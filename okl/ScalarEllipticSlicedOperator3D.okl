@@ -4,18 +4,18 @@
 // (grad v, grad q) + (-v, n.{grad q}) + (n.grad v-, (q+ - q-)) + (-v,tau*(q+-q-))
 // (grad v, grad q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
 // (G*grad^ v, G*grad^ q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
-// (grad^ v, G'*G*grad^ q + delta*G'*n*(q+ - q-)) + (-v, n.{grad q} + tau*(q+-q-))
+// (grad^ v, G'*G*grad^ q + delta*(G'*n)*(q+ - q-)) + (-v, n.{grad q} + tau*(q+-q-))
 
 // independent faces: (0,5), (1,3), (2,4)
 
 kernel void ScalarEllipticSlicedOperator3D(const int K,
-					   dfloat * restrict vgeo,
-					   dfloat * restrict sgeo,
-					   dfloat * restrict q,
-					   dfloat * restrict fqM,
-					   dfloat * restrict fqP,
-					   dfloat * restrict fdqdnM,
-					   dfloat * restrict fdqdnP,
+					   const dfloat * restrict vgeo,
+					   const dfloat * restrict sgeo,
+					   const dfloat * restrict q,
+					   const dfloat * restrict qM,
+ 					   const dfloat * restrict qP,
+					   const dfloat * restrict dqdnM,
+					   const dfloat * restrict dqdnP,
 					   dfloat * restrict Aq){
   
 
@@ -30,7 +30,7 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
     // 2*p_Nq + 3 exclusive floats (N=4 => 14 registers blocked)
     exclusive dfloat r_q[p_Nq];
     exclusive dfloat r_Aq[p_Nq];
-    exclusive dfloat dq05, dq13, dq24; // save jump in q
+    exclusive dfloat r_dq05, r_dq13, r_dq24; // save jump in q
 
     // prefetch to registers and shared memory 
     for(int j=0;j<p_Nq;++j;inner1){
@@ -88,12 +88,12 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    const int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i;
 
 	    // compute trace jump
-	    dq05 = fqP[idM]-fqM[idM];
+	    r_dq05 = qP[idM]-qM[idM];
 	    
 	    // assume sgeo contains G'*n
-	    r_q0 += sgeo[id]*dq05; id+=p_Nq2;
-	    r_q1 += sgeo[id]*dq05; id+=p_Nq2;
-	    r_q2 += sgeo[id]*dq05; 
+	    r_q0 += sgeo[id]*r_dq05; id+=p_Nq2;
+	    r_q1 += sgeo[id]*r_dq05; id+=p_Nq2;
+	    r_q2 += sgeo[id]*r_dq05; 
 	  }
 	  
 	  // faces: (1,3)
@@ -103,12 +103,12 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    const int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i;
 	    
 	    // compute trace jump
-	    dq13 = fqP[idM]-fqM[idM];
+	    r_dq13 = qP[idM]-qM[idM];
 	    
 	    // assume sgeo contains G'*n
-	    r_q0 += sgeo[id]*dq13; id+=p_Nq2;
-	    r_q1 += sgeo[id]*dq13; id+=p_Nq2;
-	    r_q2 += sgeo[id]*dq13;
+	    r_q0 += sgeo[id]*r_dq13; id+=p_Nq2;
+	    r_q1 += sgeo[id]*r_dq13; id+=p_Nq2;
+	    r_q2 += sgeo[id]*r_dq13;
 	  }
 
 	  // faces: (2,4)
@@ -118,12 +118,12 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    const int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j; 
 	    
 	    // compute trace jump
-	    dq24 = fqP[idM]-fqM[idM];
+	    r_dq24 = qP[idM]-qM[idM];
 	    
 	    // assume sgeo contains G'*n
-	    r_q0 += sgeo[id]*dq24; id+=p_Nq2;
-	    r_q1 += sgeo[id]*dq24; id+=p_Nq2;
-	    r_q2 += sgeo[id]*dq24;
+	    r_q0 += sgeo[id]*r_dq24; id+=p_Nq2;
+	    r_q1 += sgeo[id]*r_dq24; id+=p_Nq2;
+	    r_q2 += sgeo[id]*r_dq24;
 	  }    
 	  
 	  s_Dq0[j][i] = r_q0;
@@ -160,8 +160,8 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    int idG = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i; 
 	    int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i; 
 	    
-	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
-	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*dq05; // note dq0 is exclusive
+	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(dqdnP[idM]+dqdnM[idM]);
+	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*r_dq05; // note dq0 is exclusive
 	  }
     
 	  // faces: (1,3) warp divergence
@@ -171,8 +171,8 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i;
 	    
 	    // could prefetch traces
-	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
-	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*dq13;
+	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(dqdnP[idM]+dqdnM[idM]);
+	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*r_dq13;
 	  }
 
 	  // faces: (2,4) (warp divergence)
@@ -181,8 +181,9 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	    int idG = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j;
 	    int idM = e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j;
 
-	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
-	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*dq24;
+	    // check signs
+	    r_Aq[k] += -sgeo[idG+ p_idsJ*p_Nq2]*(dqdnP[idM]+dqdnM[idM]);
+	    r_Aq[k] +=  sgeo[idG+p_idtau*p_Nq2]*r_dq24;
 	  }    
 	}
       }
