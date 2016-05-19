@@ -1,0 +1,243 @@
+
+kernel void ScalarEllipticOperator3D(const int K,
+				     dfloat * restrict vgeo,
+				     dfloat * restrict sgeo,
+				     dfloat * restrict q,
+				     dfloat * restrict fqM,
+				     dfloat * restrict fqP,
+				     dfloat * restrict fdqdnM,
+				     dfloat * restrict fdqdnP,
+				     dfloat * restrict Aq){
+  
+  // only works for Nq>=2
+  // uses Nq x Nq x Nq threads until we think of something smarter
+
+  // -----------
+  // |    |    |
+  // |    |    |
+  // -----------
+  // |         |
+  // |         |
+  // |         |
+  // |         |
+  // -----------
+
+  // (grad v, grad q) + ([v], n.{grad q}) + (n.{grad v}, [q]) + ([v],tau*[q])
+  // (grad v, grad q) + (-v, n.{grad q}) + (n.grad v-, (q+ - q-)) + (-v,tau*(q+-q-))
+  // (grad v, grad q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
+  // (G*grad^ v, G*grad^ q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
+  // (grad^ v, G'*G*grad^ q + delta*G'*n*(q+ - q-)) + (-v, n.{grad q} + tau*(q+-q-))
+
+  // independent faces: (0,5), (1,3), (2,4)
+
+  for(int e=0;e<K;++e;outer0){
+    
+    // 4*p_Nq^3 shared dfloats (1K of shared for Nq=4)
+    shared dfloat  s_q[p_Nq][p_Nq][p_Nq];
+    shared dfloat s_q0[p_Nq][p_Nq][p_Nq];
+    shared dfloat s_q1[p_Nq][p_Nq][p_Nq];
+    shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
+
+    exclusive dfloat dq0, dq1, dq2;
+
+    // prefetch to shared memory 
+    for(int k=0;k<p_Nq;++k;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
+	  s_q[k][j][i] = q[id];
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // compute first derivatives
+    for(int k=0;k<p_Nq;++k;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  
+	  dfloat rx = vgeo[id]; id += p_Nq3;
+	  dfloat sx = vgeo[id]; id += p_Nq3;
+	  dfloat tx = vgeo[id]; id += p_Nq3;
+
+	  dfloat ry = vgeo[id]; id += p_Nq3;
+	  dfloat sy = vgeo[id]; id += p_Nq3;
+	  dfloat ty = vgeo[id]; id += p_Nq3;
+
+	  dfloat rz = vgeo[id]; id += p_Nq3;
+	  dfloat sz = vgeo[id]; id += p_Nq3;
+	  dfloat tz = vgeo[id]; id += p_Nq3;
+
+	  dfloat G00 = rx*rx+ry*ry+rz*rz;
+	  dfloat G01 = rx*sx+ry*sy+rz*sz;
+	  dfloat G02 = rx*tx+ry*ty+rz*tz;
+	  dfloat G11 = sx*sx+sy*sy+sz*sz;
+	  dfloat G12 = sx*tx+sy*ty+sz*tz;
+	  dfloat G22 = tx*tx+ty*ty+tz*tz;
+
+	  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
+	  
+	  for(int n=0;n<p_Nq;++n){
+	    qr += s_D[i][n]*s_q[k][j][n];
+	    qs += s_D[j][n]*s_q[k][n][i];
+	    qt += s_D[k][n]*s_q[n][j][i];
+	  }
+
+	  s_q0[k][j][i] = G00*qr + G01*qs + G02*qt;
+	  s_q1[k][j][i] = G01*qr + G11*qs + G12*qt;
+	  s_q2[k][j][i] = G02*qr + G12*qs + G22*qt;
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // faces: (0,5)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 0:5;
+	    int k = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i; // 3 for 3 components of n
+	    dq0 = fqP[idM]-fqM[idM];
+
+	    // assume sgeo contains G'*n
+	    s_q0[k][j][i] += sgeo[id]*dq0; id+=p_Nq2;
+	    s_q1[k][j][i] += sgeo[id]*dq0; id+=p_Nq2;
+	    s_q2[k][j][i] += sgeo[id]*dq0;
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // faces: (1,3)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int k=0;k<p_Nq;++k;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 1:3;
+	    int j = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i; // 3 for 3 components of n
+	    dq1 = fqP[idM]-fqM[idM];
+	    
+	    // assume sgeo contains G'*n
+	    s_q0[k][j][i] += sgeo[id]*dq1; id+=p_Nq2;
+	    s_q1[k][j][i] += sgeo[id]*dq1; id+=p_Nq2;
+	    s_q2[k][j][i] += sgeo[id]*dq1;
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // faces: (2,4)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int k=0;k<p_Nq;++k;inner1){
+	for(int j=0;j<p_Nq;++j;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 4:2;
+	    int i = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j; // 3 for 3 components of n
+	    dq2 = fqP[idM]-fqM[idM];
+	    
+	    // assume sgeo contains G'*n
+	    s_q0[k][j][i] += sgeo[id]*dq2; id+=p_Nq2;
+	    s_q1[k][j][i] += sgeo[id]*dq2; id+=p_Nq2;
+	    s_q2[k][j][i] += sgeo[id]*dq2;
+	  }    
+	}
+      }
+    }
+
+    barrier(localMemFence);
+    
+    // compute second (weak) derivatives
+    for(int k=0;k<p_Nq;++k;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  
+	  dfloat Aq0 = 0.f, Aq1 = 0.f, Aq2 = 0.f;
+
+	  for(int n=0;n<p_Nq;++n){
+	    Aq0 += s_D[n][i]*s_q0[k][j][n];
+	    Aq1 += s_D[n][j]*s_q1[k][n][i];
+	    Aq2 += s_D[n][k]*s_q2[n][j][i];
+	  }
+	  
+	  s_q[k][j][i] = Aq0 + Aq1 + Aq2;
+	}
+      }
+    }
+
+    barrier(localMemFence);
+
+    // add last flux terms
+
+    // faces: (0,5)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 0:5;
+	    int k = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i; // 3 for 3 components of n
+
+	    s_q[k][j][i] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    s_q[k][j][i] +=  sgeo[idM+p_idtau*p_Nq2]*dq0;
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // faces: (1,3)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int k=0;k<p_Nq;++k;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 1:3;
+	    int j = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i; // 3 for 3 components of n
+	    
+	    s_q[k][j][i] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    s_q[k][j][i] +=  sgeo[idM+p_idtau*p_Nq2]*dq1;
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // faces: (2,4)
+    for(int p=0;p<p_Nq;++p;inner2){
+      for(int k=0;k<p_Nq;++k;inner1){
+	for(int j=0;j<p_Nq;++j;inner0){
+	  if(p<2){ 
+	    int f = (p==0) ? 4:2;
+	    int i = (p==0) ? 0:p_Nq-1;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j; // 3 for 3 components of n
+	    s_q[k][j][i] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    s_q[k][j][i] +=  sgeo[idM+p_idtau*p_Nq2]*dq2;
+	  }    
+	}
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int k=0;k<p_Nq;++k;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
+	  Aq[id] = s_q[k][j][i];
+	}
+      }
+    }
+  }
+}
