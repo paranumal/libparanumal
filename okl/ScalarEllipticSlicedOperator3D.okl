@@ -1,0 +1,191 @@
+
+kernel void ScalarEllipticSlicedOperator3D(const int K,
+					   dfloat * restrict vgeo,
+					   dfloat * restrict sgeo,
+					   dfloat * restrict q,
+					   dfloat * restrict fqM,
+					   dfloat * restrict fqP,
+					   dfloat * restrict fdqdnM,
+					   dfloat * restrict fdqdnP,
+					   dfloat * restrict Aq){
+  
+  // only works for Nq>=2
+  // uses Nq x Nq
+  // quite heavy on registers
+
+  // (grad v, grad q) + ([v], n.{grad q}) + (n.{grad v}, [q]) + ([v],tau*[q])
+  // (grad v, grad q) + (-v, n.{grad q}) + (n.grad v-, (q+ - q-)) + (-v,tau*(q+-q-))
+  // (grad v, grad q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
+  // (G*grad^ v, G*grad^ q + delta*n*(q+-q-)) + (-v, n.{grad q} + tau*(q+-q-))
+  // (grad^ v, G'*G*grad^ q + delta*G'*n*(q+ - q-)) + (-v, n.{grad q} + tau*(q+-q-))
+
+  // independent faces: (0,5), (1,3), (2,4)
+
+  for(int e=0;e<K;++e;outer0){
+    
+    // 4*p_Nq^2 shared dfloats (N=4 => 400 bytes)
+    shared dfloat  s_D[p_Nq][p_Nq];
+    shared dfloat  s_q[p_Nq][p_Nq];
+    shared dfloat s_Dq0[p_Nq][p_Nq];
+    shared dfloat s_Dq1[p_Nq][p_Nq];
+
+    // p_Nq + 4 exclusive floats (N=4 => 9 registers)
+    exclusive dfloat r_q2;
+    exclusive dfloat r_Ax[p_Nq];
+    exclusive dfloat dq05, dq13, dq24;
+
+    // prefetch to registers and shared memory 
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+	for(int k=0;k<p_Nq;++k){ 
+	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
+	  r_q[k] = q[id];
+	  r_Ax[k] = 0.f;
+	}
+	s_D[j][i] = D[j*p_Nq+i];
+      }
+    }    
+    
+    // compute first derivatives
+    for(int k=0;k<p_Nq;++k){
+
+      barrier(localMemFence);
+
+      // copy to shared
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  s_q[j][i] = r_q[k];
+	}
+      }
+      
+      barrier(localMemFence);
+      
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  
+	  dfloat G00 = vgeo[id]; id += p_Nq3;
+	  dfloat G01 = vgeo[id]; id += p_Nq3;
+	  dfloat G02 = vgeo[id]; id += p_Nq3;
+
+	  dfloat G11 = vgeo[id]; id += p_Nq3;
+	  dfloat G12 = vgeo[id]; id += p_Nq3;
+
+	  dfloat G22 = vgeo[id]; id += p_Nq3;
+
+	  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
+	  
+	  for(int n=0;n<p_Nq;++n){
+	    qr += s_D[i][n]*s_q[j][n];
+	    qs += s_D[j][n]*s_q[n][i];
+	    qt += s_D[k][n]*r_q[n];
+	  }
+	  
+	  dfloat r_q0 = G00*qr + G01*qs + G02*qt;
+	  dfloat r_q1 = G01*qr + G11*qs + G12*qt;
+
+	  r_q2 = G02*qr + G12*qs + G22*qt;
+    
+	  // add terms at face nodes to contribute to (grad v, [q]) terms
+	  // faces: (0:5)
+	  if(k==0 || k==Nq-1){
+	    int f = (k==0)?0:5;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i;
+	    dq05 = fqP[idM]-fqM[idM];
+	    
+	    // assume sgeo contains G'*n
+	    r_q0 += sgeo[id]*dq05; id+=p_Nq2;
+	    r_q1 += sgeo[id]*dq05; id+=p_Nq2;
+	    r_q2 += sgeo[id]*dq05; 
+	  }
+	  
+	  // faces: (1,3)
+	  if(j==0 || j==p_Nq-1){ 
+	    int f = (j==0) ? 1:3;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i; // 3 for 3 components of n
+	    dq13 = fqP[idM]-fqM[idM];
+	    
+	    // assume sgeo contains G'*n
+	    r_q0 += sgeo[id]*dq13; id+=p_Nq2;
+	    r_q1 += sgeo[id]*dq13; id+=p_Nq2;
+	    r_q2 += sgeo[id]*dq13;
+	  }
+
+	  // faces: (2,4)
+	  if(i==0 || i==p_Nq-1){ 
+	    int f = (p==0) ? 4:2;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j; // 3 for 3 components of n
+	    dq24 = fqP[idM]-fqM[idM];
+	    
+	    // assume sgeo contains G'*n
+	    r_q0 += sgeo[id]*dq24; id+=p_Nq2;
+	    r_q1 += sgeo[id]*dq24; id+=p_Nq2;
+	    r_q2 += sgeo[id]*dq24;
+	  }    
+	  
+	  s_Dq0[j][i] = r_q0;
+	  s_Dq1[j][i] = r_q1;
+	}
+      }
+
+      barrier(localMemFence);
+      
+      // compute second (weak) derivatives
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  
+	  dfloat Aq0 = 0.f, Aq1 = 0.f;
+	  
+	  for(int n=0;n<p_Nq;++n){
+	    Aq0 += s_D[n][i]*s_Dq0[j][n];
+	    Aq1 += s_D[n][j]*s_Dq1[n][i];
+	  }
+	  
+	  for(int n=0;n<p_Nq;++n){
+	    r_Ax[n] += s_D[k][n]*r_q2; // spread over Ax pencil
+	  }
+
+	  r_Ax[k] += Aq0 + Aq1;
+	  
+	  // add (v, {dq/dn}) + (-v, tau*[q]) terms
+	  
+	  // faces: (0,5) (not divergent)
+	  if(k==0 || k==p_Nq-1){
+	    int f = (k==0)?0:5;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + j*p_Nq + i; 
+	    
+	    r_Ax[k] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    r_Ax[k] +=  sgeo[idM+p_idtau*p_Nq2]*dq05; // note dq0 is exclusive
+	  }
+    
+	  // faces: (1,3) warp divergence
+	  if(j==0 || j==p_Nq-1){
+	    int f = (j==0)?1:3;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + i;
+	    
+	    // could prefetch traces
+	    r_Ax[k] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    r_Ax[k] +=  sgeo[idM+p_idtau*p_Nq2]*dq13;
+	  }
+
+	  // faces: (2,4) (warp divergence)
+	  if(i==0 || i==p_Nq-1){ 
+	    int f = (i==0)?4:2;
+	    int idM = p_Nsgeo*e*p_Nq2*p_Nfaces + f*p_Nq2 + k*p_Nq + j;
+	    r_Ax[k] += -sgeo[idM+ p_idsJ*p_Nq2]*(fdqdnP[idM]+fdqdnM[idM]);
+	    r_Ax[k] +=  sgeo[idM+p_idtau*p_Nq2]*dq24;
+	  }    
+	}
+      }
+    }
+    
+    // need this k-loop to be separate since r_Ax is built progressively
+    for(int k=0;k<p_Nq;++k){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
+	  Aq[id] = r_Ax[k];
+	}
+      }
+    }
+  }
+}
