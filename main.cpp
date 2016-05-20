@@ -23,7 +23,7 @@ int main(int argc, char **argv){
   int Nq = atoi(argv[1]);
   int K  = atoi(argv[2]);
   
-  int Nfaces = 4;
+  int Nfaces = 6;
   int Nsgeo = 6;
   int Nvgeo = 6;
   
