@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "occa.hpp"
 
 #define dfloat float
@@ -13,9 +12,10 @@ dfloat *randCalloc(int N, size_t sz){
     pt[n] = drand48();
   }
 
-  return pt;
-  
+  return pt; 
 }
+
+// make; OCCA_CUDA_COMPILER_FLAGS='--use_fast_math' OCCA_PROFILE=1 OCCA_KERNEL_PROFILE=1 ./main 8 50000
 
 int main(int argc, char **argv){
   occa::printAvailableDevices();
@@ -109,5 +109,7 @@ int main(int argc, char **argv){
   for(int i = 0; i < 5; ++i)
     std::cout << i << ": " << Aq[i] << '\n';
 
+  std::cout << "GB used: " << device.memoryAllocated()/1.e9 << std::endl;
+  
   return 0;
 }
