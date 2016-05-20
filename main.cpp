@@ -71,15 +71,36 @@ int main(int argc, char **argv){
   info.addDefine("p_idsJ", 3);
   info.addDefine("p_idtau", 4);
   info.addDefine("dfloat", dfloatString);
+
   // OKL: OCCA Kernel Language
   occa::kernel scalarEllipticOp = 
     device.buildKernelFromSource("okl/ScalarEllipticSlicedOperator3D.okl",
 				 "ScalarEllipticSlicedOperator3D", 
 				 info);
   
-  scalarEllipticOp(K, o_D, o_vgeo, o_sgeo, o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq);
+  occa::initTimer(device);
+  occa::tic("scalarEllipticOp");
+  
+  int Nit = 100;
+  for(int it=0;it<Nit;++it)
+    scalarEllipticOp(K, o_D, o_vgeo, o_sgeo, o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq);
+
+  device.finish();
+  double elapsed = occa::toc("scalarEllipticOp");
 
   o_Aq.copyTo(Aq);
+  
+  double eflops = 6*Nq*Nq*Nq*Nq;
+  eflops += 15*Nq*Nq*Nq;
+  eflops += 6*7*Nq*Nq;
+  eflops += 2*Nq*Nq*Nq*Nq;
+  eflops += 4*Nq*Nq*Nq*Nq;
+  eflops += 2*Nq*Nq*Nq;
+  eflops += 6*4*5*Nq*Nq;
+  
+  double gflops = Nit*eflops*K/(1.e9*elapsed);
+
+  std::cout << " gflops = " << gflops << std::endl;
 
   for(int i = 0; i < 5; ++i)
     std::cout << i << ": " << Aq[i] << '\n';

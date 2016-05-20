@@ -72,17 +72,20 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	  const dfloat G22 = vgeo[vidG]; 
 	  
 	  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
-	  
+	
+	  // flops = 6*Nq*Nq*Nq*Nq
 	  for(int n=0;n<p_Nq;++n){
 	    qr += s_D[i][n]*s_q[j][n];
 	    qs += s_D[j][n]*s_q[n][i];
 	    qt += s_D[k][n]*r_q[n];
 	  }
 	  
+	  // flops = 15*Nq*Nq*Nq
 	  dfloat r_Dq0 = G00*qr + G01*qs + G02*qt;
 	  dfloat r_Dq1 = G01*qr + G11*qs + G12*qt;
 	  dfloat r_Dq2 = G02*qr + G12*qs + G22*qt;
     
+	  // flops = 6*7*Nq*Nq
 	  // add terms at face nodes to contribute to (grad v, [q]) terms
 	  // faces: (0:5)
 	  if(k==0 || k==p_Nq-1){
@@ -132,6 +135,7 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	  s_Dq0[j][i] = r_Dq0;
 	  s_Dq1[j][i] = r_Dq1;
 
+	  // flops = 2*Nq*Nq*Nq*Nq
 	  // do this here to hide latency of smem write ?
 	  for(int n=0;n<p_Nq;++n){
 	    r_Aq[n] += s_D[k][n]*r_Dq2; // spread over Aq pencil
@@ -147,14 +151,17 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
 	  
 	  dfloat Aq0 = 0.f, Aq1 = 0.f;
 	  
+	  // flops = 4*Nq*Nq*Nq*Nq
 	  for(int n=0;n<p_Nq;++n){
 	    // ILP ?
 	    Aq0 += s_D[n][i]*s_Dq0[j][n];
 	    Aq1 += s_D[n][j]*s_Dq1[n][i];
 	  }
 	  
+	  // flops = 2*Nq*Nq*Nq
 	  r_Aq[k] += Aq0 + Aq1;
 
+	  // flops = 6*4*5*Nq*Nq
 	  // could do this part before barrier
 	  // add (v, {dq/dn}) + (-v, tau*[q]) terms
 	  // faces: (0,5) (not divergent)
