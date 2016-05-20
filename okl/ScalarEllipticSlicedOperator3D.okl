@@ -23,10 +23,10 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
   for(int e=0;e<K;++e;outer0){
     
     // 4*p_Nq^2 shared dfloats (N=4 => 400 bytes)
-    shared dfloat  s_D[p_Nq][p_Nq];
-    shared dfloat  s_q[p_Nq][p_Nq];
-    shared dfloat s_Dq0[p_Nq][p_Nq];
-    shared dfloat s_Dq1[p_Nq][p_Nq];
+    shared dfloat  s_D[p_Nq][p_Nq+1];
+    shared dfloat  s_q[p_Nq][p_Nq+1];
+    shared dfloat s_Dq0[p_Nq][p_Nq+1];
+    shared dfloat s_Dq1[p_Nq][p_Nq+1];
 
     // 2*p_Nq + 3 exclusive floats (N=4 => 14 registers blocked)
     exclusive dfloat r_q[p_Nq];
@@ -36,6 +36,7 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
     // prefetch to registers and shared memory 
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
+      #pragma unroll	
 	for(int k=0;k<p_Nq;++k){ 
 	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
 	  r_q[k] = q[id];
@@ -46,6 +47,7 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
     }    
     
     // compute first derivatives
+#pragma unroll
     for(int k=0;k<p_Nq;++k){
       
       // do not need a barrier here - since there is a barrier either side of s_q access
@@ -200,6 +202,7 @@ kernel void ScalarEllipticSlicedOperator3D(const int K,
     }
     
     // need this k-loop to be separate since r_Aq is built progressively
+#pragma unroll
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){

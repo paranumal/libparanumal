@@ -45,8 +45,8 @@ int main(int argc, char **argv){
   //---[ Device setup with string flags ]-------------------
   //  device.setup("mode = Serial");
   // device.setup("mode = OpenMP  , schedule = compact, chunk = 10");
-  device.setup("mode = OpenCL  , platformID = 0, deviceID = 1");
-  // device.setup("mode = CUDA    , deviceID = 0");
+  //device.setup("mode = OpenCL  , platformID = 0, deviceID = 1");
+  device.setup("mode = CUDA    , deviceID = 1");
   // device.setup("mode = Pthreads, threadCount = 4, schedule = compact, pinnedCores = [0, 0, 1, 1]");
   // device.setup("mode = COI     , deviceID = 0");
   //========================================================
@@ -100,7 +100,11 @@ int main(int argc, char **argv){
   
   double gflops = Nit*eflops*K/(1.e9*elapsed);
 
+  double ebw = Nq*Nq*Nq*(6+1+1) + Nfaces*Nq*Nq*(1 + 3 + 2 + 2);
+  double gbw = sizeof(float)*Nit*ebw*K/(1.e9*elapsed);
+  
   std::cout << " gflops = " << gflops << std::endl;
+  std::cout << " bandwidth = " << gbw << std::endl;
 
   for(int i = 0; i < 5; ++i)
     std::cout << i << ": " << Aq[i] << '\n';
