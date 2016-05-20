@@ -37,16 +37,19 @@ int main(int argc, char **argv){
   dfloat *vgeo  = (dfloat*) randCalloc(Nq*Nq*Nq*Nvgeo*K,sizeof(dfloat));
   dfloat *sgeo  = (dfloat*) randCalloc(Nq*Nq*Nfaces*Nsgeo*K,sizeof(dfloat));
   dfloat *q     = (dfloat*) randCalloc(Nq*Nq*Nq*K,sizeof(dfloat));
+  dfloat *qM    = (dfloat*) randCalloc(Nq*Nq*Nfaces*K,sizeof(dfloat));
   dfloat *qP    = (dfloat*) randCalloc(Nq*Nq*Nfaces*K,sizeof(dfloat));
   dfloat *dqdnM = (dfloat*) randCalloc(Nq*Nq*Nfaces*K,sizeof(dfloat));
   dfloat *dqdnP = (dfloat*) randCalloc(Nq*Nq*Nfaces*K,sizeof(dfloat));
   dfloat *Aq    = (dfloat*) randCalloc(Nq*Nq*Nq*K,sizeof(dfloat));
 
-
+  dfloat *VXYZ  = (dfloat*) randCalloc(24*K, sizeof(dfloat));
+  dfloat *gz    = (dfloat*) randCalloc(Nq, sizeof(dfloat));
+  
 
   occa::device device;
-  occa::memory o_D, o_vgeo, o_sgeo;
-  occa::memory o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq;
+  occa::memory o_D, o_vgeo, o_sgeo, o_gz, o_VXYZ;
+  occa::memory o_q, o_qM, o_qP, o_dqdnM, o_dqdnP, o_Aq;
 
   //---[ Device setup with string flags ]-------------------
   //device.setup("mode = Serial");
@@ -61,10 +64,13 @@ int main(int argc, char **argv){
   o_vgeo  = device.malloc(Nq*Nq*Nq*Nvgeo*K*sizeof(dfloat), vgeo);
   o_sgeo  = device.malloc(Nq*Nq*Nfaces*Nsgeo*K*sizeof(dfloat), sgeo);
   o_q     = device.malloc(Nq*Nq*Nq*K*sizeof(dfloat), q);
+  o_qM    = device.malloc(Nq*Nq*Nfaces*K*sizeof(dfloat), qM);
   o_qP    = device.malloc(Nq*Nq*Nfaces*K*sizeof(dfloat), qP);
   o_dqdnM = device.malloc(Nq*Nq*Nfaces*K*sizeof(dfloat), dqdnM);
   o_dqdnP = device.malloc(Nq*Nq*Nfaces*K*sizeof(dfloat), dqdnP);
   o_Aq    = device.malloc(Nq*Nq*Nq*K*sizeof(dfloat), Aq);
+  o_gz    = device.malloc(Nq*sizeof(dfloat), gz);
+  o_VXYZ  = device.malloc(8*3*K*sizeof(dfloat), VXYZ);
 
   // info for compilation
   occa::kernelInfo info;
@@ -80,17 +86,36 @@ int main(int argc, char **argv){
   info.addDefine("p_Kblk", Kblk);
 
   // OKL: OCCA Kernel Language
+#if 0
   occa::kernel scalarEllipticOp = 
-    device.buildKernelFromSource("okl/ScalarEllipticSlicedBlockedOperator3D.okl",
+        device.buildKernelFromSource("okl/ScalarEllipticSlicedBlockedGeoOnDemandOperator3D.okl",
 				 "ScalarEllipticSlicedOperator3D", 
 				 info);
-  
+#endif
+#if 1
+  occa::kernel scalarEllipticOp = 
+    device.buildKernelFromSource("okl/ScalarEllipticOperator3D.okl",
+				 "ScalarEllipticOperator3D", 
+				 info);
+#endif
+#if 0
+  // on demand geo slow down 
+  occa::kernel scalarEllipticOp = 
+    device.buildKernelFromSource("okl/ScalarEllipticGeoOnDemand.okl",
+				 "ScalarEllipticOperator3D", 
+				 info);
+#endif
+    
   occa::initTimer(device);
   occa::tic("scalarEllipticOp");
   
   int Nit = 100;
-  for(int it=0;it<Nit;++it)
-    scalarEllipticOp(K, o_D, o_vgeo, o_sgeo, o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq);
+  for(int it=0;it<Nit;++it){
+    //    scalarEllipticOp(K, o_D, o_gz, o_VXYZ, o_sgeo, o_q, o_qM, o_qP, o_dqdnM, o_dqdnP, o_Aq);// on demand geo
+    scalarEllipticOp(K, o_D, o_vgeo, o_sgeo, o_q, o_qM, o_qP, o_dqdnM, o_dqdnP, o_Aq); // cube threading
+    //    scalarEllipticOp(K, o_D, o_vgeo, o_sgeo, o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq);
+    //    scalarEllipticOp(K, o_D, o_gz, o_VXYZ, o_sgeo, o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq);
+  }
 
   device.finish();
   double elapsed = occa::toc("scalarEllipticOp");
@@ -107,7 +132,12 @@ int main(int argc, char **argv){
   
   double gflops = Nit*eflops*K/(1.e9*elapsed);
 
+#if 1
   double ebw = Nq*Nq*Nq*(6+1+1) + Nfaces*Nq*Nq*(1 + 3 + 2 + 2);
+#else
+  double ebw = 3*8+Nq*Nq*Nq*(1+1) + Nfaces*Nq*Nq*(1 + 3 + 2 + 2);
+#endif
+  
   double gbw = sizeof(float)*Nit*ebw*K/(1.e9*elapsed);
   
   std::cout << " gflops = " << gflops << std::endl;
