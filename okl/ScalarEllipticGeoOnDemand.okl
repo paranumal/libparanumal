@@ -1,6 +1,97 @@
+void computeGeofacs(const dfloat r, const dfloat s, const dfloat t,
+		    const dfloat *VXYZ,
+		    dfloat *G00, dfloat *G01, dfloat *G02,
+		    dfloat *G11, dfloat *G12, dfloat *G22){
+  
+  // assume trilinear map
+  const dfloat x0 = VXYZ[0],  y0 = VXYZ[1],  z0 = VXYZ[2];
+  const dfloat x1 = VXYZ[3],  y1 = VXYZ[4],  z1 = VXYZ[5];
+  const dfloat x2 = VXYZ[6],  y2 = VXYZ[7],  z2 = VXYZ[8];
+  const dfloat x3 = VXYZ[9],  y3 = VXYZ[10], z3 = VXYZ[11];
+  const dfloat x4 = VXYZ[12], y4 = VXYZ[13], z4 = VXYZ[14];
+  const dfloat x5 = VXYZ[15], y5 = VXYZ[16], z5 = VXYZ[17];
+  const dfloat x6 = VXYZ[18], y6 = VXYZ[19], z6 = VXYZ[20];
+  const dfloat x7 = VXYZ[21], y7 = VXYZ[22], z7 = VXYZ[23];
+
+  const dfloat xr =
+    (1.f-s)*(1.f-t)*(x1-x0) +
+    (1.f+s)*(1.f-t)*(x2-x3) +
+    (1.f-s)*(1.f+t)*(x5-x4) +
+    (1.f+s)*(1.f+t)*(x6-x7);
+
+  const dfloat xs =
+    (1.f-r)*(1.f-t)*(x3-x0) +
+    (1.f+r)*(1.f-t)*(x2-x1) +
+    (1.f-r)*(1.f+t)*(x7-x4) +
+    (1.f+r)*(1.f+t)*(x6-x5);
+
+
+  const dfloat xt =
+    (1.f-r)*(1.f-s)*(x4-x0) +
+    (1.f+r)*(1.f-s)*(x5-x1) +
+    (1.f-r)*(1.f+s)*(x7-x3) +
+    (1.f+r)*(1.f+s)*(x6-x2);
+
+  const dfloat yr =
+    (1.f-s)*(1.f-t)*(y1-y0) +
+    (1.f+s)*(1.f-t)*(y2-y3) +
+    (1.f-s)*(1.f+t)*(y5-y4) +
+    (1.f+s)*(1.f+t)*(y6-y7);
+
+  const dfloat ys =
+    (1.f-r)*(1.f-t)*(y3-y0) +
+    (1.f+r)*(1.f-t)*(y2-y1) +
+    (1.f-r)*(1.f+t)*(y7-y4) +
+    (1.f+r)*(1.f+t)*(y6-y5);
+
+
+  const dfloat yt =
+    (1.f-r)*(1.f-s)*(y4-y0) +
+    (1.f+r)*(1.f-s)*(y5-y1) +
+    (1.f-r)*(1.f+s)*(y7-y3) +
+    (1.f+r)*(1.f+s)*(y6-y2);
+
+
+  const dfloat zr =
+    (1.f-s)*(1.f-t)*(z1-z0) +
+    (1.f+s)*(1.f-t)*(z2-z3) +
+    (1.f-s)*(1.f+t)*(z5-z4) +
+    (1.f+s)*(1.f+t)*(z6-z7);
+
+  const dfloat zs =
+    (1.f-r)*(1.f-t)*(z3-z0) +
+    (1.f+r)*(1.f-t)*(z2-z1) +
+    (1.f-r)*(1.f+t)*(z7-z4) +
+    (1.f+r)*(1.f+t)*(z6-z5);
+
+
+  const dfloat zt =
+    (1.f-r)*(1.f-s)*(z4-z0) +
+    (1.f+r)*(1.f-s)*(z5-z1) +
+    (1.f-r)*(1.f+s)*(z7-z3) +
+    (1.f+r)*(1.f+s)*(z6-z2);
+
+  const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+  const dfloat Jinv = 8.f/J;
+  const dfloat rx =  (ys*zt - zs*yt)*Jinv, ry = -(xs*zt - zs*xt)*Jinv, rz =  (xs*yt - ys*xt)*Jinv;
+  const dfloat sx = -(yr*zt - zr*yt)*Jinv, sy =  (xr*zt - zr*xt)*Jinv, sz = -(xr*yt - yr*xt)*Jinv;
+  const dfloat tx =  (yr*zs - zr*ys)*Jinv, ty = -(xr*zs - zr*xs)*Jinv, tz =  (xr*ys - yr*xs)*Jinv;
+
+  *G00 = rx*rx + ry*ry + rz*rz;
+  *G01 = rx*sx + ry*sy + rz*sz;
+  *G02 = rx*tx + ry*ty + rz*tz;
+  *G11 = sx*sx + sy*sy + sz*sz;
+  *G12 = sx*tx + sy*ty + sz*tz;
+  *G22 = tx*tx + ty*ty + tz*tz;
+
+}
+
+
+
 kernel void ScalarEllipticOperator3D(const int K,
 				     const dfloat * restrict D,
-				     const dfloat * restrict vgeo,
+				     const dfloat * restrict VXYZ,
+				     const dfloat * restrict gz,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict q,
 				     const dfloat * restrict fqM,
@@ -30,20 +121,16 @@ kernel void ScalarEllipticOperator3D(const int K,
 
   // independent faces: (0,5), (1,3), (2,4)
 
-#if (p_Nq==4 ||  p_Nq==8)
-  #define p_PAD 1
-#else
-  #define p_PAD 0
-#endif
-  
   for(int e=0;e<K;++e;outer0){
     
     // 4*p_Nq^3 shared dfloats (1K of shared for Nq=4)
-    shared dfloat  s_q[p_Nq][p_Nq][p_Nq+p_PAD];
+    shared dfloat  s_q[p_Nq][p_Nq][p_Nq];
     shared dfloat s_q0[p_Nq][p_Nq][p_Nq];
     shared dfloat s_q1[p_Nq][p_Nq][p_Nq];
     shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq+p_PAD];
+    shared dfloat s_D[p_Nq][p_Nq];
+    shared dfloat s_VXYZ[8*3];
+    shared dfloat s_gz[p_Nq];
 
     exclusive dfloat dq0, dq1, dq2;
 
@@ -51,10 +138,19 @@ kernel void ScalarEllipticOperator3D(const int K,
     for(int k=0;k<p_Nq;++k;inner2){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
-	  const int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
+	  int id = i + j*p_Nq + k*p_Nq2 + e*p_Nq3;
 	  s_q[k][j][i] = q[id];
 	  if(k==0){
 	    s_D[j][i] = D[j*p_Nq + i];
+	  }
+	  // slows it down ?
+	  id = i + j*p_Nq + k*p_Nq*p_Nq;
+	  while(id<24){
+	    s_VXYZ[id] = VXYZ[e*24+id];
+	    id+=p_Nq*p_Nq*p_Nq;
+	  }
+	  if(j==0 && k==0){
+	    s_gz[i] = gz[i];
 	  }
 	}
       }
@@ -67,18 +163,13 @@ kernel void ScalarEllipticOperator3D(const int K,
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
 
-	  int idG = p_Nvgeo*e*p_Nq3 + k*p_Nq2 + j*p_Nq + i;
+	  dfloat G00, G01, G02, G11 ,G12, G22;
+	  // VXYZ + 8*3*e,
+	  computeGeofacs(s_gz[i], s_gz[j], s_gz[k], s_VXYZ,
+			 &G00, &G01, &G02, &G11, &G12, &G22);
 	  
-	  dfloat G00 = vgeo[idG]; idG += p_Nq3;
-	  dfloat G01 = vgeo[idG]; idG += p_Nq3;
-	  dfloat G02 = vgeo[idG]; idG += p_Nq3;
-	  dfloat G11 = vgeo[idG]; idG += p_Nq3;
-	  dfloat G12 = vgeo[idG]; idG += p_Nq3;
-	  dfloat G22 = vgeo[idG]; 
-
 	  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
-
-	  occaUnroll(p_Nq)
+	  
 	  for(int n=0;n<p_Nq;++n){
 	    qr += s_D[i][n]*s_q[k][j][n];
 	    qs += s_D[j][n]*s_q[k][n][i];
