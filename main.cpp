@@ -22,6 +22,12 @@ int main(int argc, char **argv){
 
   int Nq = atoi(argv[1]);
   int K  = atoi(argv[2]);
+  int Kblk = atoi(argv[3]);
+
+  K = Kblk*((K+Kblk-1)/Kblk);
+
+  printf("Nq = %d, K = %d, Kblk = %d\n", Nq, K, Kblk); 
+	   
   
   int Nfaces = 6;
   int Nsgeo = 6;
@@ -43,7 +49,7 @@ int main(int argc, char **argv){
   occa::memory o_q, o_qP, o_dqdnM, o_dqdnP, o_Aq;
 
   //---[ Device setup with string flags ]-------------------
-  //  device.setup("mode = Serial");
+  //device.setup("mode = Serial");
   // device.setup("mode = OpenMP  , schedule = compact, chunk = 10");
   //device.setup("mode = OpenCL  , platformID = 0, deviceID = 1");
   device.setup("mode = CUDA    , deviceID = 1");
@@ -71,10 +77,11 @@ int main(int argc, char **argv){
   info.addDefine("p_idsJ", 3);
   info.addDefine("p_idtau", 4);
   info.addDefine("dfloat", dfloatString);
+  info.addDefine("p_Kblk", Kblk);
 
   // OKL: OCCA Kernel Language
   occa::kernel scalarEllipticOp = 
-    device.buildKernelFromSource("okl/ScalarEllipticSlicedOperator3D.okl",
+    device.buildKernelFromSource("okl/ScalarEllipticSlicedBlockedOperator3D.okl",
 				 "ScalarEllipticSlicedOperator3D", 
 				 info);
   
