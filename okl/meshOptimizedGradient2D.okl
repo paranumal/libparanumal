@@ -1,0 +1,461 @@
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3  
+
+// baseline mesh Gradient
+kernel void meshGradient2D_v0(int Nelements, 
+			      int Np, 
+			      int Nvgeo,
+			      dfloat * vgeo, 
+			      dfloat * Dr, 
+			      dfloat * Ds,
+			      dfloat * q, 
+			      dfloat * dqdx, 
+			      dfloat * dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    // load geometric factors
+    dfloat drdx = vgeo[e*Nvgeo + RXID];
+    dfloat drdy = vgeo[e*Nvgeo + RYID];
+    dfloat dsdx = vgeo[e*Nvgeo + SXID];
+    dfloat dsdy = vgeo[e*Nvgeo + SYID];
+    // compute gradient at each node
+    for(int n=0;n<Np;++n;inner0){
+
+      // matrix-vector multiplies
+      dfloat dqdr = 0, dqds = 0;
+      for(int m=0;m<Np;++m){
+	dqdr += Dr[n*Np + m]*q[m + e*Np];
+	dqds += Ds[n*Np + m]*q[m + e*Np];
+      }
+
+      // chain rule
+      dqdx[n+e*Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+// declare variables const and pointer restrict
+kernel void meshGradient2D_v1(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict Dr, 
+			      const dfloat * restrict Ds,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx,
+			      dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    const dfloat drdx = vgeo[e*Nvgeo + RXID];
+    const dfloat drdy = vgeo[e*Nvgeo + RYID];
+    const dfloat dsdx = vgeo[e*Nvgeo + SXID];
+    const dfloat dsdy = vgeo[e*Nvgeo + SYID];
+    
+    for(int n=0;n<Np;++n;inner0){
+
+      dfloat dqdr = 0, dqds = 0;
+      
+      for(int m=0;m<Np;++m){
+	dqdr += Dr[n*Np + m]*q[m + e*Np];
+	dqds += Ds[n*Np + m]*q[m + e*Np];
+      }
+
+      dqdx[n+e*Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+// use compiler variables for Np and Nvgeo
+kernel void meshGradient2D_v2(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict Dr, 
+			      const dfloat * restrict Ds,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx, 
+			      dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+    
+    for(int n=0;n<p_Np;++n;inner0){
+
+      dfloat dqdr = 0, dqds = 0;
+
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np + m]*q[m + e*p_Np];
+	dqds += Ds[n*p_Np + m]*q[m + e*p_Np];
+      }
+
+      dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+// unroll the Dr and Ds loop
+kernel void meshGradient2D_v3(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict Dr, 
+			      const dfloat * restrict Ds,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx, 
+			      dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+    
+    for(int n=0;n<p_Np;++n;inner0){
+
+      dfloat dqdr = 0, dqds = 0;
+
+      occaUnroll(p_Np)
+	for(int m=0;m<p_Np;++m){
+	  dqdr += Dr[n*p_Np + m]*q[m + e*p_Np];
+	  dqds += Ds[n*p_Np + m]*q[m + e*p_Np];
+	}
+      
+      dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+
+// read from Dr and Ds in thread contiguous blocks 
+kernel void meshGradient2D_v4(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT, 
+			      const dfloat * restrict DsT,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx, 
+			      dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+    
+    for(int n=0;n<p_Np;++n;inner0){
+
+      dfloat dqdr = 0, dqds = 0;
+
+      occaUnroll(p_Np)
+	for(int m=0;m<p_Np;++m){
+	  dqdr += DrT[n + m*p_Np]*q[m + e*p_Np];
+	  dqds += DsT[n + m*p_Np]*q[m + e*p_Np];
+	}
+      
+      dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+// load q node data for element e into shared memory
+kernel void meshGradient2D_v5(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT, 
+			      const dfloat * restrict DsT,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx, 
+			      dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+    shared dfloat s_q[p_Np];
+    for(int n=0;n<p_Np;++n;inner0)
+      s_q[n] = q[n+e*p_Np];
+
+    barrier(localMemFence); // make sure all nodes are loaded
+    
+    for(int n=0;n<p_Np;++n;inner0){
+      
+      dfloat dqdr = 0, dqds = 0;
+      
+      occaUnroll(p_Np)
+	for(int m=0;m<p_Np;++m){
+	  dqdr += DrT[n + m*p_Np]*s_q[m];
+	  dqds += DsT[n + m*p_Np]*s_q[m];
+	}
+      
+      dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+
+
+kernel void meshGradient2D_v6(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT,
+			      const dfloat * restrict DsT,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx, 
+			      dfloat * restrict dqdy){
+  
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int node=0;node<p_Np*Nelements;++node;tile(p_Nthreads)){
+
+    // make sure this is valid node after tiling
+    if(node<p_Np*Nelements){
+      
+      // extract element and local node number
+      const int e = node/p_Np;
+      const int n = node%p_Np;
+      
+      // read geometric factors
+      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+      
+      // compute 'r' and 's' derivatives
+      dfloat dqdr = 0, dqds = 0;
+
+      occaUnroll(p_Np)
+	for(int m=0;m<p_Np;++m){
+	  dqdr += DrT[n + m*p_Np]*q[m+e*p_Np];
+	  dqds += DsT[n + m*p_Np]*q[m+e*p_Np];
+	}
+      
+      // apply chain rule
+      dqdx[node] = drdx*dqdr + dsdx*dqds;
+      dqdy[node] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+// manually introduce tiling and prefetch DrT, DsT to shared memory
+kernel void meshGradient2D_v7(const int Nelements,
+			      const int Np,
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT,
+			      const dfloat * restrict DsT,
+			      const dfloat * restrict q,
+			      dfloat * restrict dqdx,
+			      dfloat * restrict dqdy
+			      ){
+
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int block=0;block<(p_Np*Nelements+p_Nthreads-1)/p_Nthreads;++block;outer0){
+
+    shared dfloat s_DrT[p_Np*p_Np];
+    shared dfloat s_DsT[p_Np*p_Np];
+    
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int t=thread;
+      while(t<(p_Np*p_Np)){
+	s_DrT[t] = DrT[t];
+	s_DsT[t] = DsT[t];
+	t += p_Nthreads;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    // make sure this is valid node after tiling
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int node = thread + block*p_Nthreads;
+
+      if(node<p_Np*Nelements){
+	
+	// extract element and local node number
+	const int e = node/p_Np;
+	const int n = node%p_Np;
+	
+	// read geometric factors
+	const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	
+	// compute 'r' and 's' derivatives
+	dfloat dqdr = 0, dqds = 0;
+	
+	occaUnroll(p_Np)
+	  for(int m=0;m<p_Np;++m){
+	    dqdr += s_DrT[n + m*p_Np]*q[m+e*p_Np];
+	    dqds += s_DsT[n + m*p_Np]*q[m+e*p_Np];
+	  }
+	
+	// apply chain rule
+	dqdx[node] = drdx*dqdr + dsdx*dqds;
+	dqdy[node] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+// manually introduce tiling and prefetch DrT, DsT to shared memory
+kernel void meshGradient2D_v8(const int Nelements,
+			      const int Np,
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT,
+			      const dfloat * restrict DsT,
+			      const dfloat4 * restrict q4,
+			      dfloat4 * restrict dq4dx,
+			      dfloat4 * restrict dq4dy
+			      ){
+
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int block=0;block<(p_Np*Nelements+p_Nthreads-1)/p_Nthreads;++block;outer0){
+
+    shared dfloat s_DrT[p_Np*p_Np];
+    shared dfloat s_DsT[p_Np*p_Np];
+    
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int t=thread;
+      while(t<(p_Np*p_Np)){
+	s_DrT[t] = DrT[t];
+	s_DsT[t] = DsT[t];
+	t += p_Nthreads;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    // make sure this is valid node after tiling
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int node = thread + block*p_Nthreads;
+
+      if(node<p_Np*Nelements){
+	
+	// extract element and local node number
+	const int e = node/p_Np;
+	const int n = node%p_Np;
+	
+	// read geometric factors
+	const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	
+	// compute 'r' and 's' derivatives
+	dfloat4 dq4dr;
+	dfloat4 dq4ds;
+	dq4dr.x = 0; dq4dr.y = 0; dq4dr.z = 0; dq4dr.w = 0;
+	dq4ds.x = 0; dq4ds.y = 0; dq4ds.z = 0; dq4ds.w = 0;
+	occaUnroll(p_Np)
+	  for(int m=0;m<p_Np;++m){
+	    dq4dr += s_DrT[n + m*p_Np]*q4[m+e*p_Np];
+	    dq4ds += s_DsT[n + m*p_Np]*q4[m+e*p_Np];
+	  }
+	
+	// apply chain rule
+	dq4dx[node] = drdx*dq4dr + dsdx*dq4ds;
+	dq4dy[node] = drdy*dq4dr + dsdy*dq4ds;
+      }
+    }
+  }
+}
+
+
+
+
+// hybrid version where we optimize number of elements handled in the inner block of v5 kernel
+kernel void meshGradient2D_v9(const int Nelements, 
+			      const int Np, 
+			      const int Nvgeo,
+			      const dfloat * restrict vgeo,
+			      const dfloat * restrict DrT, 
+			      const dfloat * restrict DsT,
+			      const dfloat4 * restrict q4,
+			      dfloat4 * restrict dq4dx, 
+			      dfloat4 * restrict dq4dy){
+  
+  for(int bo=0;bo<Nelements;bo+=p_Nblock;outer0){
+
+    // store each of the four q fields in separate shared memory
+    // arrays to avoid bank conflicts
+    shared dfloat s_qx[p_Nblock][p_Np], s_qy[p_Nblock][p_Np];
+    shared dfloat s_qz[p_Nblock][p_Np], s_qw[p_Nblock][p_Np];
+    
+    // loop over block of elements and nodes
+    for(int eo=0;eo<p_Nblock;++eo;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	const int e = bo+eo;
+
+	if(e<Nelements){
+	  const dfloat4 q4n = q4[n+e*p_Np];
+	  s_qx[eo][n] = q4n.x;
+	  s_qy[eo][n] = q4n.y;
+	  s_qz[eo][n] = q4n.z;
+	  s_qw[eo][n] = q4n.w;
+	}
+      }
+    }
+    
+    barrier(localMemFence); // make sure all nodes are loaded
+
+    for(int eo=0;eo<p_Nblock;++eo;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	const int e = bo+eo;
+	
+	if(e<Nelements){
+	  dfloat4 dq4dr, dq4ds;
+	  dq4dr.x = 0; dq4dr.y = 0; dq4dr.z = 0; dq4dr.w = 0;
+	  dq4ds.x = 0; dq4ds.y = 0; dq4ds.z = 0; dq4ds.w = 0;
+	  
+	  occaUnroll(p_Np)
+	    for(int m=0;m<p_Np;++m){
+	      const dfloat dr = DrT[n+m*p_Np];
+	      const dfloat ds = DsT[n+m*p_Np];
+
+	      dq4dr.x += dr*s_qx[eo][m]; dq4ds.x += ds*s_qx[eo][m];
+	      dq4dr.y += dr*s_qy[eo][m]; dq4ds.y += ds*s_qy[eo][m];
+	      dq4dr.z += dr*s_qz[eo][m]; dq4ds.z += ds*s_qz[eo][m];
+	      dq4dr.w += dr*s_qw[eo][m]; dq4ds.w += ds*s_qw[eo][m];
+	    }
+
+	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+	  dq4dx[n+e*p_Np] = drdx*dq4dr + dsdx*dq4ds;
+	  dq4dy[n+e*p_Np] = drdy*dq4dr + dsdy*dq4ds;
+	}
+      }
+    }
+  }
+}
+

@@ -1,0 +1,14 @@
+
+kernel void meshHaloExtract2D(const iint NhaloElements,
+			      const iint Nentries,
+			      const iint   * restrict haloElements,
+			      const dfloat * restrict q,
+			            dfloat * restrict haloq){
+
+  for(iint e=0;e<NhaloElements;++e;outer0){  // for all elements
+    for(iint n=0;n<Nentries;++n;inner0){     // for all entries in this element
+      const iint id = haloElements[e];
+      haloq[n + Nentries*e] = q[n + Nentries*id];
+    }
+  }
+}
