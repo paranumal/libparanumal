@@ -1,0 +1,39 @@
+
+kernel void meshAcousticsUpdate2D(const iint Ntotal,
+				  const dfloat dt,	
+				  const dfloat rka,
+				  const dfloat rkb,
+				  const dfloat * restrict rhsq,
+				  dfloat * restrict resq,
+				  dfloat * restrict q){
+				  
+  // Low storage Runge Kutta time step update
+  for(iint n=0;n<Ntotal;++n;tile(256)){
+    if(n<Ntotal){
+      dfloat resqn = resq[n];
+      resqn = rka*resqn + dt*rhsq[n];
+      resq[n] = resqn;
+      q[n] += rkb*resqn;
+    }
+  }
+}
+
+kernel void meshAcousticsUpdate2D_o1(const iint Ntotal,
+				     const dfloat dt,	
+				     const dfloat rka,
+				     const dfloat rkb,
+				     const dfloat4 * restrict rhsq,
+				     dfloat4 * restrict resq,
+				     dfloat4 * restrict q){
+				  
+  // Low storage Runge Kutta time step update (assume Ntotal is divisible by 4)
+  for(iint n=0;n<Ntotal/4;++n;tile(256)){
+    if(n<Ntotal/4){
+      dfloat4 resqn = resq[n];
+      resqn = rka*resqn + dt*rhsq[n];
+      resq[n] = resqn;
+      q[n] += rkb*resqn;
+    }
+  }
+}
+

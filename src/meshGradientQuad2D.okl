@@ -1,0 +1,38 @@
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3  
+
+kernel void meshGradientQuad2D(const int Nelements,
+			       const int Np,
+			       const int Nvgeo,
+			       const float *vgeo,
+			       const float *Dr,
+			       const float *Ds,
+			       const float *q,
+			       float *dqdx,
+			       float *dqdy
+			       ){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    for(int n=0;n<Np;++n;inner0){
+      /* improve coalescing of geometric factor loads */
+      int id = Np*Nvgeo*e + n;
+      float drdx = vgeo[id + Np*RXID];
+      float drdy = vgeo[id + Np*SXID];
+      float dsdx = vgeo[id + Np*RYID];
+      float dsdy = vgeo[id + Np*SYID];
+
+      float dqdr = 0, dqds = 0;
+      
+      for(int m=0;m<Np;++m)
+	dqdr += Dr[n*Np + m]*q[m + e*Np];
+      for(int m=0;m<Np;++m)
+	dqds += Ds[n*Np + m]*q[m + e*Np];
+
+      dqdx[n+e*Np] = drdx*dqdr + dsdx*dqds;
+      dqdy[n+e*Np] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
