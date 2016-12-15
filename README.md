@@ -1,2 +1,0 @@
-# holmes
-It's elementary.
