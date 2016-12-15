@@ -68,7 +68,6 @@ meshAcousticsVolume2D.o \
 
 mainAcoustics2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o mainAcoustics2D $(OBJS) $(paths) $(LIBS) 
-	rm -r $(OBJS)
 
 # what to do if user types "make clean"
 clean :
