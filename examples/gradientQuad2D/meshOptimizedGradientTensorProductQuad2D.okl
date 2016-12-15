@@ -1,0 +1,515 @@
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3  
+
+// baseline mesh Gradient
+kernel void meshGradientTensorProductQuad2D_v0(int Nelements, 
+					       int N, 
+					       int Np, 
+					       int Nvgeo,
+					       dfloat * vgeo, 
+					       dfloat * D, 
+					       dfloat * q, 
+					       dfloat * dqdx, 
+					       dfloat * dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+
+    // compute gradient at each node
+    for(int j=0;j<N+1;++j;inner1){
+      for(int i=0;i<N+1;++i;inner0){
+	
+	int n = i + (N+1)*j;
+
+	// load geometric factors
+	int gid = Np*Nvgeo*e + n;
+	float drdx = vgeo[gid + Np*RXID];
+	float drdy = vgeo[gid + Np*RYID];
+	float dsdx = vgeo[gid + Np*SXID];
+	float dsdy = vgeo[gid + Np*SYID];
+	
+	// matrix-vector multiplies
+	dfloat dqdr = 0, dqds = 0;
+	for(int m=0;m<N+1;++m){
+	  dqdr += D[i*(N+1) + m]*q[m + j*(N+1) + e*Np];
+	  dqds += D[j*(N+1) + m]*q[i + m*(N+1) + e*Np];
+	}
+	
+	// chain rule
+	dqdx[n+e*Np] = drdx*dqdr + dsdx*dqds;
+	dqdy[n+e*Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+// declare variables const and pointer restrict
+kernel void meshGradientTensorProductQuad2D_v1(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict D,
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx,
+					       dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    for(int j=0;j<N+1;++j;inner1){
+      for(int i=0;i<N+1;++i;inner0){
+	
+	const int n = i + (N+1)*j;
+	// load geometric factors
+	const int gid = Np*Nvgeo*e + n;
+	const float drdx = vgeo[gid + Np*RXID];
+	const float drdy = vgeo[gid + Np*RYID];
+	const float dsdx = vgeo[gid + Np*SXID];
+	const float dsdy = vgeo[gid + Np*SYID];
+	
+	dfloat dqdr = 0, dqds = 0;
+	for(int m=0;m<N+1;++m){
+	  dqdr += D[i*(N+1) + m]*q[m + j*(N+1) + e*Np];
+	  dqds += D[j*(N+1) + m]*q[i + m*(N+1) + e*Np];
+	}
+	
+	dqdx[n+e*Np] = drdx*dqdr + dsdx*dqds;
+	dqdy[n+e*Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+kernel void meshGradientTensorProductQuad2D_v2(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict D,
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx, 
+					       dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    for(int j=0;j<p_N+1;++j;inner1){
+      for(int i=0;i<p_N+1;++i;inner0){
+	
+	const int n = i + (p_N+1)*j;
+
+	const int gid = p_Np*p_Nvgeo*e + n;
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	dfloat dqdr = 0, dqds = 0;
+	for(int m=0;m<p_N+1;++m){
+	  dqdr += D[i*(p_N+1) + m]*q[m + j*(p_N+1) + e*p_Np];
+	  dqds += D[j*(p_N+1) + m]*q[i + m*(p_N+1) + e*p_Np];
+	}
+
+	dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;	
+	dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+// unroll the D loop
+kernel void meshGradientTensorProductQuad2D_v3(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict D, 
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx, 
+					       dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+
+    for(int j=0;j<N+1;++j;inner1){
+      for(int i=0;i<N+1;++i;inner0){
+	
+	const int n = i + (N+1)*j;    
+
+	const int gid = p_Np*p_Nvgeo*e + n;
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	dfloat dqdr = 0, dqds = 0;
+	occaUnroll(p_N+1)
+	for(int m=0;m<p_N+1;++m){
+	  dqdr += D[i*(p_N+1) + m]*q[m + j*(p_N+1) + e*p_Np];
+	  dqds += D[j*(p_N+1) + m]*q[i + m*(p_N+1) + e*p_Np];
+	}
+	
+	dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+	dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+
+// read from transpose(D)
+kernel void meshGradientTensorProductQuad2D_v4(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT, 
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx, 
+					       dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+
+    for(int j=0;j<p_N+1;++j;inner1){
+      for(int i=0;i<p_N+1;++i;inner0){
+	
+	const int n = i + (p_N+1)*j;
+	
+	const int gid = p_Np*p_Nvgeo*e + n;
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	dfloat dqdr = 0, dqds = 0;
+	
+	occaUnroll(p_N+1)
+	  for(int m=0;m<p_N+1;++m){
+	    dqdr += DT[i+m*(p_N+1)]*q[m + j*(p_N+1) + e*p_Np];
+	    dqds += DT[j+m*(p_N+1)]*q[i + m*(p_N+1) + e*p_Np];
+	  }
+	
+	dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+	dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+// load q node data for element e into shared memory
+kernel void meshGradientTensorProductQuad2D_v5(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT, 
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx, 
+					       dfloat * restrict dqdy){
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_q[p_N+1][p_N+1];
+
+    for(int j=0;j<p_N+1;++j;inner1){
+      for(int i=0;i<p_N+1;++i;inner0){
+	const int n = i + (p_N+1)*j;
+	s_q[j][i] = q[n+e*p_Np];
+      }
+    }
+
+    barrier(localMemFence); // make sure all nodes are loaded
+    
+    for(int j=0;j<p_N+1;++j;inner1){
+      for(int i=0;i<p_N+1;++i;inner0){
+	
+	const int n = i + (N+1)*j;
+	
+	const int gid = p_Np*p_Nvgeo*e + n;
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	dfloat dqdr = 0, dqds = 0;
+	
+	occaUnroll(p_N+1)
+	  for(int m=0;m<p_N+1;++m){
+	    dqdr += DT[i+m*(p_N+1)]*s_q[j][m];
+	    dqds += DT[j+m*(p_N+1)]*s_q[m][i];
+	  }
+	
+	dqdx[n+e*p_Np] = drdx*dqdr + dsdx*dqds;
+	dqdy[n+e*p_Np] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+
+
+kernel void meshGradientTensorProductQuad2D_v6(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT,
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx, 
+					       dfloat * restrict dqdy){
+  
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int node=0;node<p_Np*Nelements;++node;tile(p_Nthreads)){
+
+    // make sure this is valid node after tiling
+    if(node<p_Np*Nelements){
+      
+      // extract element and local node number
+      const int e = node/p_Np;
+      const int n = node%p_Np;
+      const int i = n%(p_N+1);
+      const int j = n/(p_N+1);
+      
+      // read geometric factors at this node
+      const int gid = p_Np*p_Nvgeo*e + n; 
+      const float drdx = vgeo[gid + p_Np*RXID];
+      const float drdy = vgeo[gid + p_Np*RYID];
+      const float dsdx = vgeo[gid + p_Np*SXID];
+      const float dsdy = vgeo[gid + p_Np*SYID];
+
+      // compute 'r' and 's' derivatives
+      dfloat dqdr = 0, dqds = 0;
+
+      occaUnroll(p_N+1)
+	for(int m=0;m<p_N+1;++m){
+	  dqdr += DT[i+m*(p_N+1)]*q[m + j*(p_N+1) + e*p_Np];
+	  dqds += DT[j+m*(p_N+1)]*q[i + m*(p_N+1) + e*p_Np];
+	}
+
+      // apply chain rule
+      dqdx[node] = drdx*dqdr + dsdx*dqds;
+      dqdy[node] = drdy*dqdr + dsdy*dqds;
+    }
+  }
+}
+
+
+// manually introduce tiling and prefetch DT to shared memory
+kernel void meshGradientTensorProductQuad2D_v7(const int Nelements,
+					       const int N, 
+					       const int Np,
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT,
+					       const dfloat * restrict q,
+					       dfloat * restrict dqdx,
+					       dfloat * restrict dqdy
+					       ){
+
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int block=0;block<(p_Np*Nelements+p_Nthreads-1)/p_Nthreads;++block;outer0){
+
+    shared dfloat s_DT[p_N+1][p_N+1];
+    
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int t=thread;
+      while(t<p_Np){
+	s_DT[0][t] = DT[t];
+	t += p_Nthreads;
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // make sure this is valid node after tiling
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int node = thread + block*p_Nthreads;
+
+      if(node<p_Np*Nelements){
+	
+	// extract element and local node number
+	const int e = node/p_Np;
+	const int n = node%p_Np;
+	const int i = n%(p_N+1);
+	const int j = n/(p_N+1);
+
+	// read geometric factors at this node
+	const int gid = p_Np*p_Nvgeo*e + n; 
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	// compute 'r' and 's' derivatives
+	dfloat dqdr = 0, dqds = 0;
+	
+	occaUnroll(p_N+1)
+	  for(int m=0;m<p_N+1;++m){
+	    dqdr += s_DT[m][i]*q[m + j*(p_N+1) + e*p_Np];
+	    dqds += s_DT[m][j]*q[i + m*(p_N+1) + e*p_Np];
+	  }
+
+	// apply chain rule
+	dqdx[node] = drdx*dqdr + dsdx*dqds;
+	dqdy[node] = drdy*dqdr + dsdy*dqds;
+      }
+    }
+  }
+}
+
+
+// manually introduce tiling and prefetch DT to shared memory
+kernel void meshGradientTensorProductQuad2D_v8(const int Nelements,
+					       const int N, 
+					       const int Np,
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT,
+					       const dfloat4 * restrict q4,
+					       dfloat4 * restrict dq4dx,
+					       dfloat4 * restrict dq4dy
+					       ){
+
+  // single loop variant - loop over all interpolation nodes in the mesh
+  for(int block=0;block<(p_Np*Nelements+p_Nthreads-1)/p_Nthreads;++block;outer0){
+
+    shared dfloat s_DT[p_N+1][p_N+1];
+    
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int t=thread;
+      while(t<p_Np){
+	s_DT[0][t] = DT[t];
+	t += p_Nthreads;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    // make sure this is valid node after tiling
+    for(int thread=0;thread<p_Nthreads;++thread;inner0){
+      int node = thread + block*p_Nthreads;
+
+      if(node<p_Np*Nelements){
+	
+	// extract element and local node number
+	const int e = node/p_Np;
+	const int n = node%p_Np;
+	const int i = n%(p_N+1);
+	const int j = n/(p_N+1);
+	
+	// read geometric factors
+	const int gid = p_Np*p_Nvgeo*e + n; 
+	const float drdx = vgeo[gid + p_Np*RXID];
+	const float drdy = vgeo[gid + p_Np*RYID];
+	const float dsdx = vgeo[gid + p_Np*SXID];
+	const float dsdy = vgeo[gid + p_Np*SYID];
+	
+	// compute 'r' and 's' derivatives
+	dfloat4 dq4dr;
+	dfloat4 dq4ds;
+	dq4dr.x = 0; dq4dr.y = 0; dq4dr.z = 0; dq4dr.w = 0;
+	dq4ds.x = 0; dq4ds.y = 0; dq4ds.z = 0; dq4ds.w = 0;
+
+	occaUnroll(p_N+1)
+	  for(int m=0;m<p_N+1;++m){
+	    dq4dr += s_DT[m][i]*q4[m + j*(p_N+1) + e*p_Np];
+	    dq4ds += s_DT[m][j]*q4[i + m*(p_N+1) + e*p_Np];
+	  }
+	
+	// apply chain rule
+	dq4dx[node] = drdx*dq4dr + dsdx*dq4ds;
+	dq4dy[node] = drdy*dq4dr + dsdy*dq4ds;
+      }
+    }
+  }
+}
+
+
+// hybrid version where we optimize number of elements handled in the inner block of v5 kernel
+kernel void meshGradientTensorProductQuad2D_v9(const int Nelements, 
+					       const int N, 
+					       const int Np, 
+					       const int Nvgeo,
+					       const dfloat * restrict vgeo,
+					       const dfloat * restrict DT, 
+					       const dfloat4 * restrict q4,
+					       dfloat4 * restrict dq4dx, 
+					       dfloat4 * restrict dq4dy){
+  
+  for(int bo=0;bo<Nelements;bo+=p_Nblock;outer0){
+
+    // store each of the four q fields in separate shared memory
+    // arrays to avoid bank conflicts
+    shared dfloat s_qx[p_Nblock][p_N+1][p_N+1], s_qy[p_Nblock][p_N+1][p_N+1];
+    shared dfloat s_qz[p_Nblock][p_N+1][p_N+1], s_qw[p_Nblock][p_N+1][p_N+1];
+    shared dfloat s_DT[p_N+1][p_N+1];
+
+    // loop over block of elements and nodes
+    for(int eo=0;eo<p_Nblock;++eo;inner2){
+      for(int j=0;j<p_N+1;++j;inner1){
+	for(int i=0;i<p_N+1;++i;inner0){
+	  
+	  const int e = bo+eo;
+	  
+	  if(e<Nelements){
+	    const int n = i + (p_N+1)*j;  
+	    const dfloat4 q4n = q4[n+e*p_Np];
+	    s_qx[eo][j][i] = q4n.x;
+	    s_qy[eo][j][i] = q4n.y;
+	    s_qz[eo][j][i] = q4n.z;
+	    s_qw[eo][j][i] = q4n.w;
+	    if(eo==0)
+	      s_DT[j][i] = DT[i + (p_N+1)*j];
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence); // make sure all nodes are loaded
+
+    for(int eo=0;eo<p_Nblock;++eo;inner2){
+      for(int j=0;j<p_N+1;++j;inner1){
+	for(int i=0;i<p_N+1;++i;inner0){
+	  const int e = bo+eo;
+	  
+	  if(e<Nelements){
+	    const int n = i + (p_N+1)*j;  
+	    dfloat4 dq4dr, dq4ds;
+	    dq4dr.x = 0; dq4dr.y = 0; dq4dr.z = 0; dq4dr.w = 0;
+	    dq4ds.x = 0; dq4ds.y = 0; dq4ds.z = 0; dq4ds.w = 0;
+	    
+	    occaUnroll(p_N+1)
+	      for(int m=0;m<p_N+1;++m){
+		const dfloat dr = s_DT[m][i];
+		const dfloat ds = s_DT[m][j];
+		dq4dr.x += dr*s_qx[eo][j][m];
+		dq4dr.y += dr*s_qy[eo][j][m];
+		dq4dr.z += dr*s_qz[eo][j][m];
+		dq4dr.w += dr*s_qw[eo][j][m];
+		
+		dq4ds.x += ds*s_qx[eo][m][i];
+		dq4ds.y += ds*s_qy[eo][m][i];
+		dq4ds.z += ds*s_qz[eo][m][i];
+		dq4ds.w += ds*s_qw[eo][m][i];
+	      }	    
+	    
+	    // read geometric factors
+	    const int gid = p_Np*p_Nvgeo*e + n; 
+	    const float drdx = vgeo[gid + p_Np*RXID];
+	    const float drdy = vgeo[gid + p_Np*RYID];
+	    const float dsdx = vgeo[gid + p_Np*SXID];
+	    const float dsdy = vgeo[gid + p_Np*SYID];
+	    
+	    dq4dx[n+e*p_Np] = drdx*dq4dr + dsdx*dq4ds;
+	    dq4dy[n+e*p_Np] = drdy*dq4dr + dsdy*dq4ds;
+	  }
+	}
+      }
+    }
+  }
+}
+
