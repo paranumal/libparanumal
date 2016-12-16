@@ -30,7 +30,7 @@ LIBS	=  $(links)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
 
 # list of objects to be compiled
-OBJS    = \
+AOBJS    = \
 acousticsCavitySolution2D.o \
 acousticsGaussianPulse2D.o \
 mainAcoustics2D.o \
@@ -42,7 +42,21 @@ meshAcousticsRun2D.o \
 meshAcousticsSetup2D.o \
 meshAcousticsSurface2D.o \
 meshAcousticsUpdate2D.o \
-meshAcousticsVolume2D.o \
+meshAcousticsVolume2D.o 
+
+
+# split PML objects
+POBJS    = \
+acousticsCavitySolution2D.o \
+acousticsGaussianPulse2D.o \
+mainAcousticsSplitPml2D.o \
+meshAcousticsError2D.o \
+meshAcousticsSplitPmlRun2D.o \
+meshAcousticsSplitPmlSetup2D.o \
+meshAcousticsComputeVorticity2D.o
+
+# library objects
+LOBJS = \
 ../../src/meshConnect2D.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -66,8 +80,11 @@ meshAcousticsVolume2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-mainAcoustics2D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o mainAcoustics2D $(OBJS) $(paths) $(LIBS) 
+mainAcoustics2D:$(AOBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o mainAcoustics2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
+mainAcousticsSplitPml2D:$(POBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o mainAcousticsSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
