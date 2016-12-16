@@ -183,22 +183,22 @@ void meshAcousticsSetupQuad2D(mesh2D *mesh){
   }
 
   mesh->acousticsVolumeKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsVolume2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshAcousticsVolume2D.okl",
 				       "meshAcousticsVolume2D_o0",
 				       kernelInfo);
 
   mesh->acousticsSurfaceKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsSurface2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshAcousticsSurface2D.okl",
 				       "meshAcousticsSurface2D_o0",
 				       kernelInfo);
 
   mesh->acousticsUpdateKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsUpdate2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshAcousticsUpdate2D.okl",
 				       "meshAcousticsUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("src/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
 
@@ -214,7 +214,7 @@ void meshAcousticsSetupQuad2D(mesh2D *mesh){
     sprintf(kernelNames[ker], "meshAcousticsVolume2D_o%d", ker);
     
     meshAcousticsVolumeKernels[ker] =
-      mesh->device.buildKernelFromSource("src/meshAcousticsVolume2D.okl", kernelNames[ker], kernelInfo);
+      mesh->device.buildKernelFromSource("okl/meshAcousticsVolume2D.okl", kernelNames[ker], kernelInfo);
     
     mesh->device.finish();
     occa::tic(kernelNames[ker]);
