@@ -6,9 +6,9 @@
 #define USE_2_STREAMS
 // #undef USE_2_STREAMS
 
-void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
+void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
 
-  mesh->Nfields = 8;
+  mesh->Nfields = 4;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -43,7 +43,7 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->sigmay= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
   // set temperature, gas constant, wave speeds
-  mesh->RT = 9.;
+  mesh->RT = 1.;
   mesh->sqrtRT = sqrt(mesh->RT);  
   
   // initial conditions
@@ -55,9 +55,6 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   dfloat q1bar = rho;
   dfloat q2bar = ramp*rho*u/mesh->sqrtRT;
   dfloat q3bar = ramp*rho*v/mesh->sqrtRT;
-  dfloat q4bar = ramp*ramp*(rho*u*v - sigma12)/mesh->RT;
-  dfloat q5bar = ramp*ramp*(rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
-  dfloat q6bar = ramp*ramp*(rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -66,26 +63,9 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-#if 0
-      boltzmannCavitySolution2D(x, y, t,
-				mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
-#endif
-
-#if 0
-      boltzmannGaussianPulse2D(x, y, t,
-			       mesh->q+cnt,
-			       mesh->q+cnt+1,
-			       mesh->q+cnt+2,
-			       mesh->q+cnt+3,
-			       mesh->q+cnt+4,
-			       mesh->q+cnt+5);
-#endif
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
       mesh->q[cnt+1] = q2bar;
       mesh->q[cnt+2] = q3bar;
-      mesh->q[cnt+3] = q4bar;
-      mesh->q[cnt+4] = q5bar;
-      mesh->q[cnt+5] = q6bar;
     
       cnt += mesh->Nfields;
 
@@ -93,16 +73,10 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->pmlqx[id+0*mesh->Np] = 0.f*q1bar;
       mesh->pmlqx[id+1*mesh->Np] = 0.f*q2bar;
       mesh->pmlqx[id+2*mesh->Np] = 0.f*q3bar;
-      mesh->pmlqx[id+3*mesh->Np] = 0.f*q4bar;
-      mesh->pmlqx[id+4*mesh->Np] = 0.f*q5bar;
-      mesh->pmlqx[id+5*mesh->Np] = 0.f*q6bar;
 
       mesh->pmlqy[id+0*mesh->Np] = 0.f*q1bar;
       mesh->pmlqy[id+1*mesh->Np] = 0.f*q2bar;
       mesh->pmlqy[id+2*mesh->Np] = 0.f*q3bar;
-      mesh->pmlqy[id+3*mesh->Np] = 0.f*q4bar;
-      mesh->pmlqy[id+4*mesh->Np] = 0.f*q5bar;
-      mesh->pmlqy[id+5*mesh->Np] = 0.f*q6bar;
     }
   }
 
@@ -135,13 +109,6 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
     cy /= mesh->Nverts;
     
     // add element outside [xmin,xmax]x[ymin,ymax] to pml
-#if 0
-    if(cx<xmin || cx>xmax)
-      mesh->sigmax[e] = xsigma;
-    if(cy<ymin || cy>ymax)
-      mesh->sigmay[e] = ysigma;
-#endif
-    
     for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
       dfloat y = mesh->y[n + e*mesh->Np];
@@ -402,9 +369,6 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
-  kernelInfo.addDefine("p_q4bar", q4bar);
-  kernelInfo.addDefine("p_q5bar", q5bar);
-  kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
@@ -432,26 +396,20 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  mesh->boltzmannSplitPmlVolumeKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlVolume2D.okl",
-				       "meshBoltzmannSplitPmlVolume2D",
+  mesh->acousticsSplitPmlVolumeKernel =
+    mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlVolume2D.okl",
+				       "meshAcousticsSplitPmlVolume2D",
 				       kernelInfo);
   printf("starting surface\n");
-  mesh->boltzmannSplitPmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlSurface2D.okl",
-				       "meshBoltzmannSplitPmlSurface2D",
+  mesh->acousticsSplitPmlSurfaceKernel =
+    mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlSurface2D.okl",
+				       "meshAcousticsSplitPmlSurface2D",
 				       kernelInfo);
   printf("ending surface\n");
-#if 0
-  mesh->boltzmannPartialSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannPartialSurface2D.okl",
-				       "meshBoltzmannPartialSurface2D",
-				       kernelInfo);
-#endif
 
-  mesh->boltzmannSplitPmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlUpdate2D.okl",
-				       "meshBoltzmannSplitPmlUpdate2D",
+  mesh->acousticsSplitPmlUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlUpdate2D.okl",
+				       "meshAcousticsSplitPmlUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
