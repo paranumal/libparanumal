@@ -388,18 +388,18 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--fmad=false"); // compiler option for cuda
   }
 
-  mesh->acousticsSplitPmlVolumeKernel =
+  mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlVolume2D.okl",
 				       "meshAcousticsSplitPmlVolume2D",
 				       kernelInfo);
   printf("starting surface\n");
-  mesh->acousticsSplitPmlSurfaceKernel =
+  mesh->surfaceKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlSurface2D.okl",
 				       "meshAcousticsSplitPmlSurface2D",
 				       kernelInfo);
   printf("ending surface\n");
 
-  mesh->acousticsSplitPmlUpdateKernel =
+  mesh->updateKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsSplitPmlUpdate2D.okl",
 				       "meshAcousticsSplitPmlUpdate2D",
 				       kernelInfo);

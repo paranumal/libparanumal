@@ -76,14 +76,14 @@ void meshAcousticsOccaRun3D(mesh3D *mesh){
       }
       
       // compute volume contribution to DG acoustics RHS
-      mesh->acousticsVolumeKernel(mesh->Nelements,
-				  mesh->o_vgeo,
-				  mesh->o_DrT,
-				  mesh->o_DsT,
-				  mesh->o_DtT,
-				  mesh->o_q,
-				  mesh->o_rhsq);
-
+      mesh->volumeKernel(mesh->Nelements,
+			 mesh->o_vgeo,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
+			 mesh->o_DtT,
+			 mesh->o_q,
+			 mesh->o_rhsq);
+      
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish3D(mesh);
@@ -94,28 +94,28 @@ void meshAcousticsOccaRun3D(mesh3D *mesh){
       }
       
       // compute surface contribution to DG acoustics RHS
-      mesh->acousticsSurfaceKernel(mesh->Nelements,
-				   mesh->o_sgeo,
-				   mesh->o_LIFTT,
-				   mesh->o_vmapM,
-				   mesh->o_vmapP,
-				   mesh->o_EToB,
-				   time,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_z,
-				   mesh->o_q,
-				   mesh->o_rhsq);
+      mesh->surfaceKernel(mesh->Nelements,
+			  mesh->o_sgeo,
+			  mesh->o_LIFTT,
+			  mesh->o_vmapM,
+			  mesh->o_vmapP,
+			  mesh->o_EToB,
+			  time,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_q,
+			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
-      mesh->acousticsUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-				  mesh->dt,
-				  mesh->rka[rk],
-				  mesh->rkb[rk],
-				  mesh->o_rhsq,
-				  mesh->o_resq,
-				  mesh->o_q);
-				  
+      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_rhsq,
+			 mesh->o_resq,
+			 mesh->o_q);
+      
     }
     
     // estimate maximum error

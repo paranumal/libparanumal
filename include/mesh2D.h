@@ -220,32 +220,13 @@ typedef struct {
 
   occa::kernel haloExtractKernel;
   
-  occa::kernel acousticsVolumeKernel;
-  occa::kernel acousticsSurfaceKernel;
-  occa::kernel acousticsPartialSurfaceKernel;
-  occa::kernel acousticsUpdateKernel;
+  occa::kernel volumeKernel;
+  occa::kernel surfaceKernel;
+  occa::kernel partialSurfaceKernel;
+  occa::kernel updateKernel;
 
-
-  occa::kernel acousticsSplitPmlVolumeKernel;
-  occa::kernel acousticsSplitPmlSurfaceKernel;
-  occa::kernel acousticsSplitPmlUpdateKernel;
-
-  occa::kernel acousticsPmlKernel;
-  occa::kernel acousticsPmlUpdateKernel;
-
-  occa::kernel boltzmannVolumeKernel;
-  occa::kernel boltzmannSurfaceKernel;
-  occa::kernel boltzmannUpdateKernel;
-
-  occa::kernel boltzmannPmlVolumeKernel;
-  occa::kernel boltzmannPmlSurfaceKernel;
-  occa::kernel boltzmannPmlUpdateKernel;
-
-  occa::kernel boltzmannSplitPmlVolumeKernel;
-  occa::kernel boltzmannSplitPmlSurfaceKernel;
-  occa::kernel boltzmannSplitPmlUpdateKernel;
-
-  
+  occa::kernel pmlKernel;
+  occa::kernel pmlUpdateKernel;
   
 }mesh2D;
 

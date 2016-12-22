@@ -182,17 +182,17 @@ void meshAcousticsSetupQuad2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  mesh->acousticsVolumeKernel =
+  mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsVolume2D.okl",
 				       "meshAcousticsVolume2D_o0",
 				       kernelInfo);
 
-  mesh->acousticsSurfaceKernel =
+  mesh->surfaceKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsSurface2D.okl",
 				       "meshAcousticsSurface2D_o0",
 				       kernelInfo);
 
-  mesh->acousticsUpdateKernel =
+  mesh->updateKernel =
     mesh->device.buildKernelFromSource("okl/meshAcousticsUpdate2D.okl",
 				       "meshAcousticsUpdate2D",
 				       kernelInfo);
@@ -228,7 +228,7 @@ void meshAcousticsSetupQuad2D(mesh2D *mesh){
     mesh->device.finish();
     double elapsed = occa::toc(kernelNames[ker]);
     if(elapsed<bestElapsed){
-      mesh->acousticsVolumeKernel = meshAcousticsVolumeKernels[ker];
+      mesh->volumeKernel = meshAcousticsVolumeKernels[ker];
       printf("promoting kernel: %d (time %g)\n", ker, elapsed);
       bestElapsed = elapsed;
     }
