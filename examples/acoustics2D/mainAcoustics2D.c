@@ -27,9 +27,9 @@ int main(int argc, char **argv){
 
   // run
   //meshAcousticsRun2D(mesh);
-  //meshAcousticsOccaRun2D(mesh);
+  meshAcousticsOccaRun2D(mesh);
   //  meshAcousticsOccaAsyncRun2D(mesh);
-  meshAcousticsSplitSurfaceOccaAsyncRun2D(mesh);
+  //  meshAcousticsSplitSurfaceOccaAsyncRun2D(mesh);
 
   // close down MPI
   MPI_Finalize();

@@ -5,12 +5,12 @@
 void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
 			  dfloat uM, dfloat vM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *pP){
-  if(bc==1){
+  if(1){//bc==1){
     *uP = -uM;	
     *vP = -vM;	
     *pP = pM;	
   }		
-  if(bc==2){	
+  if(0){ // (bc==2){	
     dfloat dx = 1.f/sqrt(2.f);
     dfloat dy = 1.f/sqrt(2.f);
     dfloat omega = 10.f*M_PI;
