@@ -48,14 +48,16 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   
   // initial conditions
   // uniform flow
-  dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f);
+  dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
+  //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
+  dfloat ramp = 1.f;
   dfloat q1bar = rho;
-  dfloat q2bar = rho*u/mesh->sqrtRT;
-  dfloat q3bar = rho*v/mesh->sqrtRT;
-  dfloat q4bar = (rho*u*v - sigma12)/mesh->RT;
-  dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
-  dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
+  dfloat q2bar = ramp*rho*u/mesh->sqrtRT;
+  dfloat q3bar = ramp*rho*v/mesh->sqrtRT;
+  dfloat q4bar = ramp*ramp*(rho*u*v - sigma12)/mesh->RT;
+  dfloat q5bar = ramp*ramp*(rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
+  dfloat q6bar = ramp*ramp*(rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -108,7 +110,10 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   // nu = R*T*tau
   // 1/tau = RT/nu
   //  dfloat nu = 1.e-2/.5;
-  dfloat nu = 1.e-3/.5;
+  //  dfloat nu = 1.e-3/.5;
+  //  dfloat nu = 5.e-4;
+  //    dfloat nu = 1.e-2; TW works for start up fence
+  dfloat nu = 6.e-3; 
   mesh->tauInv = mesh->RT/nu; // TW
   
   // set penalty parameter
@@ -117,7 +122,8 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   // find elements with center inside PML zone
   dfloat xmin = -4, xmax = 4, ymin = -4, ymax = 4;
-  dfloat xsigma = 20, ysigma = 20;
+  dfloat xsigma = 40, ysigma = 40;
+  //    dfloat xsigma = 0, ysigma = 0;
   
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
@@ -142,12 +148,16 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
       {
 	if(cx>xmax)
+	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
 	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
 	if(cx<xmin)
+	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
 	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
 	if(cy>ymax)
+	  //	  mesh->sigmay[mesh->Np*e + n] = ysigma;
 	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
 	if(cy<ymin)
+	  //  mesh->sigmay[mesh->Np*e + n] = ysigma;
 	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
       }
     }
@@ -172,7 +182,7 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = .4; // depends on the stability region size
+  dfloat cfl = .4; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)
@@ -423,29 +433,29 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   }
 
   mesh->boltzmannSplitPmlVolumeKernel =
-    mesh->device.buildKernelFromSource("src/meshBoltzmannSplitPmlVolume2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlVolume2D.okl",
 				       "meshBoltzmannSplitPmlVolume2D",
 				       kernelInfo);
   printf("starting surface\n");
   mesh->boltzmannSplitPmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("src/meshBoltzmannSplitPmlSurface2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlSurface2D.okl",
 				       "meshBoltzmannSplitPmlSurface2D",
 				       kernelInfo);
   printf("ending surface\n");
 #if 0
   mesh->boltzmannPartialSurfaceKernel =
-    mesh->device.buildKernelFromSource("src/meshBoltzmannPartialSurface2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshBoltzmannPartialSurface2D.okl",
 				       "meshBoltzmannPartialSurface2D",
 				       kernelInfo);
 #endif
 
   mesh->boltzmannSplitPmlUpdateKernel =
-    mesh->device.buildKernelFromSource("src/meshBoltzmannSplitPmlUpdate2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlUpdate2D.okl",
 				       "meshBoltzmannSplitPmlUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("src/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
   
