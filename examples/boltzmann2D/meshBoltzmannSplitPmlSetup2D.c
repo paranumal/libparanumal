@@ -122,7 +122,7 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   // find elements with center inside PML zone
   dfloat xmin = -4, xmax = 4, ymin = -4, ymax = 4;
-  dfloat xsigma = 40, ysigma = 40;
+  dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
   
   for(iint e=0;e<mesh->Nelements;++e){
@@ -382,6 +382,8 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
 
+  kernelInfo.addDefine("p_pmlAlpha", (float).2);
+  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 

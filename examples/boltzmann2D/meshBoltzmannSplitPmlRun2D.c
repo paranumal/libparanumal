@@ -79,7 +79,7 @@ void meshBoltzmannSplitPmlOccaRun2D(mesh2D *mesh){
 					   mesh->o_rhspmlqy);
       
       // update solution using Runge-Kutta
-      iint recombine = (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
+      iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->boltzmannSplitPmlUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 					  recombine,
 					  mesh->dt,

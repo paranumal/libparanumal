@@ -61,6 +61,9 @@ kernel void meshBoltzmannSplitPmlVolume2D(const iint Nelements,
 	  const dfloat sigmaxe = sigmax[e*p_Np+n];
 	  const dfloat sigmaye = sigmay[e*p_Np+n];
 
+	  const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+	  const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+
 	  iint base = e*p_Np*p_Nfields+n;
 	  dfloat pmlqx1 = pmlqx[base+0*p_Np];
 	  dfloat pmlqx2 = pmlqx[base+1*p_Np];
@@ -148,19 +151,19 @@ kernel void meshBoltzmannSplitPmlVolume2D(const iint Nelements,
 	  rhspmlqy6 += 0.5f*N6;
 	  
 	  // pml relaxation back to mean flow
-	  rhspmlqx1 += -sigmaxe*(pmlqx1);
-	  rhspmlqx2 += -sigmaxe*(pmlqx2);
-	  rhspmlqx3 += -sigmaxe*(pmlqx3);
-	  rhspmlqx4 += -sigmaxe*(pmlqx4) + 0.5f*sigmaxe*pmlNT4;
-	  rhspmlqx5 += -sigmaxe*(pmlqx5) + 0.5f*sigmaxe*pmlNT5;
-	  rhspmlqx6 += -sigmaxe*(pmlqx6) + 0.5f*sigmaxe*pmlNT6;
+	  rhspmlqx1 += -msigmaxe*(pmlqx1);
+	  rhspmlqx2 += -msigmaxe*(pmlqx2);
+	  rhspmlqx3 += -msigmaxe*(pmlqx3);
+	  rhspmlqx4 += -msigmaxe*(pmlqx4) + 0.5f*msigmaxe*pmlNT4;
+	  rhspmlqx5 += -msigmaxe*(pmlqx5) + 0.5f*msigmaxe*pmlNT5;
+	  rhspmlqx6 += -msigmaxe*(pmlqx6) + 0.5f*msigmaxe*pmlNT6;
 
-	  rhspmlqy1 += -sigmaye*(pmlqy1);
-	  rhspmlqy2 += -sigmaye*(pmlqy2);
-	  rhspmlqy3 += -sigmaye*(pmlqy3);
-	  rhspmlqy4 += -sigmaye*(pmlqy4) + 0.5f*sigmaye*pmlNT4;
-	  rhspmlqy5 += -sigmaye*(pmlqy5) + 0.5f*sigmaye*pmlNT5;
-	  rhspmlqy6 += -sigmaye*(pmlqy6) + 0.5f*sigmaye*pmlNT6;
+	  rhspmlqy1 += -msigmaye*(pmlqy1);
+	  rhspmlqy2 += -msigmaye*(pmlqy2);
+	  rhspmlqy3 += -msigmaye*(pmlqy3);
+	  rhspmlqy4 += -msigmaye*(pmlqy4) + 0.5f*msigmaye*pmlNT4;
+	  rhspmlqy5 += -msigmaye*(pmlqy5) + 0.5f*msigmaye*pmlNT5;
+	  rhspmlqy6 += -msigmaye*(pmlqy6) + 0.5f*msigmaye*pmlNT6;
 	  
 	  rhspmlqx[base+0*p_Np] = rhspmlqx1;
 	  rhspmlqx[base+1*p_Np] = rhspmlqx2;

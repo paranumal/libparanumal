@@ -101,18 +101,18 @@ kernel void meshAcousticsSplitPmlVolume2D(const iint Nelements,
 	  // pml relaxation back to mean flow
 	  rhspmlqx1 += -sigmaxe*(pmlqx1);
 	  rhspmlqx2 += -sigmaxe*(pmlqx2);
-	  rhspmlqx3 += -sigmaxe*(pmlqx3);
+	  rhspmlqx3 += 0.f; -sigmaxe*(pmlqx3);
 
 	  rhspmlqy1 += -sigmaye*(pmlqy1);
-	  rhspmlqy2 += -sigmaye*(pmlqy2);
+	  rhspmlqy2 += 0.f; -sigmaye*(pmlqy2);
 	  rhspmlqy3 += -sigmaye*(pmlqy3);
 	  
 	  rhspmlqx[base+0*p_Np] = rhspmlqx1;
 	  rhspmlqx[base+1*p_Np] = rhspmlqx2;
-	  rhspmlqx[base+2*p_Np] = rhspmlqx3;
+	  rhspmlqx[base+2*p_Np] = 0; rhspmlqx3;
 	  
 	  rhspmlqy[base+0*p_Np] = rhspmlqy1;
-	  rhspmlqy[base+1*p_Np] = rhspmlqy2;
+	  rhspmlqy[base+1*p_Np] = 0; rhspmlqy2;
 	  rhspmlqy[base+2*p_Np] = rhspmlqy3;
 	}
       }

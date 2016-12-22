@@ -7,9 +7,9 @@ void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat q1B, const dfloat q2B, const dfloat q3B,
               dfloat * restrict q1P, dfloat * restrict q2P, dfloat * restrict q3P){
   
-  *q1P = 0.5f*(q1B + q1M) - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M));
-  *q2P = 0.5f*(q2B + q2M) - p_isq12*(nx*(q1B-q1M));
-  *q3P = 0.5f*(q3B + q3M) - p_isq12*(ny*(q1B-q1M));
+  *q1P = 0.5f*(q1B + q1M) - 0.5f*(nx*(q2B-q2M) + ny*(q3B-q3M));
+  *q2P = 0.5f*(q2B + q2M) - 0.5f*(nx*(q1B-q1M));
+  *q3P = 0.5f*(q3B + q3M) - 0.5f*(ny*(q1B-q1M));
 }
 
 
@@ -22,11 +22,12 @@ void boundaryConditions2D(const iint bc,
     *q2B = -q2M;
     *q3B = -q3M;
   }
-  if(bc>1){ // wall for non-mean flow
-    *q1B = 2.f*p_q1bar - q1M; // q1M; 
-    *q2B = 2.f*p_q2bar - q2M; // q2M - 2.f*((q2M-p_q2bar)*nx + (q3M-p_q3bar)*ny)*nx;
-    *q3B = 2.f*p_q3bar - q3M; // q3M - 2.f*((q2M-p_q2bar)*nx + (q3M-p_q3bar)*ny)*ny;
+  if(bc==2){ // wall for non-mean flow
+    *q1B = 2.f*p_q1bar - q1M;
+    *q2B = 2.f*p_q2bar - q2M;
+    *q3B = 2.f*p_q3bar - q3M;
   }
+  if(bc==6){ // Ricker source
 }
 
 
@@ -81,11 +82,11 @@ kernel void meshAcousticsSplitPmlSurface2D(const iint Nelements,
 	    if(idP<0) idP = idM;
     
 	    // load negative and positive trace node values of q
-	    const dfloat4 qMa = q[idM];
-	    const dfloat4 qPa = q[idP];
+	    const dfloat4 qM = q[idM];
+	    const dfloat4 qP = q[idP];
 
-	    const dfloat q1M = qMa.x, q2M = qMa.y, q3M = qMa.z;
-	    dfloat q1P = qPa.x, q2P = qPa.y, q3P = qPa.z;
+	    const dfloat q1M = qM.x, q2M = qM.y, q3M = qM.z;
+	    dfloat q1P = qP.x, q2P = qP.y, q3P = qP.z;
 
 	    // apply boundary condition
 	    iint bc = EToB[face+p_Nfaces*e];
@@ -144,10 +145,10 @@ kernel void meshAcousticsSplitPmlSurface2D(const iint Nelements,
 	    const iint base = e*p_Np*p_Nfields+n;
 	    rhspmlqx[base+0*p_Np] -= p_sqrtRT*(Lnxdq2);
 	    rhspmlqx[base+1*p_Np] -= p_sqrtRT*(Lnxdq1);
-	    rhspmlqx[base+2*p_Np] -= 0.f;
+	    rhspmlqx[base+2*p_Np] = 0.f;
 
 	    rhspmlqy[base+0*p_Np] -= p_sqrtRT*(Lnydq3);
-	    rhspmlqy[base+1*p_Np] -= 0.f;
+	    rhspmlqy[base+1*p_Np] = 0.f;
 	    rhspmlqy[base+2*p_Np] -= p_sqrtRT*(Lnydq1);
 	  }
 	}

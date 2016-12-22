@@ -217,12 +217,18 @@ typedef struct {
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
   
   occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
+
+  occa::kernel haloExtractKernel;
   
   occa::kernel acousticsVolumeKernel;
   occa::kernel acousticsSurfaceKernel;
   occa::kernel acousticsPartialSurfaceKernel;
   occa::kernel acousticsUpdateKernel;
-  occa::kernel haloExtractKernel;
+
+
+  occa::kernel acousticsSplitPmlVolumeKernel;
+  occa::kernel acousticsSplitPmlSurfaceKernel;
+  occa::kernel acousticsSplitPmlUpdateKernel;
 
   occa::kernel acousticsPmlKernel;
   occa::kernel acousticsPmlUpdateKernel;
@@ -372,6 +378,8 @@ void acousticsCavitySolution2D(dfloat x, dfloat y, dfloat time,
 // initial Gaussian pulse
 void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 			      dfloat *u, dfloat *v, dfloat *p);
+
+void meshAcousticsComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
 // Boltzmann model
 void meshBoltzmannSetup2D(mesh2D *mesh);

@@ -34,6 +34,8 @@ void meshAcousticsSetup2D(mesh2D *mesh){
       acousticsGaussianPulse2D(x, y, t,
 			       mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
 #endif
+      mesh->q[cnt+2] = 1.;
+      
       cnt += mesh->Nfields;
     }
   }

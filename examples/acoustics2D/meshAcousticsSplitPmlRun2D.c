@@ -50,6 +50,7 @@ void meshAcousticsSplitPmlOccaRun2D(mesh2D *mesh){
 					  mesh->o_pmlqy,
 					  mesh->o_rhspmlqx,
 					  mesh->o_rhspmlqy);
+
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
@@ -73,7 +74,26 @@ void meshAcousticsSplitPmlOccaRun2D(mesh2D *mesh){
 					   mesh->o_q,
 					   mesh->o_rhspmlqx,
 					   mesh->o_rhspmlqy);
-      
+
+
+      if(!(tstep%5000)){
+
+	mesh->o_rhspmlqx.copyTo(mesh->rhspmlqx);
+	mesh->o_rhspmlqy.copyTo(mesh->rhspmlqy);
+	
+	
+	dfloat maxrhsx = 0, maxrhsy = 0;
+	for(int e=0;e<mesh->Nelements;++e){
+	  for(int fld=0;fld<3;++fld){
+	    for(int n=0;n<mesh->Np;++n){
+	      maxrhsx = mymax(maxrhsx, fabs(mesh->rhspmlqx[n+fld*mesh->Np+mesh->Nfields*e*mesh->Np]));
+	      maxrhsy = mymax(maxrhsy, fabs(mesh->rhspmlqy[n+fld*mesh->Np+mesh->Nfields*e*mesh->Np]));
+	    }
+	  }
+	}
+	printf("maxrhsx*dt=%lg, maxrhsqy*dt=%lg\n", mesh->dt*maxrhsx, mesh->dt*maxrhsy);
+      }
+
       // update solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->acousticsSplitPmlUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,

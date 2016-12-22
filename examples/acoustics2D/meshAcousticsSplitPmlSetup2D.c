@@ -32,23 +32,16 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
   mesh->respmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
-  mesh->pmlNT    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				    sizeof(dfloat));
-  mesh->rhspmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				    sizeof(dfloat));
-  mesh->respmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				    sizeof(dfloat));
-  
   mesh->sigmax= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   mesh->sigmay= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
   // set temperature, gas constant, wave speeds
   mesh->RT = 1.;
-  mesh->sqrtRT = sqrt(mesh->RT);  
+  mesh->sqrtRT = 1.; // sqrt(mesh->RT);  
   
   // initial conditions
   // uniform flow
-  dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
+  dfloat rho = 1, u = 0, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
   dfloat ramp = 1.f;
@@ -56,6 +49,8 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
   dfloat q2bar = ramp*rho*u/mesh->sqrtRT;
   dfloat q3bar = ramp*rho*v/mesh->sqrtRT;
 
+  printf("%17.15lf %17.15lf %17.15lf\n", q1bar, q2bar, q3bar);
+  
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -114,18 +109,20 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
       dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
       {
+	mesh->sigmax[mesh->Np*e+n] = 1e-12;
+	mesh->sigmay[mesh->Np*e+n] = 1e-12;
 	if(cx>xmax)
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+	  mesh->sigmax[mesh->Np*e + n] = xsigma;
+	//	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
 	if(cx<xmin)
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+	  mesh->sigmax[mesh->Np*e + n] = xsigma;
+	//	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
 	if(cy>ymax)
-	  //	  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+	  mesh->sigmay[mesh->Np*e + n] = ysigma;
+	//	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
 	if(cy<ymin)
-	  //  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+	  mesh->sigmay[mesh->Np*e + n] = ysigma;
+	//	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
       }
     }
   }
@@ -250,13 +247,6 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
   mesh->o_respmlqy =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
 
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_respmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-
   
   mesh->o_sigmax =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
@@ -365,11 +355,12 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
+  kernelInfo.addDefine("p_pmlAlpha", (float)1.e-2);
 
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
-  kernelInfo.addDefine("p_alpha0", (float).01f);
+
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
     kernelInfo.addDefine("dfloat4","float4");
@@ -389,11 +380,12 @@ void meshAcousticsSplitPmlSetup2D(mesh2D *mesh){
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("--ftz=true");
-    kernelInfo.addCompilerFlag("--prec-div=false");
-    kernelInfo.addCompilerFlag("--prec-sqrt=false");
-    kernelInfo.addCompilerFlag("--use_fast_math");
-    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    //    kernelInfo.addCompilerFlag("--ftz=true");
+    //    kernelInfo.addCompilerFlag("--prec-div=false");
+    //    kernelInfo.addCompilerFlag("--prec-sqrt=false");
+    //    kernelInfo.addCompilerFlag("--use_fast_math");
+    //kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo.addCompilerFlag("--fmad=false"); // compiler option for cuda
   }
 
   mesh->acousticsSplitPmlVolumeKernel =
