@@ -114,9 +114,9 @@ typedef struct {
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
   
-  occa::kernel acousticsVolumeKernel;
-  occa::kernel acousticsSurfaceKernel;
-  occa::kernel acousticsUpdateKernel;
+  occa::kernel volumeKernel;
+  occa::kernel surfaceKernel;
+  occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
 }mesh3D;
 

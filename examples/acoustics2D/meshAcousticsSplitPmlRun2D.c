@@ -39,18 +39,18 @@ void meshAcousticsSplitPmlOccaRun2D(mesh2D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      mesh->acousticsSplitPmlVolumeKernel(mesh->Nelements,
-					  mesh->o_vgeo,
-					  mesh->o_sigmax,
-					  mesh->o_sigmay,
-					  mesh->o_DrT,
-					  mesh->o_DsT,
-					  mesh->o_q,
-					  mesh->o_pmlqx,
-					  mesh->o_pmlqy,
-					  mesh->o_rhspmlqx,
-					  mesh->o_rhspmlqy);
-
+      mesh->volumeKernel(mesh->Nelements,
+			 mesh->o_vgeo,
+			 mesh->o_sigmax,
+			 mesh->o_sigmay,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
+			 mesh->o_q,
+			 mesh->o_pmlqx,
+			 mesh->o_pmlqy,
+			 mesh->o_rhspmlqx,
+			 mesh->o_rhspmlqy);
+      
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
@@ -62,20 +62,20 @@ void meshAcousticsSplitPmlOccaRun2D(mesh2D *mesh){
       }
       
       // compute surface contribution to DG acoustics RHS
-      mesh->acousticsSplitPmlSurfaceKernel(mesh->Nelements,
-					   mesh->o_sgeo,
-					   mesh->o_LIFTT,
-					   mesh->o_vmapM,
-					   mesh->o_vmapP,
-					   mesh->o_EToB,
-					   t,
-					   mesh->o_x,
-					   mesh->o_y,
-					   mesh->o_q,
-					   mesh->o_rhspmlqx,
-					   mesh->o_rhspmlqy);
-
-
+      mesh->surfaceKernel(mesh->Nelements,
+			  mesh->o_sgeo,
+			  mesh->o_LIFTT,
+			  mesh->o_vmapM,
+			  mesh->o_vmapP,
+			  mesh->o_EToB,
+			  t,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_q,
+			  mesh->o_rhspmlqx,
+			  mesh->o_rhspmlqy);
+      
+      
       if(!(tstep%5000)){
 
 	mesh->o_rhspmlqx.copyTo(mesh->rhspmlqx);
@@ -96,18 +96,18 @@ void meshAcousticsSplitPmlOccaRun2D(mesh2D *mesh){
 
       // update solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
-      mesh->acousticsSplitPmlUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-					  recombine,
-					  mesh->dt,
-					  mesh->rka[rk],
-					  mesh->rkb[rk],
-					  mesh->o_rhspmlqx,
-					  mesh->o_rhspmlqy,
-					  mesh->o_respmlqx,
-					  mesh->o_respmlqy,
-					  mesh->o_pmlqx,
-					  mesh->o_pmlqy,
-					  mesh->o_q);
+      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+			 recombine,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_rhspmlqx,
+			 mesh->o_rhspmlqy,
+			 mesh->o_respmlqx,
+			 mesh->o_respmlqy,
+			 mesh->o_pmlqx,
+			 mesh->o_pmlqy,
+			 mesh->o_q);
       
     }
     

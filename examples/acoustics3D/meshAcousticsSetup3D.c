@@ -213,17 +213,17 @@ void meshAcousticsSetup3D(mesh3D *mesh){
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  mesh->acousticsVolumeKernel =
+  mesh->volumeKernel =
     mesh->device.buildKernelFromSource("src/meshAcousticsVolume3D.okl",
 				       "meshAcousticsVolume3D_o0",
 				       kernelInfo);
 
-  mesh->acousticsSurfaceKernel =
+  mesh->surfaceKernel =
     mesh->device.buildKernelFromSource("src/meshAcousticsSurface3D.okl",
 				       "meshAcousticsSurface3D_s0",
 				       kernelInfo);
 
-  mesh->acousticsUpdateKernel =
+  mesh->updateKernel =
     mesh->device.buildKernelFromSource("src/meshAcousticsUpdate3D.okl",
 				       "meshAcousticsUpdate3D",
 				       kernelInfo);
@@ -261,7 +261,7 @@ void meshAcousticsSetup3D(mesh3D *mesh){
     mesh->device.finish();
     double elapsed = occa::toc(kernelNames[ker]);
     if(elapsed<bestElapsed){
-      mesh->acousticsVolumeKernel = meshAcousticsVolumeKernels[ker];
+      mesh->volumeKernel = meshAcousticsVolumeKernels[ker];
       printf("promoting kernel: %d (time %g)\n", ker, elapsed);
       bestElapsed = elapsed;
     }
@@ -302,7 +302,7 @@ void meshAcousticsSetup3D(mesh3D *mesh){
     mesh->device.finish();
     double elapsed = occa::toc(surfaceKernelNames[ker]);
     if(elapsed<bestElapsed){
-      mesh->acousticsSurfaceKernel = meshAcousticsSurfaceKernels[ker];
+      mesh->surfaceKernel = meshAcousticsSurfaceKernels[ker];
       printf("promoting kernel: %d (time %g)\n", ker, elapsed);
       bestElapsed = elapsed;
     }

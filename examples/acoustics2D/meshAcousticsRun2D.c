@@ -105,12 +105,12 @@ void meshAcousticsOccaRun2D(mesh2D *mesh){
       }
       
       // compute volume contribution to DG acoustics RHS
-      mesh->acousticsVolumeKernel(mesh->Nelements,
-				  mesh->o_vgeo,
-				  mesh->o_DrT,
-				  mesh->o_DsT,
-				  mesh->o_q,
-				  mesh->o_rhsq);
+      mesh->volumeKernel(mesh->Nelements,
+			 mesh->o_vgeo,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
+			 mesh->o_q,
+			 mesh->o_rhsq);
 
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
@@ -122,27 +122,27 @@ void meshAcousticsOccaRun2D(mesh2D *mesh){
       }
       
       // compute surface contribution to DG acoustics RHS
-      mesh->acousticsSurfaceKernel(mesh->Nelements,
-				   mesh->o_sgeo,
-				   mesh->o_LIFTT,
-				   mesh->o_vmapM,
-				   mesh->o_vmapP,
-				   mesh->o_EToB,
-				   t,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_q,
-				   mesh->o_rhsq);
+      mesh->surfaceKernel(mesh->Nelements,
+			  mesh->o_sgeo,
+			  mesh->o_LIFTT,
+			  mesh->o_vmapM,
+			  mesh->o_vmapP,
+			  mesh->o_EToB,
+			  t,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_q,
+			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
-      mesh->acousticsUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-				  mesh->dt,
-				  mesh->rka[rk],
-				  mesh->rkb[rk],
-				  mesh->o_rhsq,
-				  mesh->o_resq,
-				  mesh->o_q);
-				  
+      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_rhsq,
+			 mesh->o_resq,
+			 mesh->o_q);
+      
     }
     
     // estimate maximum error
@@ -231,13 +231,13 @@ void meshAcousticsOccaAsyncRun2D(mesh2D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      mesh->acousticsVolumeKernel(mesh->Nelements,
-				  mesh->o_vgeo,
-				  mesh->o_DrT,
-				  mesh->o_DsT,
-				  mesh->o_q,
-				  mesh->o_rhsq);
-
+      mesh->volumeKernel(mesh->Nelements,
+			 mesh->o_vgeo,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
+			 mesh->o_q,
+			 mesh->o_rhsq);
+      
       if(mesh->totalHaloPairs>0){
 
         // NBN: switch to secondary stream
@@ -269,27 +269,27 @@ void meshAcousticsOccaAsyncRun2D(mesh2D *mesh){
       }   
       
       // compute surface contribution to DG acoustics RHS
-      mesh->acousticsSurfaceKernel(mesh->Nelements,
-				   mesh->o_sgeo,
-				   mesh->o_LIFTT,
-				   mesh->o_vmapM,
-				   mesh->o_vmapP,
-				   mesh->o_EToB,
-				   t,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_q,
-				   mesh->o_rhsq);
+      mesh->surfaceKernel(mesh->Nelements,
+			  mesh->o_sgeo,
+			  mesh->o_LIFTT,
+			  mesh->o_vmapM,
+			  mesh->o_vmapP,
+			  mesh->o_EToB,
+			  t,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_q,
+			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
-      mesh->acousticsUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-				  mesh->dt,
-				  mesh->rka[rk],
-				  mesh->rkb[rk],
-				  mesh->o_rhsq,
-				  mesh->o_resq,
-				  mesh->o_q);
-
+      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_rhsq,
+			 mesh->o_resq,
+			 mesh->o_q);
+      
     }
     
     // estimate maximum error
@@ -391,47 +391,47 @@ void meshAcousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      mesh->acousticsVolumeKernel(mesh->Nelements,
-				  mesh->o_vgeo,
-				  mesh->o_DrT,
-				  mesh->o_DsT,
-				  mesh->o_q,
-				  mesh->o_rhsq);
-
+      mesh->volumeKernel(mesh->Nelements,
+			 mesh->o_vgeo,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
+			 mesh->o_q,
+			 mesh->o_rhsq);
+      
       if(mesh->pmlNelements){
 	// add PML contributions
-	mesh->acousticsPmlKernel(mesh->pmlNelements,
-				 mesh->o_pmlElementList,
-				 mesh->o_pmlSigmaX,
-				 mesh->o_pmlSigmaY,
-				 mesh->o_q,
+	mesh->pmlKernel(mesh->pmlNelements,
+			mesh->o_pmlElementList,
+			mesh->o_pmlSigmaX,
+			mesh->o_pmlSigmaY,
+			mesh->o_q,
 				 mesh->o_pmlq,
-				 mesh->o_rhsq,
-				 mesh->o_pmlrhsq);
+			mesh->o_rhsq,
+			mesh->o_pmlrhsq);
 	
 	// update PML variables
-	mesh->acousticsPmlUpdateKernel(mesh->pmlNelements*mesh->Np*mesh->pmlNfields,
-				       mesh->dt,
-				       mesh->rka[rk],
-				       mesh->rkb[rk],
-				       mesh->o_pmlrhsq,
-				       mesh->o_pmlresq,
-				       mesh->o_pmlq);
+	mesh->pmlUpdateKernel(mesh->pmlNelements*mesh->Np*mesh->pmlNfields,
+			      mesh->dt,
+			      mesh->rka[rk],
+			      mesh->rkb[rk],
+			      mesh->o_pmlrhsq,
+			      mesh->o_pmlresq,
+			      mesh->o_pmlq);
       }
       
       // compute surface contribution to DG acoustics RHS
-      mesh->acousticsPartialSurfaceKernel(mesh->NinternalElements,
-					  mesh->o_internalElementIds,
-					  mesh->o_sgeo,
-					  mesh->o_LIFTT,
-					  mesh->o_vmapM,
-					  mesh->o_vmapP,
-					  mesh->o_EToB,
-					  t,
-					  mesh->o_x,
-					  mesh->o_y,
-					  mesh->o_q,
-					  mesh->o_rhsq);
+      mesh->partialSurfaceKernel(mesh->NinternalElements,
+				 mesh->o_internalElementIds,
+				 mesh->o_sgeo,
+				 mesh->o_LIFTT,
+				 mesh->o_vmapM,
+				 mesh->o_vmapP,
+				 mesh->o_EToB,
+				 t,
+				 mesh->o_x,
+				 mesh->o_y,
+				 mesh->o_q,
+				 mesh->o_rhsq);
 
       if(mesh->totalHaloPairs>0){
 
@@ -462,30 +462,30 @@ void meshAcousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
       
       if(mesh->NnotInternalElements){
 	// compute surface contribution to DG acoustics RHS on stream 0
-	mesh->acousticsPartialSurfaceKernel(mesh->NnotInternalElements,
-					    mesh->o_notInternalElementIds,
-					    mesh->o_sgeo,
-					    mesh->o_LIFTT,
-					    mesh->o_vmapM,
-					    mesh->o_vmapP,
-					    mesh->o_EToB,
-					    t,
-					    mesh->o_x,
-					    mesh->o_y,
-					    mesh->o_q,
-					    mesh->o_rhsq);
+	mesh->partialSurfaceKernel(mesh->NnotInternalElements,
+				   mesh->o_notInternalElementIds,
+				   mesh->o_sgeo,
+				   mesh->o_LIFTT,
+				   mesh->o_vmapM,
+				   mesh->o_vmapP,
+				   mesh->o_EToB,
+				   t,
+				   mesh->o_x,
+				   mesh->o_y,
+				   mesh->o_q,
+				   mesh->o_rhsq);
       }
-	
+      
       
       // update solution using Runge-Kutta
-      mesh->acousticsUpdateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-				  mesh->dt,
-				  mesh->rka[rk],
-				  mesh->rkb[rk],
-				  mesh->o_rhsq,
-				  mesh->o_resq,
-				  mesh->o_q);
-
+      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_rhsq,
+			 mesh->o_resq,
+			 mesh->o_q);
+      
     }
     
     // estimate maximum error

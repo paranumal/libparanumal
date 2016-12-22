@@ -351,12 +351,12 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  mesh->boltzmannVolumeKernel =
+  mesh->volumeKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannVolume2D.okl",
 				       "meshBoltzmannVolume2D",
 				       kernelInfo);
   printf("starting surface\n");
-  mesh->boltzmannSurfaceKernel =
+  mesh->surfaceKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannSurface2D.okl",
 				       "meshBoltzmannSurface2D",
 				       kernelInfo);
@@ -368,21 +368,21 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
 				       kernelInfo);
 #endif
 
-  mesh->boltzmannUpdateKernel =
+  mesh->updateKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannUpdate2D.okl",
 				       "meshBoltzmannUpdate2D",
 				       kernelInfo);
 
-  mesh->boltzmannPmlVolumeKernel =
+  mesh->pmlVolumeKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannPmlVolume2D.okl",
 				       "meshBoltzmannPmlVolume2D",
 				       kernelInfo);
   
-  mesh->boltzmannPmlSurfaceKernel =
+  mesh->pmlSurfaceKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannPmlSurface2D.okl",
 				       "meshBoltzmannPmlSurface2D",
 				       kernelInfo);
-  mesh->boltzmannPmlUpdateKernel =
+  mesh->pmlUpdateKernel =
     mesh->device.buildKernelFromSource("src/meshBoltzmannPmlUpdate2D.okl",
 				       "meshBoltzmannPmlUpdate2D",
 				       kernelInfo);
