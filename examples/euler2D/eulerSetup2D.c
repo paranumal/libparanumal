@@ -1,12 +1,12 @@
 #include "mpi.h"
 #include <math.h>
-#include "mesh2D.h"
+#include "euler2D.h"
 
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 // #undef USE_2_STREAMS
 
-euler2D *eulerSetup2D(mesh2D *mesh){
+void eulerSetup2D(mesh2D *mesh){
   
   mesh->Nfields = 4;
   
@@ -289,15 +289,15 @@ euler2D *eulerSetup2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  euler->volumeKernel =
+  mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/eulerVolume2D.okl",
 				       "eulerVolume2D",
 				       kernelInfo);
-  euler->surfaceKernel =
+  mesh->surfaceKernel =
     mesh->device.buildKernelFromSource("okl/eulerSurface2D.okl",
 				       "eulerSurface2D",
 				       kernelInfo);
-  euler->updateKernel =
+  mesh->updateKernel =
     mesh->device.buildKernelFromSource("okl/eulerUpdate2D.okl",
 				       "eulerUpdate2D",
 				       kernelInfo);
