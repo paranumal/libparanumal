@@ -111,4 +111,87 @@ for n=1:plotNelements
   fprintf(fid, '%d %d %d\n' ,...
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3));
 end
+
+%% volume cubature
+[cubr,cubs,cubw] = Cubature2D(3*N);
+cInterp = Vandermonde2D(N, cubr, cubs)/V;
+Ncub = length(cubr);
+
+fprintf(fid, '%% number of volume cubature nodes\n');
+fprintf(fid, '%d\n', length(cubr));
+fprintf(fid, '%% cubature interpolation matrix\n');
+for n=1:Ncub
+  for m=1:Np
+    fprintf(fid, '%17.15E ', cInterp(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+[cVr,cVs] = GradVandermonde2D(N, cubr, cubs);
+cubDrT = V*transpose(cVr)*diag(cubw);
+cubDsT = V*transpose(cVs)*diag(cubw);
+
+fprintf(fid, '%% cubature r weak differentiation matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubDrT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% cubature s weak differentiation matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubDsT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+%% surface cubature
+Fr = r(FaceNodes);
+[z,w] = JacobiGQ(0,0,ceil(3*N/2));
+%z = JacobiGL(0,0,N);
+%zV = Vandermonde1D(N,z);
+%w = sum(inv(zV*transpose(zV)));
+
+Nfi = length(z);
+
+ir = [z,-z,-ones(Nfi,1)];
+is = [-ones(Nfi,1), z, -z];
+iw = [w,w,w];
+
+sV = Vandermonde2D(N, ir(:), is(:));
+sInterp = sV/V;
+
+iInterp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
+
+fprintf(fid, '%% number of surface integration nodes\n');
+fprintf(fid, '%d\n', length(z));
+fprintf(fid, '%% surface integration interpolation matrix\n');
+for n=1:Nfi*Nfaces
+  for m=1:Nfp
+    fprintf(fid, '%17.15E ', iInterp(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+bInterp = [];
+bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
+bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
+bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
+%% integration node lift matrix
+iLIFT = V*V'*sInterp'*diag(iw(:));
+size(iLIFT)
+size(iInterp)
+max(max(abs(iLIFT*bInterp-LIFT)))
+
+fprintf(fid, '%% surface integration lift matrix\n');
+for n=1:Np
+  for m=1:Nfi*Nfaces
+    fprintf(fid, '%17.15E ', iLIFT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
 fclose(fid)
