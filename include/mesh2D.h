@@ -107,6 +107,17 @@ typedef struct {
   dfloat *plotR, *plotS; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
+  // volume cubature node info
+  iint    cubNp; // number of cubature nodes
+  dfloat *cubInterp; // interpolate from W&B to cubature nodes
+  dfloat *cubDrW;    // 'r' weak differentiation matrix
+  dfloat *cubDsW;    // 's' weak differentiation matrix
+
+  // surface integration node info
+  iint    intNfp;    // number of integration nodes on each face
+  dfloat *intInterp; // interp from surface node to integration nodes
+  dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
+
   // global numbering info
   iint   *baseIds;   // local index of base nodes for each interp node
   iint   *baseRanks; // rank of base node for each interp node
@@ -182,9 +193,6 @@ typedef struct {
   dfloat *pmlNT;    // time integrated relaxtion term
   dfloat *rhspmlNT; //
   dfloat *respmlNT; //
-
-  
-
 
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv;

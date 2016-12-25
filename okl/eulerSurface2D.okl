@@ -45,8 +45,10 @@ void upwind1D(const dfloat nx, const dfloat ny,
 
 
 void boundaryConditions2D(const iint bc,
-			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
-			  const dfloat RM, const dfloat UM, const dfloat VM,
+			  const dfloat t, 
+			  const dfloat x,  const dfloat y, 
+			  const dfloat nx, const dfloat ny,
+			  const dfloat RM,  const dfloat UM, const dfloat VM,
 			  dfloat * restrict RB, dfloat * restrict UB, dfloat * restrict VB){
 
   if(bc==1){
@@ -67,14 +69,14 @@ void boundaryConditions2D(const iint bc,
 // assume that the derivatives are on the test function
 kernel void eulerSurface2D(const iint Nelements,
 			   const dfloat * restrict sgeo,
-			   const dfloat * restrict cIntrp, // interpolate to integration nodes
-			   const dfloat * restrict cLIFTT, // lift from integration to interpolation nodes
+			   const dfloat * restrict intInterp, // interpolate to integration nodes
+			   const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
 			   const iint   * restrict vmapM,
 			   const iint   * restrict vmapP,
 			   const iint   * restrict EToB,
 			   const dfloat time,
-			   const dfloat * restrict cx, // integration nodes
-			   const dfloat * restrict cy,
+			   const dfloat * restrict intx, // integration nodes
+			   const dfloat * restrict inty,
 			   const dfloat4 * restrict q,
 			   dfloat4 * restrict rhsq){
   
@@ -88,13 +90,13 @@ kernel void eulerSurface2D(const iint Nelements,
     shared dfloat s_RP[p_NblockS][p_NfacesNfp];
     shared dfloat s_UP[p_NblockS][p_NfacesNfp];
     shared dfloat s_VP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_cRflux[p_Nblocks][p_NfacesNfc];
-    shared dfloat s_cUflux[p_Nblocks][p_NfacesNfc];
-    shared dfloat s_cVflux[p_Nblocks][p_NfacesNfc];
+    shared dfloat s_intRflux[p_Nblocks][p_Nfaces*p_intNfp];
+    shared dfloat s_cUflux[p_Nblocks][p_Nfaces*p_intNfp];
+    shared dfloat s_cVflux[p_Nblocks][p_Nfaces*p_intNfp];
     
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Nfc*Nfaces,Np)
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Nfi*Nfaces,Np)
 	iint e = eo + es;
 	if(e<Nelements){
 	  if(n<p_NfacesNfp){
@@ -141,43 +143,49 @@ kernel void eulerSurface2D(const iint Nelements,
       for(iint n=0;n<p_maxNodes;++n;inner0){ 
 	iint e = eo + es;
 	if(e<Nelements){
-	  if(n<p_NfacesNfc){
-	    const iint face = n/p_Nfc; // find face that owns this integration node
+	  if(n<p_Nfaces*p_intNfp){
+	    const iint face = n/p_intNfp; // find face that owns this integration node
 
-	    dfloat cRM = 0.f, cUM = 0.f, cVM = 0.f;
-	    dfloat cRP = 0.f, cUP = 0.f, cVP = 0.f;
+	    dfloat iRM = 0.f, iUM = 0.f, iVM = 0.f;
+	    dfloat iRP = 0.f, iUP = 0.f, iVP = 0.f;
 
 	    // local block interpolation (face nodes to integration nodes)
 	    // [ exact to here ]
 	    for(iint m=0;m<p_Nfp;++m){
-	      const dfloat cI = cInterp[n+m*p_NfacesNfc];
-	      cRM += cI*s_RM[es][m+face*p_Nfp];
-	      cUM += cI*s_UM[es][m+face*p_Nfp];
-	      cVM += cI*s_VM[es][m+face*p_Nfp];
+	      const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
+	      iRM += iInm*s_RM[es][m+face*p_Nfp];
+	      iUM += iInm*s_UM[es][m+face*p_Nfp];
+	      iVM += iInm*s_VM[es][m+face*p_Nfp];
 
-	      cRP += cI*s_RP[es][m+face*p_Nfp];
-	      cUP += cI*s_UP[es][m+face*p_Nfp];
-	      cVP += cI*s_VP[es][m+face*p_Nfp];
+	      iRP += iInm*s_RP[es][m+face*p_Nfp];
+	      iUP += iInm*s_UP[es][m+face*p_Nfp];
+	      iVP += iInm*s_VP[es][m+face*p_Nfp];
 	    }
 
 	    // apply boundary condition
 	    // [ exact to here ]
 	    iint bc = EToB[face+p_Nfaces*e];
 	    if(bc>0)
-	      boundaryConditions2D(bc, time, cx[n+e*p_NfacesNfc], cy[n+e*p_NfacesNfc], nx, ny,
-				   cRM, cUM, cVM,
-				   &cRP, &cUP, &cVP);
+	      boundaryConditions2D(bc, time, 
+				   intx[n+e*p_Nfaces*p_intNfp], 
+				   inty[n+e*p_Nfaces*p_intNfp], 
+				   nx, ny,
+				   iRM, iUM, iVM,
+				   &iRP, &iUP, &iVP);
 	    
 	    // compute (q^*)
-	    dfloat cRS, cUS, cVS;
-	    upwind1D(nx, ny, cRM, cUM, cVM, cRP, cUP, cVP, &cRS, &cUS, &cVS);
+	    dfloat iRS, iUS, iVS;
+	    upwind1D(nx, ny,
+		     iRM, iUM, iVM, 
+		     iRP, iUP, iVP, 
+		     &iRS, &iUS, &iVS);
     
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^*) at integration nodes
 	    const dfloat sc = invJ*sJ;
 	    
-	    s_cRflux[es][n] = sc*(nx*cUS+ny*cVS);
-	    s_cUflux[es][n] = sc*(nx*(cUS*cUS/cRS + cRS*p_RT)+ny*(cUS*cVS/cRS));
-	    s_cVflux[es][n] = sc*(nx*(cUS*cVS/cRS)+ny*(cVS*cVS/cRS + cRS*p_RT));
+	    s_iRflux[es][n] = sc*(nx*iUS+ny*iVS);
+	    s_iUflux[es][n] = sc*(nx*(iUS*iUS/iRS + iRS*p_RT)+ny*(iUS*iVS/iRS));
+	    s_iVflux[es][n] = sc*(nx*(iUS*iVS/iRS)+ny*(iVS*iVS/iRS + iRS*p_RT));
 	  }
 	}
       }
@@ -196,11 +204,12 @@ kernel void eulerSurface2D(const iint Nelements,
 	    dfloat4 rhsqn = rhsq[n+p_Np*e];
 	    
 	    dfloat rhsR = 0.f, rhsU = 0.f, rhsV = 0.f;
-	    for(int m=0;m<p_NfacesNfc;++m){
-	      const dfloat L = cLIFTT[n+m*p_Np]; // RefMassMatrix^{-1}*cInterp^t*cWeight
-	      rhsR += L*s_cRflux[es][m];
-	      rhsU += L*s_cUflux[es][m];
-	      rhsV += L*s_cVflux[es][m];
+	    for(int m=0;m<p_Nfaces*p_intNfp;++m){
+	      // RefMassMatrix^{-1}*cInterp^t*cWeight
+	      const dfloat L = intLIFTT[n+m*p_Np]; 
+	      rhsR += L*s_intRflux[es][m];
+	      rhsU += L*s_intUflux[es][m];
+	      rhsV += L*s_intVflux[es][m];
 	    }
 
 	    // increment volume RHS
