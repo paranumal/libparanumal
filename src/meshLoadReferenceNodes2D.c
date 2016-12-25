@@ -152,23 +152,30 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
   mesh->intInterp 
     = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("intInterp=[\n");
   for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
     for(int m=0;m<mesh->Nfp;++m){
       fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
+      printf("%g ", mesh->intInterp[n*mesh->Nfp+m]);
     }
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
+  printf("]\n");
 
   // read lift matrix from surface integration to volume nodes
   mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("intLIFT=[\n");
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
       fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
+      printf("%g ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
     }
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-  
+  printf("]\n");
 #if 0
   printf("Dr: \n");
   for(int n=0;n<mesh->Np;++n){
