@@ -99,7 +99,8 @@ void eulerSetup2D(mesh2D *mesh){
   // use rank to choose DEVICE
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  sprintf(deviceConfig, "mode = Serial");
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -139,9 +140,9 @@ void eulerSetup2D(mesh2D *mesh){
       intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
     }
   }
-  for(iint n=0;n<mesh->Nfp;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
-      intInterpT[m+n*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[m+n*mesh->Nfaces*mesh->intNfp];
+  for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
+    for(int m=0;m<mesh->Nfp;++m){
+      intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
     }
   }
 

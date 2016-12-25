@@ -32,7 +32,7 @@ kernel void eulerVolume2D(const iint Nelements,
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_maxVolumeNodes;++n;inner0){     // for all nodes in this element
 	// prefetch DrT, Ds into shared
-	iint t = n + es*p_Np;
+	iint t = n + es*p_maxVolumeNodes;
 	while(t<p_Np*p_cubNp){
 	  s_cubDrWT[0][t] = cubDrWT[t]; // cubNp x Np
 	  s_cubDsWT[0][t] = cubDsWT[t]; // cubNp x Np
@@ -77,14 +77,15 @@ kernel void eulerVolume2D(const iint Nelements,
 	      cubV += s_cubInterpT[m][n]*s_V[es][m];
 	    }
 
-	    s_cubRfluxr[es][n] = -drdx*cubU - drdy*cubV;
-	    s_cubRfluxs[es][n] = -dsdx*cubU - dsdy*cubV;
+	    // (dphidx, U) + (dphidy, V)
+	    s_cubRfluxr[es][n] = drdx*cubU + drdy*cubV;
+	    s_cubRfluxs[es][n] = dsdx*cubU + dsdy*cubV;
 	    
-	    s_cubUfluxr[es][n] = -drdx*(cubU*cubU/cubR + p_RT*cubR) - drdy*(cubU*cubV/cubR);
-	    s_cubUfluxs[es][n] = -dsdx*(cubU*cubU/cubR + p_RT*cubR) - dsdy*(cubU*cubV/cubR);
+	    s_cubUfluxr[es][n] = drdx*(cubU*cubU/cubR + p_RT*cubR) + drdy*(cubU*cubV/cubR);
+	    s_cubUfluxs[es][n] = dsdx*(cubU*cubU/cubR + p_RT*cubR) + dsdy*(cubU*cubV/cubR);
 
-	    s_cubVfluxr[es][n] = -drdx*(cubU*cubV/cubR) - drdy*(cubV*cubV/cubR + p_RT*cubR);
-	    s_cubVfluxs[es][n] = -dsdx*(cubU*cubV/cubR) - dsdy*(cubV*cubV/cubR + p_RT*cubR);
+	    s_cubVfluxr[es][n] = drdx*(cubU*cubV/cubR) + drdy*(cubV*cubV/cubR + p_RT*cubR);
+	    s_cubVfluxs[es][n] = dsdx*(cubU*cubV/cubR) + dsdy*(cubV*cubV/cubR + p_RT*cubR);
 	  }
 	}
       }
