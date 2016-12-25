@@ -107,6 +107,67 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
+
+  // read number of volume cubature nodes
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); 
+  sscanf(buf, iintFormat, &(mesh->cubNp));
+
+  // read volume cubature interpolation matrix
+  mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->cubNp;++n){
+    for(int m=0;m<mesh->Np;++m){
+      fscanf(fp, dfloatFormat, mesh->cubInterp+n*mesh->Np+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  // read cubature weak 'r' differentiation matrix
+  mesh->cubDrW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubDrW+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+  // read cubature weak 's' differentiation matrix
+  mesh->cubDsW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubDsW+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+
+  // read number of surface integration nodes
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); 
+  sscanf(buf, iintFormat, &(mesh->intNfp));
+
+  // read volume cubature interpolation matrix
+  mesh->intInterp 
+    = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
+    for(int m=0;m<mesh->Np;++m){
+      fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Np+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  // read lift matrix from surface integration to volume nodes
+  mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
+      fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
   
 #if 0
   printf("Dr: \n");
