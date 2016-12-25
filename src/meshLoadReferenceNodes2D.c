@@ -148,13 +148,13 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); 
   sscanf(buf, iintFormat, &(mesh->intNfp));
 
-  // read volume cubature interpolation matrix
+  // read surface intergration node interpolation matrix
   mesh->intInterp 
-    = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+    = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
-    for(int m=0;m<mesh->Np;++m){
-      fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Np+m);
+    for(int m=0;m<mesh->Nfp;++m){
+      fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }

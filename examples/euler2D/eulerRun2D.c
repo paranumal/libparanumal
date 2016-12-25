@@ -40,6 +40,7 @@ void eulerRun2D(mesh2D *mesh){
 				recvBuffer);
       }
 
+#if 1
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
@@ -48,6 +49,7 @@ void eulerRun2D(mesh2D *mesh){
 			 mesh->o_cubDsWT,
 			 mesh->o_q,
 			 mesh->o_rhsq);
+#endif
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
@@ -57,7 +59,8 @@ void eulerRun2D(mesh2D *mesh){
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
-      
+
+#if 1
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -71,7 +74,7 @@ void eulerRun2D(mesh2D *mesh){
 			  mesh->o_inty,
 			  mesh->o_q,
 			  mesh->o_rhsq);
-      
+#endif 
       // update solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
