@@ -78,7 +78,7 @@ kernel void eulerVolume2D(const iint Nelements,
 	    }
 
 	    s_cubRfluxr[es][n] = -drdx*cubU - drdy*cubV;
-	    s_cubRfluxr[es][n] = -dsdx*cubU - dsdy*cubV;
+	    s_cubRfluxs[es][n] = -dsdx*cubU - dsdy*cubV;
 	    
 	    s_cubUfluxr[es][n] = -drdx*(cubU*cubU/cubR + p_RT*cubR) - drdy*(cubU*cubV/cubR);
 	    s_cubUfluxs[es][n] = -dsdx*(cubU*cubU/cubR + p_RT*cubR) - dsdy*(cubU*cubV/cubR);

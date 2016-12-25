@@ -25,11 +25,11 @@ void eulerSetup2D(mesh2D *mesh){
   // initial conditions
   // uniform flow
   dfloat rho = 1, u = 0, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
-  dfloat q1bar = rho;
-  dfloat q2bar = rho*u;
-  dfloat q3bar = rho*v;
+  dfloat Rbar = rho;
+  dfloat Ubar = rho*u;
+  dfloat Vbar = rho*v;
 
-  printf("%17.15lf %17.15lf %17.15lf\n", q1bar, q2bar, q3bar);
+  printf("%17.15lf %17.15lf %17.15lf\n", Rbar, Ubar, Vbar);
   
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -38,18 +38,14 @@ void eulerSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      mesh->q[cnt+0] = q1bar; // uniform density, zero flow
-      mesh->q[cnt+1] = q2bar;
-      mesh->q[cnt+2] = q3bar;
+      mesh->q[cnt+0] = Rbar; // uniform density, zero flow
+      mesh->q[cnt+1] = Ubar;
+      mesh->q[cnt+2] = Vbar;
     
       cnt += mesh->Nfields;
 
     }
   }
-
-  // set penalty parameter
-  //  mesh->Lambda2 = 0.5/(sqrt(3.)*mesh->sqrtRT);
-  mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
@@ -73,8 +69,7 @@ void eulerSetup2D(mesh2D *mesh){
   dfloat cfl = .4; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)
-			*mymax(mesh->Lambda2*mesh->RT*sqrt(2.), sqrt(3.)*mesh->sqrtRT));
+  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*(sqrt(Ubar*Ubar+Vbar*Vbar)/Rbar+mesh->sqrtRT));
 
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
@@ -91,7 +86,7 @@ void eulerSetup2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 1;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -102,9 +97,9 @@ void eulerSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -344,9 +339,9 @@ void eulerSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
   kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
 
-  kernelInfo.addDefine("p_Rbar", q1bar);
-  kernelInfo.addDefine("p_Ubar", q2bar);
-  kernelInfo.addDefine("p_Vbar", q3bar);
+  kernelInfo.addDefine("p_Rbar", Rbar);
+  kernelInfo.addDefine("p_Ubar", Ubar);
+  kernelInfo.addDefine("p_Vbar", Vbar);
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
