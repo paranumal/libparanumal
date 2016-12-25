@@ -43,17 +43,11 @@ void eulerRun2D(mesh2D *mesh){
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
-			 mesh->o_sigmax,
-			 mesh->o_sigmay,
-			 mesh->o_DrT,
-			 mesh->o_DsT,
+			 mesh->o_cubInterpT,
+			 mesh->o_cubDrWT,
+			 mesh->o_cubDsWT,
 			 mesh->o_q,
-			 mesh->o_pmlqx,
-			 mesh->o_pmlqy,
-			 mesh->o_pmlNT,
-			 mesh->o_rhspmlqx,
-			 mesh->o_rhspmlqy,
-			 mesh->o_rhspmlNT);
+			 mesh->o_rhsq);
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
@@ -67,33 +61,25 @@ void eulerRun2D(mesh2D *mesh){
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
-			  mesh->o_LIFTT,
+			  mesh->o_intInterpT,
+			  mesh->o_intLIFTT,
 			  mesh->o_vmapM,
 			  mesh->o_vmapP,
 			  mesh->o_EToB,
 			  t,
-			  mesh->o_x,
-			  mesh->o_y,
+			  mesh->o_intx,
+			  mesh->o_inty,
 			  mesh->o_q,
-			  mesh->o_rhspmlqx,
-			  mesh->o_rhspmlqy);
+			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-			 recombine,
 			 mesh->dt,
 			 mesh->rka[rk],
 			 mesh->rkb[rk],
-			 mesh->o_rhspmlqx,
-			 mesh->o_rhspmlqy,
-			 mesh->o_rhspmlNT,
-			 mesh->o_respmlqx,
-			 mesh->o_respmlqy,
-			 mesh->o_respmlNT,
-			 mesh->o_pmlqx,
-			 mesh->o_pmlqy,
-			 mesh->o_pmlNT,
+			 mesh->o_rhsq,
+			 mesh->o_resq,
 			 mesh->o_q);
       
     }

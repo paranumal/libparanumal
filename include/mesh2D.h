@@ -117,7 +117,8 @@ typedef struct {
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
   dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
-
+  dfloat *intx, *inty; // coordinates of suface integration nodes
+  
   // global numbering info
   iint   *baseIds;   // local index of base nodes for each interp node
   iint   *baseRanks; // rank of base node for each interp node
@@ -204,6 +205,9 @@ typedef struct {
   occa::memory o_Dr, o_Ds, o_LIFT;
   occa::memory o_DrT, o_DsT, o_D, o_LIFTT;
 
+  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
+  occa::memory o_cubDrWT, o_cubDsWT, o_cubInterpT;
+  
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP;
 

@@ -25,12 +25,9 @@ void eulerSetup2D(mesh2D *mesh){
   // initial conditions
   // uniform flow
   dfloat rho = 1, u = 0, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
-  dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
-  //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
-  dfloat ramp = 1.f;
   dfloat q1bar = rho;
-  dfloat q2bar = ramp*rho*u/mesh->sqrtRT;
-  dfloat q3bar = ramp*rho*v/mesh->sqrtRT;
+  dfloat q2bar = rho*u;
+  dfloat q3bar = rho*v;
 
   printf("%17.15lf %17.15lf %17.15lf\n", q1bar, q2bar, q3bar);
   
@@ -113,20 +110,68 @@ void eulerSetup2D(mesh2D *mesh){
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
     }
   }
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
 
+  // build volume cubature matrix transposes
+  dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  dfloat *cubDsWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->cubNp;++m){
+      cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+      cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+      cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+    }
+  }
+
+  // build surface integration matrix transposes
+  dfloat *intLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  dfloat *intInterpT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
+      intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
+    }
+  }
+  for(iint n=0;n<mesh->Nfp;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
+      intInterpT[m+n*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[m+n*mesh->Nfaces*mesh->intNfp];
+    }
+  }
+
+  mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      for(iint n=0;n<mesh->intNfp;++n){
+	dfloat ix = 0, iy = 0;
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
+	  dfloat xm = mesh->x[vid];
+	  dfloat ym = mesh->y[vid];
+	  dfloat Inm = mesh->intInterp[n+f*mesh->intNfp+m*mesh->intNfp*mesh->Nfaces];
+	  ix += Inm*xm;
+	  iy += Inm*ym;
+	}
+	iint id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
+	mesh->intx[id] = ix;
+	mesh->inty[id] = iy;
+      }
+    }
+  }
+  
+  
   // find elements that have all neighbors on this process
   iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
   iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
@@ -207,6 +252,16 @@ void eulerSetup2D(mesh2D *mesh){
   mesh->o_y =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
 			mesh->y);
+
+
+  mesh->o_intx =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			mesh->intx);
+
+  mesh->o_inty =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			mesh->inty);
+
   
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
@@ -218,6 +273,26 @@ void eulerSetup2D(mesh2D *mesh){
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
   }
 
+  mesh->o_cubInterpT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubInterpT);
+
+  mesh->o_cubDrWT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubDrWT);
+  
+  mesh->o_cubDsWT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubDsWT);
+
+  mesh->o_intInterpT =
+    mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			intInterpT);
+
+  mesh->o_intLIFTT =
+    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			intLIFTT);
+  
   
   //-------------------------------------
   // NBN: 2 streams for async MPI updates
