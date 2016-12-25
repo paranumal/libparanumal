@@ -1,7 +1,4 @@
 
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
-
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat RM, const dfloat UM, const dfloat VM,
 	      const dfloat RP, const dfloat UP, const dfloat VP,
@@ -30,14 +27,16 @@ void upwind1D(const dfloat nx, const dfloat ny,
   dfloat C3P = (udott)*RP+(-ny)*UP+(+nx)*VP;
 
   // choose characteristics based on wave speed (may need to reverse)
-  const dfloat C1U = (W1<0) ? C1M:C1P;
-  const dfloat C2U = (W2<0) ? C2M:C2P;
-  const dfloat C3U = (W3<0) ? C3M:C3P;
+  const dfloat C1U = (W1>0) ? C1M:C1P;
+  const dfloat C2U = (W2>0) ? C2M:C2P;
+  const dfloat C3U = (W3>0) ? C3M:C3P;
   
   *RS =                     C1U +                    C2U + (0.f)*C3U;
   *US = (UA/RA+p_sqrtRT*nx)*C1U +(UA/RA-p_sqrtRT*nx)*C2U + (-ny)*C3U;
   *VS = (VA/RA+p_sqrtRT*ny)*C1U +(VA/RA-p_sqrtRT*ny)*C2U + (+nx)*C3U;
 
+  printf("W=%g,%g,%g, CU=%g,%g,%g\n", W1, W2, W3, C1U, C2U, C3U);
+  
   //   V*( 0.5*(d+|d|)/V*Q^+ + V*( 0.5*(d-|d|)/V*Q^-
   //  0.5*(f(Q+) + f(Q-)) + 0.5*V*|d|/V*(Q^+ - Q^-)
   
@@ -75,7 +74,7 @@ void boundaryConditions2D(const iint bc,
 // assume that the derivatives are on the test function
 kernel void eulerSurface2D(const iint Nelements,
 			   const dfloat * restrict sgeo,
-			   const dfloat * restrict intInterp, // interpolate to integration nodes
+			   const dfloat * restrict intInterpT, // interpolate to integration nodes
 			   const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
 			   const iint   * restrict vmapM,
 			   const iint   * restrict vmapP,
@@ -139,7 +138,7 @@ kernel void eulerSurface2D(const iint Nelements,
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
 	iint e = eo + es;
 	if(e<Nelements){
-	  if(n<p_Nfaces*p_intNfp){
+	  if(n<(p_Nfaces*p_intNfp)){
 	    const iint face = n/p_intNfp; // find face that owns this integration node
 	  
 	    // load surface geofactors for this face
@@ -155,7 +154,7 @@ kernel void eulerSurface2D(const iint Nelements,
 	    // local block interpolation (face nodes to integration nodes)
 	    // [ exact to here ]
 	    for(iint m=0;m<p_Nfp;++m){
-	      const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
+	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 	      iRM += iInm*s_RM[es][face][m];
 	      iUM += iInm*s_UM[es][face][m];
 	      iVM += iInm*s_VM[es][face][m];

@@ -74,9 +74,9 @@ void eulerRun2D(mesh2D *mesh){
 			  mesh->o_inty,
 			  mesh->o_q,
 			  mesh->o_rhsq);
-#endif 
+#endif
+      printf("STARTING UPDATE:\n");
       // update solution using Runge-Kutta
-      iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 mesh->dt,
 			 mesh->rka[rk],
