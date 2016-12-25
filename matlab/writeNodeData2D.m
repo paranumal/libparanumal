@@ -165,7 +165,7 @@ sInterp = sV/V;
 
 iInterp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
 
-fprintf(fid, '%% number of surface integration nodes\n');
+fprintf(fid, '%% number of surface integration nodes per face\n');
 fprintf(fid, '%d\n', length(z));
 fprintf(fid, '%% surface integration interpolation matrix\n');
 for n=1:Nfi*Nfaces
