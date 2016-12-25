@@ -244,24 +244,34 @@ void eulerSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
 
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  printf("cubNp = %d, intNfp = %d\n", mesh->cubNp, mesh->intNfp);
+  
+  kernelInfo.addDefine("p_cubNp", mesh->cubNp);
+  kernelInfo.addDefine("p_intNfp", mesh->intNfp);
+  
+  int maxVolumeNodes = mymax(mesh->Np, mesh->cubNp);
+  kernelInfo.addDefine("p_maxVolumeNodes", maxVolumeNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
+
+  int NblockV = 512/maxVolumeNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 512/maxSurfaceNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_RT", mesh->RT);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
+  kernelInfo.addDefine("p_isqrtRT", 1.f/mesh->sqrtRT);
   kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
   kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
 
-  kernelInfo.addDefine("p_q1bar", q1bar);
-  kernelInfo.addDefine("p_q2bar", q2bar);
-  kernelInfo.addDefine("p_q3bar", q3bar);
+  kernelInfo.addDefine("p_Rbar", q1bar);
+  kernelInfo.addDefine("p_Ubar", q2bar);
+  kernelInfo.addDefine("p_Vbar", q3bar);
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
