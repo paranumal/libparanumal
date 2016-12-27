@@ -27,9 +27,9 @@ void upwind1D(const dfloat nx, const dfloat ny,
   dfloat C3P = (udott)*RP+(-ny)*UP+(+nx)*VP;
 
   // choose characteristics based on wave speed (may need to reverse)
-  const dfloat C1U = (W1<0) ? C1M:C1P;
-  const dfloat C2U = (W2<0) ? C2M:C2P;
-  const dfloat C3U = (W3<0) ? C3M:C3P;
+  const dfloat C1U = (W1>0) ? C1M:C1P;
+  const dfloat C2U = (W2>0) ? C2M:C2P;
+  const dfloat C3U = (W3>0) ? C3M:C3P;
   
   *RS =                     C1U +                    C2U + (0.f)*C3U;
   *US = (UA/RA+p_sqrtRT*nx)*C1U +(UA/RA-p_sqrtRT*nx)*C2U + (-ny)*C3U;
