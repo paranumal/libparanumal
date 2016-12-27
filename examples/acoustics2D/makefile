@@ -33,27 +33,27 @@ LIBS	=  $(links)
 AOBJS    = \
 acousticsCavitySolution2D.o \
 acousticsGaussianPulse2D.o \
-mainAcoustics2D.o \
-meshAcousticsError2D.o \
-meshAcousticsPml2D.o \
-meshAcousticsPmlSetup2D.o \
-meshAcousticsPmlUpdate2D.o \
-meshAcousticsRun2D.o \
-meshAcousticsSetup2D.o \
-meshAcousticsSurface2D.o \
-meshAcousticsUpdate2D.o \
-meshAcousticsVolume2D.o 
+acousticsMain2D.o \
+acousticsError2D.o \
+acousticsPml2D.o \
+acousticsPmlSetup2D.o \
+acousticsPmlUpdate2D.o \
+acousticsRun2D.o \
+acousticsSetup2D.o \
+acousticsSurface2D.o \
+acousticsUpdate2D.o \
+acousticsVolume2D.o 
 
 
 # split PML objects
 POBJS    = \
 acousticsCavitySolution2D.o \
 acousticsGaussianPulse2D.o \
-mainAcousticsSplitPml2D.o \
-meshAcousticsError2D.o \
-meshAcousticsSplitPmlRun2D.o \
-meshAcousticsSplitPmlSetup2D.o \
-meshAcousticsComputeVorticity2D.o
+acousticsSplitPmlMain2D.o \
+acousticsError2D.o \
+acousticsSplitPmlRun2D.o \
+acousticsSplitPmlSetup2D.o \
+acousticsComputeVorticity2D.o
 
 # library objects
 LOBJS = \
@@ -80,14 +80,14 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-mainAcoustics2D:$(AOBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o mainAcoustics2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+acousticsMain2D:$(AOBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o acousticsMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
-mainAcousticsSplitPml2D:$(POBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o mainAcousticsSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
+acousticsSplitPmlMain2D:$(POBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o acousticsSplitPmlMain2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS)
+	rm -r $(AOBJS) $(LOBJS) $(POBJS)
 
 
