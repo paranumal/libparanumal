@@ -1,9 +1,5 @@
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "mpi.h"
-#include "mesh2D.h"
+
+#include "acoustics2D.h"
 
 int main(int argc, char **argv){
 
