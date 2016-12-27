@@ -1,8 +1,6 @@
-#include <stdio.h>
-#include <math.h>
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
-void meshAcousticsRun3D(mesh3D *mesh){
+void acousticsRun3D(mesh3D *mesh){
 
   // MPI send buffer
   dfloat *sendBuffer =
@@ -24,24 +22,24 @@ void meshAcousticsRun3D(mesh3D *mesh){
 			 mesh->q+mesh->Np*mesh->Nfields*mesh->Nelements);
       
       // compute volume contribution to DG acoustics RHS
-      meshAcousticsVolume3D(mesh);
+      acousticsVolume3D(mesh);
 
       // compute surface contribution to DG acoustics RHS
-      meshAcousticsSurface3D(mesh, time);
+      acousticsSurface3D(mesh, time);
 
       // update solution using LSERK4
-      meshAcousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
     }
     
     // estimate maximum error
     if((tstep%mesh->errorStep)==0)
-      meshAcousticsError3D(mesh, mesh->dt*(tstep+1));
+      acousticsError3D(mesh, mesh->dt*(tstep+1));
   }
 
   free(sendBuffer);
 }
 
-void meshAcousticsOccaRun3D(mesh3D *mesh){
+void acousticsOccaRun3D(mesh3D *mesh){
 
   // MPI send buffer
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
@@ -125,7 +123,7 @@ void meshAcousticsOccaRun3D(mesh3D *mesh){
       mesh->o_q.copyTo(mesh->q);
 
       // do error stuff on host
-      meshAcousticsError3D(mesh, mesh->dt*(tstep+1));
+      acousticsError3D(mesh, mesh->dt*(tstep+1));
 
       // output field files
       iint fld = 2;

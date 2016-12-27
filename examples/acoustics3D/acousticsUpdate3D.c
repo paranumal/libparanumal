@@ -1,6 +1,6 @@
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
-void meshAcousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb){
+void acousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb){
   
   // Low storage Runge Kutta time step update
   for(iint n=0;n<mesh->Nelements*mesh->Np*mesh->Nfields;++n){

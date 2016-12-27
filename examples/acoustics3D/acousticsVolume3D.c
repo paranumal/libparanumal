@@ -1,8 +1,8 @@
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-void meshAcousticsVolume3D(mesh3D *mesh){
+void acousticsVolume3D(mesh3D *mesh){
 
   // for all elements
   for(iint e=0;e<mesh->Nelements;++e){

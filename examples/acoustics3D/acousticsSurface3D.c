@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
 void boundaryConditions3D(iint bc, dfloat time, dfloat x, dfloat y, dfloat z,
 			  dfloat uM, dfloat vM, dfloat wM, dfloat pM,
@@ -31,7 +30,7 @@ void boundaryConditions3D(iint bc, dfloat time, dfloat x, dfloat y, dfloat z,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-void meshAcousticsSurface3D(mesh3D *mesh, dfloat time){
+void acousticsSurface3D(mesh3D *mesh, dfloat time){
 
   // temporary storage for flux terms
   dfloat *fluxu = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));

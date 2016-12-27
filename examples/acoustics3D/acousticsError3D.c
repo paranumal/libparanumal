@@ -1,9 +1,6 @@
-#include <stdio.h>
-#include <math.h>
-#include <mpi.h>
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
-void meshAcousticsError3D(mesh3D *mesh, dfloat time){
+void acousticsError3D(mesh3D *mesh, dfloat time){
 
   dfloat maxErrorP = 0;
   for(iint e=0;e<mesh->Nelements;++e){
