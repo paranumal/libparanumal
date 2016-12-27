@@ -10,7 +10,7 @@ kernel void eulerUpdate2D(const iint Ntotal,
   // Low storage Runge Kutta time step update
   for(iint n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
-      printf("q=%g, resq=%g, rhsq=%g\n", q[n], resq[n], rhsq[n]);
+//      printf("q=%g, resq=%g, rhsq=%g\n", q[n], resq[n], rhsq[n]);
       dfloat resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];
       resq[n] = resqn;

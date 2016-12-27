@@ -6,7 +6,7 @@ mesh2D *meshSetup2D(char *filename, int N){
   mesh2D *mesh = meshParallelReader2D(filename);
   
   // partition elements using Morton ordering & parallel sort
-  meshGeometricPartition2D(mesh);
+  //  meshGeometricPartition2D(mesh);
 
   // print out connectivity statistics
   meshPartitionStatistics2D(mesh);

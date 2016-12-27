@@ -75,7 +75,7 @@ void eulerSetup2D(mesh2D *mesh){
   printf("hmax = %g\n", hmax);
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
-  printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
+  printf("max wave speed = %g\n", mesh->sqrtRT);
   
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -86,7 +86,7 @@ void eulerSetup2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1;
+  mesh->errorStep = 100;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -129,6 +129,7 @@ void eulerSetup2D(mesh2D *mesh){
       cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
       cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
       cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+      printf("%g @ ", cubInterpT[m+n*mesh->cubNp]);
     }
   }
 
@@ -319,26 +320,25 @@ void eulerSetup2D(mesh2D *mesh){
   
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
-  
+  kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
+
   int maxVolumeNodes = mymax(mesh->Np, mesh->cubNp);
   kernelInfo.addDefine("p_maxVolumeNodes", maxVolumeNodes);
 
   int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
-
-  int NblockV = 512/maxVolumeNodes; // works for CUDA
+  printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
+  
+  int NblockV = 256/maxVolumeNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxSurfaceNodes; // works for CUDA
+  int NblockS = 256/maxSurfaceNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_RT", mesh->RT);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
   kernelInfo.addDefine("p_isqrtRT", 1.f/mesh->sqrtRT);
-  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
 
   kernelInfo.addDefine("p_Rbar", Rbar);
   kernelInfo.addDefine("p_Ubar", Ubar);

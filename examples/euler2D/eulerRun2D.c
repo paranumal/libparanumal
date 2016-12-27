@@ -3,6 +3,55 @@
 #include "euler2D.h"
 
 
+void eulerRanges2D(mesh2D *mesh){
+
+  mesh->o_q.copyTo(mesh->q);
+  mesh->o_rhsq.copyTo(mesh->rhsq);
+
+  dfloat minR = 1e9, maxR = -1e9;
+  dfloat minRhsR = 1e9, maxRhsR = -1e9;
+
+  dfloat minU = 1e9, maxU = -1e9;
+  dfloat minRhsU = 1e9, maxRhsU = -1e9;
+
+  dfloat minV = 1e9, maxV = -1e9;
+  dfloat minRhsV = 1e9, maxRhsV = -1e9;
+
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint id =	0+mesh->Nfields*n+mesh->Nfields*mesh->Np*e;
+      minR = mymin(minR, mesh->q[id]);
+      maxR = mymax(maxR, mesh->q[id]);
+      minRhsR = mymin(minRhsR, mesh->rhsq[id]);
+      maxRhsR = mymax(maxRhsR, mesh->rhsq[id]);
+
+      ++id;
+      minU = mymin(minU, mesh->q[id]);
+      maxU = mymax(maxU, mesh->q[id]);
+      minRhsU = mymin(minRhsU, mesh->rhsq[id]);
+      maxRhsU = mymax(maxRhsU, mesh->rhsq[id]);
+
+      ++id;
+      minV = mymin(minV, mesh->q[id]);
+      maxV = mymax(maxV, mesh->q[id]);
+      minRhsV = mymin(minRhsV, mesh->rhsq[id]);
+      maxRhsV = mymax(maxRhsV, mesh->rhsq[id]);
+      
+    }
+  }
+  printf("R in [%g,%g]\n", minR, maxR);
+  printf("RHS R in [%g,%g]\n", minRhsR, maxRhsR);
+
+  printf("U in [%g,%g]\n", minU, maxU);
+  printf("RHS U in [%g,%g]\n", minRhsU, maxRhsU);
+
+  printf("V in [%g,%g]\n", minV, maxV);
+  printf("RHS V in [%g,%g]\n", minRhsV, maxRhsV);
+  
+}
+
+
 void eulerRun2D(mesh2D *mesh){
 
   // MPI send buffer
@@ -17,9 +66,6 @@ void eulerRun2D(mesh2D *mesh){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
-      //      mesh->o_q.copyTo(mesh->q);
-      //      meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
-      
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
@@ -75,7 +121,9 @@ void eulerRun2D(mesh2D *mesh){
 			  mesh->o_q,
 			  mesh->o_rhsq);
 #endif
-      printf("STARTING UPDATE:\n");
+
+      eulerRanges2D(mesh);
+      
       // update solution using Runge-Kutta
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 mesh->dt,
