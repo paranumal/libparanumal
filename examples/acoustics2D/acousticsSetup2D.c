@@ -1,6 +1,4 @@
-#include "mpi.h"
-#include <math.h>
-#include "mesh2D.h"
+#include "acoustics2D.h"
 
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS

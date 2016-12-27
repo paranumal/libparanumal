@@ -18,8 +18,12 @@ void acousticsPml2D(mesh2D *mesh);
 
 void acousticsRun2D(mesh2D *mesh);
 
+void acousticsOccaRun2D(mesh2D *mesh);
+
 void acousticsSplitPmlOccaRun2D(mesh2D *mesh);
 
+void acousticsVolume2D(mesh2D *mesh);
+void acousticsSurface2D(mesh2D *mesh, dfloat t);
 void acousticsUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
 
 void acousticsPmlUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
