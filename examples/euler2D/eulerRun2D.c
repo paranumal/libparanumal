@@ -122,8 +122,6 @@ void eulerRun2D(mesh2D *mesh){
 			  mesh->o_rhsq);
 #endif
 
-      eulerRanges2D(mesh);
-      
       // update solution using Runge-Kutta
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 mesh->dt,

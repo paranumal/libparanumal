@@ -38,7 +38,7 @@ void eulerSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      mesh->q[cnt+0] = Rbar; // uniform density, zero flow
+      mesh->q[cnt+0] = Rbar*(1.+.1*exp(-20*(x*x+y*y))); // uniform density, zero flow
       mesh->q[cnt+1] = Ubar;
       mesh->q[cnt+2] = Vbar;
     
