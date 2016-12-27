@@ -1,5 +1,5 @@
 
-kernel void meshAcousticsUpdate3D(const iint Ntotal,
+kernel void acousticsUpdate3D(const iint Ntotal,
 				  const dfloat dt,	
 				  const dfloat rka,
 				  const dfloat rkb,
@@ -18,7 +18,7 @@ kernel void meshAcousticsUpdate3D(const iint Ntotal,
   }
 }
 
-kernel void meshAcousticsUpdate3D_o1(const iint Ntotal,
+kernel void acousticsUpdate3D_o1(const iint Ntotal,
 				     const dfloat dt,	
 				     const dfloat rka,
 				     const dfloat rkb,

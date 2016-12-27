@@ -33,7 +33,7 @@ void boundaryConditions3D(iint bc, dfloat time,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-kernel void meshAcousticsSurface3D_s0(const iint Nelements,
+kernel void acousticsSurface3D_s0(const iint Nelements,
 				      const dfloat * restrict sgeo,
 				      const dfloat * restrict LIFTT,
 				      const iint   * restrict vmapM,
@@ -134,7 +134,7 @@ kernel void meshAcousticsSurface3D_s0(const iint Nelements,
 }
     
 // s1: float4 for q,rhsq
-kernel void meshAcousticsSurface3D_s1(const iint Nelements,
+kernel void acousticsSurface3D_s1(const iint Nelements,
 				      const dfloat * restrict sgeo,
 				      const dfloat * restrict LIFTT,
 				      const iint   * restrict vmapM,
@@ -237,7 +237,7 @@ kernel void meshAcousticsSurface3D_s1(const iint Nelements,
 }
     
 // s2: unroll lift loop (use float for sgeo)
-kernel void meshAcousticsSurface3D_s2(const iint Nelements,
+kernel void acousticsSurface3D_s2(const iint Nelements,
 				      const dfloat * restrict sgeo,
 				      const dfloat * restrict LIFTT,
 				      const iint   * restrict vmapM,
@@ -342,7 +342,7 @@ kernel void meshAcousticsSurface3D_s2(const iint Nelements,
 }
 
 // s3: batch process elements
-kernel void meshAcousticsSurface3D_s3(const iint Nelements,
+kernel void acousticsSurface3D_s3(const iint Nelements,
 				      const dfloat * restrict sgeo,
 				      const dfloat * restrict LIFTT,
 				      const iint   * restrict vmapM,
@@ -457,7 +457,7 @@ kernel void meshAcousticsSurface3D_s3(const iint Nelements,
 }
 
 // s4: lift in shared
-kernel void meshAcousticsSurface3D_s4(const iint Nelements,
+kernel void acousticsSurface3D_s4(const iint Nelements,
 				      const dfloat * restrict sgeo,
 				      const dfloat * restrict LIFTT,
 				      const iint   * restrict vmapM,
