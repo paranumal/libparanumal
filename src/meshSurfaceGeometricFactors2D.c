@@ -46,7 +46,7 @@ void meshSurfaceGeometricFactors2D(mesh2D *mesh){
 
     mesh->sgeo[base+NXID] = nx2/d2;
     mesh->sgeo[base+NYID] = ny2/d2;
-    mesh->sgeo[base+SJID] = d1/2.;
+    mesh->sgeo[base+SJID] = d2/2.; // TW fixed bug d1=>d2
     mesh->sgeo[base+IJID] = 1./J;
 
     /* face 3 */

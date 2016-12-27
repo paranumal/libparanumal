@@ -25,21 +25,8 @@ kernel void eulerVolume2D(const iint Nelements,
     shared dfloat s_cubVfluxr[p_NblockV][p_cubNp];
     shared dfloat s_cubVfluxs[p_NblockV][p_cubNp];
 
-    shared dfloat s_cubDrWT[p_cubNp][p_Np];
-    shared dfloat s_cubDsWT[p_cubNp][p_Np];
-    shared dfloat s_cubInterpT[p_Np][p_cubNp];
-
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_maxVolumeNodes;++n;inner0){     // for all nodes in this element
-	// prefetch DrT, Ds into shared
-	iint t = n + es*p_maxVolumeNodes;
-	while(t<p_Np*p_cubNp){
-	  s_cubDrWT[0][t] = cubDrWT[t]; // cubNp x Np
-	  s_cubDsWT[0][t] = cubDsWT[t]; // cubNp x Np
-	  s_cubInterpT[0][t] = cubInterpT[t]; // Np x cubNp
-	  t += p_maxVolumeNodes*p_NblockV;
-	}
-	
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
@@ -68,15 +55,16 @@ kernel void eulerVolume2D(const iint Nelements,
 	    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
 	    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
 	    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	    
+
 	    dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
 	    
 	    for(iint m=0;m<p_Np;++m){
-	      cubR += s_cubInterpT[m][n]*s_R[es][m];		      
-	      cubU += s_cubInterpT[m][n]*s_U[es][m];
-	      cubV += s_cubInterpT[m][n]*s_V[es][m];
+	      cubR += cubInterpT[m*p_cubNp+n]*s_R[es][m];		      
+	      cubU += cubInterpT[m*p_cubNp+n]*s_U[es][m];
+	      cubV += cubInterpT[m*p_cubNp+n]*s_V[es][m];
 	    }
 
+	    
 	    // (dphidx, U) + (dphidy, V)
 	    s_cubRfluxr[es][n] = drdx*cubU + drdy*cubV;
 	    s_cubRfluxs[es][n] = dsdx*cubU + dsdy*cubV;
@@ -86,6 +74,7 @@ kernel void eulerVolume2D(const iint Nelements,
 
 	    s_cubVfluxr[es][n] = drdx*(cubU*cubV/cubR) + drdy*(cubV*cubV/cubR + p_RT*cubR);
 	    s_cubVfluxs[es][n] = dsdx*(cubU*cubV/cubR) + dsdy*(cubV*cubV/cubR + p_RT*cubR);
+
 	  }
 	}
       }
@@ -107,13 +96,19 @@ kernel void eulerVolume2D(const iint Nelements,
 	    occaUnroll(p_cubNp)
 	      for(iint i=0;i<p_cubNp;++i){
 		// load data at node i of element e
-		const dfloat Drni = s_cubDrWT[i][n];
-		const dfloat Dsni = s_cubDsWT[i][n];
-
+#if 1
+		const dfloat Drni = cubDrWT[i*p_Np+n];
+		const dfloat Dsni = cubDsWT[i*p_Np+n];
+#else
+		const dfloat Drni = cubDrWT[i+n*p_cubNp];
+		const dfloat Dsni = cubDsWT[i+n*p_cubNp];
+#endif
+		//		printf("Drni=%g Dsni=%g\n", Drni, Dsni);
+		
 		rhsRr += Drni*s_cubRfluxr[es][i];
 		rhsUr += Drni*s_cubUfluxr[es][i];
 		rhsVr += Drni*s_cubVfluxr[es][i];
-		
+			        
 		rhsRs += Dsni*s_cubRfluxs[es][i];
 		rhsUs += Dsni*s_cubUfluxs[es][i];
 		rhsVs += Dsni*s_cubVfluxs[es][i];
@@ -122,9 +117,9 @@ kernel void eulerVolume2D(const iint Nelements,
 	    // store acoustics rhs contributions from weak differentiation
 	    const iint id = e*p_Np + n;
 	    dfloat4 rhsq4n;
-	    rhsq4n.x = -rhsRr-rhsRs;
-	    rhsq4n.y = -rhsUr-rhsUs;
-	    rhsq4n.z = -rhsVr-rhsVs;
+	    rhsq4n.x = rhsRr+rhsRs;
+	    rhsq4n.y = rhsUr+rhsUs;
+	    rhsq4n.z = rhsVr+rhsVs;
 	    rhsq4[id] = rhsq4n;
 	  }
 	}
