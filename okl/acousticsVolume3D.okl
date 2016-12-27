@@ -10,7 +10,7 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void meshAcousticsVolume3D_o0(const iint Nelements,
+kernel void acousticsVolume3D_o0(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -75,7 +75,7 @@ kernel void meshAcousticsVolume3D_o0(const iint Nelements,
 
 
 // o1: float4s
-kernel void meshAcousticsVolume3D_o1(const iint Nelements,
+kernel void acousticsVolume3D_o1(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -143,7 +143,7 @@ kernel void meshAcousticsVolume3D_o1(const iint Nelements,
 
 
 // o2: load q into shared
-kernel void meshAcousticsVolume3D_o2(const iint Nelements,
+kernel void acousticsVolume3D_o2(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -219,7 +219,7 @@ kernel void meshAcousticsVolume3D_o2(const iint Nelements,
 }
 
 // o3: multiple elements for each outer iteration
-kernel void meshAcousticsVolume3D_o3(const iint Nelements,
+kernel void acousticsVolume3D_o3(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -310,7 +310,7 @@ kernel void meshAcousticsVolume3D_o3(const iint Nelements,
 }
 
 // o4: unroll 
-kernel void meshAcousticsVolume3D_o4(const iint Nelements,
+kernel void acousticsVolume3D_o4(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -402,7 +402,7 @@ kernel void meshAcousticsVolume3D_o4(const iint Nelements,
 }
 
 // o5: DrT,Ds into shared
-kernel void meshAcousticsVolume3D_o5(const iint Nelements,
+kernel void acousticsVolume3D_o5(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -507,7 +507,7 @@ kernel void meshAcousticsVolume3D_o5(const iint Nelements,
 
 
 // o6: vgeo in shared
-kernel void meshAcousticsVolume3D_o6(const iint Nelements,
+kernel void acousticsVolume3D_o6(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
