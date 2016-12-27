@@ -1,8 +1,6 @@
-#include "mpi.h"
-#include <math.h>
-#include "mesh3D.h"
+#include "acoustics3D.h"
 
-void meshAcousticsSetup3D(mesh3D *mesh){
+void acousticsSetup3D(mesh3D *mesh){
 
   mesh->Nfields = 4;
   
@@ -214,18 +212,18 @@ void meshAcousticsSetup3D(mesh3D *mesh){
   }
 
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsVolume3D.okl",
-				       "meshAcousticsVolume3D_o0",
+    mesh->device.buildKernelFromSource("src/acousticsVolume3D.okl",
+				       "acousticsVolume3D_o0",
 				       kernelInfo);
 
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsSurface3D.okl",
-				       "meshAcousticsSurface3D_s0",
+    mesh->device.buildKernelFromSource("src/acousticsSurface3D.okl",
+				       "acousticsSurface3D_s0",
 				       kernelInfo);
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("src/meshAcousticsUpdate3D.okl",
-				       "meshAcousticsUpdate3D",
+    mesh->device.buildKernelFromSource("src/acousticsUpdate3D.okl",
+				       "acousticsUpdate3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
@@ -238,20 +236,20 @@ void meshAcousticsSetup3D(mesh3D *mesh){
 #define maxNkernels 100
 
   int NvolumeKernels = 7;
-  occa::kernel *meshAcousticsVolumeKernels = new occa::kernel[maxNkernels];
+  occa::kernel *acousticsVolumeKernels = new occa::kernel[maxNkernels];
   char kernelNames[maxNkernels][BUFSIZ];
   double bestElapsed = 1e9;
   
   for(int ker=0;ker<NvolumeKernels;++ker){
-    sprintf(kernelNames[ker], "meshAcousticsVolume3D_o%d", ker);
+    sprintf(kernelNames[ker], "acousticsVolume3D_o%d", ker);
     
-    meshAcousticsVolumeKernels[ker] =
-      mesh->device.buildKernelFromSource("src/meshAcousticsVolume3D.okl", kernelNames[ker], kernelInfo);
+    acousticsVolumeKernels[ker] =
+      mesh->device.buildKernelFromSource("src/acousticsVolume3D.okl", kernelNames[ker], kernelInfo);
     
     mesh->device.finish();
     occa::tic(kernelNames[ker]);
     for(int test=0;test<Ntests;++test)
-      meshAcousticsVolumeKernels[ker](mesh->Nelements,
+      acousticsVolumeKernels[ker](mesh->Nelements,
 				      mesh->o_vgeo,
 				      mesh->o_DrT,
 				      mesh->o_DsT,
@@ -261,7 +259,7 @@ void meshAcousticsSetup3D(mesh3D *mesh){
     mesh->device.finish();
     double elapsed = occa::toc(kernelNames[ker]);
     if(elapsed<bestElapsed){
-      mesh->volumeKernel = meshAcousticsVolumeKernels[ker];
+      mesh->volumeKernel = acousticsVolumeKernels[ker];
       printf("promoting kernel: %d (time %g)\n", ker, elapsed);
       bestElapsed = elapsed;
     }
@@ -272,21 +270,21 @@ void meshAcousticsSetup3D(mesh3D *mesh){
 
   int NsurfaceKernels = 5;
   char surfaceKernelNames[maxNkernels][BUFSIZ];
-  occa::kernel *meshAcousticsSurfaceKernels = new occa::kernel[maxNkernels];
+  occa::kernel *acousticsSurfaceKernels = new occa::kernel[maxNkernels];
   bestElapsed = 1e9;
   
   for(int ker=0;ker<NsurfaceKernels;++ker){
-    sprintf(surfaceKernelNames[ker], "meshAcousticsSurface3D_s%d", ker);
+    sprintf(surfaceKernelNames[ker], "acousticsSurface3D_s%d", ker);
     
-    meshAcousticsSurfaceKernels[ker] =
-      mesh->device.buildKernelFromSource("src/meshAcousticsSurface3D.okl",
+    acousticsSurfaceKernels[ker] =
+      mesh->device.buildKernelFromSource("src/acousticsSurface3D.okl",
 					 surfaceKernelNames[ker], kernelInfo);
     
     mesh->device.finish();
     occa::tic(surfaceKernelNames[ker]);
     for(int test=0;test<Ntests;++test){
       dfloat t  = 0;
-      meshAcousticsSurfaceKernels[ker](mesh->Nelements,
+      acousticsSurfaceKernels[ker](mesh->Nelements,
 				       mesh->o_sgeo,
 				       mesh->o_LIFTT,
 				       mesh->o_vmapM,
@@ -302,7 +300,7 @@ void meshAcousticsSetup3D(mesh3D *mesh){
     mesh->device.finish();
     double elapsed = occa::toc(surfaceKernelNames[ker]);
     if(elapsed<bestElapsed){
-      mesh->surfaceKernel = meshAcousticsSurfaceKernels[ker];
+      mesh->surfaceKernel = acousticsSurfaceKernels[ker];
       printf("promoting kernel: %d (time %g)\n", ker, elapsed);
       bestElapsed = elapsed;
     }
