@@ -31,7 +31,7 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 AOBJS    = \
-mainAcoustics3D.o \
+acousticsMain3D.o \
 acousticsError3D.o \
 acousticsRun3D.o \
 acousticsSetup3D.o \
@@ -65,11 +65,11 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-mainAcoustics3D:$(AOBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o mainAcoustics3D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+acousticsMain3D:$(AOBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o acousticsMain3D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
-mainAcousticsSplitPml3D:$(POBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o mainAcousticsSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
+acousticsMainSplitPml3D:$(POBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o acousticsMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
