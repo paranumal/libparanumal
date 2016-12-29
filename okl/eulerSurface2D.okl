@@ -49,6 +49,8 @@ void boundaryConditions2D(const iint bc,
   *UB = -UM;
   *VB = -VM;
 
+  //  printf("nx=%g,%g at x=%g,%g\n", nx, ny, x, y);
+  
 #if 0
   if(bc==1){
     *RB = RM;
@@ -63,8 +65,31 @@ void boundaryConditions2D(const iint bc,
 #endif
 }
 
+#define p_half 0.5f
 
+void laxFriedrichsFlux2D(const dfloat nx, const dfloat ny,
+			 const dfloat RM, const dfloat UM, const dfloat VM,
+			 const dfloat RP, const dfloat UP, const dfloat VP,
+			 dfloat * restrict fluxR,
+			 dfloat * restrict fluxU,
+			 dfloat * restrict fluxV){
 
+  const dfloat lambda = occaMax(occaFabs(UM*nx+VM*ny)/RM+p_RT,occaFabs(UP*nx+VP*ny)/RP+p_RT);
+
+  const dfloat fxRM = -nx*UM-ny*VM;
+  const dfloat fxUM = -nx*(UM*UM/RM+p_RT*RM)-ny*UM*VM/RM;
+  const dfloat fxVM = -nx*UM*VM/RM - ny*(VM*VM/RM+p_RT*RM);
+
+  const dfloat fxRP = -nx*UP-ny*VP;
+  const dfloat fxUP = -nx*(UP*UP/RP+p_RT*RP)-ny*UP*VP/RP;
+  const dfloat fxVP = -nx*UP*VP/RP - ny*(VP*VP/RP+p_RT*RP);
+
+  *fluxR = p_half*(fxRM+fxRP+lambda*(RP-RM));
+  *fluxU = p_half*(fxUM+fxUP+lambda*(UP-UM));
+  *fluxV = p_half*(fxVM+fxVP+lambda*(VP-VM));
+
+}
+  
 
 // batch process elements
 // assume that the derivatives are on the test function
@@ -179,7 +204,8 @@ kernel void eulerSurface2D(const iint Nelements,
 				   iRM, iUM, iVM,
 				   &iRP, &iUP, &iVP);
 	    }
-	    
+
+#if 1
 	    // compute (q^*)
 	    dfloat iRS, iUS, iVS;
 	    upwind1D(nx, ny,
@@ -193,7 +219,18 @@ kernel void eulerSurface2D(const iint Nelements,
 	    s_iRflux[es][n] = -sc*(nx*iUS+ny*iVS);
 	    s_iUflux[es][n] = -sc*(nx*(iUS*iUS/iRS + iRS*p_RT)+ny*(iUS*iVS/iRS));
 	    s_iVflux[es][n] = -sc*(nx*(iUS*iVS/iRS)+ny*(iVS*iVS/iRS + iRS*p_RT));
+#else
+	    dfloat fxR, fxU, fxV;
+	    laxFriedrichsFlux2D(nx,ny,
+				iRM, iUM, iVM,
+				iRP, iUP, iVP,
+				&fxR, &fxU, &fxV);
 
+	    const dfloat sc = invJ*sJ;
+	    s_iRflux[es][n] = sc*fxR;
+	    s_iUflux[es][n] = sc*fxU;
+	    s_iVflux[es][n] = sc*fxV;
+#endif
 	  }
 	}
       }
