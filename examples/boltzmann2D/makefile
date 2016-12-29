@@ -31,11 +31,11 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 OBJS    = \
-mainBoltzmannSplitPml2D.o \
-meshBoltzmannComputeVorticity2D.o \
-meshBoltzmannError2D.o \
-meshBoltzmannSplitPmlRun2D.o \
-meshBoltzmannSplitPmlSetup2D.o \
+boltzmannSplitPmlMain2D.o \
+boltzmannComputeVorticity2D.o \
+boltzmannError2D.o \
+boltzmannSplitPmlRun2D.o \
+boltzmannSplitPmlSetup2D.o \
 ../../src/meshConnect2D.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -59,8 +59,8 @@ meshBoltzmannSplitPmlSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-mainBoltzmannSplitPml2D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o mainBoltzmannSplitPml2D $(OBJS) $(paths) $(LIBS) 
+boltzmannSplitPmlMain2D:$(OBJS) 
+	$(LD)  $(LDFLAGS)  -o boltzmannSplitPmlMain2D $(OBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
