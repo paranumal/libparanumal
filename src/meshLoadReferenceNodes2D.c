@@ -142,6 +142,16 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+    // read cubature projection matrix
+  mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubProject+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
 
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
