@@ -3,7 +3,7 @@
 #define SXID 2  
 #define SYID 3
 
-kernel void eulerVolume2D(const iint Nelements,
+kernel void eulerVolume2D_c0(const iint Nelements,
 			     const dfloat * restrict vgeo,
 			     const dfloat * restrict cubInterpT,
 			     const dfloat * restrict cubDrWT,
@@ -78,7 +78,7 @@ kernel void eulerVolume2D(const iint Nelements,
       }
     }
     
-    barrier(localMemfence);
+    barrier(localMemFence);
 
     // weak derivatives
     for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
@@ -241,7 +241,7 @@ kernel void eulerVolume2D_c1(const iint Nelements,
       }
     }
     
-    barrier(localMemfence);
+    barrier(localMemFence);
 
     // weak derivatives
     for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
@@ -388,7 +388,7 @@ kernel void eulerVolume2D_c2(const iint Nelements,
       }
     }
     
-    barrier(localMemfence);
+    barrier(localMemFence);
 
     // weak derivatives
     for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
@@ -445,7 +445,7 @@ kernel void eulerVolume2D_c2(const iint Nelements,
 }
 
 
-// only use p_NblockV x p_Np inner iterations
+// c3: only use p_NblockV x p_Np inner iterations
 kernel void eulerVolume2D_c3(const iint Nelements,
 			  const dfloat * restrict vgeo,
 			  const dfloat * restrict cubInterpT,
@@ -530,7 +530,7 @@ kernel void eulerVolume2D_c3(const iint Nelements,
       }
     }
     
-    barrier(localMemfence);
+    barrier(localMemFence);
     
     // weak derivatives
     for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
@@ -568,9 +568,9 @@ kernel void eulerVolume2D_c3(const iint Nelements,
   }
 }
 
-// only use p_NblockV x p_Np inner iterations
+// c4: only use p_NblockV x p_Np inner iterations
 kernel void eulerVolume2D_c4(const iint Nelements,
-			  const dfloat4 * restrict vgeo,
+			  const dfloat * restrict vgeo,
 			  const dfloat * restrict cubInterpT,
 			  const dfloat * restrict cubDrWT,
 			  const dfloat * restrict cubDsWT,
@@ -590,11 +590,7 @@ kernel void eulerVolume2D_c4(const iint Nelements,
     shared dfloat s_cubVfluxr[p_NblockV][p_Np];
     shared dfloat s_cubVfluxs[p_NblockV][p_Np];
 
-    shared dfloat s_drdx[p_NblockV], s_dsdx[p_NblockV];
-    shared dfloat s_drdy[p_NblockV], s_dsdy[p_NblockV];
-
-    exclusive dfloat rhsRr, rhsUr, rhsVr;
-    exclusive dfloat rhsRs, rhsUs, rhsVs;
+    exclusive dfloat rhsR, rhsU, rhsV;
     
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
@@ -605,23 +601,148 @@ kernel void eulerVolume2D_c4(const iint Nelements,
 	  s_R[es][n] = q4n.x;      	    
 	  s_U[es][n] = q4n.y;
 	  s_V[es][n] = q4n.z;
-	  rhsRr = 0.f;
-	  rhsUr = 0.f;
-	  rhsVr = 0.f;
-	  rhsRs = 0.f;
-	  rhsUs = 0.f;
-	  rhsVs = 0.f;
 	}
 
-	iint t=n+es*p_Np;
-	if(t<p_NblockV){
-	  if(eo+t<Nelements){
-	    const dfloat4 vgeon = vgeo[eo+t];
-	    s_drdx[t] = vgeon.x; // note 
-	    s_drdy[t] = vgeon.y;
-	    s_dsdx[t] = vgeon.z;
-	    s_dsdy[t] = vgeon.w;
+	rhsR = 0.f;
+	rhsU = 0.f;
+	rhsV = 0.f;
+      }
+    }
+    
+    // interpolate to cubature nodes in groups of p_Np
+    for(iint co=0;co<p_cubNp;co+=p_Np){
+      
+      // make sure all node data is loaded into shared
+      barrier(localMemFence);
+      
+      // interpolate to cubature (assume Np<=cubNp
+      for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+	for(iint n=0;n<p_Np;++n;inner0){
+	  iint e = eo+es; // element in block
+	  if(e<Nelements){
+
+	    if(co+n<p_cubNp){
+
+	      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	      
+	      dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
+	      
+	      occaUnroll(p_Np)
+		for(iint m=0;m<p_Np;++m){
+		  const dfloat cImn = cubInterpT[m*p_cubNp+n+co];
+		  cubR += cImn*s_R[es][m];		      
+		  cubU += cImn*s_U[es][m];
+		  cubV += cImn*s_V[es][m];
+		}
+	      
+	      const dfloat invcubR = 1.f/cubR;
+	      
+	      // (dphidx, U) + (dphidy, V)
+	      const dfloat fluxRx = cubU;
+	      const dfloat fluxRy = cubV;
+	      s_cubRfluxr[es][n] = drdx*fluxRx + drdy*fluxRy;
+	      s_cubRfluxs[es][n] = dsdx*fluxRx + dsdy*fluxRy;
+	      
+	      const dfloat fluxUx = cubU*cubU*invcubR + p_RT*cubR;
+	      const dfloat fluxUy = cubV*cubU*invcubR;
+	      s_cubUfluxr[es][n] = drdx*fluxUx + drdy*fluxUy;
+	      s_cubUfluxs[es][n] = dsdx*fluxUx + dsdy*fluxUy;
+	      
+	      const dfloat fluxVx = cubV*cubU*invcubR;
+	      const dfloat fluxVy = cubV*cubV*invcubR + p_RT*cubR;
+	      s_cubVfluxr[es][n] = drdx*fluxVx + drdy*fluxVy;
+	      s_cubVfluxs[es][n] = dsdx*fluxVx + dsdy*fluxVy;
+	      
+	    }
 	  }
+	}
+      }
+      
+      barrier(localMemFence);
+      
+      // weak derivatives
+      for(iint es=0;es<p_NblockV;++es;inner1){ 
+	for(iint n=0;n<p_Np;++n;inner0){    
+	  iint e = eo+es; 
+	  if(e<Nelements){	 
+	    for(iint i=0;i<p_Np;++i){
+	      if(i+co<p_cubNp){
+		// load data at node i of element e
+		const dfloat Drni = cubDrWT[(i+co)*p_Np+n];		
+		const dfloat Dsni = cubDsWT[(i+co)*p_Np+n];
+
+		rhsR += Drni*s_cubRfluxr[es][i];
+		rhsU += Drni*s_cubUfluxr[es][i];
+		rhsV += Drni*s_cubVfluxr[es][i];
+		
+		rhsR += Dsni*s_cubRfluxs[es][i];
+		rhsU += Dsni*s_cubUfluxs[es][i];
+		rhsV += Dsni*s_cubVfluxs[es][i];
+	      }
+	    }
+	  }
+	}
+      }
+    } // end of Np blocked Ncub loop
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  dfloat4 rhsq4n;
+
+	  rhsq4n.x = rhsR;
+	  rhsq4n.y = rhsU;
+	  rhsq4n.z = rhsV;
+	  rhsq4[e*p_Np+n] = rhsq4n;
+	}
+      }
+    }
+  }
+}
+
+
+
+// only use p_NblockV x p_Np inner iterations
+kernel void eulerVolume2D(const iint Nelements,
+			  const dfloat * restrict vgeo,
+			  const dfloat * restrict cubInterpT,
+			  const dfloat * restrict cubDrWT,
+			  const dfloat * restrict cubDsWT,
+			  const dfloat4 * restrict q4,
+			  dfloat4 * restrict rhsq4){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_U[p_NblockV][p_Np];
+    shared dfloat s_V[p_NblockV][p_Np];
+    shared dfloat s_R[p_NblockV][p_Np];
+
+    shared dfloat s_cubRflux[p_NblockV][p_Np];
+    shared dfloat s_cubUflux[p_NblockV][p_Np];
+    shared dfloat s_cubVflux[p_NblockV][p_Np];
+
+    exclusive dfloat rhsR, rhsU, rhsV;
+
+    exclusive dfloat cubRfluxs;
+    exclusive dfloat cubUfluxs;
+    exclusive dfloat cubVfluxs;
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	iint e = eo+es; // element in block
+	// read contiguous blocks
+	if(e<Nelements){
+	  const dfloat4 q4n = q4[e*p_Np+n];
+	  s_R[es][n] = q4n.x;      	    
+	  s_U[es][n] = q4n.y;
+	  s_V[es][n] = q4n.z;
+	  rhsR = 0.f;
+	  rhsU = 0.f;
+	  rhsV = 0.f;
 	}
       }
     }
@@ -640,6 +761,11 @@ kernel void eulerVolume2D_c4(const iint Nelements,
 
 	    if(co+n<p_cubNp){
 
+	      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	      
 	      dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
 	      
 	      occaUnroll(p_Np)
@@ -651,64 +777,94 @@ kernel void eulerVolume2D_c4(const iint Nelements,
 		}
 	      
 	      const dfloat invcubR = 1.f/cubR;
-	      
+
 	      // (dphidx, U) + (dphidy, V)
 	      const dfloat fluxRx = cubU;
 	      const dfloat fluxRy = cubV;
-	      s_cubRfluxr[es][n] = s_drdx[es]*fluxRx + s_drdy[es]*fluxRy;
-	      s_cubRfluxs[es][n] = s_dsdx[es]*fluxRx + s_dsdy[es]*fluxRy;
+	      const dfloat cubRfluxr = drdx*fluxRx + drdy*fluxRy;
+	      cubRfluxs = dsdx*fluxRx + dsdy*fluxRy;
 	      
 	      const dfloat fluxUx = cubU*cubU*invcubR + p_RT*cubR;
 	      const dfloat fluxUy = cubV*cubU*invcubR;
-	      s_cubUfluxr[es][n] = s_drdx[es]*fluxUx + s_drdy[es]*fluxUy;
-	      s_cubUfluxs[es][n] = s_dsdx[es]*fluxUx + s_dsdy[es]*fluxUy;
+	      const dfloat cubUfluxr = drdx*fluxUx + drdy*fluxUy;
+	      cubUfluxs = dsdx*fluxUx + dsdy*fluxUy;
 	      
 	      const dfloat fluxVx = cubV*cubU*invcubR;
 	      const dfloat fluxVy = cubV*cubV*invcubR + p_RT*cubR;
-	      s_cubVfluxr[es][n] = s_drdx[es]*fluxVx + s_drdy[es]*fluxVy;
-	      s_cubVfluxs[es][n] = s_dsdx[es]*fluxVx + s_dsdy[es]*fluxVy;
-	      
+	      const dfloat cubVfluxr = drdx*fluxVx + drdy*fluxVy;
+	      cubVfluxs = dsdx*fluxVx + dsdy*fluxVy;
+
+	      s_cubRflux[es][n] = cubRfluxr;
+	      s_cubUflux[es][n] = cubUfluxr;
+	      s_cubVflux[es][n] = cubVfluxr;
 	    }
 	  }
 	}
       }
       
-      barrier(localMemfence);
+      barrier(localMemFence);
       
       // weak derivatives
-      for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint es=0;es<p_NblockV;++es;inner1){ 
 	for(iint n=0;n<p_Np;++n;inner0){    
-	  iint e = eo+es; // element in block
+	  iint e = eo+es; 
 	  if(e<Nelements){	 
-
 	    for(iint i=0;i<p_Np;++i){
 	      if(i+co<p_cubNp){
 		// load data at node i of element e
 		const dfloat Drni = cubDrWT[(i+co)*p_Np+n];		
-		const dfloat Dsni = cubDsWT[(i+co)*p_Np+n];
 		
-		rhsRr += Drni*s_cubRfluxr[es][i];
-		rhsUr += Drni*s_cubUfluxr[es][i];
-		rhsVr += Drni*s_cubVfluxr[es][i];
-				
-		rhsRs += Dsni*s_cubRfluxs[es][i];
-		rhsUs += Dsni*s_cubUfluxs[es][i];
-		rhsVs += Dsni*s_cubVfluxs[es][i];
+		rhsR += Drni*s_cubRflux[es][i];
+		rhsU += Drni*s_cubUflux[es][i];
+		rhsV += Drni*s_cubVflux[es][i];
 	      }
 	    }
 	  }
 	}
       }
-    }
+
+      barrier(localMemFence);
+
+      for(iint es=0;es<p_NblockV;++es;inner1){ 
+	for(iint n=0;n<p_Np;++n;inner0){    
+	  iint e = eo+es; 
+	  if(e<Nelements){	 
+	    s_cubRflux[es][n] = cubRfluxs;
+	    s_cubUflux[es][n] = cubUfluxs;
+	    s_cubVflux[es][n] = cubVfluxs;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+      
+      // weak 's' derivatives
+      for(iint es=0;es<p_NblockV;++es;inner1){ 
+	for(iint n=0;n<p_Np;++n;inner0){    
+	  iint e = eo+es; 
+	  if(e<Nelements){	 
+	    for(iint i=0;i<p_Np;++i){
+	      if(i+co<p_cubNp){
+		// load data at node i of element e
+		const dfloat Dsni = cubDsWT[(i+co)*p_Np+n];      
+		rhsR += Dsni*s_cubRflux[es][i];
+		rhsU += Dsni*s_cubUflux[es][i];
+		rhsV += Dsni*s_cubVflux[es][i];
+	      }
+	    }
+	  }
+	}
+      }
+    } // end of Np blocked Ncub loop
     
     for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){    
 	iint e = eo+es; // element in block
 	if(e<Nelements){	 
 	  dfloat4 rhsq4n;
-	  rhsq4n.x = rhsRr+rhsRs;
-	  rhsq4n.y = rhsUr+rhsUs;
-	  rhsq4n.z = rhsVr+rhsVs;
+	  rhsq4n.x = rhsR;	
+	  rhsq4n.y = rhsU;
+	  rhsq4n.z = rhsV;
 	  rhsq4[e*p_Np+n] = rhsq4n;
 	}
       }
