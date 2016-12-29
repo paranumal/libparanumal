@@ -3,14 +3,13 @@
 #define SXID 2  
 #define SYID 3
 
-// cDrT,cDsT into shared
 kernel void eulerVolume2D(const iint Nelements,
-			  const dfloat * restrict vgeo,
-			  const dfloat * restrict cubInterpT,
-			  const dfloat * restrict cubDrWT,
-			  const dfloat * restrict cubDsWT,
-			  const dfloat4 * restrict q4,
-			  dfloat4 * restrict rhsq4){
+			     const dfloat * restrict vgeo,
+			     const dfloat * restrict cubInterpT,
+			     const dfloat * restrict cubDrWT,
+			     const dfloat * restrict cubDsWT,
+			     const dfloat4 * restrict q4,
+			     dfloat4 * restrict rhsq4){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -63,7 +62,6 @@ kernel void eulerVolume2D(const iint Nelements,
 	      cubU += cubInterpT[m*p_cubNp+n]*s_U[es][m];
 	      cubV += cubInterpT[m*p_cubNp+n]*s_V[es][m];
 	    }
-
 	    
 	    // (dphidx, U) + (dphidy, V)
 	    s_cubRfluxr[es][n] = drdx*cubU + drdy*cubV;
@@ -127,3 +125,446 @@ kernel void eulerVolume2D(const iint Nelements,
     }
   }
 }
+
+kernel void eulerVolume2D_c1(const iint Nelements,
+			     const dfloat * restrict vgeo,
+			     const dfloat * restrict cubInterpT,
+			     const dfloat * restrict cubDrWT,
+			     const dfloat * restrict cubDsWT,
+			     const dfloat4 * restrict q4,
+			     dfloat4 * restrict rhsq4){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_U[p_NblockV][p_Np];
+    shared dfloat s_V[p_NblockV][p_Np];
+    shared dfloat s_R[p_NblockV][p_Np];
+
+    shared dfloat s_cubRfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubRfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxs[p_NblockV][p_cubNp];
+
+    shared dfloat s_cubDrWT[p_cubNp][p_Np];
+    shared dfloat s_cubDsWT[p_cubNp][p_Np];
+    shared dfloat s_cubInterpT[p_Np][p_cubNp];
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){     // for all nodes in this element
+	
+	iint t = n + es*p_maxVolumeNodes;
+	while(t<p_cubNp*p_Np){
+	  s_cubDrWT[0][t] = cubDrWT[t];
+	  s_cubDsWT[0][t] = cubDsWT[t];
+	  s_cubInterpT[0][t] = cubInterpT[t];
+	  t += p_NblockV*p_maxVolumeNodes;
+	}
+	
+	
+	iint e = eo+es; // element in block
+#if 0
+	if(e<Nelements){
+	  if(n<p_Np){
+	    const iint id = e*p_Np + n;
+	    const dfloat4 q4n = q4[id];
+	    s_R[es][n] = q4n.x;      	    
+	    s_U[es][n] = q4n.y;
+	    s_V[es][n] = q4n.z;
+	  }
+	}
+#else
+	// read contiguous blocks
+	t = n + es*p_maxVolumeNodes;
+	if(t<p_Np*p_NblockV && (eo*p_Np + t)<Nelements*p_Np){
+	  const dfloat4 q4n = q4[eo*p_Np+t];
+	  s_R[0][t] = q4n.x;      	    
+	  s_U[0][t] = q4n.y;
+	  s_V[0][t] = q4n.z;
+	}
+#endif
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    // interpolate to cubature
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  if(n<p_cubNp){
+
+	    // prefetch geometric factors (constant on triangle)
+	    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+	    dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
+
+	    occaUnroll(p_Np)
+	    for(iint m=0;m<p_Np;++m){
+#if 0
+	      cubR += cubInterpT[m*p_cubNp+n]*s_R[es][m];		      
+	      cubU += cubInterpT[m*p_cubNp+n]*s_U[es][m];
+	      cubV += cubInterpT[m*p_cubNp+n]*s_V[es][m];
+#else
+	      const dfloat cImn = s_cubInterpT[m][n];
+	      cubR += cImn*s_R[es][m];		      
+	      cubU += cImn*s_U[es][m];
+	      cubV += cImn*s_V[es][m];
+#endif
+	    }
+
+	    const dfloat invcubR = 1.f/cubR;
+
+	    // (dphidx, U) + (dphidy, V)
+	    const dfloat fluxRx = cubU, fluxRy = cubV;
+	    s_cubRfluxr[es][n] = drdx*fluxRx + drdy*fluxRy;
+	    s_cubRfluxs[es][n] = dsdx*fluxRx + dsdy*fluxRy;
+
+	    const dfloat fluxUx = cubU*cubU*invcubR + p_RT*cubR;
+	    const dfloat fluxUy = cubV*cubU*invcubR;
+	    s_cubUfluxr[es][n] = drdx*fluxUx + drdy*fluxUy;
+	    s_cubUfluxs[es][n] = dsdx*fluxUx + dsdy*fluxUy;
+
+	    const dfloat fluxVx = cubV*cubU*invcubR;
+	    const dfloat fluxVy = cubV*cubV*invcubR + p_RT*cubR;
+	    s_cubVfluxr[es][n] = drdx*fluxVx + drdy*fluxVy;
+	    s_cubVfluxs[es][n] = dsdx*fluxVx + dsdy*fluxVy;
+
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemfence);
+
+    // weak derivatives
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  if(n<p_Np){ // output at W&B nodes
+
+	    // compute weak 'r' and 's' derivatives of volume fluxes at node n
+	    dfloat rhsU = 0, rhsV = 0, rhsR = 0;
+
+	    occaUnroll(p_cubNp)
+	      for(iint i=0;i<p_cubNp;++i){
+		// load data at node i of element e
+#if 0
+		const dfloat Drni = cubDrWT[i*p_Np+n];		
+		const dfloat Dsni = cubDsWT[i*p_Np+n];
+#else
+		const dfloat Drni = s_cubDrWT[i][n];		
+		const dfloat Dsni = s_cubDsWT[i][n];		
+#endif
+		rhsR += Drni*s_cubRfluxr[es][i];
+		rhsU += Drni*s_cubUfluxr[es][i];
+		rhsV += Drni*s_cubVfluxr[es][i];
+	      }
+
+	    occaUnroll(p_cubNp)
+	      for(iint i=0;i<p_cubNp;++i){
+		const dfloat Drni = s_cubDrWT[i][n];		
+		const dfloat Dsni = s_cubDsWT[i][n];		
+		rhsR += Dsni*s_cubRfluxs[es][i];
+		rhsU += Dsni*s_cubUfluxs[es][i];
+		rhsV += Dsni*s_cubVfluxs[es][i];
+	      }
+	    s_R[es][n] = rhsR;
+	    s_U[es][n] = rhsU;
+	    s_V[es][n] = rhsV;
+	  }
+	}
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	
+	iint t = n + es*p_maxVolumeNodes;
+	if(t<p_Np*p_NblockV && (eo*p_Np + t)<Nelements*p_Np){
+	  dfloat4 rhsq4n;
+	  rhsq4n.x = s_R[0][t];
+	  rhsq4n.y = s_U[0][t];
+	  rhsq4n.z = s_V[0][t];
+	  rhsq4[eo*p_Np+t] = rhsq4n;
+	}
+      }
+    }
+  }
+}
+
+
+
+kernel void eulerVolume2D_c2(const iint Nelements,
+			  const dfloat * restrict vgeo,
+			  const dfloat * restrict cubInterpT,
+			  const dfloat * restrict cubDrWT,
+			  const dfloat * restrict cubDsWT,
+			  const dfloat4 * restrict q4,
+			  dfloat4 * restrict rhsq4){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_U[p_NblockV][p_Np];
+    shared dfloat s_V[p_NblockV][p_Np];
+    shared dfloat s_R[p_NblockV][p_Np];
+
+    shared dfloat s_cubRfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubRfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxs[p_NblockV][p_cubNp];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){     // for all nodes in this element
+	
+	// read contiguous blocks
+	iint t = n + es*p_maxVolumeNodes;
+
+	if(t<p_Np*p_NblockV && (eo*p_Np + t)<Nelements*p_Np){
+	  const dfloat4 q4n = q4[eo*p_Np+t];
+	  s_R[0][t] = q4n.x;      	    
+	  s_U[0][t] = q4n.y;
+	  s_V[0][t] = q4n.z;
+	}
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    // interpolate to cubature
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  if(n<p_cubNp){
+	    
+	    // prefetch geometric factors (constant on triangle)
+	    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+	    dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
+
+	    occaUnroll(p_Np)
+	    for(iint m=0;m<p_Np;++m){
+	      const dfloat cImn = cubInterpT[m*p_cubNp+n];
+	      cubR += cImn*s_R[es][m];		      
+	      cubU += cImn*s_U[es][m];
+	      cubV += cImn*s_V[es][m];
+	    }
+	    
+	    const dfloat invcubR = 1.f/cubR;
+	    
+	    // (dphidx, U) + (dphidy, V)
+	    const dfloat fluxRx = cubU, fluxRy = cubV;
+	    s_cubRfluxr[es][n] = drdx*fluxRx + drdy*fluxRy;
+	    s_cubRfluxs[es][n] = dsdx*fluxRx + dsdy*fluxRy;
+
+	    const dfloat fluxUx = cubU*cubU*invcubR + p_RT*cubR;
+	    const dfloat fluxUy = cubV*cubU*invcubR;
+	    s_cubUfluxr[es][n] = drdx*fluxUx + drdy*fluxUy;
+	    s_cubUfluxs[es][n] = dsdx*fluxUx + dsdy*fluxUy;
+	    
+	    const dfloat fluxVx = cubV*cubU*invcubR;
+	    const dfloat fluxVy = cubV*cubV*invcubR + p_RT*cubR;
+	    s_cubVfluxr[es][n] = drdx*fluxVx + drdy*fluxVy;
+	    s_cubVfluxs[es][n] = dsdx*fluxVx + dsdy*fluxVy;
+
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemfence);
+
+    // weak derivatives
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  if(n<p_Np){ // output at W&B nodes
+
+	    // compute weak 'r' and 's' derivatives of volume fluxes at node n
+	    dfloat rhsU = 0, rhsV = 0, rhsR = 0;
+
+	    occaUnroll(p_cubNp)
+	      for(iint i=0;i<p_cubNp;++i){
+		// load data at node i of element e
+		const dfloat Drni = cubDrWT[i*p_Np+n];		
+
+		rhsR += Drni*s_cubRfluxr[es][i];
+		rhsU += Drni*s_cubUfluxr[es][i];
+		rhsV += Drni*s_cubVfluxr[es][i];
+	      }
+
+	    occaUnroll(p_cubNp)
+	      for(iint i=0;i<p_cubNp;++i){
+		const dfloat Dsni = cubDsWT[i*p_Np+n];
+
+		rhsR += Dsni*s_cubRfluxs[es][i];
+		rhsU += Dsni*s_cubUfluxs[es][i];
+		rhsV += Dsni*s_cubVfluxs[es][i];
+	      }
+	    s_R[es][n] = rhsR;
+	    s_U[es][n] = rhsU;
+	    s_V[es][n] = rhsV;
+	  }
+	}
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_maxVolumeNodes;++n;inner0){    
+	
+	iint t = n + es*p_maxVolumeNodes;
+	if(t<p_Np*p_NblockV && (eo*p_Np + t)<Nelements*p_Np){
+	  dfloat4 rhsq4n;
+	  rhsq4n.x = s_R[0][t];
+	  rhsq4n.y = s_U[0][t];
+	  rhsq4n.z = s_V[0][t];
+	  rhsq4[eo*p_Np+t] = rhsq4n;
+	}
+      }
+    }
+  }
+}
+
+
+// only use p_NblockV x p_Np inner iterations
+kernel void eulerVolume2D_c3(const iint Nelements,
+			  const dfloat * restrict vgeo,
+			  const dfloat * restrict cubInterpT,
+			  const dfloat * restrict cubDrWT,
+			  const dfloat * restrict cubDsWT,
+			  const dfloat4 * restrict q4,
+			  dfloat4 * restrict rhsq4){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_U[p_NblockV][p_Np];
+    shared dfloat s_V[p_NblockV][p_Np];
+    shared dfloat s_R[p_NblockV][p_Np];
+
+    shared dfloat s_cubRfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubRfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubUfluxs[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxr[p_NblockV][p_cubNp];
+    shared dfloat s_cubVfluxs[p_NblockV][p_cubNp];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	iint e = eo+es; // element in block
+	// read contiguous blocks
+	if(e<Nelements){
+	  const dfloat4 q4n = q4[e*p_Np+n];
+	  s_R[es][n] = q4n.x;      	    
+	  s_U[es][n] = q4n.y;
+	  s_V[es][n] = q4n.z;
+	}
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    // interpolate to cubature (assume Np<=cubNp
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){
+	  
+	  // prefetch geometric factors (constant on triangle)
+	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];	 
+
+	  // interpolate to cubature nodes in groups of p_Np
+	  for(iint c=n;c<p_cubNp;c+=p_Np){
+
+	    dfloat cubR = 0.f, cubU = 0.f, cubV = 0.f;
+	    
+	    occaUnroll(p_Np)
+	      for(iint m=0;m<p_Np;++m){
+		const dfloat cImn = cubInterpT[m*p_cubNp+c];
+		cubR += cImn*s_R[es][m];		      
+		cubU += cImn*s_U[es][m];
+		cubV += cImn*s_V[es][m];
+	      }
+	    
+	    const dfloat invcubR = 1.f/cubR;
+	    
+	    // (dphidx, U) + (dphidy, V)
+	    const dfloat fluxRx = cubU, fluxRy = cubV;
+	    s_cubRfluxr[es][c] = drdx*fluxRx + drdy*fluxRy;
+	    s_cubRfluxs[es][c] = dsdx*fluxRx + dsdy*fluxRy;
+	    
+	    const dfloat fluxUx = cubU*cubU*invcubR + p_RT*cubR;
+	    const dfloat fluxUy = cubV*cubU*invcubR;
+	    s_cubUfluxr[es][c] = drdx*fluxUx + drdy*fluxUy;
+	    s_cubUfluxs[es][c] = dsdx*fluxUx + dsdy*fluxUy;
+	    
+	    const dfloat fluxVx = cubV*cubU*invcubR;
+	    const dfloat fluxVy = cubV*cubV*invcubR + p_RT*cubR;
+	    s_cubVfluxr[es][c] = drdx*fluxVx + drdy*fluxVy;
+	    s_cubVfluxs[es][c] = dsdx*fluxVx + dsdy*fluxVy;
+	    
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemfence);
+    
+    // weak derivatives
+    for(iint es=0;es<p_NblockV;++es;inner1){ // for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){    
+	iint e = eo+es; // element in block
+	if(e<Nelements){	 
+	  
+	  // compute weak 'r' and 's' derivatives of volume fluxes at node n
+	  dfloat rhsU = 0, rhsV = 0, rhsR = 0;
+	  
+	  occaUnroll(p_cubNp)
+	    for(iint i=0;i<p_cubNp;++i){
+	      // load data at node i of element e
+	      const dfloat Drni = cubDrWT[i*p_Np+n];		
+	      
+	      rhsR += Drni*s_cubRfluxr[es][i];
+	      rhsU += Drni*s_cubUfluxr[es][i];
+	      rhsV += Drni*s_cubVfluxr[es][i];
+
+	      const dfloat Dsni = cubDsWT[i*p_Np+n];
+	      
+	      rhsR += Dsni*s_cubRfluxs[es][i];
+	      rhsU += Dsni*s_cubUfluxs[es][i];
+	      rhsV += Dsni*s_cubVfluxs[es][i];
+	    }
+
+	  dfloat4 rhsq4n;
+	  rhsq4n.x = rhsR;
+	  rhsq4n.y = rhsU;
+	  rhsq4n.z = rhsV;
+	  rhsq4[e*p_Np+n] = rhsq4n;
+	}
+      }
+    }
+  }
+}
+
