@@ -119,7 +119,7 @@ mesh2D* meshParallelReader2D(char *fileName){
 	  iint v3tmp = v3;
 	  v3 = v2;
 	  v2 = v3tmp;
-	  printf("unwarping element\n");
+	  //	  printf("unwarping element\n");
 	}
 	
 	/* read vertex triplet for trianngle */

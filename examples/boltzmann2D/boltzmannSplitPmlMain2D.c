@@ -29,10 +29,9 @@ int main(int argc, char **argv){
   // run
   //  boltzmannRun2D(mesh);
   printf("occa run: \n");
-  //  boltzmannOccaRun2D(mesh);
 
-  void boltzmannSplitPmlOccaRun2D(mesh2D *mesh);
-  boltzmannSplitPmlOccaRun2D(mesh);
+  void boltzmannSplitPmlRun2D(mesh2D *mesh);
+  boltzmannSplitPmlRun2D(mesh);
 
   // close down MPI
   MPI_Finalize();

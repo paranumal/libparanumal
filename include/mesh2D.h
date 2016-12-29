@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -112,7 +112,8 @@ typedef struct {
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
-
+  dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
+  
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
@@ -206,7 +207,7 @@ typedef struct {
   occa::memory o_DrT, o_DsT, o_D, o_LIFTT;
 
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
-  occa::memory o_cubDrWT, o_cubDsWT, o_cubInterpT;
+  occa::memory o_cubDrWT, o_cubDsWT, o_cubInterpT, o_cubProjectT;
   
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP;
@@ -236,6 +237,7 @@ typedef struct {
   occa::kernel surfaceKernel;
   occa::kernel partialSurfaceKernel;
   occa::kernel updateKernel;
+  occa::kernel relaxationKernel;
 
   occa::kernel pmlKernel;
   occa::kernel pmlUpdateKernel;

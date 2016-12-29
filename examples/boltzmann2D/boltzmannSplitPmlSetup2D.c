@@ -201,7 +201,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -234,6 +234,17 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
+  // build volume cubature matrix transposes
+  dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  dfloat *cubInterpT  = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->cubNp;++m){
+      cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
+      cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+    }
+  }
+
+  
   // find elements that have all neighbors on this process
   iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
   iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
@@ -315,6 +326,13 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			LIFTT);
 
+  mesh->o_cubInterpT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubInterpT);
+
+  mesh->o_cubProjectT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubProjectT);
   
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
@@ -379,7 +397,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
+  kernelInfo.addDefine("p_cubNp", mesh->cubNp);
+  
   kernelInfo.addDefine("p_pmlAlpha", (float).2);
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -442,6 +461,13 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 				       "boltzmannSplitPmlSurface2D",
 				       kernelInfo);
   printf("ending surface\n");
+
+  mesh->relaxationKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlRelaxation2D.okl",
+				       "boltzmannSplitPmlRelaxation2D",
+				       kernelInfo);
+
+  
 #if 0
   mesh->boltzmannPartialSurfaceKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannPartialSurface2D.okl",

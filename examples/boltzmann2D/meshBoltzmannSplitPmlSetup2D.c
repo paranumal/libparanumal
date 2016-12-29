@@ -435,25 +435,25 @@ void meshBoltzmannSplitPmlSetup2D(mesh2D *mesh){
   }
 
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlVolume2D.okl",
-				       "meshBoltzmannSplitPmlVolume2D",
+    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolume2D.okl",
+				       "boltzmannSplitPmlVolume2D",
 				       kernelInfo);
   printf("starting surface\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlSurface2D.okl",
-				       "meshBoltzmannSplitPmlSurface2D",
+    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlSurface2D.okl",
+				       "boltzmannSplitPmlSurface2D",
 				       kernelInfo);
   printf("ending surface\n");
 #if 0
   mesh->boltzmannPartialSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannPartialSurface2D.okl",
-				       "meshBoltzmannPartialSurface2D",
+    mesh->device.buildKernelFromSource("okl/boltzmannPartialSurface2D.okl",
+				       "boltzmannPartialSurface2D",
 				       kernelInfo);
 #endif
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/meshBoltzmannSplitPmlUpdate2D.okl",
-				       "meshBoltzmannSplitPmlUpdate2D",
+    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlUpdate2D.okl",
+				       "boltzmannSplitPmlUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
