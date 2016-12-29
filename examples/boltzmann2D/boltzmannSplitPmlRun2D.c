@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 
-void boltzmannSplitPmlOccaRun2D(mesh2D *mesh){
+void boltzmannSplitPmlRun2D(mesh2D *mesh){
 
   // MPI send buffer
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
@@ -52,6 +52,15 @@ void boltzmannSplitPmlOccaRun2D(mesh2D *mesh){
 			 mesh->o_rhspmlqx,
 			 mesh->o_rhspmlqy,
 			 mesh->o_rhspmlNT);
+
+      // compute relaxation terms using cubature
+      mesh->relaxationKernel(mesh->Nelements,
+			     mesh->o_cubInterpT,
+			     mesh->o_cubProjectT,
+			     mesh->o_q,
+			     mesh->o_rhspmlqx,
+			     mesh->o_rhspmlqy,
+			     mesh->o_rhspmlNT);
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive

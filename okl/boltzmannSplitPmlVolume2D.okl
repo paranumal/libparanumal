@@ -137,6 +137,7 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	  dfloat rhspmlqy5 = 0;
 	  dfloat rhspmlqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
 
+#if 0
 	  // BGK relaxation approximation to the Boltzmann collision operator
 	  dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
 	  dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
@@ -149,7 +150,8 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	  rhspmlqy4 += 0.5f*N4; // split
 	  rhspmlqy5 += 0.5f*N5;
 	  rhspmlqy6 += 0.5f*N6;
-	  
+#endif
+
 	  // pml relaxation back to mean flow
 	  rhspmlqx1 += -msigmaxe*(pmlqx1);
 	  rhspmlqx2 += -msigmaxe*(pmlqx2);
@@ -179,10 +181,11 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	  rhspmlqy[base+4*p_Np] = rhspmlqy5;
 	  rhspmlqy[base+5*p_Np] = rhspmlqy6;
 
+#if 0
 	  rhspmlNT[base+3*p_Np] = N4;
 	  rhspmlNT[base+4*p_Np] = N5;
 	  rhspmlNT[base+5*p_Np] = N6;
-	  
+#endif	  
 	}
       }
     }
