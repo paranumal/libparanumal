@@ -1,0 +1,58 @@
+
+kernel void boltzmannSplitPmlUpdate2D(const iint Ntotal,
+				      const iint recombine,
+				      const dfloat dt,	
+				      const dfloat rka,
+				      const dfloat rkb,
+				      const dfloat * restrict rhsqx,
+				      const dfloat * restrict rhsqy,
+				      const dfloat * restrict rhsNT,	
+				      dfloat * restrict resqx,
+				      dfloat * restrict resqy,
+				      dfloat * restrict resNT,
+				      dfloat * restrict qx,
+				      dfloat * restrict qy,
+				      dfloat * restrict NT,
+				      dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint n=0;n<Ntotal;++n;tile(256)){
+    if(n<Ntotal){
+      dfloat resqxn = resqx[n];
+      dfloat qxn = qx[n];
+      resqxn = rka*resqxn + dt*rhsqx[n];
+      resqx[n] = resqxn;
+      qxn += rkb*resqxn;
+
+      dfloat resqyn = resqy[n];
+      dfloat qyn = qy[n];
+      resqyn = rka*resqyn + dt*rhsqy[n];
+      resqy[n] = resqyn;
+      qyn += rkb*resqyn;
+      
+      dfloat resNTn = resNT[n];
+      resNTn = rka*resNTn + dt*rhsNT[n];
+      resNT[n] = resNTn;
+      NT[n] += rkb*resNTn;
+
+      // need to map between qx, qy storage and q storage
+      iint node  = n%p_Np;
+      iint field = (n/p_Np)%p_Nfields;
+      iint element = n/(p_Np*p_Nfields);
+      iint id = field + node*p_Nfields + element*p_Np*p_Nfields;
+      dfloat sumq = qxn+qyn;
+      q[id] = sumq + (field==0)*p_q1bar + (field==1)*p_q2bar + (field==2)*p_q3bar + (field==3)*p_q4bar +
+	(field==4)*p_q5bar + (field==5)*p_q6bar;
+
+      if(recombine == 1){
+	qxn = 0.5f*sumq;
+	qyn = 0.5f*sumq;
+      }
+	
+      qx[n] = qxn;
+      qy[n] = qyn;
+      
+    }
+  }
+}
+
