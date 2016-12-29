@@ -66,7 +66,7 @@ void eulerSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = .4; // depends on the stability region size (was .4)
+  dfloat cfl = .2; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*(sqrt(Ubar*Ubar+Vbar*Vbar)/Rbar+mesh->sqrtRT));
@@ -97,10 +97,10 @@ void eulerSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");
+  //  sprintf(deviceConfig, "mode = Serial");
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -329,10 +329,10 @@ void eulerSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
   printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
   
-  int NblockV = 256/maxVolumeNodes; // works for CUDA
+  int NblockV = 64/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxSurfaceNodes; // works for CUDA
+  int NblockS = 512/maxSurfaceNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
