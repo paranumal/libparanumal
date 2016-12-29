@@ -3,7 +3,7 @@
 #define SXID 2  
 #define SYID 3
 
-kernel void eulerVolume2D_c0(const iint Nelements,
+kernel void eulerVolume2D(const iint Nelements,
 			     const dfloat * restrict vgeo,
 			     const dfloat * restrict cubInterpT,
 			     const dfloat * restrict cubDrWT,
@@ -569,7 +569,7 @@ kernel void eulerVolume2D_c3(const iint Nelements,
 }
 
 // only use p_NblockV x p_Np inner iterations
-kernel void eulerVolume2D(const iint Nelements,
+kernel void eulerVolume2D_c4(const iint Nelements,
 			  const dfloat4 * restrict vgeo,
 			  const dfloat * restrict cubInterpT,
 			  const dfloat * restrict cubDrWT,
@@ -593,7 +593,8 @@ kernel void eulerVolume2D(const iint Nelements,
     shared dfloat s_drdx[p_NblockV], s_dsdx[p_NblockV];
     shared dfloat s_drdy[p_NblockV], s_dsdy[p_NblockV];
 
-    exclusive dfloat rhsR, rhsU, rhsV;
+    exclusive dfloat rhsRr, rhsUr, rhsVr;
+    exclusive dfloat rhsRs, rhsUs, rhsVs;
     
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
@@ -604,9 +605,12 @@ kernel void eulerVolume2D(const iint Nelements,
 	  s_R[es][n] = q4n.x;      	    
 	  s_U[es][n] = q4n.y;
 	  s_V[es][n] = q4n.z;
-	  rhsR = 0.f;
-	  rhsU = 0.f;
-	  rhsV = 0.f;
+	  rhsRr = 0.f;
+	  rhsUr = 0.f;
+	  rhsVr = 0.f;
+	  rhsRs = 0.f;
+	  rhsUs = 0.f;
+	  rhsVs = 0.f;
 	}
 
 	iint t=n+es*p_Np;
@@ -683,13 +687,13 @@ kernel void eulerVolume2D(const iint Nelements,
 		const dfloat Drni = cubDrWT[(i+co)*p_Np+n];		
 		const dfloat Dsni = cubDsWT[(i+co)*p_Np+n];
 		
-		rhsR += Drni*s_cubRfluxr[es][i];
-		rhsU += Drni*s_cubUfluxr[es][i];
-		rhsV += Drni*s_cubVfluxr[es][i];
+		rhsRr += Drni*s_cubRfluxr[es][i];
+		rhsUr += Drni*s_cubUfluxr[es][i];
+		rhsVr += Drni*s_cubVfluxr[es][i];
 				
-		rhsR += Dsni*s_cubRfluxs[es][i];
-		rhsU += Dsni*s_cubUfluxs[es][i];
-		rhsV += Dsni*s_cubVfluxs[es][i];
+		rhsRs += Dsni*s_cubRfluxs[es][i];
+		rhsUs += Dsni*s_cubUfluxs[es][i];
+		rhsVs += Dsni*s_cubVfluxs[es][i];
 	      }
 	    }
 	  }
@@ -702,9 +706,9 @@ kernel void eulerVolume2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){	 
 	  dfloat4 rhsq4n;
-	  rhsq4n.x = rhsR;
-	  rhsq4n.y = rhsU;
-	  rhsq4n.z = rhsV;
+	  rhsq4n.x = rhsRr+rhsRs;
+	  rhsq4n.y = rhsUr+rhsUs;
+	  rhsq4n.z = rhsVr+rhsVs;
 	  rhsq4[e*p_Np+n] = rhsq4n;
 	}
       }
