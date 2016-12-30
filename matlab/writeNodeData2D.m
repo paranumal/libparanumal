@@ -127,9 +127,13 @@ for n=1:Ncub
   fprintf(fid, '\n');
 end
 
+cV = Vandermonde2D(N, cubr, cubs);
+cV'*diag(cubw)*cV;
+
 [cVr,cVs] = GradVandermonde2D(N, cubr, cubs);
 cubDrT = V*transpose(cVr)*diag(cubw);
 cubDsT = V*transpose(cVs)*diag(cubw);
+cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
 
 fprintf(fid, '%% cubature r weak differentiation matrix\n');
 for n=1:Np
@@ -147,8 +151,18 @@ for n=1:Np
   fprintf(fid, '\n');
 end
 
+fprintf(fid, '%% cubature projection matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubProject(n,m));
+  end
+  fprintf(fid, '\n');
+end
+cubProject
+testIdentity = cubProject*cInterp;
+
+
 %% surface cubature
-Fr = r(FaceNodes);
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));
 %z = JacobiGL(0,0,N);
 %zV = Vandermonde1D(N,z);
@@ -192,6 +206,17 @@ for n=1:Np
   end
   fprintf(fid, '\n');
 end
+
+cubDrT*ones(Ncub,1) 
+nr = [zeros(Nfi,1);ones(Nfi,1);-ones(Nfi,1)];
+ns = [-ones(Nfi,1);ones(Nfi,1);zeros(Nfi,1)];
+sJ = [ones(Nfi,1);ones(Nfi,1);ones(Nfi,1)];
+cubDrT*ones(Ncub,1) - iLIFT*(nr.*sJ)
+cubDsT*ones(Ncub,1) - iLIFT*(ns.*sJ)
+
+
+
+
 
 
 fclose(fid)
