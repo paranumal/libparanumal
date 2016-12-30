@@ -143,5 +143,121 @@ for n=1:plotNelements
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3));
 end
 
+%% volume cubature
+[z,w] = JacobiGQ(0,0,ceil(3*N/2));
+[cubr,cubs] = meshgrid(z);
+cubw = w*transpose(w);
+cubr = cubr(:);
+cubs = cubs(:);
+cubw = cubw(:);
+
+cInterp = VandermondeQuad2D(N, cubr, cubs)/V;
+Ncub = length(cubr);
+
+fprintf(fid, '%% number of volume cubature nodes\n');
+fprintf(fid, '%d\n', length(cubr));
+fprintf(fid, '%% cubature interpolation matrix\n');
+for n=1:Ncub
+  for m=1:Np
+    fprintf(fid, '%17.15E ', cInterp(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+cV = VandermondeQuad2D(N, cubr, cubs);
+cV'*diag(cubw)*cV;
+
+[cVr,cVs] = GradVandermondeQuad2D(N, cubr, cubs);
+cubDrT = V*transpose(cVr)*diag(cubw);
+cubDsT = V*transpose(cVs)*diag(cubw);
+cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+
+fprintf(fid, '%% cubature r weak differentiation matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubDrT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% cubature s weak differentiation matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubDsT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% cubature projection matrix\n');
+for n=1:Np
+  for m=1:Ncub
+    fprintf(fid, '%17.15E ', cubProject(n,m));
+  end
+  fprintf(fid, '\n');
+end
+cubProject
+testIdentity = cubProject*cInterp
+
+
+%% surface cubature
+[z,w] = JacobiGQ(0,0,ceil(3*N/2));
+%z = JacobiGL(0,0,N);
+%zV = Vandermonde1D(N,z);
+%w = sum(inv(zV*transpose(zV)));
+
+Nfi = length(z);
+
+ir = [z,ones(Nfi,1),-z,-ones(Nfi,1)];
+is = [-ones(Nfi,1), z, ones(Nfi,1), -z];
+iw = [w,w,w,w];
+
+sV = VandermondeQuad2D(N, ir(:), is(:));
+	    sInterp = sV/V;
+	    
+	    iInterp = [sInterp(1:Nfi,faceNodes(:,1));
+	    sInterp(Nfi+1:2*Nfi,faceNodes(:,2));
+	    sInterp(2*Nfi+1:3*Nfi,faceNodes(:,3));
+	    sInterp(3*Nfi+1:4*Nfi,faceNodes(:,4))];
+
+fprintf(fid, '%% number of surface integration nodes per face\n');
+fprintf(fid, '%d\n', length(z));
+fprintf(fid, '%% surface integration interpolation matrix\n');
+for n=1:Nfi*Nfaces
+  for m=1:Nfp
+    fprintf(fid, '%17.15E ', iInterp(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+bInterp = [];
+bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
+bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
+bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
+bInterp(3*Nfi+1:4*Nfi,3*Nfp+1:4*Nfp) = iInterp(3*Nfi+1:4*Nfi,:);
+%% integration node lift matrix
+iLIFT = V*V'*sInterp'*diag(iw(:));
+size(iLIFT)
+size(iInterp)
+altLiftError = max(max(abs(iLIFT*bInterp-LIFT)))
+
+fprintf(fid, '%% surface integration lift matrix\n');
+for n=1:Np
+  for m=1:Nfi*Nfaces
+    fprintf(fid, '%17.15E ', iLIFT(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+cubDrT*ones(Ncub,1) 
+nr = [zeros(Nfi,1);ones(Nfi,1);zeros(Nfi,1);-ones(Nfi,1)];
+ns = [-ones(Nfi,1);zeros(Nfi,1);ones(Nfi,1);zeros(Nfi,1)];
+sJ = [ones(Nfi,1);ones(Nfi,1);ones(Nfi,1);ones(Nfi,1)];
+cubDrT*ones(Ncub,1) - iLIFT*(nr.*sJ)
+cubDsT*ones(Ncub,1) - iLIFT*(ns.*sJ)
+
+
+
+
+
 
 fclose(fid);
