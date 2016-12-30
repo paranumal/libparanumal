@@ -111,7 +111,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 6.e-3; 
+  dfloat nu = 6.e-2;  // was 6.e-3
   mesh->tauInv = mesh->RT/nu; // TW
   
   // set penalty parameter
@@ -203,7 +203,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 100;
 
   printf("dt = %g\n", mesh->dt);
 
