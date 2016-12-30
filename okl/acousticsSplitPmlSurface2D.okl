@@ -28,23 +28,24 @@ void boundaryConditions2D(const iint bc,
     *q3B = 2.f*p_q3bar - q3M;
   }
   if(bc==6){ // Ricker source
+  }
 }
 
 
 
 // batch process elements
 kernel void acousticsSplitPmlSurface2D(const iint Nelements,
-					   const dfloat * restrict sgeo,
-					   const dfloat * restrict LIFTT,
-					   const iint   * restrict vmapM,
-					   const iint   * restrict vmapP,
-					   const iint   * restrict EToB,
-					   const dfloat time,
-					   const dfloat * restrict x,
-					   const dfloat * restrict y,
-					   const dfloat4 * restrict q,
-					   dfloat       * restrict rhspmlqx,
-					   dfloat       * restrict rhspmlqy){
+				       const dfloat * restrict sgeo,
+				       const dfloat * restrict LIFTT,
+				       const iint   * restrict vmapM,
+				       const iint   * restrict vmapP,
+				       const iint   * restrict EToB,
+				       const dfloat time,
+				       const dfloat * restrict x,
+				       const dfloat * restrict y,
+				       const dfloat4 * restrict q,
+				       dfloat       * restrict rhspmlqx,
+				       dfloat       * restrict rhspmlqy){
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
