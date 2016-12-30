@@ -215,6 +215,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //  sprintf(deviceConfig, "mode = Serial");	  
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -398,6 +399,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
+  kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   
   kernelInfo.addDefine("p_pmlAlpha", (float).2);
   

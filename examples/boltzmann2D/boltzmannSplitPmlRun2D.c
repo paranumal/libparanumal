@@ -52,7 +52,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			 mesh->o_rhspmlqx,
 			 mesh->o_rhspmlqy,
 			 mesh->o_rhspmlNT);
-
+#if 1
       // compute relaxation terms using cubature
       mesh->relaxationKernel(mesh->Nelements,
 			     mesh->o_cubInterpT,
@@ -61,7 +61,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			     mesh->o_rhspmlqx,
 			     mesh->o_rhspmlqy,
 			     mesh->o_rhspmlNT);
-      
+#endif 
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish2D(mesh);
