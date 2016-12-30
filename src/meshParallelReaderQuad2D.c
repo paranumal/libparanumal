@@ -61,10 +61,13 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
   fpos_t fpos;
   fgetpos(fp, &fpos);
   int Nquadrilaterals = 0;
+
+  int NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
     iint elementType;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
+    if(elementType==1) ++NboundaryFaces;
     if(elementType==3) ++Nquadrilaterals;
   }
   // rewind to start of elements
@@ -86,12 +89,23 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
 		     sizeof(iint));
 
   /* scan through file looking for quadrilateral elements */
-  int cnt=0;
+  int cnt=0, bcnt=0;
   Nquadrilaterals = 0;
+
+  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*3, sizeof(iint));
   for(n=0;n<mesh->Nelements;++n){
     iint elementType, v1, v2, v3, v4;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
+
+    if(elementType==1){ // boundary face
+      sscanf(buf, "%*d%*d %*d%d%*d %d%d", 
+	     mesh->boundaryInfo+bcnt*3, &v1, &v2);
+      mesh->boundaryInfo[bcnt*3+1] = v1-1;
+      mesh->boundaryInfo[bcnt*3+2] = v2-1;
+      ++bcnt;
+    }
+    
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
 	sscanf(buf, "%*d%*d%*d%*d%*d %d%d%d%d", 
@@ -120,6 +134,9 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
   }
   fclose(fp);
 
+  /* record number of boundary faces found */
+  mesh->NboundaryFaces = bcnt;
+  
   /* record number of found quadrilaterals */
   mesh->Nelements = NquadrilateralsLocal;
 

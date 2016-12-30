@@ -119,7 +119,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
   // find elements with center inside PML zone
-  dfloat xmin = -4, xmax = 4, ymin = -4, ymax = 4;
+  dfloat xmin = -4, xmax = 8, ymin = -4, ymax = 4;
   dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
   
