@@ -76,6 +76,7 @@ LOBJS = \
 ../../src/meshReader2D.o \
 ../../src/meshSetup2D.o \
 ../../src/meshSurfaceGeometricFactors2D.o \
+../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o

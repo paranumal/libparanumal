@@ -341,6 +341,9 @@ void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 mesh2D *meshSetup2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
+// set up OCCA device and copy generic element info to device
+void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
+
 void meshAcousticsRun2D(mesh2D *mesh);
 void meshAcousticsRunQuad2D(mesh2D *mesh);
 void meshAcousticsOccaRun2D(mesh2D *mesh);

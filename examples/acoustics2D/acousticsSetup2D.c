@@ -85,7 +85,14 @@ void acousticsSetup2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+
+  occa::kernelInfo kernelInfo;
+
+  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+  
+#if 0  
   mesh->device.setup(deviceConfig);
+
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -209,8 +216,6 @@ void acousticsSetup2D(mesh2D *mesh){
   mesh->device.setStream(mesh->stream0);
   //-------------------------------------
   
-  occa::kernelInfo kernelInfo;
-
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Np", mesh->Np);
@@ -219,17 +224,6 @@ void acousticsSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 512/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
-
-  int NblockS = 512/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
-  
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
@@ -254,7 +248,21 @@ void acousticsSetup2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
+#endif
+  
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
 
+  int NblockV = 512/mesh->Np; // works for CUDA
+  kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockS = 512/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+  
+  kernelInfo.addDefine("p_Lambda2", 0.5f);
+
+
+  
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/acousticsVolume2D.okl",
 				       "acousticsVolume2D_o0",
