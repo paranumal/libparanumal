@@ -54,10 +54,10 @@ kernel void boltzmannSplitPmlVolumeQuad2D(const iint Nelements,
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Np*p_Nvgeo n + p_Np*RXID];
-	  const dfloat drdy = vgeo[e*p_Np*p_Nvgeo n + p_Np*RYID];
-	  const dfloat dsdx = vgeo[e*p_Np*p_Nvgeo n + p_Np*SXID];
-	  const dfloat dsdy = vgeo[e*p_Np*p_Nvgeo n + p_Np*SYID];
+	  const dfloat drdx = vgeo[e*p_Np*p_Nvgeo + n + p_Np*RXID];
+	  const dfloat drdy = vgeo[e*p_Np*p_Nvgeo + n + p_Np*RYID];
+	  const dfloat dsdx = vgeo[e*p_Np*p_Nvgeo + n + p_Np*SXID];
+	  const dfloat dsdy = vgeo[e*p_Np*p_Nvgeo + n + p_Np*SYID];
 
 	  const dfloat sigmaxe = sigmax[e*p_Np+n];
 	  const dfloat sigmaye = sigmay[e*p_Np+n];
