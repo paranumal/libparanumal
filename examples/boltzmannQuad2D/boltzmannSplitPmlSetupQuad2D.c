@@ -166,20 +166,22 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   for(iint e=0;e<mesh->Nelements;++e){  
 
     for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
-
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-      
-      dfloat hest = .5/(sJ*invJ);
-
-      hmin = mymin(hmin, hest);
-      hmax = mymax(hmax, hest);
+      for(iint n=0;n<mesh->Nfp;++n){
+	iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e + mesh->Nfp*f+n);
+	dfloat sJ   = mesh->sgeo[sid + SJID];
+	dfloat invJ = mesh->sgeo[sid + IJID];
+	
+	// sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+	// h = 0.5/(sJ/J)
+	
+	dfloat hest = .5/(sJ*invJ);
+	
+	hmin = mymin(hmin, hest);
+	hmax = mymax(hmax, hest);
+      }
     }
   }
-
+    
   dfloat cfl = .4; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
@@ -212,10 +214,10 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");	  
+  //sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
 
@@ -228,8 +230,17 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
 
   printf("mesh->Nq = %d\n", mesh->Nq);
   mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+
+  mesh->o_vgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
+			mesh->vgeo);
   
-  // pml variables
+  mesh->o_sgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+			mesh->sgeo);
+
+  
+  //pml variables
   mesh->o_pmlqx =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
   mesh->o_rhspmlqx =

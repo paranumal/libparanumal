@@ -96,6 +96,18 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
 	sscanf(buf, "%*d%*d%*d%*d%*d %d%d%d%d", 
 	       &v1, &v2, &v3, &v4);
+
+	// check orientation
+	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
+	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
+	dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
+	if(J<0){
+	  iint v4tmp = v4;
+	  v4 = v2;
+	  v2 = v4tmp;
+	  //	  printf("unwarping element\n");
+	}
+	
 	/* read vertex triplet for trianngle */
 	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
 	mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
