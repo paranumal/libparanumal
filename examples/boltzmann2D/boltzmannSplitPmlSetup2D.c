@@ -216,6 +216,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //  sprintf(deviceConfig, "mode = Serial");	  
+
+  occa::kernelInfo kernelInfo;
+
+  meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);
+  
+#if 0
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -236,10 +242,16 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   }
 
   // build volume cubature matrix transposes
+  iint cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
+  dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
+  dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   dfloat *cubInterpT  = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->cubNp;++m){
+      cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+      cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+      
       cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
       cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
     }
@@ -278,35 +290,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_respmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_respmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_respmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-
-  
-  mesh->o_sigmax =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
-
-  mesh->o_sigmay =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
-  
   mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 				   mesh->Dr);
 
@@ -334,7 +317,16 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->o_cubProjectT =
     mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			cubProjectT);
+
+
+  mesh->o_cubDrWT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubDrWT);
   
+  mesh->o_cubDsWT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubDsWT);
+
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
@@ -388,8 +380,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->device.setStream(mesh->stream0);
   //-------------------------------------
   
-  occa::kernelInfo kernelInfo;
-
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Np", mesh->Np);
@@ -399,6 +389,67 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
+
+  if(sizeof(dfloat)==4){
+    kernelInfo.addDefine("dfloat","float");
+    kernelInfo.addDefine("dfloat4","float4");
+    kernelInfo.addDefine("dfloat8","float8");
+  }
+  if(sizeof(dfloat)==8){
+    kernelInfo.addDefine("dfloat","double");
+    kernelInfo.addDefine("dfloat4","double4");
+    kernelInfo.addDefine("dfloat8","double8");
+  }
+
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
+  }
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
+  }
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo.addCompilerFlag("--ftz=true");
+    kernelInfo.addCompilerFlag("--prec-div=false");
+    kernelInfo.addCompilerFlag("--prec-sqrt=false");
+    kernelInfo.addCompilerFlag("--use_fast_math");
+    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+  }
+  
+#endif
+
+
+  // pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_rhspmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_respmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_rhspmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_respmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+
+  mesh->o_pmlNT =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+  mesh->o_rhspmlNT =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_respmlNT =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+
+  
+  mesh->o_sigmax =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
+
+  mesh->o_sigmay =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
+
+  // specialization for Boltzmann
+
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   
   kernelInfo.addDefine("p_pmlAlpha", (float).2);
@@ -427,31 +478,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
-  if(sizeof(dfloat)==4){
-    kernelInfo.addDefine("dfloat","float");
-    kernelInfo.addDefine("dfloat4","float4");
-    kernelInfo.addDefine("dfloat8","float8");
-  }
-  if(sizeof(dfloat)==8){
-    kernelInfo.addDefine("dfloat","double");
-    kernelInfo.addDefine("dfloat4","double4");
-    kernelInfo.addDefine("dfloat8","double8");
-  }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
-  }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
-  }
-
-  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("--ftz=true");
-    kernelInfo.addCompilerFlag("--prec-div=false");
-    kernelInfo.addCompilerFlag("--prec-sqrt=false");
-    kernelInfo.addCompilerFlag("--use_fast_math");
-    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
-  }
 
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolume2D.okl",
