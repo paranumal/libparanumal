@@ -17,7 +17,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 
       //      mesh->o_q.copyTo(mesh->q);
       //      boltzmannError2D(mesh, mesh->dt*(tstep+1));
-      
+
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
@@ -52,7 +52,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			 mesh->o_rhspmlqx,
 			 mesh->o_rhspmlqy,
 			 mesh->o_rhspmlNT);
-#if 1
+
+
       // compute relaxation terms using cubature
       mesh->relaxationKernel(mesh->Nelements,
 			     mesh->o_cubInterpT,
@@ -61,7 +62,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			     mesh->o_rhspmlqx,
 			     mesh->o_rhspmlqy,
 			     mesh->o_rhspmlNT);
-#endif 
+
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish2D(mesh);
@@ -70,7 +71,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
-      
+
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,

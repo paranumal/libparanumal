@@ -185,6 +185,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_cubInterpT =
     mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			cubInterpT);
+  
+  mesh->o_cubProjectT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			cubProjectT);
 
   mesh->o_cubDrWT =
     mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
