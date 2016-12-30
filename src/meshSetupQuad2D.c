@@ -14,6 +14,9 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   // connect elements using parallel sort
   meshParallelConnect2D(mesh);
 
+  // connect elements to boundary faces
+  meshConnectBoundary2D(mesh);
+  
   // load reference (r,s) element nodes
   meshLoadReferenceNodesQuad2D(mesh, N);
 
