@@ -118,7 +118,7 @@ kernel void boltzmannSplitPmlSurfaceQuad2D(const iint Nelements,
 	    const iint face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    const iint sid = p_Nsgeo*(p_Nfp*e*p_Nfaces+n); // fix later for TP
+	    const iint sid = p_Nsgeo*(p_Nfp*p_Nfaces*e+n); // fix later for TP
 	    const dfloat nx = sgeo[sid+0];
 	    const dfloat ny = sgeo[sid+1];
 	    const dfloat sJ = sgeo[sid+2];
@@ -149,7 +149,8 @@ kernel void boltzmannSplitPmlSurfaceQuad2D(const iint Nelements,
 	    dfloat q1U, q2U, q3U, q4U, q5U, q6U;		    
 	    
 	    upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U);
-	      // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+
+	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ;
 
 	    s_nxdq1[es][n] = sc*(nx*(q1U-q1M));

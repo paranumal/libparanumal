@@ -203,7 +203,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 
