@@ -7,6 +7,8 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+
+  occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
@@ -38,6 +40,8 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 				recvBuffer);
       }
 
+      mesh->device.finish();
+      occa::tic("volumeKernel");
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
@@ -53,6 +57,8 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 			 mesh->o_rhspmlqx,
 			 mesh->o_rhspmlqy,
 			 mesh->o_rhspmlNT);
+      mesh->device.finish();
+      occa::toc("volumeKernel");
 
 #if 0
       // compute relaxation terms using cubature
@@ -73,7 +79,9 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
-
+      
+      mesh->device.finish();
+      occa::tic("surfaceKernel");
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -87,10 +95,15 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 			  mesh->o_q,
 			  mesh->o_rhspmlqx,
 			  mesh->o_rhspmlqy);
+      mesh->device.finish();
+      occa::toc("surfaceKernel");
       
-      // update solution using Runge-Kutta
+      // updaee solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
-      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+
+      mesh->device.finish();
+      occa::tic("updateKernel");
+      mesh->updateKernel(mesh->Nelements,
 			 recombine,
 			 mesh->dt,
 			 mesh->rka[rk],
@@ -105,7 +118,9 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 			 mesh->o_pmlqy,
 			 mesh->o_pmlNT,
 			 mesh->o_q);
-      
+
+      mesh->device.finish();
+      occa::toc("updateKernel");
     }
     
     // estimate maximum error
@@ -128,6 +143,8 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
     }
   }
 
+  occa::printTimer();
+  
   free(recvBuffer);
   free(sendBuffer);
 }
