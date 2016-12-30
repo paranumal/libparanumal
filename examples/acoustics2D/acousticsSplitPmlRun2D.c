@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <math.h>
-#include "mesh2D.h"
-
+#include "acoustics2D.h"
 
 void acousticsSplitPmlOccaRun2D(mesh2D *mesh){
 

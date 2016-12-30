@@ -179,6 +179,12 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+
+  occa::kernelInfo kernelInfo;
+  
+  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+  
+#if 0
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -230,28 +236,6 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_respmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_respmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-  
-  mesh->o_sigmax =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
-
-  mesh->o_sigmay =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
-  
   mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 				   mesh->Dr);
 
@@ -326,8 +310,6 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
   mesh->device.setStream(mesh->stream0);
   //-------------------------------------
   
-  occa::kernelInfo kernelInfo;
-
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Np", mesh->Np);
@@ -336,28 +318,6 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 512/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
-
-  int NblockS = 512/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
-
-  // physics 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
-  kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
-  kernelInfo.addDefine("p_tauInv", mesh->tauInv);
-
-  kernelInfo.addDefine("p_pmlAlpha", (float)1.e-2);
-
-  kernelInfo.addDefine("p_q1bar", q1bar);
-  kernelInfo.addDefine("p_q2bar", q2bar);
-  kernelInfo.addDefine("p_q3bar", q3bar);
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
@@ -385,7 +345,54 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
     //kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
     kernelInfo.addCompilerFlag("--fmad=false"); // compiler option for cuda
   }
+#endif
+  
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
 
+  int NblockV = 512/mesh->Np; // works for CUDA
+  kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockS = 512/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+
+  // physics 
+  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
+  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
+  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
+  kernelInfo.addDefine("p_tauInv", mesh->tauInv);
+
+  kernelInfo.addDefine("p_pmlAlpha", (float)1.e-2);
+
+  kernelInfo.addDefine("p_q1bar", q1bar);
+  kernelInfo.addDefine("p_q2bar", q2bar);
+  kernelInfo.addDefine("p_q3bar", q3bar);
+  
+  // pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_rhspmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_respmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_rhspmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_respmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+
+  
+  mesh->o_sigmax =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
+
+  mesh->o_sigmay =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
+  
+
+  
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/acousticsSplitPmlVolume2D.okl",
 				       "acousticsSplitPmlVolume2D",
