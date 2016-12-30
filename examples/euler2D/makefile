@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I.
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g
@@ -54,6 +54,7 @@ eulerSetup2D.o \
 ../../src/meshReader2D.o \
 ../../src/meshSetup2D.o \
 ../../src/meshSurfaceGeometricFactors2D.o \
+../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
