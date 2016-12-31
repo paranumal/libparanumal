@@ -111,7 +111,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 6.e-3;  // was 6.e-3
+  dfloat nu = 2.e-3;  // was 6.e-3
   mesh->tauInv = mesh->RT/nu; // TW
   
   // set penalty parameter
@@ -198,12 +198,12 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 1e-2;
+  mesh->finalTime = 40;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 10000;
 
   printf("dt = %g\n", mesh->dt);
 
