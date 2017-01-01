@@ -8,3 +8,5 @@
 void boltzmannError2D(mesh2D *mesh, dfloat time);
 
 void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
+
+dfloat boltzmannRampFunction2D(dfloat t);

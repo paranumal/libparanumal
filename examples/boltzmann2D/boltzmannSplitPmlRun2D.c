@@ -1,6 +1,5 @@
 #include "boltzmann2D.h"
 
-
 void boltzmannSplitPmlRun2D(mesh2D *mesh){
 
   // MPI send buffer
@@ -73,6 +72,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
       }
 
       // compute surface contribution to DG boltzmann RHS
+      dfloat ramp = boltzmannRampFunction2D(t);
+
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -82,17 +83,24 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			  t,
 			  mesh->o_x,
 			  mesh->o_y,
+			  ramp,
 			  mesh->o_q,
 			  mesh->o_rhspmlqx,
 			  mesh->o_rhspmlqy);
       
       // update solution using Runge-Kutta
-      iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
-      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+      iint recombine = 0; // do not recombine split fields
+
+      // ramp function for flow at next RK stage
+      dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
+      dfloat rampUpdate = boltzmannRampFunction2D(tupdate);
+
+      mesh->updateKernel(mesh->Nelements,
 			 recombine,
 			 mesh->dt,
 			 mesh->rka[rk],
 			 mesh->rkb[rk],
+			 rampUpdate,
 			 mesh->o_rhspmlqx,
 			 mesh->o_rhspmlqy,
 			 mesh->o_rhspmlNT,
@@ -108,12 +116,21 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
     
     // estimate maximum error
     if((tstep%mesh->errorStep)==0){
+      dfloat t = (tstep+1)*mesh->dt;
 
+      // report ramp function
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      if(rank==0){
+	dfloat ramp = boltzmannRampFunction2D(t);
+	printf("t: %g ramp: %g\n", t, ramp);
+      }
+      
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
       
       // do error stuff on host
-      boltzmannError2D(mesh, mesh->dt*(tstep+1));
+      boltzmannError2D(mesh, t);
 
       // compute vorticity
       boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
