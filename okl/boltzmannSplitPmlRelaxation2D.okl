@@ -154,9 +154,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 	  s_q[es][5][n] = qbn.y;
 	}
 
-	N4 = 0.f;
-	N5 = 0.f;
-	N6 = 0.f;
+	N4 = 0.f; N5 = 0.f; N6 = 0.f;
       }
     }
     
@@ -172,7 +170,6 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 	  
 	  iint e = eo+es; // element in block
 	  if(e<Nelements){
-
 	    if(n+co<p_cubNp){
 	      dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
 	      dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
@@ -186,11 +183,10 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 		cubq4 += Icn*s_q[es][3][m];
 		cubq5 += Icn*s_q[es][4][m];
 		cubq6 += Icn*s_q[es][5][m];
-	      }
-	      
-	      dfloat icubq1 = 1.f/cubq1;
+	      }	     
 	      
 	      // BGK relaxation approximation to the Boltzmann collision operator
+	      dfloat icubq1 = 1.f/cubq1;     	       
 	      s_cubN4[es][n] = -p_tauInv*(cubq4-           cubq2*cubq3*icubq1);
 	      s_cubN5[es][n] = -p_tauInv*(cubq5-p_invsqrt2*cubq2*cubq2*icubq1);
 	      s_cubN6[es][n] = -p_tauInv*(cubq6-p_invsqrt2*cubq3*cubq3*icubq1);
@@ -218,9 +214,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 		partN6 += Pnc*s_cubN6[es][i];
 	      }
 	    }
-	    N4 += partN4;
-	    N5 += partN5;
-	    N6 += partN6;
+	    N4 += partN4; N5 += partN5; N6 += partN6;
 	  }
 	}
       }
@@ -293,11 +287,9 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 	  s_q3[es][n] = qan.z;
 
 	  // first part of  -p_tauInv*(q4-cubq2*cubq3*icubq1);
-	  
 	  N4 = -p_tauInv*qan.w;
 	  N5 = -p_tauInv*qbn.x;
 	  N6 = -p_tauInv*qbn.y;
-	  
 	}
       }
     }
