@@ -51,11 +51,11 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
   dfloat ramp = boltzmannRampFunction2D(0);
   dfloat q1bar = rho;
-  dfloat q2bar = ramp*rho*u/mesh->sqrtRT;
-  dfloat q3bar = ramp*rho*v/mesh->sqrtRT;
-  dfloat q4bar = ramp*ramp*(rho*u*v - sigma12)/mesh->RT;
-  dfloat q5bar = ramp*ramp*(rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
-  dfloat q6bar = ramp*ramp*(rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
+  dfloat q2bar = rho*u/mesh->sqrtRT;
+  dfloat q3bar = rho*v/mesh->sqrtRT;
+  dfloat q4bar = (rho*u*v - sigma12)/mesh->RT;
+  dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
+  dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -79,11 +79,11 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 			       mesh->q+cnt+5);
 #endif
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
-      mesh->q[cnt+1] = q2bar;
-      mesh->q[cnt+2] = q3bar;
-      mesh->q[cnt+3] = q4bar;
-      mesh->q[cnt+4] = q5bar;
-      mesh->q[cnt+5] = q6bar;
+      mesh->q[cnt+1] = ramp*q2bar;
+      mesh->q[cnt+2] = ramp*q3bar;
+      mesh->q[cnt+3] = ramp*ramp*q4bar;
+      mesh->q[cnt+4] = ramp*ramp*q5bar;
+      mesh->q[cnt+5] = ramp*ramp*q6bar;
     
       cnt += mesh->Nfields;
 
@@ -111,7 +111,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 1.e-4; 
+  dfloat nu = 1.e-3; 
   mesh->tauInv = mesh->RT/nu; // TW
   
   // set penalty parameter
