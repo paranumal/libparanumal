@@ -97,7 +97,7 @@ typedef struct {
   iint   NtimeSteps;// number of time steps 
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
-  dfloat rka[5], rkb[5], rkc[5];
+  dfloat rka[5], rkb[5], rkc[6];
 
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element

@@ -21,7 +21,9 @@ void upwind1D(const dfloat nx, const dfloat ny,
 
 
 void boundaryConditions2D(const iint bc,
-			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
+			  const dfloat  t, const dfloat  x, const dfloat  y,
+			  const dfloat  nx, const dfloat  ny,
+			  const dfloat ramp,
 			  const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
 			  const dfloat  q4M, const dfloat  q5M, const dfloat  q6M,
 			  dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
@@ -37,8 +39,8 @@ void boundaryConditions2D(const iint bc,
   }
   if(bc>1){ // wall for non-mean flow
     *q1B = 2.f*p_q1bar - q1M; 
-    *q2B = 2.f*p_q2bar - q2M; 
-    *q3B = 2.f*p_q3bar - q3M; 
+    *q2B = 2.f*ramp*p_q2bar - q2M; 
+    *q3B = 2.f*ramp*p_q3bar - q3M; 
     *q4B = 2.f*p_q4bar - q4M;
     *q5B = 2.f*p_q5bar - q5M;
     *q6B = 2.f*p_q6bar - q6M;
@@ -86,6 +88,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 				       const dfloat time,
 				       const dfloat * restrict x,
 				       const dfloat * restrict y,
+				       const dfloat ramp,
 				       const dfloat4 * restrict q,
 				       dfloat       * restrict rhspmlqx,
 				       dfloat       * restrict rhspmlqy){
@@ -141,7 +144,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	    // apply boundary condition
 	    iint bc = EToB[face+p_Nfaces*e];
 	    if(bc>0)
-	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny,
+	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
 				   q1M, q2M, q3M, q4M, q5M, q6M,
 				   &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
 

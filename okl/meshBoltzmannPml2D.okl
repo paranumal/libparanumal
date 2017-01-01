@@ -1,0 +1,58 @@
+
+// function to compute collocation differentiation
+// contributions to nodal DG rhs for acoustics
+kernel void meshAcousticsPml2D(const iint pmlNelements,
+			       const iint    * restrict pmlElementList,
+			       const dfloat  * restrict pmlSigmaX,
+			       const dfloat  * restrict pmlSigmaY,
+			       const dfloat4 * restrict q,
+			       const dfloat4 * restrict pmlq,
+			       dfloat8 * restrict rhsq,
+			       dfloat8 * restrict pmlrhsq){
+
+  // for all PML elements
+  for(iint el=0;el<pmlNelements;++el;outer0){
+
+    // for all nodes in this element
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      // element index
+      const iint e = pmlElementList[el];
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat sigmax = pmlSigmaX[el];
+      const dfloat sigmay = pmlSigmaY[el];
+
+      // load state and rhs values at node
+      const dfloat8 qn = q[e*p_Np+n];
+
+      // load pml state at node
+      const dfloat8 pmlqn = pmlq[el*p_Np+n];
+
+      // unpack variables
+      const dfloat u = qn.x, v = qn.y, p = qn.z;
+      const dfloat utilde = pmlqn.x;
+      const dfloat vtilde = pmlqn.y;
+      const dfloat ptilde = pmlqn.z;
+
+      dfloat4 rhsqn = rhsq[e*p_Np+n];
+      
+      // update for u,v,p
+      rhsqn.x += -(sigmax-sigmay)*u - sigmay*(sigmay-sigmax)*utilde; // uhat
+      rhsqn.y += -(sigmay-sigmax)*v - sigmax*(sigmax-sigmay)*vtilde; // vhat
+      rhsqn.z += -(sigmax+sigmay)*p - sigmax*sigmay*ptilde; // p
+
+      // update for u~,v~, p~
+      dfloat4 pmlrhsqn;
+      pmlrhsqn.x = u-sigmay*utilde; // du~/dt = -sigmay*u~  + uhat
+      pmlrhsqn.y = v-sigmax*vtilde; // dv~/dt = -sigmax*v~  + vhat
+      pmlrhsqn.z = p;               // dp~/dt = p
+
+      // store acoustics rhs contributions from PML
+      rhsq[e*p_Np+n] = rhsqn;
+
+      // store PML rhs
+      pmlrhsq[el*p_Np+n] = pmlrhsqn;
+    }
+  }
+}
