@@ -13,3 +13,4 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh);
 
 void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh);
 
+dfloat boltzmannRampFunction2D(dfloat t);

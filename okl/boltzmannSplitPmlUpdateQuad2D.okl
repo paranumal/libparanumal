@@ -4,6 +4,7 @@ kernel void boltzmannSplitPmlUpdateQuad2D(const iint Nelements,
 					  const dfloat dt,	
 					  const dfloat rka,
 					  const dfloat rkb,
+					  const dfloat ramp,
 					  const dfloat * restrict rhsqx,
 					  const dfloat * restrict rhsqy,
 					  const dfloat * restrict rhsNT,	
@@ -144,12 +145,12 @@ kernel void boltzmannSplitPmlUpdateQuad2D(const iint Nelements,
 
       dfloat4 qa, qb;
       qa.x = p_q1bar + qx1 + qy1;
-      qa.y = p_q2bar + qx2 + qy2;
-      qa.z = p_q3bar + qx3 + qy3;
-      qa.w = p_q4bar + qx4 + qy4;
+      qa.y = ramp*p_q2bar + qx2 + qy2;
+      qa.z = ramp*p_q3bar + qx3 + qy3;
+      qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
       
-      qb.x = p_q5bar + qx5 + qy5;
-      qb.y = p_q6bar + qx6 + qy6;
+      qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+      qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
 
       q[2*(n+e*p_Np)] = qa;
       q[2*(n+e*p_Np)+1] = qb;
