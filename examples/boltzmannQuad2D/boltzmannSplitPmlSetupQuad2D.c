@@ -171,10 +171,11 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
 	dfloat sJ   = mesh->sgeo[sid + SJID];
 	dfloat invJ = mesh->sgeo[sid + IJID];
 	
-	// sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-	// h = 0.5/(sJ/J)
+	// A = 0.5*h*L
+	// => J*2 = 0.5*h*sJ*2
+	// => h = 2*J/sJ
 	
-	dfloat hest = .5/(sJ*invJ);
+	dfloat hest = 2./(sJ*invJ);
 	
 	hmin = mymin(hmin, hest);
 	hmax = mymax(hmax, hest);
@@ -182,7 +183,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
     }
   }
     
-  dfloat cfl = .4; // depends on the stability region size (was .4)
+  dfloat cfl = .8; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)
