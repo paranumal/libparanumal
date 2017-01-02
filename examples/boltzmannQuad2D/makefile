@@ -36,6 +36,7 @@ boltzmannComputeVorticityQuad2D.o \
 boltzmannErrorQuad2D.o \
 boltzmannSplitPmlRunQuad2D.o \
 boltzmannSplitPmlSetupQuad2D.o \
+boltzmannRampFunction2D.o \
 ../../src/meshConnect2D.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshConnectFaceNodes2D.o \
