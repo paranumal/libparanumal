@@ -6,6 +6,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+
+  occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
@@ -37,6 +39,9 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
       dfloat ramp, drampdt;
       boltzmannRampFunction2D(t, &ramp, &drampdt);
 
+      mesh->device.finish();
+      occa::tic("volumeKernel");
+      
       // compute volume contribution to DG boltzmann RHS
       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
@@ -55,15 +60,20 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 
       // compute volume contribution to DG boltzmann RHS
       // added d/dt (ramp(qbar)) to RHS
-      mesh->volumeKernel(mesh->nonPmlNelements,
-			 mesh->o_nonPmlElementIds,
-			 ramp, 
-			 drampdt,
-			 mesh->o_vgeo,
-			 mesh->o_DrT,
-			 mesh->o_DsT,
-			 mesh->o_q,
-			 mesh->o_rhsq);
+      if(mesh->nonPmlNelements)
+	mesh->volumeKernel(mesh->nonPmlNelements,
+			   mesh->o_nonPmlElementIds,
+			   ramp, 
+			   drampdt,
+			   mesh->o_vgeo,
+			   mesh->o_DrT,
+			   mesh->o_DsT,
+			   mesh->o_q,
+			   mesh->o_rhsq);
+
+
+      mesh->device.finish();
+      occa::toc("volumeKernel");
       
       // compute relaxation terms using cubature
 #if 0
@@ -85,6 +95,9 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
 
+      mesh->device.finish();
+      occa::tic("surfaceKernel");
+      
       // compute surface contribution to DG boltzmann RHS
       mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			     mesh->o_pmlElementIds,
@@ -101,28 +114,34 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			     mesh->o_rhspmlqx,
 			     mesh->o_rhspmlqy);
 
-      mesh->surfaceKernel(mesh->nonPmlNelements,
-			  mesh->o_nonPmlElementIds,
-			  mesh->o_sgeo,
-			  mesh->o_LIFTT,
-			  mesh->o_vmapM,
-			  mesh->o_vmapP,
-			  mesh->o_EToB,
-			  t,
-			  mesh->o_x,
-			  mesh->o_y,
-			  ramp,
-			  mesh->o_q,
-			  mesh->o_rhsq);
+      if(mesh->nonPmlNelements)
+	mesh->surfaceKernel(mesh->nonPmlNelements,
+			    mesh->o_nonPmlElementIds,
+			    mesh->o_sgeo,
+			    mesh->o_LIFTT,
+			    mesh->o_vmapM,
+			    mesh->o_vmapP,
+			    mesh->o_EToB,
+			    t,
+			    mesh->o_x,
+			    mesh->o_y,
+			    ramp,
+			    mesh->o_q,
+			    mesh->o_rhsq);
+
+      mesh->device.finish();
+      occa::toc("surfaceKernel");
       
       // update solution using Runge-Kutta
-      iint recombine = 0; // do not recombine split fields
 
       // ramp function for flow at next RK stage
       dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
       dfloat rampUpdate, drampdtUpdate;
       boltzmannRampFunction2D(tupdate, &rampUpdate, &drampdtUpdate);
 
+      mesh->device.finish();
+      occa::tic("updateKernel");
+      
       mesh->pmlUpdateKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
@@ -140,15 +159,18 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
 			    mesh->o_pmlNT,
 			    mesh->o_q);
 
-      mesh->updateKernel(mesh->nonPmlNelements,
-			 mesh->o_nonPmlElementIds,
-			 mesh->dt,
-			 mesh->rka[rk],
-			 mesh->rkb[rk],
-			 mesh->o_rhsq,
-			 mesh->o_resq,
-			 mesh->o_q);
+      if(mesh->nonPmlNelements)
+	mesh->updateKernel(mesh->nonPmlNelements,
+			   mesh->o_nonPmlElementIds,
+			   mesh->dt,
+			   mesh->rka[rk],
+			   mesh->rkb[rk],
+			   mesh->o_rhsq,
+			   mesh->o_resq,
+			   mesh->o_q);
 
+      mesh->device.finish();
+      occa::toc("updateKernel");      
      
     }
     
@@ -182,6 +204,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
     }
   }
 
+  occa::printTimer();
+  
   free(recvBuffer);
   free(sendBuffer);
 }

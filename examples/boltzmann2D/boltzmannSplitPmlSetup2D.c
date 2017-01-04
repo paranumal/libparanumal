@@ -150,7 +150,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->sigmay[e] = ysigma;
 #endif
 
-    iint isPml = 0;
+    iint isPml = 1;
     
     for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
@@ -223,7 +223,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 100;
+  mesh->finalTime = .5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -239,8 +239,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //    sprintf(deviceConfig, "mode = Serial");	  
 
@@ -279,8 +279,11 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   mesh->nonPmlNelements = nonPmlNelements;
   mesh->pmlNelements = pmlNelements;
-  mesh->o_nonPmlElementIds = 
-    mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
+
+  if(mesh->nonPmlNelements)
+    mesh->o_nonPmlElementIds = 
+      mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
+  
   mesh->o_pmlElementIds = 
     mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
 
