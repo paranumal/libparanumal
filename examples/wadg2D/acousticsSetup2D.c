@@ -64,8 +64,9 @@ void acousticsSetup2D(mesh2D *mesh){
       dfloat y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
       
       // smoothly varying (sinusoidal) wavespeed
-      //mesh->c2[n + mesh->cubNp*e] = 1.0 + .25 * sin(M_PI*x)*sin(M_PI*y);
-      mesh->c2[n + mesh->cubNp*e] = 1.0;
+      //printf("M_PI = %f\n",M_PI);
+      mesh->c2[n + mesh->cubNp*e] = 1.0 + .5 * sin(M_PI*x)*sin(M_PI*y);
+      //mesh->c2[n + mesh->cubNp*e] = 1.0;
     }
   }
 

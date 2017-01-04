@@ -54,7 +54,7 @@ kernel void acousticsUpdate2D_wadg(const iint Nelements,
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
-    for(iint n=0; n < p_cubNp; ++n; inner0){     // for all nodes in this element
+    for(iint n=0; n < p_cubNp; ++n; inner0){  
 
       if (n < p_Np){
 	const iint id = p_Nfields*(e*p_Np + n);
@@ -77,14 +77,7 @@ kernel void acousticsUpdate2D_wadg(const iint Nelements,
 	val += cubInterp[n + i*p_cubNp] * s_p[i];
       }
 
-      // Multiply result by value of c2 at cubature node
-#if 0
-      if (e==0 && n < p_Np){
-	dfloat pval = s_p[n];
-	//printf("c2(%d) = %f, p(%d) = %f\n",n,c2n,n,pval);
-	printf("p(%d) = %f, val = %f\n",n+1,pval,val);
-      }
-#endif	 
+      // Multiply result by wavespeed c2 at cubature node
       r_p = val * c2n;
     }
     barrier(localMemFence);
@@ -106,21 +99,15 @@ kernel void acousticsUpdate2D_wadg(const iint Nelements,
 	rhsqn[0] = rhsq[id + 0];
 	rhsqn[1] = rhsq[id + 1];	
 	
-	// Project scaled rhsp down
+	// Project scaled rhs down
 	dfloat rhsp = 0.f;
 	for (int i=0;i<p_cubNp;++i){
 	  rhsp += cubProject[n + i*p_Np] * s_p[i];
 	}
-#if 0
-	if (e==0){
-	  printf("rhsp(%d) = %f\n",n+1,rhsp);
-	}
-#endif	
-	//rhsqn[2] = rhsp;
-	rhsqn[2] = rhsq[id + 2];
+	//rhsqn[2] = rhsq[id + 2];
+	rhsqn[2] = rhsp;
 
 	// Increment solutions
-	// note: p_Nfields = mesh->Nfields = 4, this is wrong in 2D?
 	for (int fld = 0; fld < p_Nfields; ++fld){ 
 	  dfloat resqn = resq[id + fld];
 	  resqn = rka*resqn + dt*rhsqn[fld];
