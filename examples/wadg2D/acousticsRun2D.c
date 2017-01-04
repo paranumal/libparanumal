@@ -82,6 +82,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
+      //printf("mesh->totalHaloPairs = %d\n",mesh->totalHaloPairs);
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
@@ -101,7 +102,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
 				sendBuffer,
 				recvBuffer);
       }
-      
+
       // compute volume contribution to DG acoustics RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
@@ -118,7 +119,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
-      
+
       // compute surface contribution to DG acoustics RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -133,6 +134,8 @@ void acousticsOccaRun2D(mesh2D *mesh){
 			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
+#if 0
+      
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 mesh->dt,
 			 mesh->rka[rk],
@@ -140,6 +143,21 @@ void acousticsOccaRun2D(mesh2D *mesh){
 			 mesh->o_rhsq,
 			 mesh->o_resq,
 			 mesh->o_q);
+      
+#else // WADG
+      //printf("running update on step %d\n",tstep);
+      
+      mesh->updateKernel(mesh->Nelements,
+			 mesh->dt,
+			 mesh->rka[rk],
+			 mesh->rkb[rk],
+			 mesh->o_cubInterpT,
+			 mesh->o_cubProjectT,
+			 mesh->o_c2,
+			 mesh->o_rhsq,
+			 mesh->o_resq,
+			 mesh->o_q);
+#endif
       
     }
     
@@ -278,7 +296,7 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
 			  mesh->o_y,
 			  mesh->o_q,
 			  mesh->o_rhsq);
-      
+
       // update solution using Runge-Kutta
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 mesh->dt,
@@ -287,7 +305,6 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
 			 mesh->o_rhsq,
 			 mesh->o_resq,
 			 mesh->o_q);
-      
     }
     
     // estimate maximum error

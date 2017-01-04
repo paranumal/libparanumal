@@ -64,10 +64,11 @@ void acousticsSetup2D(mesh2D *mesh){
       dfloat y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
       
       // smoothly varying (sinusoidal) wavespeed
-      mesh->c2[n + mesh->cubNp*e] = 1.0 + .25 * sin(M_PI*x)*sin(M_PI*y);
-      
+      //mesh->c2[n + mesh->cubNp*e] = 1.0 + .25 * sin(M_PI*x)*sin(M_PI*y);
+      mesh->c2[n + mesh->cubNp*e] = 1.0;
     }
   }
+
   
   // set penalty parameter
   mesh->Lambda2 = 0.5;
@@ -97,7 +98,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  mesh->finalTime = 1.5;
+  mesh->finalTime = 1;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -134,7 +135,13 @@ void acousticsSetup2D(mesh2D *mesh){
   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
+  // wadg initialize c2
+  mesh->o_c2 =
+    mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat),
+  			mesh->c2);
 
+
+  
   
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/acousticsVolume2D.okl",
@@ -153,7 +160,7 @@ void acousticsSetup2D(mesh2D *mesh){
 
   mesh->updateKernel =
     mesh->device.buildKernelFromSource("okl/acousticsUpdate2D.okl",
-				       "acousticsUpdate2D",
+				       "acousticsUpdate2D_wadg",
 				       kernelInfo);
   
   mesh->haloExtractKernel =
