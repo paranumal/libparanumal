@@ -91,6 +91,6 @@ acousticsSplitPmlMain2D:$(POBJS) $(LOBJS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS)
+	rm $(AOBJS) $(LOBJS) $(POBJS)
 
 

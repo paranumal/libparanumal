@@ -122,7 +122,7 @@ fprintf(fid, '%% number of volume cubature nodes\n');
 fprintf(fid, '%d\n', length(cubr));
 
 fprintf(fid, '%% cubature node coordinates\n');
-for n=1:Np
+for n=1:Ncub
   fprintf(fid, '%17.15E %17.15E\n', cubr(n), cubs(n));
 end
 

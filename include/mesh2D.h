@@ -114,9 +114,6 @@ typedef struct {
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
-
-  // wadg
-  dfloat *c2; 
   
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
@@ -177,8 +174,8 @@ typedef struct {
 
   // pml stuff
   iint    pmlNfields;
-  //  iint    pmlNelements;
-  //  iint   *pmlElementList;
+  //  iint    pmlNelements; // deprecated
+  iint   *pmlElementList; // deprecated
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
@@ -241,6 +238,10 @@ typedef struct {
   
   occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
 
+  // wadg
+  dfloat *c2;
+  occa::memory o_c2;
+
   occa::kernel haloExtractKernel;
   
   occa::kernel volumeKernel;
@@ -248,7 +249,8 @@ typedef struct {
   occa::kernel partialSurfaceKernel;
   occa::kernel updateKernel;
   occa::kernel relaxationKernel;
-
+  
+  occa::kernel pmlKernel; // deprecated
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
