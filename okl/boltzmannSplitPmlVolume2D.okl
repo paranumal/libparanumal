@@ -5,6 +5,7 @@
 #define SYID 3
 
 kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
+				      const iint * restrict elementIds,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -22,13 +23,16 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    
+    exclusive iint element;
+
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
 	iint e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np+n;
+	  element = elementIds[e];
+
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 	  
@@ -53,18 +57,18 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	  const dfloat drdx = vgeo[element*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[element*p_Nvgeo + RYID];
+	  const dfloat dsdx = vgeo[element*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[element*p_Nvgeo + SYID];
 
-	  const dfloat sigmaxe = sigmax[e*p_Np+n];
-	  const dfloat sigmaye = sigmay[e*p_Np+n];
+	  const dfloat sigmaxe = sigmax[element*p_Np+n];
+	  const dfloat sigmaye = sigmay[element*p_Np+n];
 
 	  const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
 	  const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
 
-	  iint base = e*p_Np*p_Nfields+n;
+	  iint base = element*p_Np*p_Nfields+n;
 	  dfloat pmlqx1 = pmlqx[base+0*p_Np];
 	  dfloat pmlqx2 = pmlqx[base+1*p_Np];
 	  dfloat pmlqx3 = pmlqx[base+2*p_Np];
@@ -137,7 +141,7 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	  dfloat rhspmlqy5 = 0;
 	  dfloat rhspmlqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
 
-#if 0
+#if 1
 	  // BGK relaxation approximation to the Boltzmann collision operator
 	  dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
 	  dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
@@ -181,7 +185,7 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 	  rhspmlqy[base+4*p_Np] = rhspmlqy5;
 	  rhspmlqy[base+5*p_Np] = rhspmlqy6;
 
-#if 0
+#if 1
 	  rhspmlNT[base+3*p_Np] = N4;
 	  rhspmlNT[base+4*p_Np] = N5;
 	  rhspmlNT[base+5*p_Np] = N6;

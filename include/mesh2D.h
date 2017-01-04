@@ -177,8 +177,8 @@ typedef struct {
 
   // pml stuff
   iint    pmlNfields;
-  iint    pmlNelements;
-  iint   *pmlElementList;
+  //  iint    pmlNelements;
+  //  iint   *pmlElementList;
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
@@ -226,6 +226,12 @@ typedef struct {
 
   // pml vars
   occa::memory o_sigmax, o_sigmay;
+
+  iint pmlNelements;
+  iint nonPmlNelements;
+  occa::memory o_pmlElementIds;
+  occa::memory o_nonPmlElementIds;
+
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT;
@@ -243,7 +249,8 @@ typedef struct {
   occa::kernel updateKernel;
   occa::kernel relaxationKernel;
 
-  occa::kernel pmlKernel;
+  occa::kernel pmlVolumeKernel;
+  occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
   
 }mesh2D;
