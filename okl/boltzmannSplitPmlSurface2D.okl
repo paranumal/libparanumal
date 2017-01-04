@@ -45,41 +45,13 @@ void boundaryConditions2D(const iint bc,
     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
-#if 0
-  if(bc==2){ // slip
-    // specify reversed normal velocity (no-penetration/slip boundary)
-    *q1B = q1M;
-    *q2B = q2M - 2.f*(nx*q2M+ny*q3M)*nx;
-    *q3B = q3M - 2.f*(nx*q2M+ny*q3M)*ny;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
-  if(bc==3){ // inflow
-    // specify uniform extenral velocity
-    *q1B = q1M;
-    *q2B = p_q2bar;
-    *q3B = p_q3bar;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
-  if(bc==4){ // outflow
-    // only specify density (specifies pressure since p = rho*RT)
-    *q1B = p_q1bar;
-    *q2B = q2M;
-    *q3B = q3M;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
-#endif
 }
 
 
 
 // batch process elements
 kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
+				       const iint * restrict elementIds,
 				       const dfloat * restrict sgeo,
 				       const dfloat * restrict LIFTT,
 				       const iint   * restrict vmapM,
@@ -111,24 +83,28 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
+    exclusive iint element;
+
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
 	iint e = eo + es;
 	if(e<Nelements){
+	  element = elementIds[e];
+
 	  if(n<p_NfacesNfp){
 	    // find face that owns this node
 	    const iint face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+	    const iint sid = p_Nsgeo*(element*p_Nfaces+face);
 	    const dfloat nx = sgeo[sid+0];
 	    const dfloat ny = sgeo[sid+1];
 	    const dfloat sJ = sgeo[sid+2];
 	    const dfloat invJ = sgeo[sid+3];
 
 	    // indices of negative and positive traces of face node
-	    const iint id  = e*p_Nfp*p_Nfaces + n;
+	    const iint id  = element*p_Nfp*p_Nfaces + n;
 	    iint idM = vmapM[id];
 	    iint idP = vmapP[id];
 
@@ -142,7 +118,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	    dfloat q1P = qPa.x, q2P = qPa.y, q3P = qPa.z, q4P = qPa.w, q5P = qPb.x, q6P = qPb.y;
 
 	    // apply boundary condition
-	    iint bc = EToB[face+p_Nfaces*e];
+	    iint bc = EToB[face+p_Nfaces*element];
 	    if(bc>0)
 	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
 				   q1M, q2M, q3M, q4M, q5M, q6M,
@@ -183,7 +159,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	const iint e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
-	    const iint id = p_Np*e + n;
+	    const iint id = p_Np*element + n;
 	    
 	    // load rhs data from volume fluxes
 	    dfloat Lnxdq1 = 0.f, Lnxdq2 = 0.f, Lnxdq3 = 0.f, Lnxdq4 = 0.f, Lnxdq5 = 0.f, Lnxdq6 = 0.f;
@@ -208,7 +184,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	      Lnydq6 += L*s_nydq6[es][m];
 	    }
 
-	    const iint base = e*p_Np*p_Nfields+n;
+	    const iint base = element*p_Np*p_Nfields+n;
 	    rhspmlqx[base+0*p_Np] -= p_sqrtRT*(Lnxdq2);
 	    rhspmlqx[base+1*p_Np] -= p_sqrtRT*(Lnxdq1+p_sqrt2*Lnxdq5);
 	    rhspmlqx[base+2*p_Np] -= p_sqrtRT*(Lnxdq4);

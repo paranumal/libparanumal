@@ -1,5 +1,6 @@
 
 kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
+					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
 					     const dfloat4 * restrict q,
@@ -17,14 +18,18 @@ kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
     shared dfloat s_cubN5[p_NblockV][p_cubNp];
     shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
+    exclusive iint element;
+
     // prefetch q to shared
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
 	
 	iint e = eo+es; // element in block
 	if(e<Nelements){
+	  element = elementIds[e];
+
 	  if(n<p_Np){
-	    const iint id = e*p_Np+n;
+	    const iint id = element*p_Np+n;
 	    dfloat4 qan = q[2*id];
 	    dfloat4 qbn = q[2*id+1];
 	    
@@ -83,7 +88,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
-	    iint base = e*p_Np*p_Nfields+n;
+	    iint base = element*p_Np*p_Nfields+n;
 	    
 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
 	    dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
@@ -115,12 +120,13 @@ kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
 
 // c1: working (reproduces c0)
 kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
-					  const dfloat * restrict cubInterpT,
-					  const dfloat * restrict cubProjectT,
-					  const dfloat4 * restrict q,
-					  dfloat * restrict rhspmlqx,
-					  dfloat * restrict rhspmlqy,
-					  dfloat * restrict rhspmlNT){
+					     const iint * restrict elementIds,
+					     const dfloat * restrict cubInterpT,
+					     const dfloat * restrict cubProjectT,
+					     const dfloat4 * restrict q,
+					     dfloat * restrict rhspmlqx,
+					     dfloat * restrict rhspmlqy,
+					     dfloat * restrict rhspmlNT){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -134,6 +140,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 
     // result of interpolation and projection
     exclusive dfloat N4, N5, N6;
+    exclusive iint element;
 
     // prefetch q to shared
     for(iint es=0;es<p_NblockV;++es;inner1){
@@ -141,7 +148,10 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 	
 	iint e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np+n;
+
+	  element = elementIds[e];
+
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 	  
@@ -227,7 +237,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  // slightly inefficient since splits warp
-	  iint base = e*p_Np*p_Nfields+n;
+	  iint base = element*p_Np*p_Nfields+n;
 
 	  // split relaxation
 	  rhspmlqx[base+3*p_Np] += 0.5f*N4;
@@ -250,6 +260,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 
 // c2: do not interpolate q4,q5,q6
 kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
+					  const iint * restrict elementIds,
 					  const dfloat * restrict cubInterpT,
 					  const dfloat * restrict cubProjectT,
 					  const dfloat4 * restrict q,
@@ -271,6 +282,7 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 
     // result of interpolation and projection
     exclusive dfloat N4, N5, N6;
+    exclusive iint element;
 
     // prefetch q to shared
     for(iint es=0;es<p_NblockV;++es;inner1){
@@ -278,7 +290,9 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 	
 	iint e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np+n;
+	  element = elementIds[e];
+
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 	  
@@ -363,7 +377,7 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  // slightly inefficient since splits warp
-	  iint base = e*p_Np*p_Nfields+n;
+	  iint base = element*p_Np*p_Nfields+n;
 
 	  // split relaxation
 	  rhspmlqx[base+3*p_Np] += 0.5f*N4;

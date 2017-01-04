@@ -44,12 +44,16 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->RT = 9.;
   mesh->sqrtRT = sqrt(mesh->RT);  
   
+  printf("starting initial conditions\n");
+
   // initial conditions
   // uniform flow
   dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
-  dfloat ramp = boltzmannRampFunction2D(0);
+  dfloat ramp, drampdt;
+  boltzmannRampFunction2D(0, &ramp, &drampdt);
+
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
   dfloat q3bar = rho*v/mesh->sqrtRT;
@@ -104,6 +108,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
+  printf("starting parameters\n");
+
   // set BGK collision relaxation rate
   // nu = R*T*tau
   // 1/tau = RT/nu
@@ -123,6 +129,10 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
   
+  iint *pmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint pmlNelements = 0;
+  iint nonPmlNelements = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
     for(iint n=0;n<mesh->Nverts;++n){
@@ -139,27 +149,43 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     if(cy<ymin || cy>ymax)
       mesh->sigmay[e] = ysigma;
 #endif
+
+    iint isPml = 0;
     
     for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
       dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
-      {
-	if(cx>xmax)
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
-	if(cx<xmin)
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
-	if(cy>ymax)
-	  //	  mesh->sigmay[mesh->Np*e + n] = ysigma;
+
+      if(cx>xmax){
+	//  mesh->sigmax[mesh->Np*e + n] = xsigma;
+	mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+	isPml = 1;
+      }
+      if(cx<xmin){
+	//  mesh->sigmax[mesh->Np*e + n] = xsigma;
+	mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+	isPml = 1;
+      }
+      if(cy>ymax){
+	//	  mesh->sigmay[mesh->Np*e + n] = ysigma;
 	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
-	if(cy<ymin)
-	  //  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+	  isPml = 1;
+      }
+      if(cy<ymin){
+	//  mesh->sigmay[mesh->Np*e + n] = ysigma;
+	mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+	isPml = 1;
       }
     }
+    
+    if(isPml)
+      pmlElementIds[pmlNelements++] = e;
+    else
+      nonPmlElementIds[nonPmlNelements++] = e;
   }
+
+  printf("detected pml: %d pml %d non-pml %d total \n", pmlNelements, nonPmlNelements, mesh->Nelements);
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
@@ -202,7 +228,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -213,10 +239,10 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //  sprintf(deviceConfig, "mode = Serial");	  
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  //    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //    sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
 
@@ -251,6 +277,13 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->o_sigmay =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
 
+  mesh->nonPmlNelements = nonPmlNelements;
+  mesh->pmlNelements = pmlNelements;
+  mesh->o_nonPmlElementIds = 
+    mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
+  mesh->o_pmlElementIds = 
+    mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
+
   // specialization for Boltzmann
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
@@ -260,10 +293,10 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
@@ -282,32 +315,40 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
 
-
+  printf("compiling volume kernel\n");
   mesh->volumeKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlVolume2D.okl",
+				       "boltzmannNonPmlVolume2D",
+				       kernelInfo);
+
+  printf("compiling surface kernel\n");
+  mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlSurface2D.okl",
+				       "boltzmannNonPmlSurface2D",
+				       kernelInfo);
+
+  printf("compiling update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlUpdate2D.okl",
+				       "boltzmannNonPmlUpdate2D",
+				       kernelInfo);
+
+  mesh->pmlVolumeKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolume2D.okl",
 				       "boltzmannSplitPmlVolume2D",
 				       kernelInfo);
-  printf("starting surface\n");
-  mesh->surfaceKernel =
+
+  mesh->pmlSurfaceKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlSurface2D.okl",
 				       "boltzmannSplitPmlSurface2D",
 				       kernelInfo);
-  printf("ending surface\n");
 
   mesh->relaxationKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlRelaxation2D.okl",
 				       "boltzmannSplitPmlRelaxation2D",
 				       kernelInfo);
 
-  
-#if 0
-  mesh->boltzmannPartialSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannPartialSurface2D.okl",
-				       "boltzmannPartialSurface2D",
-				       kernelInfo);
-#endif
-
-  mesh->updateKernel =
+  mesh->pmlUpdateKernel =
     mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlUpdate2D.okl",
 				       "boltzmannSplitPmlUpdate2D",
 				       kernelInfo);
