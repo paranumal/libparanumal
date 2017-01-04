@@ -119,6 +119,12 @@ Ncub = length(cubr);
 
 fprintf(fid, '%% number of volume cubature nodes\n');
 fprintf(fid, '%d\n', length(cubr));
+
+fprintf(fid, '%% cubature node coordinates\n');
+for n=1:Np
+  fprintf(fid, '%17.15E %17.15E\n', cubr(n), cubs(n));
+end
+
 fprintf(fid, '%% cubature interpolation matrix\n');
 for n=1:Ncub
   for m=1:Np
@@ -193,6 +199,7 @@ bInterp = [];
 bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
 bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
 bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
+
 %% integration node lift matrix
 iLIFT = V*V'*sInterp'*diag(iw(:));
 size(iLIFT)

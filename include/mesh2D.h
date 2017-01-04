@@ -109,10 +109,14 @@ typedef struct {
 
   // volume cubature node info
   iint    cubNp; // number of cubature nodes
+  dfloat *cubr, *cubs;   // cubature node coordinates
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
+
+  // wadg
+  dfloat *c2; 
   
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face

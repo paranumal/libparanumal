@@ -113,6 +113,15 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); 
   sscanf(buf, iintFormat, &(mesh->cubNp));
 
+  // read cub nodes and weights
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->cubr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  mesh->cubs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  for(int n=0;n<mesh->cubNp;++n){
+    fgets(buf, BUFSIZ, fp);
+    sscanf(buf, dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n);
+  } 
+
   // read volume cubature interpolation matrix
   mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
@@ -207,3 +216,5 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
 
   fclose(fp);
 }
+
+
