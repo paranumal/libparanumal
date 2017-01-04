@@ -1,6 +1,6 @@
 
 kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
-				      const iint recombine,
+				      const iint * restrict elementIds, 
 				      const dfloat dt,	
 				      const dfloat rka,
 				      const dfloat rkb,
@@ -20,7 +20,9 @@ kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
 
-      const iint base = n + e*p_Nfields*p_Np;
+      const iint element = elementIds[e];
+
+      const iint base = n + element*p_Nfields*p_Np;
 
       dfloat resqx1 = resqx[base+0*p_Np];
       dfloat resqx2 = resqx[base+1*p_Np];
@@ -128,6 +130,7 @@ kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
       NT5 += rkb*resNT5;
       NT6 += rkb*resNT6;
 
+#if 0
       if(recombine == 1){
 	qx1 = 0.5f*(qx1+qy1);
 	qx2 = 0.5f*(qx2+qy2);
@@ -142,6 +145,7 @@ kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
 	qy5 = qx5;
 	qy6 = qx6;
       }
+#endif
 
       dfloat4 qa, qb;
       qa.x = p_q1bar + qx1 + qy1;
@@ -152,8 +156,8 @@ kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
       qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
       qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
 
-      q[2*(n+e*p_Np)] = qa;
-      q[2*(n+e*p_Np)+1] = qb;
+      q[2*(n+element*p_Np)] = qa;
+      q[2*(n+element*p_Np)+1] = qb;
 
       resqx[base+0*p_Np] = resqx1;
       resqx[base+1*p_Np] = resqx2;

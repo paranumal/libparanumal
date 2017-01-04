@@ -105,7 +105,7 @@ void meshConnectBoundary2D(mesh2D *mesh){
       iint f = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
       mesh->EToB[e*mesh->Nfaces+f] =
 	mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
-      printf("%d,%d=>%d\n", e,f,mesh->EToB[e*mesh->Nfaces+f]);
+      //      printf("%d,%d=>%d\n", e,f,mesh->EToB[e*mesh->Nfaces+f]);
       ++matches;
     }
   }

@@ -115,7 +115,8 @@ end
 %% volume cubature
 [cubr,cubs,cubw] = Cubature2D(3*N);
 cInterp = Vandermonde2D(N, cubr, cubs)/V;
-Ncub = length(cubr);
+Np
+Ncub = length(cubr)
 
 fprintf(fid, '%% number of volume cubature nodes\n');
 fprintf(fid, '%d\n', length(cubr));
