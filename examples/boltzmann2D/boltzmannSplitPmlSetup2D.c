@@ -150,7 +150,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->sigmay[e] = ysigma;
 #endif
 
-    iint isPml = 1;
+    iint isPml = 0;
     
     for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
