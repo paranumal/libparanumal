@@ -71,7 +71,8 @@ void meshLoadReferenceNodes3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->LIFT+n);
   }
-
+  fgets(buf, BUFSIZ, fp); // read comment
+  
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
@@ -108,7 +109,7 @@ void meshLoadReferenceNodes3D(mesh3D *mesh, int N){
   fgets(buf, BUFSIZ, fp);
   printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->plotNverts));
-  
+
   // build and read in plot node triangulation
   mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
   fgets(buf, BUFSIZ, fp); // read comment
@@ -118,6 +119,60 @@ void meshLoadReferenceNodes3D(mesh3D *mesh, int N){
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("%s", buf);
+  fgets(buf, BUFSIZ, fp); // read number of cubature points
+  printf("%s", buf);
+  sscanf(buf, iintFormat, &(mesh->cubNp));
+  printf("cubNp = %d\n",mesh->cubNp);
+    
+  mesh->cubr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  mesh->cubs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  mesh->cubt = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("%s", buf);
+  for(int n=0;n<mesh->cubNp;++n){
+    fgets(buf, BUFSIZ, fp);
+    sscanf(buf, dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n, mesh->cubt+n);
+  }
+  
+  mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->cubNp*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->cubInterp+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment  
+
+  mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->cubNp*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->cubProject+n);
+  }
+
+  
+#if 0
+  for(int n=0;n<mesh->cubNp;++n){
+    printf("rq,sq,tq = %f, %f, %f\n",mesh->cubr[n],mesh->cubs[n],mesh->cubt[n]);
+  }
+
+  printf("Vq: \n");
+  for(int n=0;n<mesh->cubNp;++n){
+    for(int m=0;m<mesh->Np;++m){
+      printf("%f ",mesh->cubInterp[n*mesh->Np+m]);
+    }
+    printf("\n");
+  }
+
+  printf("Pq: \n");
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      printf("%f ",mesh->cubProject[n*mesh->cubNp+m]);
+    }
+    printf("\n");
+  }
+#endif
+  
   
 #if 0
   printf("Dr: \n");
