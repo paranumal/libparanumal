@@ -37,3 +37,89 @@ kernel void acousticsUpdate3D_o1(const iint Ntotal,
   }
 }
 
+
+
+kernel void acousticsUpdate3D_wadg(const iint Nelements,
+				   const dfloat dt,	
+				   const dfloat rka,
+				   const dfloat rkb,
+				   const dfloat * restrict cubInterp,
+				   const dfloat * restrict cubProject,
+				   const dfloat * restrict c2,
+				   const dfloat * restrict rhsq,
+				   dfloat * restrict resq,
+				   dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
+
+    shared dfloat s_p[p_cubNp];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp; ++n; inner0){  
+
+      if (n < p_Np){
+	const iint id = p_Nfields*(e*p_Np + n);
+	s_p[n] = rhsq[id + 3]; // extract pressure rhs
+      }
+
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp;++n;inner0){
+
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + e*p_cubNp];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<p_Np;++i){
+	val += cubInterp[n + i*p_cubNp] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp;++n;inner0){
+
+      if (n < p_Np){
+
+	// Extract velocity rhs
+	const iint id = p_Nfields*(e*p_Np + n);
+	dfloat rhsqn[p_Nfields];
+	rhsqn[0] = rhsq[id + 0];
+	rhsqn[1] = rhsq[id + 1];
+	rhsqn[2] = rhsq[id + 2];		
+	
+	// Project scaled rhs down
+	dfloat rhsp = 0.f;
+	for (int i=0;i<p_cubNp;++i){
+	  rhsp += cubProject[n + i*p_Np] * s_p[i];
+	}
+	rhsqn[3] = rhsp;
+
+	// Increment solutions
+	for (int fld = 0; fld < p_Nfields; ++fld){ 
+	  dfloat resqn = resq[id + fld];
+	  resqn = rka*resqn + dt*rhsqn[fld];
+	  resq[id + fld] = resqn;
+	  q[id + fld] += rkb*resqn;
+	}
+
+      }      
+    }
+
+
+  }
+}
