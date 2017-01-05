@@ -110,6 +110,7 @@ typedef struct {
   // volume cubature node info
   iint    cubNp; // number of cubature nodes
   dfloat *cubr, *cubs;   // cubature node coordinates
+  //  dfloat *cubx, *cuby;   // cubature node physical coordinates
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
