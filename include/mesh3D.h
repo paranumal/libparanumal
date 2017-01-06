@@ -83,6 +83,16 @@ typedef struct {
   
   dfloat Lambda2; // square of penalty paramater used in constructing q^*
 
+  // cubature
+  iint cubNp;
+  dfloat *cubr, *cubs, *cubt;    // coordinates of local nodes
+  dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
+  dfloat *cubInterp; // interpolate from W&B to cubature nodes
+  dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
+
+  // c2 at cubature points (for wadg)
+  dfloat *c2;
+
   // time stepping info
   dfloat dt; // time step
   dfloat finalTime; // final time to run acoustics to
@@ -110,6 +120,11 @@ typedef struct {
   occa::memory o_vmapM, o_vmapP;
   
   occa::memory o_EToB, o_x, o_y, o_z;
+
+  // cubature (for wadg)
+  occa::memory o_cubInterpT, o_cubProjectT;
+  occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
+  occa::memory o_c2;
   
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;

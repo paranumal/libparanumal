@@ -1,0 +1,86 @@
+ifndef OCCA_DIR
+ERROR:
+	@echo "Error, environment variable [OCCA_DIR] is not set"
+endif
+
+DEBUG = 1
+include ${OCCA_DIR}/scripts/makefile
+sPath = src
+oPath = obj
+compilerFlags += 
+
+#---[ COMPILATION ]-------------------------------
+headers = $(wildcard $(iPath)/*.h) $(wildcard $(iPath)/*.tpp)
+sources = $(wildcard $(sPath)/*.c)
+
+objects	= obj/mainAcoustics3D.o\
+obj/meshSetup3D.o\
+obj/meshAcousticsSetup3D.o\
+obj/meshAcousticsRun3D.o\
+obj/meshAcousticsSurface3D.o\
+obj/meshAcousticsVolume3D.o\
+obj/meshAcousticsUpdate3D.o\
+obj/meshAcousticsError3D.o\
+obj/meshConnect3D.o\
+obj/meshConnectBoundary3D.o\
+obj/meshConnectFaceNodes3D.o\
+obj/meshHaloSetup3D.o\
+obj/meshHaloExchange3D.o\
+obj/meshGeometricFactors3D.o\
+obj/meshGeometricPartition3D.o\
+obj/meshGradient3D.o\
+obj/meshLoadReferenceNodes3D.o\
+obj/meshParallelConnect3D.o\
+obj/meshParallelPrint3D.o\
+obj/meshParallelReader3D.o\
+obj/meshPartitionStatistics3D.o\
+obj/meshPhysicalNodes3D.o\
+obj/meshPrint3D.o\
+obj/meshReader3D.o\
+obj/meshSurfaceGeometricFactors3D.o\
+obj/meshVTU3D.o\
+obj/meshPlotVTU3D.o\
+obj/occaOptimizeGradient3D.o\
+obj/occaTest3D.o\
+obj/parallelSort.o\
+obj/mysort.o\
+obj/acousticsCavitySolution3D.o
+
+
+
+quadObjects = obj/mainQuad3D.o\
+obj/meshAcousticsSurface3D.o\
+obj/meshAcousticsVolume3D.o\
+obj/meshConnect3D.o\
+obj/meshConnectFaceNodes3D.o\
+obj/meshGeometricFactorsQuad3D.o\
+obj/meshGeometricPartition3D.o\
+obj/meshGradientQuad3D.o\
+obj/meshLoadReferenceNodesQuad3D.o\
+obj/meshParallelConnect3D.o\
+obj/meshParallelPrint3D.o\
+obj/meshParallelReaderQuad3D.o\
+obj/meshPartitionStatistics3D.o\
+obj/meshPhysicalNodesQuad3D.o\
+obj/meshPrint3D.o\
+obj/meshReader3D.o\
+obj/meshSurfaceGeometricFactorsQuad3D.o\
+obj/meshVTU3D.o\
+obj/occaOptimizeGradientQuad3D.o\
+obj/occaTest3D.o\
+obj/parallelSort.o
+
+
+main: $(objects) $(headers) 
+	$(compiler) $(compilerFlags) -o mainAcoustics3D $(flags) $(objects) $(paths) $(links)
+
+mainQuad3D: $(quadObjects) $(headers) 
+	$(compiler) $(compilerFlags) -o mainQuad3D $(flags) $(quadObjects) $(paths) $(links)
+
+$(oPath)/%.o:$(sPath)/%.c $(wildcard $(subst $(sPath)/,$(iPath)/,$(<:.c=.h))) $(wildcard $(subst $(sPath)/,$(iPath)/,$(<:.c=.tpp)))
+	$(compiler) $(compilerFlags) -o $@ $(flags) -c $(paths) $<
+
+clean:
+	rm -f $(oPath)/*;
+	rm -f main
+#=================================================
