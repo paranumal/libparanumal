@@ -80,7 +80,8 @@ end
 plotNp = length(plotR);
 
 %% triangulate equilateral element nodes
-plotEToV = delaunay3(plotR,plotS,plotT)-1; 
+%plotEToV = delaunay3(plotR,plotS,plotT)-1; 
+plotEToV = delaunayFixVolume(plotR,plotS,plotT)-1; 
 
 %% count triangles in plot node triangulation
 plotNelements = size(plotEToV,1); 
@@ -114,9 +115,42 @@ fprintf(fid, '%d\n', size(plotEToV,2));
 
 fprintf(fid, '%% triangulation of plot nodes\n');
 for n=1:plotNelements
-  fprintf(fid, '%d %d %d\n' ,...
+  fprintf(fid, '%d %d %d %d\n' ,...
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3),plotEToV(n,4));
 end
 
+%% output cubature arrays
+
+if N < 7
+    [cubr cubs cubt cubw] = tet_cubature(2*N+1);
+    Vq = Vandermonde3D(N,cubr,cubs,cubt)/V;
+    Pq = V*V'*Vq'*diag(cubw);
+    
+    Ncub = length(cubw);
+    fprintf(fid, '%% number of volume cubature nodes\n');
+    fprintf(fid, '%d\n', Ncub);
+    
+    fprintf(fid, '%% cubature node coordinates\n');
+    for n=1:Ncub
+        fprintf(fid, '%17.15E %17.15E %17.15E\n', cubr(n), cubs(n), cubt(n));
+    end
+    
+    fprintf(fid,'%% cubature interpolation matrix\n');
+    for i=1:Ncub
+        for j = 1:Np
+            fprintf(fid, '%17.15E ', Vq(i,j));
+        end
+        fprintf(fid, '\n');
+    end
+    
+    fprintf(fid,'%% cubature projection matrix\n');
+    for i=1:Np
+        for j = 1:Ncub
+            fprintf(fid, '%17.15E ', Pq(i,j));
+        end
+        fprintf(fid, '\n');
+    end
+end
+%%
 
 fclose(fid);
