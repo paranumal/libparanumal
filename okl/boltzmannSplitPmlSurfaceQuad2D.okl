@@ -1,7 +1,4 @@
 
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
-
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat q1M, const dfloat q2M, const dfloat q3M,
 	      const dfloat q4M, const dfloat q5M, const dfloat q6M,

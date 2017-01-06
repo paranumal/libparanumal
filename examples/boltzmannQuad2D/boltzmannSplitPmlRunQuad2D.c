@@ -80,11 +80,11 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
       
-      mesh->device.finish();
-
       dfloat ramp = boltzmannRampFunction2D(t);
-      
+
+      mesh->device.finish();
       occa::tic("surfaceKernel");
+      
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -105,12 +105,13 @@ void boltzmannSplitPmlRunQuad2D(mesh2D *mesh){
       // updaee solution using Runge-Kutta
       iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
 
-      mesh->device.finish();
 
       dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
       dfloat rampUpdate = boltzmannRampFunction2D(tupdate);
-      
+
+      mesh->device.finish();
       occa::tic("updateKernel");
+
       mesh->updateKernel(mesh->Nelements,
 			 recombine,
 			 mesh->dt,
