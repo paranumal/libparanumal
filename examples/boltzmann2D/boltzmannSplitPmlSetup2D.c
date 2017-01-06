@@ -306,6 +306,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
   kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
+  kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
   kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
