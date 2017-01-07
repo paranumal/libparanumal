@@ -25,8 +25,8 @@ void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfie
 	mesh->vgeo[mesh->Nvgeo*e+RYID]*dudr +
 	mesh->vgeo[mesh->Nvgeo*e+SYID]*duds;
       dfloat dvdx =
-	mesh->vgeo[mesh->Nvgeo*e+RYID]*dvdr +
-	mesh->vgeo[mesh->Nvgeo*e+SYID]*dvds;
+	mesh->vgeo[mesh->Nvgeo*e+RXID]*dvdr +
+	mesh->vgeo[mesh->Nvgeo*e+SXID]*dvds;
       q[outfld + Nfields*(n+e*mesh->Np)] = dudy-dvdx;
     }
   }
