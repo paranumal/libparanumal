@@ -211,7 +211,9 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   // too small ???
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT); // upwind dt
+  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+  dfloat dt = cfl*mymin(hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT),
+			4./(mesh->tauInv*magVelocity));
 
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
@@ -223,7 +225,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = .5;
+  mesh->finalTime = 100;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 

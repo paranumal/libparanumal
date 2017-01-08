@@ -36,7 +36,9 @@ boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
+boltzmannSplitPmlLserkStep2D.o \
 boltzmannRampFunction2D.o \
+boltzmannReport2D.o \
 ../../src/meshConnect2D.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshConnectFaceNodes2D.o \
