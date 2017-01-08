@@ -11,3 +11,10 @@ void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfie
 
 //dfloat boltzmannRampFunction2D(dfloat t);
 void boltzmannRampFunction2D(dfloat t, dfloat *ramp, dfloat *drampdt);
+
+// execute one Boltzmann time step using LSERK4
+void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer);
+
+// output run statistics for Boltzmann simulation
+void boltzmannReport2D(mesh2D *mesh, iint tstep);
