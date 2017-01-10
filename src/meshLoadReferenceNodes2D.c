@@ -195,6 +195,127 @@ void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   printf("]\n");
+
+  // ======================= BB data [added by JC] ===========================
+#if 1
+  // BB Vandermonde matrices
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->VB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  printf("VB = [");
+  for(int n=0;n<mesh->Np*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->VB+n);
+    printf("%g ",mesh->VB[n]);
+  }
+  printf("];\n");
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->invVB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  printf("invVB = [");
+  for(int n=0;n<mesh->Np*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->invVB+n);
+    printf("%g ",mesh->invVB[n]);
+  }
+  printf("]\n");
+
+  // sparse barycentric differentiation matrices
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->D1ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
+  printf("D1ids = [");
+  for (int n=0;n<mesh->Np*3;++n){    
+    fscanf(fp, iintFormat, mesh->D1ids+n);
+    printf("%d ",mesh->D1ids[n]);
+  }
+  printf("]\n");
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("D2ids = [");
+  mesh->D2ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
+  for (int n=0;n<mesh->Np*3;++n){
+    fscanf(fp, iintFormat, mesh->D2ids+n);
+    printf("%d ",mesh->D2ids[n]);
+  }
+  printf("]\n");
+  
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("D3ids = [");
+  mesh->D3ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
+  for (int n=0;n<mesh->Np*3;++n){
+    fscanf(fp, iintFormat, mesh->D3ids+n);
+    printf("%d ",mesh->D3ids[n]);
+  }
+  printf("]\n");
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("Dvals = [");
+  mesh->Dvals = (dfloat*) calloc(mesh->Np*3, sizeof(dfloat));
+  for (int n=0;n<mesh->Np*3;++n){
+    fscanf(fp, dfloatFormat, mesh->Dvals+n);
+    printf("%g ",mesh->Dvals[n]);
+  }
+  printf("]\n");
+  
+  // BB cubature projection matrices
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("VBq = [");
+  mesh->VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp, sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->cubNp;++n){
+    fscanf(fp, dfloatFormat, mesh->VBq+n);
+    printf("%g ",mesh->VBq[n]);
+  }
+  printf("]\n");
+  
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("PBq = [");
+  mesh->PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp, sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->cubNp;++n){
+    fscanf(fp, dfloatFormat, mesh->PBq+n);
+    printf("%g ",mesh->PBq[n]);
+  }
+  printf("]\n");
+
+  // BB L0 matrix values
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->L0vals = (dfloat*) calloc(mesh->Nfp*3, sizeof(dfloat));
+  printf("L0vals = [");
+  for (int n=0;n<mesh->Nfp*3;++n){
+    fscanf(fp, dfloatFormat, mesh->L0vals+n);
+    printf("%g ",mesh->L0vals[n]);
+  }
+  printf("]\n");
+
+  // BB lift reduction (EL) matrix (sparse format)
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->max_EL_nnz = mesh->Nfp + 2;
+  printf("ELids = [");
+  mesh->ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(iint));
+  for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
+    fscanf(fp, iintFormat, mesh->ELids+n);
+    printf("%d ",mesh->ELids[n]);
+  }
+  printf("]\n");
+  
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(dfloat));
+  printf("ELvals = [");
+  for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
+    fscanf(fp, dfloatFormat, mesh->ELvals+n);
+    printf("%g ",mesh->ELvals[n]);
+  }
+  printf("]\n");
+  
+  // ============ end BB stuff ==================
+#endif
+  
 #if 0
   printf("Dr: \n");
   for(int n=0;n<mesh->Np;++n){
