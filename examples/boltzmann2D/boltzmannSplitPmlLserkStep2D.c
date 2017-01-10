@@ -135,24 +135,26 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
     mesh->device.finish();
     occa::tic("updateKernel");
-
-    // update solution using Runge-Kutta
-    mesh->pmlUpdateKernel(mesh->pmlNelements,
-			  mesh->o_pmlElementIds,
-			  mesh->dt,
-			  mesh->rka[rk],
-			  mesh->rkb[rk],
-			  rampUpdate,
-			  mesh->o_rhspmlqx,
-			  mesh->o_rhspmlqy,
-			  mesh->o_rhspmlNT,
-			  mesh->o_respmlqx,
-			  mesh->o_respmlqy,
-			  mesh->o_respmlNT,
-			  mesh->o_pmlqx,
-			  mesh->o_pmlqy,
-			  mesh->o_pmlNT,
-			  mesh->o_q);
+    
+    //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
+    if (mesh->pmlNelements){    
+      mesh->pmlUpdateKernel(mesh->pmlNelements,
+			    mesh->o_pmlElementIds,
+			    mesh->dt,
+			    mesh->rka[rk],
+			    mesh->rkb[rk],
+			    rampUpdate,
+			    mesh->o_rhspmlqx,
+			    mesh->o_rhspmlqy,
+			    mesh->o_rhspmlNT,
+			    mesh->o_respmlqx,
+			    mesh->o_respmlqy,
+			    mesh->o_respmlNT,
+			    mesh->o_pmlqx,
+			    mesh->o_pmlqy,
+			    mesh->o_pmlNT,
+			    mesh->o_q);
+    }
     
     if(mesh->nonPmlNelements)
       mesh->updateKernel(mesh->nonPmlNelements,
