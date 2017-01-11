@@ -25,8 +25,29 @@ int parallelCompareVertices(const void *a,
   if(fa->v2 > fb->v2) return +1;
 
   return 0;
+}
+
+/* comparison function that orders element/face
+   based on their indexes */
+int parallelCompareFaces(const void *a, 
+			 const void *b){
+
+  parallelFace_t *fa = (parallelFace_t*) a;
+  parallelFace_t *fb = (parallelFace_t*) b;
+
+  if(fa->rank < fb->rank) return -1;
+  if(fa->rank > fb->rank) return +1;
+
+  if(fa->element < fb->element) return -1;
+  if(fa->element > fb->element) return +1;
+
+  if(fa->face < fb->face) return -1;
+  if(fa->face > fb->face) return +1;
+
+  return 0;
 
 }
+
 
 // compute destination rank for sorting
 iint destinationRank(iint size, iint v1, iint v2){
