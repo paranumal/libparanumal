@@ -51,7 +51,7 @@ int parallelCompareFaces(const void *a,
 
 // compute destination rank for sorting
 iint destinationRank(iint size, iint v1, iint v2){
-  return (mymax(v1,v2)%size);
+  return (mymin(v1%size,v2%size));
 }
   
 // mesh is the local partition
@@ -68,6 +68,10 @@ void meshParallelConnect2D(mesh2D *mesh){
   // count # of elements to send to each rank based on
   // minimum {vertex id % size}
   iint *Nsend = (iint*) calloc(size, sizeof(iint));
+  iint *Nrecv = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
+    
   iint allNsend = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
@@ -77,10 +81,10 @@ void meshParallelConnect2D(mesh2D *mesh){
 	iint v2 = mesh->EToV[e*mesh->Nfaces+(f+1)%mesh->Nverts];
 
 	// find rank of destination for sorting based on max(v1,v2)%size
-	iint destRank = destinationRank(v1,v2);
-	
+	iint destRank = destinationRank(size, v1,v2);
+
 	// increment send size for 
-	Nsend[destRank] += sizeof(parallelFace_t);
+	++Nsend[destRank];
 	++allNsend;
       }
     }
@@ -88,14 +92,14 @@ void meshParallelConnect2D(mesh2D *mesh){
   
   // find send offsets
   for(iint r=1;r<size;++r)
-    sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1]; // byte offsets
+    sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
   
   // reset counters
   for(iint r=0;r<size;++r)
     Nsend[r] = 0;
 
   // buffer for outgoing data
-  parallelFace_t *sendFaces = (iint*) calloc(allNsend, sizeof(parallelFace_t));
+  parallelFace_t *sendFaces = (parallelFace_t*) calloc(allNsend, sizeof(parallelFace_t));
 
   // pack face data
   for(iint e=0;e<mesh->Nelements;++e){
@@ -106,10 +110,11 @@ void meshParallelConnect2D(mesh2D *mesh){
 	iint v2 = mesh->EToV[e*mesh->Nfaces+(f+1)%mesh->Nverts];
 
 	// find rank of destination for sorting based on max(v1,v2)%size
-	iint destRank = destinationRank(v1,v2);
+	iint destRank = destinationRank(size, v1,v2);
 	
-	// populate face to send out
-	iint id = Nsend[destRank];
+	// populate face to send out staged in segment of sendFaces array
+	iint id = sendOffsets[destRank]+Nsend[destRank];
+
 	sendFaces[id].element = e;
 	sendFaces[id].face = f;
 	sendFaces[id].v1 = mymax(v1,v2);
@@ -119,8 +124,8 @@ void meshParallelConnect2D(mesh2D *mesh){
 	sendFaces[id].elementN = -1;
 	sendFaces[id].faceN = -1;
 	sendFaces[id].rankN = -1;
-
-	Nsend[destRank] += sizeof(parallelFace_t);
+	
+	++Nsend[destRank];
       }
     }
   }
@@ -132,15 +137,19 @@ void meshParallelConnect2D(mesh2D *mesh){
   
   // count incoming faces
   iint allNrecv = 0;
-  for(iint r=0;r<size;++r)
-    allNrecv += Nrecv[r]/sizeof(parallelFace_t);
+  for(iint r=0;r<size;++r){
+    allNrecv += Nrecv[r];
+    Nrecv[r] *= sizeof(parallelFace_t);
+    Nsend[r] *= sizeof(parallelFace_t);
+    sendOffsets[r] *= sizeof(parallelFace_t);
+  }
 
   // find offsets for recv data
   for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1]; // byte offsets
   
   // buffer for incoming face data
-  parallelFace_t *recvFaces = (iint*) calloc(allNrecv, sizeof(parallelFace_t));
+  parallelFace_t *recvFaces = (parallelFace_t*) calloc(allNrecv, sizeof(parallelFace_t));
   
   // exchange parallel faces
   MPI_Alltoallv(sendFaces, Nsend, sendOffsets, MPI_CHAR,
@@ -177,7 +186,7 @@ void meshParallelConnect2D(mesh2D *mesh){
   for(int cnt=0;cnt<mesh->Nelements*mesh->Nfaces;++cnt)
     mesh->EToP[cnt] = -1;
   
-  for(iint cnt=0;cnt<allNrecv;++cnt){
+  for(iint cnt=0;cnt<allNsend;++cnt){
     iint e = sendFaces[cnt].element;
     iint f = sendFaces[cnt].face;
     iint eN = sendFaces[cnt].elementN;
