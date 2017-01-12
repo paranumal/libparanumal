@@ -47,7 +47,7 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
 	  /* compute geometric factors for affine coordinate transform*/
 	  dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
-	  if(J<0) printf("J = %g !!!!!!!!!!!!!\n", J);
+	  if(J<1e-5) printf("J = %g !!!!!!!!!!!!!\n", J);
 	  
 	  dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
 	  dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
