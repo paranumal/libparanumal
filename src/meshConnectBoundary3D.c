@@ -120,9 +120,19 @@ void meshConnectBoundary3D(mesh3D *mesh){
 
       mesh->EToB[e*mesh->Nfaces+f] =
 	mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
-      
+
       ++matches;
     }
   }
+
+#if 0
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
+      ++cnt;
+    }
+  }
+#endif
 }
 

@@ -71,7 +71,7 @@ void meshConnect3D(mesh3D *mesh){
       }
       
       mysort(faces[cnt].v, mesh->NfaceVertices, "descending");
-      
+
       faces[cnt].NfaceVertices = mesh->NfaceVertices;
       
       faces[cnt].element = e;
