@@ -41,9 +41,11 @@ typedef struct {
   unsigned long long int index;
   
   iint element;
-  iint v[4];
 
-  dfloat EX[4], EY[4], EZ[4];
+  // use 8 for maximum vertices per element
+  iint v[8];
+
+  dfloat EX[8], EY[8], EZ[8];
 
 }element_t;
 

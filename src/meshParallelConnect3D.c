@@ -5,10 +5,10 @@
 
 
 typedef struct {
-  iint v[3];
+  iint v[4];
   iint element, face, rank;
   iint elementN, faceN, rankN; // N for neighbor
-
+  iint NfaceVertices;
 }parallelFace_t;
 
 
@@ -21,14 +21,10 @@ int parallelCompareVertices(const void *a,
   parallelFace_t *fa = (parallelFace_t*) a;
   parallelFace_t *fb = (parallelFace_t*) b;
 
-  if(fa->v[0] < fb->v[0]) return -1;
-  if(fa->v[0] > fb->v[0]) return +1;
-
-  if(fa->v[1] < fb->v[1]) return -1;
-  if(fa->v[1] > fb->v[1]) return +1;
-
-  if(fa->v[2] < fb->v[2]) return -1;
-  if(fa->v[2] > fb->v[2]) return +1;
+  for(iint n=0;n<fa->NfaceVertices;++n){
+    if(fa->v[n] < fb->v[n]) return -1;
+    if(fa->v[n] > fb->v[n]) return +1;
+  }
 
   return 0;
 
@@ -109,6 +105,8 @@ void meshParallelConnect3D(mesh3D *mesh){
 	    mesh->EToV[e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n]];
 	
 	mysort(brokenFaces[cnt].v,mesh->NfaceVertices, "descending");
+
+	brokenFaces[cnt].NfaceVertices = mesh->NfaceVertices;
 	
 	brokenFaces[cnt].element = e;
 	brokenFaces[cnt].face = f;
@@ -123,6 +121,8 @@ void meshParallelConnect3D(mesh3D *mesh){
 
   while(cnt<maxNbroken){
 
+    brokenFaces[cnt].NfaceVertices = mesh->NfaceVertices; // could use this
+    
     brokenFaces[cnt].v[0] = -1;
     brokenFaces[cnt].v[1] = -2;
     brokenFaces[cnt].v[2] = -3;
