@@ -33,7 +33,6 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 AOBJS    = \
-acousticsMainHex3D.o \
 acousticsErrorHex3D.o \
 acousticsRunHex3D.o \
 acousticsSetupHex3D.o \
@@ -67,11 +66,14 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-acousticsMain3D:$(AOBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o acousticsMain3D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o
+	$(LD)  $(LDFLAGS)  -o acousticsMain3D acousticsMainHex3D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 acousticsMainSplitPml3D:$(POBJS) $(LOBJS)
 	$(LD)  $(LDFLAGS)  -o acousticsMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
+
+test3D: $(LOBJS) $(AOBJS) testMainHex3D.o
+	$(LD)  $(LDFLAGS)  -o testMain3D testMainHex3D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :

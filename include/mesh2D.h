@@ -435,6 +435,9 @@ void meshEllipticLocalOpQuad2D(mesh2D *mesh, dfloat *qL, dfloat lambda, dfloat *
 #define mymin(a,b) ((a<b)?a:b)
 #define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
 
+/* hash function */
+unsigned int hash(const unsigned int value) ;
+
 /* offsets for geometric factors */
 #define RXID 0  
 #define RYID 1  

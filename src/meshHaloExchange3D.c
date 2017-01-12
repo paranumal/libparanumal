@@ -32,7 +32,7 @@ void meshHaloExchange3D(mesh3D *mesh,
     if(r!=rank){
       size_t count = mesh->NhaloPairs[r]*Nbytes;
       if(count){
-	printf("rank %d sending %d bytes to rank %d\n", rank, count, r);
+	//	printf("rank %d sending %d bytes to rank %d\n", rank, count, r);
 	MPI_Irecv(((char*)recvBuffer)+offset, count, MPI_CHAR, r, tag,
 		  MPI_COMM_WORLD, (MPI_Request*)mesh->haloRecvRequests+message);
 	
@@ -43,7 +43,7 @@ void meshHaloExchange3D(mesh3D *mesh,
       }
     }
   }
-  printf("mesh->NhaloMessages = %d\n", mesh->NhaloMessages);
+  //  printf("mesh->NhaloMessages = %d\n", mesh->NhaloMessages);
 
   // Wait for all sent messages to have left and received messages to have arrived
   MPI_Status *sendStatus = (MPI_Status*) calloc(mesh->NhaloMessages, sizeof(MPI_Status));

@@ -5,46 +5,36 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   // read chunk of elements
   mesh3D *mesh = meshParallelReaderHex3D(filename);
 
-  printf("starting geom part\n");
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
 
   // print out connectivity statistics
   meshPartitionStatistics3D(mesh);
 
-  printf("starting || connect \n");
   // connect elements using parallel sort
   meshParallelConnect3D(mesh);
 
-  printf("starting connect bc \n");
   // connect elements to boundary faces
   meshConnectBoundary3D(mesh);
 
-  printf("starting ref nodes \n");
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesHex3D(mesh, N);
 
-  printf("starting phys nodes\n");
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesHex3D(mesh);
 
-  printf("starting geom factors\n");
   // compute geometric factors
   meshGeometricFactorsHex3D(mesh);
 
-  printf("starting surf geom factors\n");
   // compute surface geofacs
   meshSurfaceGeometricFactorsHex3D(mesh);
 
-  printf("starting halo exchange\n");
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup3D(mesh);
 
-  printf("starting connect face nodes\n");
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
 
-  printf("starting || connect nodes\n");
   // global nodes
   meshParallelConnectNodesHex3D(mesh);
 
