@@ -3,6 +3,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
+CXXFLAGS = 
+
 include ${OCCA_DIR}/scripts/makefile
 
 # define variables
@@ -14,10 +16,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR)
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags)
+LDFLAGS	= $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -49,7 +51,7 @@ LOBJS = \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange3D.o \
 ../../src/meshHaloSetup3D.o \
-../../src/meshParallelConnect3D.o \
+../../src/meshParallelConnectOpt3D.o \
 ../../src/meshParallelPrint3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics3D.o \
