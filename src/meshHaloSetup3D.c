@@ -104,6 +104,8 @@ void meshHaloSetup3D(mesh3D *mesh){
       }
     }
   }
+
+  printf("totalHaloPairs = %d\n", mesh->totalHaloPairs);
   
   // create halo extension for x,y arrays
   iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;

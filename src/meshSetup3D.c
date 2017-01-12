@@ -6,7 +6,7 @@ mesh3D *meshSetup3D(char *filename, int N){
   mesh3D *mesh = meshParallelReader3D(filename);
 
   // partition elements using Morton ordering & parallel sort
-  //  meshGeometricPartition3D(mesh);
+  meshGeometricPartition3D(mesh);
   
   // print out connectivity statistics
   //  meshPartitionStatistics3D(mesh);
