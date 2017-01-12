@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
-void meshLoadReferenceNodesQuad3D(mesh3D *mesh, int N){
+void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   char fname[BUFSIZ];
   sprintf(fname, "nodes/hexN%02d.dat", N);
