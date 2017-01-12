@@ -67,7 +67,7 @@ kernel void boltzmannNonPmlSurface2D(const iint Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxq[p_NblockS][6][p_Nfp*p_Nfaces];
     exclusive iint element;
 
     // for all face nodes of all elements
@@ -177,11 +177,11 @@ kernel void boltzmannNonPmlSurface2D(const iint Nelements,
 
 
 kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
-					 const iint * restrict elementIds,
+					 const iint   * restrict elementIds,
 					 const dfloat * restrict sgeo,
-					 const dfloat *L0vals,
-					 const iint *ELids,
-					 const dfloat *ELvals,	 
+					 const dfloat * restrict L0vals,
+					 const iint   * restrict ELids,
+					 const dfloat * restrict ELvals,	 
 					 const iint   * restrict vmapM,
 					 const iint   * restrict vmapP,
 					 const iint   * restrict EToB,
@@ -196,8 +196,8 @@ kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxq_copy[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];    
+    shared dfloat s_fluxq[p_NblockS][6][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxq_copy[p_NblockS][6][p_Nfp*p_Nfaces];    
     exclusive iint element;
 
     // for all face nodes of all elements 
@@ -270,7 +270,7 @@ kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
     
     // wait for all shared memory writes of the previous inner loop to complete
     barrier(localMemFence);
-
+#if 1
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
@@ -281,14 +281,14 @@ kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
 	    const iint fid = n % p_Nfaces;  // warning: redundant reads
 	    const dfloat L0val = L0vals[fid + p_Nfp]; 
 
-	    dfloat tmpflux;;
+	    dfloat tmpflux;
 	    for (int fld = 0; fld < 6; ++fld){
 	      tmpflux = L0val * s_fluxq[es][fld][n];
 	      if (fid > 0){		
-		tmpflux += L0vals[fid]*s_fluxq[es][fld][n+1]; // add previous term
+		tmpflux += L0vals[fid]*s_fluxq[es][fld][n-1]; // add previous term
 	      }
 	      if (fid < p_Nfp){
-		tmpflux += L0vals[fid + 2*p_Nfp]*s_fluxq[es][fld][n-1];// add next term
+		tmpflux += L0vals[fid + 2*p_Nfp]*s_fluxq[es][fld][n+1];// add next term
 	      }
 	      s_fluxq_copy[es][fld][n] = tmpflux;
 	    }
@@ -297,6 +297,7 @@ kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
 	}
       }
     }
+#endif
     barrier(localMemFence);
 
     // apply lift reduction and accumulate RHS
