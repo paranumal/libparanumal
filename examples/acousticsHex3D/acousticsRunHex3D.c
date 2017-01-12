@@ -50,6 +50,7 @@ void acousticsOccaRunHex3D(mesh3D *mesh){
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
     for(iint rk=0;rk<mesh->Nrk;++rk){
+
       // intermediate stage time
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 

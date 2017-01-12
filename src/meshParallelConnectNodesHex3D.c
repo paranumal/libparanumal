@@ -25,7 +25,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   vnums[4] = mesh->Nq*mesh->Nq*mesh->N + 0;
   vnums[5] = mesh->Nq*mesh->Nq*mesh->N + mesh->N;
   vnums[6] = mesh->Nq*mesh->Nq*mesh->N + mesh->Np-1;
-  vnums[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*(mesh->N+1); 
+  vnums[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*mesh->Nq;
 
   // use local numbering 
   for(iint n=0;n<mesh->Nelements*mesh->Np;++n){
@@ -86,6 +86,4 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   free(globalNumbering);
   free(sendBuffer);
 
-  MPI_Finalize();
-  exit(0);
 }

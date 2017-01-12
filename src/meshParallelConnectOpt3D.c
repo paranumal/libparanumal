@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include "mesh2D.h"
+#include "mesh3D.h"
 
 typedef struct {
   iint NfaceVertices;
@@ -49,7 +49,7 @@ int parallelCompareFaces(const void *a,
 }
   
 // mesh is the local partition
-void meshParallelConnect2D(mesh2D *mesh){
+void meshParallelConnect3D(mesh3D *mesh){
 
   int rank, size;
 
@@ -57,7 +57,7 @@ void meshParallelConnect2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // serial connectivity on each process
-  meshConnect2D(mesh);
+  meshConnect3D(mesh);
 
   // count # of elements to send to each rank based on
   // minimum {vertex id % size}
@@ -73,7 +73,7 @@ void meshParallelConnect2D(mesh2D *mesh){
 	// find rank of destination for sorting based on max(face vertices)%size
 	iint maxv = 0;
 	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfacesVertices+n];
+	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
 	  iint id = mesh->EToV[e*mesh->Nverts + nid];
 	  maxv = mymax(maxv, id);
 	}
@@ -105,7 +105,7 @@ void meshParallelConnect2D(mesh2D *mesh){
 	// find rank of destination for sorting based on max(face vertices)%size
 	iint maxv = 0;
 	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfacesVertices+n];
+	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
 	  iint id = mesh->EToV[e*mesh->Nverts + nid];
 	  maxv = mymax(maxv, id);
 	}
@@ -118,12 +118,13 @@ void meshParallelConnect2D(mesh2D *mesh){
 	sendFaces[id].element = e;
 	sendFaces[id].face = f;
 	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfacesVertices+n];
+	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
 	  sendFaces[id].v[n] = mesh->EToV[e*mesh->Nverts + nid];
 	}
 
 	mysort(sendFaces[id].v,mesh->NfaceVertices, "descending");
-	
+
+	sendFaces[id].NfaceVertices = mesh->NfaceVertices;
 	sendFaces[id].rank = rank;
 
 	sendFaces[id].elementN = -1;

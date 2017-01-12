@@ -97,18 +97,20 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   int cnt=0, bcnt = 0;
   Nhexes = 0;
 
-  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*4, sizeof(iint));
+  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*(mesh->NfaceVertices+1), sizeof(iint));
   for(n=0;n<mesh->Nelements;++n){
     iint elementType, v1, v2, v3, v4, v5, v6, v7, v8;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==3){ // quad boundary face
+      iint base = (mesh->NfaceVertices+1)*bcnt;
       sscanf(buf, "%*d%*d %*d%d%*d %d%d%d%d", 
-	     mesh->boundaryInfo+bcnt*5, &v1, &v2, &v3, &v4);
-      mesh->boundaryInfo[bcnt*5+1] = v1-1;
-      mesh->boundaryInfo[bcnt*5+2] = v2-1;
-      mesh->boundaryInfo[bcnt*5+3] = v3-1;
-      mesh->boundaryInfo[bcnt*5+4] = v4-1;
+	     mesh->boundaryInfo+base, &v1, &v2, &v3, &v4);
+
+      mesh->boundaryInfo[base+1] = v1-1;
+      mesh->boundaryInfo[base+2] = v2-1;
+      mesh->boundaryInfo[base+3] = v3-1;
+      mesh->boundaryInfo[base+4] = v4-1;
       ++bcnt;
     }
 
@@ -128,6 +130,8 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 	mesh->EToV[cnt*mesh->Nverts+6] = v7-1;
 	mesh->EToV[cnt*mesh->Nverts+7] = v8-1;
 
+	//	printf("%d: %d,%d,%d,%d %d,%d,%d,%d", cnt, v1-1, v2-1,v3-1,v4-1,v5-1,v6-1,v7-1,v8-1);
+	
 	++cnt;
       }
       ++Nhexes;

@@ -48,6 +48,8 @@ void meshConnectBoundary3D(mesh3D *mesh){
 
   printf("Nbf = %d\n", mesh->NboundaryFaces);
   printf("Nfv = %d\n", mesh->NfaceVertices);
+  printf("bcnt = %d\n", bcnt);
+  printf("Nelements = %d\n", mesh->Nelements);
   
   /* build list of boundary faces */
   boundaryFace_t *boundaryFaces = (boundaryFace_t*) calloc(bcnt+mesh->NboundaryFaces,
@@ -59,8 +61,7 @@ void meshConnectBoundary3D(mesh3D *mesh){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1) { 
 	
 	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint vid = e*mesh->Nverts +
-	    mesh->faceVertices[f*mesh->NfaceVertices+n];
+	  iint vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
 	  boundaryFaces[bcnt].v[n] = mesh->EToV[vid];
 	}
       
@@ -82,7 +83,8 @@ void meshConnectBoundary3D(mesh3D *mesh){
       boundaryFaces[bcnt].v[n] = mesh->boundaryInfo[b*(mesh->NfaceVertices+1)+n+1];
     
     mysort(boundaryFaces[bcnt].v,mesh->NfaceVertices, "descending");
-    
+
+    boundaryFaces[bcnt].NfaceVertices = mesh->NfaceVertices;
     boundaryFaces[bcnt].element = -1;
     boundaryFaces[bcnt].face = -1;
     boundaryFaces[bcnt].bctype = mesh->boundaryInfo[b*(mesh->NfaceVertices+1)];
@@ -90,17 +92,19 @@ void meshConnectBoundary3D(mesh3D *mesh){
     ++bcnt;
   }
 
+#if 0
   for(iint b=0;b<bcnt;++b){
-    printf("%d: e=%d, f=%d, bc=%d, v=%d,%d,%d\n",
+    printf("%d: e=%d, f=%d, bc=%d, v=",
 	   b,
 	   boundaryFaces[b].element,
 	   boundaryFaces[b].face,
-	   boundaryFaces[b].bctype,
-	   boundaryFaces[b].v[0],
-	   boundaryFaces[b].v[1],
-	   boundaryFaces[b].v[2]);
+	   boundaryFaces[b].bctype);
+    for(iint n=0;n<mesh->NfaceVertices;++n)
+      printf("%d ", boundaryFaces[b].v[n]);
+    printf("\n");
   }
-
+#endif
+  
   /* sort boundaryFaces by their vertex number pairs */
   qsort(boundaryFaces, bcnt, sizeof(boundaryFace_t), compareBoundaryFaces);
 
@@ -114,8 +118,6 @@ void meshConnectBoundary3D(mesh3D *mesh){
       iint e = mymax(boundaryFaces[cnt].element, boundaryFaces[cnt+1].element);
       iint f = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
 
-      printf("e=%d, f=%d\n", e, f);
-      
       mesh->EToB[e*mesh->Nfaces+f] =
 	mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
       
