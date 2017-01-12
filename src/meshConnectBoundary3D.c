@@ -10,7 +10,9 @@ typedef struct{
   iint element;
   iint face;
 
-  iint v[3];
+  iint NfaceVertices;
+  
+  iint v[4]; // max number of face vertices
 
   iint bctype;
 
@@ -24,14 +26,10 @@ int compareBoundaryFaces(const void *a,
   boundaryFace_t *fa = (boundaryFace_t*) a;
   boundaryFace_t *fb = (boundaryFace_t*) b;
 
-  if(fa->v[0] < fb->v[0]) return -1;
-  if(fa->v[0] > fb->v[0]) return +1;
-
-  if(fa->v[1] < fb->v[1]) return -1;
-  if(fa->v[1] > fb->v[1]) return +1;
-
-  if(fa->v[2] < fb->v[2]) return -1;
-  if(fa->v[2] > fb->v[2]) return +1;
+  for(iint n=0;n<fa->NfaceVertices;++n){
+    if(fa->v[n] < fb->v[n]) return -1;
+    if(fa->v[n] > fb->v[n]) return +1;
+  }
 
   return 0;
 
@@ -68,6 +66,7 @@ void meshConnectBoundary3D(mesh3D *mesh){
       
 	mysort(boundaryFaces[bcnt].v,mesh->NfaceVertices, "descending");
 
+	boundaryFaces[bcnt].NfaceVertices = mesh->NfaceVertices;
 	boundaryFaces[bcnt].element = e;
 	boundaryFaces[bcnt].face = f;
 	boundaryFaces[bcnt].bctype = -1;
@@ -80,13 +79,13 @@ void meshConnectBoundary3D(mesh3D *mesh){
   for(iint b=0;b<mesh->NboundaryFaces;++b){
     
     for(iint n=0;n<mesh->NfaceVertices;++n)
-      boundaryFaces[bcnt].v[n] = mesh->boundaryInfo[b*4+n+1];
+      boundaryFaces[bcnt].v[n] = mesh->boundaryInfo[b*(mesh->NfaceVertices+1)+n+1];
     
     mysort(boundaryFaces[bcnt].v,mesh->NfaceVertices, "descending");
     
     boundaryFaces[bcnt].element = -1;
     boundaryFaces[bcnt].face = -1;
-    boundaryFaces[bcnt].bctype = mesh->boundaryInfo[b*4];
+    boundaryFaces[bcnt].bctype = mesh->boundaryInfo[b*(mesh->NfaceVertices+1)];
 
     ++bcnt;
   }
