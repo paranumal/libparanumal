@@ -204,7 +204,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
-
+#if 0
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
@@ -238,7 +238,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   printf("]\n");
-
+#endif
   
   fclose(fp);
 }

@@ -42,9 +42,10 @@ void meshPhysicalNodesHex3D(mesh3D *mesh){
 
     for(iint n=0;n<mesh->Np;++n){ /* for each node */
       
-      /* (r,s) coordinates of interpolation nodes*/
+      /* (r,s,t) coordinates of interpolation nodes*/
       dfloat rn = mesh->r[n]; 
       dfloat sn = mesh->s[n];
+      dfloat tn = mesh->t[n];
 
       /* physical coordinate of interpolation node */
       mesh->x[cnt] = 
