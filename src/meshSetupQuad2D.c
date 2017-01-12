@@ -35,6 +35,10 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
+  // global nodes
+  void meshParallelConnectNodesQuad2D(mesh2D *mesh);
+  meshParallelConnectNodesQuad2D(mesh);
+  
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
 
