@@ -80,5 +80,7 @@ void meshParallelConnectNodesQuad2D(mesh2D *mesh){
 
   free(globalNumbering);
   free(sendBuffer);
-  
+
+  MPI_Finalize();
+  exit(0);
 }

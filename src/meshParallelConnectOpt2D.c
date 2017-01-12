@@ -51,7 +51,9 @@ int parallelCompareFaces(const void *a,
 
 // compute destination rank for sorting
 iint destinationRank(iint size, iint v1, iint v2){
-  return (mymin(v1%size,v2%size));
+  //return (mymin(v1%size,v2%size));
+  //return (mymin(v1,v2))%size;
+  return hash(mymin(v1,v2))%size;
 }
   
 // mesh is the local partition
@@ -144,6 +146,21 @@ void meshParallelConnect2D(mesh2D *mesh){
     sendOffsets[r] *= sizeof(parallelFace_t);
   }
 
+  for(iint p=0;p<size;++p)
+    fflush(stdout);
+
+  for(iint p=0;p<size;++p){
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(p==rank){
+      printf("faces sent by rank %03d: ", p);
+      for(iint r=0;r<size;++r){
+	printf("%d ", Nsend[r]/sizeof(parallelFace_t));
+      }
+      printf("\n");
+      fflush(stdout);
+    }
+  }
+      
   // find offsets for recv data
   for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1]; // byte offsets
