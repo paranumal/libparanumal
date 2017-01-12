@@ -22,7 +22,7 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    shared dfloat s_q[p_NblockV][6][p_Np];
     exclusive iint element;
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block

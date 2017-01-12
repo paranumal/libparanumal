@@ -1,5 +1,5 @@
 
-kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
+kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
@@ -11,7 +11,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // shared memory for q at nodes
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    shared dfloat s_q[p_NblockV][6][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
     shared dfloat s_cubN4[p_NblockV][p_cubNp];
@@ -67,12 +67,11 @@ kernel void boltzmannSplitPmlRelaxation2D_c0(const iint Nelements,
 	      cubq5 += Icn*s_q[es][4][m];
 	      cubq6 += Icn*s_q[es][5][m];
 	    }
-	    dfloat icubq1 = 1.f/cubq1;
 	    
 	    // BGK relaxation approximation to the Boltzmann collision operator
-	    s_cubN4[es][n] = -p_tauInv*(cubq4-           cubq2*cubq3*icubq1);
-	    s_cubN5[es][n] = -p_tauInv*(cubq5-p_invsqrt2*cubq2*cubq2*icubq1);
-	    s_cubN6[es][n] = -p_tauInv*(cubq6-p_invsqrt2*cubq3*cubq3*icubq1);
+	    s_cubN4[es][n] = -p_tauInv*(cubq4-(           cubq2*cubq3/cubq1));
+	    s_cubN5[es][n] = -p_tauInv*(cubq5-(p_invsqrt2*cubq2*cubq2/cubq1));
+	    s_cubN6[es][n] = -p_tauInv*(cubq6-(p_invsqrt2*cubq3*cubq3/cubq1));
 	  }
 	}
       }
@@ -259,7 +258,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 
 
 // c2: do not interpolate q4,q5,q6
-kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
+kernel void boltzmannSplitPmlRelaxation2D_c2(const iint Nelements,
 					  const iint * restrict elementIds,
 					  const dfloat * restrict cubInterpT,
 					  const dfloat * restrict cubProjectT,
@@ -377,8 +376,8 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  // slightly inefficient since splits warp
-	  iint base = element*p_Np*p_Nfields+n;
-
+	  const iint base = element*p_Np*p_Nfields+n;
+	  
 	  // split relaxation
 	  rhspmlqx[base+3*p_Np] += 0.5f*N4;
 	  rhspmlqx[base+4*p_Np] += 0.5f*N5;
