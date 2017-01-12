@@ -51,8 +51,9 @@ LOBJS = \
 ../../src/meshHaloSetup3D.o \
 ../../src/meshParallelConnect3D.o \
 ../../src/meshParallelPrint3D.o \
-../../src/meshParallelReader3D.o \
+../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics3D.o \
+../../src/meshParallelConnectNodesHex3D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \

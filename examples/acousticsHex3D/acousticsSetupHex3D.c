@@ -1,6 +1,6 @@
 #include "acousticsHex3D.h"
 
-void acousticsSetup3D(mesh3D *mesh){
+void acousticsSetupHex3D(mesh3D *mesh){
 
   mesh->Nfields = 4;
   
