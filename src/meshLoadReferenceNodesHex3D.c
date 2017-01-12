@@ -58,10 +58,13 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
+  //  printf("faceNodes: \n");
   for(int f=0;f<mesh->Nfaces;++f){
     for(int n=0;n<mesh->Nfp;++n){
       fscanf(fp, iintFormat, mesh->faceNodes+n + f*mesh->Nfp);
+      //      printf("%d ", mesh->faceNodes[n+f*mesh->Nfp]);
     }
+    //    printf("\n");
   }
   fgets(buf, BUFSIZ, fp); // read EOL
 
@@ -75,14 +78,14 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("comment = %s\n", buf);
+  //  printf("comment = %s\n", buf);
   mesh->D = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
       fscanf(fp, dfloatFormat, mesh->D+m+n*(mesh->N+1));
-      printf("%f ",  mesh->D[m+n*(mesh->N+1)]);
+      //      printf("%f ",  mesh->D[m+n*(mesh->N+1)]);
     }
-    printf("\n");
+    //    printf("\n");
   }
   fgets(buf, BUFSIZ, fp); // read comment
 
@@ -107,6 +110,8 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   fgets(buf, BUFSIZ, fp); 
   sscanf(buf, iintFormat, &(mesh->plotNp));
 
+  printf("plotNp=%d\n", mesh->plotNp);
+  
   // read plot node coordinates (hard code triangles)
   mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   mesh->plotS = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
@@ -150,6 +155,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+#if 0
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
@@ -203,7 +209,8 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-
+#endif
+  
 #if 0
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment

@@ -28,11 +28,12 @@ void acousticsSetupHex3D(mesh3D *mesh){
 
       cnt += mesh->Nfields;
     }
-    printf("\n");
   }
 
   // set penalty parameter
   mesh->Lambda2 = 0.5;
+
+  printf("Nelements = %d, Nfaces = %d\n", mesh->Nelements, mesh->Nfaces);
   
   // set time step
   dfloat hmin = 1e9;
@@ -47,10 +48,13 @@ void acousticsSetupHex3D(mesh3D *mesh){
       // h = 0.5/(sJ/J)
       
       dfloat hest = .5/(sJ*invJ);
-
+      
       hmin = mymin(hmin, hest);
     }
   }
+
+  printf("hmin = %g\n", hmin);
+  
   dfloat cfl = 1; // depends on the stability region size
 
   dfloat dt = cfl*hmin/((mesh->N+1)*(mesh->N+1)*mesh->Lambda2);
@@ -227,8 +231,8 @@ void acousticsSetupHex3D(mesh3D *mesh){
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtractHex3D.okl",
-				       "meshHaloExtractHex3D",
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+				       "meshHaloExtract3D",
 				       kernelInfo);
 
 

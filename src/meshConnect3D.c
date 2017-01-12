@@ -12,8 +12,10 @@ typedef struct{
 
   iint elementNeighbor; // neighbor element
   iint faceNeighbor;    // neighbor face
-    
-  iint v[3];
+
+  iint NfaceVertices;
+  
+  iint v[4];
 
 }face_t;
 
@@ -24,16 +26,12 @@ int compareVertices(const void *a,
 
   face_t *fa = (face_t*) a;
   face_t *fb = (face_t*) b;
-
-  if(fa->v[0] < fb->v[0]) return -1;
-  if(fa->v[0] > fb->v[0]) return +1;
-
-  if(fa->v[1] < fb->v[1]) return -1;
-  if(fa->v[1] > fb->v[1]) return +1;
-
-  if(fa->v[2] < fb->v[2]) return -1;
-  if(fa->v[2] > fb->v[2]) return +1;
-
+  
+  for(iint n=0;n<fa->NfaceVertices;++n){
+    if(fa->v[n] < fb->v[n]) return -1;
+    if(fa->v[n] > fb->v[n]) return +1;
+  }
+  
   return 0;
 
 }
@@ -61,19 +59,20 @@ void meshConnect3D(mesh3D *mesh){
 
   /* build list of faces */
   face_t *faces = 
-    (face_t*) calloc(mesh->Nelements*mesh->Nfaces,
-		     sizeof(face_t));
+    (face_t*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(face_t));
+  
   int cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
-
+      
       for(iint n=0;n<mesh->NfaceVertices;++n){
-	iint vid = e*mesh->Nverts +
-	  mesh->faceVertices[f*mesh->NfaceVertices+n];
+	iint vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
 	faces[cnt].v[n] = mesh->EToV[vid];
       }
       
-      mysort(faces[cnt].v,mesh->NfaceVertices, "descending");
+      mysort(faces[cnt].v, mesh->NfaceVertices, "descending");
+      
+      faces[cnt].NfaceVertices = mesh->NfaceVertices;
       
       faces[cnt].element = e;
       faces[cnt].face = f;
@@ -114,11 +113,8 @@ void meshConnect3D(mesh3D *mesh){
 	compareFaces);
 
   /* extract the element to element and element to face connectivity */
-  mesh->EToE = (iint*) calloc(mesh->Nelements*mesh->Nfaces, 
-			      sizeof(iint));
-
-  mesh->EToF = (iint*) calloc(mesh->Nelements*mesh->Nfaces, 
-			      sizeof(iint));
+  mesh->EToE = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  mesh->EToF = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
 
   cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -126,11 +122,10 @@ void meshConnect3D(mesh3D *mesh){
       mesh->EToE[cnt] = faces[cnt].elementNeighbor;
       mesh->EToF[cnt] = faces[cnt].faceNeighbor;
 
-      //      printf("%d ", mesh->EToF[cnt]);
+      printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
       
       ++cnt;
     }
-    //    printf("\n");
   }
 
   iint Nbcs = 0;
@@ -138,6 +133,7 @@ void meshConnect3D(mesh3D *mesh){
     for(iint f=0;f<mesh->Nfaces;++f)
       if(mesh->EToE[e*mesh->Nfaces+f]==-1)
 	++Nbcs;
+
   printf("Nelements = %d, Nbcs = %d\n", mesh->Nelements, Nbcs);
 }
 

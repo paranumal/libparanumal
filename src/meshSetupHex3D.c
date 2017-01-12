@@ -31,13 +31,13 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup3D(mesh);
-  
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
 
   // global nodes
   meshParallelConnectNodesHex3D(mesh);
-  
+
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
 
