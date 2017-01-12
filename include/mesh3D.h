@@ -60,8 +60,12 @@ typedef struct {
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
+  // quad specific quantity
+  iint Nq;
+  
   dfloat *D; // 1D differentiation matrix (for tensor-product)
-  dfloat *gllz; // 1D GLL quadrature nodes 
+  dfloat *gllz; // 1D GLL quadrature nodes
+  dfloat *gllw; // 1D GLL quadrature weights
 
   // face node info
   iint Nfp;        // number of nodes per face
@@ -89,6 +93,9 @@ typedef struct {
   dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
+  dfloat *cubDrW;    // 'r' weak differentiation matrix
+  dfloat *cubDsW;    // 's' weak differentiation matrix
+  dfloat *cubDtW;    // 't' weak differentiation matrix
 
   // c2 at cubature points (for wadg)
   dfloat *c2;
@@ -108,7 +115,7 @@ typedef struct {
   iint   *plotEToV;      // triangulation of plot nodes
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
-  
+
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
@@ -139,7 +146,7 @@ mesh3D* meshReader3D(char *fileName);
 
 // mesh readers
 mesh3D* meshParallelReader3D(char *fileName);
-mesh3D* meshParallelReaderQuad3D(char *fileName);
+mesh3D* meshParallelReaderHex3D(char *fileName);
 
 // build connectivity in serial
 void meshConnect3D(mesh3D *mesh);
@@ -176,18 +183,19 @@ void parallelSort(iint N, void *vv, size_t sz,
 
 // compute geometric factors for local to physical map 
 void meshGeometricFactors3D(mesh3D *mesh);
-void meshGeometricFactorsQuad3D(mesh3D *mesh);
+void meshGeometricFactorsHex3D(mesh3D *mesh);
 
 void meshSurfaceGeometricFactors3D(mesh3D *mesh);
+void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
 void meshPhysicalNodes3D(mesh3D *mesh);
-void meshPhysicalNodesQuad3D(mesh3D *mesh);
+void meshPhysicalNodesHex3D(mesh3D *mesh);
 
 void meshLoadReferenceNodes3D(mesh3D *mesh, int N);
-void meshLoadReferenceNodesQuad3D(mesh3D *mesh, int N);
+void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N);
 
 void meshGradient3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-void meshGradientQuad3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
+void meshGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
 // print out parallel partition i
 void meshPartitionStatistics3D(mesh3D *mesh);
@@ -197,12 +205,13 @@ void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqd
 
 // 
 void occaOptimizeGradient3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-void occaOptimizeGradientQuad3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
+void occaOptimizeGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
 // serial face-node to face-node connection
 void meshConnectFaceNodes3D(mesh3D *mesh);
 
-// 
+//
+mesh3D *meshSetupHex3D(char *filename, int N);
 void meshParallelConnectNodesHex3D(mesh3D *mesh);
 
 
@@ -225,7 +234,7 @@ void meshHaloExchangeFinish3D(mesh3D *mesh);
 
 // build list of nodes on each face of the reference element
 void meshBuildFaceNodes3D(mesh3D *mesh);
-void meshBuildFaceNodesQuad3D(mesh3D *mesh);
+void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 mesh3D *meshSetup3D(char *filename, int N);
 
@@ -256,6 +265,7 @@ void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
 #define TYID 7  
 #define TZID 8  
 #define  JID 9
+#define JWID 10
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
