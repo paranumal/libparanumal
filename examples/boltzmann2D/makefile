@@ -48,7 +48,7 @@ boltzmannReport2D.o \
 ../../src/meshHaloExtract2D.o \
 ../../src/meshHaloSetup2D.o \
 ../../src/meshLoadReferenceNodes2D.o \
-../../src/meshParallelConnect2D.o \
+../../src/meshParallelConnectOpt2D.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReader2D.o \
 ../../src/meshPartitionStatistics2D.o \
@@ -61,7 +61,8 @@ boltzmannReport2D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/hash.o
 
 boltzmannSplitPmlMain2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannSplitPmlMain2D $(OBJS) $(paths) $(LIBS) 
