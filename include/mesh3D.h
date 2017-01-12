@@ -202,6 +202,10 @@ void occaOptimizeGradientQuad3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *d
 // serial face-node to face-node connection
 void meshConnectFaceNodes3D(mesh3D *mesh);
 
+// 
+void meshParallelConnectNodesHex3D(mesh3D *mesh);
+
+
 // halo connectivity information
 void meshHaloSetup3D(mesh3D *mesh);
 
