@@ -19,14 +19,20 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
   vnums[0] = 0;
   vnums[1] = mesh->N;
-  vnums[2] = mesh->Np-1;
+  vnums[2] = (mesh->N+1)*(mesh->N+1)-1;
   vnums[3] = mesh->N*(mesh->N+1); 
 
   vnums[4] = mesh->Nq*mesh->Nq*mesh->N + 0;
   vnums[5] = mesh->Nq*mesh->Nq*mesh->N + mesh->N;
-  vnums[6] = mesh->Nq*mesh->Nq*mesh->N + mesh->Np-1;
+  vnums[6] = mesh->Np-1;
   vnums[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*mesh->Nq;
 
+  printf("vnums=\n");
+  for(iint n=0;n<mesh->Nverts;++n){
+    printf("%d ", vnums[n]);
+  }
+  printf("\n");
+  
   // use local numbering 
   for(iint n=0;n<mesh->Nelements*mesh->Np;++n){
     globalNumbering[n] = 1+n+mesh->Nnodes;
