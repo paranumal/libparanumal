@@ -122,10 +122,9 @@ void meshParallelConnect3D(mesh3D *mesh){
   while(cnt<maxNbroken){
 
     brokenFaces[cnt].NfaceVertices = mesh->NfaceVertices; // could use this
-    
-    brokenFaces[cnt].v[0] = -1;
-    brokenFaces[cnt].v[1] = -2;
-    brokenFaces[cnt].v[2] = -3;
+
+    for(int n=0;n<mesh->NfaceVertices;++n)
+      brokenFaces[cnt].v[n] = -1-n;
     
     brokenFaces[cnt].element = -1;
     brokenFaces[cnt].face = -1;
