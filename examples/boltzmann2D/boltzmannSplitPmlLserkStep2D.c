@@ -37,20 +37,21 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    mesh->pmlVolumeKernel(mesh->pmlNelements,
-			  mesh->o_pmlElementIds,
-			  mesh->o_vgeo,
-			  mesh->o_sigmax,
-			  mesh->o_sigmay,
-			  mesh->o_DrT,
-			  mesh->o_DsT,
-			  mesh->o_q,
-			  mesh->o_pmlqx,
-			  mesh->o_pmlqy,
-			  mesh->o_pmlNT,
-			  mesh->o_rhspmlqx,
-			  mesh->o_rhspmlqy,
-			  mesh->o_rhspmlNT);
+    if(mesh->pmlNelements)
+      mesh->pmlVolumeKernel(mesh->pmlNelements,
+			    mesh->o_pmlElementIds,
+			    mesh->o_vgeo,
+			    mesh->o_sigmax,
+			    mesh->o_sigmay,
+			    mesh->o_DrT,
+			    mesh->o_DsT,
+			    mesh->o_q,
+			    mesh->o_pmlqx,
+			    mesh->o_pmlqy,
+			    mesh->o_pmlNT,
+			    mesh->o_rhspmlqx,
+			    mesh->o_rhspmlqy,
+			    mesh->o_rhspmlNT);
     
     // compute volume contribution to DG boltzmann RHS
     // added d/dt (ramp(qbar)) to RHS
@@ -71,14 +72,26 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       
 #if 0
     // compute relaxation terms using cubature
-    mesh->relaxationKernel(mesh->pmlNelements,
-			   mesh->o_pmlElementIds,
-			   mesh->o_cubInterpT,
-			   mesh->o_cubProjectT,
-			   mesh->o_q,
-			   mesh->o_rhspmlqx,
-			   mesh->o_rhspmlqy,
-			   mesh->o_rhspmlNT);
+    if(mesh->nonPmlNelements)
+      mesh->relaxationKernel(mesh->nonPmlNelements,
+			     mesh->o_nonPmlElementIds,
+			     mesh->o_cubInterpT,
+			     mesh->o_cubProjectT,
+			     mesh->o_q,
+			     mesh->o_rhspmlqx,
+			     mesh->o_rhspmlqy,
+			     mesh->o_rhspmlNT);
+    
+    // compute relaxation terms using cubature
+    if(mesh->pmlNelements)
+      mesh->relaxationKernel(mesh->pmlNelements,
+			     mesh->o_pmlElementIds,
+			     mesh->o_cubInterpT,
+			     mesh->o_cubProjectT,
+			     mesh->o_q,
+			     mesh->o_rhspmlqx,
+			     mesh->o_rhspmlqy,
+			     mesh->o_rhspmlNT);
 #endif
 
     // complete halo exchange
