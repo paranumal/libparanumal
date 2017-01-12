@@ -122,7 +122,7 @@ void meshConnect3D(mesh3D *mesh){
       mesh->EToE[cnt] = faces[cnt].elementNeighbor;
       mesh->EToF[cnt] = faces[cnt].faceNeighbor;
 
-      printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
+      //      printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
       
       ++cnt;
     }

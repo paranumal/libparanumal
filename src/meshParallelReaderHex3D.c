@@ -22,12 +22,14 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 
   mesh->Nverts = 8; // number of vertices per element
   mesh->Nfaces = 6;
+  mesh->NfaceVertices = 4;
   
   // vertices on each face
   iint faceVertices[6][4] = {{0,1,2,3},{0,1,5,4},{1,2,6,5},{3,4,7,6},{3,0,4,7},{4,5,6,7}};
-  mesh->NfaceVertices = 4;
+
   mesh->faceVertices =
     (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
+
   memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(iint));
     
   if(fp==NULL){
