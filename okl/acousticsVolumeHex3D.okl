@@ -22,15 +22,16 @@ kernel void acousticsVolumeHex3D(const iint Nelements,
     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-      const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-      const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-      const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-      const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-      const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+      const iint base = e*p_Np*p_Nvgeo + n;
+      const dfloat drdx = vgeo[base + RXID*p_Np];
+      const dfloat drdy = vgeo[base + RYID*p_Np];
+      const dfloat drdz = vgeo[base + RZID*p_Np];
+      const dfloat dsdx = vgeo[base + SXID*p_Np];
+      const dfloat dsdy = vgeo[base + SYID*p_Np];
+      const dfloat dsdz = vgeo[base + SZID*p_Np];
+      const dfloat dtdx = vgeo[base + TXID*p_Np];
+      const dfloat dtdy = vgeo[base + TYID*p_Np];
+      const dfloat dtdz = vgeo[base + TZID*p_Np];
       
       // compute 'r', 's', and 't' derivatives of (u,v,w,p) at node n
       dfloat dudr = 0, duds = 0, dudt = 0;
