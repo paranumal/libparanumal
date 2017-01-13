@@ -39,8 +39,8 @@ void acousticsSetupHex3D(mesh3D *mesh){
   dfloat hmin = 1e9;
   for(iint e=0;e<mesh->Nelements;++e){  
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(iint n=0;n<mesh->Nfaces*mesh->Nfp;++n){
+      iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e +  n);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -131,11 +131,11 @@ void acousticsSetupHex3D(mesh3D *mesh){
 			LIFTT);
   
   mesh->o_vgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
+    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
   
   mesh->o_sgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
 
   mesh->o_vmapM =

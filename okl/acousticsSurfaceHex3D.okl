@@ -16,7 +16,7 @@ void boundaryConditions3D(iint bc, dfloat time,
     dfloat dx = 1.f/occaSqrt(2.f);
     dfloat dy = 1.f/occaSqrt(2.f);
     dfloat dz = 0;
-    dfloat omega = 10*M_PI;
+    dfloat omega = 10.f*M_PI;
     dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
@@ -62,12 +62,12 @@ kernel void acousticsSurfaceHex3D(const iint Nelements,
 	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	iint sid = p_Nsgeo*(e*p_Nfaces+face);
-	dfloat nx = sgeo[sid+0];
-	dfloat ny = sgeo[sid+1];
-	dfloat nz = sgeo[sid+2];
-	dfloat sJ = sgeo[sid+3];
-	dfloat invJ = sgeo[sid+4];
+	const iint base = p_Nsgeo*(p_Nfaces*p_Nfp*e + n);
+	dfloat nx = sgeo[base+0];
+	dfloat ny = sgeo[base+1];
+	dfloat nz = sgeo[base+2];
+	dfloat sJ = sgeo[base+3];
+	dfloat invJ = sgeo[base+4];
 
 	// indices of negative and positive traces of face node
 	iint id  = e*p_Nfp*p_Nfaces + n;
