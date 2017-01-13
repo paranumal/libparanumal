@@ -13,6 +13,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
   // form continuous node numbering (local=>virtual global)
   iint *globalNumbering = (iint*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np, sizeof(iint));
+  iint *globalBoundaryTags = (iint*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np, sizeof(iint));
   
   // assume ordering (brittle)
   iint vnums[8];
@@ -47,6 +48,18 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     }
   }
 
+  // use element-to-boundary connectivity to create tag for local nodes
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      for(iint n=0;n<mesh->Nfp;++n){
+	iint lid = mesh->faceNodes[f*mesh->Nfp+n];
+	iint tag = mesh->EToB[e*mesh->Nfaces+f];
+	if(tag>0)
+	  globaBoundaryTags[e*mesh->Np + lid] = tag;
+      }
+    }
+  }
+
   iint localChange = 0, globalChange = 1;
 
   iint *sendBuffer = (iint*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(iint));
@@ -61,7 +74,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     // extract halo
     
     // send halo data and recv into extension of buffer
-    meshHaloExchange3D(mesh, mesh->Np*sizeof(iint), globalNumbering, sendBuffer, globalNumbering+mesh->Np*mesh->Nelements);
+    meshHaloExchange3D(mesh, mesh->Np*sizeof(iint), globalNumbering, s   endBuffer, globalNumbering   +mesh->Np*mesh->Nelements);
+    meshHaloExchange3D(mesh, mesh->Np*sizeof(iint), globalBoundaryTags, sendBuffer, globalBoundaryTags+mesh->Np*mesh->Nelements);
 
     // compare trace nodes
     for(iint e=0;e<mesh->Nelements;++e){
@@ -78,6 +92,20 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	  globalNumbering[idM] = mymax(gidP,gidM);
 	  globalNumbering[idP] = mymax(gidP,gidM);
 	}
+
+	iint tagM = globalBoundaryTags[idM];
+	iint tagP = globalBoundaryTags[idM];
+
+	// use minimum non-zer tag for both nodes
+	if(tagM!=tagP){
+	  ++localChange;
+	  if(tagM>0 || tagP>0){
+	    if(tagP>tagM && tagM>0) tagP = tagM;
+	    if(tagM>tagP && tagP>0) tagM = tagP;
+	    globalBoundaryTags[idM] = tagM;
+	    globalBoundaryTags[idP] = tagP;
+	  }
+	}
       }
     }
 
@@ -89,7 +117,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       printf("globalChange=%d\n", globalChange);
   }
 
-  free(globalNumbering);
+  // should do something with tag and global numbering arrays
   free(sendBuffer);
 
 }
