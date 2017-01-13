@@ -146,21 +146,6 @@ void meshParallelConnect2D(mesh2D *mesh){
     sendOffsets[r] *= sizeof(parallelFace_t);
   }
 
-  for(iint p=0;p<size;++p)
-    fflush(stdout);
-
-  for(iint p=0;p<size;++p){
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(p==rank){
-      printf("faces sent by rank %03d: ", p);
-      for(iint r=0;r<size;++r){
-	printf("%d ", Nsend[r]/sizeof(parallelFace_t));
-      }
-      printf("\n");
-      fflush(stdout);
-    }
-  }
-      
   // find offsets for recv data
   for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1]; // byte offsets
