@@ -10,14 +10,13 @@ typedef struct{
   iint rank;    // rank of original node
   iint id;      // original id
   iint tag;   // original bc tag
-  dfloat x,y,z;
   
   // info on base node (lowest rank node)
   iint baseElement; 
   iint baseNode;
   iint baseRank;
   iint baseId;
-  dfloat baseX, baseY, baseZ;
+  iint maxRank;
   
   // priority tag
   iint priorityTag;   // minimum (non-zero bc tag)
@@ -43,24 +42,24 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   for(iint r=0;r<rank;++r)
     globalNodeStart += allLocalNodeCounts[r];
   
-  
   // form continuous node numbering (local=>virtual global)
   parallelNode_t *globalNumbering =
     (parallelNode_t*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np, sizeof(parallelNode_t));
 
   // assume ordering (brittle) (ideally search for min dist from (-1,-1)...
   // assume ordering (brittle)
-  iint vnums[8];
+  // move this to meshLoadNodes [ then use generic meshParallelConnect ]
+  iint vertexNodes[8];
 
-  vnums[0] = 0;
-  vnums[1] = mesh->N;
-  vnums[2] = (mesh->N+1)*(mesh->N+1)-1;
-  vnums[3] = mesh->N*(mesh->N+1); 
+  vertexNodes[0] = 0;
+  vertexNodes[1] = mesh->N;
+  vertexNodes[2] = (mesh->N+1)*(mesh->N+1)-1;
+  vertexNodes[3] = mesh->N*(mesh->N+1); 
 
-  vnums[4] = mesh->Nq*mesh->Nq*mesh->N + 0;
-  vnums[5] = mesh->Nq*mesh->Nq*mesh->N + mesh->N;
-  vnums[6] = mesh->Np-1;
-  vnums[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*mesh->Nq;
+  vertexNodes[4] = mesh->Nq*mesh->Nq*mesh->N + 0;
+  vertexNodes[5] = mesh->Nq*mesh->Nq*mesh->N + mesh->N;
+  vertexNodes[6] = mesh->Np-1;
+  vertexNodes[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*mesh->Nq;
 
   // use local numbering
   for(iint e=0;e<mesh->Nelements;++e){
@@ -74,20 +73,14 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].baseElement = e;
       globalNumbering[id].baseNode = n;
       globalNumbering[id].baseRank = rank;
+      globalNumbering[id].maxRank = rank;
       globalNumbering[id].baseId = 1 + id + mesh->Nnodes + globalNodeStart;
 
-      globalNumbering[id].x = mesh->x[id];
-      globalNumbering[id].y = mesh->y[id];
-      globalNumbering[id].z = mesh->z[id];
-
-      globalNumbering[id].baseX = mesh->x[id];
-      globalNumbering[id].baseY = mesh->y[id];
-      globalNumbering[id].baseZ = mesh->z[id];
     }
 
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
-      iint id = e*mesh->Np + vnums[v];
+      iint id = e*mesh->Np + vertexNodes[v];
       iint gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       globalNumbering[id].id = gid;
     }
@@ -107,9 +100,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
   iint localChange = 0, globalChange = 1;
 
-  parallelNode_t *sendBuffer = (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
-
-  printf("totalHaloPairs = %d\n", mesh->totalHaloPairs);
+  parallelNode_t *sendBuffer =
+    (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
   
   while(globalChange>0){
 
@@ -117,7 +109,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     localChange = 0;
 
     // send halo data and recv into extension of buffer
-    meshHaloExchange3D(mesh, mesh->Np*sizeof(parallelNode_t), globalNumbering, sendBuffer, globalNumbering+mesh->Np*mesh->Nelements);
+    meshHaloExchange3D(mesh, mesh->Np*sizeof(parallelNode_t),
+		       globalNumbering, sendBuffer, globalNumbering+mesh->Np*mesh->Nelements);
 
     // compare trace nodes
     for(iint e=0;e<mesh->Nelements;++e){
@@ -130,6 +123,12 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
 	iint baseRankM = globalNumbering[idM].baseRank;
 	iint baseRankP = globalNumbering[idP].baseRank;
+
+	iint maxRankM = globalNumbering[idM].maxRank;
+	iint maxRankP = globalNumbering[idP].maxRank;
+
+	globalNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
+	globalNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
 	
 	// use minimum of trace variables
 	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
@@ -138,10 +137,6 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	  globalNumbering[idP].baseNode    = globalNumbering[idM].baseNode;
 	  globalNumbering[idP].baseRank    = globalNumbering[idM].baseRank;
 	  globalNumbering[idP].baseId      = globalNumbering[idM].baseId;
-
-	  globalNumbering[idP].baseX    = globalNumbering[idM].baseX;
-	  globalNumbering[idP].baseY    = globalNumbering[idM].baseY;
-	  globalNumbering[idP].baseZ    = globalNumbering[idM].baseZ;
 	}
 
 	if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
@@ -150,10 +145,6 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	  globalNumbering[idM].baseNode    = globalNumbering[idP].baseNode;
 	  globalNumbering[idM].baseRank    = globalNumbering[idP].baseRank;
 	  globalNumbering[idM].baseId      = globalNumbering[idP].baseId;
-
-	  globalNumbering[idM].baseX    = globalNumbering[idP].baseX;
-	  globalNumbering[idM].baseY    = globalNumbering[idP].baseY;
-	  globalNumbering[idM].baseZ    = globalNumbering[idP].baseZ;
 	}
 
 	iint tagM = globalNumbering[idM].priorityTag;
@@ -185,37 +176,41 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       printf("globalChange=%d\n", globalChange);
   }
 
+#if 0
+  iint *Nsends = (iint*) calloc(size, sizeof(iint));
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
       iint id = e*mesh->Np+n;
-      if(globalNumbering[id].baseRank>rank){
-	printf("Node: (e,n,r,id,bc) = (%d,%d,%d,%d,%d) => (%d,%d,[%d],%d,(%g,%g,%g),%d) => (%d,%d,[%d],%d,(%g,%g,%g),%d)\n",
-	       e,
-	       n,
-	       rank,
-	       id,
-	       globalNumbering[id].tag,
-	       
-	       globalNumbering[id].element,
-	       globalNumbering[id].node,
-	       globalNumbering[id].rank,
-	       globalNumbering[id].id,
-	       globalNumbering[id].x,
-	       globalNumbering[id].y,
-	       globalNumbering[id].z,
-	       globalNumbering[id].tag,
-	       globalNumbering[id].baseElement,
-	       globalNumbering[id].baseNode,
-	       globalNumbering[id].baseRank,
-	       globalNumbering[id].baseId,
-	       globalNumbering[id].baseX,
-	       globalNumbering[id].baseY,
-	       globalNumbering[id].baseZ,
-	       globalNumbering[id].priorityTag);
+      iint baseRank = globalNumbering[id].baseRank;
+      if(baseRank!=rank){
+	++(Nsends[baseRank]);
       }
     }
   }
 
+
+  for(iint r=0;r<size;++r){
+    fflush(stdout);
+  }
+  for(iint r=0;r<size;++r){
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(r==rank){
+      iint Nmessages = 0;
+      iint totalNsends = 0;
+      for(iint p=0;p<size;++p){
+	printf("%04d ", Nsends[p]);
+	Nmessages += (Nsends[p]>0);
+	totalNsends += (Nsends[p]+mesh->Nfp-1)/mesh->Nfp;
+      }
+      printf(": (%d messages and %d data sent)\n", Nmessages, totalNsends);
+      fflush(stdout);
+    }
+  }
+#endif
+
+  // could use halo exchange to accumulate incoming base node list
+  // [otherLocalID, rank to localId for incoming nodes]
+  
   // should do something with tag and global numbering arrays
   free(sendBuffer);
   free(globalNumbering);
