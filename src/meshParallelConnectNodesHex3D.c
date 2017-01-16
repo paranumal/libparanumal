@@ -23,6 +23,26 @@ typedef struct{
 
 }parallelNode_t;
 
+// compare on base rank for sorting suitable for destination
+int parallelCompareBaseNodes(const void *a, const void *b){
+
+  parallelNode_t *fa = (parallelNode_t*) a;
+  parallelNode_t *fb = (parallelNode_t*) b;
+
+  if(fa->baseRank < fb->baseRank) return -1;
+  if(fa->baseRank > fb->baseRank) return +1;
+
+  if(fa->baseElement < fb->baseElement) return -1;
+  if(fa->baseElement > fb->baseElement) return +1;
+
+  if(fa->baseNode < fb->baseNode) return -1;
+  if(fa->baseNode > fb->baseNode) return +1;
+  
+  return 0;
+
+}
+
+
 // iteratively find a global numbering for all local element nodes
 void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
@@ -44,7 +64,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   
   // form continuous node numbering (local=>virtual global)
   parallelNode_t *globalNumbering =
-    (parallelNode_t*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np, sizeof(parallelNode_t));
+    (parallelNode_t*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,
+			     sizeof(parallelNode_t));
 
   // assume ordering (brittle) (ideally search for min dist from (-1,-1)...
   // assume ordering (brittle)
@@ -102,7 +123,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
   parallelNode_t *sendBuffer =
     (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
-  
+
+  // keep comparing numbers on positive and negative traces until convergence
   while(globalChange>0){
 
     // reset change counter
@@ -110,7 +132,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
     // send halo data and recv into extension of buffer
     meshHaloExchange3D(mesh, mesh->Np*sizeof(parallelNode_t),
-		       globalNumbering, sendBuffer, globalNumbering+mesh->Np*mesh->Nelements);
+		       globalNumbering, sendBuffer, globalNumbering+localNodeCount);
 
     // compare trace nodes
     for(iint e=0;e<mesh->Nelements;++e){
@@ -175,42 +197,73 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     if(rank==0)
       printf("globalChange=%d\n", globalChange);
   }
+  // at this point all nodes on this rank have bases on this rank or below
 
-#if 0
-  iint *Nsends = (iint*) calloc(size, sizeof(iint));
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = e*mesh->Np+n;
-      iint baseRank = globalNumbering[id].baseRank;
-      if(baseRank!=rank){
-	++(Nsends[baseRank]);
-      }
+  
+  // sort based on base nodes (rank,element,node at base)
+  qsort(globalNumbering, localNodeCount,
+	sizeof(parallelNode_t), parallelCompareBaseNodes);
+
+  // A. gather on DEVICE [ local and non-local base nodes ]
+  // B. copy non-local DEVICE>HOST [ contiguous block ]
+  // C. gslib: gather-scatter between HOSTS<>HOSTS
+  // D. copy back to buffer HOST>DEVICE
+  // E. scatter
+  
+  // 1. count number of unique base nodes on this process
+  iint NuniqueBases = 0; // assumes at least one base node
+  for(iint n=0;n<localNodeCount;++n){
+    iint test = (n==0) ? 1: (globalNumbering[n].baseId != globalNumbering[n-1].baseId);
+    NuniqueBases += test;
+  }
+  
+  iint *gatherNsends = (iint*) calloc(size, sizeof(iint));
+
+  iint *gatherGlobalNodes = (iint*) calloc(NuniqueBases, sizeof(iint)); // global labels for unique nodes
+  iint *gatherNodeOffsets = (iint*) calloc(NuniqueBases+1, sizeof(iint)); // offset into sorted list of nodes
+  
+  // [strip out singletons in gather and stages ?]
+  NuniqueBases = 0; // reset counter
+  for(iint n=0;n<localNodeCount;++n){
+    iint test = (n==0) ? 1: (globalNumbering[n].baseId != globalNumbering[n-1].baseId);
+    if(test){
+      gatherGlobalNodes[NuniqueBases] = globalNumbering[n].baseId; // use this for gslib gather-scatter operation
+      gatherNodeOffsets[NuniqueBases++] = n;  // increment unique base counter and record index into shuffled list of ndoes
+
+      ++gatherNsends[globalNumbering[n].baseRank];
     }
   }
+  gatherNodeOffsets[NuniqueBases] = localNodeCount;
 
-
-  for(iint r=0;r<size;++r){
-    fflush(stdout);
+  iint *gatherLocalNodes = (iint*) calloc(localNodeCount, sizeof(iint));
+  for(iint n=0;n<localNodeCount;++n){
+    gatherLocalNodes[n] = globalNumbering[n].node + mesh->Np*globalNumbering[n].element; // scrape shuffled list of local indices
   }
+
+  iint *gatherSendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  for(iint r=1;r<size+1;++r)
+    gatherSendOffsets[r] = gatherSendOffsets[r-1]+gatherNsends[r-1];
+
+  // print some diagnostics
   for(iint r=0;r<size;++r){
     MPI_Barrier(MPI_COMM_WORLD);
-    if(r==rank){
-      iint Nmessages = 0;
-      iint totalNsends = 0;
+    if(rank==r)
+      fflush(stdout);
+  }
+  
+  for(iint r=0;r<size;++r){
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    if(rank==r){
+      printf("###### rank %d sends ", rank);
       for(iint p=0;p<size;++p){
-	printf("%04d ", Nsends[p]);
-	Nmessages += (Nsends[p]>0);
-	totalNsends += (Nsends[p]+mesh->Nfp-1)/mesh->Nfp;
+	printf("%04d ", gatherNsends[p]);
       }
-      printf(": (%d messages and %d data sent)\n", Nmessages, totalNsends);
+      printf("\n");
       fflush(stdout);
     }
   }
-#endif
 
-  // could use halo exchange to accumulate incoming base node list
-  // [otherLocalID, rank to localId for incoming nodes]
-  
   // should do something with tag and global numbering arrays
   free(sendBuffer);
   free(globalNumbering);
