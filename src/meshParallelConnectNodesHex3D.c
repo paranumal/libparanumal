@@ -32,12 +32,16 @@ int parallelCompareBaseNodes(const void *a, const void *b){
   if(fa->baseRank < fb->baseRank) return -1;
   if(fa->baseRank > fb->baseRank) return +1;
 
+#if 0
   if(fa->baseElement < fb->baseElement) return -1;
   if(fa->baseElement > fb->baseElement) return +1;
 
   if(fa->baseNode < fb->baseNode) return -1;
   if(fa->baseNode > fb->baseNode) return +1;
-  
+#else
+  if(fa->baseId < fb->baseId) return -1;
+  if(fa->baseId > fb->baseId) return +1;
+#endif
   return 0;
 
 }
@@ -94,9 +98,9 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].baseElement = e;
       globalNumbering[id].baseNode = n;
       globalNumbering[id].baseRank = rank;
-      globalNumbering[id].maxRank = rank;
       globalNumbering[id].baseId = 1 + id + mesh->Nnodes + globalNodeStart;
 
+      globalNumbering[id].maxRank = rank;
     }
 
     // use vertex ids for vertex nodes to reduce iterations
@@ -104,6 +108,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       iint id = e*mesh->Np + vertexNodes[v];
       iint gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       globalNumbering[id].id = gid;
+      globalNumbering[id].baseId = gid;
+      
     }
 
     // use element-to-boundary connectivity to create tag for local nodes
@@ -174,17 +180,13 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
 	// use minimum non-zer tag for both nodes
 	if(tagM!=tagP){
-	  if(tagM>0 || tagP>0){
-	    if(tagP>tagM && tagM>0){
-	      ++localChange;
-	      tagP = tagM;
-	    }
-	    if(tagM>tagP && tagP>0){
-	      ++localChange;
-	      tagM = tagP;
-	    }
-	    globalNumbering[idM].priorityTag = tagM;
-	    globalNumbering[idP].priorityTag = tagP;
+	  if(tagP>tagM){
+	    ++localChange;
+	    globalNumbering[idM].priorityTag = tagP;
+	  }
+	  if(tagM>tagP){
+	    ++localChange;
+	    globalNumbering[idP].priorityTag = tagM;
 	  }
 	}
       }
@@ -210,6 +212,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   // D. copy back to buffer HOST>DEVICE
   // E. scatter
   
+  // DANG - was sorting on rank/element/node of base nodes
+
   // 1. count number of unique base nodes on this process
   iint NuniqueBases = 0; // assumes at least one base node
   for(iint n=0;n<localNodeCount;++n){
@@ -244,25 +248,26 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   for(iint r=1;r<size+1;++r)
     gatherSendOffsets[r] = gatherSendOffsets[r-1]+gatherNsends[r-1];
 
-  // print some diagnostics
-  for(iint r=0;r<size;++r){
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(rank==r)
-      fflush(stdout);
-  }
+  char allname[BUFSIZ], redname[BUFSIZ];
+
+  sprintf(allname, "all_rank%04d.dat", rank);
+  sprintf(redname, "red_rank%04d.dat", rank);
   
-  for(iint r=0;r<size;++r){
-    MPI_Barrier(MPI_COMM_WORLD);
-    
-    if(rank==r){
-      printf("###### rank %d sends ", rank);
-      for(iint p=0;p<size;++p){
-	printf("%04d ", gatherNsends[p]);
-      }
-      printf("\n");
-      fflush(stdout);
-    }
+  FILE *allfp = (FILE*) fopen(allname, "w");
+  FILE *redfp = (FILE*) fopen(redname, "w");
+
+  fprintf(allfp, "all: \n (element, node, rank, id, tag) => base (element, node, rank, id), max rank, priority tag\n");
+  for(iint n=0;n<localNodeCount;++n){
+    parallelNode_t gn = globalNumbering[n];
+    iint id = gn.element*mesh->Np+gn.node;
+    fprintf(allfp,"(%f,%f,%f) (%05d %05d %02d %05d %01d) => (%05d %05d %02d id%05d), %02d, t%01d\n",
+	    mesh->x[id],mesh->y[id],mesh->z[id],
+	    gn.element, gn.node, gn.rank, gn.id, gn.tag,
+	    gn.baseElement, gn.baseNode, gn.baseRank, gn.baseId,
+	    gn.maxRank, gn.priorityTag);
   }
+  fclose(allfp);
+  fclose(redfp);
 
   // should do something with tag and global numbering arrays
   free(sendBuffer);
