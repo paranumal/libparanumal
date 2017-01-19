@@ -15,11 +15,20 @@
 
 #include "gslib.h"
 
-void meshParallelGatherScatter(void *gsh, float *v){
+void meshParallelGatherScatter(void *gsh, void *v, const char *type){
 
   /* need gs_float or gs_double */
-  gs(v, gs_float, gs_add, 0, gsh, 0);  
-
+  if(!strcmp(type, "float"))
+    gs(v, gs_float, gs_add, 0, gsh, 0);
+  if(!strcmp(type, "double")){
+    printf("performing double gs on %s\n", type);
+    gs(v, gs_double, gs_add, 0, gsh, 0);
+  }
+  if(!strcmp(type, "int")){
+    printf("performing int gs\n");
+    gs(v, gs_int, gs_add, 0, gsh, 0);  
+  }
+  
 }
 
 
