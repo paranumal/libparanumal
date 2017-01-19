@@ -140,7 +140,7 @@ static void *array_reserve_(struct array *a, size_t min, size_t size,
 static void array_cat_(size_t size, struct array *d, const void *s, size_t n,
                        const char *file, unsigned line)
 {
-  char *out = array_reserve_(d,d->n+n,size, file,line);
+  char *out = (char*)array_reserve_(d,d->n+n,size, file,line);
   memcpy(out+d->n*size, s, n*size);
   d->n+=n;
 }
