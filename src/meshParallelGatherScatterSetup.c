@@ -16,7 +16,7 @@
 #include "gslib.h"
 
 void *meshParallelGatherScatterSetup(int NuniqueBases,
-				    int *gatherGlobalNodes){
+				     int *gatherGlobalNodes){
   
   /* gslib stuff */
   comm_ext world;
