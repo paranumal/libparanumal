@@ -81,9 +81,9 @@ void acousticsSetupHex3D(mesh3D *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 
   mesh->device.setup(deviceConfig);
 
@@ -235,5 +235,27 @@ void acousticsSetupHex3D(mesh3D *mesh){
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
+  mesh->gatherKernel =
+    mesh->device.buildKernelFromSource("okl/gather.okl",
+				       "gather",
+				       kernelInfo);
 
+  mesh->scatterKernel =
+    mesh->device.buildKernelFromSource("okl/scatter.okl",
+				       "scatter",
+				       kernelInfo);
+
+  mesh->getKernel =
+    mesh->device.buildKernelFromSource("okl/get.okl",
+				       "get",
+				       kernelInfo);
+
+  mesh->putKernel =
+    mesh->device.buildKernelFromSource("okl/put.okl",
+				       "put",
+				       kernelInfo);
+
+  
+  meshParallelConnectNodesHex3D(mesh);
+  
 }
