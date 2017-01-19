@@ -1,7 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi.h"
+#include <stddef.h>
+
 #include "mesh3D.h"
+#include "mpi.h"
+
+extern "C"
+{
+  void *meshParallelGatherScatterSetup(int NuniqueBases,
+				     int *gatherGlobalNodes);
+  
+  void meshParallelGatherScatter(void *gsh, float *v);
+}
 
 typedef struct{
 
@@ -32,16 +42,9 @@ int parallelCompareBaseNodes(const void *a, const void *b){
   if(fa->baseRank < fb->baseRank) return -1;
   if(fa->baseRank > fb->baseRank) return +1;
 
-#if 0
-  if(fa->baseElement < fb->baseElement) return -1;
-  if(fa->baseElement > fb->baseElement) return +1;
-
-  if(fa->baseNode < fb->baseNode) return -1;
-  if(fa->baseNode > fb->baseNode) return +1;
-#else
   if(fa->baseId < fb->baseId) return -1;
   if(fa->baseId > fb->baseId) return +1;
-#endif
+
   return 0;
 
 }
@@ -71,21 +74,6 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     (parallelNode_t*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,
 			     sizeof(parallelNode_t));
 
-  // assume ordering (brittle) (ideally search for min dist from (-1,-1)...
-  // assume ordering (brittle)
-  // move this to meshLoadNodes [ then use generic meshParallelConnect ]
-  iint vertexNodes[8];
-
-  vertexNodes[0] = 0;
-  vertexNodes[1] = mesh->N;
-  vertexNodes[2] = (mesh->N+1)*(mesh->N+1)-1;
-  vertexNodes[3] = mesh->N*(mesh->N+1); 
-
-  vertexNodes[4] = mesh->Nq*mesh->Nq*mesh->N + 0;
-  vertexNodes[5] = mesh->Nq*mesh->Nq*mesh->N + mesh->N;
-  vertexNodes[6] = mesh->Np-1;
-  vertexNodes[7] = mesh->Nq*mesh->Nq*mesh->N + mesh->N*mesh->Nq;
-
   // use local numbering
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -105,11 +93,10 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
-      iint id = e*mesh->Np + vertexNodes[v];
+      iint id = e*mesh->Np + mesh->vertexNodes[v];
       iint gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       globalNumbering[id].id = gid;
       globalNumbering[id].baseId = gid;
-      
     }
 
     // use element-to-boundary connectivity to create tag for local nodes
@@ -178,7 +165,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	iint tagM = globalNumbering[idM].priorityTag;
 	iint tagP = globalNumbering[idP].priorityTag;
 
-	// use minimum non-zer tag for both nodes
+	// use maximum non-zero tag for both nodes
 	if(tagM!=tagP){
 	  if(tagP>tagM){
 	    ++localChange;
@@ -198,22 +185,17 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     // report
     if(rank==0)
       printf("globalChange=%d\n", globalChange);
-  }
-  // at this point all nodes on this rank have bases on this rank or below
-
+  }  // at this point all nodes on this rank have bases on this rank or below
   
   // sort based on base nodes (rank,element,node at base)
-  qsort(globalNumbering, localNodeCount,
-	sizeof(parallelNode_t), parallelCompareBaseNodes);
+  qsort(globalNumbering, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
-  // A. gather on DEVICE [ local and non-local base nodes ]
-  // B. copy non-local DEVICE>HOST [ contiguous block ]
-  // C. gslib: gather-scatter between HOSTS<>HOSTS
-  // D. copy back to buffer HOST>DEVICE
-  // E. scatter
+  // local numbers of sorted nodes
+  iint *gatherLocalNodes = (iint*) calloc(localNodeCount, sizeof(iint));
+  for(iint n=0;n<localNodeCount;++n){
+    gatherLocalNodes[n] = globalNumbering[n].node + mesh->Np*globalNumbering[n].element; // scrape shuffled list of local indices
+  }
   
-  // DANG - was sorting on rank/element/node of base nodes
-
   // 1. count number of unique base nodes on this process
   iint NuniqueBases = 0; // assumes at least one base node
   for(iint n=0;n<localNodeCount;++n){
@@ -221,12 +203,10 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     NuniqueBases += test;
   }
   
-  iint *gatherNsends = (iint*) calloc(size, sizeof(iint));
-
+  iint *gatherNsends      = (iint*) calloc(size, sizeof(iint));
   iint *gatherGlobalNodes = (iint*) calloc(NuniqueBases, sizeof(iint)); // global labels for unique nodes
   iint *gatherNodeOffsets = (iint*) calloc(NuniqueBases+1, sizeof(iint)); // offset into sorted list of nodes
   
-  // [strip out singletons in gather and stages ?]
   NuniqueBases = 0; // reset counter
   for(iint n=0;n<localNodeCount;++n){
     iint test = (n==0) ? 1: (globalNumbering[n].baseId != globalNumbering[n-1].baseId);
@@ -239,37 +219,42 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   }
   gatherNodeOffsets[NuniqueBases] = localNodeCount;
 
-  iint *gatherLocalNodes = (iint*) calloc(localNodeCount, sizeof(iint));
-  for(iint n=0;n<localNodeCount;++n){
-    gatherLocalNodes[n] = globalNumbering[n].node + mesh->Np*globalNumbering[n].element; // scrape shuffled list of local indices
-  }
-
   iint *gatherSendOffsets = (iint*) calloc(size+1, sizeof(iint));
   for(iint r=1;r<size+1;++r)
     gatherSendOffsets[r] = gatherSendOffsets[r-1]+gatherNsends[r-1];
 
-  char allname[BUFSIZ], redname[BUFSIZ];
 
-  sprintf(allname, "all_rank%04d.dat", rank);
-  sprintf(redname, "red_rank%04d.dat", rank);
-  
-  FILE *allfp = (FILE*) fopen(allname, "w");
-  FILE *redfp = (FILE*) fopen(redname, "w");
+  dfloat *v = (dfloat*) calloc(NuniqueBases, sizeof(dfloat));
+  dfloat *origv = (dfloat*) calloc(NuniqueBases, sizeof(dfloat));
 
-  fprintf(allfp, "all: \n (element, node, rank, id, tag) => base (element, node, rank, id), max rank, priority tag\n");
-  for(iint n=0;n<localNodeCount;++n){
-    parallelNode_t gn = globalNumbering[n];
-    iint id = gn.element*mesh->Np+gn.node;
-    fprintf(allfp,"(%f,%f,%f) (%05d %05d %02d %05d %01d) => (%05d %05d %02d id%05d), %02d, t%01d\n",
-	    mesh->x[id],mesh->y[id],mesh->z[id],
-	    gn.element, gn.node, gn.rank, gn.id, gn.tag,
-	    gn.baseElement, gn.baseNode, gn.baseRank, gn.baseId,
-	    gn.maxRank, gn.priorityTag);
+  iint cnt = 0;
+  for(iint n=0;n<NuniqueBases;++n){
+    iint start = gatherNodeOffsets[n];
+    iint end = gatherNodeOffsets[n+1];
+    for(iint m=start;m<end;++m){
+      v[n] += 1;
+      origv[n] += 1;
+    }
   }
-  fclose(allfp);
-  fclose(redfp);
+  
+  void* gsh = meshParallelGatherScatterSetup(NuniqueBases,
+					     gatherGlobalNodes);
+  
+  meshParallelGatherScatter(gsh, v);
 
+#if 0
+  for(iint n=0;n<NuniqueBases;++n){
+    //    if(v[n]!=origv[n]){
+    {
+      printf("%d: v[%d] = %g orig[%d] = %g \n",
+	     gatherGlobalNodes[n], n, v[n], n, origv[n]);
+    }
+  }
+#endif
+  free(v);
+  
   // should do something with tag and global numbering arrays
   free(sendBuffer);
   free(globalNumbering);
 }
+
