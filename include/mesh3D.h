@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -60,6 +60,9 @@ typedef struct {
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
+  // indices of vertex nodes
+  iint *vertexNodes;
+  
   // quad specific quantity
   iint Nq;
   
@@ -140,6 +143,12 @@ typedef struct {
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
+
+  occa::kernel gatherKernel;
+  occa::kernel scatterKernel;
+
+  occa::kernel getKernel;
+  occa::kernel putKernel;
 }mesh3D;
 
 mesh3D* meshReader3D(char *fileName);

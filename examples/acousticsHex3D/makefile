@@ -12,14 +12,15 @@ HDRDIR  = ../../include
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
+cc	= mpicc
 CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g
+LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github -lgs
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -29,7 +30,7 @@ LIBS	=  $(links)
 
 # rule for .c files
 .c.o:
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
+	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 
 # list of objects to be compiled
 AOBJS    = \
@@ -64,12 +65,22 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o\
+../../src/hash.o
 
-acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o
-	$(LD)  $(LDFLAGS)  -o acousticsMain3D acousticsMainHex3D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
-acousticsMainSplitPml3D:$(POBJS) $(LOBJS)
+COBJS = \
+../../src/meshParallelGatherScatter.o\
+../../src/meshParallelGatherScatterSetup.o
+
+acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o gslibInterface
+	$(LD)  $(LDFLAGS)  -o acousticsMain3D acousticsMainHex3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
+gslibInterface:
+	$(cc) $(CFLAGS) -c -o ../../src/meshParallelGatherScatter.o ../../src/meshParallelGatherScatter.c $(paths)
+	$(cc) $(CFLAGS) -c -o ../../src/meshParallelGatherScatterSetup.o ../../src/meshParallelGatherScatterSetup.c $(paths) 
+
+acousticsMainSplitPml3D:$(POBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o acousticsMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
 
 test3D: $(LOBJS) $(AOBJS) testMainHex3D.o
