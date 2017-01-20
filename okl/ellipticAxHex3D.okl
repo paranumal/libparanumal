@@ -1,0 +1,149 @@
+
+// hex kernel for screened coulomb potential mat-vec
+kernel void ellipticAxHex3D(const iint     Nelements,
+			    const dfloat * restrict ggeo,
+			    const dfloat * restrict D,
+			    const dfloat   lambda,
+			    const dfloat * restrict q,
+			          dfloat * restrict Aq){
+
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+      
+    shared dfloat s_tmpr[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_tmps[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_q[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+    
+    exclusive dfloat r_q[p_Nq], r_Aq[p_Nq], r_qt, r_tmpt;
+      
+    // prefetch q(i,j,:,e) to register array
+    for(iint es=0; es<p_NblockV; ++es; inner2){
+      for(iint j=0; j<p_Nq; ++j; inner1){
+	for(iint i=0; i<p_Nq; ++i; inner0){
+	  const iint e = eo + es;
+
+	  if(e<Nelements){
+	    const iint base = i + j*p_Nq + e*p_Np; 
+	    
+	    for(iint k=0;k<p_Nq;++k){
+	      r_q[k] = q[base + k*p_Nq*p_Nq];
+	      r_Aq[k] = 0.f;
+	    }
+	  }
+	  
+	  if(es==0) // fetch D to shared
+	    s_D[j][i] = D[j*p_Nq+i];
+	  
+	}
+      }
+    }
+      
+    barrier(localMemFence);
+
+#if 1
+    for(iint k=0;k<p_Nq;++k){
+	
+      for(iint es=0;es<p_NblockV;++es;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    const iint e = eo + es;
+	    if(e<Nelements){
+
+	      // share k-slice of q 
+	      s_q[es][j][i] = r_q[k];
+	      
+	      // hide shared latency behind t-derivative
+	      dfloat qtk = 0.f;
+	      for(iint n=0;n<p_Nq;++n){
+		qtk += s_D[k][n]*r_q[n];
+	      }
+	      r_qt = qtk;
+	      
+	    }
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+
+      // process k-slice (first r- and s-derivatives)
+      for(iint es=0;es<p_NblockV;++es;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    const iint e = eo + es;
+	    if(e<Nelements){
+	      const iint base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+	      const dfloat G00 = ggeo[base+p_G00ID*p_Np];
+	      const dfloat G01 = ggeo[base+p_G01ID*p_Np];
+	      const dfloat G02 = ggeo[base+p_G02ID*p_Np];
+	      const dfloat G11 = ggeo[base+p_G11ID*p_Np];
+	      const dfloat G12 = ggeo[base+p_G12ID*p_Np];
+	      const dfloat G22 = ggeo[base+p_G22ID*p_Np];
+	      const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
+
+	      dfloat qr = 0.f, qs = 0.f;
+	      for(iint n=0;n<p_Nq;++n){
+		qr += s_D[i][n]*s_q[es][j][n];
+		qs += s_D[j][n]*s_q[es][n][i];
+	      }
+
+	      // assumes w*J built into G entries
+	      s_tmpr[es][j][i] = G00*qr + G01*qs + G02*r_qt;
+	      s_tmps[es][j][i] = G01*qr + G11*qs + G12*r_qt;
+	      r_tmpt           = G02*qr + G12*qs + G22*r_qt;
+
+	      r_Aq[k] = GwJ*lambda*r_q[k];
+	    }
+	  }
+	}
+      }
+    
+      barrier(localMemFence);
+
+      // second derivatives
+      for(iint es=0;es<p_NblockV;++es;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    const iint e = eo + es;
+	    if(e<Nelements){
+
+	      dfloat Aq1 = 0.0f, Aq2 = 0.0f;
+
+	      for(iint n=0;n<p_Nq;++n){
+		Aq1 += s_D[n][i]*s_tmpr[es][j][n];
+		Aq2 += s_D[n][j]*s_tmps[es][i][n];
+	      }
+
+	      r_Aq[k] +=  Aq1 + Aq2;
+
+	      for(iint n=0;n<p_Nq;++n){
+		r_Aq[k] += s_D[k][n]*r_tmpt;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+
+    // write result out (local node storage)
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){
+	for(iint i=0;i<p_Nq;++i;inner0){
+	  const iint e = eo + es;
+	  if(e<Nelements){
+	    iint base = e*p_Np + j*p_Nq + i;
+	    for(iint k=0;k<p_Nq;++k){
+	      Aq[base] = r_Aq[k];
+	      base+=p_Nq*p_Nq;
+	    }
+	  }
+	}
+      }
+    }
+#endif
+    
+  }
+}
+

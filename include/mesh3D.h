@@ -54,6 +54,10 @@ typedef struct {
   dfloat *vgeo;
   iint Nvgeo;
 
+  // second order volume geometric factors
+  dfloat *ggeo;
+  iint Nggeo;
+
   // volume node info 
   iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
@@ -126,6 +130,8 @@ typedef struct {
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
 
+  occa::memory o_D; // tensor product differentiation matrix (for Hexes)
+  
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP;
   
@@ -135,9 +141,27 @@ typedef struct {
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
-  
+
+  // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
+
+  // CG gather-scatter info
+  void *gsh; // gslib struct pointer
+  
+  iint NuniqueBases; // number of unique bases on this rank
+  occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
+  occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
+  occa::memory o_gatherTmp; // temporary array to store base values gathered locally
+
+  iint NnodeHalo; // number of halo bases on this rank
+  occa::memory o_nodeHaloIds;  // indices of halo base nodes after initial local gather
+  occa::memory o_subGatherTmp; // temporary DEVICE array to store halo base values prior to DEVICE>HOST copy
+  dfloat        *subGatherTmp; // temporary HALO array
+
+  occa::memory o_ggeo; // second order geometric factors
+
+
   
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
@@ -149,6 +173,8 @@ typedef struct {
 
   occa::kernel getKernel;
   occa::kernel putKernel;
+
+  occa::kernel AxKernel;
 }mesh3D;
 
 mesh3D* meshReader3D(char *fileName);
@@ -276,6 +302,15 @@ void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
 #define TZID 8  
 #define  JID 9
 #define JWID 10
+
+/* offsets for second order geometric factors */
+#define G00ID 0  
+#define G01ID 1  
+#define G02ID 2
+#define G11ID 3  
+#define G12ID 4  
+#define G22ID 5  
+#define GWJID 6  
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
