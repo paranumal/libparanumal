@@ -307,6 +307,15 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   // copy from DEVICE to HOST for checking
   o_localv.copyTo(localv);
 
+  char fname[BUFSIZ];
+  sprintf(fname, "v_%05d.dat", rank);
+  FILE *fp = fopen(fname, "w");
+  for(iint n=0;n<localNodeCount;++n){
+    fprintf(fp, "base: %d gs degree: %g\n", globalNumbering[n].baseId, localv[n]);
+  }
+  
+  fclose(fp);
+  
   //  for(iint n=0;n<localNodeCount;++n){
   //    printf("n=%d localv=%d\n", n, (iint)localv[n]);
   //  }
