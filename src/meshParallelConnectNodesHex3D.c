@@ -7,10 +7,10 @@
 
 extern "C"
 {
-  void *meshParallelGatherScatterSetup(int NuniqueBases,
+  void *gsParallelGatherScatterSetup(int NuniqueBases,
 				     int *gatherGlobalNodes);
   
-  void meshParallelGatherScatter(void *gsh, void *v, const char *type);
+  void gsParallelGatherScatter(void *gsh, void *v, const char *type);
 }
 
 typedef struct{
@@ -97,8 +97,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     for(iint v=0;v<mesh->Nverts;++v){
       iint id = e*mesh->Np + mesh->vertexNodes[v];
       iint gid = mesh->EToV[e*mesh->Nverts+v] + 1;
-      globalNumbering[id].id = gid; hash(gid);
-      globalNumbering[id].baseId = gid; hash(gid);
+      globalNumbering[id].id = gid; 
+      globalNumbering[id].baseId = gid; 
     }
 
     // use element-to-boundary connectivity to create tag for local nodes
@@ -187,9 +187,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     // report
     if(rank==0)
       printf("globalChange=%d\n", globalChange);
-  }  // at this point all nodes on this rank have bases on this rank or below
-
-  // IDEA: gather from below (but still need to catch from above)
+  }  
   
   // sort based on base nodes (rank,element,node at base)
   qsort(globalNumbering, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
@@ -206,8 +204,8 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     iint test = (n==0) ? 1: (globalNumbering[n].baseId != globalNumbering[n-1].baseId);
     NuniqueBases += test;
   }
+  mesh->NuniqueBases = NuniqueBases;
   
-  iint *gatherNsends      = (iint*) calloc(size, sizeof(iint));
   iint *gatherGlobalNodes = (iint*) calloc(NuniqueBases, sizeof(iint)); // global labels for unique nodes
   iint *gatherNodeOffsets = (iint*) calloc(NuniqueBases+1, sizeof(iint)); // offset into sorted list of nodes
 
@@ -219,26 +217,9 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       gatherGlobalNodes[NuniqueBases] = globalNumbering[n].baseId; // use this for gslib gather-scatter operation
       gatherNodeOffsets[NuniqueBases++] = n;  // increment unique base counter and record index into shuffled list of ndoes
 
-      ++gatherNsends[globalNumbering[n].baseRank];
     }
   }
   gatherNodeOffsets[NuniqueBases] = localNodeCount;
-
-  iint *gatherSendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  for(iint r=1;r<size+1;++r)
-    gatherSendOffsets[r] = gatherSendOffsets[r-1]+gatherNsends[r-1];
-
-
-  dfloat *gatherv = (dfloat*) calloc(NuniqueBases,   sizeof(dfloat));
-  dfloat *localv  = (dfloat*) calloc(localNodeCount, sizeof(dfloat)); 
-  for(iint n=0;n<localNodeCount;++n)
-    localv[n] = 1;
-
-  occa::memory o_localv  = mesh->device.malloc(localNodeCount*sizeof(dfloat), localv);
-  occa::memory o_gatherv = mesh->device.malloc(NuniqueBases*sizeof(dfloat), gatherv);
-
-  occa::memory o_gatherNodeOffsets = mesh->device.malloc((NuniqueBases+1)*sizeof(iint), gatherNodeOffsets);
-  occa::memory o_gatherLocalNodes  = mesh->device.malloc(localNodeCount*sizeof(iint), gatherLocalNodes);
 
   // list of nodes to extract from DEVICE gathered array
   iint NnodeHalo = 0;
@@ -248,17 +229,15 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       ++NnodeHalo;
     }
   }
-
+  mesh->NnodeHalo = NnodeHalo;
+  
   printf("NnodeHalo = %d, NuniqueBases = %d\n", NnodeHalo, NuniqueBases);
 
-  iint *nodeHaloIds, *nodeHaloGlobalIds;
-  occa::memory o_nodeHaloIds, o_subgatherv;
-  void* gsh;
-  dfloat *subgatherv;
-  
-  if(NnodeHalo){  
-    nodeHaloIds = (iint*) calloc(NnodeHalo, sizeof(iint));
-    nodeHaloGlobalIds = (iint*) calloc(NnodeHalo, sizeof(iint));
+  // set up gather-scatter of halo nodes
+  mesh->gsh = NULL;
+  if(mesh->NnodeHalo){  
+    iint *nodeHaloIds = (iint*) calloc(NnodeHalo, sizeof(iint));
+    iint *nodeHaloGlobalIds = (iint*) calloc(NnodeHalo, sizeof(iint));
     NnodeHalo = 0;
     for(iint n=0;n<NuniqueBases;++n){
       int id = gatherNodeOffsets[n];
@@ -271,70 +250,19 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     }     
 
     // initiate gslib gather-scatter comm pattern
-    gsh = meshParallelGatherScatterSetup(NnodeHalo, nodeHaloGlobalIds);
-
+    mesh->gsh = gsParallelGatherScatterSetup(NnodeHalo, nodeHaloGlobalIds);
+    
     // list of halo node indices
-    o_nodeHaloIds = mesh->device.malloc(NnodeHalo*sizeof(iint),  nodeHaloIds);
-
+    mesh->o_nodeHaloIds = mesh->device.malloc(NnodeHalo*sizeof(iint),  nodeHaloIds);
+    
     // allocate buffer for gathering on halo nodes
-    subgatherv = (dfloat*) calloc(NnodeHalo, sizeof(dfloat));
-    o_subgatherv  = mesh->device.malloc(NnodeHalo*sizeof(dfloat), subgatherv);
-  }
-  
-  // gather on DEVICE
-  mesh->gatherKernel(NuniqueBases, o_gatherNodeOffsets, o_gatherLocalNodes, o_localv, o_gatherv);
-
-  // extract gathered halo node data [i.e. shared nodes ]
-  if(NnodeHalo){
-    mesh->getKernel(NnodeHalo, o_gatherv, o_nodeHaloIds, o_subgatherv); // subv = v[ids]
-    
-    // copy partially gathered halo data from DEVICE to HOST
-    o_subgatherv.copyTo(subgatherv);
-    
-    // gather across MPI processes then scatter back
-    meshParallelGatherScatter(gsh, subgatherv, "float");
-    
-    // copy totally gather halo data back from HOST to DEVICE
-    o_subgatherv.copyFrom(subgatherv);
-    
-    // insert totally gathered halo node data - need this kernel 
-    mesh->putKernel(NnodeHalo, o_subgatherv, o_nodeHaloIds, o_gatherv); // v[ids] = subv
+    mesh->subGatherTmp = (dfloat*) calloc(NnodeHalo, sizeof(dfloat));
+    mesh->o_subGatherTmp  = mesh->device.malloc(NnodeHalo*sizeof(dfloat), mesh->subGatherTmp);
   }
 
-  // do scatter back to local nodes
-  mesh->scatterKernel(NuniqueBases, o_gatherNodeOffsets, o_gatherLocalNodes, o_gatherv, o_localv);
-  
-  // copy from DEVICE to HOST for checking
-  o_localv.copyTo(localv);
-
-  char fname[BUFSIZ];
-  sprintf(fname, "v_%05d.dat", rank);
-  FILE *fp = fopen(fname, "w");
-  for(iint n=0;n<localNodeCount;++n){
-    fprintf(fp, "base: %d gs degree: %g\n", globalNumbering[n].baseId, localv[n]);
-  }
-  
-  fclose(fp);
-  
-  //  for(iint n=0;n<localNodeCount;++n){
-  //    printf("n=%d localv=%d\n", n, (iint)localv[n]);
-  //  }
-  
-  // WHAT NOW - base nodes on this rank get some incoming stuff from higher ranks
-  
-  //  meshParallelGatherScatter(gsh, v);
-
-#if 0
-  //  for(iint n=0;n<NuniqueBases;++n){
-  for(iint n=0;n<gatherSendOffsets[rank];++n){
-    if(v[n]!=gatherv[n]){
-      {
-	printf("%d: v[%d] = %g orig[%d] = %g \n",
-	       gatherGlobalNodes[n], n, gatherv[n], n, origv[n]);
-      }
-    }
-  }
-#endif
+  mesh->o_gatherTmp         = mesh->device.malloc(NuniqueBases*sizeof(dfloat));
+  mesh->o_gatherNodeOffsets = mesh->device.malloc((NuniqueBases+1)*sizeof(iint), gatherNodeOffsets);
+  mesh->o_gatherLocalNodes  = mesh->device.malloc(localNodeCount*sizeof(iint),   gatherLocalNodes);
 
   
   // should do something with tag and global numbering arrays
