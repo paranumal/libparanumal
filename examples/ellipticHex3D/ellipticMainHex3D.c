@@ -37,8 +37,8 @@ int main(int argc, char **argv){
 
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
-  for(iint n=0;n<mesh->Nelements*mesh->Np;++n)
-    printf("deg[%d] = %g\n", n, mesh->rhsq[n]);
+  //  for(iint n=0;n<mesh->Nelements*mesh->Np;++n)
+  //    printf("deg[%d] = %g\n", n, mesh->rhsq[n]);
   
   // close down MPI
   MPI_Finalize();

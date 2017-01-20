@@ -1,5 +1,5 @@
 // slightly brittle
-#define p_maxNconn 32
+#define p_maxNconn 64
 
 kernel void gather(const iint NuniqueBases,
 		   const iint * restrict gatherStarts,
