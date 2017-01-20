@@ -7,10 +7,8 @@
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(int NuniqueBases,
-				     int *gatherGlobalNodes);
-  
-  void gsParallelGatherScatter(void *gsh, void *v, const char *type);
+  void *gsParallelGatherScatterSetup(int NuniqueBases, int *gatherGlobalNodes);
+  void  gsParallelGatherScatter(void *gsh, void *v, const char *type);
 }
 
 typedef struct{
@@ -195,7 +193,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   // local numbers of sorted nodes
   iint *gatherLocalNodes = (iint*) calloc(localNodeCount, sizeof(iint));
   for(iint n=0;n<localNodeCount;++n){
-    gatherLocalNodes[n] = globalNumbering[n].node + mesh->Np*globalNumbering[n].element; // scrape shuffled list of local indices
+    gatherLocalNodes[n] = globalNumbering[n].node + mesh->Np*globalNumbering[n].element; 
   }
   
   // 1. count number of unique base nodes on this process
@@ -214,13 +212,18 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   for(iint n=0;n<localNodeCount;++n){
     iint test = (n==0) ? 1: (globalNumbering[n].baseId != globalNumbering[n-1].baseId);
     if(test){
-      gatherGlobalNodes[NuniqueBases] = globalNumbering[n].baseId; // use this for gslib gather-scatter operation
+      gatherGlobalNodes[NuniqueBases] = globalNumbering[n].baseId; // global indices of base nodes
       gatherNodeOffsets[NuniqueBases++] = n;  // increment unique base counter and record index into shuffled list of ndoes
 
     }
   }
   gatherNodeOffsets[NuniqueBases] = localNodeCount;
 
+  // allocate buffers on DEVICE
+  mesh->o_gatherTmp         = mesh->device.malloc(NuniqueBases*sizeof(dfloat));
+  mesh->o_gatherNodeOffsets = mesh->device.malloc((NuniqueBases+1)*sizeof(iint), gatherNodeOffsets);
+  mesh->o_gatherLocalNodes  = mesh->device.malloc(localNodeCount*sizeof(iint),   gatherLocalNodes);
+  
   // list of nodes to extract from DEVICE gathered array
   iint NnodeHalo = 0;
   for(iint n=0;n<NuniqueBases;++n){
@@ -244,26 +247,50 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       if(globalNumbering[id].baseRank!=globalNumbering[id].maxRank){
 	nodeHaloIds[NnodeHalo] = n;
 	nodeHaloGlobalIds[NnodeHalo] = globalNumbering[id].baseId;
-	//	printf("halo node %d base node %d global id %d\n", NnodeHalo, n, nodeHaloGlobalIds[NnodeHalo]); 
 	++NnodeHalo;
       }
     }     
-
-    // initiate gslib gather-scatter comm pattern
-    mesh->gsh = gsParallelGatherScatterSetup(NnodeHalo, nodeHaloGlobalIds);
     
     // list of halo node indices
     mesh->o_nodeHaloIds = mesh->device.malloc(NnodeHalo*sizeof(iint),  nodeHaloIds);
     
-    // allocate buffer for gathering on halo nodes
+    // allocate buffer for gathering on halo nodes (danger on size of buffer)
     mesh->subGatherTmp = (dfloat*) calloc(NnodeHalo, sizeof(dfloat));
     mesh->o_subGatherTmp  = mesh->device.malloc(NnodeHalo*sizeof(dfloat), mesh->subGatherTmp);
+    
+    // initiate gslib gather-scatter comm pattern
+    mesh->gsh = gsParallelGatherScatterSetup(NnodeHalo, nodeHaloGlobalIds);
+    
   }
 
-  mesh->o_gatherTmp         = mesh->device.malloc(NuniqueBases*sizeof(dfloat));
-  mesh->o_gatherNodeOffsets = mesh->device.malloc((NuniqueBases+1)*sizeof(iint), gatherNodeOffsets);
-  mesh->o_gatherLocalNodes  = mesh->device.malloc(localNodeCount*sizeof(iint),   gatherLocalNodes);
+  // find maximum degree
+  {
+    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+      mesh->rhsq[n] = 1;
+    }
+    mesh->o_rhsq.copyFrom(mesh->rhsq);
+    
+    void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+    meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, "float");
 
+    mesh->o_rhsq.copyTo(mesh->rhsq);
+    dfloat maxDegree = 0, minDegree = 1e9;
+    dfloat globalMaxDegree = 0, globalMinDegree = 1e9;
+    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+      maxDegree = mymax(maxDegree, mesh->rhsq[n]);
+      minDegree = mymin(minDegree, mesh->rhsq[n]);
+    }
+
+    MPI_Allreduce(&maxDegree, &globalMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&minDegree, &globalMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
+    if(rank==0){
+      printf("max degree = %g\n", globalMaxDegree);
+      printf("min degree = %g\n", globalMinDegree);
+    }
+      
+    
+  }
   
   // should do something with tag and global numbering arrays
   free(sendBuffer);
