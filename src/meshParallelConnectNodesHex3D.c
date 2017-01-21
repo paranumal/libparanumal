@@ -89,8 +89,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].maxRank = rank;
     }
 
-    unsigned int hash(const unsigned int value);
-    
+#if 0
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
       iint id = e*mesh->Np + mesh->vertexNodes[v];
@@ -98,7 +97,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].id = gid; 
       globalNumbering[id].baseId = gid; 
     }
-
+#endif
     // use element-to-boundary connectivity to create tag for local nodes
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
@@ -271,7 +270,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     mesh->o_rhsq.copyFrom(mesh->rhsq);
     
     void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
-    meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, "float");
+    meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
     dfloat maxDegree = 0, minDegree = 1e9;

@@ -12,6 +12,7 @@
 #define MPI_DFLOAT MPI_FLOAT
 #define iintFormat "%d"
 #define dfloatFormat "%f"
+#define dfloatString "float"
 #else
 #define iint int
 #define dfloat double
@@ -19,6 +20,7 @@
 #define MPI_DFLOAT MPI_DOUBLE
 #define iintFormat "%d"
 #define dfloatFormat "%lf"
+#define dfloatString "double"
 #endif
 
 typedef struct {
