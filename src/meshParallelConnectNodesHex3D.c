@@ -89,6 +89,11 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].maxRank = rank;
     }
 
+    static int warn = 0;
+    if(!warn){
+      printf("WARNING : turned off vertex index over ride !!! \n");
+      warn=1;
+    }
 #if 0
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
@@ -141,26 +146,29 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	iint maxRankM = globalNumbering[idM].maxRank;
 	iint maxRankP = globalNumbering[idP].maxRank;
 
-	globalNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
-	globalNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
+	if(1){
+	  globalNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
+	  globalNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
+	  
+	  // use minimum of trace variables
+	  
+	  if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
+	    ++localChange;
+	    globalNumbering[idP].baseElement = globalNumbering[idM].baseElement;
+	    globalNumbering[idP].baseNode    = globalNumbering[idM].baseNode;
+	    globalNumbering[idP].baseRank    = globalNumbering[idM].baseRank;
+	    globalNumbering[idP].baseId      = globalNumbering[idM].baseId;
+	  }
+	  
+	  if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
+	    ++localChange;
+	    globalNumbering[idM].baseElement = globalNumbering[idP].baseElement;
+	    globalNumbering[idM].baseNode    = globalNumbering[idP].baseNode;
+	    globalNumbering[idM].baseRank    = globalNumbering[idP].baseRank;
+	    globalNumbering[idM].baseId      = globalNumbering[idP].baseId;
+	  }
+	}
 	
-	// use minimum of trace variables
-	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
-	  ++localChange;
-	  globalNumbering[idP].baseElement = globalNumbering[idM].baseElement;
-	  globalNumbering[idP].baseNode    = globalNumbering[idM].baseNode;
-	  globalNumbering[idP].baseRank    = globalNumbering[idM].baseRank;
-	  globalNumbering[idP].baseId      = globalNumbering[idM].baseId;
-	}
-
-	if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
-	  ++localChange;
-	  globalNumbering[idM].baseElement = globalNumbering[idP].baseElement;
-	  globalNumbering[idM].baseNode    = globalNumbering[idP].baseNode;
-	  globalNumbering[idM].baseRank    = globalNumbering[idP].baseRank;
-	  globalNumbering[idM].baseId      = globalNumbering[idP].baseId;
-	}
-
 	iint tagM = globalNumbering[idM].priorityTag;
 	iint tagP = globalNumbering[idP].priorityTag;
 

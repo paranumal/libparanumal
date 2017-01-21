@@ -7,7 +7,7 @@ void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memo
   mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); // store A*q in rhsq
 
   // do parallel gather scatter
-  meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, "float");
+  meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
 }
 
 dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
@@ -79,6 +79,9 @@ int main(int argc, char **argv){
     exit(-1);
   }
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  
   // int specify polynomial degree 
   int N = atoi(argv[2]);
   
@@ -100,13 +103,13 @@ int main(int argc, char **argv){
 
   mesh->o_rhsq.copyFrom(mesh->rhsq);
   
-  meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, "float");
+  meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
   
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   for(iint n=0;n<Ntotal;++n){
-    invDegree[n] = 1./mesh->rhsq[n];
+    invDegree[n] = 1./(mesh->rhsq[n]);
     if(!mesh->rhsq[n]) printf("found zero degree at  node %d \n", n);
   }
   
@@ -124,7 +127,7 @@ int main(int argc, char **argv){
   // set up cg
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-4;
+  const dfloat tol = 1e-8;
 
   // load rhs into r
   for(iint e=0;e<mesh->Nelements;++e){
@@ -138,16 +141,19 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
 
-      dfloat f = (3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      dfloat f = -(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      //      dfloat f = -lambda*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      //dfloat f = -lambda*xn*xn*xn;
 
       //      Zt*Z*(SL+lambda*ML)*Zt*x = Zt*Z*ML*fL
       
-      r[id] = wJ*f;
+      r[id] = -wJ*f;
 
       x[id] = 0; // initial guess
     }
   }
 
+  // need to rename o_r, o_x to avoid confusion
   occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
   occa::memory o_r   = mesh->device.malloc(Ntotal*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
@@ -166,20 +172,16 @@ int main(int argc, char **argv){
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter r
-  meshParallelGatherScatter3D(mesh, o_r, o_r, "float");
+  meshParallelGatherScatter3D(mesh, o_r, o_r, dfloatString);
 
   // p = r
-  o_r.copyTo(p);
-  o_p.copyFrom(p);
+  o_p.copyFrom(o_r);
   
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
   dfloat rdotr1 = 0;
 
   do{
-
-    printf("rdotr0 = %g\n", rdotr0);
-    
     // placeholder conjugate gradient:
     // https://en.wikipedia.org/wiki/Conjugate_gradient_method
     
@@ -189,8 +191,6 @@ int main(int argc, char **argv){
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
 
-    printf("pAp=%g\n", pAp);
-    
     // alpha = dot(r,r)/dot(p,A*p)
     dfloat alpha = rdotr0/pAp;
 
@@ -213,12 +213,37 @@ int main(int argc, char **argv){
     // swith rdotr0 <= rdotr1
     rdotr0 = rdotr1;
 
-    printf("rdotr0 = %g\n", rdotr0);
+    if(rank==0)
+      printf("pAp = %g norm(r) = %g\n", pAp, sqrt(rdotr0));
     
   }while(rdotr0>(tol*tol));
-  
-  mesh->o_rhsq.copyTo(mesh->rhsq);
 
+  // arggh
+  o_x.copyTo(mesh->q);
+
+  dfloat maxError = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint   id = e*mesh->Np+n;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      dfloat zn = mesh->z[id];
+      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      //      dfloat exact = xn*xn*xn;
+      dfloat error = fabs(exact-mesh->q[id]);
+      
+      maxError = mymax(maxError, error);
+      //      if(error>1e-3)
+      //	printf("exact: %g computed: %g error: %g\n", exact, mesh->q[id], error);
+
+      mesh->q[id] -= exact;
+    }
+  }
+
+  printf("maxError = %g\n", maxError);
+  
+  meshPlotVTU3D(mesh, "foo", 0);
+  
   // close down MPI
   MPI_Finalize();
 
