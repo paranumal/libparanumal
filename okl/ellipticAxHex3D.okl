@@ -115,12 +115,13 @@ kernel void ellipticAxHex3D(const iint     Nelements,
 		Aq1 += s_D[n][i]*s_tmpr[es][j][n];
 		Aq2 += s_D[n][j]*s_tmps[es][i][n];
 	      }
-
+#if 0
 	      r_Aq[k] +=  Aq1 + Aq2;
 
 	      for(iint n=0;n<p_Nq;++n){
 		r_Aq[k] += s_D[k][n]*r_tmpt;
 	      }
+#endif		
 	    }
 	  }
 	}

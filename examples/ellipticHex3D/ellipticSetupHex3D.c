@@ -117,6 +117,21 @@ void ellipticSetupHex3D(mesh3D *mesh){
 				       "ellipticAxHex3D",
 				       kernelInfo);
 
+  mesh->weightedInnerProduct1Kernel =
+    mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
+				       "weightedInnerProduct1",
+				       kernelInfo);
+
+  mesh->weightedInnerProduct2Kernel =
+    mesh->device.buildKernelFromSource("okl/weightedInnerProduct2.okl",
+				       "weightedInnerProduct2",
+				       kernelInfo);
+
+  mesh->scaledAddKernel =
+      mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
+					 "scaledAdd",
+					 kernelInfo);
+
 
   // does global numbering and gather-scatter set up
   meshParallelConnectNodesHex3D(mesh);

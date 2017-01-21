@@ -175,6 +175,9 @@ typedef struct {
   occa::kernel putKernel;
 
   occa::kernel AxKernel;
+  occa::kernel weightedInnerProduct1Kernel;
+  occa::kernel weightedInnerProduct2Kernel;
+  occa::kernel scaledAddKernel;
 }mesh3D;
 
 mesh3D* meshReader3D(char *fileName);

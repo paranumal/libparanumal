@@ -11,27 +11,62 @@ void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memo
 }
 
 dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
-  
-  mesh->ellipticScaleAddKernel(mesh->Ntotal, alpha, o_a, beta, o_b);
+
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
+  mesh->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
   
 }
 
-void ellipticWeightedInnerProduct(iint Ntotal, int Nblock, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b, occa::memory &o_tmp, dfloat *tmp){
+dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
+				    iint Nblock,
+				    occa::memory &o_w,
+				    occa::memory &o_a,
+				    occa::memory &o_b,
+				    occa::memory &o_tmp,
+				    dfloat *tmp){
 
-  mesh->weightedInnerProduct(Ntotal, o_w, o_a, o_b, o_tmp);
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
 
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(iint n=0;n<Nblock;++n)
-    wab += o_tmp[n];
-
+  for(iint n=0;n<Nblock;++n){
+    wab += tmp[n];
+  }
+      
   dfloat globalwab = 0;
   MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   return globalwab;
 }
 
+dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
+				    iint Nblock,
+				    occa::memory &o_w,
+				    occa::memory &o_a,
+				    occa::memory &o_tmp,
+				    dfloat *tmp){
+
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  
+  mesh->weightedInnerProduct1Kernel(Ntotal, o_w, o_a, o_tmp);
+
+  o_tmp.copyTo(tmp);
+  
+  dfloat wa2 = 0;
+  for(iint n=0;n<Nblock;++n){
+    wa2 += tmp[n];
+  }
+  
+  dfloat globalwa2 = 0;
+  MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+  return globalwa2;
+}
+
+ 
 
 int main(int argc, char **argv){
 
@@ -52,10 +87,9 @@ int main(int argc, char **argv){
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
 
   // set up elliptic stuff
-  int B = 256; // block size for reduction
+  int B = 256; // block size for reduction (hard coded)
 
-  void ellipticSetupHex3D(mesh3D *mesh, iint B);
-  ellipticSetupHex3D(mesh, B);
+  ellipticSetupHex3D(mesh);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
@@ -71,9 +105,11 @@ int main(int argc, char **argv){
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  for(iint n=0;n<Ntotals;++n)
+  for(iint n=0;n<Ntotal;++n){
     invDegree[n] = 1./mesh->rhsq[n];
-
+    if(!mesh->rhsq[n]) printf("found zero degree at  node %d \n", n);
+  }
+  
   occa::memory o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
 
   dfloat *p   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -82,48 +118,104 @@ int main(int argc, char **argv){
   dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   
-  occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
-  occa::memory o_r   = mesh->device.malloc(Ntotal*sizeof(dfloat), r);
-  occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
-  occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
-  occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
-  
   // at this point gather-scatter is available
   dfloat lambda = 10;
 
-  dfloat normr = 0;
-  dfloat rdotr0, rdotr1;
+  // set up cg
 
+  // convergence tolerance (currently absolute)
   const dfloat tol = 1e-4;
+
+  // load rhs into r
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+
+      iint ggid = e*mesh->Np*mesh->Nggeo + n;
+      dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
+
+      iint   id = e*mesh->Np+n;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      dfloat zn = mesh->z[id];
+
+      dfloat f = (3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+
+      //      Zt*Z*(SL+lambda*ML)*Zt*x = Zt*Z*ML*fL
+      
+      r[id] = wJ*f;
+
+      x[id] = 0; // initial guess
+    }
+  }
+
+  occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
+  occa::memory o_r   = mesh->device.malloc(Ntotal*sizeof(dfloat), r);
+  occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
+  occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
+  occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
+  occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
   
+  // copy initial guess for x to DEVICE
+  o_x.copyFrom(x);
+  ellipticOperator(mesh, lambda, o_x, o_Ax); // eventually add reduction in scatterKernel
+  
+  // copy r = b
+  o_r.copyFrom(r);
+
+  // subtract r = b - A*x
+  ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
+
+  // gather-scatter r
+  meshParallelGatherScatter3D(mesh, o_r, o_r, "float");
+
+  // p = r
+  o_r.copyTo(p);
+  o_p.copyFrom(p);
+  
+  // dot(r,r)
+  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
+  dfloat rdotr1 = 0;
+
   do{
 
+    printf("rdotr0 = %g\n", rdotr0);
+    
     // placeholder conjugate gradient:
     // https://en.wikipedia.org/wiki/Conjugate_gradient_method
     
-    // need to look at the local storage version of CG
+    // A*p 
     ellipticOperator(mesh, lambda, o_p, o_Ap); // eventually add reduction in scatterKernel
 
-    // need local reduction operation
-    iint Ntotal = mesh->Np*mesh->Nelements;
-    
-    dfloat pAp = ellipticWeightedInnerProduct(Ntotal, o_invDegree, o_p, o_Ap);
+    // dot(p,A*p)
+    dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
 
+    printf("pAp=%g\n", pAp);
+    
+    // alpha = dot(r,r)/dot(p,A*p)
     dfloat alpha = rdotr0/pAp;
 
-    // should merge --- -
+    // x <= x + alpha*p
     ellipticScaledAdd(mesh,  alpha, o_p,  1.f, o_x);
+
+    // r <= r - alpha*A*p
     ellipticScaledAdd(mesh, -alpha, o_Ap, 1.f, o_r);
 
-    rdotr1 = ellipticWeightedNorm(Ntotal, o_invDegree, o_r);
-    // ----
-
+    // dot(r,r)
+    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
+    if(rdotr1 < tol*tol) break;
+    
+    // beta = rdotr1/rdotr0
     dfloat beta = rdotr1/rdotr0;
 
+    // p = r + beta*p
     ellipticScaledAdd(mesh, 1.f, o_r, beta, o_p);
+
+    // swith rdotr0 <= rdotr1
+    rdotr0 = rdotr1;
+
+    printf("rdotr0 = %g\n", rdotr0);
     
-    
-  }while(normr>tol);
+  }while(rdotr0>(tol*tol));
   
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
