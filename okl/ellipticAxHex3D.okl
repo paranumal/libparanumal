@@ -41,7 +41,6 @@ kernel void ellipticAxHex3D(const iint     Nelements,
       
     barrier(localMemFence);
 
-#if 1
     for(iint k=0;k<p_Nq;++k){
 	
       for(iint es=0;es<p_NblockV;++es;inner2){
@@ -94,7 +93,13 @@ kernel void ellipticAxHex3D(const iint     Nelements,
 	      s_tmps[es][j][i] = G01*qr + G11*qs + G12*r_qt;
 	      r_tmpt           = G02*qr + G12*qs + G22*r_qt;
 
-	      r_Aq[k] = GwJ*lambda*r_q[k];
+	      r_Aq[k] += GwJ*lambda*r_q[k];
+
+#if 0
+	      for(iint n=0;n<p_Nq;++n){
+		r_Aq[n] += s_D[k][n]*r_tmpt;
+	      }
+#endif
 	    }
 	  }
 	}
@@ -113,15 +118,11 @@ kernel void ellipticAxHex3D(const iint     Nelements,
 
 	      for(iint n=0;n<p_Nq;++n){
 		Aq1 += s_D[n][i]*s_tmpr[es][j][n];
-		Aq2 += s_D[n][j]*s_tmps[es][i][n];
+		Aq2 += s_D[n][j]*s_tmps[es][n][i];
 	      }
 #if 0
 	      r_Aq[k] +=  Aq1 + Aq2;
-
-	      for(iint n=0;n<p_Nq;++n){
-		r_Aq[k] += s_D[k][n]*r_tmpt;
-	      }
-#endif		
+#endif  
 	    }
 	  }
 	}
@@ -143,8 +144,6 @@ kernel void ellipticAxHex3D(const iint     Nelements,
 	}
       }
     }
-#endif
-    
   }
 }
 
