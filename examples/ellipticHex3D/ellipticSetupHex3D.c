@@ -132,10 +132,44 @@ void ellipticSetupHex3D(mesh3D *mesh){
 					 "scaledAdd",
 					 kernelInfo);
 
+  mesh->dotMultiplyKernel =
+      mesh->device.buildKernelFromSource("okl/dotMultiply.okl",
+					 "dotMultiply",
+					 kernelInfo);
 
+  mesh->dotDivideKernel =
+      mesh->device.buildKernelFromSource("okl/dotDivide.okl",
+					 "dotDivide",
+					 kernelInfo);
+
+  
   // does global numbering and gather-scatter set up
   meshParallelConnectNodesHex3D(mesh);
 
+
+  // build weights for continuous SEM L2 project --->
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
+      localMM[n+e*mesh->Np] = wJ;
+    }
+  }
+
+  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+
+  // sum up all contributions at base nodes and scatter back
+  meshParallelGatherScatter3D(mesh, o_localMM, o_MM, dfloatString);
+
+  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
+
+  free(localMM); o_MM.free(); o_localMM.free();
+  // <------
+  
 
   
 }

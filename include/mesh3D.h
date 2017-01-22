@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -162,7 +162,7 @@ typedef struct {
   dfloat        *subGatherTmp; // temporary HALO array
 
   occa::memory o_ggeo; // second order geometric factors
-
+  occa::memory o_projectL2; // local weights for projection.
 
   
   occa::kernel volumeKernel;
@@ -180,6 +180,8 @@ typedef struct {
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
   occa::kernel scaledAddKernel;
+  occa::kernel dotMultiplyKernel;
+  occa::kernel dotDivideKernel;
 }mesh3D;
 
 mesh3D* meshReader3D(char *fileName);
@@ -277,6 +279,10 @@ void meshBuildFaceNodes3D(mesh3D *mesh);
 void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 mesh3D *meshSetup3D(char *filename, int N);
+
+
+void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+
 
 void meshAcousticsRun3D(mesh3D *mesh);
 void meshAcousticsSetup3D(mesh3D *mesh);

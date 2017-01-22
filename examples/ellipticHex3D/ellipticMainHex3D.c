@@ -1,18 +1,18 @@
 #include "ellipticHex3D.h"
 
-void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
-
 void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
-  
-  mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); // store A*q in rhsq
 
-  // do parallel gather scatter
+  // compute local element operations and store result in o_Aq
+  mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
+
+  // do parallel gather scatter (uses o_gatherTmp,  o_subGatherTmp, subGatherTmp)
   meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
 }
 
 dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   iint Ntotal = mesh->Nelements*mesh->Np;
+
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   mesh->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
   
@@ -66,6 +66,16 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
   return globalwa2;
 }
 
+void ellipticProject(mesh3D *mesh, occa::memory &o_v, occa::memory &o_Pv){
+
+
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  
+  mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
+
+  // assemble
+  meshParallelGatherScatter3D(mesh, o_Pv, o_Pv, dfloatString);
+}
  
 
 int main(int argc, char **argv){
@@ -127,7 +137,7 @@ int main(int argc, char **argv){
   // set up cg
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-8;
+  const dfloat tol = 1e-5;
 
   // load rhs into r
   for(iint e=0;e<mesh->Nelements;++e){
@@ -215,6 +225,9 @@ int main(int argc, char **argv){
 
     if(rank==0)
       printf("pAp = %g norm(r) = %g\n", pAp, sqrt(rdotr0));
+
+
+    ellipticProject(mesh, o_x, o_x);
     
   }while(rdotr0>(tol*tol));
 
@@ -240,7 +253,10 @@ int main(int argc, char **argv){
     }
   }
 
-  printf("maxError = %g\n", maxError);
+  dfloat globalMaxError = 0;
+  MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  if(rank==0)
+    printf("globalMaxError = %g\n", globalMaxError);
   
   meshPlotVTU3D(mesh, "foo", 0);
   

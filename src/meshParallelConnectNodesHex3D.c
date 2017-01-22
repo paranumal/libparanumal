@@ -94,7 +94,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       printf("WARNING : turned off vertex index over ride !!! \n");
       warn=1;
     }
-#if 0
+#if 1
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
       iint id = e*mesh->Np + mesh->vertexNodes[v];
@@ -281,6 +281,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
+
     dfloat maxDegree = 0, minDegree = 1e9;
     dfloat globalMaxDegree = 0, globalMinDegree = 1e9;
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -292,11 +293,9 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     MPI_Allreduce(&minDegree, &globalMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
     if(rank==0){
-      printf("max degree = %g\n", globalMaxDegree);
-      printf("min degree = %g\n", globalMinDegree);
+      printf("max degree = " dfloatFormat "\n", globalMaxDegree);
+      printf("min degree = " dfloatFormat "\n", globalMinDegree);
     }
-      
-    
   }
   
   // should do something with tag and global numbering arrays
