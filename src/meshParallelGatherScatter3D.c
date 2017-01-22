@@ -24,7 +24,7 @@ void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &
     mesh->o_subGatherTmp.copyTo(mesh->subGatherTmp);
     
     // gather across MPI processes then scatter back
-    gsParallelGatherScatter(mesh->gsh, mesh->subGatherTmp, "float"); // danger on hardwired type
+    gsParallelGatherScatter(mesh->gsh, mesh->subGatherTmp, dfloatString); // danger on hardwired type
     
     // copy totally gather halo data back from HOST to DEVICE
     mesh->o_subGatherTmp.copyFrom(mesh->subGatherTmp);
