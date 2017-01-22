@@ -12,8 +12,8 @@ kernel void weightedInnerProduct2(const iint N,
   // loop over blocks
   for(int b=0;b<(N+G*S-1)/(G*S);++b;outer0){
     
-    volatile shared float s_a[G][S];
-    volatile shared float s_b[G];
+    volatile shared dfloat s_a[G][S];
+    volatile shared dfloat s_b[G];
 
     for(int g=0;g<G;++g;inner1){
       for(int s=0;s<S;++s;inner0){
