@@ -2,24 +2,31 @@
 
 void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_q, occa::memory &o_gsq, const char *type){
 
+  mesh->device.finish();
+  occa::tic("meshParallelGatherScatter3D");
+  
   // use gather map for gather and scatter
   meshParallelGatherScatter3D(mesh,
-			      mesh->NuniqueBases,
+			      mesh->NuniqueBases,  // gather info for DEVICE gather
 			      mesh->o_gatherNodeOffsets,
 			      mesh->o_gatherLocalNodes,
 			      mesh->o_gatherTmp,     
-			      mesh->NnodeHalo,
+			      mesh->NnodeHalo,     // halo info for extracting gathered halo
 			      mesh->o_nodeHaloIds,
 			      mesh->o_subGatherTmp,
 			      mesh->subGatherTmp,
-			      mesh->NuniqueBases,
+			      mesh->NuniqueBases,   // use gather info for DEVICE scatter
 			      mesh->o_gatherNodeOffsets,
 			      mesh->o_gatherLocalNodes,
-			      mesh->gsh,
+			      mesh->gsh,            // gslib 
 			      o_q,
 			      o_gsq,
 			      type);
 
+  mesh->device.finish();
+  occa::toc("meshParallelGatherScatter3D");
+
+  
 }
 
 void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
@@ -42,8 +49,14 @@ dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat b
 
   iint Ntotal = mesh->Nelements*mesh->Np;
 
+  mesh->device.finish();
+  occa::tic("scaledAddKernel");
+  
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   mesh->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
+
+  mesh->device.finish();
+  occa::toc("scaledAddKernel");
   
 }
 
@@ -238,16 +251,19 @@ int main(int argc, char **argv){
   do{
     // placeholder conjugate gradient:
     // https://en.wikipedia.org/wiki/Conjugate_gradient_method
-    
+
+    // -----------> merge these later into ellipticPcgPart1
     // A*p 
     ellipticOperator(mesh, lambda, o_p, o_Ap); // eventually add reduction in scatterKernel
 
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
-
+    // <------------ to here
+    
     // alpha = dot(r,r)/dot(p,A*p)
     dfloat alpha = rdotr0/pAp;
 
+    // --------------> merge these later into ellipticPcgPart2
     // x <= x + alpha*p
     ellipticScaledAdd(mesh,  alpha, o_p,  1.f, o_x);
 
@@ -256,6 +272,8 @@ int main(int argc, char **argv){
 
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
+    // <-------------- to here 
+    
     if(rdotr1 < tol*tol) break;
     
     // beta = rdotr1/rdotr0
@@ -270,8 +288,7 @@ int main(int argc, char **argv){
     if(rank==0)
       printf("pAp = %g norm(r) = %g\n", pAp, sqrt(rdotr0));
 
-
-    ellipticProject(mesh, o_x, o_x);
+    //    ellipticProject(mesh, o_x, o_x);
     
   }while(rdotr0>(tol*tol));
 
