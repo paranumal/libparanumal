@@ -24,12 +24,16 @@ void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_q, occa::memo
 
 void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
 
+  mesh->device.finish();
+  occa::tic("AxKernel");
+  
   // compute local element operations and store result in o_Aq
   mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
 
+  mesh->device.finish();
+  occa::toc("AxKernel");
+  
   // do parallel gather scatter (uses o_gatherTmp,  o_subGatherTmp, subGatherTmp)
-  //  meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
-
   ellipticParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
   
 }
@@ -51,9 +55,16 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 				    occa::memory &o_tmp,
 				    dfloat *tmp){
 
+  mesh->device.finish();
+  occa::tic("weighted inner product2");
+
   iint Ntotal = mesh->Nelements*mesh->Np;
   mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
 
+  mesh->device.finish();
+  occa::toc("weighted inner product2");
+
+  
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
@@ -75,9 +86,15 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 				    dfloat *tmp){
 
   iint Ntotal = mesh->Nelements*mesh->Np;
+
+  mesh->device.finish();
+  occa::tic("weighted inner product1");
   
   mesh->weightedInnerProduct1Kernel(Ntotal, o_w, o_a, o_tmp);
 
+  mesh->device.finish();
+  occa::toc("weighted inner product1");
+  
   o_tmp.copyTo(tmp);
   
   dfloat wa2 = 0;
@@ -188,6 +205,8 @@ int main(int argc, char **argv){
     }
   }
 
+  occa::initTimer(mesh->device);
+  
   // need to rename o_r, o_x to avoid confusion
   occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
   occa::memory o_r   = mesh->device.malloc(Ntotal*sizeof(dfloat), r);
@@ -256,6 +275,8 @@ int main(int argc, char **argv){
     
   }while(rdotr0>(tol*tol));
 
+  occa::printTimer();
+  
   // arggh
   o_x.copyTo(mesh->q);
 
