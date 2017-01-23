@@ -34,9 +34,9 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
-
+  
   // global nodes
-  //  meshParallelConnectNodesHex3D(mesh);
+  meshParallelConnectNodesHex3D(mesh);
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
