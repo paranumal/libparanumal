@@ -169,8 +169,7 @@ void ellipticSetupHex3D(mesh3D *mesh){
     }
     mesh->o_rhsq.copyFrom(mesh->rhsq);
     
-    void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
-    meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+    ellipticParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
     
@@ -205,7 +204,7 @@ void ellipticSetupHex3D(mesh3D *mesh){
   occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
   // sum up all contributions at base nodes and scatter back
-  meshParallelGatherScatter3D(mesh, o_localMM, o_MM, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, o_localMM, o_MM, dfloatString);
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);

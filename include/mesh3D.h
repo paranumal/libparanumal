@@ -286,7 +286,24 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 mesh3D *meshSetup3D(char *filename, int N);
 
 
-void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+// void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+
+void meshParallelGatherScatter3D(mesh3D *mesh,
+				 iint Ngather,                 // input: number of gather nodes 
+				 occa::memory &o_gatherOffsets, // input: start of local bases
+				 occa::memory &o_gatherLocalIds,// input: base connected nodes
+				 occa::memory &o_gatherTmp,     // input: DEVICE gather buffer
+				 iint Nhalo,                   // input: number of halo nodes
+				 occa::memory &o_haloLocalIds,  // input: list of halo nodes to
+				 occa::memory &o_haloTmp,       // input: temporary halo buffer
+				 void *haloTmp,                // input: temporary HOST halo buffer
+				 iint Nscatter,                 // input: number of scatter nodes 
+				 occa::memory &o_scatterOffsets, // input: start of local bases
+				 occa::memory &o_scatterLocalIds,// input: base connected nodes
+				 void *gsh,
+				 occa::memory &o_v,
+				 occa::memory &o_gsv,
+				 const char *type);
 
 void meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 				      iint Nlocal,     // number of local nodes
