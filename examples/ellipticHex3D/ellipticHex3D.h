@@ -19,4 +19,4 @@ void ellipticUpdateHex3D(mesh3D *mesh, dfloat rka, dfloat rkb);
 
 void ellipticErrorHex3D(mesh3D *mesh, dfloat time);
 
-
+void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
