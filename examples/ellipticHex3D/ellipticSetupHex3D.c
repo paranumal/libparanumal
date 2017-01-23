@@ -114,7 +114,7 @@ void ellipticSetupHex3D(mesh3D *mesh){
 
   mesh->AxKernel =
     mesh->device.buildKernelFromSource("okl/ellipticAxHex3D.okl",
-				       "ellipticAxHex3D_e0",
+				       "ellipticAxHex3D_e1",
 				       kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
