@@ -143,9 +143,52 @@ void ellipticSetupHex3D(mesh3D *mesh){
 					 kernelInfo);
 
   
-  // does global numbering and gather-scatter set up
-  meshParallelConnectNodesHex3D(mesh);
+  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+  meshParallelGatherScatterSetup3D(mesh,
+				   mesh->Np*mesh->Nelements,
+				   sizeof(dfloat),
+				   mesh->gatherLocalIds,
+				   mesh->gatherBaseIds, 
+				   mesh->gatherBaseRanks,
+				   mesh->gatherMaxRanks,
+				   mesh->NuniqueBases,
+				   mesh->o_gatherNodeOffsets,
+				   mesh->o_gatherLocalNodes,
+				   mesh->o_gatherTmp,
+				   mesh->NnodeHalo,
+				   mesh->o_nodeHaloIds,
+				   mesh->o_subGatherTmp,
+				   (void**)&(mesh->subGatherTmp),
+				   (void**)&(mesh->gsh));
 
+
+  // find maximum degree
+  {
+    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+      mesh->rhsq[n] = 1;
+    }
+    mesh->o_rhsq.copyFrom(mesh->rhsq);
+    
+    void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+    meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+
+    mesh->o_rhsq.copyTo(mesh->rhsq);
+    
+    dfloat maxDegree = 0, minDegree = 1e9;
+    dfloat gatherMaxDegree = 0, gatherMinDegree = 1e9;
+    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+      maxDegree = mymax(maxDegree, mesh->rhsq[n]);
+      minDegree = mymin(minDegree, mesh->rhsq[n]);
+    }
+
+    MPI_Allreduce(&maxDegree, &gatherMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&minDegree, &gatherMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
+    if(rank==0){
+      printf("max degree = " dfloatFormat "\n", gatherMaxDegree);
+      printf("min degree = " dfloatFormat "\n", gatherMinDegree);
+    }
+  }
 
   // build weights for continuous SEM L2 project --->
   iint Ntotal = mesh->Nelements*mesh->Np;
