@@ -283,6 +283,23 @@ mesh3D *meshSetup3D(char *filename, int N);
 
 void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
 
+void meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
+				      iint Nlocal,     // number of local nodes
+				      iint Nbytes,     // number of bytes per node
+				      iint *localIds,  // local index of nodes
+				      iint *baseIds,   // global index of their base nodes
+				      iint *baseRanks, // rank of their base nodes
+				      iint *maxRanks,  // max rank connected to base node
+				      iint &Ngather,   // output: number of gather nodes 
+				      occa::memory &o_gatherOffsets, // output: start of local bases
+				      occa::memory &o_gatherLocalIds,// output: base connected nodes
+				      occa::memory &o_gatherTmp,     // output: DEVICE gather buffer
+				      iint &Nhalo,     // output: number of halo nodes
+				      occa::memory &o_haloLocalIds, // list of halo nodes to
+				      occa::memory &o_haloTmp, // temporary halo buffer
+				      void **haloTmp, // temporary HOST halo buffer
+				      void **gsh); // output: gather-scatter
+
 
 void meshAcousticsRun3D(mesh3D *mesh);
 void meshAcousticsSetup3D(mesh3D *mesh);

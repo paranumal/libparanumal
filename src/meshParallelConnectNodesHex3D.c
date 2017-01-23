@@ -5,11 +5,13 @@
 #include "mesh3D.h"
 #include "mpi.h"
 
+#if 0
 extern "C"
 {
   void *gsParallelGatherScatterSetup(int NuniqueBases, int *gatherGlobalNodes);
   void  gsParallelGatherScatter(void *gsh, void *v, const char *type);
 }
+#endif
 
 typedef struct{
 
@@ -46,7 +48,6 @@ int parallelCompareBaseNodes(const void *a, const void *b){
   return 0;
 
 }
-
 
 // iteratively find a global numbering for all local element nodes
 void meshParallelConnectNodesHex3D(mesh3D *mesh){
@@ -89,12 +90,6 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].maxRank = rank;
     }
 
-    static int warn = 0;
-    if(!warn){
-      printf("WARNING : turned off vertex index over ride !!! \n");
-      warn=1;
-    }
-#if 1
     // use vertex ids for vertex nodes to reduce iterations
     for(iint v=0;v<mesh->Nverts;++v){
       iint id = e*mesh->Np + mesh->vertexNodes[v];
@@ -102,7 +97,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       globalNumbering[id].id = gid; 
       globalNumbering[id].baseId = gid; 
     }
-#endif
+
     // use element-to-boundary connectivity to create tag for local nodes
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
@@ -146,27 +141,25 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	iint maxRankM = globalNumbering[idM].maxRank;
 	iint maxRankP = globalNumbering[idP].maxRank;
 
-	if(1){
-	  globalNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
-	  globalNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
-	  
-	  // use minimum of trace variables
-	  
-	  if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
-	    ++localChange;
-	    globalNumbering[idP].baseElement = globalNumbering[idM].baseElement;
-	    globalNumbering[idP].baseNode    = globalNumbering[idM].baseNode;
-	    globalNumbering[idP].baseRank    = globalNumbering[idM].baseRank;
-	    globalNumbering[idP].baseId      = globalNumbering[idM].baseId;
-	  }
-	  
-	  if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
-	    ++localChange;
-	    globalNumbering[idM].baseElement = globalNumbering[idP].baseElement;
-	    globalNumbering[idM].baseNode    = globalNumbering[idP].baseNode;
-	    globalNumbering[idM].baseRank    = globalNumbering[idP].baseRank;
-	    globalNumbering[idM].baseId      = globalNumbering[idP].baseId;
-	  }
+	globalNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
+	globalNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
+	
+	// use minimum of trace variables
+	
+	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
+	  ++localChange;
+	  globalNumbering[idP].baseElement = globalNumbering[idM].baseElement;
+	  globalNumbering[idP].baseNode    = globalNumbering[idM].baseNode;
+	  globalNumbering[idP].baseRank    = globalNumbering[idM].baseRank;
+	  globalNumbering[idP].baseId      = globalNumbering[idM].baseId;
+	}
+	
+	if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
+	  ++localChange;
+	  globalNumbering[idM].baseElement = globalNumbering[idP].baseElement;
+	  globalNumbering[idM].baseNode    = globalNumbering[idP].baseNode;
+	  globalNumbering[idM].baseRank    = globalNumbering[idP].baseRank;
+	  globalNumbering[idM].baseId      = globalNumbering[idP].baseId;
 	}
 	
 	iint tagM = globalNumbering[idM].priorityTag;
@@ -192,11 +185,39 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     // report
     if(rank==0)
       printf("globalChange=%d\n", globalChange);
-  }  
-  
+  }
+
   // sort based on base nodes (rank,element,node at base)
   qsort(globalNumbering, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
+  // extract base index of each node (i.e. global numbering)
+  iint *globalLocalIds  = (iint*) calloc(localNodeCount, sizeof(iint));
+  iint *globalBaseIds   = (iint*) calloc(localNodeCount, sizeof(iint));
+  iint *globalBaseRanks = (iint*) calloc(localNodeCount, sizeof(iint));
+  iint *globalMaxRanks  = (iint*) calloc(localNodeCount, sizeof(iint));
+  for(iint id=0;id<localNodeCount;++id){
+    globalLocalIds[id]  = globalNumbering[id].element*mesh->Np+globalNumbering[id].node;
+    globalBaseIds[id]       = globalNumbering[id].baseId;
+    globalBaseRanks[id] = globalNumbering[id].baseRank;
+    globalMaxRanks[id]  = globalNumbering[id].maxRank;
+  }
+
+  meshParallelGatherScatterSetup3D(mesh, localNodeCount, sizeof(dfloat),
+				   globalLocalIds,
+				   globalBaseIds, 
+				   globalBaseRanks,
+				   globalMaxRanks,
+				   mesh->NuniqueBases,
+				   mesh->o_gatherNodeOffsets,
+				   mesh->o_gatherLocalNodes,
+				   mesh->o_gatherTmp,
+				   mesh->NnodeHalo,
+				   mesh->o_nodeHaloIds,
+				   mesh->o_subGatherTmp,
+				   (void**)&(mesh->subGatherTmp),
+				   (void**)&(mesh->gsh));
+  
+#if 0
   // local numbers of sorted nodes
   iint *gatherLocalNodes = (iint*) calloc(localNodeCount, sizeof(iint));
   for(iint n=0;n<localNodeCount;++n){
@@ -269,7 +290,9 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     mesh->gsh = gsParallelGatherScatterSetup(NnodeHalo, nodeHaloGlobalIds);
     
   }
+#endif
 
+  
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -281,7 +304,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
-
+    
     dfloat maxDegree = 0, minDegree = 1e9;
     dfloat globalMaxDegree = 0, globalMinDegree = 1e9;
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
