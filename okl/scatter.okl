@@ -1,23 +1,21 @@
-// slightly brittle
-#define p_maxNconn 64
 
-kernel void scatter(const iint NuniqueBases,
+kernel void scatter(const iint Nscatter,
 		   const iint * restrict scatterStarts,
 		   const iint * restrict scatterIds,
 		   const dfloat * restrict q,
 		   dfloat * restrict scatterq){
-  
-  for(iint b=0;b<NuniqueBases;++b;outer0){
 
-    for(iint m=0;m<p_maxNconn;++m;inner0){
+  for(iint s=0;s<Nscatter;++s;tile(256)){
 
-      const iint start = scatterStarts[b];   // surely cached
-      const iint   end = scatterStarts[b+1]; // surely cached      
-      const iint id = start + m;
-      if(id<end){
-	const dfloat  qb = q[b]; // surely cached
-	const iint   gid = scatterIds[id];  // contiguous
-	scatterq[gid] = qb;
+    if(s<Nscatter){
+      const dfloat qs = q[s];
+      
+      const iint start = scatterStarts[s];
+      const iint end = scatterStarts[s+1];
+      
+      for(iint n=start;n<end;++n){
+	const iint id = scatterIds[n];
+	scatterq[id] = qs;
       }
     }
   }

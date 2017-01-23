@@ -1,44 +1,24 @@
-// slightly brittle
-#define p_maxNconn 64
 
-kernel void gather(const iint NuniqueBases,
+kernel void gather(const iint Ngather,
 		   const iint * restrict gatherStarts,
 		   const iint * restrict gatherIds,
 		   const dfloat * restrict q,
 		   dfloat * restrict gatherq){
-  
-  for(iint b=0;b<NuniqueBases;++b;outer0){
 
-    shared dfloat s_g[p_maxNconn];
+  for(iint g=0;g<Ngather;++g;tile(256)){
 
-    for(iint m=0;m<p_maxNconn;++m;inner0){
-      const iint start = gatherStarts[b];   // surely cached
-      const iint   end = gatherStarts[b+1]; // surely cached
-      const iint id = start + m;
-      if(id<end){
-	const iint gid = gatherIds[id];  // contiguous
-	s_g[m] = q[gid];           // random access
-      }else{
-	s_g[m] = 0.f;
-      }
-    }
-#if 1
-    // tree reduction
-    for(iint alive=p_maxNconn/2;alive>0;alive/=2){
+    if(g<Ngather){
+      const iint start = gatherStarts[g];
+      const iint end = gatherStarts[g+1];
+      dfloat gq = 0.f;
       
-      barrier(localMemFence);
-      
-      for(iint m=0;m<p_maxNconn;++m;inner0){
-	// reduce to "alive" values
-	if(m<alive)
-	  s_g[m] += s_g[m+alive];
-	
-	// last thread standing
-	if(alive==1 && m==0)
-	  gatherq[b] = s_g[0];
+      for(iint n=start;n<end;++n){
+	const iint id = gatherIds[n];
+	gq += q[id];
       }
+
+      gatherq[g] = gq;
     }
-#endif
   }
 }
 
