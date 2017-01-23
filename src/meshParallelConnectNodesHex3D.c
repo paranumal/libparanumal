@@ -194,7 +194,7 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     mesh->gatherMaxRanks[id]  = gatherNumbering[id].maxRank;
   }
 
-
+  // also need to extract bc tag above !!!
   
   // should do something with tag and gather numbering arrays
   free(sendBuffer);

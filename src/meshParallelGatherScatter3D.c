@@ -11,29 +11,44 @@ extern "C"
 }
 
 // ok to use o_v = o_gsv
-void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type){
+void meshParallelGatherScatter3D(mesh3D *mesh,
+				 iint Ngather,                 // input: number of gather nodes 
+				 occa::memory &o_gatherOffsets, // input: start of local bases
+				 occa::memory &o_gatherLocalIds,// input: base connected nodes
+				 occa::memory &o_gatherTmp,     // input: DEVICE gather buffer
+				 iint Nhalo,                   // input: number of halo nodes
+				 occa::memory &o_haloLocalIds,  // input: list of halo nodes to
+				 occa::memory &o_haloTmp,       // input: temporary halo buffer
+				 void *haloTmp,                // input: temporary HOST halo buffer
+				 iint Nscatter,                 // input: number of scatter nodes 
+				 occa::memory &o_scatterOffsets, // input: start of local bases
+				 occa::memory &o_scatterLocalIds,// input: base connected nodes
+				 void *gsh,
+				 occa::memory &o_v,
+				 occa::memory &o_gsv,
+				 const char *type){
 
   // gather on DEVICE
-  mesh->gatherKernel(mesh->NuniqueBases, mesh->o_gatherNodeOffsets, mesh->o_gatherLocalNodes, o_v, mesh->o_gatherTmp);
+  mesh->gatherKernel(Ngather, o_gatherOffsets, o_gatherLocalIds, o_v, o_gatherTmp);
 
   // extract gathered halo node data [i.e. shared nodes ]
-  if(mesh->NnodeHalo){
-    mesh->getKernel(mesh->NnodeHalo, mesh->o_gatherTmp, mesh->o_nodeHaloIds, mesh->o_subGatherTmp); // subv = v[ids]
+  if(Nhalo){
+    mesh->getKernel(Nhalo, o_gatherTmp, o_haloLocalIds, o_haloTmp); // subv = v[ids]
     
     // copy partially gathered halo data from DEVICE to HOST
-    mesh->o_subGatherTmp.copyTo(mesh->subGatherTmp);
+    o_haloTmp.copyTo(haloTmp);
     
     // gather across MPI processes then scatter back
-    gsParallelGatherScatter(mesh->gsh, mesh->subGatherTmp, dfloatString); // danger on hardwired type
+    gsParallelGatherScatter(gsh, haloTmp, dfloatString); // danger on hardwired type
     
     // copy totally gather halo data back from HOST to DEVICE
-    mesh->o_subGatherTmp.copyFrom(mesh->subGatherTmp);
+    o_haloTmp.copyFrom(haloTmp);
     
     // insert totally gathered halo node data - need this kernel 
-    mesh->putKernel(mesh->NnodeHalo, mesh->o_subGatherTmp, mesh->o_nodeHaloIds, mesh->o_gatherTmp); // v[ids] = subv
+    mesh->putKernel(Nhalo, o_haloTmp,o_haloLocalIds, o_gatherTmp); // v[ids] = subv
   }
   
   // do scatter back to local nodes
-  mesh->scatterKernel(mesh->NuniqueBases, mesh->o_gatherNodeOffsets, mesh->o_gatherLocalNodes, mesh->o_gatherTmp, o_gsv);
+  mesh->scatterKernel(Nscatter, o_scatterOffsets, o_scatterLocalIds, o_gatherTmp, o_gsv);
   
 }

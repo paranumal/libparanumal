@@ -1,12 +1,37 @@
 #include "ellipticHex3D.h"
 
+void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_q, occa::memory &o_gsq, const char *type){
+
+  // use gather map for gather and scatter
+  meshParallelGatherScatter3D(mesh,
+			      mesh->NuniqueBases,
+			      mesh->o_gatherNodeOffsets,
+			      mesh->o_gatherLocalNodes,
+			      mesh->o_gatherTmp,     
+			      mesh->NnodeHalo,
+			      mesh->o_nodeHaloIds,
+			      mesh->o_subGatherTmp,
+			      mesh->subGatherTmp,
+			      mesh->NuniqueBases,
+			      mesh->o_gatherNodeOffsets,
+			      mesh->o_gatherLocalNodes,
+			      mesh->gsh,
+			      o_q,
+			      o_gsq,
+			      type);
+
+}
+
 void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
 
   // compute local element operations and store result in o_Aq
   mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
 
   // do parallel gather scatter (uses o_gatherTmp,  o_subGatherTmp, subGatherTmp)
-  meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
+  //  meshParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
+
+  ellipticParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
+  
 }
 
 dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
@@ -74,7 +99,7 @@ void ellipticProject(mesh3D *mesh, occa::memory &o_v, occa::memory &o_Pv){
   mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
 
   // assemble
-  meshParallelGatherScatter3D(mesh, o_Pv, o_Pv, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, o_Pv, o_Pv, dfloatString);
 }
  
 
@@ -113,7 +138,7 @@ int main(int argc, char **argv){
 
   mesh->o_rhsq.copyFrom(mesh->rhsq);
   
-  meshParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
   
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
@@ -182,7 +207,7 @@ int main(int argc, char **argv){
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter r
-  meshParallelGatherScatter3D(mesh, o_r, o_r, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, o_r, o_r, dfloatString);
 
   // p = r
   o_p.copyFrom(o_r);
