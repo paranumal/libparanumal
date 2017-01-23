@@ -19,15 +19,15 @@ void meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 				      iint *baseIds,   // global index of their base nodes
 				      iint *baseRanks, // rank of their base nodes
 				      iint *maxRanks,  // max rank connected to base node
-				      iint &Ngather,   // output: number of gather nodes 
+				      iint &Ngather,                 // output: number of gather nodes 
 				      occa::memory &o_gatherOffsets, // output: start of local bases
 				      occa::memory &o_gatherLocalIds,// output: base connected nodes
 				      occa::memory &o_gatherTmp,     // output: DEVICE gather buffer
-				      iint &Nhalo,     // output: number of halo nodes
-				      occa::memory &o_haloLocalIds, // list of halo nodes to
-				      occa::memory &o_haloTmp, // temporary halo buffer
-				      void **haloTmp, // temporary HOST halo buffer
-				      void **gsh){ // output: gather-scatter
+				      iint &Nhalo,                   // output: number of halo nodes
+				      occa::memory &o_haloLocalIds,  // output: list of halo nodes to
+				      occa::memory &o_haloTmp,       // output: temporary halo buffer
+				      void **haloTmp,                // output: temporary HOST halo buffer
+				      void **gsh){                   // output: gather-scatter
   
   // 1. count number of unique base nodes on this process
   Ngather = 0; // assumes at least one base node

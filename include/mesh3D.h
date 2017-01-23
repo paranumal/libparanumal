@@ -150,6 +150,11 @@ typedef struct {
 
   // CG gather-scatter info
   void *gsh; // gslib struct pointer
+
+  iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
+  iint *gatherBaseIds;  // gather index of ""
+  iint *gatherBaseRanks; // base rank
+  iint *gatherMaxRanks;  // maximum rank connected to each sorted node
   
   iint NuniqueBases; // number of unique bases on this rank
   occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
@@ -287,7 +292,7 @@ void meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 				      iint Nlocal,     // number of local nodes
 				      iint Nbytes,     // number of bytes per node
 				      iint *localIds,  // local index of nodes
-				      iint *baseIds,   // global index of their base nodes
+				      iint *baseIds,   // gather index of their base nodes
 				      iint *baseRanks, // rank of their base nodes
 				      iint *maxRanks,  // max rank connected to base node
 				      iint &Ngather,   // output: number of gather nodes 
