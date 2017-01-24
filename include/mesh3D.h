@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -22,6 +22,35 @@
 #define dfloatFormat "%lf"
 #define dfloatString "double"
 #endif
+
+// OCCA+gslib gather scatter
+typedef struct {
+  
+  iint         Ngather;          //  number of gather nodes
+
+  iint         *gatherOffsets;
+  iint         *gatherMaxRanks;
+  iint         *gatherBaseRanks;
+  iint         *gatherLocalIds;
+  iint         *gatherBaseIds;
+  
+  occa::memory o_gatherOffsets;  //  start of local bases
+  occa::memory o_gatherLocalIds; //  base connected nodes
+  occa::memory o_gatherTmp;      //  DEVICE gather buffer
+  void         *gatherGsh;       // gslib gather 
+
+  iint         Nscatter;
+  occa::memory o_scatterOffsets; //  start of local bases
+  occa::memory o_scatterLocalIds;//  base connected nodes
+  occa::memory o_scatterTmp;     //  DEVICE scatter buffer
+  void         *scatterGsh;      //  gslib scatter
+  
+  iint         Nhalo;            //  number of halo nodes
+  occa::memory o_haloLocalIds;   //  list of halo nodes to
+  occa::memory o_haloTmp;        //  temporary halo buffer
+  void         *haloTmp;         //  temporary HOST halo buffer
+
+}ogs_t;
 
 typedef struct {
 
@@ -289,39 +318,18 @@ mesh3D *meshSetup3D(char *filename, int N);
 // void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
 
 void meshParallelGatherScatter3D(mesh3D *mesh,
-				 iint Ngather,                 // input: number of gather nodes 
-				 occa::memory &o_gatherOffsets, // input: start of local bases
-				 occa::memory &o_gatherLocalIds,// input: base connected nodes
-				 occa::memory &o_gatherTmp,     // input: DEVICE gather buffer
-				 iint Nhalo,                   // input: number of halo nodes
-				 occa::memory &o_haloLocalIds,  // input: list of halo nodes to
-				 occa::memory &o_haloTmp,       // input: temporary halo buffer
-				 void *haloTmp,                // input: temporary HOST halo buffer
-				 iint Nscatter,                 // input: number of scatter nodes 
-				 occa::memory &o_scatterOffsets, // input: start of local bases
-				 occa::memory &o_scatterLocalIds,// input: base connected nodes
-				 void *gsh,
+				 ogs_t *ogs, 
 				 occa::memory &o_v,
 				 occa::memory &o_gsv,
 				 const char *type);
 
-void meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint Nbytes,     // number of bytes per node
-				      iint *localIds,  // local index of nodes
-				      iint *baseIds,   // gather index of their base nodes
-				      iint *baseRanks, // rank of their base nodes
-				      iint *maxRanks,  // max rank connected to base node
-				      iint &Ngather,   // output: number of gather nodes 
-				      occa::memory &o_gatherOffsets, // output: start of local bases
-				      occa::memory &o_gatherLocalIds,// output: base connected nodes
-				      occa::memory &o_gatherTmp,     // output: DEVICE gather buffer
-				      iint &Nhalo,     // output: number of halo nodes
-				      occa::memory &o_haloLocalIds, // list of halo nodes to
-				      occa::memory &o_haloTmp, // temporary halo buffer
-				      void **haloTmp, // temporary HOST halo buffer
-				      void **gsh); // output: gather-scatter
-
+ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
+					iint Nlocal,     // number of local nodes
+					iint Nbytes,     // number of bytes per node
+					iint *localIds,  // local index of nodes
+					iint *baseIds,   // gather index of their base nodes
+					iint *baseRanks, // rank of their base nodes
+					iint *maxRanks); // max rank connected to base node);
 
 void meshAcousticsRun3D(mesh3D *mesh);
 void meshAcousticsSetup3D(mesh3D *mesh);
