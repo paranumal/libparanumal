@@ -222,8 +222,8 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   // make preconBaseIds => preconNumbering
   ogs_t *ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
 						 gatherLocalIdsP, gatherBaseIdsP, gatherBaseRanksP, gatherMaxRanksP);
-						 
+
+  // as is - will need to extract local nodes from precon nodes
+  
   return ogsP;
 }
-    
-    
