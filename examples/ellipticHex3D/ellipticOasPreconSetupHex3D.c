@@ -8,12 +8,12 @@ typedef struct{
   iint maxRank;
   iint baseRank;
 
-} gatherInfo_t;
+} preconGatherInfo_t;
 
 int parallelCompareBaseRank(const void *a, const void *b){
 
-  gatherInfo_t *fa = (gatherInfo_t*) a;
-  gatherInfo_t *fb = (gatherInfo_t*) b;
+  preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
+  preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
 
   if(fa->baseRank < fb->baseRank) return -1;
   if(fa->baseRank > fb->baseRank) return +1;
@@ -37,7 +37,7 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   iint Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
   
   // space for gather base indices with halo
-  gatherInfo_t *gatherInfo = (gatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(gatherInfo_t));
+  preconGatherInfo_t *gatherInfo = (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
 
   // rearrange in node order
   for(iint n=0;n<Nlocal;++n){
@@ -48,8 +48,8 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   }
   
   // exchange one element halo (fix later if warranted)
-  gatherInfo_t *sendBuffer = (gatherInfo_t*) calloc(Nhalo, sizeof(gatherInfo_t));
-  meshHaloExchange3D(mesh, mesh->Np*sizeof(gatherInfo_t), gatherInfo,   sendBuffer, gatherInfo+Nlocal);
+  preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
+  meshHaloExchange3D(mesh, mesh->Np*sizeof(preconGatherInfo_t), gatherInfo,   sendBuffer, gatherInfo+Nlocal);
   
   // offsetes to extract second layer
   iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
@@ -60,16 +60,6 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   offset[4] = +1;
   offset[5] = -mesh->Nfp;
 
-#if 0
-  iint *offsetP = (iint*) calloc(mesh->Nfaces, sizeof(iint));
-  offsetP[0] = +NqP*NqP;
-  offsetP[1] = +NqP;
-  offsetP[2] = -1;
-  offsetP[3] = -NqP;
-  offsetP[4] = +1;
-  offsetP[5] = -NqP*NqP;
-#endif
-  
   // build gather-scatter
 
   // a. gather on DEVICE   [ NuniqueBases on DEVICE, offsets, local node ids] 
@@ -84,24 +74,46 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   // 2. create on-DEVICE scatter arrays
   // 3. feed to meshParallelGatherScatterSetup3D.c (need to add scatter info Nscatter, ...)
 
-#if 0
-  // need to build these for gather and scatter steps
-  iint Ngather;
-  iint *gatherLocalIds;  // local index of nodes
-  iint *gatherBaseIds;   // global index of their base nodes
-  iint *gatherBaseRanks; // rank of their base nodes
-  iint *gatherMaxRanks;  // max rank connected to base node
-
-  // HMMM CAN JUST USE THESE AND THEN EXTRACT THE INTERIOR CHUNKS
-#endif
-  
   iint NqP = mesh->Nq+2;
   iint NpP = NqP*NqP*NqP;
-  gatherInfo_t *gatherInfoP = (gatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(gatherInfo_t));
 
+  iint *offsetP = (iint*) calloc(mesh->Nfaces, sizeof(iint));
+  offsetP[0] = +NqP*NqP;
+  offsetP[1] = +NqP;
+  offsetP[2] = -1;
+  offsetP[3] = -NqP;
+  offsetP[4] = +1;
+  offsetP[5] = -NqP*NqP;
+
+  iint *faceNodesPrecon = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
+  for(iint j=0;j<mesh->Nq;++j)
+    for(iint i=0;i<mesh->Nq;++i)
+      faceNodesPrecon[i+j*mesh->Nq+0*mesh->Nfp] = i+1 + (j+1)*NqP + 0*NqP*NqP;
+  
+  for(iint k=0;k<mesh->Nq;++k)
+    for(iint i=0;i<mesh->Nq;++i)
+      faceNodesPrecon[i+k*mesh->Nq+1*mesh->Nfp] = i+1 + 0*NqP + (k+1)*NqP*NqP;
+  
+  for(iint k=0;k<mesh->Nq;++k)
+    for(iint j=0;j<mesh->Nq;++j)
+      faceNodesPrecon[j+k*mesh->Nq+2*mesh->Nfp] = NqP-1 + (j+1)*NqP + (k+1)*NqP*NqP;
+
+  for(iint k=0;k<mesh->Nq;++k)
+    for(iint i=0;i<mesh->Nq;++i)
+      faceNodesPrecon[i+k*mesh->Nq+3*mesh->Nfp] = i+1 + (NqP-1)*NqP + (k+1)*NqP*NqP;
+
+  for(iint k=0;k<mesh->Nq;++k)
+    for(iint j=0;j<mesh->Nq;++j)
+      faceNodesPrecon[j+k*mesh->Nq+4*mesh->Nfp] = 0 + (j+1)*NqP + (k+1)*NqP*NqP;
+  
+  for(iint j=0;j<mesh->Nq;++j)
+    for(iint i=0;i<mesh->Nq;++i)
+      faceNodesPrecon[i+j*mesh->Nq+5*mesh->Nfp] = i+1 + (j+1)*NqP + (NqP-1)*NqP*NqP;
+
+  preconGatherInfo_t *preconGatherInfo = (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
+  
   // 0 numbering for uninvolved nodes
   for(iint e=0;e<mesh->Nelements;++e){
-    
     for(iint k=0;k<mesh->Nq;++k){
       for(iint j=0;j<mesh->Nq;++j){
 	for(iint i=0;i<mesh->Nq;++i){
@@ -109,69 +121,28 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
 	  iint pid = i + 1 + (j+1)*NqP + (k+1)*NqP*NqP + e*NpP;
 
 	  // ugly - need to make a struct then sort
-	  gatherInfoP[pid] = gatherInfo[id];
-
-	  // brittle
-	  if(k==0){
-	    iint fid = i + j*mesh->Nq + 0*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+0];
-	    if(fP<0) fP = 0;
-
-	    iint idP =  mesh->vmapP[fid] + offset[fP]; // need to use offset of plus face
-	    gatherInfoP[pid-NqP*NqP] = gatherInfo[idP];  // different offsets
-	  }
-	  if(j==0){
-	    iint fid = i + k*mesh->Nq + 1*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+1];
-	    if(fP<0) fP = 1;
-
-	    iint idP = mesh->vmapP[fid] + offset[fP];
-	    gatherInfoP[pid - NqP] = gatherInfo[idP];
-	  }
-	  if(i==mesh->Nq-1){
-	    iint fid = j + k*mesh->Nq + 2*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+2];
-	    if(fP<0) fP = 2;
-
-	    iint idP = mesh->vmapP[fid] + offset[fP];
-	    gatherInfoP[pid + 1] = gatherInfo[idP];
-	  }
-	  if(j==mesh->Nq-1){
-	    iint fid = i + k*mesh->Nq + 3*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+3];
-	    if(fP<0) fP = 3;
-
-	    iint idP = mesh->vmapP[fid] + offset[fP];
-	    gatherInfoP[pid + NqP] = gatherInfo[idP];
-	  }
-	  if(i==0){
-	    iint fid = j + k*mesh->Nq + 4*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+4];
-	    if(fP<0) fP = 4;
-
-	    iint idP = mesh->vmapP[fid] + offset[fP];
-	    gatherInfoP[pid - 1] = gatherInfo[idP];
-	  }
-	  if(k==mesh->Nq-1){
-	    iint fid = i + j*mesh->Nq + 5*mesh->Nfp + e*mesh->Nfp*mesh->Nfaces;	    
-
-	    iint fP = mesh->EToF[e*mesh->Nfaces+5];
-	    if(fP<0) fP = 5;
-
-	    iint idP = mesh->vmapP[fid] + offset[fP];
-	    //	    printf("mesh->vmapP[fid] = %d\n", mesh->vmapP[fid]);
-	    gatherInfoP[pid + NqP*NqP] = gatherInfo[idP];
-	  }
+	  preconGatherInfo[pid] = gatherInfo[id];
 	}
       }
     }
   }
-#if 0
+
+  // take node info from positive trace and put in overlap region on parallel gather info
+  for(iint e=0;e<mesh->Nelements;++e){
+
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint fid = e*mesh->Nfp*mesh->Nfaces + n;
+      iint fM = n/mesh->Nfp;
+      iint fP = mesh->EToF[e*mesh->Nfaces+fM];
+      if(fP<0) fP = fM;
+
+      iint idP = mesh->vmapP[fid] + offset[fP];
+      iint idO = faceNodesPrecon[n] + e*NpP;
+      preconGatherInfo[idO] = gatherInfo[idP];
+    }
+  }
+  
+#if 1
   for(iint e=0;e<mesh->Nelements;++e){
     printf("e=%d:[ \n", e);
     for(iint k=0;k<NqP;++k){
@@ -180,7 +151,7 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
 	printf("       ");
 	for(iint i=0;i<NqP;++i){
 	  iint id  = i + j*NqP + k*NqP*NqP + e*NpP;
-	  printf("%05d ", gatherInfoP[id].baseId);
+	  printf("%05d ", preconGatherInfo[id].baseId);
 	}
 	printf("\n");
       }
@@ -192,14 +163,14 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   
   // reset local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
-    gatherInfoP[n].localId = n;
+    preconGatherInfo[n].localId = n;
   
   // sort by rank then base index
-  qsort(gatherInfoP, NpP*mesh->Nelements, sizeof(gatherInfo_t), parallelCompareBaseRank);
+  qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
 
   // do not gather-scatter nodes labelled zero
   iint skip = 0;
-  while(gatherInfoP[skip].baseId==0 && skip<NpP*mesh->Nelements){
+  while(preconGatherInfo[skip].baseId==0 && skip<NpP*mesh->Nelements){
     ++skip;
   }
 
@@ -212,10 +183,10 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
   iint *gatherBaseRanksP = (iint*) calloc(NlocalP, sizeof(iint));
   iint *gatherMaxRanksP  = (iint*) calloc(NlocalP, sizeof(iint));
   for(iint n=0;n<NlocalP;++n){
-    gatherLocalIdsP[n]  = gatherInfoP[n+skip].localId;
-    gatherBaseIdsP[n]   = gatherInfoP[n+skip].baseId;
-    gatherBaseRanksP[n] = gatherInfoP[n+skip].baseRank;
-    gatherMaxRanksP[n]  = gatherInfoP[n+skip].maxRank;
+    gatherLocalIdsP[n]  = preconGatherInfo[n+skip].localId;
+    gatherBaseIdsP[n]   = preconGatherInfo[n+skip].baseId;
+    gatherBaseRanksP[n] = preconGatherInfo[n+skip].baseRank;
+    gatherMaxRanksP[n]  = preconGatherInfo[n+skip].maxRank;
     //    printf("base[%d] = %d\n", n, gatherBaseIdsP[n]);
   }
   
