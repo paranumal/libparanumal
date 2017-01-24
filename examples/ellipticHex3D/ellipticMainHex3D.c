@@ -1,27 +1,12 @@
 #include "ellipticHex3D.h"
 
-void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_q, occa::memory &o_gsq, const char *type){
+void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type){
 
   mesh->device.finish();
   occa::tic("meshParallelGatherScatter3D");
   
   // use gather map for gather and scatter
-  meshParallelGatherScatter3D(mesh,
-			      mesh->NuniqueBases,  // gather info for DEVICE gather
-			      mesh->o_gatherNodeOffsets,
-			      mesh->o_gatherLocalNodes,
-			      mesh->o_gatherTmp,     
-			      mesh->NnodeHalo,     // halo info for extracting gathered halo
-			      mesh->o_nodeHaloIds,
-			      mesh->o_subGatherTmp,
-			      mesh->subGatherTmp,
-			      mesh->NuniqueBases,   // use gather info for DEVICE scatter
-			      mesh->o_gatherNodeOffsets,
-			      mesh->o_gatherLocalNodes,
-			      mesh->gsh,            // gslib 
-			      o_q,
-			      o_gsq,
-			      type);
+  meshParallelGatherScatter3D(mesh, ogs, o_q, o_gsq, type);
 
   mesh->device.finish();
   occa::toc("meshParallelGatherScatter3D");
@@ -29,7 +14,7 @@ void ellipticParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_q, occa::memo
   
 }
 
-void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
+void ellipticOperator(mesh3D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
 
   mesh->device.finish();
   occa::tic("AxKernel");
@@ -41,7 +26,7 @@ void ellipticOperator(mesh3D *mesh, dfloat lambda, occa::memory &o_q, occa::memo
   occa::toc("AxKernel");
   
   // do parallel gather scatter (uses o_gatherTmp,  o_subGatherTmp, subGatherTmp)
-  ellipticParallelGatherScatter3D(mesh, o_Aq, o_Aq, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, o_Aq, o_Aq, dfloatString);
   
 }
 
@@ -76,7 +61,6 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 
   mesh->device.finish();
   occa::toc("weighted inner product2");
-
   
   o_tmp.copyTo(tmp);
 
@@ -121,7 +105,7 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
   return globalwa2;
 }
 
-void ellipticProject(mesh3D *mesh, occa::memory &o_v, occa::memory &o_Pv){
+void ellipticProject(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_Pv){
 
 
   iint Ntotal = mesh->Nelements*mesh->Np;
@@ -129,7 +113,7 @@ void ellipticProject(mesh3D *mesh, occa::memory &o_v, occa::memory &o_Pv){
   mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
 
   // assemble
-  ellipticParallelGatherScatter3D(mesh, o_Pv, o_Pv, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, o_Pv, o_Pv, dfloatString);
 }
  
 
@@ -153,11 +137,13 @@ int main(int argc, char **argv){
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
-
+  ogs_t *ogs, *ogsP;
+  
   // set up elliptic stuff
   int B = 256; // block size for reduction (hard coded)
 
-  ellipticSetupHex3D(mesh);
+  // set up
+  ellipticSetupHex3D(mesh, &ogs, &ogsP);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
@@ -168,7 +154,7 @@ int main(int argc, char **argv){
 
   mesh->o_rhsq.copyFrom(mesh->rhsq);
   
-  ellipticParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
   
   mesh->o_rhsq.copyTo(mesh->rhsq);
 
@@ -230,7 +216,7 @@ int main(int argc, char **argv){
   
   // copy initial guess for x to DEVICE
   o_x.copyFrom(x);
-  ellipticOperator(mesh, lambda, o_x, o_Ax); // eventually add reduction in scatterKernel
+  ellipticOperator(mesh, ogs, lambda, o_x, o_Ax); // eventually add reduction in scatterKernel
   
   // copy r = b
   o_r.copyFrom(r);
@@ -239,7 +225,7 @@ int main(int argc, char **argv){
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter r
-  ellipticParallelGatherScatter3D(mesh, o_r, o_r, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, o_r, o_r, dfloatString);
 
   // p = r
   o_p.copyFrom(o_r);
@@ -247,14 +233,15 @@ int main(int argc, char **argv){
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
   dfloat rdotr1 = 0;
-
+  iint Niter = 0;
+  
   do{
     // placeholder conjugate gradient:
     // https://en.wikipedia.org/wiki/Conjugate_gradient_method
 
     // -----------> merge these later into ellipticPcgPart1
     // A*p 
-    ellipticOperator(mesh, lambda, o_p, o_Ap); // eventually add reduction in scatterKernel
+    ellipticOperator(mesh, ogs, lambda, o_p, o_Ap); // eventually add reduction in scatterKernel
 
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
@@ -286,9 +273,11 @@ int main(int argc, char **argv){
     rdotr0 = rdotr1;
 
     if(rank==0)
-      printf("pAp = %g norm(r) = %g\n", pAp, sqrt(rdotr0));
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
     //    ellipticProject(mesh, o_x, o_x);
+
+    ++Niter;
     
   }while(rdotr0>(tol*tol));
 
@@ -305,12 +294,9 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
       dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
-      //      dfloat exact = xn*xn*xn;
       dfloat error = fabs(exact-mesh->q[id]);
       
       maxError = mymax(maxError, error);
-      //      if(error>1e-3)
-      //	printf("exact: %g computed: %g error: %g\n", exact, mesh->q[id], error);
 
       mesh->q[id] -= exact;
     }
