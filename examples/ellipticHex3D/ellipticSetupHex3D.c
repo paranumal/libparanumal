@@ -1,6 +1,6 @@
 #include "ellipticHex3D.h"
 
-void ellipticSetupHex3D(mesh3D *mesh){
+void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, ogs_t **ogsP){
 
   mesh->Nfields = 1;
   
@@ -144,23 +144,15 @@ void ellipticSetupHex3D(mesh3D *mesh){
 
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  meshParallelGatherScatterSetup3D(mesh,
-				   mesh->Np*mesh->Nelements,
-				   sizeof(dfloat),
-				   mesh->gatherLocalIds,
-				   mesh->gatherBaseIds, 
-				   mesh->gatherBaseRanks,
-				   mesh->gatherMaxRanks,
-				   mesh->NuniqueBases,
-				   mesh->o_gatherNodeOffsets,
-				   mesh->o_gatherLocalNodes,
-				   mesh->o_gatherTmp,
-				   mesh->NnodeHalo,
-				   mesh->o_nodeHaloIds,
-				   mesh->o_subGatherTmp,
-				   (void**)&(mesh->subGatherTmp),
-				   (void**)&(mesh->gsh));
+  *ogs = meshParallelGatherScatterSetup3D(mesh,
+					  mesh->Np*mesh->Nelements,
+					  sizeof(dfloat),
+					  mesh->gatherLocalIds,
+					  mesh->gatherBaseIds, 
+					  mesh->gatherBaseRanks,
+					  mesh->gatherMaxRanks);
 
+  *ogsP = ellipticOasPreconSetupHex3D(mesh);
 
   // find maximum degree
   {
@@ -169,7 +161,7 @@ void ellipticSetupHex3D(mesh3D *mesh){
     }
     mesh->o_rhsq.copyFrom(mesh->rhsq);
     
-    ellipticParallelGatherScatter3D(mesh, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+    ellipticParallelGatherScatter3D(mesh, *ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
     
@@ -204,7 +196,7 @@ void ellipticSetupHex3D(mesh3D *mesh){
   occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
   // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatter3D(mesh, o_localMM, o_MM, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, *ogs, o_localMM, o_MM, dfloatString);
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
