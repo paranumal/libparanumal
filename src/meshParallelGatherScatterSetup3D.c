@@ -16,10 +16,10 @@ extern "C"
 ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 					iint Nlocal,     // number of local nodes
 					iint Nbytes,     // number of bytes per node
-					iint *localIds,  // local index of nodes
-					iint *baseIds,   // global index of their base nodes
-					iint *baseRanks, // rank of their base nodes
-					iint *maxRanks){  // max rank connected to base node
+					iint *gatherLocalIds,  // local index of nodes
+					iint *gatherBaseIds,   // global index of their base nodes
+					iint *gatherBaseRanks, // rank of their base nodes
+					iint *gatherMaxRanks){  // max rank connected to base node
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -29,19 +29,17 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   // 1. count number of unique base nodes on this process
   ogs->Ngather = 0; // assumes at least one base node
   for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
+    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
     ogs->Ngather += test;
   }
   
-  iint *gatherIds     = (iint*) calloc(ogs->Ngather, sizeof(iint)); // global labels for unique nodes
   iint *gatherOffsets = (iint*) calloc(ogs->Ngather+1, sizeof(iint)); // offset into sorted list of nodes
 
   // only finds bases
   ogs->Ngather = 0; // reset counter
   for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
+    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
     if(test){
-      gatherIds[ogs->Ngather] = baseIds[n]; // global indices of base nodes
       gatherOffsets[ogs->Ngather++] = n;  // increment unique base counter and record index into shuffled list of ndoes
     }
   }
@@ -50,18 +48,18 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   // allocate buffers on DEVICE
   ogs->o_gatherTmp      = mesh->device.malloc(ogs->Ngather*Nbytes);
   ogs->o_gatherOffsets  = mesh->device.malloc((ogs->Ngather+1)*sizeof(iint), gatherOffsets);
-  ogs->o_gatherLocalIds = mesh->device.malloc(Nlocal*sizeof(iint), localIds);
+  ogs->o_gatherLocalIds = mesh->device.malloc(Nlocal*sizeof(iint), gatherLocalIds);
   
-  ogs->gatherLocalIds  = localIds;
-  ogs->gatherBaseIds   = baseIds;
-  ogs->gatherBaseRanks = baseRanks;
-  ogs->gatherMaxRanks  = maxRanks;
+  ogs->gatherLocalIds  = gatherLocalIds;
+  ogs->gatherBaseIds   = gatherBaseIds;
+  ogs->gatherBaseRanks = gatherBaseRanks;
+  ogs->gatherMaxRanks  = gatherMaxRanks;
 
   // list of nodes to extract from DEVICE gathered array
   ogs->Nhalo = 0;
   for(iint n=0;n<ogs->Ngather;++n){
     int id = gatherOffsets[n];
-    if(baseRanks[id]!=maxRanks[id] || baseRanks[id]!=rank){ // is this a shared node ?
+    if(gatherBaseRanks[id]!=gatherMaxRanks[id] || gatherBaseRanks[id]!=rank){ // is this a shared node ?
       ++ogs->Nhalo;
     }
   }
@@ -77,9 +75,9 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     ogs->Nhalo = 0;
     for(iint n=0;n<ogs->Ngather;++n){
       int id = gatherOffsets[n];
-      if(baseRanks[id]!=maxRanks[id] || baseRanks[id]!=rank){
+      if(gatherBaseRanks[id]!=gatherMaxRanks[id] || gatherBaseRanks[id]!=rank){
 	haloLocalIds[ogs->Nhalo] = n;
-	haloGlobalIds[ogs->Nhalo] = baseIds[id];
+	haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
 	++ogs->Nhalo;
       }
     }     
@@ -98,15 +96,12 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     free(haloLocalIds);
   }
 
+  
   ogs->Nscatter = ogs->Ngather;
-  ogs->o_scatterTmp = ogs->o_gatherTmp;
   ogs->o_scatterOffsets = ogs->o_gatherOffsets;
   ogs->o_scatterLocalIds = ogs->o_gatherLocalIds;
-  ogs->scatterGsh = ogs->gatherGsh;
   
-  free(gatherIds);
   free(gatherOffsets);
 
   return ogs;
 }
-
