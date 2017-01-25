@@ -42,8 +42,6 @@ typedef struct {
   iint         Nscatter;
   occa::memory o_scatterOffsets; //  start of local bases
   occa::memory o_scatterLocalIds;//  base connected nodes
-  occa::memory o_scatterTmp;     //  DEVICE scatter buffer
-  void         *scatterGsh;      //  gslib scatter
   
   iint         Nhalo;            //  number of halo nodes
   occa::memory o_haloLocalIds;   //  list of halo nodes to
@@ -99,12 +97,17 @@ typedef struct {
   iint *vertexNodes;
   
   // quad specific quantity
-  iint Nq;
+  iint Nq, NqP;
   
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
 
+  // transform to/from eigenmodes of 1D laplacian (with built in weighting)
+  dfloat *oasForward;
+  dfloat *oasBack;
+  dfloat *oasDiagOp;
+  
   // face node info
   iint Nfp;        // number of nodes per face
   iint *faceNodes; // list of element reference interpolation nodes on element faces
@@ -154,6 +157,9 @@ typedef struct {
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
+  // overlapping additive schwarz direction transform (Hex or quad only)
+  
+  
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;

@@ -26,7 +26,7 @@ int parallelCompareBaseRank(const void *a, const void *b){
 }
 
 
-ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
+precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
   
   // assumes meshParallelGatherScatterSetup3D has been called
   
@@ -120,13 +120,14 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
 	  iint id  = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq + e*mesh->Np;
 	  iint pid = i + 1 + (j+1)*NqP + (k+1)*NqP*NqP + e*NpP;
 
-	  // ugly - need to make a struct then sort
 	  preconGatherInfo[pid] = gatherInfo[id];
 	}
       }
     }
   }
 
+  iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  
   // take node info from positive trace and put in overlap region on parallel gather info
   for(iint e=0;e<mesh->Nelements;++e){
 
@@ -137,12 +138,15 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
       if(fP<0) fP = fM;
 
       iint idP = mesh->vmapP[fid] + offset[fP];
+
+      vmapPP[fid] = idP;
+      
       iint idO = faceNodesPrecon[n] + e*NpP;
       preconGatherInfo[idO] = gatherInfo[idP];
     }
   }
   
-#if 1
+#if 0
   for(iint e=0;e<mesh->Nelements;++e){
     printf("e=%d:[ \n", e);
     for(iint k=0;k<NqP;++k){
@@ -189,12 +193,75 @@ ogs_t *ellipticOasPreconSetupHex3D(mesh3D *mesh){
     gatherMaxRanksP[n]  = preconGatherInfo[n+skip].maxRank;
     //    printf("base[%d] = %d\n", n, gatherBaseIdsP[n]);
   }
+
+  // local flag
+  iint *localFlag = (iint*) calloc(NpP*mesh->Nelements, sizeof(iint));
+
+  iint cnt=1;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint k=0;k<mesh->Nq;++k){
+      for(iint j=0;j<mesh->Nq;++j){
+	for(iint i=0;i<mesh->Nq;++i){
+	  iint pid = i + 1 + (j+1)*NqP + (k+1)*NqP*NqP + e*NpP;
+	  localFlag[pid] = cnt++;
+	}
+      }
+    }
+  }
+
+#if 0
+  iint Nscatter = Nlocal;
+  iint *scatterLocalIdsP = (iint*) calloc(Nscatter, sizeof(iint));
+  cnt = 0;
+  for(iint n=0;n<NpP*mesh->Nelements;++n){
+    if(localFlag[gatherLocalIdsP[n]]>0){
+      scatterLocalIdsP[cnt++] = localFlag[gatherLocalIdsP[n]];
+    }
+  }
+#endif
   
   // make preconBaseIds => preconNumbering
-  ogs_t *ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
-						 gatherLocalIdsP, gatherBaseIdsP, gatherBaseRanksP, gatherMaxRanksP);
+  precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
+  precon->ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
+						  gatherLocalIdsP, gatherBaseIdsP, gatherBaseRanksP, gatherMaxRanksP);
 
-  // as is - will need to extract local nodes from precon nodes
+
+  precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
+  // need o_vmapPP, o_invP, o_diagInvOp, o_P,
+  // invP and P are 1D change of basis matrics and diagInvP is a diagonal set of precon inversion weights (evals etc)
+
+  precon->o_vmapPP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
+
+  // load Pmatrix and invPmatrix from file
+  precon->o_oasForward = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForward);
+  precon->o_oasBack    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBack);
+
+  // hack estimate for Jacobian scaling
+  dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
+  for(iint e=0;e<mesh->Nelements;++e){
+
+    dfloat JWhrinv2 = 0, JWhsinv2 = 0, JWhtinv2 = 0, JW = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      iint base = mesh->Nggeo*mesh->Np*e + n;
+      JW = mymax(JW, mesh->ggeo[base + mesh->Np*GWJID]);
+      JWhrinv2 = mymax(JWhrinv2, mesh->ggeo[base + mesh->Np*G00ID]);
+      JWhsinv2 = mymax(JWhsinv2, mesh->ggeo[base + mesh->Np*G11ID]);
+      JWhtinv2 = mymax(JWhtinv2, mesh->ggeo[base + mesh->Np*G22ID]);
+    }
+    
+    for(iint k=0;k<NqP;++k){
+      for(iint j=0;j<NqP;++j){
+	for(iint i=0;i<NqP;++i){
+	  iint pid = i + j*NqP + k*NqP*NqP + e*NpP;
+	  
+	  diagInvOp[pid] = 1./(JW*lambda + JWhrinv2*mesh->oasDiagOp[i] + JWhsinv2*mesh->oasDiagOp[j] + JWhtinv2*mesh->oasDiagOp[k]);
+	  //	  printf("diagInvOp[%d] = %g JW=%g\n", pid, diagInvOp[pid], JW);
+	}
+      }
+    }
+  }
   
-  return ogsP;
+  precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
+
+  return precon;
 }
