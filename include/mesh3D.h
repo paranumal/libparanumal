@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT

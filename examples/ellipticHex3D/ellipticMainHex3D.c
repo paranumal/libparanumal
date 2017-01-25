@@ -128,10 +128,11 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
   
   // extract halo on DEVICE
   if(haloBytes){
+    // WARNING: uses dfloats
     mesh->haloExtractKernel(mesh->totalHaloPairs,
-			    mesh->Np*sizeof(dfloat), // size per element
+			    mesh->Np,
 			    mesh->o_haloElementList,
-			    o_z,
+			    o_r,
 			    mesh->o_haloBuffer);
   
     // copy extracted halo to HOST 
@@ -205,6 +206,7 @@ int main(int argc, char **argv){
   ellipticSetupHex3D(mesh, &ogs, &precon, lambda);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
+  iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   
@@ -229,6 +231,7 @@ int main(int argc, char **argv){
   dfloat *p   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
   dfloat *z   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
@@ -268,7 +271,8 @@ int main(int argc, char **argv){
   occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
   occa::memory o_r   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), r);
   occa::memory o_z   = mesh->device.malloc(Ntotal*sizeof(dfloat), z);
-  occa::memory o_zP   = mesh->device.malloc(mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements*sizeof(dfloat)); // CAUTION
+  occa::memory o_zP
+    = mesh->device.malloc(mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements*sizeof(dfloat), zP); // CAUTION
   occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
   occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
   occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
@@ -278,6 +282,7 @@ int main(int argc, char **argv){
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+  printf("haloBytes = %d\n", haloBytes);
   
   // copy initial guess for x to DEVICE
   o_x.copyFrom(x);

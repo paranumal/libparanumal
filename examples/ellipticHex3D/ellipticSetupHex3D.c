@@ -77,7 +77,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 
   occa::kernelInfo kernelInfo;
 
