@@ -1,6 +1,6 @@
 #include "ellipticHex3D.h"
 
-void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, ogs_t **ogsP){
+void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda){
 
   mesh->Nfields = 1;
   
@@ -85,6 +85,8 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, ogs_t **ogsP){
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_NqP", mesh->NqP);
+  kernelInfo.addDefine("p_NpP", mesh->NqP*mesh->NqP*mesh->NqP);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
@@ -137,12 +139,15 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, ogs_t **ogsP){
 					 "dotMultiply",
 					 kernelInfo);
 
-  mesh->dotDivideKernel =
+  mesh->dotDivideKernel = 
       mesh->device.buildKernelFromSource("okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
+
   
+
+
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   *ogs = meshParallelGatherScatterSetup3D(mesh,
 					  mesh->Np*mesh->Nelements,
@@ -152,8 +157,18 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, ogs_t **ogsP){
 					  mesh->gatherBaseRanks,
 					  mesh->gatherMaxRanks);
 
-  *ogsP = ellipticOasPreconSetupHex3D(mesh);
+  *precon = ellipticOasPreconSetupHex3D(mesh, lambda);
 
+  (*precon)->preconKernel = 
+    mesh->device.buildKernelFromSource("okl/ellipticOasPreconHex3D.okl",
+				       "ellipticOasPreconHex3D",
+				       kernelInfo);
+  
+  (*precon)->restrictKernel =
+    mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictHex3D.okl",
+				       "ellipticPreconRestrictHex3D",
+				       kernelInfo);
+  
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
