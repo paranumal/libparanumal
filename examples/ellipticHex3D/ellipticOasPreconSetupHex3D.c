@@ -37,19 +37,21 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
   iint Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
   
   // space for gather base indices with halo
-  preconGatherInfo_t *gatherInfo = (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
+  preconGatherInfo_t *gatherInfo =
+    (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
 
   // rearrange in node order
   for(iint n=0;n<Nlocal;++n){
     iint id = mesh->gatherLocalIds[n];
-    gatherInfo[id].baseId   = mesh->gatherBaseIds[n];
+    gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
     gatherInfo[id].maxRank  = mesh->gatherMaxRanks[n];
     gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
   }
   
   // exchange one element halo (fix later if warranted)
   preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
-  meshHaloExchange3D(mesh, mesh->Np*sizeof(preconGatherInfo_t), gatherInfo,   sendBuffer, gatherInfo+Nlocal);
+  meshHaloExchange3D(mesh, mesh->Np*sizeof(preconGatherInfo_t), gatherInfo,
+		     sendBuffer, gatherInfo+Nlocal);
   
   // offsetes to extract second layer
   iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
@@ -110,7 +112,8 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
     for(iint i=0;i<mesh->Nq;++i)
       faceNodesPrecon[i+j*mesh->Nq+5*mesh->Nfp] = i+1 + (j+1)*NqP + (NqP-1)*NqP*NqP;
 
-  preconGatherInfo_t *preconGatherInfo = (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
+  preconGatherInfo_t *preconGatherInfo =
+    (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
   
   // 0 numbering for uninvolved nodes
   for(iint e=0;e<mesh->Nelements;++e){
@@ -141,7 +144,7 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
 
       vmapPP[fid] = idP;
       
-      iint idO = faceNodesPrecon[n] + e*NpP;
+      iint idO = faceNodesPrecon[n] + e*NpP; // overlap  index
       preconGatherInfo[idO] = gatherInfo[idP];
     }
   }
@@ -212,7 +215,8 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
   // make preconBaseIds => preconNumbering
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
   precon->ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
-						  gatherLocalIdsP, gatherBaseIdsP, gatherBaseRanksP, gatherMaxRanksP);
+						  gatherLocalIdsP, gatherBaseIdsP,
+						  gatherBaseRanksP, gatherMaxRanksP);
 
 
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);

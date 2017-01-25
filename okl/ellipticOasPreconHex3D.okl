@@ -55,7 +55,14 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       iint n=i+p_NqP*j+p_NqP*p_NqP*k;
 
       s_q[0][0][n] = 0; // zero shared memory
+    }
 
+    barrier(localMemFence);
+    
+    cubeThreadsP{
+
+      iint n=i+p_NqP*j+p_NqP*p_NqP*k;
+    
       if(n<p_Np){
 	// coalesce reads from p_Nq x p_Nq x p_Nq storage
 	iint ip = n%p_Nq;
@@ -65,18 +72,18 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       }
 
       r_diagInvOp = diagInvOp[n+e*p_NpP];
-      
-      while(n<p_Nfaces*p_Nfp){
-	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
-	s_q[0][0][faceNodesP[n]] = q[id];
-	n += p_NpP;
-      }
 
       if(k==0) s_forward[j][i]  = forward[i+p_NqP*j];
       if(k==1) s_back[j][i]     = back[i+p_NqP*j];
 
+      // thread safe since the overlap nodes do not overlap
+      while(n<p_Nfp*p_Nfaces){
+	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
+	s_q[0][0][faceNodesP[n]] = q[id];
+	n+=p_NqP*p_NqP*p_NqP;
+      }
     }
-    
+      
     barrier(localMemFence);
 
     // r-transform
