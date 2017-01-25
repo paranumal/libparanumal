@@ -208,17 +208,6 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
       }
     }
   }
-
-#if 0
-  iint Nscatter = Nlocal;
-  iint *scatterLocalIdsP = (iint*) calloc(Nscatter, sizeof(iint));
-  cnt = 0;
-  for(iint n=0;n<NpP*mesh->Nelements;++n){
-    if(localFlag[gatherLocalIdsP[n]]>0){
-      scatterLocalIdsP[cnt++] = localFlag[gatherLocalIdsP[n]];
-    }
-  }
-#endif
   
   // make preconBaseIds => preconNumbering
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
@@ -254,7 +243,11 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
 	for(iint i=0;i<NqP;++i){
 	  iint pid = i + j*NqP + k*NqP*NqP + e*NpP;
 	  
-	  diagInvOp[pid] = 1./(JW*lambda + JWhrinv2*mesh->oasDiagOp[i] + JWhsinv2*mesh->oasDiagOp[j] + JWhtinv2*mesh->oasDiagOp[k]);
+	  diagInvOp[pid] =
+	    1./(JW*lambda +
+		JWhrinv2*mesh->oasDiagOp[i] +
+		JWhsinv2*mesh->oasDiagOp[j] +
+		JWhtinv2*mesh->oasDiagOp[k]);
 	  //	  printf("diagInvOp[%d] = %g JW=%g\n", pid, diagInvOp[pid], JW);
 	}
       }
