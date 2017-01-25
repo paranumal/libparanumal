@@ -12,6 +12,7 @@
 #define MPI_DFLOAT MPI_FLOAT
 #define iintFormat "%d"
 #define dfloatFormat "%f"
+#define dfloatString "float"
 #else
 #define iint int
 #define dfloat double
@@ -19,7 +20,37 @@
 #define MPI_DFLOAT MPI_DOUBLE
 #define iintFormat "%d"
 #define dfloatFormat "%lf"
+#define dfloatString "double"
 #endif
+
+// OCCA+gslib gather scatter
+typedef struct {
+  
+  iint         Ngather;          //  number of gather nodes
+
+  iint         *gatherOffsets;
+  iint         *gatherMaxRanks;
+  iint         *gatherBaseRanks;
+  iint         *gatherLocalIds;
+  iint         *gatherBaseIds;
+  
+  occa::memory o_gatherOffsets;  //  start of local bases
+  occa::memory o_gatherLocalIds; //  base connected nodes
+  occa::memory o_gatherTmp;      //  DEVICE gather buffer
+  void         *gatherGsh;       // gslib gather 
+
+  iint         Nscatter;
+  occa::memory o_scatterOffsets; //  start of local bases
+  occa::memory o_scatterLocalIds;//  base connected nodes
+  occa::memory o_scatterTmp;     //  DEVICE scatter buffer
+  void         *scatterGsh;      //  gslib scatter
+  
+  iint         Nhalo;            //  number of halo nodes
+  occa::memory o_haloLocalIds;   //  list of halo nodes to
+  occa::memory o_haloTmp;        //  temporary halo buffer
+  void         *haloTmp;         //  temporary HOST halo buffer
+
+}ogs_t;
 
 typedef struct {
 
@@ -54,12 +85,19 @@ typedef struct {
   dfloat *vgeo;
   iint Nvgeo;
 
+  // second order volume geometric factors
+  dfloat *ggeo;
+  iint Nggeo;
+
   // volume node info 
   iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
+  // indices of vertex nodes
+  iint *vertexNodes;
+  
   // quad specific quantity
   iint Nq;
   
@@ -123,6 +161,8 @@ typedef struct {
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
 
+  occa::memory o_D; // tensor product differentiation matrix (for Hexes)
+  
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP;
   
@@ -132,14 +172,50 @@ typedef struct {
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
-  
+
+  // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
+
+  // CG gather-scatter info
+  void *gsh; // gslib struct pointer
+
+  iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
+  iint *gatherBaseIds;  // gather index of ""
+  iint *gatherBaseRanks; // base rank
+  iint *gatherMaxRanks;  // maximum rank connected to each sorted node
+  
+  iint NuniqueBases; // number of unique bases on this rank
+  occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
+  occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
+  occa::memory o_gatherTmp; // temporary array to store base values gathered locally
+
+  iint NnodeHalo; // number of halo bases on this rank
+  occa::memory o_nodeHaloIds;  // indices of halo base nodes after initial local gather
+  occa::memory o_subGatherTmp; // temporary DEVICE array to store halo base values prior to DEVICE>HOST copy
+  dfloat        *subGatherTmp; // temporary HALO array
+
+  occa::memory o_ggeo; // second order geometric factors
+  occa::memory o_projectL2; // local weights for projection.
+
   
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
+
+  occa::kernel gatherKernel;
+  occa::kernel scatterKernel;
+
+  occa::kernel getKernel;
+  occa::kernel putKernel;
+
+  occa::kernel AxKernel;
+  occa::kernel weightedInnerProduct1Kernel;
+  occa::kernel weightedInnerProduct2Kernel;
+  occa::kernel scaledAddKernel;
+  occa::kernel dotMultiplyKernel;
+  occa::kernel dotDivideKernel;
 }mesh3D;
 
 mesh3D* meshReader3D(char *fileName);
@@ -238,6 +314,23 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 mesh3D *meshSetup3D(char *filename, int N);
 
+
+// void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+
+void meshParallelGatherScatter3D(mesh3D *mesh,
+				 ogs_t *ogs, 
+				 occa::memory &o_v,
+				 occa::memory &o_gsv,
+				 const char *type);
+
+ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
+					iint Nlocal,     // number of local nodes
+					iint Nbytes,     // number of bytes per node
+					iint *localIds,  // local index of nodes
+					iint *baseIds,   // gather index of their base nodes
+					iint *baseRanks, // rank of their base nodes
+					iint *maxRanks); // max rank connected to base node);
+
 void meshAcousticsRun3D(mesh3D *mesh);
 void meshAcousticsSetup3D(mesh3D *mesh);
 void meshAcousticsVolume3D(mesh3D *mesh);
@@ -267,6 +360,15 @@ void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
 #define TZID 8  
 #define  JID 9
 #define JWID 10
+
+/* offsets for second order geometric factors */
+#define G00ID 0  
+#define G01ID 1  
+#define G02ID 2
+#define G11ID 3  
+#define G12ID 4  
+#define G22ID 5  
+#define GWJID 6  
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  

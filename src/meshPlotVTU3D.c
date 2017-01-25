@@ -11,9 +11,6 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld){
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  printf("mesh->plotNp = %d , mesh->plotNelements = %d\n",
-	 mesh->plotNp, mesh->plotNelements);
-  
   FILE *fp;
   char fileName[BUFSIZ];
   sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
