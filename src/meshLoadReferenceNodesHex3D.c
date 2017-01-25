@@ -18,7 +18,8 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   mesh->N = N;
   mesh->Nq = N+1;
   mesh->Nfp = (N+1)*(N+1);
-
+  mesh->Nverts = 8;
+  
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
   int Npcheck;
@@ -35,6 +36,28 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 	   mesh->r+n, mesh->s+n, mesh->t+n);
   }
 
+  // find node indices of vertex nodes
+  dfloat NODETOL = 1e-6;
+  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
+  for(iint n=0;n<mesh->Np;++n){
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
+      mesh->vertexNodes[0] = n;
+    if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
+      mesh->vertexNodes[1] = n;
+    if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
+      mesh->vertexNodes[2] = n;
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
+      mesh->vertexNodes[3] = n;
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
+      mesh->vertexNodes[4] = n;
+    if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
+      mesh->vertexNodes[5] = n;
+    if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
+      mesh->vertexNodes[6] = n;
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
+      mesh->vertexNodes[7] = n;
+  }
+  
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){

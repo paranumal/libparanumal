@@ -1,0 +1,14 @@
+
+kernel void put(const int N,
+		const dfloat * restrict subv,
+		const iint   * restrict ids,
+		dfloat * restrict v){
+
+  for(iint n=0;n<N;++n;tile(256)){
+    if(n<N){
+      const iint id = ids[n];
+      v[id] = subv[n];
+    }
+  }
+
+}

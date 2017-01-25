@@ -1,0 +1,43 @@
+// slightly brittle
+#define p_maxNconn 64
+
+kernel void gatherNodes(const iint NuniqueBases,
+			const iint * restrict gatherStarts,
+			const iint * restrict gatherIds,
+			const dfloat * restrict q,
+			dfloat * restrict gatherq){
+  
+  for(iint b=0;b<NuniqueBases;++b;outer0){
+
+    shared dfloat s_g[p_maxNconn];
+
+    for(iint m=0;m<p_maxNconn;++m;inner0){
+      const iint start = gatherStarts[b];   // surely cached
+      const iint   end = gatherStarts[b+1]; // surely cached
+      const iint id = start + m;
+      if(id<end){
+	const iint gid = gatherIds[id];  // contiguous
+	s_g[m] = q[gid];           // random access
+      }else{
+	s_g[m] = 0.f;
+      }
+    }
+
+    // tree reduction
+    for(iint alive=p_maxNconn/2;alive>0;alive/=2){
+      
+      barrier(localMemFence);
+      
+      for(iint m=0;m<p_maxNconn;++m;inner0){
+	// reduce to "alive" values
+	if(m<alive)
+	  s_g[m] += s_g[m+alive];
+	
+	// last thread standing
+	if(alive==1 && m==0)
+	  gatherq[b] = s_g[0];
+      }
+    }
+  }
+}
+

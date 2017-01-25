@@ -6,7 +6,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   mesh3D *mesh = meshParallelReaderHex3D(filename);
 
   // partition elements using Morton ordering & parallel sort
-  meshGeometricPartition3D(mesh);
+  meshGeometricPartition3D(mesh);  // SOMETHING GOES WRONG WITH LARGE size
 
   // print out connectivity statistics
   meshPartitionStatistics3D(mesh);
@@ -34,7 +34,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
-
+  
   // global nodes
   meshParallelConnectNodesHex3D(mesh);
 

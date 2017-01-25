@@ -1,0 +1,23 @@
+
+kernel void scatter(const iint Nscatter,
+		   const iint * restrict scatterStarts,
+		   const iint * restrict scatterIds,
+		   const dfloat * restrict q,
+		   dfloat * restrict scatterq){
+
+  for(iint s=0;s<Nscatter;++s;tile(256)){
+
+    if(s<Nscatter){
+      const dfloat qs = q[s];
+      
+      const iint start = scatterStarts[s];
+      const iint end = scatterStarts[s+1];
+      
+      for(iint n=start;n<end;++n){
+	const iint id = scatterIds[n];
+	scatterq[id] = qs;
+      }
+    }
+  }
+}
+
