@@ -209,7 +209,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasBack+n*mesh->NqP+m);
+      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
     }
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   
