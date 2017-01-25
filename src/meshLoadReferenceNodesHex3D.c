@@ -178,6 +178,36 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+  // projection info for OAS precon (one node overlap)
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("%s", buf);
+  fgets(buf, BUFSIZ, fp);
+  printf("%s", buf);
+  sscanf(buf, iintFormat, &(mesh->NqP));
+  
+  mesh->oasForward = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    for(int m=0;m<mesh->NqP;++m){
+      fscanf(fp, dfloatFormat, mesh->oasForward+n*mesh->NqP+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+
+  mesh->oasDiagOp = (dfloat*) calloc(mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    fscanf(fp, dfloatFormat, mesh->oasDiagOp+n);
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  mesh->oasBack = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    for(int m=0;m<mesh->NqP;++m){
+      fscanf(fp, dfloatFormat, mesh->oasBack+n*mesh->NqP+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+  
 #if 0
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
