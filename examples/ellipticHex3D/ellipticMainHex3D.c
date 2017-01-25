@@ -3,6 +3,8 @@
 #define PCG 1
 #undef CG
 
+// SOME WRITE OR READ RACE CONDITION ??? non-deterministic 
+
 void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type){
 
   mesh->device.finish();
@@ -13,7 +15,6 @@ void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q
 
   mesh->device.finish();
   occa::toc("meshParallelGatherScatter3D");
-
   
 }
 
@@ -128,13 +129,15 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
   
   // extract halo on DEVICE
   if(haloBytes){
+    //    SOME WHERE IN HERE THERE IS BADNESS;
+
     // WARNING: uses dfloats
     mesh->haloExtractKernel(mesh->totalHaloPairs,
 			    mesh->Np,
 			    mesh->o_haloElementList,
 			    o_r,
 			    mesh->o_haloBuffer);
-  
+    
     // copy extracted halo to HOST 
     mesh->o_haloBuffer.copyTo(sendBuffer);
 
@@ -146,7 +149,7 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
     
     // finalize recv on HOST
     meshHaloExchangeFinish3D(mesh);
-  
+
     // copy into halo zone of o_r  HOST>DEVICE
     o_r.copyFrom(recvBuffer, haloBytes, haloOffset);
   }
@@ -161,7 +164,7 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
 		       o_r,
 		       o_zP);
 
-  // gather-scatter precon blocks on DEVICE
+  // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
   ellipticParallelGatherScatter3D(mesh, precon->ogsP, o_zP, o_zP, type);
 
   // extract block interiors on DEVICE
@@ -169,7 +172,6 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
 
   // do this to revert to CG
   //  o_z.copyFrom(o_r);
-  
 }
 
 
