@@ -5,7 +5,7 @@
 
 
 typedef struct {
-  iint v[4];
+  iint v[4]; // 4 is max nodes per face
   iint element, face, rank;
   iint elementN, faceN, rankN; // N for neighbor
   iint NfaceVertices;

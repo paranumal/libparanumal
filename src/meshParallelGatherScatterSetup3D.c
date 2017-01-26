@@ -59,7 +59,8 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   ogs->Nhalo = 0;
   for(iint n=0;n<ogs->Ngather;++n){
     int id = gatherOffsets[n];
-    if(gatherBaseRanks[id]!=gatherMaxRanks[id] || gatherBaseRanks[id]!=rank){ // is this a shared node ?
+    if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
+       gatherBaseRanks[id]!=rank){ // is this a shared node ?
       ++ogs->Nhalo;
     }
   }
@@ -70,12 +71,13 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   ogs->gatherGsh = NULL;
   if(ogs->Nhalo){
     
-    iint *haloLocalIds = (iint*) calloc(ogs->Nhalo, sizeof(iint));
+    iint *haloLocalIds  = (iint*) calloc(ogs->Nhalo, sizeof(iint));
     iint *haloGlobalIds = (iint*) calloc(ogs->Nhalo, sizeof(iint));
     ogs->Nhalo = 0;
     for(iint n=0;n<ogs->Ngather;++n){
       int id = gatherOffsets[n];
-      if(gatherBaseRanks[id]!=gatherMaxRanks[id] || gatherBaseRanks[id]!=rank){
+      if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
+	 gatherBaseRanks[id]!=rank){
 	haloLocalIds[ogs->Nhalo] = n;
 	haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
 	++ogs->Nhalo;
