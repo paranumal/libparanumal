@@ -1,9 +1,9 @@
 #include "mesh3D.h"
 
-mesh3D *meshSetup3D(char *filename, int N){
+mesh3D *meshSetupTet3D(char *filename, int N){
 
   // read chunk of elements
-  mesh3D *mesh = meshParallelReader3D(filename);
+  mesh3D *mesh = meshParallelReaderTet3D(filename);
 
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
@@ -18,17 +18,17 @@ mesh3D *meshSetup3D(char *filename, int N){
   // connect elements to boundary faces
   meshConnectBoundary3D(mesh);
 
-  // load reference (r,s) element nodes
-  meshLoadReferenceNodes3D(mesh, N);
+  // load reference (r,s,t) element nodes
+  meshLoadReferenceNodesTet3D(mesh, N);
 
   // compute physical (x,y,z) locations of the element nodes
-  meshPhysicalNodes3D(mesh);
+  meshPhysicalNodesTet3D(mesh);
 
   // compute geometric factors
-  meshGeometricFactors3D(mesh);
+  meshGeometricFactorsTet3D(mesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactors3D(mesh);
+  meshSurfaceGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup3D(mesh);
