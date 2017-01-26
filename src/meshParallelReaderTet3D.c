@@ -8,7 +8,7 @@
 /* 
    purpose: read gmsh tetrahedra mesh 
 */
-mesh3D* meshParallelReader3D(char *fileName){
+mesh3D* meshParallelReaderTet3D(char *fileName){
 
   int rank, size;
 
@@ -31,7 +31,7 @@ mesh3D* meshParallelReader3D(char *fileName){
   memcpy(mesh->faceVertices, faceVertices[0], 12*sizeof(iint));
     
   if(fp==NULL){
-    printf("meshReader3D: could not load file %s\n", fileName);
+    printf("meshReaderTet3D: could not load file %s\n", fileName);
     exit(0);
   }
 

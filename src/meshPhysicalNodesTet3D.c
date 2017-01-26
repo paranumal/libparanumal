@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
-void meshPhysicalNodes3D(mesh3D *mesh){
+void meshPhysicalNodesTet3D(mesh3D *mesh){
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));

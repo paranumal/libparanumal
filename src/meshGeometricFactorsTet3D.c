@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
-void meshGeometricFactors3D(mesh3D *mesh){
+void meshGeometricFactorsTet3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
   mesh->Nvgeo = 10;

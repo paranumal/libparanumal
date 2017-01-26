@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
-void meshLoadReferenceNodes3D(mesh3D *mesh, int N){
+void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   char fname[BUFSIZ];
   sprintf(fname, "nodes/tetN%02d.dat", N);
