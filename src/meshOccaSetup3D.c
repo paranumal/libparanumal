@@ -9,6 +9,9 @@
 void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
   
   mesh->device.setup(deviceConfig);
+
+  occa::initTimer(mesh->device);
+
   
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
