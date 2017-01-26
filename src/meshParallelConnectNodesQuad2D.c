@@ -25,7 +25,7 @@ typedef struct{
 }parallelNode_t;
 
 // iteratively find a global numbering for all local element nodes
-void meshParallelConnectNodesHex2D(mesh2D *mesh){
+void meshParallelConnectNodesQuad2D(mesh2D *mesh){
 
   int rank, size;
 
