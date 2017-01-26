@@ -40,6 +40,8 @@ typedef struct {
   unsigned long long int index;
   
   iint element;
+
+  // 4 for maximum number of vertices per element in 2D
   iint v[4];
 
   dfloat EX[4], EY[4];
