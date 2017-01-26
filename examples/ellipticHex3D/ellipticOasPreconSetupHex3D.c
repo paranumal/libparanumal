@@ -47,13 +47,15 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
     gatherInfo[id].maxRank  = mesh->gatherMaxRanks[n];
     gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
   }
-  
-  // exchange one element halo (fix later if warranted)
+
+  // send buffer for outgoing halo
   preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
+
+  // exchange one element halo (fix later if warranted)
   meshHaloExchange3D(mesh, mesh->Np*sizeof(preconGatherInfo_t), gatherInfo,
 		     sendBuffer, gatherInfo+Nlocal);
   
-  // offsetes to extract second layer
+  // offsets to extract second layer
   iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
   offset[0] = +mesh->Nfp;
   offset[1] = +mesh->Nq;
@@ -63,19 +65,6 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
   offset[5] = -mesh->Nfp;
 
   // build gather-scatter
-
-  // a. gather on DEVICE   [ NuniqueBases on DEVICE, offsets, local node ids] 
-  // b. get DEVICE=>DEVICE [ halo node ids ]
-  // c. copy DEVICE=>HOST  
-  // d. gs parallel gather scatter [ gsh ]
-  // e. copy HOST=>DEVICE  
-  // f. put on DEVICE      [ halo node ids ]
-  // g. scatter on DEVICE  [ NuniqueBases on DEVICE, different than original gather ids ]
-  
-  // 1. create on-DEVICE gather arrays
-  // 2. create on-DEVICE scatter arrays
-  // 3. feed to meshParallelGatherScatterSetup3D.c (need to add scatter info Nscatter, ...)
-
   iint NqP = mesh->Nq+2;
   iint NpP = NqP*NqP*NqP;
 
@@ -136,37 +125,21 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
 
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       iint fid = e*mesh->Nfp*mesh->Nfaces + n;
+
+      // find face index
       iint fM = n/mesh->Nfp;
       iint fP = mesh->EToF[e*mesh->Nfaces+fM];
       if(fP<0) fP = fM;
 
+      // find location of "+" trace in regular mesh
       iint idP = mesh->vmapP[fid] + offset[fP];
-
       vmapPP[fid] = idP;
-      
+
+      // find location of overlap node in precon mesh
       iint idO = faceNodesPrecon[n] + e*NpP; // overlap  index
       preconGatherInfo[idO] = gatherInfo[idP];
     }
   }
-  
-#if 0
-  for(iint e=0;e<mesh->Nelements;++e){
-    printf("e=%d:[ \n", e);
-    for(iint k=0;k<NqP;++k){
-      printf("     [\n");
-      for(iint j=0;j<NqP;++j){
-	printf("       ");
-	for(iint i=0;i<NqP;++i){
-	  iint id  = i + j*NqP + k*NqP*NqP + e*NpP;
-	  printf("%05d ", preconGatherInfo[id].baseId);
-	}
-	printf("\n");
-      }
-      printf("     ]\n");
-    }
-    printf(" ]\n");
-  }
-#endif
   
   // reset local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
@@ -197,38 +170,19 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
     //    printf("base[%d] = %d\n", n, gatherBaseIdsP[n]);
   }
 
-  // local flag
-  iint *localFlag = (iint*) calloc(NpP*mesh->Nelements, sizeof(iint));
-
-  iint cnt=1;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint k=0;k<mesh->Nq;++k){
-      for(iint j=0;j<mesh->Nq;++j){
-	for(iint i=0;i<mesh->Nq;++i){
-	  iint pid = i + 1 + (j+1)*NqP + (k+1)*NqP*NqP + e*NpP;
-	  localFlag[pid] = cnt++;
-	}
-      }
-    }
-  }
-  
   // make preconBaseIds => preconNumbering
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
   precon->ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
 						  gatherLocalIdsP, gatherBaseIdsP,
 						  gatherBaseRanksP, gatherMaxRanksP);
 
-
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
-  // need o_vmapPP, o_invP, o_diagInvOp, o_P,
-  // invP and P are 1D change of basis matrics and diagInvP is a diagonal set of precon inversion weights (evals etc)
-
-  precon->o_vmapPP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
-
-  // load Pmatrix and invPmatrix from file
+  precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
   precon->o_oasForward = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForward);
   precon->o_oasBack    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBack);
 
+  /// ---------------------------------------------------------------------------
+  
   // hack estimate for Jacobian scaling
   dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
@@ -270,7 +224,8 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
   
   precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
 
-  // compute diagonal of stiffness matrix
+  /// ---------------------------------------------------------------------------
+  // compute diagonal of stiffness matrix for Jacobi
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   dfloat *diagA = (dfloat*) calloc(Ntotal, sizeof(dfloat));
