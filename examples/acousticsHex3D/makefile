@@ -17,10 +17,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github -lgs
+LDFLAGS	= $(compilerFlags) $(flags) -g 
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -69,22 +69,11 @@ LOBJS = \
 ../../src/hash.o
 
 
-COBJS = \
-../../src/meshParallelGatherScatter.o\
-../../src/meshParallelGatherScatterSetup.o
-
-acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o gslibInterface
+acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o 
 	$(LD)  $(LDFLAGS)  -o acousticsMain3D acousticsMainHex3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
-
-gslibInterface:
-	$(cc) $(CFLAGS) -c -o ../../src/meshParallelGatherScatter.o ../../src/meshParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/meshParallelGatherScatterSetup.o ../../src/meshParallelGatherScatterSetup.c $(paths) 
 
 acousticsMainSplitPml3D:$(POBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o acousticsMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
-
-test3D: $(LOBJS) $(AOBJS) testMainHex3D.o
-	$(LD)  $(LDFLAGS)  -o testMain3D testMainHex3D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
