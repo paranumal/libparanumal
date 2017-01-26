@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mesh2D.h"
 
-void meshPhysicalNodes2D(mesh2D *mesh){
+void meshPhysicalNodesTri2D(mesh2D *mesh){
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));

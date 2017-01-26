@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "mesh2D.h"
 
-void meshGeometricFactors2D(mesh2D *mesh){
+void meshGeometricFactorsTri2D(mesh2D *mesh){
 
   /* unified storage array for geometric factors */
   mesh->Nvgeo = 5;

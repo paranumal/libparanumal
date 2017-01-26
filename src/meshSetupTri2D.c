@@ -1,9 +1,9 @@
 #include "mesh2D.h"
 
-mesh2D *meshSetup2D(char *filename, int N){
+mesh2D *meshSetupTri2D(char *filename, int N){
 
   // read chunk of elements
-  mesh2D *mesh = meshParallelReader2D(filename);
+  mesh2D *mesh = meshParallelReaderTri2D(filename);
   
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition2D(mesh);
@@ -18,16 +18,16 @@ mesh2D *meshSetup2D(char *filename, int N){
   meshConnectBoundary2D(mesh);
   
   // load reference (r,s) element nodes
-  meshLoadReferenceNodes2D(mesh, N);
+  meshLoadReferenceNodesTri2D(mesh, N);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodes2D(mesh);
+  meshPhysicalNodesTri2D(mesh);
 
   // compute geometric factors
-  meshGeometricFactors2D(mesh);
+  meshGeometricFactorsTri2D(mesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactors2D(mesh);
+  meshSurfaceGeometricFactorsTri2D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup2D(mesh);
@@ -35,9 +35,6 @@ mesh2D *meshSetup2D(char *filename, int N){
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
-  // test global numbering of nodes
-  //meshNumberNodes2D(mesh);
-  
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
 

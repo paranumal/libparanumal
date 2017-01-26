@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "mesh2D.h"
 
-void meshLoadReferenceNodes2D(mesh2D *mesh, int N){
+void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   char fname[BUFSIZ];
   sprintf(fname, "nodes/triangleN%02d.dat", N);

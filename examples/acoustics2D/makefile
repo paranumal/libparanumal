@@ -57,25 +57,25 @@ acousticsComputeVorticity2D.o
 
 # library objects
 LOBJS = \
+../../src/meshParallelReaderTri2D.o \
+../../src/meshGeometricFactorsTri2D.o \
+../../src/meshLoadReferenceNodesTri2D.o \
+../../src/meshSurfaceGeometricFactorsTri2D.o \
+../../src/meshPhysicalNodesTri2D.o \
+../../src/meshSetupTri2D.o \
+../../src/meshConnectFaceNodes2D.o \
 ../../src/meshConnect2D.o \
 ../../src/meshConnectBoundary2D.o \
-../../src/meshConnectFaceNodes2D.o \
-../../src/meshGeometricFactors2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange2D.o \
 ../../src/meshHaloExtract2D.o \
 ../../src/meshHaloSetup2D.o \
-../../src/meshLoadReferenceNodes2D.o \
 ../../src/meshParallelConnect2D.o \
 ../../src/meshParallelPrint2D.o \
-../../src/meshParallelReader2D.o \
 ../../src/meshPartitionStatistics2D.o \
-../../src/meshPhysicalNodes2D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshReader2D.o \
-../../src/meshSetup2D.o \
-../../src/meshSurfaceGeometricFactors2D.o \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
