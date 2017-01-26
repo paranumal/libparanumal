@@ -9,7 +9,7 @@
 /* 
    purpose: read gmsh triangle mesh 
 */
-mesh2D* meshParallelReader2D(char *fileName){
+mesh2D* meshParallelReaderTri2D(char *fileName){
 
   int rank, size;
 

@@ -274,10 +274,11 @@ typedef struct {
   
 }mesh2D;
 
-mesh2D* meshReader2D(char *fileName);
+mesh2D* meshReaderTri2D(char *fileName);
+mesh2D* meshReaderQuad2D(char *fileName);
 
 // mesh readers
-mesh2D* meshParallelReader2D(char *fileName);
+mesh2D* meshParallelReaderTri2D(char *fileName);
 mesh2D* meshParallelReaderQuad2D(char *fileName);
 
 // build connectivity in serial
@@ -314,19 +315,19 @@ void parallelSort(iint N, void *vv, size_t sz,
 		  );
 
 // compute geometric factors for local to physical map 
-void meshGeometricFactors2D(mesh2D *mesh);
+void meshGeometricFactorsTri2D(mesh2D *mesh);
 void meshGeometricFactorsQuad2D(mesh2D *mesh);
 
-void meshSurfaceGeometricFactors2D(mesh2D *mesh);
+void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh);
 void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh);
 
-void meshPhysicalNodes2D(mesh2D *mesh);
+void meshPhysicalNodesTri2D(mesh2D *mesh);
 void meshPhysicalNodesQuad2D(mesh2D *mesh);
 
-void meshLoadReferenceNodes2D(mesh2D *mesh, int N);
+void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N);
 void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N);
 
-void meshGradient2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
+void meshGradientTri2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
 void meshGradientQuad2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
 
 // print out parallel partition i
@@ -336,7 +337,7 @@ void meshPartitionStatistics2D(mesh2D *mesh);
 void occaTest(mesh2D *mesh);
 
 // 
-void occaOptimizeGradient2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
+void occaOptimizeGradientTri2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
 void occaOptimizeGradientQuad2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy);
 
 // serial face-node to face-node connection
@@ -365,35 +366,35 @@ void meshHaloExchangeFinish2D(mesh2D *mesh);
 void meshHaloExtract2D(mesh2D *mesh, size_t Nbytes, void *sourceBuffer, void *sendBuffer);
 
 // build list of nodes on each face of the reference element
-void meshBuildFaceNodes2D(mesh2D *mesh);
+void meshBuildFaceNodesTri2D(mesh2D *mesh);
 void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 
-mesh2D *meshSetup2D(char *filename, int N);
+mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 
-void meshAcousticsRun2D(mesh2D *mesh);
+void meshAcousticsRunTri2D(mesh2D *mesh);
 void meshAcousticsRunQuad2D(mesh2D *mesh);
-void meshAcousticsOccaRun2D(mesh2D *mesh);
-void meshAcousticsOccaAsyncRun2D(mesh2D *mesh);
-void meshAcousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh);
+void meshAcousticsOccaRunTri2D(mesh2D *mesh);
+void meshAcousticsOccaAsyncRunTri2D(mesh2D *mesh);
+void meshAcousticsSplitSurfaceOccaAsyncRunTri2D(mesh2D *mesh);
 
-void meshAcousticsSetup2D(mesh2D *mesh);
+void meshAcousticsSetupTri2D(mesh2D *mesh);
 void meshAcousticsSetupQuad2D(mesh2D *mesh);
-void meshAcousticsVolume2D(mesh2D *mesh);
-void meshAcousticsVolumeQuad2D(mesh2D *mesh);
-void meshAcousticsSurface2D(mesh2D *mesh, dfloat time);
+void meshAcousticsVolumeTri2D(mesh2D *mesh);
+void meshAcousticsVolumeQuadTri2D(mesh2D *mesh);
+void meshAcousticsSurfaceTri2D(mesh2D *mesh, dfloat time);
 void meshAcousticsSurfaceQuad2D(mesh2D *mesh);
 void meshAcousticsUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
 void meshAcousticsError2D(mesh2D *mesh, dfloat time);
 
 // set up perfectly matched layer
-void meshAcousticsPmlSetup2D(mesh2D *mesh,
-			     dfloat xmin, dfloat xmax, // bounding box for non-pml sub-domain
-			     dfloat ymin, dfloat ymax,
-			     dfloat xsigma, dfloat ysigma);
+void meshAcousticsPmlSetupd2D(mesh2D *mesh,
+			      dfloat xmin, dfloat xmax, // bounding box for non-pml sub-domain
+			      dfloat ymin, dfloat ymax,
+			      dfloat xsigma, dfloat ysigma);
 
 // add PML right hand stuff
 void meshAcousticsPml2D(mesh2D *mesh);
@@ -423,13 +424,6 @@ void boltzmannGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 			      dfloat *q4, dfloat *q5, dfloat *q6);
 
 void meshBoltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
-
-// continuous Galerkin functions
-void meshGatherScatterSetupQuad2D(mesh2D *mesh);
-void meshGatherScatterQuad2D(mesh2D *mesh, dfloat *AqL);
-void meshEllipticSetupQuad2D(mesh2D *mesh);
-void meshEllipticSolveQuad2D(mesh2D *mesh);
-void meshEllipticLocalOpQuad2D(mesh2D *mesh, dfloat *qL, dfloat lambda, dfloat *AqL);
 
 #define mymax(a,b) ((a>b)?a:b)
 #define mymin(a,b) ((a<b)?a:b)

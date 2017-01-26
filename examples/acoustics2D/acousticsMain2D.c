@@ -16,7 +16,7 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // set up mesh stuff
-  mesh2D *mesh = meshSetup2D(argv[1], N);
+  mesh2D *mesh = meshSetupTri2D(argv[1], N);
 
   // set up acoustics stuff
   acousticsSetup2D(mesh);
