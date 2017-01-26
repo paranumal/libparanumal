@@ -256,6 +256,4 @@ void acousticsSetupHex3D(mesh3D *mesh){
 				       kernelInfo);
 
   
-  meshParallelConnectNodesHex3D(mesh);
-  
 }
