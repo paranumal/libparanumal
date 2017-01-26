@@ -235,25 +235,5 @@ void acousticsSetupHex3D(mesh3D *mesh){
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
-  mesh->gatherKernel =
-    mesh->device.buildKernelFromSource("okl/gather.okl",
-				       "gather",
-				       kernelInfo);
-
-  mesh->scatterKernel =
-    mesh->device.buildKernelFromSource("okl/scatter.okl",
-				       "scatter",
-				       kernelInfo);
-
-  mesh->getKernel =
-    mesh->device.buildKernelFromSource("okl/get.okl",
-				       "get",
-				       kernelInfo);
-
-  mesh->putKernel =
-    mesh->device.buildKernelFromSource("okl/put.okl",
-				       "put",
-				       kernelInfo);
-
   
 }
