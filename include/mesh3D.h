@@ -224,10 +224,8 @@ typedef struct {
   occa::kernel dotDivideKernel;
 }mesh3D;
 
-mesh3D* meshReader3D(char *fileName);
-
 // mesh readers
-mesh3D* meshParallelReader3D(char *fileName);
+mesh3D* meshParallelReaderTet3D(char *fileName);
 mesh3D* meshParallelReaderHex3D(char *fileName);
 
 // build connectivity in serial
@@ -264,19 +262,19 @@ void parallelSort(iint N, void *vv, size_t sz,
 		  );
 
 // compute geometric factors for local to physical map 
-void meshGeometricFactors3D(mesh3D *mesh);
+void meshGeometricFactorsTet3D(mesh3D *mesh);
 void meshGeometricFactorsHex3D(mesh3D *mesh);
 
-void meshSurfaceGeometricFactors3D(mesh3D *mesh);
+void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
-void meshPhysicalNodes3D(mesh3D *mesh);
+void meshPhysicalNodesTet3D(mesh3D *mesh);
 void meshPhysicalNodesHex3D(mesh3D *mesh);
 
-void meshLoadReferenceNodes3D(mesh3D *mesh, int N);
+void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N);
 void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N);
 
-void meshGradient3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
+void meshGradientTet3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 void meshGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
 // print out parallel partition i
@@ -286,14 +284,16 @@ void meshPartitionStatistics3D(mesh3D *mesh);
 void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
 // 
-void occaOptimizeGradient3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
+void occaOptimizeGradientTet3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 void occaOptimizeGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 
 // serial face-node to face-node connection
 void meshConnectFaceNodes3D(mesh3D *mesh);
 
 //
+mesh3D *meshSetupTet3D(char *filename, int N);
 mesh3D *meshSetupHex3D(char *filename, int N);
+
 void meshParallelConnectNodesHex3D(mesh3D *mesh);
 
 
@@ -318,7 +318,6 @@ void meshHaloExchangeFinish3D(mesh3D *mesh);
 void meshBuildFaceNodes3D(mesh3D *mesh);
 void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
-mesh3D *meshSetup3D(char *filename, int N);
 
 
 // void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
