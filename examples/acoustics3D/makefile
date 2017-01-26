@@ -43,24 +43,23 @@ acousticsCavitySolution3D.o
 
 # library objects
 LOBJS = \
+../../src/meshGeometricFactorsTet3D.o \
+../../src/meshLoadReferenceNodesTet3D.o \
+../../src/meshParallelReaderTet3D.o \
+../../src/meshPhysicalNodesTet3D.o \
+../../src/meshSetupTet3D.o \
+../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshConnect3D.o \
 ../../src/meshConnectBoundary3D.o \
 ../../src/meshConnectFaceNodes3D.o \
-../../src/meshGeometricFactors3D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange3D.o \
 ../../src/meshHaloSetup3D.o \
-../../src/meshLoadReferenceNodes3D.o \
 ../../src/meshParallelConnect3D.o \
 ../../src/meshParallelPrint3D.o \
-../../src/meshParallelReader3D.o \
 ../../src/meshPartitionStatistics3D.o \
-../../src/meshPhysicalNodes3D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
-../../src/meshReader3D.o \
-../../src/meshSetup3D.o \
-../../src/meshSurfaceGeometricFactors3D.o \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
