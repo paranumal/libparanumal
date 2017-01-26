@@ -26,7 +26,7 @@ int parallelCompareBaseRank(const void *a, const void *b){
 }
 
 
-precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
+precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
   
   // assumes meshParallelGatherScatterSetup3D has been called
   
@@ -233,13 +233,23 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
   dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
 
+    // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
+    // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
+    
     dfloat JWhrinv2 = 0, JWhsinv2 = 0, JWhtinv2 = 0, JW = 0;
     for(iint n=0;n<mesh->Np;++n){
       iint base = mesh->Nggeo*mesh->Np*e + n;
+      /*
       JW = mymax(JW, mesh->ggeo[base + mesh->Np*GWJID]);
       JWhrinv2 = mymax(JWhrinv2, mesh->ggeo[base + mesh->Np*G00ID]);
       JWhsinv2 = mymax(JWhsinv2, mesh->ggeo[base + mesh->Np*G11ID]);
       JWhtinv2 = mymax(JWhtinv2, mesh->ggeo[base + mesh->Np*G22ID]);
+      */
+      JW += mesh->ggeo[base + mesh->Np*GWJID];
+      JWhrinv2 += mesh->ggeo[base + mesh->Np*G00ID];
+      JWhsinv2 += mesh->ggeo[base + mesh->Np*G11ID];
+      JWhtinv2 += mesh->ggeo[base + mesh->Np*G22ID];
+      
     }
     
     for(iint k=0;k<NqP;++k){
@@ -260,5 +270,35 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, dfloat lambda){
   
   precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
 
+  // compute diagonal of stiffness matrix
+
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  dfloat *diagA = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+				   
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint cnt = 0;
+    for(iint k=0;k<mesh->Nq;++k){
+      for(iint j=0;j<mesh->Nq;++j){
+	for(iint i=0;i<mesh->Nq;++i){
+	  
+	  dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo+ cnt + mesh->Np*GWJID];
+	  // (D_{ii}^2 + D_{jj}^2 + D_{kk}^2 + lambda)*w_i*w_j*w_k*J_{ijke}
+	  diagA[e*mesh->Np+cnt] = (pow(mesh->D[i*mesh->Nq+i],2) +
+				   pow(mesh->D[j*mesh->Nq+j],2) +
+				   pow(mesh->D[k*mesh->Nq+k],2) +
+				   lambda)*JW;
+	  ++cnt;
+	}
+      }
+    }
+  }
+
+  precon->o_diagA = mesh->device.malloc(Ntotal*sizeof(dfloat), diagA);
+
+  // sum up
+  meshParallelGatherScatter3D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
+
+  free(diagA);
+  
   return precon;
 }

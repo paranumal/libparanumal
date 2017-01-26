@@ -113,23 +113,22 @@ void ellipticProject(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &
 
 
   iint Ntotal = mesh->Nelements*mesh->Np;
-  
-  mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
 
-  // assemble
+  mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
+  
   ellipticParallelGatherScatter3D(mesh, ogs, o_Pv, o_Pv, dfloatString);
 }
 
 void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfloat *recvBuffer,
 			 occa::memory &o_r, occa::memory &o_zP, occa::memory &o_z, const char *type){
 
+#if 0
   // count size of halo for this process
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   iint haloOffset = mesh->Nelements*mesh->Np*mesh->Nfields*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
-    //    SOME WHERE IN HERE THERE IS BADNESS;
 
     // WARNING: uses dfloats
     mesh->haloExtractKernel(mesh->totalHaloPairs,
@@ -153,6 +152,9 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
     // copy into halo zone of o_r  HOST>DEVICE
     o_r.copyFrom(recvBuffer, haloBytes, haloOffset);
   }
+
+  mesh->device.finish();
+  occa::tic("preconKernel");
   
   // compute local precon on DEVICE
   precon->preconKernel(mesh->Nelements,
@@ -164,14 +166,29 @@ void ellipticOasPrecon3D(mesh3D *mesh, precon_t *precon, dfloat *sendBuffer, dfl
 		       o_r,
 		       o_zP);
 
+  mesh->device.finish();
+  occa::toc("preconKernel");
+  
   // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
   ellipticParallelGatherScatter3D(mesh, precon->ogsP, o_zP, o_zP, type);
 
   // extract block interiors on DEVICE
+  mesh->device.finish();
+  occa::tic("restrictKernel");
+  
   precon->restrictKernel(mesh->Nelements, o_zP, o_z);
 
+  mesh->device.finish();
+  occa::toc("restrictKernel");
+  
   // do this to revert to CG
   //  o_z.copyFrom(o_r);
+
+#else
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
+#endif
+  
 }
 
 
@@ -267,7 +284,6 @@ int main(int argc, char **argv){
     }
   }
 
-  occa::initTimer(mesh->device);
   
   // need to rename o_r, o_x to avoid confusion
   occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);

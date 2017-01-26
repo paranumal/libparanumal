@@ -64,7 +64,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
     cubeThreadsP{
 
       iint n=i+p_NqP*j+p_NqP*p_NqP*k;
-    
+#if 0
       if(n<p_Np){
 	// coalesce reads from p_Nq x p_Nq x p_Nq storage
 	iint ip = n%p_Nq;
@@ -72,6 +72,12 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
 	iint kp = (n/(p_Nq*p_Nq));
 	s_q1[kp+1][jp+1][ip+1] = q[n+e*p_Np];
       }
+#else
+      if(k<p_NqP-2 && j<p_NqP-2 && i<p_NqP-2){
+	iint m = k*p_Nq*p_Nq + j*p_Nq + i;
+	s_q1[k+1][j+1][i+1] = q[m+e*p_Np];
+      }
+#endif
 
       r_diagInvOp = diagInvOp[n+e*p_NpP];
 
