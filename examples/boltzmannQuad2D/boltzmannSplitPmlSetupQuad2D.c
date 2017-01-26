@@ -198,7 +198,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 40;
+  mesh->finalTime = 50;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -289,6 +289,8 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
   kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
   kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
+  kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
 
