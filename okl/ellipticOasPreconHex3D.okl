@@ -73,7 +73,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
 	s_q1[kp+1][jp+1][ip+1] = q[n+e*p_Np];
       }
 #else
-      if(k<p_NqP-2 && j<p_NqP-2 && i<p_NqP-2){
+      if((k<(p_NqP-2)) && (j<(p_NqP-2)) && (i<(p_NqP-2))){
 	iint m = k*p_Nq*p_Nq + j*p_Nq + i;
 	s_q1[k+1][j+1][i+1] = q[m+e*p_Np];
       }
