@@ -38,5 +38,5 @@ void ellipticErrorHex3D(mesh3D *mesh, dfloat time);
 
 void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv, const char *type);
 
-precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda);
+precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda);
 
