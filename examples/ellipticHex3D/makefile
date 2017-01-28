@@ -35,7 +35,7 @@ LIBS	=  $(links)
 # list of objects to be compiled
 AOBJS    = \
 ellipticSetupHex3D.o \
-ellipticOasPreconSetupHex3D.o
+ellipticPreconditionerSetupHex3D.o
 
 # library objects
 LOBJS = \
@@ -85,6 +85,6 @@ test3D: $(LOBJS) $(AOBJS) testMainHex3D.o
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS)
+	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) ellipticMainHex3D.o
 
 
