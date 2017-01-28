@@ -157,7 +157,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 					  mesh->gatherBaseRanks,
 					  mesh->gatherMaxRanks);
 
-  *precon = ellipticOasPreconSetupHex3D(mesh, *ogs, lambda);
+  *precon = ellipticPreconditionerSetupHex3D(mesh, *ogs, lambda);
 
   (*precon)->preconKernel = 
     mesh->device.buildKernelFromSource("okl/ellipticOasPreconHex3D.okl",
