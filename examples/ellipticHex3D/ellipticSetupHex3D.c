@@ -77,7 +77,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 
   occa::kernelInfo kernelInfo;
 
@@ -85,8 +85,8 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
-  kernelInfo.addDefine("p_NqP", mesh->NqP);
-  kernelInfo.addDefine("p_NpP", mesh->NqP*mesh->NqP*mesh->NqP);
+  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
+  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
@@ -166,7 +166,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   
   (*precon)->restrictKernel =
     mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictHex3D.okl",
-				       "ellipticPreconRestrictHex3D",
+				       "ellipticFooHex3D",
 				       kernelInfo);
   
   // find maximum degree

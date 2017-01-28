@@ -290,6 +290,9 @@ void meshConnectBoundary2D(mesh2D *mesh);
 // build connectivity in parallel
 void meshParallelConnect2D(mesh2D *mesh);
 
+// build global connectivity in parallel
+void meshParallelConnectNodesQuad2D(mesh2D *mesh);
+
 // create global number of nodes
 void meshNumberNodes2D(mesh2D *mesh);
 

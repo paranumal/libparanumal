@@ -26,7 +26,8 @@ void meshParallelGatherScatter3D(mesh3D *mesh,
   mesh->device.finish();
   occa::toc("gatherKernel");
 
-
+  //  if(strcmp(type, "float")) printf("BU55ER ; type = %s\n", type);
+  
   // extract gathered halo node data [i.e. shared nodes ]
   if(ogs->Nhalo){
     mesh->getKernel(ogs->Nhalo, ogs->o_gatherTmp, ogs->o_haloLocalIds, ogs->o_haloTmp); // subv = v[ids]
@@ -48,7 +49,8 @@ void meshParallelGatherScatter3D(mesh3D *mesh,
   occa::tic("scatterKernel");
   
   // do scatter back to local nodes
-  mesh->scatterKernel(ogs->Nscatter, ogs->o_scatterOffsets, ogs->o_scatterLocalIds, ogs->o_gatherTmp, o_gsv);
+  //  mesh->scatterKernel(ogs->Nscatter, ogs->o_scatterOffsets, ogs->o_scatterLocalIds, ogs->o_gatherTmp, o_gsv);
+  mesh->scatterKernel(ogs->Ngather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, ogs->o_gatherTmp, o_gsv);
   
   mesh->device.finish();
   occa::toc("scatterKernel");

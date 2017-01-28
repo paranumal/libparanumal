@@ -45,8 +45,10 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   }
   gatherOffsets[ogs->Ngather] = Nlocal;
 
+  char *gatherTmp = (char*) calloc(ogs->Ngather*Nbytes, sizeof(char));
+  
   // allocate buffers on DEVICE
-  ogs->o_gatherTmp      = mesh->device.malloc(ogs->Ngather*Nbytes);
+  ogs->o_gatherTmp      = mesh->device.malloc(ogs->Ngather*Nbytes, gatherTmp);
   ogs->o_gatherOffsets  = mesh->device.malloc((ogs->Ngather+1)*sizeof(iint), gatherOffsets);
   ogs->o_gatherLocalIds = mesh->device.malloc(Nlocal*sizeof(iint), gatherLocalIds);
   
@@ -56,12 +58,15 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   ogs->gatherMaxRanks  = gatherMaxRanks;
 
   // list of nodes to extract from DEVICE gathered array
-  ogs->Nhalo = 0;
-  for(iint n=0;n<ogs->Ngather;++n){
-    int id = gatherOffsets[n];
-    if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
-       gatherBaseRanks[id]!=rank){ // is this a shared node ?
-      ++ogs->Nhalo;
+  ogs->Nhalo = 0; 
+  for(iint n=0;n<ogs->Ngather;++n){ // could be this? 
+    //  int id = gatherOffsets[n];
+    for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
+      if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
+	 gatherBaseRanks[id]!=rank){ // is this a shared node ?
+	++ogs->Nhalo;
+	break;
+      }
     }
   }
   
@@ -73,14 +78,19 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     
     iint *haloLocalIds  = (iint*) calloc(ogs->Nhalo, sizeof(iint));
     iint *haloGlobalIds = (iint*) calloc(ogs->Nhalo, sizeof(iint));
+
     ogs->Nhalo = 0;
     for(iint n=0;n<ogs->Ngather;++n){
-      int id = gatherOffsets[n];
-      if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
-	 gatherBaseRanks[id]!=rank){
-	haloLocalIds[ogs->Nhalo] = n;
-	haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
-	++ogs->Nhalo;
+      //int id = gatherOffsets[n];
+
+      for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
+	if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
+	   gatherBaseRanks[id]!=rank){
+	  haloLocalIds[ogs->Nhalo] = n;
+	  haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
+	  ++ogs->Nhalo;
+	  break;
+	}
       }
     }     
     
@@ -88,7 +98,9 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     ogs->o_haloLocalIds = mesh->device.malloc(ogs->Nhalo*sizeof(iint), haloLocalIds);
     
     // allocate buffer for gathering on halo nodes (danger on size of buffer)
-    ogs->haloTmp = (dfloat*) malloc(ogs->Nhalo*Nbytes);
+    if(Nbytes != sizeof(dfloat)) printf("DANGER WILL ROBINSON\n");
+    
+    ogs->haloTmp = (dfloat*) calloc(ogs->Nhalo, sizeof(dfloat));
     ogs->o_haloTmp  = mesh->device.malloc(ogs->Nhalo*Nbytes, ogs->haloTmp);
     
     // initiate gslib gather-scatter comm pattern

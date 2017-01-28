@@ -57,7 +57,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
       mesh->vertexNodes[7] = n;
   }
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){
@@ -133,7 +133,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   fgets(buf, BUFSIZ, fp); 
   sscanf(buf, iintFormat, &(mesh->plotNp));
 
-  printf("plotNp=%d\n", mesh->plotNp);
+  //  printf("plotNp=%d\n", mesh->plotNp);
   
   // read plot node coordinates (hard code triangles)
   mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
@@ -163,9 +163,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("%s", buf);
+  //  printf("%s", buf);
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
+  //  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->plotNverts));
   
   // build and read in plot node triangulation
@@ -180,9 +180,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("comment: %s", buf);
+  //  printf("comment: %s", buf);
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
+  //  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->NqP));
 
   fgets(buf, BUFSIZ, fp);
@@ -190,9 +190,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasForward+n*mesh->NqP+m);
-      printf("%g ", mesh->oasForward[n*mesh->NqP+m]);
+      //      printf("%g ", mesh->oasForward[n*mesh->NqP+m]);
     }
-    printf("\n");
+    //    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
@@ -201,7 +201,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOp+n);
     fgets(buf,BUFSIZ,fp); // rest of line
-    printf("oasDiagOp[%d]=%g\n", n, mesh->oasDiagOp[n]);
+    //    printf("oasDiagOp[%d]=%g\n", n, mesh->oasDiagOp[n]);
   }
 
   fgets(buf,BUFSIZ,fp); // rest of line
@@ -209,9 +209,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasBack+n*mesh->NqP+m);
-      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
+      //      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
     }
-    printf("\n");
+    //    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   

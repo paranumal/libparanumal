@@ -27,34 +27,17 @@ int parallelCompareBaseRank(const void *a, const void *b){
 
 
 precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
-  
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   // assumes meshParallelGatherScatterSetup3D has been called
   
   // ????? need to extend storage for halo ?????
-  
   iint Nlocal = mesh->Np*mesh->Nelements;
   iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
   iint Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
-  
-  // space for gather base indices with halo
-  preconGatherInfo_t *gatherInfo =
-    (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
 
-  // rearrange in node order
-  for(iint n=0;n<Nlocal;++n){
-    iint id = mesh->gatherLocalIds[n];
-    gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
-    gatherInfo[id].maxRank  = mesh->gatherMaxRanks[n];
-    gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
-  }
-
-  // send buffer for outgoing halo
-  preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
-
-  // exchange one element halo (fix later if warranted)
-  meshHaloExchange3D(mesh, mesh->Np*sizeof(preconGatherInfo_t), gatherInfo,
-		     sendBuffer, gatherInfo+Nlocal);
-  
   // offsets to extract second layer
   iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
   offset[0] = +mesh->Nfp;
@@ -101,6 +84,85 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
     for(iint i=0;i<mesh->Nq;++i)
       faceNodesPrecon[i+j*mesh->Nq+5*mesh->Nfp] = i+1 + (j+1)*NqP + (NqP-1)*NqP*NqP;
 
+  iint *vmapMP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  
+  // take node info from positive trace and put in overlap region on parallel gather info
+  for(iint e=0;e<mesh->Nelements;++e){
+
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint fid = e*mesh->Nfp*mesh->Nfaces + n;
+
+      // find face index
+      iint fM = n/mesh->Nfp;
+      iint fP = mesh->EToF[e*mesh->Nfaces+fM];
+      if(fP<0) fP = fM;
+
+      // find location of "+" trace in regular mesh
+      iint idM = mesh->vmapM[fid] + offset[fM];
+      iint idP = mesh->vmapP[fid] + offset[fP];
+
+      vmapMP[fid] = idM;
+      vmapPP[fid] = idP;
+    }
+  }
+
+  
+  // space for gather base indices with halo
+  preconGatherInfo_t *gatherInfo =
+    (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
+
+  // rearrange in node order
+  for(iint n=0;n<Nlocal;++n){
+    iint id = mesh->gatherLocalIds[n];
+    gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
+    gatherInfo[id].maxRank  = mesh->gatherMaxRanks[n];
+    gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
+  }
+
+  // send buffer for outgoing halo
+  preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
+
+  iint globalChange = 0;
+  do{
+
+    iint change = 0;
+
+    // exchange one element halo (fix later if warranted)
+    meshHaloExchange3D(mesh,
+		       mesh->Np*sizeof(preconGatherInfo_t),
+		       gatherInfo,
+		       sendBuffer,
+		       gatherInfo+Nlocal);
+
+    // compare trace nodes
+    for(iint e=0;e<mesh->Nelements;++e){
+      for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+	iint id  = e*mesh->Nfp*mesh->Nfaces + n;
+	iint idM = vmapMP[id];
+	iint idP = vmapPP[id];
+	
+	iint baseRankM = gatherInfo[idM].baseRank;
+	iint baseRankP = gatherInfo[idP].baseRank;
+
+	iint maxRankM = gatherInfo[idM].maxRank;
+	iint maxRankP = gatherInfo[idP].maxRank;
+
+	if(baseRankM != baseRankP || maxRankM != maxRankP){
+	  ++change;
+	  gatherInfo[idP].baseRank = mymin(baseRankM, baseRankP);
+	  gatherInfo[idM].baseRank = mymin(baseRankM, baseRankP);
+	  gatherInfo[idP].maxRank = mymax(maxRankM, maxRankP);
+	  gatherInfo[idM].maxRank = mymax(maxRankM, maxRankP);
+	}
+      }
+    }
+    printf("overlap change = %d\n", change);
+    
+    MPI_Allreduce(&change, &globalChange, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    
+  }while(globalChange);
+  
   preconGatherInfo_t *preconGatherInfo =
     (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
   
@@ -117,26 +179,15 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
       }
     }
   }
-
-  iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   
-  // take node info from positive trace and put in overlap region on parallel gather info
   for(iint e=0;e<mesh->Nelements;++e){
-
+    
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       iint fid = e*mesh->Nfp*mesh->Nfaces + n;
 
-      // find face index
-      iint fM = n/mesh->Nfp;
-      iint fP = mesh->EToF[e*mesh->Nfaces+fM];
-      if(fP<0) fP = fM;
-
-      // find location of "+" trace in regular mesh
-      iint idP = mesh->vmapP[fid] + offset[fP];
-      vmapPP[fid] = idP;
-
       // find location of overlap node in precon mesh
       iint idO = faceNodesPrecon[n] + e*NpP; // overlap  index
+      iint idP = vmapPP[fid];
       preconGatherInfo[idO] = gatherInfo[idP];
     }
   }
@@ -144,18 +195,16 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
   // reset local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfo[n].localId = n;
-  
+
   // sort by rank then base index
   qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
-
+  
   // do not gather-scatter nodes labelled zero
   iint skip = 0;
   while(preconGatherInfo[skip].baseId==0 && skip<NpP*mesh->Nelements){
     ++skip;
   }
 
-  printf("skip = %d, NlocalP = %d\n", skip, NpP*mesh->Nelements);
-  
   // reset local ids
   iint NlocalP = NpP*mesh->Nelements - skip;
   iint *gatherLocalIdsP  = (iint*) calloc(NlocalP, sizeof(iint));
@@ -167,7 +216,6 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
     gatherBaseIdsP[n]   = preconGatherInfo[n+skip].baseId;
     gatherBaseRanksP[n] = preconGatherInfo[n+skip].baseRank;
     gatherMaxRanksP[n]  = preconGatherInfo[n+skip].maxRank;
-    //    printf("base[%d] = %d\n", n, gatherBaseIdsP[n]);
   }
 
   // make preconBaseIds => preconNumbering
@@ -216,7 +264,7 @@ precon_t *ellipticOasPreconSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
 		JWhrinv2*mesh->oasDiagOp[i] +
 		JWhsinv2*mesh->oasDiagOp[j] +
 		JWhtinv2*mesh->oasDiagOp[k]);
-	  //	  printf("diagInvOp[%d] = %g JW=%g\n", pid, diagInvOp[pid], JW);
+
 	}
       }
     }
