@@ -7,7 +7,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);  // SOMETHING GOES WRONG WITH LARGE size
-
+  
   // print out connectivity statistics
   meshPartitionStatistics3D(mesh);
 

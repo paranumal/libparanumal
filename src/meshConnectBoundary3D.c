@@ -46,10 +46,12 @@ void meshConnectBoundary3D(mesh3D *mesh){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1) // || mesh->EToE[e*mesh->Nfaces+f]==e)
 	++bcnt;
 
+#if 0
   printf("Nbf = %d\n", mesh->NboundaryFaces);
   printf("Nfv = %d\n", mesh->NfaceVertices);
   printf("bcnt = %d\n", bcnt);
   printf("Nelements = %d\n", mesh->Nelements);
+#endif
   
   /* build list of boundary faces */
   boundaryFace_t *boundaryFaces = (boundaryFace_t*) calloc(bcnt+mesh->NboundaryFaces,
