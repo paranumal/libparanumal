@@ -37,8 +37,6 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-
-
 void ellipticOperator3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
 
   mesh->device.finish();
@@ -69,8 +67,6 @@ dfloat ellipticScaledAdd(mesh3D *mesh, dfloat alpha, occa::memory &o_a, dfloat b
   occa::toc("scaledAddKernel");
   
 }
-
-
 
 dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 				    iint Nblock,
@@ -309,9 +305,6 @@ int main(int argc, char **argv){
     invDegreeP[n] = 1./degreeP[n];
   }
   o_invDegreeP.copyFrom(invDegreeP);
-
-
-
   
   dfloat *p   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
@@ -395,9 +388,6 @@ int main(int argc, char **argv){
     ellipticPreconditioner3D(mesh, precon, ogs, sendBuffer, recvBuffer,
 			     o_r, o_zP, o_z, dfloatString, preconType, invDegree, invDegreeP); // r => rP => zP => z
 
-    //    diagnostics(mesh, Nblock, o_invDegree, o_z, o_tmp, tmp, "|| o_z ||");
-    //    diagnostics(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp, "|| o_r ||");
-    
     // p = z
     o_p.copyFrom(o_z); // PCG
   }
