@@ -29,7 +29,7 @@ typedef struct {
   iint         Ngather;          //  number of gather nodes
 
   iint         *gatherOffsets;
-  iint         *gatherMaxRanks;
+  iint         *gatherHaloFlags;
   iint         *gatherBaseRanks;
   iint         *gatherLocalIds;
   iint         *gatherBaseIds;
@@ -190,7 +190,8 @@ typedef struct {
   iint *gatherBaseIds;  // gather index of ""
   iint *gatherBaseRanks; // base rank
   iint *gatherMaxRanks;  // maximum rank connected to each sorted node
-  
+  iint *gatherHaloFlags;  // maximum rank connected to each sorted node
+
   iint NuniqueBases; // number of unique bases on this rank
   occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
   occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
@@ -334,7 +335,7 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 					iint *localIds,  // local index of nodes
 					iint *baseIds,   // gather index of their base nodes
 					iint *baseRanks, // rank of their base nodes
-					iint *maxRanks); // max rank connected to base node);
+					iint *haloFlags); // 1 for halo node, 0 for not
 
 void meshAcousticsRun3D(mesh3D *mesh);
 void meshAcousticsSetup3D(mesh3D *mesh);

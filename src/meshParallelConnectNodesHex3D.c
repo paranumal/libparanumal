@@ -12,14 +12,14 @@ typedef struct{
   iint rank;    // rank of original node
   iint id;      // original id
   iint tag;   // original bc tag
+  iint haloFlag;
   
   // info on base node (lowest rank node)
   iint baseElement; 
   iint baseNode;
   iint baseRank;
   iint baseId;
-  iint maxRank;
-  
+
   // priority tag
   iint priorityTag;   // minimum (non-zero bc tag)
 
@@ -79,7 +79,6 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       gatherNumbering[id].baseRank = rank;
       gatherNumbering[id].baseId = 1 + id + mesh->Nnodes + gatherNodeStart;
 
-      gatherNumbering[id].maxRank = rank;
     }
 
     // use vertex ids for vertex nodes to reduce iterations
@@ -90,6 +89,16 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
       gatherNumbering[id].baseId = gid; 
     }
 
+    // label halo flags
+    for(iint f=0;f<mesh->Nfaces;++f){
+      if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
+	for(iint n=0;n<mesh->Nfp;++n){
+	  iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+	  gatherNumbering[id].haloFlag = 1;
+	}
+      }
+    }
+		      
     // use element-to-boundary connectivity to create tag for local nodes
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
@@ -130,13 +139,11 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
 	iint baseRankM = gatherNumbering[idM].baseRank;
 	iint baseRankP = gatherNumbering[idP].baseRank;
 
-	iint maxRankM = gatherNumbering[idM].maxRank;
-	iint maxRankP = gatherNumbering[idP].maxRank;
-
-	gatherNumbering[idM].maxRank = mymax(maxRankM, maxRankP);
-	gatherNumbering[idP].maxRank = mymax(maxRankM, maxRankP);
-	
 	// use minimum of trace variables
+	iint haloM = gatherNumbering[idM].haloFlag;
+	iint haloP = gatherNumbering[idP].haloFlag;
+	gatherNumbering[idM].haloFlag = mymax(haloM, haloP);
+	gatherNumbering[idP].haloFlag = mymax(haloM, haloP);
 	
 	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
 	  ++localChange;
@@ -186,14 +193,30 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
   mesh->gatherLocalIds  = (iint*) calloc(localNodeCount, sizeof(iint));
   mesh->gatherBaseIds   = (iint*) calloc(localNodeCount, sizeof(iint));
   mesh->gatherBaseRanks = (iint*) calloc(localNodeCount, sizeof(iint));
-  mesh->gatherMaxRanks  = (iint*) calloc(localNodeCount, sizeof(iint));
+  mesh->gatherHaloFlags = (iint*) calloc(localNodeCount, sizeof(iint));
+
   for(iint id=0;id<localNodeCount;++id){
     mesh->gatherLocalIds[id]  = gatherNumbering[id].element*mesh->Np+gatherNumbering[id].node;
     mesh->gatherBaseIds[id]   = gatherNumbering[id].baseId;
     mesh->gatherBaseRanks[id] = gatherNumbering[id].baseRank;
-    mesh->gatherMaxRanks[id]  = gatherNumbering[id].maxRank;
+    mesh->gatherHaloFlags[id] = gatherNumbering[id].haloFlag;
   }
 
+  #if 0
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint k=0;k<mesh->Nq;++k){
+      for(iint j=0;j<mesh->Nq;++j){
+	for(iint i=0;i<mesh->Nq;++i){
+	  iint id = i + mesh->Nq*j + mesh->Nq*mesh->Nq*k + e*mesh->Np;
+	  printf("%d ", mesh->gatherHaloFlags[id]);
+	}
+	printf("\n");
+      }
+      printf("\n\n");
+    }
+    printf("\n\n\n");
+  }
+  #endif
   // also need to extract bc tag above !!!
   
   // should do something with tag and gather numbering arrays

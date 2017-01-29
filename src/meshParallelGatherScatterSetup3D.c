@@ -19,7 +19,7 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 					iint *gatherLocalIds,  // local index of nodes
 					iint *gatherBaseIds,   // global index of their base nodes
 					iint *gatherBaseRanks, // rank of their base nodes
-					iint *gatherMaxRanks){  // max rank connected to base node
+					iint *gatherHaloFlags){   // 1 for halo node, 0 for not
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -55,15 +55,13 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   ogs->gatherLocalIds  = gatherLocalIds;
   ogs->gatherBaseIds   = gatherBaseIds;
   ogs->gatherBaseRanks = gatherBaseRanks;
-  ogs->gatherMaxRanks  = gatherMaxRanks;
+  ogs->gatherHaloFlags = gatherHaloFlags;
 
   // list of nodes to extract from DEVICE gathered array
   ogs->Nhalo = 0; 
   for(iint n=0;n<ogs->Ngather;++n){ // could be this? 
-    //  int id = gatherOffsets[n];
     for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-      if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
-	 gatherBaseRanks[id]!=rank){ // is this a shared node ?
+      if(gatherHaloFlags[id]){ // if any of these are labelled as halo then mark
 	++ogs->Nhalo;
 	break;
       }
@@ -81,11 +79,8 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 
     ogs->Nhalo = 0;
     for(iint n=0;n<ogs->Ngather;++n){
-      //int id = gatherOffsets[n];
-
       for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-	if(gatherBaseRanks[id]!=gatherMaxRanks[id] ||
-	   gatherBaseRanks[id]!=rank){
+	if(gatherHaloFlags[id]){
 	  haloLocalIds[ogs->Nhalo] = n;
 	  haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
 	  ++ogs->Nhalo;
@@ -109,11 +104,6 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     free(haloGlobalIds);
     free(haloLocalIds);
   }
-
-  
-  ogs->Nscatter = ogs->Ngather;
-  ogs->o_scatterOffsets = ogs->o_gatherOffsets;
-  ogs->o_scatterLocalIds = ogs->o_gatherLocalIds;
   
   free(gatherOffsets);
 
