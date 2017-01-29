@@ -1,4 +1,3 @@
-
 #include "ellipticHex3D.h"
 
 typedef struct{
@@ -25,11 +24,11 @@ int parallelCompareBaseRank(const void *a, const void *b){
 
 }
 
-
 precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
 
-  int rank;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // assumes meshParallelGatherScatterSetup3D has been called
   
@@ -106,7 +105,6 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       vmapPP[fid] = idP;
     }
   }
-
   
   // space for gather base indices with halo
   preconGatherInfo_t *gatherInfo =
@@ -173,6 +171,30 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   // reset local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfo[n].localId = n;
+
+  char fname[BUFSIZ];
+  sprintf(fname, "haloFlag%05d.dat", rank);
+  FILE *fp = fopen(fname, "w");
+  
+  for(iint p=0;p<size;++p){
+    if(p==rank){
+      for(iint e=0;e<mesh->Nelements;++e){
+	fprintf(fp,"e=%d: \n", e);
+	for(iint k=0;k<mesh->NqP;++k){
+	  for(iint j=0;j<mesh->NqP;++j){
+	    for(iint i=0;i<mesh->NqP;++i){
+	      iint id = i + mesh->NqP*j + mesh->NqP*mesh->NqP*k+ e*NpP;
+	      fprintf(fp,"%d ", preconGatherInfo[id].haloFlag);
+	    }
+	    fprintf(fp,"\n");
+	  }
+	  fprintf(fp,"\n");
+	}
+	fprintf(fp,"\n");
+      }
+    }
+  }
+  fclose(fp);
   
   // sort by rank then base index
   qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);

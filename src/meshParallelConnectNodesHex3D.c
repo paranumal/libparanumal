@@ -202,25 +202,9 @@ void meshParallelConnectNodesHex3D(mesh3D *mesh){
     mesh->gatherHaloFlags[id] = gatherNumbering[id].haloFlag;
   }
 
-  #if 0
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint k=0;k<mesh->Nq;++k){
-      for(iint j=0;j<mesh->Nq;++j){
-	for(iint i=0;i<mesh->Nq;++i){
-	  iint id = i + mesh->Nq*j + mesh->Nq*mesh->Nq*k + e*mesh->Np;
-	  printf("%d ", mesh->gatherHaloFlags[id]);
-	}
-	printf("\n");
-      }
-      printf("\n\n");
-    }
-    printf("\n\n\n");
-  }
-  #endif
   // also need to extract bc tag above !!!
   
   // should do something with tag and gather numbering arrays
   free(sendBuffer);
   free(gatherNumbering);
 }
-
