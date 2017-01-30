@@ -11,6 +11,10 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, 
 				sizeof(dfloat));
+
+  /* number of second order geometric factors */
+  mesh->Nggeo = 4;
+  mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
   
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
@@ -50,6 +54,13 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*SYID] = sy;
       mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*JID]  = J;
       mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*JWID] = JW;
+      
+      /* store second order geometric factors */
+      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G00ID] = JW*(rx*rx + ry*ry);
+      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G01ID] = JW*(rx*sx + ry*sy);
+      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G11ID] = JW*(sx*sx + sy*sy);
+      mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*GWJID] = JW;
+      
     }
   }
 }

@@ -1,0 +1,141 @@
+     
+#define squareThreadsP \
+    for(iint j=0;j<p_NqP;++j;inner1) \
+      for(iint i=0;i<p_NqP;++i;inner0) 
+
+#if 0
+// q  \in  Nq x Nq x Nelements
+// Pq \in  NqPx NqPx Nelements
+
+//                        |         | 
+// form invP, P wrt   o x x x x x x x x o
+//                        |         |
+
+// 1D transforms (assume J=const)
+//  S = (lambda*W + hScaling*trans(D)*W*D) // stiffness matrix (also needs assembly)
+//
+//  S~ = W\S = W\trans(D)*W*D
+//  S~ = V*Mu*inv(V) [ [V,Mu] = eig(S~) ]
+//
+//  S = W*V*(lambda*I+hScaling*Mu)*inv(V)
+//
+// inv(S) = V*(lambda*I + hScaling*Mu)^{-1}*inv(W*V)
+//
+// invP := inv(W*V)
+// P = V
+//
+// inv(S) = P*(lambda*I + hscaling*Mu)^{-1}*invP
+
+// 1. multiply by invP in each direcction
+// 2. divide nodewise by  (lambda + Mu_i/h_r^2 + Mu_j/h_s^2 + Mu_k/h_t^2)*h_r*h_s*h_t/8 for suitable h_r,h_s,h_t
+//    use h_r = 1/min r_x ? give or take a factor of 2
+// 3. multiply by P in each direction
+#endif
+
+
+kernel void ellipticOasPreconQuad2D(const iint Nelements,
+				   const iint   * restrict vmapPP,
+				   const iint   * restrict faceNodesP,
+				   const dfloat * restrict forward,
+				   const dfloat * restrict diagInvOp,
+				   const dfloat * restrict back,
+				   const dfloat * restrict q,
+				   dfloat * restrict Pq){
+  
+  for(iint e=0; e<Nelements; ++e; outer0){
+    
+    shared dfloat s_q1[p_NqP][p_NqP];
+    shared dfloat s_q2[p_NqP][p_NqP];
+    shared dfloat s_q3[p_NqP][p_NqP];
+    shared dfloat s_forward[p_NqP][p_NqP];
+    shared dfloat s_back[p_NqP][p_NqP];
+    exclusive dfloat r_diagInvOp;
+    
+    squareThreadsP{
+
+      iint n=i+p_NqP*j;
+
+      s_q1[0][n] = 0; // zero shared memory
+    }
+
+    barrier(localMemFence);
+    
+    squareThreadsP{
+
+      iint n=i+p_NqP*j;
+      if( (j<(p_NqP-2)) && (i<(p_NqP-2))){
+	iint m = j*p_Nq + i;
+	s_q1[j+1][i+1] = q[m+e*p_Np];
+      }
+
+      r_diagInvOp = diagInvOp[n+e*p_NpP];
+
+      s_forward[j][i]  = forward[i+p_NqP*j];
+       s_back[j][i]     = back[i+p_NqP*j];
+
+      // thread safe since the overlap nodes do not overlap
+      // p_NqP = (N+3)^2
+      // p_Nfp*p_Nfaces = (N+1)*3 < (N+3)^2
+      if(n<p_Nfp*p_Nfaces){
+	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
+	s_q1[0][faceNodesP[n]] = q[id];
+      }
+    }
+      
+    barrier(localMemFence);
+
+    // r-transform
+    squareThreadsP{
+      dfloat tmp = 0.f;
+
+      occaUnroll(p_NqP)
+	for(iint n=0;n<p_NqP;++n)
+	  tmp += s_forward[i][n]*s_q1[j][n];
+
+      s_q2[j][i] = tmp;
+    }
+
+    barrier(localMemFence);
+
+    // s-transform
+    squareThreadsP{
+      dfloat tmp = 0.f;
+
+      occaUnroll(p_NqP)
+	for(iint n=0;n<p_NqP;++n)
+	  tmp += s_forward[j][n]*s_q2[n][i];
+      
+      // diagonal inverse
+      s_q1[j][i] = r_diagInvOp*tmp;
+    }
+
+    barrier(localMemFence);
+    
+    // s-transform back
+    squareThreadsP{
+      dfloat tmp = 0.f;
+
+      occaUnroll(p_NqP)
+	for(iint n=0;n<p_NqP;++n)
+	  tmp += s_back[j][n]*s_q1[n][i];
+      
+      s_q2[j][i] = tmp;
+    }
+
+    barrier(localMemFence);
+
+    // r-transform back
+    squareThreadsP{
+      dfloat tmp = 0.f;
+
+      occaUnroll(p_NqP)
+	for(iint n=0;n<p_NqP;++n)
+	  tmp += s_back[i][n]*s_q2[j][n];
+      
+      const iint id=i+p_NqP*j+ p_NpP*e;
+      Pq[id] = tmp;
+    }
+  } 
+}
+					
+  
