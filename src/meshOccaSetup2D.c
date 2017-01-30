@@ -166,6 +166,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
+
+  mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  
+
   mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 				   mesh->Dr);
 
@@ -194,6 +198,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
+
+  mesh->o_ggeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+			mesh->ggeo);
+  
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
@@ -297,13 +306,15 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
+  kernelInfo.addDefine("p_Nq", mesh->N+1);
   kernelInfo.addDefine("p_Np", mesh->Np);
   kernelInfo.addDefine("p_Nfp", mesh->Nfp);
   kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
+  kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
+  
   kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
 
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
@@ -335,4 +346,12 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
+
+
+  kernelInfo.addDefine("p_G00ID", G00ID);
+  kernelInfo.addDefine("p_G01ID", G01ID);
+  kernelInfo.addDefine("p_G11ID", G11ID);
+  kernelInfo.addDefine("p_GWJID", GWJID);
+
+  
 }
