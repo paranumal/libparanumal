@@ -12,6 +12,7 @@
 #define MPI_DFLOAT MPI_FLOAT
 #define iintFormat "%d"
 #define dfloatFormat "%f"
+#define dfloatString "float"
 #else
 #define iint int
 #define dfloat double
@@ -19,7 +20,10 @@
 #define MPI_DFLOAT MPI_DOUBLE
 #define iintFormat "%d"
 #define dfloatFormat "%lf"
+#define dfloatString "double"
 #endif
+
+#include "ogs_t.h"
 
 typedef struct {
 
@@ -59,18 +63,31 @@ typedef struct {
   dfloat *vgeo;
   iint Nvgeo;
 
+  // second order volume geometric factors
+  dfloat *ggeo;
+  iint Nggeo;
+
   // volume node info 
   iint N, Np;
   dfloat *r, *s;   // coordinates of local nodes
   dfloat *Dr, *Ds; // collocation differentiation matrices
   dfloat *x, *y;   // coordinates of physical nodes
 
+  // indices of vertex nodes
+  iint *vertexNodes;
+  
   // quad specific quantity
-  iint Nq;
+  iint Nq, NqP;
   
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
+
+  // transform to/from eigenmodes of 1D laplacian (with built in weighting)
+  dfloat *oasForward;
+  dfloat *oasBack;
+  dfloat *oasDiagOp;
+
 
   // face node info
   iint Nfp;        // number of nodes per face
@@ -259,6 +276,30 @@ typedef struct {
   dfloat *c2;
   occa::memory o_c2;
 
+  // CG gather-scatter info
+  void *gsh; // gslib struct pointer
+
+  iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
+  iint *gatherBaseIds;  // gather index of ""
+  iint *gatherBaseRanks; // base rank
+  iint *gatherMaxRanks;  // maximum rank connected to each sorted node
+  iint *gatherHaloFlags;  // maximum rank connected to each sorted node
+
+  iint NuniqueBases; // number of unique bases on this rank
+  occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
+  occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
+  occa::memory o_gatherTmp; // temporary array to store base values gathered locally
+
+  iint NnodeHalo; // number of halo bases on this rank
+  occa::memory o_nodeHaloIds;  // indices of halo base nodes after initial local gather
+  occa::memory o_subGatherTmp; // temporary DEVICE array to store halo base values prior to DEVICE>HOST copy
+  dfloat        *subGatherTmp; // temporary HALO array
+
+  occa::memory o_ggeo; // second order geometric factors
+  occa::memory o_projectL2; // local weights for projection.
+
+
+  
   occa::kernel haloExtractKernel;
   
   occa::kernel volumeKernel;
@@ -272,6 +313,19 @@ typedef struct {
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
   
+  occa::kernel gatherKernel;
+  occa::kernel scatterKernel;
+
+  occa::kernel getKernel;
+  occa::kernel putKernel;
+
+  occa::kernel AxKernel;
+  occa::kernel weightedInnerProduct1Kernel;
+  occa::kernel weightedInnerProduct2Kernel;
+  occa::kernel scaledAddKernel;
+  occa::kernel dotMultiplyKernel;
+  occa::kernel dotDivideKernel;
+
 }mesh2D;
 
 mesh2D* meshReaderTri2D(char *fileName);
@@ -375,6 +429,23 @@ void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
+void meshParallelGatherScatter2D(mesh2D *mesh,
+				 ogs_t *ogs, 
+				 occa::memory &o_v,
+				 occa::memory &o_gsv,
+				 const char *type);
+
+
+ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
+					iint Nlocal,     // number of local nodes
+					iint Nbytes,     // number of bytes per node
+					iint *localIds,  // local index of nodes
+					iint *baseIds,   // gather index of their base nodes
+					iint *baseRanks, // rank of their base nodes
+					iint *haloFlags); // 1 for halo node, 0 for not
+
+
+
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 
@@ -442,6 +513,13 @@ unsigned int hash(const unsigned int value) ;
 #define SYID 3  
 #define  JID 4
 #define JWID 5
+
+
+/* offsets for second order geometric factors */
+#define G00ID 0  
+#define G01ID 1  
+#define G11ID 2
+#define GWJID 3
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
