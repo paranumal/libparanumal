@@ -186,6 +186,8 @@ typedef struct {
   occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
 
+  occa::kernel gradientKernel;
+  
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
 
