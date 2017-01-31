@@ -144,7 +144,16 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 					 kernelInfo);
 
 
-  
+  mesh->gradientKernel = 
+    mesh->device.buildKernelFromSource("okl/ellipticGradientQuad2D.okl",
+				       "ellipticGradientQuad2D",
+					 kernelInfo);
+
+
+  mesh->ipdgKernel =
+    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgQuad2D.okl",
+				       "ellipticAxIpdgQuad2D",
+				       kernelInfo);  
 
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays

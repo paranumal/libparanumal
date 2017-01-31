@@ -37,14 +37,25 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
+void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *method){
 
   mesh->device.finish();
   occa::tic("AxKernel");
-  
-  // compute local element operations and store result in o_Aq
-  mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
 
+  if(!strcmp(method, "CG")){
+    // compute local element operations and store result in o_Aq
+    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
+  }
+  else{
+
+    printf("IPDG\n");
+
+    mesh->gradientKernel(mesh->Nelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
+
+    mesh->ipdgKernel(mesh->Nelements, mesh->o_vmapM, mesh->o_vmapP, lambda, 100.f,
+		     mesh->o_vgeo, mesh->o_sgeo, mesh->o_D, o_gradq, o_Aq);
+
+  }
   mesh->device.finish();
   occa::toc("AxKernel");
 
@@ -354,8 +365,14 @@ int main(int argc, char **argv){
   occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
 
-  char *schemeType = strdup("PCG");    // can be CG or PCG
-  char *preconType = strdup("OAS"); // can be JACOBI, OAS, NONE
+  dfloat *x4   = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
+  occa::memory o_gradx  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
+  occa::memory o_gradp  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
+  
+
+  char *iterationType = strdup("PCG"); // can be CG or PCG
+  char *preconType = strdup("OAS");    // can be JACOBI, OAS, NONE
+  char *methodType = strdup("IPDG");   // can be IPDG or CG
   
   // use this for OAS precon pairwise halo exchange
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
@@ -367,7 +384,7 @@ int main(int argc, char **argv){
   o_x.copyFrom(x);
 
   // compute A*x
-  ellipticOperator2D(mesh, ogs, lambda, o_x, o_Ax); 
+  ellipticOperator2D(mesh, ogs, lambda, o_x, o_gradx, o_Ax, methodType); 
   
   // copy r = b
   o_r.copyFrom(r);
@@ -378,7 +395,7 @@ int main(int argc, char **argv){
   // gather-scatter 
   ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString);
   
-  if(!strcmp(schemeType,"PCG")){
+  if(!strcmp(iterationType,"PCG")){
     // Precon^{-1} (b-A*x)
     ellipticPreconditioner2D(mesh, precon, ogs, sendBuffer, recvBuffer,
 			     o_r, o_zP, o_z, dfloatString, preconType, invDegree, invDegreeP); // r => rP => zP => z
@@ -405,12 +422,12 @@ int main(int argc, char **argv){
   do{
     
     // A*p
-    ellipticOperator2D(mesh, ogs, lambda, o_p, o_Ap); // eventually add reduction in scatterKernel
+    ellipticOperator2D(mesh, ogs, lambda, o_p, o_gradp, o_Ap, methodType); // eventually add reduction in scatterKernel
 
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
 
-    if(!strcmp(schemeType,"PCG"))
+    if(!strcmp(iterationType,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
       alpha = rdotz0/pAp;
     else
@@ -428,7 +445,7 @@ int main(int argc, char **argv){
     
     if(rdotr1 < tol*tol) break;
 
-    if(!strcmp(schemeType,"PCG")){
+    if(!strcmp(iterationType,"PCG")){
 
       // z = Prvon^{-1} r
       ellipticPreconditioner2D(mesh, precon, ogs, sendBuffer, recvBuffer, o_r, o_zP, o_z,
