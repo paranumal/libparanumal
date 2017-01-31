@@ -72,7 +72,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
 			mesh->ggeo);
 
-
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapM);
@@ -115,6 +114,14 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
 
+  kernelInfo.addDefine("p_NXID", NXID);
+  kernelInfo.addDefine("p_NYID", NYID);
+  kernelInfo.addDefine("p_NZID", NZID);
+  kernelInfo.addDefine("p_SJID", SJID);
+  kernelInfo.addDefine("p_IJID", IJID);
+  kernelInfo.addDefine("p_WSJID", WSJID);
+
+  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -158,4 +165,19 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_G22ID", G22ID);
   kernelInfo.addDefine("p_GWJID", GWJID);
 
+
+  kernelInfo.addDefine("p_RXID", RXID);
+  kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo.addDefine("p_TXID", TXID);
+
+  kernelInfo.addDefine("p_RYID", RYID);
+  kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo.addDefine("p_TYID", TYID);
+
+  kernelInfo.addDefine("p_RZID", RZID);
+  kernelInfo.addDefine("p_SZID", SZID);
+  kernelInfo.addDefine("p_TZID", TZID);
+
+  kernelInfo.addDefine("p_JWID", JWID);
+  
 }
