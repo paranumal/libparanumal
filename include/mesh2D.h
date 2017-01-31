@@ -297,8 +297,6 @@ typedef struct {
 
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
-
-
   
   occa::kernel haloExtractKernel;
   
@@ -326,6 +324,10 @@ typedef struct {
   occa::kernel dotMultiplyKernel;
   occa::kernel dotDivideKernel;
 
+  occa::kernel gradientKernel;
+  occa::kernel ipdgKernel;
+
+  
 }mesh2D;
 
 mesh2D* meshReaderTri2D(char *fileName);
@@ -526,7 +528,7 @@ unsigned int hash(const unsigned int value) ;
 #define NYID 1  
 #define SJID 2  
 #define IJID 3  
-
+#define WSJID 4
 
 #endif
 

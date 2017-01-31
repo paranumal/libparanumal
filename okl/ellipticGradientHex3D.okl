@@ -1,8 +1,8 @@
 // compute local gradients
 
 kernel void ellipticGradientHex3D(const int Nelements,
-				  const dfloat4 * restrict vgeo,
-				  const dfloat  * restrict const D,
+				  const dfloat * restrict vgeo,
+				  const dfloat * restrict  D,
 				  const dfloat * restrict q,
 				  dfloat4 * restrict gradq){  
 
@@ -17,13 +17,13 @@ kernel void ellipticGradientHex3D(const int Nelements,
 	s_D[j][i] = D[i + p_Nq*j];
       }
     }
-
-    // loop over slabs
+    
+    // prefetch q
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
-	// prefetch q
 	for(int i=0;i<p_Nq;++i;inner0){
-	  s_q[k][j][i] = q[e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i];
+	  const iint id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
+	  s_q[k][j][i] = q[id];
 	}
       }
     }
@@ -35,19 +35,19 @@ kernel void ellipticGradientHex3D(const int Nelements,
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
 	
-	  const int gid = i + j*p_Nq + k*p_Nfp + e*p_Np*p_Nvgeo;
-
-	  const dfloat drdx = vgeo[gid + RXID*p_Np];
-	  const dfloat drdy = vgeo[gid + RYID*p_Np];
-	  const dfloat drdz = vgeo[gid + RZID*p_Np];
+	  const int gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
 	  
-	  const dfloat dsdx = vgeo[gid + SXID*p_Np];
-	  const dfloat dsdy = vgeo[gid + SYID*p_Np];
-	  const dfloat dsdz = vgeo[gid + SZID*p_Np];
+	  const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+	  const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+	  const dfloat drdz = vgeo[gid + p_RZID*p_Np];
 	  
-	  const dfloat dtdx = vgeo[gid + TXID*p_Np];
-	  const dfloat dtdy = vgeo[gid + TYID*p_Np];
-	  const dfloat dtdz = vgeo[gid + TZID*p_Np];
+	  const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+	  const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+	  const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+	  
+	  const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+	  const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+	  const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 	  
 	  // compute 1D derivatives
 	  dfloat qr = 0, qs = 0, qt = 0;
@@ -58,12 +58,13 @@ kernel void ellipticGradientHex3D(const int Nelements,
 	  }
 	  
 	  dfloat4 gradqn;
-	  gradqn.x = drdx*pr + dsdx*ps + dtdx*pt;
-	  gradqn.y = drdy*pr + dsdy*ps + dtdy*pt;
-	  gradqn.z = drdz*pr + dsdz*ps + dtdz*pt;
+	  gradqn.x = drdx*qr + dsdx*qs + dtdx*qt;
+	  gradqn.y = drdy*qr + dsdy*qs + dtdy*qt;
+	  gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
 	  gradqn.w = s_q[k][j][i];
-	  
-	  q[gid] = gradqn;
+
+	  const iint id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i; 
+	  gradq[id] = gradqn;
 	}
       }
     }

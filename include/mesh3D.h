@@ -186,8 +186,6 @@ typedef struct {
   occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
 
-  occa::kernel gradientKernel;
-  
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
 
@@ -195,11 +193,16 @@ typedef struct {
   occa::kernel putKernel;
 
   occa::kernel AxKernel;
+  occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
   occa::kernel scaledAddKernel;
   occa::kernel dotMultiplyKernel;
   occa::kernel dotDivideKernel;
+
+  occa::kernel gradientKernel;
+  occa::kernel ipdgKernel;
+  
 }mesh3D;
 
 // mesh readers
@@ -358,6 +361,7 @@ void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
 #define NYID 1  
 #define NZID 2 
 #define SJID 3  
-#define IJID 4  
+#define IJID 4
+#define WSJID 5
 #endif
 

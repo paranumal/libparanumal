@@ -7,7 +7,7 @@
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 5;
+  mesh->Nsgeo = 6;
   mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
@@ -76,6 +76,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 	mesh->sgeo[base+NZID] = nz;
 	mesh->sgeo[base+SJID] = sJ;
 	mesh->sgeo[base+IJID] = 1./J;
+	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[i%mesh->Nq]*mesh->gllw[i/mesh->Nq];
       }
     }
   }

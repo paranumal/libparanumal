@@ -88,6 +88,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
 
+  
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
@@ -129,6 +130,11 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
+  mesh->innerProductKernel =
+    mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+				       "innerProduct",
+				       kernelInfo);
+
   mesh->scaledAddKernel =
       mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
 					 "scaledAdd",
@@ -144,10 +150,17 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 					 "dotDivide",
 					 kernelInfo);
 
+  mesh->gradientKernel = 
+    mesh->device.buildKernelFromSource("okl/ellipticGradientHex3D.okl",
+				       "ellipticGradientHex3D",
+					 kernelInfo);
 
+
+  mesh->ipdgKernel =
+    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgHex3D.okl",
+				       "ellipticAxIpdgHex3D",
+				       kernelInfo);
   
-
-
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   *ogs = meshParallelGatherScatterSetup3D(mesh,
 					  mesh->Np*mesh->Nelements,

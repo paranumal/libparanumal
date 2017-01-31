@@ -314,6 +314,12 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
+
+  kernelInfo.addDefine("p_NXID", NXID);
+  kernelInfo.addDefine("p_NYID", NYID);
+  kernelInfo.addDefine("p_SJID", SJID);
+  kernelInfo.addDefine("p_IJID", IJID);
+  kernelInfo.addDefine("p_WSJID", WSJID);
   
   kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
 
@@ -352,6 +358,16 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_G01ID", G01ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
   kernelInfo.addDefine("p_GWJID", GWJID);
+
+
+  kernelInfo.addDefine("p_RXID", RXID);
+  kernelInfo.addDefine("p_SXID", SXID);
+
+  kernelInfo.addDefine("p_RYID", RYID);
+  kernelInfo.addDefine("p_SYID", SYID);
+
+  kernelInfo.addDefine("p_JWID", JWID);
+
 
   
 }

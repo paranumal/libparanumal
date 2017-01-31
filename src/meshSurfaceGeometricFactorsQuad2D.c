@@ -7,7 +7,7 @@
 void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 4;
+  mesh->Nsgeo = 5;
   mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
@@ -52,6 +52,8 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 	mesh->sgeo[base+NYID] = ny/d;
 	mesh->sgeo[base+SJID] = d/2.;
 	mesh->sgeo[base+IJID] = 1./J;
+
+	mesh->sgeo[base+WSJID] = (d/2.)*mesh->gllw[i];
       }
     }
   }

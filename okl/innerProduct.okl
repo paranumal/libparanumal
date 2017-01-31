@@ -1,0 +1,46 @@
+
+// barrier avoiding (partial) reduction
+kernel void innerProduct(const iint N,
+			 const dfloat * restrict x,
+			 const dfloat * restrict y,
+			 dfloat * restrict xy){
+  
+#define G 8
+#define S 32
+  
+  // loop over blocks
+  for(int b=0;b<(N+G*S-1)/(G*S);++b;outer0){
+    
+    volatile shared dfloat s_a[G][S];
+    volatile shared dfloat s_b[G];
+
+    for(int g=0;g<G;++g;inner1){
+      for(int s=0;s<S;++s;inner0){
+	const iint n = b*G*S + g*S + s;
+
+	const dfloat xgs = (n<N) ? x[n]:0.f;
+	const dfloat ygs = (n<N) ? y[n]:0.f;
+
+	s_a[g][s] = xgs*ygs;
+	
+        if(s<16) s_a[g][s] += s_a[g][s + 16];
+        if(s< 8) s_a[g][s] += s_a[g][s +  8];
+        if(s< 4) s_a[g][s] += s_a[g][s +  4];
+        if(s< 2) s_a[g][s] += s_a[g][s +  2];
+        if(s==0) s_b[g] = s_a[g][0] + s_a[g][1];
+      }
+    }
+    
+    barrier(localMemFence);
+
+    for(int g=0;g<G;++g;inner1){
+      for(int s=0;s<S;++s;inner0){
+        if(g==0){
+          if(s< 4) s_b[s] += s_b[s +  4];
+          if(s< 2) s_b[s] += s_b[s +  2];
+          if(s==0) xy[b] = s_b[0] + s_b[1];
+        }
+      }
+    }
+  }
+}
