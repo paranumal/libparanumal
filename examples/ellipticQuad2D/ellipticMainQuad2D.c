@@ -42,9 +42,13 @@ void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o
   mesh->device.finish();
   occa::tic("AxKernel");
 
-  if(!strcmp(method, "CG")){
+  if(!strcmp(method, "H0")){
     // compute local element operations and store result in o_Aq
-    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq); 
+    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+    
+    // parallel gather scatter
+    ellipticParallelGatherScatter2D(mesh, ogs, o_Aq, o_Aq, dfloatString);
+    
   }
   else{
 
@@ -52,16 +56,14 @@ void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o
 
     mesh->gradientKernel(mesh->Nelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
-    mesh->ipdgKernel(mesh->Nelements, mesh->o_vmapM, mesh->o_vmapP, lambda, 100.f,
+    dfloat tau = 1000.f;
+    mesh->ipdgKernel(mesh->Nelements, mesh->o_vmapM, mesh->o_vmapP, lambda, tau,
 		     mesh->o_vgeo, mesh->o_sgeo, mesh->o_D, o_gradq, o_Aq);
 
   }
   mesh->device.finish();
   occa::toc("AxKernel");
 
-  // parallel gather scatter
-  ellipticParallelGatherScatter2D(mesh, ogs, o_Aq, o_Aq, dfloatString);
-  
 }
 
 dfloat ellipticScaledAdd(mesh2D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
@@ -85,14 +87,19 @@ dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
 				    occa::memory &o_a,
 				    occa::memory &o_b,
 				    occa::memory &o_tmp,
-				    dfloat *tmp){
+				    dfloat *tmp,
+				    const char *methodType){
 
   mesh->device.finish();
   occa::tic("weighted inner product2");
 
   iint Ntotal = mesh->Nelements*mesh->Np;
-  mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
 
+  if(!strcmp(methodType,"H0"))
+    mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
+  else
+    mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+  
   mesh->device.finish();
   occa::toc("weighted inner product2");
   
@@ -109,6 +116,7 @@ dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
   return globalwab;
 }
 
+#if 0
 dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
 				    iint Nblock,
 				    occa::memory &o_w,
@@ -146,7 +154,7 @@ dfloat diagnostics(mesh2D *mesh, iint Nblock, occa::memory &o_w, occa::memory &o
 
   printf("%s: L2 norm = %g\n", message, sqrt(wa2));
 }
-
+#endif
 
 void ellipticProject(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_Pv){
 
@@ -371,8 +379,8 @@ int main(int argc, char **argv){
   
 
   char *iterationType = strdup("PCG"); // can be CG or PCG
-  char *preconType = strdup("OAS");    // can be JACOBI, OAS, NONE
-  char *methodType = strdup("IPDG");   // can be IPDG or CG
+  char *preconType = strdup("NONE");    // can be JACOBI, OAS, NONE
+  char *methodType = strdup("IPDG");   // can be IPDG or H0
   
   // use this for OAS precon pairwise halo exchange
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
@@ -412,8 +420,8 @@ int main(int argc, char **argv){
   //  exit(0);
   
   // dot(r,r)
-  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
-  dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp); // PCG
+  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, methodType);
+  dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, methodType); 
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   iint Niter = 0;
@@ -425,7 +433,7 @@ int main(int argc, char **argv){
     ellipticOperator2D(mesh, ogs, lambda, o_p, o_gradp, o_Ap, methodType); // eventually add reduction in scatterKernel
 
     // dot(p,A*p)
-    dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp);
+    dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, methodType);
 
     if(!strcmp(iterationType,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -441,7 +449,7 @@ int main(int argc, char **argv){
     ellipticScaledAdd(mesh, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
-    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_tmp, tmp);
+    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, methodType);
     
     if(rdotr1 < tol*tol) break;
 
@@ -452,7 +460,7 @@ int main(int argc, char **argv){
 			       dfloatString, preconType, invDegree, invDegreeP); 
       
       // dot(r,z)
-      rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp);
+      rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, methodType);
 
       beta = rdotz1/rdotz0;
 

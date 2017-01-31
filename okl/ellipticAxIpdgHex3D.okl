@@ -97,13 +97,10 @@ kernel void ellipticAxIpdgHex3D(const int Nelements,
 	  // assume that this stores (p, px, py, pz) as dfloat4
 	  const dfloat4 gradqn = gradq[e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i];
 	  
-	  const int gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;	 
+	  const iint gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;	 
 
 	  const dfloat JW = vgeo[gid + p_JWID*p_Np];
 
-	  // D_{ii'}*J_i*w_i*D_{im}*q_{m}
-	  
-	  // chain rule (need to scale by wei
 	  s_dqdx[k][j][i] = JW*gradqn.x;
 	  s_dqdy[k][j][i] = JW*gradqn.y;
 	  s_dqdz[k][j][i] = JW*gradqn.z;
@@ -120,8 +117,8 @@ kernel void ellipticAxIpdgHex3D(const int Nelements,
     // face 0 & 5
     for(iint j=0;j<p_Nq;++j;inner1){
       for(iint i=0;i<p_Nq;++i;inner0){
-	int sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
-	int sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;		
+	iint sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
+	iint sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;		
 
 	surfaceTerms(sk0,i,j,     0);
 	surfaceTerms(sk5,i,j,p_Nq-1); 
@@ -161,7 +158,7 @@ kernel void ellipticAxIpdgHex3D(const int Nelements,
       for(iint j=0;j<p_Nq;++j;inner1){
 	for(iint i=0;i<p_Nq;++i;inner0){
 
-	  const int gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;	 
+	  const iint gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;	 
 
 	  const dfloat drdx = vgeo[gid + p_RXID*p_Np];
 	  const dfloat drdy = vgeo[gid + p_RYID*p_Np];
