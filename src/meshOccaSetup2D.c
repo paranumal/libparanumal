@@ -190,13 +190,14 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			LIFTT);
 
-  
+  // HARD CODED FOR QUADS
   mesh->o_vgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
+    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
 			mesh->vgeo);
   
+  // HARD CODED FOR QUADS
   mesh->o_sgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
 
   mesh->o_ggeo =
