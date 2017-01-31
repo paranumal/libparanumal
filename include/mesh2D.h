@@ -318,6 +318,8 @@ typedef struct {
   occa::kernel putKernel;
 
   occa::kernel AxKernel;
+
+  occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
   occa::kernel scaledAddKernel;

@@ -11,18 +11,19 @@ kernel void ellipticGradientQuad2D(const int Nelements,
     shared dfloat s_D[p_Nq][p_Nq];
     shared dfloat s_q[p_Nq][p_Nq];
     
-    // prefetch D
     for(int j=0;j<p_Nq;++j){
+      // prefetch D
       for(int i=0;i<p_Nq;++i;inner0){
 	s_D[j][i] = D[i + p_Nq*j];
       }
-    }
-    
-    // prefetch q
-    for(int j=0;j<p_Nq;++j){
+      // prefetch q
       for(int i=0;i<p_Nq;++i;inner0){
 	const iint id = e*p_Np+j*p_Nq+i;
+#if 0
 	s_q[j][i] = q[id];
+#else
+	s_q[j][i] = 0;
+#endif
       }
     }
     
@@ -32,14 +33,17 @@ kernel void ellipticGradientQuad2D(const int Nelements,
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;inner0){
 	
+#if 0
 	const int gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
-	
+		
 	const dfloat drdx = vgeo[gid + p_RXID*p_Np];
 	const dfloat drdy = vgeo[gid + p_RYID*p_Np];
 	
 	const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
 	const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-	
+#else
+	const dfloat drdx = 0, drdy = 0, dsdx = 0, dsdy = 0;
+#endif
 	// compute 1D derivatives
 	dfloat qr = 0, qs = 0;
 	for(int n=0;n<p_Nq;++n){
@@ -51,9 +55,10 @@ kernel void ellipticGradientQuad2D(const int Nelements,
 	gradqn.x = drdx*qr + dsdx*qs;
 	gradqn.y = drdy*qr + dsdy*qs;
 	gradqn.w = s_q[j][i];
-	
+
 	const iint id = e*p_Np+j*p_Nq+i; 
 	gradq[id] = gradqn;
+
       }
     }
   }

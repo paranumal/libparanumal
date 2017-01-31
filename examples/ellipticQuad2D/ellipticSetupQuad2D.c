@@ -128,6 +128,11 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
+  mesh->innerProductKernel =
+    mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+				       "innerProduct",
+				       kernelInfo);
+  
   mesh->scaledAddKernel =
       mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
 					 "scaledAdd",
