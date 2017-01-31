@@ -336,7 +336,7 @@ int main(int argc, char **argv){
   // at this point gather-scatter is available
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-10;
+  const dfloat tol = 1e-6;
 
   // load rhs into r
   for(iint e=0;e<mesh->Nelements;++e){

@@ -222,19 +222,18 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
     // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
     
-    dfloat JWhrinv2 = 0, JWhsinv2 = 0, JW = 0;
+    dfloat Jhrinv2 = 0, Jhsinv2 = 0, J = 0;
     for(iint n=0;n<mesh->Np;++n){
-      iint base = mesh->Nggeo*mesh->Np*e + n;
-      /*
-      JW = mymax(JW, mesh->ggeo[base + mesh->Np*GWJID]);
-      JWhrinv2 = mymax(JWhrinv2, mesh->ggeo[base + mesh->Np*G00ID]);
-      JWhsinv2 = mymax(JWhsinv2, mesh->ggeo[base + mesh->Np*G11ID]);
-      */
 
-      JW += mesh->ggeo[base + mesh->Np*GWJID];
-      JWhrinv2 += mesh->ggeo[base + mesh->Np*G00ID];
-      JWhsinv2 += mesh->ggeo[base + mesh->Np*G11ID];
+      dfloat W = mesh->gllz[n%mesh->Nq]*mesh->gllz[n/mesh->Nq];
       
+      iint base = mesh->Nggeo*mesh->Np*e + n;
+
+      J = mymax(J, mesh->ggeo[base + mesh->Np*GWJID]/W);
+      Jhrinv2 = mymax(Jhrinv2, mesh->ggeo[base + mesh->Np*G00ID]/W);
+      Jhsinv2 = mymax(Jhsinv2, mesh->ggeo[base + mesh->Np*G11ID]/W);
+
+
     }
     
     for(iint j=0;j<NqP;++j){
@@ -242,9 +241,9 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 	iint pid = i + j*NqP + e*NpP;
 	
 	  diagInvOp[pid] =
-	    1./(JW*lambda +
-		JWhrinv2*mesh->oasDiagOp[i] +
-		JWhsinv2*mesh->oasDiagOp[j]);
+	    1./(J*lambda +
+		Jhrinv2*mesh->oasDiagOp[i] +
+		Jhsinv2*mesh->oasDiagOp[j]);
       }
     }
   }
