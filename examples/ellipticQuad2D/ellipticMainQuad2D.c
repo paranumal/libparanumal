@@ -329,7 +329,7 @@ int main(int argc, char **argv){
   dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
   dfloat *z   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *x   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
   dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   
@@ -368,7 +368,7 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), r);
   occa::memory o_z   = mesh->device.malloc(Ntotal*sizeof(dfloat), z);
   occa::memory o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat), zP); // CAUTION
-  occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
+  occa::memory o_x   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), x);
   occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
   occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
