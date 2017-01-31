@@ -329,14 +329,14 @@ int main(int argc, char **argv){
   dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
   dfloat *z   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *x   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
   dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   
   // at this point gather-scatter is available
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
+  const dfloat tol = 1e-10;
 
   // load rhs into r
   for(iint e=0;e<mesh->Nelements;++e){
@@ -368,7 +368,7 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), r);
   occa::memory o_z   = mesh->device.malloc(Ntotal*sizeof(dfloat), z);
   occa::memory o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat), zP); // CAUTION
-  occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
+  occa::memory o_x   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), x);
   occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
   occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
@@ -401,7 +401,8 @@ int main(int argc, char **argv){
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter 
-  ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString);
+  if(!strcmp(methodType, "H0"))
+    ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString);
   
   if(!strcmp(iterationType,"PCG")){
     // Precon^{-1} (b-A*x)
@@ -503,7 +504,7 @@ int main(int argc, char **argv){
       
       maxError = mymax(maxError, error);
 
-      //      mesh->q[id] -= exact;
+      mesh->q[id] -= exact;
     }
   }
 

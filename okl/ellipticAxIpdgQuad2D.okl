@@ -24,8 +24,8 @@
   s_dqdx[j][i] += 0.5f*WsJ*nx*dq;					\
   s_dqdy[j][i] += 0.5f*WsJ*ny*dq;					\
   									\
-  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +			\
-			    ny*(gradqP.y+gradqM.y) +			\
+  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(sc*gradqP.x+gradqM.x) +			\
+			    ny*(sc*gradqP.y+gradqM.y) +			\
 			    tau*dq);					\
   }
 
@@ -120,8 +120,8 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
       iint sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
       iint sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-      surfaceTerms(sk1,     0,j);
-      surfaceTerms(sk3,p_Nq-1,j); 
+      surfaceTerms(sk1,p_Nq-1,j);
+      surfaceTerms(sk3,0,j); 
     }
 
     barrier(localMemFence);
@@ -144,8 +144,8 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
 	const dfloat dqdx = s_dqdx[j][i];
 	const dfloat dqdy = s_dqdy[j][i];
 	
-	s_dqdx[j][i] = JW*(drdx*dqdx + drdy*dqdy);
-	s_dqdy[j][i] = JW*(dsdx*dqdx + dsdy*dqdy);
+	s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy);
+	s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy);
       }
     }
     
