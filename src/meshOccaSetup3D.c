@@ -60,6 +60,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 			  LIFTT);
   }
   
+  // hardcoded for hexes
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
