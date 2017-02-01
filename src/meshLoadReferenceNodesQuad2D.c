@@ -155,19 +155,19 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
-  //  printf("comment: %s", buf);
+  printf("comment: %s", buf);
   fgets(buf, BUFSIZ, fp);
-  //  printf("%s", buf);
+  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->NqP));
-
+  printf("1) mesh->NqP=%d from (%s)\n", mesh->NqP, buf);
   fgets(buf, BUFSIZ, fp);
   mesh->oasForward = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasForward+n*mesh->NqP+m);
-      //      printf("%g ", mesh->oasForward[n*mesh->NqP+m]);
+      printf("%g ", mesh->oasForward[n*mesh->NqP+m]);
     }
-    //    printf("\n");
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
@@ -176,7 +176,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOp+n);
     fgets(buf,BUFSIZ,fp); // rest of line
-    //    printf("oasDiagOp[%d]=%g\n", n, mesh->oasDiagOp[n]);
+    printf("oasDiagOp[%d]=%g\n", n, mesh->oasDiagOp[n]);
   }
 
   fgets(buf,BUFSIZ,fp); // rest of line
@@ -184,12 +184,48 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasBack+n*mesh->NqP+m);
-      //      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
+      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
     }
-    //    printf("\n");
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-  
+
+  // projection info for OAS precon (one node overlap)
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("comment: %s", buf);
+  fgets(buf, BUFSIZ, fp);
+  printf("%s", buf);
+  sscanf(buf, iintFormat, &(mesh->NqP));
+  printf("2) mesh->NqP=%d\n", mesh->NqP);
+  fgets(buf, BUFSIZ, fp);
+  mesh->oasForwardDg = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    for(int m=0;m<mesh->NqP;++m){
+      fscanf(fp, dfloatFormat, mesh->oasForwardDg+n*mesh->NqP+m);
+      printf("%g ", mesh->oasForwardDg[n*mesh->NqP+m]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  fgets(buf, BUFSIZ, fp);
+  mesh->oasDiagOpDg = (dfloat*) calloc(mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
+    fgets(buf,BUFSIZ,fp); // rest of line
+    printf("oasDiagOpDg[%d]=%g\n", n, mesh->oasDiagOpDg[n]);
+  }
+
+  fgets(buf,BUFSIZ,fp); // rest of line
+  mesh->oasBackDg = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
+  for(int n=0;n<mesh->NqP;++n){
+    for(int m=0;m<mesh->NqP;++m){
+      fscanf(fp, dfloatFormat, mesh->oasBackDg+n*mesh->NqP+m);
+      printf("%g ", mesh->oasBackDg[n*mesh->NqP+m]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
 
   
   // read number of volume cubature nodes

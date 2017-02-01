@@ -20,9 +20,9 @@ kernel void innerProduct(const iint N,
 
 	const dfloat xgs = (n<N) ? x[n]:0.f;
 	const dfloat ygs = (n<N) ? y[n]:0.f;
-
-	s_a[g][s] = xgs*ygs;
 	
+	s_a[g][s] = xgs*ygs;
+		  
         if(s<16) s_a[g][s] += s_a[g][s + 16];
         if(s< 8) s_a[g][s] += s_a[g][s +  8];
         if(s< 4) s_a[g][s] += s_a[g][s +  4];
