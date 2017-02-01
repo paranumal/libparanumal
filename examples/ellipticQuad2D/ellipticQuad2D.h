@@ -9,14 +9,19 @@ typedef struct {
 
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
+
   occa::memory o_oasForward;
   occa::memory o_oasBack;
   occa::memory o_oasDiagInvOp;
 
+  occa::memory o_oasForwardDg;
+  occa::memory o_oasBackDg;
+  occa::memory o_oasDiagInvOpDg;
+
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
   
-  ogs_t *ogsP;
+  ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
   

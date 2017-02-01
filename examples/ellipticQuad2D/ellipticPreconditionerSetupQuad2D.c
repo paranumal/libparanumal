@@ -89,6 +89,8 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       vmapPP[fid] = idP;
     }
   }
+
+  // -------------------------------------------------------------------------------------------
   
   // space for gather base indices with halo
   preconGatherInfo_t *gatherInfo =
@@ -154,27 +156,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   for(iint n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfo[n].localId = n;
 
-  char fname[BUFSIZ];
-  sprintf(fname, "haloFlag%05d.dat", rank);
-  FILE *fp = fopen(fname, "w");
-  
-  for(iint p=0;p<size;++p){
-    if(p==rank){
-      for(iint e=0;e<mesh->Nelements;++e){
-	fprintf(fp,"e=%d: \n", e);
-	for(iint j=0;j<mesh->NqP;++j){
-	  for(iint i=0;i<mesh->NqP;++i){
-	    iint id = i + mesh->NqP*j + e*NpP;
-	    fprintf(fp,"%d ", preconGatherInfo[id].haloFlag);
-	  }
-	  fprintf(fp,"\n");
-	}
-	fprintf(fp,"\n");
-      }
-    }
-  }
-  fclose(fp);
-  
   // sort by rank then base index
   qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
   
@@ -208,15 +189,144 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 						  gatherBaseRanksP,
 						  gatherHaloFlagsP);
 
+  // -------------------------------------------------------------------------------------------
+#if 1
+  // build gather-scatter for overlapping patches
+  iint *allNelements = (iint*) calloc(size, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+		allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // offests
+  iint *startElement = (iint*) calloc(size, sizeof(iint));
+  for(iint r=1;r<size;++r){
+    startElement[r] = startElement[r-1]+allNelements[r-1];
+  }
+
+  preconGatherInfo_t *preconGatherInfoDg = 
+    (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
+
+  // reset local ids
+  for(iint n=0;n<mesh->Nelements*NpP;++n)
+    preconGatherInfoDg[n].localId = n;
+
+  for(iint e=0;e<mesh->Nelements;++e){
+
+    // push to non-overlap nodes
+    for(iint j=0;j<mesh->Nq;++j){
+      for(iint i=0;i<mesh->Nq;++i){
+	iint id  = i + j*mesh->Nq + e*mesh->Np;
+	iint pid = i + 1 + (j+1)*NqP + e*NpP;
+
+	// all patch interior nodes are local
+	preconGatherInfoDg[pid].baseId = 1 + id + startElement[rank]*mesh->Np;
+	preconGatherInfoDg[pid].baseRank = rank;
+      }
+    }
+    
+    for(iint f=0;f<mesh->Nfaces;++f){
+      // mark halo nodes
+      iint rP = mesh->EToP[e*mesh->Nfaces+f];
+      if(rP!=-1){
+	printf("FOUND HALO %d\n", rP);
+	for(iint n=0;n<mesh->Nfp;++n){
+	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+	  iint idM = mesh->vmapM[id];
+	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; // one layer in from patch face
+	  preconGatherInfoDg[pid].haloFlag = 1;
+
+	  iint eP = mesh->EToE[e*mesh->Nfaces+f];
+	  iint idP = (mesh->vmapP[id])%mesh->Np + (eP + startElement[rP])*mesh->Np;
+	  pid -= offsetP[f];
+	  preconGatherInfoDg[pid].haloFlag = 1;
+	  preconGatherInfoDg[pid].baseId = 1 + idP;
+	  preconGatherInfoDg[pid].baseRank = rP;
+	}
+      }
+      else{
+	for(iint n=0;n<mesh->Nfp;++n){
+	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+	  iint idP = mesh->vmapP[id];
+	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n]; 
+	  preconGatherInfoDg[pid].baseId   = 1 + idP + startElement[rank]*mesh->Np;
+	  preconGatherInfoDg[pid].baseRank = rank;	  
+	}
+      }
+    }
+  }
+
+#if 0
+  for(iint e=0;e<mesh->Nelements;++e){
+    printf("e=%d: \n", e);
+    for(iint j=0;j<mesh->NqP;++j){
+      for(iint i=0;i<mesh->NqP;++i){
+	iint id = i + mesh->NqP*j + e*NpP;
+	printf("%d ", preconGatherInfoDg[id].baseId);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+#endif
+  
+  // sort by rank then base index
+  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
+
+#if 0
+  for(iint n=0;n<NpP*mesh->Nelements;++n){
+    printf(" preconGatherInfoDg[%d].baseId = %d\n", n, preconGatherInfoDg[n].baseId);
+  }
+#endif
+  
+  // do not gather-scatter nodes labelled zero
+  skip = 0;
+  while(preconGatherInfoDg[skip].baseId==0 && skip<NpP*mesh->Nelements){
+    ++skip;
+  }
+
+  printf("skipDg = %d out of %d\n", skip, NpP*mesh->Nelements);
+
+  // reset local ids
+  iint NlocalDg = NpP*mesh->Nelements - skip;
+  iint *gatherLocalIdsDg  = (iint*) calloc(NlocalDg, sizeof(iint));
+  iint *gatherBaseIdsDg   = (iint*) calloc(NlocalDg, sizeof(iint));
+  iint *gatherBaseRanksDg = (iint*) calloc(NlocalDg, sizeof(iint));
+  iint *gatherHaloFlagsDg = (iint*) calloc(NlocalDg, sizeof(iint));
+  for(iint n=0;n<NlocalDg;++n){
+    gatherLocalIdsDg[n]  = preconGatherInfoDg[n+skip].localId;
+    gatherBaseIdsDg[n]   = preconGatherInfoDg[n+skip].baseId;
+    gatherBaseRanksDg[n] = preconGatherInfoDg[n+skip].baseRank;
+    gatherHaloFlagsDg[n] = preconGatherInfoDg[n+skip].haloFlag;
+  }
+
+  // make preconBaseIds => preconNumbering
+  precon->ogsDg = meshParallelGatherScatterSetup2D(mesh,
+						   NlocalDg,
+						   sizeof(dfloat),
+						   gatherLocalIdsDg,
+						   gatherBaseIdsDg,
+						   gatherBaseRanksDg,
+						   gatherHaloFlagsDg);
+#endif  
+  // -------------------------------------------------------------------------------------------
+
+  
+  
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
   precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
+
+  // load prebuilt transform matrices
   precon->o_oasForward = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForward);
   precon->o_oasBack    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBack);
 
+  precon->o_oasForwardDg = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForwardDg);
+  precon->o_oasBackDg    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBackDg);
+  
   /// ---------------------------------------------------------------------------
   
   // hack estimate for Jacobian scaling
+
   dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
+  dfloat *diagInvOpDg = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
 
     // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
@@ -232,8 +342,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       J = mymax(J, mesh->ggeo[base + mesh->Np*GWJID]/W);
       Jhrinv2 = mymax(Jhrinv2, mesh->ggeo[base + mesh->Np*G00ID]/W);
       Jhsinv2 = mymax(Jhsinv2, mesh->ggeo[base + mesh->Np*G11ID]/W);
-
-
     }
     
     for(iint j=0;j<NqP;++j){
@@ -244,11 +352,17 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 	    1./(J*lambda +
 		Jhrinv2*mesh->oasDiagOp[i] +
 		Jhsinv2*mesh->oasDiagOp[j]);
+
+	  diagInvOpDg[pid] =
+	    1./(J*lambda +
+		Jhrinv2*mesh->oasDiagOpDg[i] +
+		Jhsinv2*mesh->oasDiagOpDg[j]);
       }
     }
   }
   
   precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
+  precon->o_oasDiagInvOpDg = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
   /// ---------------------------------------------------------------------------
   // compute diagonal of stiffness matrix for Jacobi

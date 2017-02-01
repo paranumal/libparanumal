@@ -83,11 +83,17 @@ typedef struct {
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
 
-  // transform to/from eigenmodes of 1D laplacian (with built in weighting)
+  // transform to/from eigenmodes of H0 1D laplacian (with built in weighting)
   dfloat *oasForward;
   dfloat *oasBack;
   dfloat *oasDiagOp;
 
+  // transform to/from eigenmode of IPDG 1D laplacian
+  dfloat *oasForwardDg;
+  dfloat *oasBackDg;
+  dfloat *oasDiagOpDg;
+
+  
 
   // face node info
   iint Nfp;        // number of nodes per face
