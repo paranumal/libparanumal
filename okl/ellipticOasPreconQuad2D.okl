@@ -34,13 +34,13 @@
 
 
 kernel void ellipticOasPreconQuad2D(const iint Nelements,
-				   const iint   * restrict vmapPP,
-				   const iint   * restrict faceNodesP,
-				   const dfloat * restrict forward,
-				   const dfloat * restrict diagInvOp,
-				   const dfloat * restrict back,
-				   const dfloat * restrict q,
-				   dfloat * restrict Pq){
+				    const iint   * restrict vmapPP,
+				    const iint   * restrict faceNodesP,
+				    const dfloat * restrict forward,
+				    const dfloat * restrict diagInvOp,
+				    const dfloat * restrict back,
+				    const dfloat * restrict q,
+				    dfloat * restrict Pq){
   
   for(iint e=0; e<Nelements; ++e; outer0){
     
@@ -56,29 +56,33 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       iint n=i+p_NqP*j;
 
       s_q1[0][n] = 0; // zero shared memory
+      s_q2[0][n] = 0; // zero shared memory
+      s_q3[0][n] = 0; // zero shared memory
     }
 
     barrier(localMemFence);
     
     squareThreadsP{
 
-      iint n=i+p_NqP*j;
-      if( (j<(p_NqP-2)) && (i<(p_NqP-2))){
+      if( (j<(p_Nq)) && (i<(p_Nq))){
 	iint m = j*p_Nq + i;
 	s_q1[j+1][i+1] = q[m+e*p_Np];
       }
-
+      
+      iint n=i+p_NqP*j;
       r_diagInvOp = diagInvOp[n+e*p_NpP];
-
+      
       s_forward[j][i]  = forward[i+p_NqP*j];
-       s_back[j][i]     = back[i+p_NqP*j];
-
+      s_back[j][i]     = back[i+p_NqP*j];
+      
       // thread safe since the overlap nodes do not overlap
       // p_NqP = (N+3)^2
-      // p_Nfp*p_Nfaces = (N+1)*3 < (N+3)^2
-      if(n<p_Nfp*p_Nfaces){
+      // p_Nfp*p_Nfaces = (N+1)*4 < (N+3)^2
+      
+      while(n<p_Nfp*p_Nfaces){
 	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
 	s_q1[0][faceNodesP[n]] = q[id];
+	n += p_NqP*p_NqP;
       }
     }
       
@@ -88,7 +92,7 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
     squareThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      //      occaUnroll(p_NqP)
 	for(iint n=0;n<p_NqP;++n)
 	  tmp += s_forward[i][n]*s_q1[j][n];
 
@@ -101,12 +105,13 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
     squareThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      //      occaUnroll(p_NqP)
 	for(iint n=0;n<p_NqP;++n)
 	  tmp += s_forward[j][n]*s_q2[n][i];
       
       // diagonal inverse
-      s_q1[j][i] = r_diagInvOp*tmp;
+	s_q1[j][i] = r_diagInvOp*tmp;
+	//	s_q1[j][i] = tmp;
     }
 
     barrier(localMemFence);
@@ -115,7 +120,7 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
     squareThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      //      occaUnroll(p_NqP)
 	for(iint n=0;n<p_NqP;++n)
 	  tmp += s_back[j][n]*s_q1[n][i];
       
@@ -128,12 +133,14 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
     squareThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      //      occaUnroll(p_NqP)
 	for(iint n=0;n<p_NqP;++n)
 	  tmp += s_back[i][n]*s_q2[j][n];
+
+      const iint idP=i+p_NqP*j+ p_NpP*e;
       
-      const iint id=i+p_NqP*j+ p_NpP*e;
-      Pq[id] = tmp;
+      Pq[idP] = tmp;
+      //      Pq[id] = q[id]; 
     }
   } 
 }
