@@ -36,7 +36,7 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
 				 const dfloat tau,
 				 const dfloat * restrict vgeo,
 				 const dfloat * restrict sgeo,
-				 const dfloat * restrict const D,
+				 const dfloat * restrict D,
 				 const dfloat4 * restrict gradq,
 				 dfloat  * restrict Aq){
   

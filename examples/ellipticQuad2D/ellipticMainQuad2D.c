@@ -172,7 +172,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     
     // compute local precon on DEVICE
     if(strstr(options, "CONTINUOUS")) {
-      printf("continuous precon and GS\n");
+
       precon->preconKernel(mesh->Nelements,
 			   precon->o_vmapPP,
 			   precon->o_faceNodesP,
@@ -248,8 +248,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -364,17 +364,30 @@ int main(int argc, char **argv){
     ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString);
   
   if(strstr(options,"PCG")){
+
+#if 0
+    o_r.copyTo(r);
+    
+    for(iint e=0;e<mesh->Nelements;++e){ // zP is zero for N even
+      printf("e r %05d: ", e);
+      for(iint n=0;n<mesh->Nq*mesh->Nq;++n){
+	printf("%g ", r[n+mesh->Nq*mesh->Nq*e]);
+      }
+      printf("\n");
+    }
+#endif
+
+    
     // Precon^{-1} (b-A*x)
     ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer,
 			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
-
+#if 0
     o_zP.copyTo(zP);
 
-#if 0
-    for(iint e=0;e<mesh->Nelements;++e){
-      printf("e %05d: ", e);
-      for(iint n=0;n<mesh->NqP*mesh->NqP*mesh->NqP;++n){
-	printf("%g ", zP[n+mesh->NqP*mesh->NqP*mesh->NqP*e]);
+    for(iint e=0;e<mesh->Nelements;++e){ // zP is zero for N even
+      printf("e zP %05d: ", e);
+      for(iint n=0;n<mesh->NqP*mesh->NqP;++n){
+	printf("%g ", zP[n+mesh->NqP*mesh->NqP*e]);
       }
       printf("\n");
     }
@@ -392,6 +405,15 @@ int main(int argc, char **argv){
   //  MPI_Finalize();
   //  exit(0);
 
+#if 0
+  o_r.copyTo(r);
+  o_z.copyTo(z);
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){ // z is zeor here for N odd !!!
+    printf("r,z(%d) = %g,%g\n", n, r[n], z[n]);
+  }
+#endif
+  
+  
   
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
@@ -418,8 +440,6 @@ int main(int argc, char **argv){
       // alpha = dot(r,r)/dot(p,A*p)
       alpha = rdotr0/pAp;
 
-    printf("alpha = %g\n", alpha);
-    
     // x <= x + alpha*p
     ellipticScaledAdd(mesh,  alpha, o_p,  1.f, o_x);
 
