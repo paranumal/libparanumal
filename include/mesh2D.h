@@ -443,7 +443,8 @@ void meshParallelGatherScatter2D(mesh2D *mesh,
 				 ogs_t *ogs, 
 				 occa::memory &o_v,
 				 occa::memory &o_gsv,
-				 const char *type);
+				 const char *type,
+				 const char *op);
 
 
 ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
@@ -451,7 +452,6 @@ ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
 					iint Nbytes,     // number of bytes per node
 					iint *localIds,  // local index of nodes
 					iint *baseIds,   // gather index of their base nodes
-					iint *baseRanks, // rank of their base nodes
 					iint *haloFlags); // 1 for halo node, 0 for not
 
 

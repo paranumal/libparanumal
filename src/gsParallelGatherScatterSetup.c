@@ -41,3 +41,10 @@ void *gsParallelGatherScatterSetup(int NuniqueBases,
 
   return gsh;
 }
+
+
+void gsParallelGatherScatterDestroy(void *gsh){
+
+  gs_free(gsh);
+
+}

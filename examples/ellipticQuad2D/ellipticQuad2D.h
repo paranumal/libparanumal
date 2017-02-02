@@ -41,7 +41,8 @@ void ellipticUpdateQuad2D(mesh2D *mesh, dfloat rka, dfloat rkb);
 
 void ellipticErrorQuad2D(mesh2D *mesh, dfloat time);
 
-void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+				     const char *type, const char *op);
 
 precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
 

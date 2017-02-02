@@ -44,13 +44,13 @@ void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuff
 }
 
 				 
-void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type){
+void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op){
 
   mesh->device.finish();
   occa::tic("meshParallelGatherScatter2D");
   
   // use gather map for gather and scatter
-  meshParallelGatherScatter2D(mesh, ogs, o_q, o_gsq, type);
+  meshParallelGatherScatter2D(mesh, ogs, o_q, o_gsq, type, op);
 
   mesh->device.finish();
   occa::toc("meshParallelGatherScatter2D");
@@ -67,7 +67,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
   o_deg.copyFrom(deg);
   
-  ellipticParallelGatherScatter2D(mesh, ogs, o_deg, o_deg, dfloatString);
+  ellipticParallelGatherScatter2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
   
   o_deg.copyTo(deg);
 
@@ -88,7 +88,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
     
     // parallel gather scatter
-    ellipticParallelGatherScatter2D(mesh, ogs, o_Aq, o_Aq, dfloatString);
+    ellipticParallelGatherScatter2D(mesh, ogs, o_Aq, o_Aq, dfloatString, "add");
     
   }
   else{
@@ -169,7 +169,7 @@ void ellipticProject(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &
 
   mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
   
-  ellipticParallelGatherScatter2D(mesh, ogs, o_Pv, o_Pv, dfloatString);
+  ellipticParallelGatherScatter2D(mesh, ogs, o_Pv, o_Pv, dfloatString, "add");
 }
 
 void ellipticPreconditioner2D(mesh2D *mesh,
@@ -203,7 +203,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
-      ellipticParallelGatherScatter2D(mesh, precon->ogsP, o_zP, o_zP, type);
+      ellipticParallelGatherScatter2D(mesh, precon->ogsP, o_zP, o_zP, type, "add");
     }
     else{
       precon->preconKernel(mesh->Nelements,
@@ -215,7 +215,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
-      ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type);
+      ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
     }
 
     mesh->device.finish();
@@ -269,8 +269,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -382,7 +382,7 @@ int main(int argc, char **argv){
 
   // gather-scatter 
   if(strstr(options, "CONTINUOUS"))
-    ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString);
+    ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString, "add");
   
   if(strstr(options,"PCG")){
 
