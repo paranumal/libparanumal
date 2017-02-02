@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "mesh2D.h"
@@ -9,8 +8,7 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
   mesh->Nvgeo = 6;
   
   /* note that we have volume geometric factors for each node */
-  mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, 
-				sizeof(dfloat));
+  mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
 
   /* number of second order geometric factors */
   mesh->Nggeo = 4;

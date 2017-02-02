@@ -2,9 +2,48 @@
 
 const int B = 256; // block size for reduction (hard coded)
 
+void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
 
-// SOME WRITE OR READ RACE CONDITION ??? non-deterministic 
+  // count size of halo for this process
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  
+  // extract halo on DEVICE
+  if(haloBytes){
+    
+    // WARNING: uses dfloats
+    mesh->haloExtractKernel(mesh->totalHaloPairs, mesh->Np, mesh->o_haloElementList,
+			    o_q, mesh->o_haloBuffer);
+    
+    // copy extracted halo to HOST 
+    mesh->o_haloBuffer.copyTo(sendBuffer);
+    
+      // start halo exchange HOST<>HOST
+    meshHaloExchangeStart2D(mesh,
+			    mesh->Np*sizeof(dfloat),
+			    sendBuffer,
+			    recvBuffer);
+  }
+}
+    
 
+void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
+  
+  // count size of halo for this process
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  
+  // extract halo on DEVICE
+  if(haloBytes){
+      // finalize recv on HOST
+    meshHaloExchangeFinish2D(mesh);
+    
+    // copy into halo zone of o_r  HOST>DEVICE
+    o_q.copyFrom(recvBuffer, haloBytes, haloOffset);
+  }
+}
+
+				 
 void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type){
 
   mesh->device.finish();
@@ -37,7 +76,9 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *options){
+void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
+			ogs_t *ogs, dfloat lambda,
+			occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *options){
 
   mesh->device.finish();
   occa::tic("AxKernel");
@@ -52,7 +93,13 @@ void ellipticOperator2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o
   }
   else{
 
-    mesh->gradientKernel(mesh->Nelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
+    ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
+
+    // need start/end elements then can split into two parts
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
+    mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
     dfloat tau = 10.f*mesh->Nq*mesh->Nq;
     mesh->ipdgKernel(mesh->Nelements, mesh->o_vmapM, mesh->o_vmapP, lambda, tau,
@@ -137,35 +184,9 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
   if(strstr(options, "OAS")){
 
-    // count size of halo for this process
-    iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-    iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
-    // extract halo on DEVICE
-    if(haloBytes){
-      
-      // WARNING: uses dfloats
-      mesh->haloExtractKernel(mesh->totalHaloPairs,
-			      mesh->Np,
-			      mesh->o_haloElementList,
-			      o_r,
-			      mesh->o_haloBuffer);
-    
-      // copy extracted halo to HOST 
-      mesh->o_haloBuffer.copyTo(sendBuffer);
-      
-      // start halo exchange HOST<>HOST
-      meshHaloExchangeStart2D(mesh,
-			      mesh->Np*sizeof(dfloat),
-			      sendBuffer,
-			      recvBuffer);
-      
-      // finalize recv on HOST
-      meshHaloExchangeFinish2D(mesh);
-      
-      // copy into halo zone of o_r  HOST>DEVICE
-      o_r.copyFrom(recvBuffer, haloBytes, haloOffset);
-    }
+    ellipticEndHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
     mesh->device.finish();
     occa::tic("preconKernel");
@@ -235,7 +256,7 @@ int main(int argc, char **argv){
 
   if(argc!=3){
     // to run cavity test case with degree N elements
-    printf("usage: ./main meshes/cavityCONTINUOUS05.msh N\n");
+    printf("usage: ./main meshes/cavityQuadH02.msh N\n");
     exit(-1);
   }
 
@@ -248,8 +269,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -288,17 +309,17 @@ int main(int argc, char **argv){
       invDegree[n] = 1.;
 
   o_invDegree.copyFrom(invDegree);
+
+  iint Nall = Ntotal + Nhalo;
   
-  dfloat *p   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
-  dfloat *z   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *p   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *r   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *z   = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *x   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
-  dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   
-  // at this point gather-scatter is available
-
   // convergence tolerance (currently absolute)
   const dfloat tol = 1e-6;
 
@@ -328,18 +349,18 @@ int main(int argc, char **argv){
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_preconditioned_conjugate_gradient_method
 
   // need to rename o_r, o_x to avoid confusion
-  occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
-  occa::memory o_r   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), r);
-  occa::memory o_z   = mesh->device.malloc(Ntotal*sizeof(dfloat), z);
+  occa::memory o_p   = mesh->device.malloc(Nall*sizeof(dfloat), p);
+  occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_z   = mesh->device.malloc(Nall*sizeof(dfloat), z);
   occa::memory o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat), zP); // CAUTION
-  occa::memory o_x   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), x);
-  occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
-  occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
+  occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
 
-  dfloat *x4   = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
-  occa::memory o_gradx  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
-  occa::memory o_gradp  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
+  dfloat *x4   = (dfloat*) calloc(4*Nall, sizeof(dfloat));
+  occa::memory o_gradx  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
+  occa::memory o_gradp  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
   
   // use this for OAS precon pairwise halo exchange
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
@@ -351,7 +372,7 @@ int main(int argc, char **argv){
   o_x.copyFrom(x);
 
   // compute A*x
-  ellipticOperator2D(mesh, ogs, lambda, o_x, o_gradx, o_Ax, options);
+  ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_x, o_gradx, o_Ax, options);
   
   // copy r = b
   o_r.copyFrom(r);
@@ -413,8 +434,6 @@ int main(int argc, char **argv){
   }
 #endif
   
-  
-  
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
   dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
@@ -428,7 +447,7 @@ int main(int argc, char **argv){
   do{
     
     // A*p
-    ellipticOperator2D(mesh, ogs, lambda, o_p, o_gradp, o_Ap, options); 
+    ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_p, o_gradp, o_Ap, options); 
 
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);

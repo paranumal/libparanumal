@@ -14,8 +14,8 @@ int parallelCompareBaseRank(const void *a, const void *b){
   preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
   preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
 
-  if(fa->baseRank < fb->baseRank) return -1;
-  if(fa->baseRank > fb->baseRank) return +1;
+  //  if(fa->baseRank < fb->baseRank) return -1;
+  //  if(fa->baseRank > fb->baseRank) return +1;
 
   if(fa->baseId < fb->baseId) return -1;
   if(fa->baseId > fb->baseId) return +1;
@@ -30,9 +30,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // assumes meshParallelGatherScatterSetup2D has been called
-  
-  // ????? need to extend storage for halo ?????
   iint Nlocal = mesh->Np*mesh->Nelements;
   iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
   iint Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
@@ -55,17 +52,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   offsetP[3] = +1;
 
   iint *faceNodesPrecon = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
-  for(iint i=0;i<mesh->Nq;++i)
-    faceNodesPrecon[i+0*mesh->Nfp] = i+1 + 0*NqP;
-  
-  for(iint j=0;j<mesh->Nq;++j)
-    faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
-  
-  for(iint i=0;i<mesh->Nq;++i)
-    faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
-
-  for(iint j=0;j<mesh->Nq;++j)
-    faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
+  for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+0*mesh->Nfp] = i+1 + 0*NqP;
+  for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
+  for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
+  for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
 
   iint *vmapMP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
@@ -219,48 +209,60 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
 	// all patch interior nodes are local
 	preconGatherInfoDg[pid].baseId = 1 + id + startElement[rank]*mesh->Np;
-	preconGatherInfoDg[pid].baseRank = rank;
+	preconGatherInfoDg[pid].haloFlag = 1;
+
+	mesh->gatherHaloFlags[id]; // wasteful
+	
       }
     }
-    
+  }
+  
+  for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
       // mark halo nodes
       iint rP = mesh->EToP[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint fP = mesh->EToF[e*mesh->Nfaces+f];
+      
+      Probably something wrong here;
+      
       if(rP!=-1){
 	printf("FOUND HALO %d\n", rP);
 	for(iint n=0;n<mesh->Nfp;++n){
-	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-	  iint idM = mesh->vmapM[id];
+	  
 	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; // one layer in from patch face
 	  preconGatherInfoDg[pid].haloFlag = 1;
-
-	  iint eP = mesh->EToE[e*mesh->Nfaces+f];
-	  iint idP = (mesh->vmapP[id])%mesh->Np + (eP + startElement[rP])*mesh->Np;
+	  
+	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+	  iint idP = 1 + (mesh->vmapP[id]%mesh->Np) + (eP + startElement[rP])*mesh->Np;
 	  pid -= offsetP[f];
+	  
 	  preconGatherInfoDg[pid].haloFlag = 1;
-	  preconGatherInfoDg[pid].baseId = 1 + idP;
-	  preconGatherInfoDg[pid].baseRank = rP;
+	  preconGatherInfoDg[pid].baseId = idP;
 	}
       }
       else{
 	for(iint n=0;n<mesh->Nfp;++n){
 	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+	  iint idM = mesh->vmapM[id];
 	  iint idP = mesh->vmapP[id];
 	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n]; 
+
 	  preconGatherInfoDg[pid].baseId   = 1 + idP + startElement[rank]*mesh->Np;
-	  preconGatherInfoDg[pid].baseRank = rank;	  
+	  preconGatherInfoDg[pid].haloFlag = 1;
+	  // mymax(mesh->gatherHaloFlags[idM],mesh->gatherHaloFlags[idP]); wasteful
 	}
       }
     }
   }
-
-#if 0
+  
+#if 1
   for(iint e=0;e<mesh->Nelements;++e){
     printf("e=%d: \n", e);
     for(iint j=0;j<mesh->NqP;++j){
       for(iint i=0;i<mesh->NqP;++i){
 	iint id = i + mesh->NqP*j + e*NpP;
-	printf("%d ", preconGatherInfoDg[id].baseId);
+	printf("%05d ", preconGatherInfoDg[id].baseId);
       }
       printf("\n");
     }
@@ -391,7 +393,23 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   // sum up
   meshParallelGatherScatter2D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
 
+  if(Nhalo){
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange2D(mesh,
+		       mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+		       mesh->vgeo,
+		       vgeoSendBuffer,
+		       mesh->vgeo + Nlocal*mesh->Nvgeo);
+    
+    printf("Extending vgeo\n");
+    mesh->o_vgeo = mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
+
   free(diagA);
-  
+    
   return precon;
 }
