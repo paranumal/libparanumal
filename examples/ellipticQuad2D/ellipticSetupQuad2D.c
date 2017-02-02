@@ -167,7 +167,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 					  sizeof(dfloat),
 					  mesh->gatherLocalIds,
 					  mesh->gatherBaseIds, 
-					  mesh->gatherBaseRanks,
 					  mesh->gatherHaloFlags);
 
   *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda);
@@ -189,7 +188,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
     }
     mesh->o_rhsq.copyFrom(mesh->rhsq);
     
-    ellipticParallelGatherScatter2D(mesh, *ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString);
+    ellipticParallelGatherScatter2D(mesh, *ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString, "add");
 
     mesh->o_rhsq.copyTo(mesh->rhsq);
     
@@ -224,7 +223,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
   // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatter2D(mesh, *ogs, o_localMM, o_MM, dfloatString);
+  ellipticParallelGatherScatter2D(mesh, *ogs, o_localMM, o_MM, dfloatString, "add");
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);

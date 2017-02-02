@@ -4,18 +4,14 @@ typedef struct{
 
   iint localId;
   iint baseId;
-  iint baseRank;
   iint haloFlag;
   
 } preconGatherInfo_t;
 
-int parallelCompareBaseRank(const void *a, const void *b){
+int parallelCompareBaseId(const void *a, const void *b){
 
   preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
   preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
-
-  //  if(fa->baseRank < fb->baseRank) return -1;
-  //  if(fa->baseRank > fb->baseRank) return +1;
 
   if(fa->baseId < fb->baseId) return -1;
   if(fa->baseId > fb->baseId) return +1;
@@ -90,7 +86,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   for(iint n=0;n<Nlocal;++n){
     iint id = mesh->gatherLocalIds[n];
     gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
-    gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
     gatherInfo[id].haloFlag = mesh->gatherHaloFlags[n];
   }
 
@@ -134,11 +129,13 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 	    
       preconGatherInfo[idMP] = gatherInfo[idP];
 
+#if 1
       if(gatherInfo[idM].haloFlag){
 	preconGatherInfo[idMP].haloFlag = 1;
 	preconGatherInfo[idMP+offsetP[f]].haloFlag = 1;
 	preconGatherInfo[idMP+2*offsetP[f]].haloFlag = 1;
       }
+#endif
     }
   }
   
@@ -147,7 +144,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     preconGatherInfo[n].localId = n;
 
   // sort by rank then base index
-  qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
+  qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
   
   // do not gather-scatter nodes labelled zero
   iint skip = 0;
@@ -160,12 +157,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   iint NlocalP = NpP*mesh->Nelements - skip;
   iint *gatherLocalIdsP  = (iint*) calloc(NlocalP, sizeof(iint));
   iint *gatherBaseIdsP   = (iint*) calloc(NlocalP, sizeof(iint));
-  iint *gatherBaseRanksP = (iint*) calloc(NlocalP, sizeof(iint));
   iint *gatherHaloFlagsP = (iint*) calloc(NlocalP, sizeof(iint));
   for(iint n=0;n<NlocalP;++n){
     gatherLocalIdsP[n]  = preconGatherInfo[n+skip].localId;
     gatherBaseIdsP[n]   = preconGatherInfo[n+skip].baseId;
-    gatherBaseRanksP[n] = preconGatherInfo[n+skip].baseRank;
     gatherHaloFlagsP[n] = preconGatherInfo[n+skip].haloFlag;
   }
 
@@ -176,17 +171,15 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 						  sizeof(dfloat),
 						  gatherLocalIdsP,
 						  gatherBaseIdsP,
-						  gatherBaseRanksP,
 						  gatherHaloFlagsP);
 
   // -------------------------------------------------------------------------------------------
-#if 1
   // build gather-scatter for overlapping patches
   iint *allNelements = (iint*) calloc(size, sizeof(iint));
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
 		allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
 
-  // offests
+  // offsets
   iint *startElement = (iint*) calloc(size, sizeof(iint));
   for(iint r=1;r<size;++r){
     startElement[r] = startElement[r-1]+allNelements[r-1];
@@ -209,9 +202,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
 	// all patch interior nodes are local
 	preconGatherInfoDg[pid].baseId = 1 + id + startElement[rank]*mesh->Np;
-	preconGatherInfoDg[pid].haloFlag = 1;
-
-	mesh->gatherHaloFlags[id]; // wasteful
 	
       }
     }
@@ -224,13 +214,12 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       iint eP = mesh->EToE[e*mesh->Nfaces+f];
       iint fP = mesh->EToF[e*mesh->Nfaces+f];
       
-      Probably something wrong here;
-      
       if(rP!=-1){
 	printf("FOUND HALO %d\n", rP);
 	for(iint n=0;n<mesh->Nfp;++n){
-	  
-	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; // one layer in from patch face
+
+	  // mark inner face to 1
+	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
 	  preconGatherInfoDg[pid].haloFlag = 1;
 	  
 	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
@@ -247,10 +236,8 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 	  iint idM = mesh->vmapM[id];
 	  iint idP = mesh->vmapP[id];
 	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n]; 
-
+	  
 	  preconGatherInfoDg[pid].baseId   = 1 + idP + startElement[rank]*mesh->Np;
-	  preconGatherInfoDg[pid].haloFlag = 1;
-	  // mymax(mesh->gatherHaloFlags[idM],mesh->gatherHaloFlags[idP]); wasteful
 	}
       }
     }
@@ -271,7 +258,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 #endif
   
   // sort by rank then base index
-  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
+  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
 
 #if 0
   for(iint n=0;n<NpP*mesh->Nelements;++n){
@@ -291,12 +278,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   iint NlocalDg = NpP*mesh->Nelements - skip;
   iint *gatherLocalIdsDg  = (iint*) calloc(NlocalDg, sizeof(iint));
   iint *gatherBaseIdsDg   = (iint*) calloc(NlocalDg, sizeof(iint));
-  iint *gatherBaseRanksDg = (iint*) calloc(NlocalDg, sizeof(iint));
   iint *gatherHaloFlagsDg = (iint*) calloc(NlocalDg, sizeof(iint));
   for(iint n=0;n<NlocalDg;++n){
     gatherLocalIdsDg[n]  = preconGatherInfoDg[n+skip].localId;
     gatherBaseIdsDg[n]   = preconGatherInfoDg[n+skip].baseId;
-    gatherBaseRanksDg[n] = preconGatherInfoDg[n+skip].baseRank;
     gatherHaloFlagsDg[n] = preconGatherInfoDg[n+skip].haloFlag;
   }
 
@@ -306,9 +291,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 						   sizeof(dfloat),
 						   gatherLocalIdsDg,
 						   gatherBaseIdsDg,
-						   gatherBaseRanksDg,
 						   gatherHaloFlagsDg);
-#endif  
   // -------------------------------------------------------------------------------------------
 
   
@@ -391,7 +374,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   precon->o_diagA = mesh->device.malloc(Ntotal*sizeof(dfloat), diagA);
 
   // sum up
-  meshParallelGatherScatter2D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
+  meshParallelGatherScatter2D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString, "add");
 
   if(Nhalo){
     dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
