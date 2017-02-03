@@ -180,10 +180,6 @@ void meshParallelConnectNodesQuad2D(mesh2D *mesh){
 
     // sum up changes
     MPI_Allreduce(&localChange, &gatherChange, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
-
-    // report
-    if(rank==0)
-      printf("gatherChange=%d\n", gatherChange);
   }
 
   // sort based on base nodes (rank,element,node at base)
