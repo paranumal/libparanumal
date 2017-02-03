@@ -46,3 +46,4 @@ void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v
 
 precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
 
+void diagnostic(int N, occa::memory &o_x, const char *message);

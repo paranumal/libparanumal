@@ -9,14 +9,19 @@ typedef struct {
 
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
+
   occa::memory o_oasForward;
   occa::memory o_oasBack;
   occa::memory o_oasDiagInvOp;
 
+  occa::memory o_oasForwardDg;
+  occa::memory o_oasBackDg;
+  occa::memory o_oasDiagInvOpDg;
+  
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
   
-  ogs_t *ogsP;
+  ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
   
@@ -36,7 +41,8 @@ void ellipticUpdateHex3D(mesh3D *mesh, dfloat rka, dfloat rkb);
 
 void ellipticErrorHex3D(mesh3D *mesh, dfloat time);
 
-void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv, const char *type);
+void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+				     const char *type, const char *op);
 
 precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda);
 
