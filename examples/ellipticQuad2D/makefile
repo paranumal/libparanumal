@@ -63,7 +63,8 @@ LOBJS = \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
-../../src/hash.o
+../../src/hash.o\
+./diagnostic.o
 
 
 COBJS = \
