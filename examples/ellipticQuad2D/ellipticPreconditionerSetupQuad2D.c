@@ -185,18 +185,19 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     startElement[r] = startElement[r-1]+allNelements[r-1];
   }
 
-  // THIS BROKE size=1
+  // 1-indexed numbering of nodes on this process
   iint *localNums = (iint*) calloc((Nlocal+Nhalo), sizeof(iint));
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
       localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
     }
   }
-
+  
   if(Nhalo){
     // send buffer for outgoing halo
     iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
-    
+
+    // exchange node numbers with neighbors
     meshHaloExchange2D(mesh,
 		       mesh->Np*sizeof(iint),
 		       localNums,
@@ -208,13 +209,12 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
 				 sizeof(preconGatherInfo_t));
 
-  // reset local ids
+  // set local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfoDg[n].localId = n;
 
+  // numbering of patch interior nodes
   for(iint e=0;e<mesh->Nelements;++e){
-
-    // push to non-overlap nodes
     for(iint j=0;j<mesh->Nq;++j){
       for(iint i=0;i<mesh->Nq;++i){
 	iint id  = i + j*mesh->Nq + e*mesh->Np;
@@ -226,6 +226,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     }
   }
 
+  // add patch boundary nodes
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
       // mark halo nodes
@@ -241,7 +242,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 	// local numbers
 	iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
 	iint pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
-	preconGatherInfoDg[pidP].baseId   = localNums[idP];
+	preconGatherInfoDg[pidP].baseId = localNums[idP];
 
 	if(rP!=-1){
 	  preconGatherInfoDg[pidM].haloFlag = 1;
