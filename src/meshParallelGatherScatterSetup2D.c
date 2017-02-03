@@ -29,15 +29,18 @@ ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
 
   // ------------------------------------------------------------
   // 0. propagate halo flags uniformly using a disposable gs instance
+
   void *allGsh = gsParallelGatherScatterSetup(Nlocal, gatherBaseIds);
 
   // compute max halo flag using global numbering
-  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); 
+  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use iint
 
+  // tidy up
   gsParallelGatherScatterDestroy(allGsh);
   
   // ------------------------------------------------------------
   // 1. count number of unique base nodes on this process 
+
   ogs->Ngather = 0; // assumes at least one base node
   for(iint n=0;n<Nlocal;++n){
     iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
@@ -71,15 +74,14 @@ ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
   ogs->Nhalo = 0; 
   for(iint n=0;n<ogs->Ngather;++n){ // could be this? 
     for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-      if(gatherHaloFlags[id]){ // if any of these are labelled as halo then mark
+      if(gatherHaloFlags[id]){
+	// if any of these are labelled as halo then mark
 	++ogs->Nhalo;
 	break;
       }
     }
   }
   
-  printf("ogs->Nhalo = %d, ogs->Ngather = %d\n", ogs->Nhalo, ogs->Ngather);
-
   // set up gather-scatter of halo nodes
   ogs->gatherGsh = NULL;
   if(ogs->Nhalo){
@@ -103,8 +105,6 @@ ogs_t *meshParallelGatherScatterSetup2D(mesh2D *mesh,    // provides DEVICE
     ogs->o_haloLocalIds = mesh->device.malloc(ogs->Nhalo*sizeof(iint), haloLocalIds);
     
     // allocate buffer for gathering on halo nodes (danger on size of buffer)
-    if(Nbytes != sizeof(dfloat)) printf("DANGER WILL ROBINSON\n");
-    
     ogs->haloTmp = (dfloat*) calloc(ogs->Nhalo, sizeof(dfloat));
     ogs->o_haloTmp  = mesh->device.malloc(ogs->Nhalo*Nbytes, ogs->haloTmp);
     

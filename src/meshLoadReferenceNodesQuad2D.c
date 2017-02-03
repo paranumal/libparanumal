@@ -80,14 +80,12 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("comment = %s\n", buf);
+
   mesh->D = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
       fscanf(fp, dfloatFormat, mesh->D+m+n*(mesh->N+1));
-      printf("%f ",  mesh->D[m+n*(mesh->N+1)]);
     }
-    printf("\n");
   }
   fgets(buf, BUFSIZ, fp); // read comment
 
@@ -138,9 +136,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("%s", buf);
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->plotNverts));
   
   // build and read in plot node triangulation
@@ -155,19 +151,14 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("comment: %s", buf);
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->NqP));
-  printf("1) mesh->NqP=%d from (%s)\n", mesh->NqP, buf);
   fgets(buf, BUFSIZ, fp);
   mesh->oasForward = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasForward+n*mesh->NqP+m);
-      printf("%g ", mesh->oasForward[n*mesh->NqP+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
@@ -176,7 +167,6 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOp+n);
     fgets(buf,BUFSIZ,fp); // rest of line
-    printf("oasDiagOp[%d]=%g\n", n, mesh->oasDiagOp[n]);
   }
 
   fgets(buf,BUFSIZ,fp); // rest of line
@@ -184,27 +174,20 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasBack+n*mesh->NqP+m);
-      printf("%g ", mesh->oasBack[n*mesh->NqP+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("comment: %s", buf);
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
   sscanf(buf, iintFormat, &(mesh->NqP));
-  printf("2) mesh->NqP=%d\n", mesh->NqP);
   fgets(buf, BUFSIZ, fp);
   mesh->oasForwardDg = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasForwardDg+n*mesh->NqP+m);
-      printf("%g ", mesh->oasForwardDg[n*mesh->NqP+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
@@ -213,7 +196,6 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
     fgets(buf,BUFSIZ,fp); // rest of line
-    printf("oasDiagOpDg[%d]=%g\n", n, mesh->oasDiagOpDg[n]);
   }
 
   fgets(buf,BUFSIZ,fp); // rest of line
@@ -221,9 +203,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->NqP;++n){
     for(int m=0;m<mesh->NqP;++m){
       fscanf(fp, dfloatFormat, mesh->oasBackDg+n*mesh->NqP+m);
-      printf("%g ", mesh->oasBackDg[n*mesh->NqP+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
@@ -282,31 +262,23 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   mesh->intInterp 
     = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("intInterp=[\n");
   for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
     for(int m=0;m<mesh->Nfp;++m){
       fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
-      printf("%g ", mesh->intInterp[n*mesh->Nfp+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-  printf("]\n");
 
   // read lift matrix from surface integration to volume nodes
   mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("intLIFT=[\n");
+
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
       fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
-      printf("%g ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
     }
-    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-  printf("]\n");
-
   
   fclose(fp);
 }

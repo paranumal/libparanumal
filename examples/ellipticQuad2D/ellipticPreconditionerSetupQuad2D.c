@@ -48,11 +48,12 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   offsetP[3] = +1;
 
   iint *faceNodesPrecon = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
+
   for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+0*mesh->Nfp] = i+1 + 0*NqP;
   for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
   for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
   for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
-
+  
   iint *vmapMP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   
@@ -151,7 +152,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   while(preconGatherInfo[skip].baseId==0 && skip<NpP*mesh->Nelements){
     ++skip;
   }
-  printf("skip = %d out of %d\n", skip, NpP*mesh->Nelements);
 
   // reset local ids
   iint NlocalP = NpP*mesh->Nelements - skip;
@@ -185,8 +185,28 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     startElement[r] = startElement[r-1]+allNelements[r-1];
   }
 
+  // THIS BROKE size=1
+  iint *localNums = (iint*) calloc((Nlocal+Nhalo), sizeof(iint));
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
+    }
+  }
+
+  if(Nhalo){
+    // send buffer for outgoing halo
+    iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
+    
+    meshHaloExchange2D(mesh,
+		       mesh->Np*sizeof(iint),
+		       localNums,
+		       sendBuffer,
+		       localNums+Nlocal);
+  }
+  
   preconGatherInfo_t *preconGatherInfoDg = 
-    (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
+    (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
+				 sizeof(preconGatherInfo_t));
 
   // reset local ids
   for(iint n=0;n<mesh->Nelements*NpP;++n)
@@ -198,81 +218,49 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     for(iint j=0;j<mesh->Nq;++j){
       for(iint i=0;i<mesh->Nq;++i){
 	iint id  = i + j*mesh->Nq + e*mesh->Np;
-	iint pid = i + 1 + (j+1)*NqP + e*NpP;
+	iint pid = (i+1) + (j+1)*NqP + e*NpP;
 
 	// all patch interior nodes are local
-	preconGatherInfoDg[pid].baseId = 1 + id + startElement[rank]*mesh->Np;
-	
+	preconGatherInfoDg[pid].baseId = localNums[id];
       }
     }
   }
-  
+
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
       // mark halo nodes
       iint rP = mesh->EToP[e*mesh->Nfaces+f];
       iint eP = mesh->EToE[e*mesh->Nfaces+f];
       iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      
-      if(rP!=-1){
-	printf("FOUND HALO %d\n", rP);
-	for(iint n=0;n<mesh->Nfp;++n){
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
 
-	  // mark inner face to 1
-	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
-	  preconGatherInfoDg[pid].haloFlag = 1;
-	  
-	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-	  iint idP = 1 + (mesh->vmapP[id]%mesh->Np) + (eP + startElement[rP])*mesh->Np;
-	  pid -= offsetP[f];
-	  
-	  preconGatherInfoDg[pid].haloFlag = 1;
-	  preconGatherInfoDg[pid].baseId = idP;
-	}
-      }
-      else{
-	for(iint n=0;n<mesh->Nfp;++n){
-	  iint id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-	  iint idM = mesh->vmapM[id];
-	  iint idP = mesh->vmapP[id];
-	  iint pid = e*NpP + faceNodesPrecon[f*mesh->Nfp+n]; 
-	  
-	  preconGatherInfoDg[pid].baseId   = 1 + idP + startElement[rank]*mesh->Np;
+      for(iint n=0;n<mesh->Nfp;++n){
+	iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+	iint idP = mesh->vmapP[id];
+	
+	// local numbers
+	iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
+	iint pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
+	preconGatherInfoDg[pidP].baseId   = localNums[idP];
+
+	if(rP!=-1){
+	  preconGatherInfoDg[pidM].haloFlag = 1;
+	  preconGatherInfoDg[pidP].haloFlag = 1;
 	}
       }
     }
   }
-  
-#if 1
-  for(iint e=0;e<mesh->Nelements;++e){
-    printf("e=%d: \n", e);
-    for(iint j=0;j<mesh->NqP;++j){
-      for(iint i=0;i<mesh->NqP;++i){
-	iint id = i + mesh->NqP*j + e*NpP;
-	printf("%05d ", preconGatherInfoDg[id].baseId);
-      }
-      printf("\n");
-    }
-    printf("\n");
-  }
-#endif
-  
+
   // sort by rank then base index
-  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
-
-#if 0
-  for(iint n=0;n<NpP*mesh->Nelements;++n){
-    printf(" preconGatherInfoDg[%d].baseId = %d\n", n, preconGatherInfoDg[n].baseId);
-  }
-#endif
-  
+  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t),
+	parallelCompareBaseId);
+    
   // do not gather-scatter nodes labelled zero
   skip = 0;
+
   while(preconGatherInfoDg[skip].baseId==0 && skip<NpP*mesh->Nelements){
     ++skip;
   }
-
-  printf("skipDg = %d out of %d\n", skip, NpP*mesh->Nelements);
 
   // reset local ids
   iint NlocalDg = NpP*mesh->Nelements - skip;
@@ -292,9 +280,8 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 						   gatherLocalIdsDg,
 						   gatherBaseIdsDg,
 						   gatherHaloFlagsDg);
-  // -------------------------------------------------------------------------------------------
-
   
+  // -------------------------------------------------------------------------------------------
   
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
   precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
@@ -388,10 +375,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 		       vgeoSendBuffer,
 		       mesh->vgeo + Nlocal*mesh->Nvgeo);
     
-    printf("Extending vgeo\n");
-    mesh->o_vgeo = mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
-
+  
   free(diagA);
     
   return precon;

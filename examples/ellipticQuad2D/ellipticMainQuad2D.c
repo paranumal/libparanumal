@@ -2,6 +2,31 @@
 
 const int B = 256; // block size for reduction (hard coded)
 
+void diagnostic(int N, occa::memory &o_x, const char *message){
+#if 0
+  dfloat *x = (dfloat*) calloc(N, sizeof(dfloat));
+
+  o_x.copyTo(x, N*sizeof(dfloat), 0);
+  
+  int n;
+  dfloat normX = 0;
+  for(n=0;n<N;++n)
+    normX += x[n]*x[n];
+
+  dfloat globalNormX;
+  MPI_Allreduce(&normX, &globalNormX, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if(rank==0)
+    printf("rank %d reports norm %17.15lf for %s\n", rank, sqrt(globalNormX), message);
+
+  free(x);
+#endif
+}
+
+
 void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
 
   // count size of halo for this process
@@ -27,7 +52,7 @@ void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBu
 }
     
 
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
+void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer){
   
   // count size of halo for this process
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
@@ -95,7 +120,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
 
     ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
     
-    ellipticEndHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
 
     // need start/end elements then can split into two parts
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
@@ -161,17 +186,6 @@ dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
   return globalwab;
 }
 
-
-void ellipticProject(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_Pv){
-
-
-  iint Ntotal = mesh->Nelements*mesh->Np;
-
-  mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
-  
-  ellipticParallelGatherScatter2D(mesh, ogs, o_Pv, o_Pv, dfloatString, "add");
-}
-
 void ellipticPreconditioner2D(mesh2D *mesh,
 			      precon_t *precon,
 			      dfloat *sendBuffer,
@@ -186,7 +200,9 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
-    ellipticEndHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+
+    //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
     
     mesh->device.finish();
     occa::tic("preconKernel");
@@ -215,7 +231,13 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
+      iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
+      
+      // OAS => additive Schwarz => sum up patch solutions
       ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
+
+      diagnostic(NtotalP, o_zP, "o_zP after GS");
     }
 
     mesh->device.finish();
@@ -269,8 +291,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -290,6 +312,9 @@ int main(int argc, char **argv){
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
+  iint NallP  = NtotalP;
+  
 
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -307,17 +332,15 @@ int main(int argc, char **argv){
   else
     for(iint n=0;n<Ntotal;++n)
       invDegree[n] = 1.;
-
-  o_invDegree.copyFrom(invDegree);
-
-  iint Nall = Ntotal + Nhalo;
   
-  dfloat *p   = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *r   = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *z   = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *x   = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
+  o_invDegree.copyFrom(invDegree);
+  
+  dfloat *p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *zP  = (dfloat*) calloc(NallP,  sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   
   // convergence tolerance (currently absolute)
@@ -352,7 +375,7 @@ int main(int argc, char **argv){
   occa::memory o_p   = mesh->device.malloc(Nall*sizeof(dfloat), p);
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_z   = mesh->device.malloc(Nall*sizeof(dfloat), z);
-  occa::memory o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat), zP); // CAUTION
+  occa::memory o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),zP); // CAUTION
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
   occa::memory o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), x);
   occa::memory o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), Ap);
@@ -386,34 +409,9 @@ int main(int argc, char **argv){
   
   if(strstr(options,"PCG")){
 
-#if 0
-    o_r.copyTo(r);
-    
-    for(iint e=0;e<mesh->Nelements;++e){ // zP is zero for N even
-      printf("e r %05d: ", e);
-      for(iint n=0;n<mesh->Nq*mesh->Nq;++n){
-	printf("%g ", r[n+mesh->Nq*mesh->Nq*e]);
-      }
-      printf("\n");
-    }
-#endif
-
-    
     // Precon^{-1} (b-A*x)
     ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer,
 			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
-#if 0
-    o_zP.copyTo(zP);
-
-    for(iint e=0;e<mesh->Nelements;++e){ // zP is zero for N even
-      printf("e zP %05d: ", e);
-      for(iint n=0;n<mesh->NqP*mesh->NqP;++n){
-	printf("%g ", zP[n+mesh->NqP*mesh->NqP*e]);
-      }
-      printf("\n");
-    }
-#endif
-
     
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -423,17 +421,7 @@ int main(int argc, char **argv){
     o_p.copyFrom(o_r); // CG
   }
 
-  //  MPI_Finalize();
-  //  exit(0);
 
-#if 0
-  o_r.copyTo(r);
-  o_z.copyTo(z);
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){ // z is zeor here for N odd !!!
-    printf("r,z(%d) = %g,%g\n", n, r[n], z[n]);
-  }
-#endif
-  
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
   dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
@@ -442,13 +430,18 @@ int main(int argc, char **argv){
   iint Niter = 0;
   dfloat alpha, beta;
 
-  printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
+  if(rank==0)
+    printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
   
   do{
+
+    diagnostic(Ntotal, o_p, "o_p");
     
     // A*p
     ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_p, o_gradp, o_Ap, options); 
 
+    diagnostic(Ntotal, o_p, "o_Ap");
+    
     // dot(p,A*p)
     dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);
 
@@ -472,7 +465,7 @@ int main(int argc, char **argv){
 
     if(strstr(options,"PCG")){
 
-      // z = Prvon^{-1} r
+      // z = Precon^{-1} r
       ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
