@@ -2,16 +2,56 @@
 
 const int B = 256; // block size for reduction (hard coded)
 
+void ellipticStartHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
 
-// SOME WRITE OR READ RACE CONDITION ??? non-deterministic 
+  // count size of halo for this process
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  
+  // extract halo on DEVICE
+  if(haloBytes){
+    
+    // WARNING: uses dfloats
+    mesh->haloExtractKernel(mesh->totalHaloPairs, mesh->Np, mesh->o_haloElementList,
+			    o_q, mesh->o_haloBuffer);
+    
+    // copy extracted halo to HOST 
+    mesh->o_haloBuffer.copyTo(sendBuffer);
+    
+    // start halo exchange HOST<>HOST
+    meshHaloExchangeStart3D(mesh,
+			    mesh->Np*sizeof(dfloat),
+			    sendBuffer,
+			    recvBuffer);
+  }
+}
+    
 
-void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type){
+void ellipticEndHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *recvBuffer){
+  
+  // count size of halo for this process
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  
+  // extract halo on DEVICE
+  if(haloBytes){
+    // finalize recv on HOST
+    meshHaloExchangeFinish3D(mesh);
+    
+    // copy into halo zone of o_r  HOST>DEVICE
+    o_q.copyFrom(recvBuffer, haloBytes, haloOffset);
+  }
+}
+
+ 
+
+void ellipticParallelGatherScatter3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op){
 
   mesh->device.finish();
   occa::tic("meshParallelGatherScatter3D");
   
   // use gather map for gather and scatter
-  meshParallelGatherScatter3D(mesh, ogs, o_q, o_gsq, type);
+  meshParallelGatherScatter3D(mesh, ogs, o_q, o_gsq, type, op);
 
   mesh->device.finish();
   occa::toc("meshParallelGatherScatter3D");
@@ -28,7 +68,7 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
   o_deg.copyFrom(deg);
   
-  ellipticParallelGatherScatter3D(mesh, ogs, o_deg, o_deg, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
   
   o_deg.copyTo(deg);
 
@@ -37,26 +77,31 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-void ellipticOperator3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *method){
+void ellipticOperator3D(mesh3D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
+			ogs_t *ogs, dfloat lambda,
+			occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *options){
 
 
   mesh->device.finish();
   occa::tic("AxKernel");
   
   // compute local element operations and store result in o_Aq
-  if(!strcmp(method, "H0")){
+  if(strstr(options, "CONTINUOUS")){
     mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
 
     // parallel gather scatter
-    ellipticParallelGatherScatter3D(mesh, ogs, o_Aq, o_Aq, dfloatString);
+    ellipticParallelGatherScatter3D(mesh, ogs, o_Aq, o_Aq, dfloatString, "add");
   }
   else{
 
-    printf("IPDG [ need to add halo exchange ] \n");
+    ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
 
-    mesh->gradientKernel(mesh->Nelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
-    dfloat tau = 10000.f;
+    dfloat tau = 10.f*mesh->Nq*mesh->Nq;
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
 		     mesh->o_vmapP,
@@ -67,10 +112,7 @@ void ellipticOperator3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, occa::memory &o
 		     mesh->o_D,
 		     o_gradq,
 		     o_Aq);
-    
-    // parallel gather scatter
-    //    ellipticParallelGatherScatter3D(mesh, ogs, o_Aq, o_Aq, dfloatString);
-    
+        
   }
 
   mesh->device.finish();
@@ -99,7 +141,7 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 				    occa::memory &o_b,
 				    occa::memory &o_tmp,
 				    dfloat *tmp,
-				    const char *method){
+				    const char *options){
 
   printf("hello\n");
   
@@ -107,7 +149,7 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
   occa::tic("weighted inner product2");
 
   iint Ntotal = mesh->Nelements*mesh->Np;
-  if(!strcmp(method,"H0"))
+  if(strstr(options,"CONTINUOUS"))
     mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
@@ -128,47 +170,6 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
   return globalwab;
 }
 
-#if 0
-dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
-				    iint Nblock,
-				    occa::memory &o_w,
-				    occa::memory &o_a,
-				    occa::memory &o_tmp,
-				    dfloat *tmp){
-
-  iint Ntotal = mesh->Nelements*mesh->Np;
-
-  mesh->device.finish();
-  occa::tic("weighted inner product1");
-  
-  mesh->weightedInnerProduct1Kernel(Ntotal, o_w, o_a, o_tmp);
-
-  mesh->device.finish();
-  occa::toc("weighted inner product1");
-  
-  o_tmp.copyTo(tmp);
-  
-  dfloat wa2 = 0;
-  for(iint n=0;n<Nblock;++n){
-    wa2 += tmp[n];
-  }
-  
-  dfloat globalwa2 = 0;
-  MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-
-  return globalwa2;
-}
-
-dfloat diagnostics(mesh3D *mesh, iint Nblock, occa::memory &o_w, occa::memory &o_a,
-		   occa::memory &o_tmp, dfloat *tmp, const char *message){
-
-  dfloat wa2 = ellipticWeightedInnerProduct(mesh, Nblock, o_w, o_a, o_tmp, tmp);
-
-  printf("%s: L2 norm = %g\n", message, sqrt(wa2));
-}
-#endif
-
-
 void ellipticProject(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_Pv){
 
 
@@ -176,7 +177,7 @@ void ellipticProject(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &
 
   mesh->dotMultiplyKernel(Ntotal, mesh->o_projectL2, o_v, o_Pv);
   
-  ellipticParallelGatherScatter3D(mesh, ogs, o_Pv, o_Pv, dfloatString);
+  ellipticParallelGatherScatter3D(mesh, ogs, o_Pv, o_Pv, dfloatString, "add");
 }
 
 void ellipticPreconditioner3D(mesh3D *mesh,
@@ -188,64 +189,54 @@ void ellipticPreconditioner3D(mesh3D *mesh,
 			      occa::memory &o_zP,
 			      occa::memory &o_z,
 			      const char *type,
-			      char *preconType,
-			      dfloat *invDegree,
-			      dfloat *invDegreeP){
+			      const char *options){
 
-  if(!strcmp(preconType, "OAS")){
+  if(strstr(options, "OAS")){
 
-    // the non-repeatability happens in here somewhere
+    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
-    // count size of halo for this process
-    iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-    iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
-    
-    // extract halo on DEVICE
-    if(haloBytes){
-      
-      // WARNING: uses dfloats
-      mesh->haloExtractKernel(mesh->totalHaloPairs,
-			      mesh->Np,
-			      mesh->o_haloElementList,
-			      o_r,
-			      mesh->o_haloBuffer);
-    
-      // copy extracted halo to HOST 
-      mesh->o_haloBuffer.copyTo(sendBuffer);
-      
-      // start halo exchange HOST<>HOST
-      meshHaloExchangeStart3D(mesh,
-			      mesh->Np*sizeof(dfloat),
-			      sendBuffer,
-			      recvBuffer);
-      
-      // finalize recv on HOST
-      meshHaloExchangeFinish3D(mesh);
-      
-      // copy into halo zone of o_r  HOST>DEVICE
-      o_r.copyFrom(recvBuffer, haloBytes, haloOffset);
-    }
+    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
     
     mesh->device.finish();
     occa::tic("preconKernel");
-    
-    // compute local precon on DEVICE
-    precon->preconKernel(mesh->Nelements,
-			 precon->o_vmapPP,
-			 precon->o_faceNodesP,
-			 precon->o_oasForward,
-			 precon->o_oasDiagInvOp,
-			 precon->o_oasBack,
-			 o_r,
-			 o_zP);
 
-    mesh->device.finish();
-    occa::toc("preconKernel");
-    
-    // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
-    // something goes wrong here:
-    ellipticParallelGatherScatter3D(mesh, precon->ogsP, o_zP, o_zP, type);
+    if(strstr(options, "CONTINUOUS")) {
+      // compute local precon on DEVICE
+      precon->preconKernel(mesh->Nelements,
+			   precon->o_vmapPP,
+			   precon->o_faceNodesP,
+			   precon->o_oasForward,
+			   precon->o_oasDiagInvOp,
+			   precon->o_oasBack,
+			   o_r,
+			   o_zP);
+      
+      mesh->device.finish();
+      occa::toc("preconKernel");
+      
+      // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
+      // something goes wrong here:
+      ellipticParallelGatherScatter3D(mesh, precon->ogsP, o_zP, o_zP, type, "add");
+    }
+    else{
+      precon->preconKernel(mesh->Nelements,
+			   mesh->o_vmapP,
+			   precon->o_faceNodesP,
+			   precon->o_oasForwardDg,
+			   precon->o_oasDiagInvOpDg,
+			   precon->o_oasBackDg,
+			   o_r,
+			   o_zP);
 
+      iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
+      
+      // OAS => additive Schwarz => sum up patch solutions
+      ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
+
+      diagnostic(NtotalP, o_zP, "o_zP after GS");
+
+    }
     // extract block interiors on DEVICE
     mesh->device.finish();
     occa::tic("restrictKernel");
@@ -256,7 +247,7 @@ void ellipticPreconditioner3D(mesh3D *mesh,
     mesh->device.finish();
     occa::toc("restrictKernel");   
   }
-  else if(!strcmp(preconType, "JACOBI")){
+  else if(strstr(options, "JACOBI")){
 
     occa::tic("dotDivideKernel");   
     mesh->device.finish();
@@ -291,6 +282,12 @@ int main(int argc, char **argv){
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
+
+  // solver can be CG or PCG
+  // preconditioner can be JACOBI, OAS, NONE
+  // method can be CONTINUOUS or IPDG
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);
@@ -305,12 +302,14 @@ int main(int argc, char **argv){
   
   // set up
   ellipticSetupHex3D(mesh, &ogs, &precon, lambda);
-
+  
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-
+  iint Nall   = Ntotal + Nhalo;
+  iint NallP  = NtotalP;
+ 
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -338,18 +337,16 @@ int main(int argc, char **argv){
   }
   o_invDegreeP.copyFrom(invDegreeP);
   
-  dfloat *p   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *r   = (dfloat*) calloc(Ntotal+Nhalo, sizeof(dfloat));
-  dfloat *z   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *zP  = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *x   = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *Ap  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *p   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *r   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *z   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *zP  = (dfloat*) calloc(NallP, sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
 
   dfloat *x4   = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
   
-  // at this point gather-scatter is available
-
   // convergence tolerance (currently absolute)
   const dfloat tol = 1e-6;
 
@@ -366,11 +363,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[id];
 
       dfloat f = -(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
-      //      dfloat f = -lambda*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
-      //dfloat f = -lambda*xn*xn*xn;
 
-      //      Zt*Z*(SL+lambda*ML)*Zt*x = Zt*Z*ML*fL
-      
       r[id] = -wJ*f;
 
       x[id] = 0; // initial guess
@@ -384,22 +377,18 @@ int main(int argc, char **argv){
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_preconditioned_conjugate_gradient_method
 
   // need to rename o_r, o_x to avoid confusion
-  occa::memory o_p   = mesh->device.malloc(Ntotal*sizeof(dfloat), p);
-  occa::memory o_r   = mesh->device.malloc((Ntotal+Nhalo)*sizeof(dfloat), r);
-  occa::memory o_z   = mesh->device.malloc(Ntotal*sizeof(dfloat), z);
-  occa::memory o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat), zP); // CAUTION
-  occa::memory o_x   = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
-  occa::memory o_Ax  = mesh->device.malloc(Ntotal*sizeof(dfloat), x);
-  occa::memory o_Ap  = mesh->device.malloc(Ntotal*sizeof(dfloat), Ap);
+  occa::memory o_p   = mesh->device.malloc(Nall*sizeof(dfloat), p);
+  occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_z   = mesh->device.malloc(Nall*sizeof(dfloat), z);
+  occa::memory o_zP  = mesh->device.malloc(NallP*sizeof(dfloat), zP); // CAUTION
+  occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
 
-  occa::memory o_gradx  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
-  occa::memory o_gradp  = mesh->device.malloc((Ntotal+Nhalo)*4*sizeof(dfloat), x4);
+  occa::memory o_gradx  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
+  occa::memory o_gradp  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
 
-  char *methodType = strdup("H0"); // can be H0 (continuous Galerkin) or IPDG
-  char *schemeType = strdup("PCG");  // can be CG or PCG
-  char *preconType = strdup("JACOBI"); // can be JACOBI, OAS, NONE
-  
   // use this for OAS precon pairwise halo exchange
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
 
@@ -410,7 +399,7 @@ int main(int argc, char **argv){
   o_x.copyFrom(x);
 
   // compute A*x
-  ellipticOperator3D(mesh, ogs, lambda, o_x, o_gradx, o_Ax, methodType); 
+  ellipticOperator3D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_x, o_gradx, o_Ax, options);
   
   // copy r = b
   o_r.copyFrom(r);
@@ -419,13 +408,13 @@ int main(int argc, char **argv){
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter
-  if(!strcmp(methodType,"H0"))
-    ellipticParallelGatherScatter3D(mesh, ogs, o_r, o_r, dfloatString);
+  if(strstr(options,"CONTINUOUS"))
+    ellipticParallelGatherScatter3D(mesh, ogs, o_r, o_r, dfloatString, "add");
   
-  if(!strcmp(schemeType,"PCG")){
+  if(strstr(options,"PCG")){
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner3D(mesh, precon, ogs, sendBuffer, recvBuffer,
-			     o_r, o_zP, o_z, dfloatString, preconType, invDegree, invDegreeP); // r => rP => zP => z
+    ellipticPreconditioner3D(mesh, precon, sendBuffer, recvBuffer,
+			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
 
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -436,8 +425,8 @@ int main(int argc, char **argv){
   }
 
   // dot(r,r)
-  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, methodType);
-  dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, methodType);
+  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
+  dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
   
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
@@ -447,13 +436,13 @@ int main(int argc, char **argv){
   do{
     
     // A*p
-    ellipticOperator3D(mesh, ogs, lambda, o_p, o_gradp, o_Ap, methodType); 
+    ellipticOperator3D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_p, o_gradp, o_Ap, options); 
 
     // dot(p,A*p)
     dfloat pAp =
-      ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, methodType);
+      ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);
 
-    if(!strcmp(schemeType,"PCG"))
+    if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
       alpha = rdotz0/pAp;
     else
@@ -467,18 +456,18 @@ int main(int argc, char **argv){
     ellipticScaledAdd(mesh, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
-    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, methodType);
+    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
     
     if(rdotr1 < tol*tol) break;
 
-    if(!strcmp(schemeType,"PCG")){
+    if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner3D(mesh, precon, ogs, sendBuffer, recvBuffer, o_r, o_zP, o_z,
-			       dfloatString, preconType, invDegree, invDegreeP); 
+      ellipticPreconditioner3D(mesh, precon, sendBuffer, recvBuffer,
+			       o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
-      rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, methodType);
+      rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
       
       beta = rdotz1/rdotz0;
 

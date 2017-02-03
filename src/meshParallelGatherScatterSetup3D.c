@@ -9,6 +9,8 @@
 extern "C"
 {
   void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
+  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
+  void gsParallelGatherScatterDestroy(void *gsh);
 }
 
 // assume nodes locally sorted by rank then global index
@@ -18,14 +20,25 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 					iint Nbytes,     // number of bytes per node
 					iint *gatherLocalIds,  // local index of nodes
 					iint *gatherBaseIds,   // global index of their base nodes
-					iint *gatherBaseRanks, // rank of their base nodes
 					iint *gatherHaloFlags){   // 1 for halo node, 0 for not
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   
   ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
-  
+
+  // ------------------------------------------------------------  
+  // 0. propagate halo flags uniformly using a disposable gs instance
+
+  void *allGsh = gsParallelGatherScatterSetup(Nlocal, gatherBaseIds);
+
+  // compute max halo flag using global numbering
+  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use iint
+
+  // tidy up
+  gsParallelGatherScatterDestroy(allGsh);
+
+  // ------------------------------------------------------------
   // 1. count number of unique base nodes on this process
   ogs->Ngather = 0; // assumes at least one base node
   for(iint n=0;n<Nlocal;++n){
@@ -54,7 +67,6 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
   
   ogs->gatherLocalIds  = gatherLocalIds;
   ogs->gatherBaseIds   = gatherBaseIds;
-  ogs->gatherBaseRanks = gatherBaseRanks;
   ogs->gatherHaloFlags = gatherHaloFlags;
 
   // list of nodes to extract from DEVICE gathered array
@@ -68,8 +80,6 @@ ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
     }
   }
   
-  printf("ogs->Nhalo = %d, ogs->Ngather = %d\n", ogs->Nhalo, ogs->Ngather);
-
   // set up gather-scatter of halo nodes
   ogs->gatherGsh = NULL;
   if(ogs->Nhalo){

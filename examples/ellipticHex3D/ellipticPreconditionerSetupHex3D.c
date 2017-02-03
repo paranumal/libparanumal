@@ -4,18 +4,14 @@ typedef struct{
 
   iint localId;
   iint baseId;
-  iint baseRank;
   iint haloFlag;
   
 } preconGatherInfo_t;
 
-int parallelCompareBaseRank(const void *a, const void *b){
+int parallelCompareBaseId(const void *a, const void *b){
 
   preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
   preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
-
-  if(fa->baseRank < fb->baseRank) return -1;
-  if(fa->baseRank > fb->baseRank) return +1;
 
   if(fa->baseId < fb->baseId) return -1;
   if(fa->baseId > fb->baseId) return +1;
@@ -114,7 +110,6 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   for(iint n=0;n<Nlocal;++n){
     iint id = mesh->gatherLocalIds[n];
     gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
-    gatherInfo[id].baseRank = mesh->gatherBaseRanks[n];
     gatherInfo[id].haloFlag = mesh->gatherHaloFlags[n];
   }
 
@@ -197,7 +192,7 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   fclose(fp);
   
   // sort by rank then base index
-  qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseRank);
+  qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
   
   // do not gather-scatter nodes labelled zero
   iint skip = 0;
@@ -210,12 +205,10 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   iint NlocalP = NpP*mesh->Nelements - skip;
   iint *gatherLocalIdsP  = (iint*) calloc(NlocalP, sizeof(iint));
   iint *gatherBaseIdsP   = (iint*) calloc(NlocalP, sizeof(iint));
-  iint *gatherBaseRanksP = (iint*) calloc(NlocalP, sizeof(iint));
   iint *gatherHaloFlagsP = (iint*) calloc(NlocalP, sizeof(iint));
   for(iint n=0;n<NlocalP;++n){
     gatherLocalIdsP[n]  = preconGatherInfo[n+skip].localId;
     gatherBaseIdsP[n]   = preconGatherInfo[n+skip].baseId;
-    gatherBaseRanksP[n] = preconGatherInfo[n+skip].baseRank;
     gatherHaloFlagsP[n] = preconGatherInfo[n+skip].haloFlag;
   }
 
@@ -226,14 +219,131 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
 						  sizeof(dfloat),
 						  gatherLocalIdsP,
 						  gatherBaseIdsP,
-						  gatherBaseRanksP,
 						  gatherHaloFlagsP);
 
+  // -------------------------------------------------------------------------------------------
+  // build gather-scatter for overlapping patches
+  iint *allNelements = (iint*) calloc(size, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+		allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // offsets
+  iint *startElement = (iint*) calloc(size, sizeof(iint));
+  for(iint r=1;r<size;++r){
+    startElement[r] = startElement[r-1]+allNelements[r-1];
+  }
+
+  // 1-indexed numbering of nodes on this process
+  iint *localNums = (iint*) calloc((Nlocal+Nhalo), sizeof(iint));
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
+    }
+  }
+  
+  if(Nhalo){
+    // send buffer for outgoing halo
+    iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
+
+    // exchange node numbers with neighbors
+    meshHaloExchange3D(mesh,
+		       mesh->Np*sizeof(iint),
+		       localNums,
+		       sendBuffer,
+		       localNums+Nlocal);
+  }
+  
+  preconGatherInfo_t *preconGatherInfoDg = 
+    (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
+				 sizeof(preconGatherInfo_t));
+
+  // set local ids
+  for(iint n=0;n<mesh->Nelements*NpP;++n)
+    preconGatherInfoDg[n].localId = n;
+
+  // numbering of patch interior nodes
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint k=0;k<mesh->Nq;++k){
+      for(iint j=0;j<mesh->Nq;++j){
+	for(iint i=0;i<mesh->Nq;++i){
+	  iint id  = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq + e*mesh->Np;
+	  iint pid = (i+1) + (j+1)*NqP + (k+1)*NqP*NqP + e*NpP;
+
+	  // all patch interior nodes are local
+	  preconGatherInfoDg[pid].baseId = localNums[id];
+	}
+      }
+    }
+  }
+  // add patch boundary nodes
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      // mark halo nodes
+      iint rP = mesh->EToP[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint fP = mesh->EToF[e*mesh->Nfaces+f];
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      
+      for(iint n=0;n<mesh->Nfp;++n){
+	iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+	iint idP = mesh->vmapP[id];
+	
+	// local numbers
+	iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
+	iint pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
+	preconGatherInfoDg[pidP].baseId = localNums[idP];
+	
+	if(rP!=-1){
+	  preconGatherInfoDg[pidM].haloFlag = 1;
+	  preconGatherInfoDg[pidP].haloFlag = 1;
+	}
+      }
+    }
+  }
+
+  // sort by rank then base index
+  qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t),
+	parallelCompareBaseId);
+    
+  // do not gather-scatter nodes labelled zero
+  skip = 0;
+
+  while(preconGatherInfoDg[skip].baseId==0 && skip<NpP*mesh->Nelements){
+    ++skip;
+  }
+
+  // reset local ids
+  iint NlocalDg = NpP*mesh->Nelements - skip;
+  iint *gatherLocalIdsDg  = (iint*) calloc(NlocalDg, sizeof(iint));
+  iint *gatherBaseIdsDg   = (iint*) calloc(NlocalDg, sizeof(iint));
+  iint *gatherHaloFlagsDg = (iint*) calloc(NlocalDg, sizeof(iint));
+  for(iint n=0;n<NlocalDg;++n){
+    gatherLocalIdsDg[n]  = preconGatherInfoDg[n+skip].localId;
+    gatherBaseIdsDg[n]   = preconGatherInfoDg[n+skip].baseId;
+    gatherHaloFlagsDg[n] = preconGatherInfoDg[n+skip].haloFlag;
+  }
+
+  // make preconBaseIds => preconNumbering
+  precon->ogsDg = meshParallelGatherScatterSetup2D(mesh,
+						   NlocalDg,
+						   sizeof(dfloat),
+						   gatherLocalIdsDg,
+						   gatherBaseIdsDg,
+						   gatherHaloFlagsDg);
+  
+  // -------------------------------------------------------------------------------------------
+  
+
+  
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
   precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
+
   precon->o_oasForward = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForward);
   precon->o_oasBack    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBack);
 
+  precon->o_oasForwardDg = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForwardDg);
+  precon->o_oasBackDg    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBackDg);
+  
   /// ---------------------------------------------------------------------------
   
   // hack estimate for Jacobian scaling
@@ -243,20 +353,17 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
     // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
     
-    dfloat JWhrinv2 = 0, JWhsinv2 = 0, JWhtinv2 = 0, JW = 0;
+    dfloat Jhrinv2 = 0, Jhsinv2 = 0, Jhtinv2 = 0, J = 0;
     for(iint n=0;n<mesh->Np;++n){
+      dfloat W = mesh->gllw[n%mesh->Nq]*
+	mesh->gllw[(n/mesh->Nq)%mesh->Nq]*
+	mesh->gllw[n/(mesh->Nq*mesh->Nq)];
       iint base = mesh->Nggeo*mesh->Np*e + n;
-      /*
-      JW = mymax(JW, mesh->ggeo[base + mesh->Np*GWJID]);
-      JWhrinv2 = mymax(JWhrinv2, mesh->ggeo[base + mesh->Np*G00ID]);
-      JWhsinv2 = mymax(JWhsinv2, mesh->ggeo[base + mesh->Np*G11ID]);
-      JWhtinv2 = mymax(JWhtinv2, mesh->ggeo[base + mesh->Np*G22ID]);
-      */
 
-      JW += mesh->ggeo[base + mesh->Np*GWJID];
-      JWhrinv2 += mesh->ggeo[base + mesh->Np*G00ID];
-      JWhsinv2 += mesh->ggeo[base + mesh->Np*G11ID];
-      JWhtinv2 += mesh->ggeo[base + mesh->Np*G22ID];
+      J = mymax(J, mesh->ggeo[base + mesh->Np*GWJID]/W);
+      Jhrinv2 = mymax(Jhrinv2, mesh->ggeo[base + mesh->Np*G00ID]/W);
+      Jhsinv2 = mymax(Jhsinv2, mesh->ggeo[base + mesh->Np*G11ID]/W);
+      Jhtinv2 = mymax(Jhtinv2, mesh->ggeo[base + mesh->Np*G22ID]/W);
       
     }
     
@@ -266,10 +373,17 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
 	  iint pid = i + j*NqP + k*NqP*NqP + e*NpP;
 	  
 	  diagInvOp[pid] =
-	    1./(JW*lambda +
-		JWhrinv2*mesh->oasDiagOp[i] +
-		JWhsinv2*mesh->oasDiagOp[j] +
-		JWhtinv2*mesh->oasDiagOp[k]);
+	    1./(J*lambda +
+		Jhrinv2*mesh->oasDiagOp[i] +
+		Jhsinv2*mesh->oasDiagOp[j] +
+		Jhtinv2*mesh->oasDiagOp[k]);
+
+
+	  diagInvOpDg[pid] =
+	    1./(J*lambda +
+		Jhrinv2*mesh->oasDiagOpDg[i] +
+		Jhsinv2*mesh->oasDiagOpDg[j] +
+		Jhtinv2*mesh->oasDiagOpDg[k]);
 
 	}
       }
@@ -277,7 +391,8 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   }
   
   precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
-
+  precon->o_oasDiagInvOpDg = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
+  
   /// ---------------------------------------------------------------------------
   // compute diagonal of stiffness matrix for Jacobi
 
@@ -307,6 +422,23 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   // sum up
   meshParallelGatherScatter3D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
 
+  if(Nhalo){
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange2D(mesh,
+		       mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+		       mesh->vgeo,
+		       vgeoSendBuffer,
+		       mesh->vgeo + Nlocal*mesh->Nvgeo);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
+
+  
   free(diagA);
   
   return precon;

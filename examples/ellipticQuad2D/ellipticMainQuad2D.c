@@ -2,31 +2,6 @@
 
 const int B = 256; // block size for reduction (hard coded)
 
-void diagnostic(int N, occa::memory &o_x, const char *message){
-#if 0
-  dfloat *x = (dfloat*) calloc(N, sizeof(dfloat));
-
-  o_x.copyTo(x, N*sizeof(dfloat), 0);
-  
-  int n;
-  dfloat normX = 0;
-  for(n=0;n<N;++n)
-    normX += x[n]*x[n];
-
-  dfloat globalNormX;
-  MPI_Allreduce(&normX, &globalNormX, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  if(rank==0)
-    printf("rank %d reports norm %17.15lf for %s\n", rank, sqrt(globalNormX), message);
-
-  free(x);
-#endif
-}
-
-
 void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
 
   // count size of halo for this process
@@ -43,7 +18,7 @@ void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBu
     // copy extracted halo to HOST 
     mesh->o_haloBuffer.copyTo(sendBuffer);
     
-      // start halo exchange HOST<>HOST
+    // start halo exchange HOST<>HOST
     meshHaloExchangeStart2D(mesh,
 			    mesh->Np*sizeof(dfloat),
 			    sendBuffer,
@@ -60,7 +35,7 @@ void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuff
   
   // extract halo on DEVICE
   if(haloBytes){
-      // finalize recv on HOST
+    // finalize recv on HOST
     meshHaloExchangeFinish2D(mesh);
     
     // copy into halo zone of o_r  HOST>DEVICE
@@ -127,8 +102,16 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
     dfloat tau = 10.f*mesh->Nq*mesh->Nq;
-    mesh->ipdgKernel(mesh->Nelements, mesh->o_vmapM, mesh->o_vmapP, lambda, tau,
-		     mesh->o_vgeo, mesh->o_sgeo, mesh->o_D, o_gradq, o_Aq);
+    mesh->ipdgKernel(mesh->Nelements,
+		     mesh->o_vmapM,
+		     mesh->o_vmapP,
+		     lambda,
+		     tau,
+		     mesh->o_vgeo,
+		     mesh->o_sgeo,
+		     mesh->o_D,
+		     o_gradq,
+		     o_Aq);
 
   }
   mesh->device.finish();
@@ -342,6 +325,8 @@ int main(int argc, char **argv){
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
+
+  dfloat *x4   = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
   
   // convergence tolerance (currently absolute)
   const dfloat tol = 1e-6;
@@ -381,7 +366,6 @@ int main(int argc, char **argv){
   occa::memory o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), Ap);
   occa::memory o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), tmp);
 
-  dfloat *x4   = (dfloat*) calloc(4*Nall, sizeof(dfloat));
   occa::memory o_gradx  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
   occa::memory o_gradp  = mesh->device.malloc(Nall*4*sizeof(dfloat), x4);
   
@@ -443,8 +427,9 @@ int main(int argc, char **argv){
     diagnostic(Ntotal, o_p, "o_Ap");
     
     // dot(p,A*p)
-    dfloat pAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);
-
+    dfloat pAp =
+      ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);
+    
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
       alpha = rdotz0/pAp;
@@ -466,7 +451,8 @@ int main(int argc, char **argv){
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_r, o_zP, o_z, dfloatString, options);
+      ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer,
+			       o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
       rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
