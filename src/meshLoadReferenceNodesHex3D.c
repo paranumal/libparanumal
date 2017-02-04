@@ -58,27 +58,29 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
       mesh->vertexNodes[7] = n;
   }
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Dr+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
+  if(0){
+    fgets(buf, BUFSIZ, fp); // read comment
+    mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np*mesh->Np;++n){
+      fscanf(fp, dfloatFormat, mesh->Dr+n);
+    }
+    fgets(buf, BUFSIZ, fp); // read comment
+    
+    fgets(buf, BUFSIZ, fp); // read comment
+    mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np*mesh->Np;++n){
+      fscanf(fp, dfloatFormat, mesh->Ds+n);
+    }
+    fgets(buf, BUFSIZ, fp); // read EOL
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Ds+n);
+    fgets(buf, BUFSIZ, fp); // read comment
+    mesh->Dt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np*mesh->Np;++n){
+      fscanf(fp, dfloatFormat, mesh->Dt+n);
+    }
+    fgets(buf, BUFSIZ, fp); // read EOL
   }
-  fgets(buf, BUFSIZ, fp); // read EOL
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Dt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Dt+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read EOL
-
+  
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   //  printf("faceNodes: \n");
@@ -91,14 +93,15 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp); // read EOL
 
-    
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->LIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->LIFT+n);
+  if(0){
+    fgets(buf, BUFSIZ, fp); // read comment
+    mesh->LIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
+      fscanf(fp, dfloatFormat, mesh->LIFT+n);
+    }
+    fgets(buf, BUFSIZ, fp);
   }
-  fgets(buf, BUFSIZ, fp);
-
+  
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
   //  printf("comment = %s\n", buf);

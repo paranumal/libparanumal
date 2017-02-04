@@ -7,7 +7,7 @@
 
 extern "C"
 {
-  void gsParallelGatherScatter(void *gsh, void *v, const char *type);
+  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
 }
 
 // ok to use o_v = o_gsv
@@ -15,7 +15,8 @@ void meshParallelGatherScatter3D(mesh3D *mesh,
 				 ogs_t *ogs, 
 				 occa::memory &o_v,
 				 occa::memory &o_gsv,
-				 const char *type){
+				 const char *type,
+				 const char *op){
 
   mesh->device.finish();
   occa::tic("gatherKernel");
@@ -36,7 +37,7 @@ void meshParallelGatherScatter3D(mesh3D *mesh,
     ogs->o_haloTmp.copyTo(ogs->haloTmp);
     
     // gather across MPI processes then scatter back
-    gsParallelGatherScatter(ogs->gatherGsh, ogs->haloTmp, dfloatString); // danger on hardwired type
+    gsParallelGatherScatter(ogs->gatherGsh, ogs->haloTmp, dfloatString, op); // danger on hardwired type
     
     // copy totally gather halo data back from HOST to DEVICE
     ogs->o_haloTmp.copyFrom(ogs->haloTmp);
