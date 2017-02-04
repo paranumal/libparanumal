@@ -57,6 +57,8 @@ for n=1:Np
   fprintf(fid, '%17.15E %17.15E %17.15E\n', r(n), s(n), t(n));
 end
 
+if(0)
+
 fprintf(fid, '%% r collocation differentation matrix\n');
 for n=1:Np
   for m=1:Np
@@ -80,6 +82,7 @@ for n=1:Np
   end
   fprintf(fid, '\n');
 end
+end
 
 fprintf(fid, '%% faceNodes\n');
 for f=1:Nfaces
@@ -89,12 +92,15 @@ for f=1:Nfaces
   fprintf(fid, '\n');
 end
 
+if(0)
 fprintf(fid, '%% LIFT matrix\n');
 for n=1:Np
   for m=1:Nfp*Nfaces
     fprintf(fid, '%17.15E ', LIFT(n,m));
   end
   fprintf(fid, '\n');
+end
+
 end
 
 fprintf(fid, '%% D (1D) matrix\n');
@@ -241,6 +247,82 @@ for n=1:NqP
   end
   fprintf(fid, '\n');
 end
+
+
+%%ids 
+Nelements = 10;
+Nq = N+1;
+ADG = zeros(Nq*Nelements,Nq*Nelements);
+es = reshape(1:Nelements*Nq, Nq,Nelements);
+
+tau = 2*(N+1)^2;
+for e=2:Nelements-1
+  n = es(:,e);
+  nL = es(1,e);  
+  nR = es(Nq,e);
+  nP = es(:,e+1);
+  nM = es(:,e-1);
+
+  ADG(n,n)  = ADG(n,n)+gllS;
+
+  ADG(n,nL)   = ADG(n,nL)   + 0.5*transpose(D1d(1,:));
+  ADG(n,nL-1) = ADG(n,nL-1) - 0.5*transpose(D1d(1,:));
+
+  ADG(n,nR)   = ADG(n,nR)   - 0.5*transpose(D1d(Nq,:));
+  ADG(n,nR+1) = ADG(n,nR+1) + 0.5*transpose(D1d(Nq,:));
+
+  ADG(nL,n)   = ADG(nL,n)   + 0.5*(D1d(1,:));
+  ADG(nL-1,n) = ADG(nL-1,n) - 0.5*(D1d(1,:));
+
+  ADG(nR,n)   = ADG(nR,n)   - 0.5*(D1d(Nq,:));
+  ADG(nR+1,n) = ADG(nR+1,n) + 0.5*(D1d(Nq,:));
+
+  ADG(nL,nL)  = ADG(nL,nL) + 0.5*tau;	    
+  ADG(nL,nL-1) = ADG(nL,nL-1) - 0.5*tau;	    
+
+  ADG(nR,nR) = ADG(nR,nR) + 0.5*tau;	    
+  ADG(nR,nR+1) = ADG(nR,nR+1) - 0.5*tau;	    
+
+  MDG(n,n) = diag(w1d);
+end
+
+ids = 4*Nq:5*Nq+1;
+BDG = ADG(ids,ids)
+MDG = MDG(ids,ids)
+
+gllwP = diag([w1d(1),w1d,w1d(1)]);
+
+[vSP,dSP] = eig(gllwP\BDG);
+
+%% invSP = vSP*inv(dSP)*inv(gllwP*vSP) (i.e. the inverse we need)
+%% define P = vSP, invP = inv(gllwP*vSP), 
+P = vSP;
+invP = inv(gllwP*vSP);
+diagOp = diag(dSP); % need to divide to get inverse
+
+fprintf(fid, '%% stencil size for DG OAS NqP\n');
+fprintf(fid, '%d\n', NqP);
+fprintf(fid, '%% forwardDG [ change of basis for DG OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', invP(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% diagOpDG [ weight so that inv(W\(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
+for n=1:NqP
+    fprintf(fid, '%17.15E ', diagOp(n));
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% backwardDG [ reverse change of basis forr H0 OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', P(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
 
 
 
