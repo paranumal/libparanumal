@@ -15,7 +15,7 @@
     const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];				\
     const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];				\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-    const dfloat h   = 2.f*occaSqrt(sgeo[sk*p_Nsgeo+p_SJID]);		\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
     									\
     const dfloat4 gradqM = gradq[idM];					\
     const dfloat4 gradqP = gradq[idP];					\
@@ -31,7 +31,7 @@
     s_rhsq[k][j][i] -= 0.5f*WsJ*(nx*(sc*gradqP.x+gradqM.x) +		\
 				 ny*(sc*gradqP.y+gradqM.y) +		\
 				 nz*(sc*gradqP.z+gradqM.z) +		\
-				 tau*dq/h);				\
+				 tau*hinv*dq);				\
   }
 
 // (grad phi, grad q) + ([phi], n.{grad q}) + ({grad phi}, n[u]) + (tau[phi],[u])

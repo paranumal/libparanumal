@@ -26,14 +26,14 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   // compute geometric factors
   meshGeometricFactorsHex3D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsHex3D(mesh);
-
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup3D(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
+  
+  // compute surface geofacs (including halo)
+  meshSurfaceGeometricFactorsHex3D(mesh);
   
   // global nodes
   meshParallelConnectNodesHex3D(mesh);
