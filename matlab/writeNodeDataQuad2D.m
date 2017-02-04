@@ -143,6 +143,165 @@ for n=1:plotNelements
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3));
 end
 
+%%%% ---
+
+%% 1D 
+gllS = transpose(D1d)*diag(w1d)*D1d;
+
+NqP = N+3;
+
+%ids 
+Nelements = 3;
+cnt = 1;
+for e=1:Nelements
+for n=1:N+1
+galnums(n,e) = cnt;
+cnt = cnt+1;
+end
+cnt = cnt-1;
+end
+
+A = zeros(cnt,cnt);
+for e=1:Nelements
+for n=1:N+1
+for m=1:N+1
+i = galnums(n,e);
+j = galnums(m,e);
+
+A(i,j) = A(i,j) + gllS(n,m);
+end
+end
+end
+
+
+%% WARNING NEED N>1 (otherwise we need a boundary condition)
+
+overlap = 1;
+ids = N+1-overlap:2*N+1+overlap;
+subA = A(ids,ids)
+
+SP = zeros(NqP,NqP); %% one point overlap
+SP(2:NqP-1,2:NqP-1) = gllS;
+SP(1,1) = SP(1,1) + gllS(2,2);
+SP(2,1) = SP(2,1) + gllS(1,2);
+SP(2,2) = SP(2,2) + gllS(1,1);
+SP(1,2) = SP(1,2) + gllS(2,1);
+
+SP(NqP,NqP)   = SP(NqP,NqP) + gllS(2,2);
+SP(NqP-1,NqP) = SP(NqP-1,NqP) + gllS(1,2);
+SP(NqP-1,NqP-1) = SP(NqP-1,NqP-1) + gllS(1,1);
+SP(NqP,NqP-1) = SP(NqP,NqP-1) + gllS(2,1);
+
+gllwP = diag([w1d(2),2*w1d(1),w1d(2:end-1),2*w1d(1),w1d(2)]);
+
+[vSP,dSP] = eig(gllwP\SP);
+
+%% invSP = vSP*inv(dSP)*inv(gllwP*vSP) (i.e. the inverse we need)
+%% define P = vSP, invP = inv(gllwP*vSP), 
+P = vSP;
+invP = inv(gllwP*vSP);
+diagOp = diag(dSP); % need to divide to get inverse
+
+fprintf(fid, '%% stencil size for H0 OAS NqP\n');
+fprintf(fid, '%d\n', NqP);
+fprintf(fid, '%% invP [ change of basis for H0 OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', invP(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% diagOp [ weight so that inv(W\(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
+for n=1:NqP
+    fprintf(fid, '%17.15E ', diagOp(n));
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% P [ reverse change of basis forr H0 OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', P(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
+%%ids 
+Nelements = 10;
+Nq = N+1;
+ADG = zeros(Nq*Nelements,Nq*Nelements);
+es = reshape(1:Nelements*Nq, Nq,Nelements);
+
+tau = 2*(N+1)^2;
+for e=2:Nelements-1
+  n = es(:,e);
+  nL = es(1,e);  
+  nR = es(Nq,e);
+  nP = es(:,e+1);
+  nM = es(:,e-1);
+
+  ADG(n,n)  = ADG(n,n)+gllS;
+
+  ADG(n,nL)   = ADG(n,nL)   + 0.5*transpose(D1d(1,:));
+  ADG(n,nL-1) = ADG(n,nL-1) - 0.5*transpose(D1d(1,:));
+
+  ADG(n,nR)   = ADG(n,nR)   - 0.5*transpose(D1d(Nq,:));
+  ADG(n,nR+1) = ADG(n,nR+1) + 0.5*transpose(D1d(Nq,:));
+
+  ADG(nL,n)   = ADG(nL,n)   + 0.5*(D1d(1,:));
+  ADG(nL-1,n) = ADG(nL-1,n) - 0.5*(D1d(1,:));
+
+  ADG(nR,n)   = ADG(nR,n)   - 0.5*(D1d(Nq,:));
+  ADG(nR+1,n) = ADG(nR+1,n) + 0.5*(D1d(Nq,:));
+
+  ADG(nL,nL)  = ADG(nL,nL) + 0.5*tau;	    
+  ADG(nL,nL-1) = ADG(nL,nL-1) - 0.5*tau;	    
+
+  ADG(nR,nR) = ADG(nR,nR) + 0.5*tau;	    
+  ADG(nR,nR+1) = ADG(nR,nR+1) - 0.5*tau;	    
+
+  MDG(n,n) = diag(w1d);
+end
+
+ids = 4*Nq:5*Nq+1;
+BDG = ADG(ids,ids)
+MDG = MDG(ids,ids)
+
+gllwP = diag([w1d(1),w1d,w1d(1)]);
+
+[vSP,dSP] = eig(gllwP\BDG);
+
+%% invSP = vSP*inv(dSP)*inv(gllwP*vSP) (i.e. the inverse we need)
+%% define P = vSP, invP = inv(gllwP*vSP), 
+P = vSP;
+invP = inv(gllwP*vSP);
+diagOp = diag(dSP); % need to divide to get inverse
+
+fprintf(fid, '%% stencil size for DG OAS NqP\n');
+fprintf(fid, '%d\n', NqP);
+fprintf(fid, '%% forwardDG [ change of basis for DG OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', invP(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% diagOpDG [ weight so that inv(W\(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
+for n=1:NqP
+    fprintf(fid, '%17.15E ', diagOp(n));
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% backwardDG [ reverse change of basis forr H0 OAS precon ]\n');
+for n=1:NqP
+  for m=1:NqP
+    fprintf(fid, '%17.15E ', P(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
+
+
+
 %% volume cubature
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));
 [cubr,cubs] = meshgrid(z);
