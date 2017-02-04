@@ -209,7 +209,6 @@ void ellipticPreconditioner3D(mesh3D *mesh,
 			   o_zP);
       
       mesh->device.finish();
-      occa::toc("preconKernel");
       
       // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
       // something goes wrong here:
@@ -234,6 +233,8 @@ void ellipticPreconditioner3D(mesh3D *mesh,
       //      diagnostic(NtotalP, o_zP, "o_zP after GS");
 
     }
+    occa::toc("preconKernel");
+	  
     // extract block interiors on DEVICE
     mesh->device.finish();
     occa::tic("restrictKernel");
@@ -283,8 +284,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);
