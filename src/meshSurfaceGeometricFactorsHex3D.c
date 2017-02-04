@@ -7,11 +7,11 @@
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 6;
-  mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
+  mesh->Nsgeo = 7;
+  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     iint id = e*mesh->Nverts;
@@ -78,6 +78,17 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 	mesh->sgeo[base+IJID] = 1./J;
 	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[i%mesh->Nq]*mesh->gllw[i/mesh->Nq];
       }
+    }
+  }
+
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
+      iint baseP = mesh->mapP[baseM];
+      dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+      dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
   }
 }

@@ -93,6 +93,7 @@ typedef struct {
   iint *faceNodes; // list of element reference interpolation nodes on element faces
   iint *vmapM;     // list of volume nodes that are face nodes
   iint *vmapP;     // list of volume nodes that are paired with face nodes
+  iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
   iint *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
@@ -368,5 +369,6 @@ void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
 #define SJID 3  
 #define IJID 4
 #define WSJID 5
+#define IHID 6
 #endif
 
