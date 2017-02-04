@@ -85,6 +85,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
       iint baseP = mesh->mapP[baseM];
+      // V = 2*A*h, J = V/8, sJ = A/4; => h = V/(2*A) = 8*J/(8*sJ) = J/sJ
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
