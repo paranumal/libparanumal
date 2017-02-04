@@ -5,7 +5,7 @@
 
 // nx,ny,nz,sJ,invJ - need WsJ
 
-/* assumes zero Neumann */
+/* assumes zero Neumann - nasty hack for h */
 #define surfaceTerms(sk, i, j, k)					\
   {									\
     const iint  idM = vmapM[sk];					\
@@ -15,6 +15,7 @@
     const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];				\
     const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];				\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat h   = 2.f*occaSqrt(sgeo[sk*p_Nsgeo+p_SJID]);		\
     									\
     const dfloat4 gradqM = gradq[idM];					\
     const dfloat4 gradqP = gradq[idP];					\
@@ -30,7 +31,7 @@
     s_rhsq[k][j][i] -= 0.5f*WsJ*(nx*(sc*gradqP.x+gradqM.x) +		\
 				 ny*(sc*gradqP.y+gradqM.y) +		\
 				 nz*(sc*gradqP.z+gradqM.z) +		\
-				 tau*dq);				\
+				 tau*dq/h);				\
   }
 
 // (grad phi, grad q) + ([phi], n.{grad q}) + ({grad phi}, n[u]) + (tau[phi],[u])

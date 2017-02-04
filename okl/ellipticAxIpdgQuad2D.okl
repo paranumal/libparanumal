@@ -13,6 +13,7 @@
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
   const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];				\
+  const dfloat h   = 2.f*sgeo[sk*p_Nsgeo+p_SJID];			\
   									\
   const dfloat4 gradqM = gradq[idM];					\
   const dfloat4 gradqP = gradq[idP];					\
@@ -26,7 +27,7 @@
   									\
   s_rhsq[j][i] -= 0.5f*WsJ*(nx*(sc*gradqP.x+gradqM.x) +			\
 			    ny*(sc*gradqP.y+gradqM.y) +			\
-			    tau*dq);					\
+			    tau*dq/h);					\
   }
 
 kernel void ellipticAxIpdgQuad2D(const int Nelements,
