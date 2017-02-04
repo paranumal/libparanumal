@@ -182,7 +182,6 @@ void ellipticProject(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &
 
 void ellipticPreconditioner3D(mesh3D *mesh,
 			      precon_t *precon,
-			      ogs_t *ogs,
 			      dfloat *sendBuffer,
 			      dfloat *recvBuffer,
 			      occa::memory &o_r,
@@ -193,9 +192,9 @@ void ellipticPreconditioner3D(mesh3D *mesh,
 
   if(strstr(options, "OAS")){
 
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+    ellipticStartHaloExchange3D(mesh, o_r, sendBuffer, recvBuffer);
     
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+    ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
     
     mesh->device.finish();
     occa::tic("preconKernel");
@@ -229,12 +228,12 @@ void ellipticPreconditioner3D(mesh3D *mesh,
 			   o_zP);
 
       iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
-      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
+      //      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
       
       // OAS => additive Schwarz => sum up patch solutions
-      ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
+      ellipticParallelGatherScatter3D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
 
-      diagnostic(NtotalP, o_zP, "o_zP after GS");
+      //      diagnostic(NtotalP, o_zP, "o_zP after GS");
 
     }
     // extract block interiors on DEVICE

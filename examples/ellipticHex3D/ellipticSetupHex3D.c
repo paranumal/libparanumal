@@ -167,7 +167,6 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 					  sizeof(dfloat),
 					  mesh->gatherLocalIds,
 					  mesh->gatherBaseIds, 
-					  mesh->gatherBaseRanks,
 					  mesh->gatherHaloFlags);
 
   *precon = ellipticPreconditionerSetupHex3D(mesh, *ogs, lambda);
