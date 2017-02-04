@@ -83,6 +83,11 @@ typedef struct {
   dfloat *oasBack;
   dfloat *oasDiagOp;
   
+  // transform to/from eigenmode of IPDG 1D laplacian
+  dfloat *oasForwardDg;
+  dfloat *oasBackDg;
+  dfloat *oasDiagOpDg;
+  
   // face node info
   iint Nfp;        // number of nodes per face
   iint *faceNodes; // list of element reference interpolation nodes on element faces
@@ -307,14 +312,14 @@ void meshParallelGatherScatter3D(mesh3D *mesh,
 				 ogs_t *ogs, 
 				 occa::memory &o_v,
 				 occa::memory &o_gsv,
-				 const char *type);
+				 const char *type,
+				 const char *op);
 
 ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
 					iint Nlocal,     // number of local nodes
 					iint Nbytes,     // number of bytes per node
 					iint *localIds,  // local index of nodes
 					iint *baseIds,   // gather index of their base nodes
-					iint *baseRanks, // rank of their base nodes
 					iint *haloFlags); // 1 for halo node, 0 for not
 
 void meshAcousticsRun3D(mesh3D *mesh);

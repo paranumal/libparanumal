@@ -101,7 +101,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
-    dfloat tau = 10.f*mesh->Nq*mesh->Nq;
+    dfloat tau = 2.f*mesh->Nq*mesh->Nq; // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
 		     mesh->o_vmapP,
@@ -274,8 +274,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);

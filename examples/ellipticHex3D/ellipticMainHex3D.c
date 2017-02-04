@@ -101,7 +101,7 @@ void ellipticOperator3D(mesh3D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
-    dfloat tau = 10.f*mesh->Nq*mesh->Nq;
+    dfloat tau = 2.f*mesh->Nq*mesh->Nq;
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
 		     mesh->o_vmapP,
@@ -143,8 +143,6 @@ dfloat ellipticWeightedInnerProduct(mesh3D *mesh,
 				    dfloat *tmp,
 				    const char *options){
 
-  printf("hello\n");
-  
   mesh->device.finish();
   occa::tic("weighted inner product2");
 
@@ -285,8 +283,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);
@@ -316,25 +314,26 @@ int main(int argc, char **argv){
   
   ellipticComputeDegreeVector(mesh, Ntotal, ogs, degree);
 
+#if 0
+  // superb it counts
   for(iint n=0;n<Ntotal;++n){
     if(degree[n]==0) printf("degree[%d]=%d\n", n, degree[n]);
     invDegree[n] = 1./degree[n];
   }
   o_invDegree.copyFrom(invDegree);
-
-
-  dfloat *invDegreeP = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-  dfloat *degreeP = (dfloat*) calloc(NtotalP, sizeof(dfloat));
-
-  occa::memory o_invDegreeP = mesh->device.malloc(NtotalP*sizeof(dfloat), invDegreeP);
-  
-  ellipticComputeDegreeVector(mesh, NtotalP, precon->ogsP, degreeP);
-
-  for(iint n=0;n<NtotalP;++n){
-    if(degreeP[n]==0) printf("degreeP[%d]=%d\n", n, degreeP[n]);
-    invDegreeP[n] = 1./degreeP[n];
+#else
+  if(strstr(options, "CONTINUOUS")){
+    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
   }
-  o_invDegreeP.copyFrom(invDegreeP);
+  else
+    for(iint n=0;n<Ntotal;++n)
+      invDegree[n] = 1.;
+  
+  o_invDegree.copyFrom(invDegree);
+#endif
   
   dfloat *p   = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Nall, sizeof(dfloat));
