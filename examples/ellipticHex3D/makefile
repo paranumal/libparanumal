@@ -39,7 +39,7 @@ ellipticPreconditionerSetupHex3D.o
 
 # library objects
 LOBJS = \
-../../src/meshConnect3D.o \
+../../src/meshConnect.o \
 ../../src/meshConnectBoundary3D.o \
 ../../src/meshConnectFaceNodes3D.o \
 ../../src/meshGeometricPartition3D.o \

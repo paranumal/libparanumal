@@ -316,5 +316,8 @@ void parallelSort(iint N, void *vv, size_t sz,
 /* hash function */
 unsigned int hash(const unsigned int value) ;
 
+/* dimension independent mesh operations */
+void meshConnect(mesh_t *mesh);
+
 #endif
 

@@ -23,9 +23,18 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   mesh->Nverts = 3; // number of vertices per element
   mesh->Nfaces = 3;
+  mesh->NfaceVertices = 2;
+
+  /* vertices on each face */
+  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}; 
+
+  mesh->faceVertices =
+    (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
+
+  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(iint));
 
   if(fp==NULL){
-    printf("meshReader2D: could not load file %s\n", fileName);
+    printf("meshParallelReaderTri2D: could not load file %s\n", fileName);
     exit(0);
   }
 

@@ -73,7 +73,7 @@ void meshParallelConnect2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // serial connectivity on each process
-  meshConnect2D(mesh);
+  meshConnect(mesh);
 
   // count # of broken links
   iint Nbroken =0;
