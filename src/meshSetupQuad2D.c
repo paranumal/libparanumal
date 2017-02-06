@@ -36,7 +36,7 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   meshSurfaceGeometricFactorsQuad2D(mesh);
   
   // global nodes
-  meshParallelConnectNodesQuad2D(mesh);
+  meshParallelConnectNodes(mesh);
   
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
