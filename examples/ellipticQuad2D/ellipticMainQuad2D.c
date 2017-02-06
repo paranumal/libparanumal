@@ -275,7 +275,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -286,7 +286,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 10;
+  dfloat lambda = 100;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);
