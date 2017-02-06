@@ -273,7 +273,8 @@ typedef struct {
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
   occa::kernel haloExtractKernel;
-
+  occa::kernel partialSurfaceKernel;
+  
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
 
