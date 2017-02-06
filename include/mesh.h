@@ -324,6 +324,24 @@ void meshConnect(mesh_t *mesh);
 /* build global connectivity in parallel */
 void meshParallelConnectNodes(mesh_t *mesh);
 
+void meshHaloSetup(mesh_t *mesh);
+
+/* extract whole elements for the halo exchange */
+void meshHaloExtract(mesh_t *mesh, size_t Nbytes, void *sourceBuffer, void *haloBuffer);
+
+void meshHaloExchange(mesh_t *mesh,
+		      size_t Nbytes,         // message size per element
+		      void *sourceBuffer,  
+		      void *sendBuffer,    // temporary buffer
+		      void *recvBuffer);
+
+void meshHaloExchangeStart(mesh_t *mesh,
+			   size_t Nbytes,       // message size per element                                                                                         
+			   void *sendBuffer,    // temporary buffer                                                                                                 
+			   void *recvBuffer);
+
+
+void meshHaloExchangeFinish(mesh_t *mesh);
 
 #endif
 

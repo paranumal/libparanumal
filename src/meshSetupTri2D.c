@@ -30,7 +30,7 @@ mesh2D *meshSetupTri2D(char *filename, int N){
   meshSurfaceGeometricFactorsTri2D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetup2D(mesh);
+  meshHaloSetup(mesh);
   
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);

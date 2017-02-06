@@ -32,14 +32,14 @@ int compareHaloFaces(const void *a,
 
 // set up halo infomation for inter-processor MPI 
 // exchange of trace nodes
-void meshHaloSetup(mesh *mesh){
+void meshHaloSetup(mesh_t *mesh){
 
   // MPI info
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // non-blocking MPI isend/irecv requests (used in meshHaloExchange2D)
+  // non-blocking MPI isend/irecv requests (used in meshHaloExchange)
   mesh->haloSendRequests = calloc(size, sizeof(MPI_Request));
   mesh->haloRecvRequests = calloc(size, sizeof(MPI_Request));
   

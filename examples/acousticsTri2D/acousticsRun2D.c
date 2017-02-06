@@ -16,14 +16,14 @@ void acousticsRun2D(mesh2D *mesh){
       
       if(mesh->totalHaloPairs>0){
 	// extract halo node data
-	meshHaloExtract2D(mesh, mesh->Np*mesh->Nfields*sizeof(dfloat),
-			  mesh->q, sendBuffer);
+	meshHaloExtract(mesh, mesh->Np*mesh->Nfields*sizeof(dfloat),
+			mesh->q, sendBuffer);
 	
 	// start halo exchange
-	meshHaloExchangeStart2D(mesh,
-				mesh->Np*mesh->Nfields*sizeof(dfloat),
-				sendBuffer,
-				recvBuffer);
+	meshHaloExchangeStart(mesh,
+			      mesh->Np*mesh->Nfields*sizeof(dfloat),
+			      sendBuffer,
+			      recvBuffer);
       }
       
       // compute volume contribution to DG acoustics RHS
@@ -34,7 +34,7 @@ void acousticsRun2D(mesh2D *mesh){
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
-	meshHaloExchangeFinish2D(mesh);
+	meshHaloExchangeFinish(mesh);
 	
 	// copy data to halo zone of q
 	memcpy(mesh->q+mesh->Np*mesh->Nfields*mesh->Nelements, recvBuffer, haloBytes);
@@ -96,10 +96,10 @@ void acousticsOccaRun2D(mesh2D *mesh){
 	mesh->o_haloBuffer.copyTo(sendBuffer);      
 	
 	// start halo exchange
-	meshHaloExchangeStart2D(mesh,
-				mesh->Np*mesh->Nfields*sizeof(dfloat),
-				sendBuffer,
-				recvBuffer);
+	meshHaloExchangeStart(mesh,
+			      mesh->Np*mesh->Nfields*sizeof(dfloat),
+			      sendBuffer,
+			      recvBuffer);
       }
       
       // compute volume contribution to DG acoustics RHS
@@ -112,7 +112,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
 
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
-	meshHaloExchangeFinish2D(mesh);
+	meshHaloExchangeFinish(mesh);
 	
 	// copy halo data to DEVICE
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
@@ -245,13 +245,13 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
         mesh->device.finish();
         
         // start halo exchange (NBN: moved from above)
-        meshHaloExchangeStart2D(mesh,
-          mesh->Np*mesh->Nfields * sizeof(dfloat),
-          H_send_Q,
-          H_recv_Q);
+        meshHaloExchangeStart(mesh,
+			      mesh->Np*mesh->Nfields * sizeof(dfloat),
+			      H_send_Q,
+			      H_recv_Q);
 
         // wait for halo data to arrive
-        meshHaloExchangeFinish2D(mesh);
+        meshHaloExchangeFinish(mesh);
 
         // copy halo data to DEVICE
         // NBN: making this copy "async" means the copy will be 
@@ -440,13 +440,13 @@ void acousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
         mesh->device.finish();
         
         // start halo exchange (NBN: moved from above)
-        meshHaloExchangeStart2D(mesh,
-          mesh->Np*mesh->Nfields * sizeof(dfloat),
-          H_send_Q,
-          H_recv_Q);
+        meshHaloExchangeStart(mesh,
+			      mesh->Np*mesh->Nfields * sizeof(dfloat),
+			      H_send_Q,
+			      H_recv_Q);
 
         // wait for halo data to arrive
-        meshHaloExchangeFinish2D(mesh);
+        meshHaloExchangeFinish(mesh);
 
         // copy halo data to DEVICE on stream 1
         mesh->o_q.asyncCopyFrom(H_recv_Q,haloBytes,offset);

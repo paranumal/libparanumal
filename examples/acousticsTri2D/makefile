@@ -64,12 +64,12 @@ LOBJS = \
 ../../src/meshPhysicalNodesTri2D.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshConnectFaceNodes2D.o \
-../../src/meshConnect2D.o \
+../../src/meshConnect.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshGeometricPartition2D.o \
-../../src/meshHaloExchange2D.o \
-../../src/meshHaloExtract2D.o \
-../../src/meshHaloSetup2D.o \
+../../src/meshHaloExchange.o \
+../../src/meshHaloExtract.o \
+../../src/meshHaloSetup.o \
 ../../src/meshParallelConnect2D.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics2D.o \
