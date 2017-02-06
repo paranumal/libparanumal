@@ -37,7 +37,7 @@ kernel void acousticsUpdate3D_o1(const iint Ntotal,
   }
 }
 
-
+#if 0
 
 kernel void acousticsUpdate3D_wadg(const iint Nelements,
 				   const dfloat dt,	
@@ -123,3 +123,4 @@ kernel void acousticsUpdate3D_wadg(const iint Nelements,
 
   }
 }
+#endif
