@@ -19,6 +19,32 @@ make clean; make -j 8; cd ../../;
 
 ./examples/acousticsTri2D/acousticsMain2D  meshes/cavityH01.msh 3
 
+cd examples/boltzmannQuad2D
+
+make clean; make -j 8; cd ../../
+
+./examples/boltzmannQuad2D/boltzmannSplitPmlMain2D meshes/boltzmannSquareCylinderUnboundedQuadV2.msh 3
+
+cd examples/boltzmannTri2D
+
+make clean; make -j 8; cd ../../
+
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D meshes/boltzmannSquareCylinderUnboundedBC.msh 3
+
+cd examples/ellipticQuad2D
+
+make clean; make -j 8; cd ../../
+
+./examples/ellipticQuad2D/ellipticMainQuad2D meshes/cavityQuadH02.msh 3
+
+
+cd examples/ellipticHex2D
+
+make clean; make -j 8; cd ../../
+
+./examples/ellipticHex3D/ellipticMainHex3D meshes/cubHexa.msh 3
+
+
 
 
 
