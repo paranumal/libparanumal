@@ -26,7 +26,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   mesh->NfaceVertices = 2;
 
   /* vertices on each face */
-  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}; 
+  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}}; 
 
   mesh->faceVertices =
     (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));

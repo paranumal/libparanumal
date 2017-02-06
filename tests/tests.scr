@@ -13,6 +13,13 @@ make clean; make -j 8; cd ../../;
 ./examples/acousticsTet3D/acousticsMain3D  meshes/cavity3D.msh 3
 
 
+cd examples/acousticsTri2D;
+
+make clean; make -j 8; cd ../../;
+
+./examples/acousticsTri2D/acousticsMain2D  meshes/cavityH01.msh 3
+
+
 
 
 # broken because of Dr
