@@ -163,6 +163,36 @@ typedef struct {
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
+  // Boltzmann specific stuff
+  dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
+
+    // pml stuff
+  iint    pmlNfields;
+  //  iint    pmlNelements; // deprecated
+  iint   *pmlElementList; // deprecated
+  dfloat *pmlSigma;
+  dfloat *pmlSigmaX;
+  dfloat *pmlSigmaY;
+  dfloat *pmlq;
+  dfloat *pmlrhsq;
+  dfloat *pmlresq;
+
+  dfloat *pmlqx;    // x-pml data array
+  dfloat *rhspmlqx; // right hand side data array
+  dfloat *respmlqx; // residual data array (for LSERK time-stepping)
+  dfloat *sigmax;
+
+  dfloat *pmlqy;    // y-pml data array
+  dfloat *rhspmlqy; // right hand side data array
+  dfloat *respmlqy; // residual data array (for LSERK time-stepping)
+  dfloat *sigmay;
+  
+  dfloat *pmlNT;    // time integrated relaxtion term
+  dfloat *rhspmlNT; //
+  dfloat *respmlNT; //
+
+  
+  
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
@@ -195,6 +225,25 @@ typedef struct {
   occa::memory o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0vals, o_ELids, o_ELvals; 
+
+
+  // pml vars
+  occa::memory o_sigmax, o_sigmay;
+
+  iint pmlNelements;
+  iint nonPmlNelements;
+  occa::memory o_pmlElementIds;
+  occa::memory o_nonPmlElementIds;
+
+  occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
+  occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
+  occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT;
+  
+  occa::memory o_pmlElementList;
+  occa::memory o_pmlSigmaX, o_pmlSigmaY;
+  
+  occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
+
 
   
   // CG gather-scatter info
@@ -241,6 +290,14 @@ typedef struct {
 
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
+
+  occa::kernel relaxationKernel;
+  
+  occa::kernel pmlKernel; // deprecated
+  occa::kernel pmlVolumeKernel;
+  occa::kernel pmlSurfaceKernel;
+  occa::kernel pmlUpdateKernel;
+
   
 }mesh_t;
 

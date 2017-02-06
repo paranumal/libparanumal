@@ -193,7 +193,8 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
-  mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
+  if(Ninterior>0)
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
   if(NnotInterior>0)
     mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(iint), notInternalElementIds);
   

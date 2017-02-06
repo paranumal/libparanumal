@@ -285,9 +285,10 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   if(mesh->nonPmlNelements)
     mesh->o_nonPmlElementIds = 
       mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
-  
-  mesh->o_pmlElementIds = 
-    mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
+
+  if(mesh->pmlNelements)
+    mesh->o_pmlElementIds = 
+      mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
 
   // specialization for Boltzmann
 
