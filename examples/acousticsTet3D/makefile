@@ -49,7 +49,7 @@ LOBJS = \
 ../../src/meshPhysicalNodesTet3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshConnect3D.o \
+../../src/meshConnect.o \
 ../../src/meshConnectBoundary3D.o \
 ../../src/meshConnectFaceNodes3D.o \
 ../../src/meshGeometricPartition3D.o \

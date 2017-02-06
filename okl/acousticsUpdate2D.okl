@@ -36,7 +36,8 @@ kernel void acousticsUpdate2D_o1(const iint Ntotal,
     }
   }
 }
-
+#if 0
+// cubNp is not universal
 kernel void acousticsUpdate2D_wadg(const iint Nelements,
 				   const dfloat dt,	
 				   const dfloat rka,
@@ -121,3 +122,4 @@ kernel void acousticsUpdate2D_wadg(const iint Nelements,
 
   }
 }
+#endif

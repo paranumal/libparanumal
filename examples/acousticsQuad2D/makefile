@@ -31,16 +31,16 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 OBJS    = \
-mainAcousticsQuad2D.o \
-meshAcousticsError2D.o \
-meshAcousticsUpdate2D.o \
-meshAcousticsRunQuad2D.o \
-meshAcousticsSetupQuad2D.o \
-meshAcousticsSurfaceQuad2D.o \
-meshAcousticsVolumeQuad2D.o \
+acousticsMainQuad2D.o \
+acousticsError2D.o \
+acousticsUpdate2D.o \
+acousticsRunQuad2D.o \
+acousticsSetupQuad2D.o \
+acousticsSurfaceQuad2D.o \
+acousticsVolumeQuad2D.o \
 acousticsCavitySolution2D.o \
 acousticsGaussianPulse2D.o \
-../../src/meshConnect2D.o \
+../../src/meshConnect.o \
 ../../src/meshConnectBoundary2D.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
@@ -49,6 +49,7 @@ acousticsGaussianPulse2D.o \
 ../../src/meshHaloExtract2D.o \
 ../../src/meshHaloSetup2D.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
+../../src/meshParallelConnectNodesQuad2D.o \
 ../../src/meshParallelConnect2D.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReaderQuad2D.o \
@@ -63,8 +64,8 @@ acousticsGaussianPulse2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-mainAcousticsQuad2D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o mainAcousticsQuad2D $(OBJS) $(paths) $(LIBS) 
+acousticsMainQuad2D:$(OBJS) 
+	$(LD)  $(LDFLAGS)  -o acousticsMainQuad2D $(OBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
