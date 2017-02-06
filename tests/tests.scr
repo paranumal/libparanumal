@@ -38,15 +38,18 @@ make clean; make -j 8; cd ../../
 ./examples/ellipticQuad2D/ellipticMainQuad2D meshes/cavityQuadH02.msh 3
 
 
-cd examples/ellipticHex2D
+cd examples/ellipticHex3D
 
 make clean; make -j 8; cd ../../
 
 ./examples/ellipticHex3D/ellipticMainHex3D meshes/cubHexa.msh 3
 
 
+cd examples/eulerTri2D
 
+make clean; make -j 8; cd ../../
 
+./examples/eulerTri2D/eulerMain2D meshes/cavityH01.msh 3
 
 # broken because of Dr
 #cd examples/acousticsHex3D;
