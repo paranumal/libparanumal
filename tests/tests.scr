@@ -1,0 +1,15 @@
+
+cd examples/acousticsQuad2D;
+
+make clean; make -j 8; cd ../../;
+
+./examples/acousticsQuad2D/acousticsMainQuad2D  meshes/cavityQuadH02.msh 3
+
+
+
+# broken because of Dr
+#cd examples/acousticsHex3D;
+#
+#make clean; make -j 8; cd ../../;
+#
+#./examples/acousticsHex3D/acousticsMain3D meshes/cubeHexa.msh 3
