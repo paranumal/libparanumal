@@ -24,10 +24,10 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       mesh->o_haloBuffer.copyTo(sendBuffer);      
       
       // start halo exchange
-      meshHaloExchangeStart2D(mesh,
-			      mesh->Np*mesh->Nfields*sizeof(dfloat),
-			      sendBuffer,
-			      recvBuffer);
+      meshHaloExchangeStart(mesh,
+			    mesh->Np*mesh->Nfields*sizeof(dfloat),
+			    sendBuffer,
+			    recvBuffer);
     }
     
     dfloat ramp, drampdt;
@@ -97,7 +97,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     // complete halo exchange
     if(mesh->totalHaloPairs>0){
       // wait for halo data to arrive
-      meshHaloExchangeFinish2D(mesh);
+      meshHaloExchangeFinish(mesh);
       
       // copy halo data to DEVICE
       size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
