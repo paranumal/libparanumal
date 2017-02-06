@@ -36,7 +36,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   meshSurfaceGeometricFactorsHex3D(mesh);
   
   // global nodes
-  meshParallelConnectNodesHex3D(mesh);
+  meshParallelConnectNodes(mesh);
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

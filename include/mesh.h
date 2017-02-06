@@ -27,6 +27,7 @@
 
 typedef struct {
 
+  iint dim;
   iint Nverts, Nfaces, NfaceVertices;
 
   iint Nnodes;
@@ -319,6 +320,10 @@ unsigned int hash(const unsigned int value) ;
 
 /* dimension independent mesh operations */
 void meshConnect(mesh_t *mesh);
+
+/* build global connectivity in parallel */
+void meshParallelConnectNodes(mesh_t *mesh);
+
 
 #endif
 
