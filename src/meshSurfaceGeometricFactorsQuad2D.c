@@ -7,8 +7,9 @@
 void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 5;
-  mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
+  mesh->Nsgeo = 6;
+  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
@@ -57,5 +58,18 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
       }
     }
   }
+
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
+      iint baseP = mesh->mapP[baseM];
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+      dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+      dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+    }
+  }
+
   
 }

@@ -285,7 +285,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);

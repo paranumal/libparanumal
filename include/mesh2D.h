@@ -1,6 +1,7 @@
 #ifndef MESH2D_H 
 #define MESH2D_H 1
 
+#if 0
 #include <math.h>
 #include <stdlib.h>
 #include <occa.hpp>
@@ -92,14 +93,14 @@ typedef struct {
   dfloat *oasForwardDg;
   dfloat *oasBackDg;
   dfloat *oasDiagOpDg;
-
-  
+ 
 
   // face node info
   iint Nfp;        // number of nodes per face
   iint *faceNodes; // list of element reference interpolation nodes on element faces
   iint *vmapM;     // list of volume nodes that are face nodes
   iint *vmapP;     // list of volume nodes that are paired with face nodes
+  iint *mapP;      // list of surface nodes that are paired with -ve surface  nodes
 
   dfloat *LIFT; // lift matrix
 
@@ -337,6 +338,12 @@ typedef struct {
 
   
 }mesh2D;
+#endif
+
+#include "mesh.h"
+
+#define mesh2D mesh_t
+
 
 mesh2D* meshReaderTri2D(char *fileName);
 mesh2D* meshReaderQuad2D(char *fileName);
@@ -509,12 +516,12 @@ void boltzmannGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 
 void meshBoltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
+#if 0
 #define mymax(a,b) ((a>b)?a:b)
 #define mymin(a,b) ((a<b)?a:b)
-#define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
+#endif
 
-/* hash function */
-unsigned int hash(const unsigned int value) ;
+#define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
 
 /* offsets for geometric factors */
 #define RXID 0  
@@ -537,6 +544,7 @@ unsigned int hash(const unsigned int value) ;
 #define SJID 2  
 #define IJID 3  
 #define WSJID 4
+#define IHID 5
 
 #endif
 

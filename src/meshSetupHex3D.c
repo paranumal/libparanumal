@@ -6,7 +6,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   mesh3D *mesh = meshParallelReaderHex3D(filename);
 
   // partition elements using Morton ordering & parallel sort
-  meshGeometricPartition3D(mesh);  // SOMETHING GOES WRONG WITH LARGE size
+  meshGeometricPartition3D(mesh); 
   
   // print out connectivity statistics
   meshPartitionStatistics3D(mesh);

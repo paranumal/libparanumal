@@ -4,7 +4,7 @@
 #include "mesh2D.h"
 
 iint findBestMatch(dfloat x1, dfloat y1, 
-		   iint Np2, iint *nodeList, dfloat *x2, dfloat *y2){
+		   iint Np2, iint *nodeList, dfloat *x2, dfloat *y2, int *nP){
   
   iint matchIndex = nodeList[0];
   dfloat mindist2 = pow(x1-x2[nodeList[0]],2) + pow(y1-y2[nodeList[0]],2);
@@ -21,6 +21,7 @@ iint findBestMatch(dfloat x1, dfloat y1,
     if(dist2<mindist2){
       mindist2 = dist2;
       matchIndex = i2;
+      *nP = n;
     }
   }
   if(mindist2>1e-3) printf("arggh - bad match: x,y=%g,%g\n", x1,y1);
@@ -34,6 +35,7 @@ void meshConnectFaceNodes2D(mesh2D *mesh){
   /* volume indices of the interior and exterior face nodes for each element */
   mesh->vmapM = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   mesh->vmapP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  mesh->mapP  = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
   
   /* assume elements already connected */
   for(iint e=0;e<mesh->Nelements;++e){
@@ -50,14 +52,17 @@ void meshConnectFaceNodes2D(mesh2D *mesh){
 	dfloat xM = mesh->x[idM];
 	dfloat yM = mesh->y[idM];
 	iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+	int nP;
+	
 	iint  idP = findBestMatch(xM, yM, 
 				  mesh->Nfp, 
 				  mesh->faceNodes+fP*mesh->Nfp,
 				  mesh->x+eP*mesh->Np,
-				  mesh->y+eP*mesh->Np);
+				  mesh->y+eP*mesh->Np, &nP);
 	
 	mesh->vmapM[id] = idM;
 	mesh->vmapP[id] = idP + eP*mesh->Np;
+	mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
 	
       }
     }

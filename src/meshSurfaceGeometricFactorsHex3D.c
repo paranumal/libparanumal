@@ -8,7 +8,8 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
   mesh->Nsgeo = 7;
-  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
+  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
   for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
@@ -85,7 +86,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
       iint baseP = mesh->mapP[baseM];
-      // V = 2*A*h, J = V/8, sJ = A/4; => h = V/(2*A) = 8*J/(8*sJ) = J/sJ
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);

@@ -1,7 +1,6 @@
-#ifndef MESH3D_H 
-#define MESH3D_H 1
+#ifndef MESH_H 
+#define MESH_H 1
 
-#if 0
 #include <math.h>
 #include <stdlib.h>
 #include <occa.hpp>
@@ -55,6 +54,12 @@ typedef struct {
   void *haloSendRequests;
   void *haloRecvRequests;
 
+  iint NinternalElements; // number of elements that can update without halo exchange
+  iint NnotInternalElements; // number of elements that cannot update without halo exchange
+  
+  // NBN: streams / command queues
+  occa::stream stream0, stream1;  
+  
   // volumeGeometricFactors;
   dfloat *vgeo;
   iint Nvgeo;
@@ -123,6 +128,25 @@ typedef struct {
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
+  // surface integration node info
+  iint    intNfp;    // number of integration nodes on each face
+  dfloat *intInterp; // interp from surface node to integration nodes
+  dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
+  dfloat *intx, *inty; // coordinates of suface integration nodes
+
+  // Bernstein-Bezier info
+  dfloat *VB, *invVB; // Bernstein Vandermonde matrices
+  iint *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
+  dfloat *Dvals; // Bernstein deriv matrix values
+  dfloat *VBq, *PBq; // cubature interpolation/projection matrices
+  dfloat *L0vals; // L0 values (L0 tridiagonal in 2D)
+  iint *ELids; // lift reduction matrix indices
+  dfloat *ELvals; // lift reduction matrix values
+  iint max_EL_nnz; // max number of non-zeros per row of EL
+
+  
+
+  
   // time stepping info
   dfloat dt; // time step
   dfloat finalTime; // final time to run acoustics to
@@ -139,9 +163,6 @@ typedef struct {
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
-  // overlapping additive schwarz direction transform (Hex or quad only)
-  
-  
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
@@ -157,6 +178,8 @@ typedef struct {
   occa::memory o_EToB, o_x, o_y, o_z;
 
   // cubature (for wadg)
+  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
+  occa::memory o_cubDrWT, o_cubDsWT;
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
@@ -165,6 +188,15 @@ typedef struct {
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
 
+  occa::memory o_internalElementIds;
+  occa::memory o_notInternalElementIds;
+  
+  // Bernstein-Bezier occa arrays
+  occa::memory o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
+  occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
+  occa::memory o_L0vals, o_ELids, o_ELvals; 
+
+  
   // CG gather-scatter info
   void *gsh; // gslib struct pointer
 
@@ -210,42 +242,8 @@ typedef struct {
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
   
-}mesh3D;
-#endif
+}mesh_t;
 
-#include "mesh.h"
-
-#define mesh3D mesh_t
-
-// mesh readers
-mesh3D* meshParallelReaderTet3D(char *fileName);
-mesh3D* meshParallelReaderHex3D(char *fileName);
-
-// build connectivity in serial
-void meshConnect3D(mesh3D *mesh);
-
-// build element-boundary connectivity
-void meshConnectBoundary3D(mesh3D *mesh);
-
-// build connectivity in parallel
-void meshParallelConnect3D(mesh3D *mesh);
-
-// repartition elements in parallel
-void meshGeometricPartition3D(mesh3D *mesh);
-
-// print out mesh 
-void meshPrint3D(mesh3D *mesh);
-
-// print out mesh in parallel from the root process
-void meshParallelPrint3D(mesh3D *mesh);
-
-// print out mesh partition in parallel
-void meshVTU3D(mesh3D *mesh, char *fileName);
-
-// print out mesh field
-void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
-
-#if 0
 // serial sort
 void mysort(iint *data, iint N, const char *order);
 
@@ -254,132 +252,12 @@ void parallelSort(iint N, void *vv, size_t sz,
 		  int (*compare)(const void *, const void *),
 		  void (*match)(void *, void *)
 		  );
-#endif
-
-// compute geometric factors for local to physical map 
-void meshGeometricFactorsTet3D(mesh3D *mesh);
-void meshGeometricFactorsHex3D(mesh3D *mesh);
-
-void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
-void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
-
-void meshPhysicalNodesTet3D(mesh3D *mesh);
-void meshPhysicalNodesHex3D(mesh3D *mesh);
-
-void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N);
-void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N);
-
-void meshGradientTet3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-void meshGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-
-// print out parallel partition i
-void meshPartitionStatistics3D(mesh3D *mesh);
-
-// functions that call OCCA kernels
-void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-
-// 
-void occaOptimizeGradientTet3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-void occaOptimizeGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
-
-// serial face-node to face-node connection
-void meshConnectFaceNodes3D(mesh3D *mesh);
-
-//
-mesh3D *meshSetupTet3D(char *filename, int N);
-mesh3D *meshSetupHex3D(char *filename, int N);
-
-void meshParallelConnectNodesHex3D(mesh3D *mesh);
-
-
-// halo connectivity information
-void meshHaloSetup3D(mesh3D *mesh);
-
-// perform halo exchange
-void meshHaloExchange3D(mesh3D *mesh,
-			size_t Nbytes,  // number of bytes per element
-			void *sourceBuffer, 
-			void *sendBuffer, 
-			void *recvBuffer);
-
-void meshHaloExchangeStart3D(mesh3D *mesh,
-			     size_t Nbytes,       // message size per element
-			     void *sendBuffer,    // temporary buffer
-			     void *recvBuffer);
-
-void meshHaloExchangeFinish3D(mesh3D *mesh);
-
-// build list of nodes on each face of the reference element
-void meshBuildFaceNodes3D(mesh3D *mesh);
-void meshBuildFaceNodesHex3D(mesh3D *mesh);
-
-
-
-// void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
-
-void meshParallelGatherScatter3D(mesh3D *mesh,
-				 ogs_t *ogs, 
-				 occa::memory &o_v,
-				 occa::memory &o_gsv,
-				 const char *type,
-				 const char *op);
-
-ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
-					iint Nlocal,     // number of local nodes
-					iint Nbytes,     // number of bytes per node
-					iint *localIds,  // local index of nodes
-					iint *baseIds,   // gather index of their base nodes
-					iint *haloFlags); // 1 for halo node, 0 for not
-
-#if 0
-void meshAcousticsRun3D(mesh3D *mesh);
-void meshAcousticsSetup3D(mesh3D *mesh);
-void meshAcousticsVolume3D(mesh3D *mesh);
-void meshAcousticsSurface3D(mesh3D *mesh, dfloat time);
-void meshAcousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb);
-void meshAcousticsError3D(mesh3D *mesh, dfloat time);
-
-void meshAcousticsOccaRun3D(mesh3D *mesh);
-void meshAcousticsOccaRunHex3D(mesh3D *mesh);
-
-void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
-			       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
-#endif
-#define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
+/* hash function */
+unsigned int hash(const unsigned int value) ;
 
-/* offsets for geometric factors */
-#define RXID 0  
-#define RYID 1  
-#define RZID 2
-#define SXID 3  
-#define SYID 4  
-#define SZID 5  
-#define TXID 6  
-#define TYID 7  
-#define TZID 8  
-#define  JID 9
-#define JWID 10
-
-/* offsets for second order geometric factors */
-#define G00ID 0  
-#define G01ID 1  
-#define G02ID 2
-#define G11ID 3  
-#define G12ID 4  
-#define G22ID 5  
-#define GWJID 6  
-
-/* offsets for nx, ny, sJ, 1/J */
-#define NXID 0  
-#define NYID 1  
-#define NZID 2 
-#define SJID 3  
-#define IJID 4
-#define WSJID 5
-#define IHID 6
 #endif
 
