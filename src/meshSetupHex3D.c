@@ -9,7 +9,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   meshGeometricPartition3D(mesh); 
   
   // print out connectivity statistics
-  meshPartitionStatistics3D(mesh);
+  meshPartitionStatistics(mesh);
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
