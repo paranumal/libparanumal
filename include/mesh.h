@@ -346,5 +346,8 @@ void meshHaloExchangeStart(mesh_t *mesh,
 
 void meshHaloExchangeFinish(mesh_t *mesh);
 
+// print out parallel partition i
+void meshPartitionStatistics(mesh_t *mesh);
+
 #endif
 

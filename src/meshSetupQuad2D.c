@@ -9,7 +9,7 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   meshGeometricPartition2D(mesh);
 
   // print out connectivity statistics
-  meshPartitionStatistics2D(mesh);
+  meshPartitionStatistics(mesh);
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
