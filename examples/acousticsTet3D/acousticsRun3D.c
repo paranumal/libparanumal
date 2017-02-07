@@ -15,11 +15,11 @@ void acousticsRun3D(mesh3D *mesh){
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       // halo exchange
-      meshHaloExchange3D(mesh,
-			 mesh->Np*mesh->Nfields,
-			 mesh->q,
-			 sendBuffer,
-			 mesh->q+mesh->Np*mesh->Nfields*mesh->Nelements);
+      meshHaloExchange(mesh,
+		       mesh->Np*mesh->Nfields,
+		       mesh->q,
+		       sendBuffer,
+		       mesh->q+mesh->Np*mesh->Nfields*mesh->Nelements);
       
       // compute volume contribution to DG acoustics RHS
       acousticsVolume3D(mesh);
@@ -67,10 +67,10 @@ void acousticsOccaRun3D(mesh3D *mesh){
 	mesh->o_haloBuffer.copyTo(sendBuffer);      
 	
 	// start halo exchange
-	meshHaloExchangeStart3D(mesh,
-				mesh->Np*mesh->Nfields*sizeof(dfloat),
-				sendBuffer,
-				recvBuffer);
+	meshHaloExchangeStart(mesh,
+			      mesh->Np*mesh->Nfields*sizeof(dfloat),
+			      sendBuffer,
+			      recvBuffer);
       }
       
       // compute volume contribution to DG acoustics RHS
@@ -84,7 +84,7 @@ void acousticsOccaRun3D(mesh3D *mesh){
       
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
-	meshHaloExchangeFinish3D(mesh);
+	meshHaloExchangeFinish(mesh);
 	
 	// copy halo data to DEVICE
 	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data

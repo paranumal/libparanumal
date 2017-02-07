@@ -162,12 +162,12 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 				       kernelInfo);
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  *ogs = meshParallelGatherScatterSetup3D(mesh,
-					  mesh->Np*mesh->Nelements,
-					  sizeof(dfloat),
-					  mesh->gatherLocalIds,
-					  mesh->gatherBaseIds, 
-					  mesh->gatherHaloFlags);
+  *ogs = meshParallelGatherScatterSetup(mesh,
+					mesh->Np*mesh->Nelements,
+					sizeof(dfloat),
+					mesh->gatherLocalIds,
+					mesh->gatherBaseIds, 
+					mesh->gatherHaloFlags);
 
   *precon = ellipticPreconditionerSetupHex3D(mesh, *ogs, lambda);
 

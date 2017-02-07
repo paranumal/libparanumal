@@ -58,8 +58,8 @@ LOBJS = \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
-../../src/meshParallelGatherScatter2D.o \
-../../src/meshParallelGatherScatterSetup2D.o \
+../../src/meshParallelGatherScatter.o \
+../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\

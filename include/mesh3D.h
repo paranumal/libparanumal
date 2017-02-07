@@ -95,19 +95,19 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 // void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
 
-void meshParallelGatherScatter3D(mesh3D *mesh,
-				 ogs_t *ogs, 
-				 occa::memory &o_v,
-				 occa::memory &o_gsv,
-				 const char *type,
-				 const char *op);
+void meshParallelGatherScatter(mesh3D *mesh,
+			       ogs_t *ogs, 
+			       occa::memory &o_v,
+			       occa::memory &o_gsv,
+			       const char *type,
+			       const char *op);
 
-ogs_t *meshParallelGatherScatterSetup3D(mesh3D *mesh,    // provides DEVICE
-					iint Nlocal,     // number of local nodes
-					iint Nbytes,     // number of bytes per node
-					iint *localIds,  // local index of nodes
-					iint *baseIds,   // gather index of their base nodes
-					iint *haloFlags); // 1 for halo node, 0 for not
+ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
+				      iint Nlocal,     // number of local nodes
+				      iint Nbytes,     // number of bytes per node
+				      iint *localIds,  // local index of nodes
+				      iint *baseIds,   // gather index of their base nodes
+				      iint *haloFlags); // 1 for halo node, 0 for not
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
