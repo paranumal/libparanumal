@@ -50,10 +50,10 @@ acousticsGaussianPulse2D.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
 ../../src/meshParallelConnectNodes.o \
-../../src/meshParallelConnect2D.o \
+../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReaderQuad2D.o \
-../../src/meshPartitionStatistics2D.o \
+../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \

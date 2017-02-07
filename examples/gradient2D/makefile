@@ -47,10 +47,10 @@ LOBJS = \
 ../../src/meshHaloExtract2D.o \
 ../../src/meshHaloSetup2D.o \
 ../../src/meshLoadReferenceNodes2D.o \
-../../src/meshParallelConnect2D.o \
+../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReader2D.o \
-../../src/meshPartitionStatistics2D.o \
+../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodes2D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \

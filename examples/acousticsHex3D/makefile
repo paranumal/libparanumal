@@ -51,11 +51,11 @@ LOBJS = \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloSetup.o \
-../../src/meshParallelConnectOpt3D.o \
+../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint3D.o \
 ../../src/meshParallelReaderHex3D.o \
-../../src/meshPartitionStatistics3D.o \
-../../src/meshParallelConnectNodesHex3D.o \
+../../src/meshPartitionStatistics.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \
