@@ -94,11 +94,11 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     // send buffer for outgoing halo
     preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
     
-    meshHaloExchange2D(mesh,
-		       mesh->Np*sizeof(preconGatherInfo_t),
-		       gatherInfo,
-		       sendBuffer,
-		       gatherInfo+Nlocal);
+    meshHaloExchange(mesh,
+		     mesh->Np*sizeof(preconGatherInfo_t),
+		     gatherInfo,
+		     sendBuffer,
+		     gatherInfo+Nlocal);
   }
   // now create padded version
 
@@ -198,11 +198,11 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
 
     // exchange node numbers with neighbors
-    meshHaloExchange2D(mesh,
-		       mesh->Np*sizeof(iint),
-		       localNums,
-		       sendBuffer,
-		       localNums+Nlocal);
+    meshHaloExchange(mesh,
+		     mesh->Np*sizeof(iint),
+		     localNums,
+		     sendBuffer,
+		     localNums+Nlocal);
   }
   
   preconGatherInfo_t *preconGatherInfoDg = 
@@ -370,11 +370,11 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     // import geometric factors from halo elements
     mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
     
-    meshHaloExchange2D(mesh,
-		       mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-		       mesh->vgeo,
-		       vgeoSendBuffer,
-		       mesh->vgeo + Nlocal*mesh->Nvgeo);
+    meshHaloExchange(mesh,
+		     mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+		     mesh->vgeo,
+		     vgeoSendBuffer,
+		     mesh->vgeo + Nlocal*mesh->Nvgeo);
     
     mesh->o_vgeo =
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
