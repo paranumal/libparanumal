@@ -214,12 +214,12 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
 
   // make preconBaseIds => preconNumbering
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
-  precon->ogsP = meshParallelGatherScatterSetup3D(mesh,
-						  NlocalP,
-						  sizeof(dfloat),
-						  gatherLocalIdsP,
-						  gatherBaseIdsP,
-						  gatherHaloFlagsP);
+  precon->ogsP = meshParallelGatherScatterSetup(mesh,
+						NlocalP,
+						sizeof(dfloat),
+						gatherLocalIdsP,
+						gatherBaseIdsP,
+						gatherHaloFlagsP);
 
   // -------------------------------------------------------------------------------------------
   // build gather-scatter for overlapping patches
@@ -324,12 +324,12 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   }
 
   // make preconBaseIds => preconNumbering
-  precon->ogsDg = meshParallelGatherScatterSetup3D(mesh,
-						   NlocalDg,
-						   sizeof(dfloat),
-						   gatherLocalIdsDg,
-						   gatherBaseIdsDg,
-						   gatherHaloFlagsDg);
+  precon->ogsDg = meshParallelGatherScatterSetup(mesh,
+						 NlocalDg,
+						 sizeof(dfloat),
+						 gatherLocalIdsDg,
+						 gatherBaseIdsDg,
+						 gatherHaloFlagsDg);
   
   // -------------------------------------------------------------------------------------------
   
@@ -422,7 +422,7 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   precon->o_diagA = mesh->device.malloc(Ntotal*sizeof(dfloat), diagA);
 
   // sum up
-  meshParallelGatherScatter3D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString, "add");
+  meshParallelGatherScatter(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString, "add");
 
   if(Nhalo){
     dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
