@@ -13,7 +13,6 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   
   // connect elements using parallel sort
   meshParallelConnect3D(mesh);
-  //meshConnect3D(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary3D(mesh);
@@ -31,7 +30,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   meshSurfaceGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetup3D(mesh);
+  meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
