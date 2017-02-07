@@ -12,7 +12,7 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   meshPartitionStatistics2D(mesh);
 
   // connect elements using parallel sort
-  meshParallelConnect2D(mesh);
+  meshParallelConnect(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary2D(mesh);

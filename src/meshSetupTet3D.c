@@ -12,7 +12,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   //  meshPartitionStatistics3D(mesh);
   
   // connect elements using parallel sort
-  meshParallelConnect3D(mesh);
+  meshParallelConnect(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary3D(mesh);

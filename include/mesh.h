@@ -321,6 +321,9 @@ unsigned int hash(const unsigned int value) ;
 /* dimension independent mesh operations */
 void meshConnect(mesh_t *mesh);
 
+/* build parallel face connectivity */
+void meshParallelConnect(mesh_t *mesh);
+
 /* build global connectivity in parallel */
 void meshParallelConnectNodes(mesh_t *mesh);
 
