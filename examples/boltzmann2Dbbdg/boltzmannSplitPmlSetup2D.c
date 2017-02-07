@@ -178,7 +178,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 	isPml = 1;
       }
     }
-    
+
     if(isPml)
       pmlElementIds[pmlNelements++] = e;
     else
@@ -225,7 +225,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 100;
+  mesh->finalTime = .2;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
