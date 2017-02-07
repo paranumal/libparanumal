@@ -49,7 +49,7 @@ acousticsGaussianPulse2D.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshParallelConnectNodesQuad2D.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnect2D.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReaderQuad2D.o \
