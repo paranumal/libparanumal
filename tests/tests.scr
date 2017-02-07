@@ -42,7 +42,7 @@ cd examples/ellipticHex3D
 
 make clean; make -j 8; cd ../../
 
-./examples/ellipticHex3D/ellipticMainHex3D meshes/cubHexa.msh 3
+./examples/ellipticHex3D/ellipticMainHex3D meshes/cubeHexa.msh 3
 
 
 cd examples/eulerTri2D

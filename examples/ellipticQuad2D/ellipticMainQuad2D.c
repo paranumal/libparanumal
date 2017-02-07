@@ -19,10 +19,10 @@ void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBu
     mesh->o_haloBuffer.copyTo(sendBuffer);
     
     // start halo exchange HOST<>HOST
-    meshHaloExchangeStart2D(mesh,
-			    mesh->Np*sizeof(dfloat),
-			    sendBuffer,
-			    recvBuffer);
+    meshHaloExchangeStart(mesh,
+			  mesh->Np*sizeof(dfloat),
+			  sendBuffer,
+			  recvBuffer);
   }
 }
     
@@ -36,7 +36,7 @@ void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuff
   // extract halo on DEVICE
   if(haloBytes){
     // finalize recv on HOST
-    meshHaloExchangeFinish2D(mesh);
+    meshHaloExchangeFinish(mesh);
     
     // copy into halo zone of o_r  HOST>DEVICE
     o_q.copyFrom(recvBuffer, haloBytes, haloOffset);
