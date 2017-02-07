@@ -40,7 +40,7 @@ ellipticPreconditionerSetupQuad2D.o
 # library objects
 LOBJS = \
 ../../src/meshConnect.o \
-../../src/meshConnectBoundary2D.o \
+../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \

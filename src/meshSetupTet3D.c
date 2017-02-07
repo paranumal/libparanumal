@@ -15,7 +15,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   meshParallelConnect(mesh);
 
   // connect elements to boundary faces
-  meshConnectBoundary3D(mesh);
+  meshConnectBoundary(mesh);
 
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesTet3D(mesh, N);

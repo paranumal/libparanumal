@@ -38,8 +38,8 @@ occaTest2D.o
 
 # library objects
 LOBJS = \
-../../src/meshConnect2D.o \
-../../src/meshConnectBoundary2D.o \
+../../src/meshConnect.o \
+../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricFactors2D.o \
 ../../src/meshGeometricPartition2D.o \
