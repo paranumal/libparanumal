@@ -27,7 +27,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   meshGeometricFactorsHex3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetup3D(mesh);
+  meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);

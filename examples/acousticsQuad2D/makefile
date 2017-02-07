@@ -45,9 +45,9 @@ acousticsGaussianPulse2D.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshGeometricPartition2D.o \
-../../src/meshHaloExchange2D.o \
-../../src/meshHaloExtract2D.o \
-../../src/meshHaloSetup2D.o \
+../../src/meshHaloExchange.o \
+../../src/meshHaloExtract.o \
+../../src/meshHaloSetup.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
 ../../src/meshParallelConnectNodesQuad2D.o \
 ../../src/meshParallelConnect2D.o \
