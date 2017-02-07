@@ -41,7 +41,7 @@ acousticsVolumeQuad2D.o \
 acousticsCavitySolution2D.o \
 acousticsGaussianPulse2D.o \
 ../../src/meshConnect.o \
-../../src/meshConnectBoundary2D.o \
+../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshGeometricPartition2D.o \

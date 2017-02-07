@@ -15,7 +15,7 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   meshParallelConnect(mesh);
 
   // connect elements to boundary faces
-  meshConnectBoundary3D(mesh);
+  meshConnectBoundary(mesh);
 
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesHex3D(mesh, N);

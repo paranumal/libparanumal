@@ -45,7 +45,7 @@ boltzmannRampFunction2D.o \
 ../../src/meshParallelConnectNodes.o\
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshConnect.o \
-../../src/meshConnectBoundary2D.o \
+../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \

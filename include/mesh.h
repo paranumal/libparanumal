@@ -349,5 +349,9 @@ void meshHaloExchangeFinish(mesh_t *mesh);
 // print out parallel partition i
 void meshPartitionStatistics(mesh_t *mesh);
 
+
+// build element-boundary connectivity
+void meshConnectBoundary(mesh_t *mesh);
+
 #endif
 

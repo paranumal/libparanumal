@@ -41,8 +41,8 @@ boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
-../../src/meshConnect2D.o \
-../../src/meshConnectBoundary2D.o \
+../../src/meshConnect.o \
+../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricFactors2D.o \
 ../../src/meshGeometricPartition2D.o \
