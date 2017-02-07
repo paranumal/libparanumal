@@ -162,12 +162,12 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  *ogs = meshParallelGatherScatterSetup2D(mesh,
-					  mesh->Np*mesh->Nelements,
-					  sizeof(dfloat),
-					  mesh->gatherLocalIds,
-					  mesh->gatherBaseIds, 
-					  mesh->gatherHaloFlags);
+  *ogs = meshParallelGatherScatterSetup(mesh,
+					mesh->Np*mesh->Nelements,
+					sizeof(dfloat),
+					mesh->gatherLocalIds,
+					mesh->gatherBaseIds, 
+					mesh->gatherHaloFlags);
 
   *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda);
 

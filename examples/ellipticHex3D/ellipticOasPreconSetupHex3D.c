@@ -220,9 +220,9 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
 
   // make preconBaseIds => preconNumbering
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
-  precon->ogsP = meshParallelGatherScatterSetup3D(mesh, NlocalP, sizeof(dfloat),
-						  gatherLocalIdsP, gatherBaseIdsP,
-						  gatherBaseRanksP, gatherMaxRanksP);
+  precon->ogsP = meshParallelGatherScatterSetup(mesh, NlocalP, sizeof(dfloat),
+						gatherLocalIdsP, gatherBaseIdsP,
+						gatherBaseRanksP, gatherMaxRanksP);
 
   precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
   precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
@@ -299,7 +299,7 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   precon->o_diagA = mesh->device.malloc(Ntotal*sizeof(dfloat), diagA);
 
   // sum up
-  meshParallelGatherScatter3D(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
+  meshParallelGatherScatter(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString);
 
   free(diagA);
   

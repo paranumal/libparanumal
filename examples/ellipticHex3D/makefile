@@ -58,8 +58,8 @@ LOBJS = \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
-../../src/meshParallelGatherScatter3D.o \
-../../src/meshParallelGatherScatterSetup3D.o \
+../../src/meshParallelGatherScatter.o \
+../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
