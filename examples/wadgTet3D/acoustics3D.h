@@ -19,4 +19,5 @@ void acousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb);
 
 void acousticsError3D(mesh3D *mesh, dfloat time);
 
-
+void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,
+			       dfloat *u, dfloat *v, dfloat *w, dfloat *p);

@@ -327,7 +327,7 @@ void acousticsSetup3D(mesh3D *mesh){
 				       "acousticsSurface3D_s0",
 				       kernelInfo);
 
-#if 1
+#if 0
   mesh->updateKernel =
     mesh->device.buildKernelFromSource("okl/acousticsUpdate3D.okl",
 				       "acousticsUpdate3D",
