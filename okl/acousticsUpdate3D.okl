@@ -37,12 +37,12 @@ kernel void acousticsUpdate3D_o1(const iint Ntotal,
   }
 }
 
-#if 0
 
 kernel void acousticsUpdate3D_wadg(const iint Nelements,
 				   const dfloat dt,	
 				   const dfloat rka,
 				   const dfloat rkb,
+				   const int cubNp,
 				   const dfloat * restrict cubInterp,
 				   const dfloat * restrict cubProject,
 				   const dfloat * restrict c2,
@@ -53,10 +53,10 @@ kernel void acousticsUpdate3D_wadg(const iint Nelements,
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){  // for all elements
 
-    shared dfloat s_p[p_cubNp];
+    shared dfloat s_p[cubNp];
     exclusive dfloat r_p;
 
-    for(iint n=0; n < p_cubNp; ++n; inner0){  
+    for(iint n=0; n < cubNp; ++n; inner0){  
 
       if (n < p_Np){
 	const iint id = p_Nfields*(e*p_Np + n);
@@ -69,14 +69,14 @@ kernel void acousticsUpdate3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<cubNp;++n;inner0){
 
       // Prefetch value of c2
-      const dfloat c2n = c2[n + e*p_cubNp];
+      const dfloat c2n = c2[n + e*cubNp];
       
       dfloat val = 0.f;
       for (int i=0;i<p_Np;++i){
-	val += cubInterp[n + i*p_cubNp] * s_p[i];
+	val += cubInterp[n + i*cubNp] * s_p[i];
       }
 
       // Multiply result by wavespeed c2 at cubature node
@@ -85,13 +85,13 @@ kernel void acousticsUpdate3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(iint n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<cubNp;++n;inner0){
       s_p[n] = r_p;
     }
     barrier(localMemFence);
     
     // Increment solution, project result back down
-    for(iint n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<cubNp;++n;inner0){
 
       if (n < p_Np){
 
@@ -104,7 +104,7 @@ kernel void acousticsUpdate3D_wadg(const iint Nelements,
 	
 	// Project scaled rhs down
 	dfloat rhsp = 0.f;
-	for (int i=0;i<p_cubNp;++i){
+	for (int i=0;i<cubNp;++i){
 	  rhsp += cubProject[n + i*p_Np] * s_p[i];
 	}
 	rhsqn[3] = rhsp;
