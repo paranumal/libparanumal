@@ -5,11 +5,6 @@
 #include "mesh.h"
 #include "mpi.h"
 
-extern "C"
-{
-  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
-}
-
 // ok to use o_v = o_gsv
 void meshParallelGatherScatter(mesh_t *mesh,
 			       ogs_t *ogs, 

@@ -353,5 +353,14 @@ void meshPartitionStatistics(mesh_t *mesh);
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
+extern "C"
+{
+  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
+  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
+  void gsParallelGatherScatterDestroy(void *gsh);
+}
+
+
+
 #endif
 
