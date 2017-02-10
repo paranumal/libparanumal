@@ -6,13 +6,6 @@
 
 #include "mesh.h"
 
-extern "C"
-{
-  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
-  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
-  void gsParallelGatherScatterDestroy(void *gsh);
-}
-
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
 ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
