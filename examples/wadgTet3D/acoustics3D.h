@@ -17,6 +17,8 @@ void acousticsSurface3D(mesh3D *mesh, dfloat time);
 
 void acousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb);
 
+void acousticsTimeWadg3D(mesh3D *mesh); // compare wadg vs loading invM
+
 void acousticsError3D(mesh3D *mesh, dfloat time);
 
 void acousticsCavitySolution3D(dfloat x, dfloat y, dfloat z, dfloat time,

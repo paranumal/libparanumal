@@ -71,35 +71,17 @@ void acousticsSetup3D(mesh3D *mesh){
   }
 
   dfloat *invMc;
-#define storeMatrices 0
+
+#define storeMatrices 1
 #if storeMatrices
   invMc = (dfloat*) calloc(mesh->Np*mesh->Np*mesh->Nelements,sizeof(dfloat));
   
   for(iint e=0;e<mesh->Nelements;++e){
-
-    dfloat *Mc = (dfloat*) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     for (int j = 0; j < mesh->Np; ++j){
       for (int i = 0; i < mesh->Np; ++i){
-
-	dfloat val = 0.0;
-	for (int k = 0; k < mesh->cubNp; ++k){
-	  dfloat Pk = mesh->cubProject[i*mesh->Np + k];
-	  dfloat Vk = mesh->cubInterp[j*mesh->Np + k];
-	  dfloat c2k = mesh->c2[k + e*mesh->cubNp];
-	  val += Pk * c2k * Vk;
-	}
-	Mc[i + j*mesh->Np] = val;	
-      }
-    }
-
-    // invert Mc
-    // todo: add code to do this
-
-    // store inverse of Mc
-    for (int j = 0; j < mesh->Np; ++j){
-      for (int i = 0; i < mesh->Np; ++i){
+	// store arbitrary values for testing
 	invMc[i + j*mesh->Np + e*mesh->Np*mesh->Np] =
-	  Mc[i + j*mesh->Np];
+	  (dfloat) i+j+e;
       }
     }
   }
