@@ -21,7 +21,9 @@ int main(int argc, char **argv){
   acousticsSetup3D(mesh);
 
   // run
-  //acousticsRun3D(mesh);
+  acousticsTimeWadg3D(mesh);
+  return 0;
+    
   acousticsOccaRun3D(mesh);
 
   // close down MPI

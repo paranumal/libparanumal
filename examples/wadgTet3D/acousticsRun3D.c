@@ -152,3 +152,104 @@ void acousticsOccaRun3D(mesh3D *mesh){
   free(recvBuffer);
   free(sendBuffer);
 }
+
+
+void acousticsTimeWadg3D(mesh3D *mesh){
+
+  occa::kernelInfo kernelInfo;
+  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
+  kernelInfo.addDefine("p_N", mesh->N);
+  kernelInfo.addDefine("p_Np", mesh->Np);
+  kernelInfo.addDefine("p_cubNp", mesh->cubNp);  
+  kernelInfo.addDefine("p_Nfp", mesh->Nfp);
+  kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
+  kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
+  kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
+  kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
+  
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  
+  int NblockV = 512/mesh->Np; // works for CUDA
+  kernelInfo.addDefine("p_NblockV", NblockV);
+
+  if(sizeof(dfloat)==4){
+    kernelInfo.addDefine("dfloat","float");
+    kernelInfo.addDefine("dfloat4","float4");
+  }
+  if(sizeof(dfloat)==8){
+    kernelInfo.addDefine("dfloat","double");
+    kernelInfo.addDefine("dfloat4","double4");
+  }
+
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
+  }
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
+  }
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo.addCompilerFlag("--ftz=true");
+    kernelInfo.addCompilerFlag("--prec-div=false");
+    kernelInfo.addCompilerFlag("--prec-sqrt=false");
+    kernelInfo.addCompilerFlag("--use_fast_math");
+    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+  }
+
+
+  
+  dfloat * invMc = (dfloat*) calloc(mesh->Np*mesh->Np*mesh->Nelements,sizeof(dfloat));  
+  for(iint e=0;e<mesh->Nelements;++e){
+    for (int j = 0; j < mesh->Np; ++j){
+      for (int i = 0; i < mesh->Np; ++i){
+	// store arbitrary values for testing
+	invMc[i + j*mesh->Np + e*mesh->Np*mesh->Np] =
+	  (dfloat) i+j+e;
+      }
+    }
+  }  
+  occa::memory o_invMc =
+    mesh->device.malloc(mesh->Np*mesh->Np*mesh->Nelements*sizeof(dfloat),
+			invMc);  
+  
+  occa::kernel applyWADG =
+    mesh->device.buildKernelFromSource("./examples/wadgTet3D/wadgKernels.okl",
+				       "applyWADG",
+				       kernelInfo);  
+
+  occa::kernel applyMassInv =
+    mesh->device.buildKernelFromSource("./examples/wadgTet3D/wadgKernels.okl",
+				       "applyMassInv",
+				       kernelInfo);  
+  
+  // load/store comparison
+  double wadgTime = 0.0, massInvTime = 0.0;
+  
+  int Nsteps = 10;
+  for(iint i = 0; i < Nsteps; ++i){
+
+    clock_t begin = clock();
+    
+    applyWADG(mesh->Nelements,
+	      mesh->cubNp,
+	      mesh->o_cubInterpT,
+	      mesh->o_cubProjectT,
+	      mesh->o_c2, // weight
+	      mesh->o_q);
+    mesh->device.finish();
+    clock_t end = clock();
+    wadgTime += (double)(end - begin) / CLOCKS_PER_SEC;
+
+    begin = clock();
+    applyMassInv(mesh->Nelements,		 
+		 o_invMc,
+		 mesh->o_q);      
+    mesh->device.finish();
+    end = clock();
+    massInvTime += (double)(end - begin) / CLOCKS_PER_SEC;
+  }
+
+  printf("wadg time = %g, mass inv time = %g\n",wadgTime,massInvTime);
+}
+
