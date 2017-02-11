@@ -39,6 +39,7 @@ ellipticPreconditionerSetupQuad2D.o
 
 # library objects
 LOBJS = \
+../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \

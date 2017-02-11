@@ -327,6 +327,9 @@ void meshParallelConnect(mesh_t *mesh);
 /* build global connectivity in parallel */
 void meshParallelConnectNodes(mesh_t *mesh);
 
+/* renumber global nodes to remove gaps */
+void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering);
+
 void meshHaloSetup(mesh_t *mesh);
 
 /* extract whole elements for the halo exchange */
@@ -352,6 +355,15 @@ void meshPartitionStatistics(mesh_t *mesh);
 
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
+
+extern "C"
+{
+  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
+  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
+  void gsParallelGatherScatterDestroy(void *gsh);
+}
+
+
 
 #endif
 
