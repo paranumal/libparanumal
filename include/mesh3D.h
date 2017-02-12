@@ -53,6 +53,9 @@ void meshGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dflo
 // print out parallel partition i
 void meshPartitionStatistics3D(mesh3D *mesh);
 
+// default occa set up
+void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
+
 // functions that call OCCA kernels
 void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
 

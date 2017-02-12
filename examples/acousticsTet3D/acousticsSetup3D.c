@@ -81,6 +81,8 @@ void acousticsSetup3D(mesh3D *mesh){
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 
+
+#if 0
   mesh->device.setup(deviceConfig);
 
   // build Dr, Ds, LIFT transposes
@@ -164,8 +166,13 @@ void acousticsSetup3D(mesh3D *mesh){
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
   }
+#endif
   
   occa::kernelInfo kernelInfo;
+
+  // generic occa device set up
+  meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+
 
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);

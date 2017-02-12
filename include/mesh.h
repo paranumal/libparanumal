@@ -210,7 +210,7 @@ typedef struct {
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
-  occa::memory o_cubDrWT, o_cubDsWT;
+  occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;

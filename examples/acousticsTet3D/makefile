@@ -58,6 +58,7 @@ LOBJS = \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint3D.o \
 ../../src/meshPartitionStatistics.o \
+../../src/meshOccaSetup3D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \
