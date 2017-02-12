@@ -173,8 +173,8 @@ void acousticsSetup3D(mesh3D *mesh){
   // generic occa device set up
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
 
-
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
+#if 0
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Np", mesh->Np);
   kernelInfo.addDefine("p_Nfp", mesh->Nfp);
@@ -182,7 +182,7 @@ void acousticsSetup3D(mesh3D *mesh){
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
+  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -217,7 +217,8 @@ void acousticsSetup3D(mesh3D *mesh){
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
-
+#endif
+  
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/acousticsVolume3D.okl",
 				       "acousticsVolume3D_o0",
