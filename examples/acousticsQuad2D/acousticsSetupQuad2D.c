@@ -142,14 +142,20 @@ void acousticsSetupQuad2D(mesh2D *mesh){
   
   occa::kernelInfo kernelInfo;
 
+  // generic occa device set up
+  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
+
+#if 0
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Np", mesh->Np);
   kernelInfo.addDefine("p_Nfp", mesh->Nfp);
   kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-
+#endif
+  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -158,8 +164,9 @@ void acousticsSetupQuad2D(mesh2D *mesh){
 
   int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
-  
+
   kernelInfo.addDefine("p_Lambda2", 0.5f);
+#if 0
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
@@ -184,7 +191,8 @@ void acousticsSetupQuad2D(mesh2D *mesh){
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
-
+#endif
+  
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource("okl/acousticsVolume2D.okl",
 				       "acousticsVolume2D_o0",
