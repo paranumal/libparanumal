@@ -188,6 +188,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
+  kernelInfo.addDefine("p_cubNp", mesh->cubNp);
+  kernelInfo.addDefine("p_intNfp", mesh->intNfp);
+  kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
+  
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
     kernelInfo.addDefine("dfloat4","float4");
