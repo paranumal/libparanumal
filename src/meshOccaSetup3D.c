@@ -58,7 +58,61 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			  LIFTT);
+
+    dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+    dfloat *cubDsWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+    dfloat *cubDtWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+    dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+    dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->cubNp;++m){
+	cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+	cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+	cubDtWT[n+m*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
+	
+
+	cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
+	cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+      }
+    }
+
+    // build surface integration matrix transposes
+    dfloat *intLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+    dfloat *intInterpT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
+	intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
+      }
+    }
+    for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
+      for(int m=0;m<mesh->Nfp;++m){
+	intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
+      }
+    }
+
+    mesh->o_cubInterpT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubInterpT);
+  
+    mesh->o_cubProjectT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubProjectT);
+
+    mesh->o_cubDrWT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubDrWT);
+  
+    mesh->o_cubDsWT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubDsWT);
+
+    mesh->o_cubDtWT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubDtWT);
+    
   }
+
+
   
   // hardcoded for hexes
   mesh->o_vgeo =

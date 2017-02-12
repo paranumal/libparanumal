@@ -85,7 +85,7 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->plotNp;++n){
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n, mesh->plotT+n);
+    sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n, mesh->plotT+n);
   }
   
   // read plot interpolation matrix
@@ -134,7 +134,7 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   printf("%s", buf);
   for(int n=0;n<mesh->cubNp;++n){
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n, mesh->cubt+n);
+    sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n, mesh->cubt+n);
   }
   
   mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -144,6 +144,39 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp); // read comment  
 
+  // read cubature weak 'r' differentiation matrix
+  mesh->cubDrW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubDrW+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  // read cubature weak 's' differentiation matrix
+  mesh->cubDsW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubDsW+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+
+   // read cubature weak 's' differentiation matrix
+  mesh->cubDtW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
+      fscanf(fp, dfloatFormat, mesh->cubDtW+n*mesh->cubNp+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+
+  
   mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->cubNp*mesh->Np;++n){
