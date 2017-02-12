@@ -126,6 +126,12 @@ if N < 7
     Vq = Vandermonde3D(N,cubr,cubs,cubt)/V;
     Pq = V*V'*Vq'*diag(cubw);
     
+    cV = Vandermonde3D(N, cubr, cubs, cubt);
+    [cVr,cVs,cVt] = GradVandermonde3D(N, cubr, cubs, cubt);
+    cubDrT = V*transpose(cVr)*diag(cubw);
+    cubDsT = V*transpose(cVs)*diag(cubw);
+    cubDtT = V*transpose(cVt)*diag(cubw);
+
     Ncub = length(cubw);
     fprintf(fid, '%% number of volume cubature nodes\n');
     fprintf(fid, '%d\n', Ncub);
@@ -142,6 +148,32 @@ if N < 7
         end
         fprintf(fid, '\n');
     end
+
+   fprintf(fid, '%% cubature r weak differentiation matrix\n');
+for n=1:Np
+    for m=1:Ncub
+        fprintf(fid, '%17.15E ', cubDrT(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% cubature s weak differentiation matrix\n');
+for n=1:Np
+    for m=1:Ncub
+        fprintf(fid, '%17.15E ', cubDsT(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+
+fprintf(fid, '%% cubature t weak differentiation matrix\n');
+for n=1:Np
+    for m=1:Ncub
+        fprintf(fid, '%17.15E ', cubDtT(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
     
     fprintf(fid,'%% cubature projection matrix\n');
     for i=1:Np
@@ -150,6 +182,8 @@ if N < 7
         end
         fprintf(fid, '\n');
     end
+
+
 end
 %%
 
