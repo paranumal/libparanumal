@@ -53,7 +53,7 @@ kernel void acousticsUpdate2D_wadg(const iint Nelements,
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){  // for all elements
 
-    shared dfloat s_p[cubNp];
+    shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
     for(iint n=0; n < cubNp; ++n; inner0){  
