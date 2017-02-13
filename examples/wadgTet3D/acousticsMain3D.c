@@ -21,8 +21,7 @@ int main(int argc, char **argv){
   acousticsSetup3D(mesh);
 
   // run
-  acousticsTimeWadg3D(mesh);
-  return 0;
+  //  acousticsTimeWadg3D(mesh);  return 0;
     
   acousticsOccaRun3D(mesh);
 
