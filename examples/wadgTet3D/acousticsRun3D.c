@@ -122,7 +122,6 @@ void acousticsOccaRun3D(mesh3D *mesh){
 			 mesh->dt,
 			 mesh->rka[rk],
 			 mesh->rkb[rk],
-			 mesh->cubNp,
 			 mesh->o_cubInterpT,
 			 mesh->o_cubProjectT,
 			 mesh->o_c2,
