@@ -67,12 +67,12 @@ LOBJS = \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ./diagnostic.o\
-../../src/xxtCoarseSolve.o
 
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o
+../../src/gsParallelGatherScatterSetup.o\
+../../src/xxtCoarseSolve.o
 
 ellipticMainQuad2D:$(AOBJS) $(LOBJS) ellipticMainQuad2D.o gslibInterface
 	$(LD)  $(LDFLAGS)  -o ellipticMainQuad2D ellipticMainQuad2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
@@ -80,6 +80,7 @@ ellipticMainQuad2D:$(AOBJS) $(LOBJS) ellipticMainQuad2D.o gslibInterface
 gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
+	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
 ellipticMainSplitPml2D:$(POBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 

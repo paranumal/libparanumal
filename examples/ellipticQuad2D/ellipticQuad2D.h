@@ -21,6 +21,9 @@ typedef struct {
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
 
+  occa::kernel coarsenKernel;
+  occa::kernel prolongateKernel;  
+
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
