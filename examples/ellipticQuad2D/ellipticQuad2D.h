@@ -20,10 +20,16 @@ typedef struct {
 
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
-  
+
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
+
+  // coarse grid basis for preconditioning
+  occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
+  occa::memory o_r1, o_z1;
+  dfloat *r1, *z1;
+  void *xxt;
   
 } precon_t;
 
@@ -47,3 +53,7 @@ void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v
 precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
+
+void ellipticCoarsePreconditionerQuad2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
+
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda);
