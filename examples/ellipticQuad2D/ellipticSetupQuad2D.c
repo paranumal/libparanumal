@@ -160,9 +160,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "ellipticAxIpdgQuad2D",
 				       kernelInfo);  
 
-  // renumber nodes to have unique, continuous numbering
-  meshParallelConsecutiveGlobalNumbering(mesh->Np*mesh->Nelements, mesh->gatherBaseIds);
-  
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   *ogs = meshParallelGatherScatterSetup(mesh,
@@ -234,5 +231,5 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
   
-
+  
 }
