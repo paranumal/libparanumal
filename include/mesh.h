@@ -21,6 +21,7 @@
 #define iintFormat "%d"
 #define dfloatFormat "%lf"
 #define dfloatString "double"
+#define iintString "int"
 #endif
 
 #include "ogs_t.h"
@@ -362,18 +363,20 @@ extern "C"
 }
 
 void * xxtSetup(uint num_local_rows, 
-                 uint* row_ids,
-                 uint nnz, 
-                 uint*   A_i,
-                 uint*   A_j,
-                 double* A_vals,
-		int null_space);
+                void* row_ids,
+                uint nnz, 
+                void*   A_i,
+                void*   A_j,
+                void* A_vals,
+		            int null_space,
+                char* inttype,
+                char* floattype);
 
-int xxtSolve(double* x,
-              void* crs_A,
-	     double* rhs);
+int xxtSolve(void* x,
+             void* A,
+	           void* rhs);
 
-int xxtFree(void* crs_A) ;
+int xxtFree(void* A) ;
 
 #endif
 

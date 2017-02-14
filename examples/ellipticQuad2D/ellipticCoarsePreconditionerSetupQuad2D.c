@@ -94,14 +94,17 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
       }
     }
   }
-  
-  precon->xxt = xxtSetup(mesh->Nverts*mesh->Nelements,
+
+  uint localNumRows = mesh->Nverts*mesh->Nelements;
+  uint nnz = mesh->Nverts*mesh->Nverts*mesh->Nelements;
+
+  precon->xxt = xxtSetup(localNumRows,
 			 globalNumbering,
-			 mesh->Nverts*mesh->Nverts*mesh->Nelements,
+			 nnz,
 			 rowsA,
 			 colsA,
 			 valsA,
-			 0); // 0 if no null space
+			 0,iintString,dfloatString); // 0 if no null space
   
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
