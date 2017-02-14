@@ -137,16 +137,14 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
-  iint *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
+  iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
+  iint *L0ids; // L0 matrix ids
   dfloat *L0vals; // L0 values (L0 tridiagonal in 2D)
   iint *ELids; // lift reduction matrix indices
   dfloat *ELvals; // lift reduction matrix values
   iint max_EL_nnz; // max number of non-zeros per row of EL
-
-  
-
   
   // time stepping info
   dfloat dt; // time step
@@ -223,9 +221,9 @@ typedef struct {
   occa::memory o_notInternalElementIds;
   
   // Bernstein-Bezier occa arrays
-  occa::memory o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
+  occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
-  occa::memory o_L0vals, o_ELids, o_ELvals; 
+  occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals; 
 
 
   // pml vars

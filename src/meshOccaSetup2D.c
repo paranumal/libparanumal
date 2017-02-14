@@ -60,7 +60,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
   // =============== BB operators [added by JC] ===============
-#if 1
 
   // deriv operators: transpose from row major to column major
   iint *D1ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
@@ -107,7 +106,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
   }
-#endif  
+
   // =============== end BB stuff =============================
 
 

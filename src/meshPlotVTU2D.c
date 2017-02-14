@@ -50,10 +50,12 @@ void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, iint fld){
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
+
       for(iint m=0;m<mesh->Np;++m){
-	dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
-	plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
+        dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
+        plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
+
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }
