@@ -1,39 +1,9 @@
 #include "ellipticQuad2D.h"
 
-int compareRowCol(void *a, void *b){
-  
-  nonZero_t *fa = (nonZero_t*) a;
-  nonZero_t *fb = (nonZero_t*) b;
-
-  if(fa->row < fb->row) return -1;
-  if(fa->row > fb->row) return +1;
-
-  if(fa->col < fb->col) return -1;
-  if(fa->col > fb->col) return +1;
-  
-  return 0;  
-}
-
-int compareOwner(void *a, void *b){
-  
-  nonZero_t *fa = (nonZero_t*) a;
-  nonZero_t *fb = (nonZero_t*) b;
-
-  if(fa->own < fb->own) return -1;
-  if(fa->own > fb->own) return +1;
-  
-  return 0;  
-}
-
 void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   // ------------------------------------------------------------------------------------
-  // 0. Create a contiguous numbering system, starting from the element-vertex connectivity
-  
+  // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
   iint Nnum = mesh->Nverts*mesh->Nelements;
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
@@ -42,19 +12,46 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum);
 
-  // squeeze numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners);
+  // ------------------------------------------------------------------------------------
+  // 2. Build coarse grid element basis functions
+
+  dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+  dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+  dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+
+  for(iint j=0;j<mesh->Nq;++j){
+    for(iint i=0;i<mesh->Nq;++i){
+      iint n = i+j*mesh->Nq;
+      dfloat rn = mesh->r[n];
+      dfloat sn = mesh->s[n];
+
+      V1[0*mesh->Np+n] = 0.25*(1-rn)*(1-sn);
+      V1[1*mesh->Np+n] = 0.25*(1+rn)*(1-sn);
+      V1[2*mesh->Np+n] = 0.25*(1+rn)*(1+sn);
+      V1[3*mesh->Np+n] = 0.25*(1-rn)*(1+sn);
+
+      Vr1[0*mesh->Np+n] = 0.25*(-1)*(1-sn);
+      Vr1[1*mesh->Np+n] = 0.25*(+1)*(1-sn);
+      Vr1[2*mesh->Np+n] = 0.25*(+1)*(1+sn);
+      Vr1[3*mesh->Np+n] = 0.25*(-1)*(1+sn);
+      
+      Vs1[0*mesh->Np+n] = 0.25*(1-rn)*(-1);
+      Vs1[1*mesh->Np+n] = 0.25*(1+rn)*(-1);
+      Vs1[2*mesh->Np+n] = 0.25*(1+rn)*(+1);
+      Vs1[3*mesh->Np+n] = 0.25*(1-rn)*(+1);
+    }
+  }
+  precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
+  precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
+  precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
 
   // ------------------------------------------------------------------------------------
-  // 1. Build non-zeros of stiffness matrix (unassembled)
-
-  // counts
-  iint *sendCounts = (iint*) calloc(size, sieof(iint));
-  iint *recvCounts = (iint*) calloc(size, sieof(iint));
-  
-  // build stiffness matrix for vertex modes
+  // 3. Build non-zeros of stiffness matrix (unassembled)
   iint NnonZeros = mesh->Nverts*mesh->Nverts*mesh->Nelements;
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(NnonZeros, sizeof(nonZero_t));
+  iint   *rowsA = (iint*) calloc(NnonZeros, sizeof(iint));
+  iint   *colsA = (iint*) calloc(NnonZeros, sizeof(iint));
+  dfloat *valsA = (dfloat*) calloc(NnonZeros, sizeof(dfloat));
+  
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -66,14 +63,14 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 	  for(iint i=0;i<mesh->Nq;++i){
 	    iint id = i+j*mesh->Nq;
 	    
-	    dfloat Vr1ni = mesh->Vr1[n*mesh->Np+id];
-	    dfloat Vs1ni = mesh->Vs1[n*mesh->Np+id];
+	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
+	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
 	    
-	    dfloat Vr1mi = mesh->Vr1[m*mesh->Np+id];
-	    dfloat Vs1mi = mesh->Vs1[m*mesh->Np+id];
+	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
+	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
 
-	    dfloat V1ni  = mesh->V1[n*mesh->Np+id];
-	    dfloat V1mi  = mesh->V1[m*mesh->Np+id];
+	    dfloat V1ni  = V1[n*mesh->Np+id];
+	    dfloat V1mi  = V1[m*mesh->Np+id];
 
 	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
 	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
@@ -90,86 +87,25 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 	  }
 	}
 	
-	iint row = globalNumbering[e*mesh->Nverts+n];
-	iint col = globalNumbering[e*mesh->Nverts+m];
-	iint own = globalOwners[e*mesh->Nverts+m]; // own by row
-	sendNonZeros[cnt].row = row;
-	sendNonZeros[cnt].col = col;
-	sendNonZeros[cnt].val = Snm;
-	sendNonZeros[cnt].own = own;
-
-	// increment the send counter for the owner rank
-	++sendCounts[own];
-	
+	valsA[cnt] = Snm;
+	rowsA[cnt] = e*mesh->Nverts+n;
+	colsA[cnt] = e*mesh->Nverts+m;
 	++cnt;
       }
     }
   }
-
-  // ------------------------------------------------------------------------------------
-  // 2. Sort non-zeros based on owner rank and send to owner
   
-  // sort the non-zeros by owner rank
-  qsort(sendNonZeros, NnonZeros, sizeof(nonZero_t), compareOwner);
+  precon->xxt = xxtSetup(mesh->Nverts*mesh->Nelements,
+			 globalNumbering,
+			 mesh->Nverts*mesh->Nverts*mesh->Nelements,
+			 rowsA,
+			 colsA,
+			 valsA,
+			 0); // 0 if no null space
   
-  iint *sendOffsets = (iint*) calloc(size+1, sieof(iint));
-  iint *recvOffsets = (iint*) calloc(size+1, sieof(iint));
-  for(iint r=0;r<size;++r){
-    sendCounts[r] *= sizeof(nonZero_t);
-    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
-  }
-
-  // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
+  precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
+  precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
+  precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   
-  // find send and recv offsets for gather
-  iint recvNtotal = 0;
-  for(iint r=0;r<size;++r){
-    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
-    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(nonZero_t);
-  }
-
-  nonZeros_t *recvNonZeros =  (nonZeros_t*) calloc(recvNtotal, sizeof(nonZeros_t));
-  MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_CHAR,
-		recvNonZeros, recvCounts, recvOffsets, MPI_CHAR,
-		MPI_COMM_WORLD);  
-
-  // ------------------------------------------------------------------------------------
-  // 3. Sort received non-zeros based on row then column indices
-    
-  // sort by row then column
-  qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), compareRowCol);
-
-  // compress duplicate entries
-  iint cnt = 0;
-  for(iint n=1;n<recvNtotal;++n){
-    if(!compareRowCol(recvNonZeros+n, recvNonZeros+n-1)){ // match
-      recvNonZeros[cnt].val += recvNonZeros[n].val;
-    }
-    else{
-      ++cnt;
-      recvNonZeros[cnt] = recvNonZeros[n];
-    }
-  }
-  recvNtotal = cnt+1;
-
-  // ------------------------------------------------------------------------------------
-  // 4. Find number of nodes owned by all ranks
-  
-  iint *allNowned = (iint*) calloc(size, sizeof(iint));
-  iint *allStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&recvNtotal, 1, MPI_IINT, allNowned, 1, MPI_IINT, MPI_COMM_WORLD);
-
-  for(iint r=0;r<size;++r){
-    allStarts[r+1] = allStarts[r] + allNowned[r];
-  }
-
-  // ------------------------------------------------------------------------------------
-  // 5. Set up AMG
-  
-  precon->amg = amgSetup(allStarts, recvNonZeros);
-
-  free(recvNonZeros);
- 
 }

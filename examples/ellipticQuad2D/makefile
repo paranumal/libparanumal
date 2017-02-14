@@ -35,11 +35,12 @@ LIBS	=  $(links)
 # list of objects to be compiled
 AOBJS    = \
 ellipticSetupQuad2D.o \
-ellipticPreconditionerSetupQuad2D.o
+ellipticPreconditionerSetupQuad2D.o\
+ellipticCoarsePreconditionerSetupQuad2D.o\
+ellipticCoarsePreconditionerQuad2D.o\
 
 # library objects
 LOBJS = \
-../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -65,7 +66,8 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
-./diagnostic.o
+./diagnostic.o\
+../../src/xxtCoarseSolve.o
 
 
 COBJS = \

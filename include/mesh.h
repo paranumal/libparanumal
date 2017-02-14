@@ -243,6 +243,7 @@ typedef struct {
   
   occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
 
+  
 
   
   // CG gather-scatter info
@@ -267,7 +268,6 @@ typedef struct {
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
 
-  
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
@@ -361,7 +361,19 @@ extern "C"
   void gsParallelGatherScatterDestroy(void *gsh);
 }
 
+void * xxtSetup(uint num_local_rows, 
+                 uint* row_ids,
+                 uint nnz, 
+                 uint*   A_i,
+                 uint*   A_j,
+                 double* A_vals,
+		int null_space);
 
+int xxtSolve(double* x,
+              void* crs_A,
+	     double* rhs);
+
+int xxtFree(void* crs_A) ;
 
 #endif
 

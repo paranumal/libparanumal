@@ -186,10 +186,10 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
 
     //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
-    
+
     mesh->device.finish();
     occa::tic("preconKernel");
-    
+
     // compute local precon on DEVICE
     if(strstr(options, "CONTINUOUS")) {
 
@@ -231,6 +231,25 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     occa::tic("restrictKernel");
     
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
+
+#if  0
+    if(strstr(options, "COARSEGRID")){ // should split into two parts
+
+      // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
+      
+      precon->coarsenKernel(mesh->Nelements, mesh->o_restrictMatrix, o_r, precon->o_r1);
+
+      // do we need to gather (or similar) here ?
+      precon->o_r1.copyTo(precon->r1); 
+      
+      amgSolve(precon->amg,precon->r1,precon->z1);
+
+      precon->o_z1.copyFrom(precon->z1);
+      
+      precon->prolongateKernel(mesh->Nelements, mesh->o_prolongateMatrix, precon->o_z1, o_z);
+      
+    }
+#endif
     
     mesh->device.finish();
     occa::toc("restrictKernel");   
