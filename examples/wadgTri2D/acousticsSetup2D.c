@@ -160,7 +160,7 @@ void acousticsSetup2D(mesh2D *mesh){
 				       kernelInfo);
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate2D.okl",
+    mesh->device.buildKernelFromSource("okl/wadgUpdateKernels.okl",
 				       "acousticsUpdate2D_wadg",
 				       kernelInfo);
   

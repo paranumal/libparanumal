@@ -7,7 +7,7 @@
 #include "mesh3D.h"
 
 void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
-  
+
   mesh->device.setup(deviceConfig);
 
   occa::initTimer(mesh->device);
@@ -25,7 +25,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
   if(mesh->Nfaces==4){
-    
+
     // build Dr, Ds, LIFT transposes
     dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
     dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -37,7 +37,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       	DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
       }
     }
-    
+
     dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
@@ -87,15 +87,15 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dr);
     mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Ds);
     mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dt);
-    
+
     mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DrT);
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DsT);
     mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DtT);
-    
+
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			  mesh->LIFT);
-    
+
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			  LIFTT);
@@ -134,7 +134,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_cubInterpT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			  cubInterpT);
-  
+
     mesh->o_cubProjectT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			  cubProjectT);
@@ -142,7 +142,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_cubDrWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			  cubDrWT);
-  
+
     mesh->o_cubDsWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			  cubDsWT);
@@ -167,21 +167,35 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
 
-  
-  // hardcoded for hexes
-  mesh->o_vgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
-			mesh->vgeo);
-  
-  mesh->o_sgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-			mesh->sgeo);
+  printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
+  if (mesh->Nverts==8){     // hardcoded for hexes
+
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
+                          mesh->vgeo);
+
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+                          mesh->sgeo);
+  }else if (mesh->Nverts==4){     // for tets
+
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
+                          mesh->vgeo);
+
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+                          mesh->sgeo);
+
+  }else{
+    printf("Nverts = %d: unknown element type!\n",mesh->Nverts);
+  }
 
   if(mesh->Nggeo)
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
 			  mesh->ggeo);
-  
+
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapM);
@@ -202,17 +216,17 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->z);
-  
+
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
       mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
-    
+
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
   }
-  
+
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Nq", mesh->N+1);
@@ -233,7 +247,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_IJID", IJID);
   kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_IHID", IHID);
-  
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -242,13 +256,13 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
-  
+
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
   kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
-  
+
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
     kernelInfo.addDefine("dfloat4","float4");
@@ -295,5 +309,5 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_TZID", TZID);
 
   kernelInfo.addDefine("p_JWID", JWID);
-  
+
 }
