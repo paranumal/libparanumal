@@ -1,0 +1,293 @@
+#define p_half 0.5f
+
+void boundaryConditions3D(iint bc, dfloat time, 
+			  dfloat x, dfloat y, dfloat z, 
+			  dfloat uM, dfloat vM, dfloat wM, dfloat pM,
+			  dfloat *uP, dfloat *vP, dfloat *wP, dfloat *pP){
+  
+  if(bc==1){
+    // assert Neumann for pressure and no penetration for velocity
+    *uP = -uM;
+    *vP = -vM;
+    *wP = -wM;
+    *pP = pM;
+  }
+  if(bc==2){
+    dfloat dx = 1.f/occaSqrt(2.f);
+    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dz = 0;
+    dfloat omega = 10*M_PI;
+    dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
+    dfloat uI = dx*wave;
+    dfloat vI = dy*wave;
+    dfloat wI = dz*wave;
+    dfloat pI = wave;
+    
+    // scattered field wall
+    *uP = -uM -2.f*uI;
+    *vP = -vM -2.f*vI;
+    *wP = -wM -2.f*wI;
+    *pP = pM;
+  }
+}
+
+// function to compute surface contributions 
+// for nodal DG acoustics right hand side
+kernel void acousticsSurface3D(const iint Nelements,
+				      const dfloat * restrict sgeo,
+				      const dfloat * restrict LIFTT,
+				      const iint   * restrict vmapM,
+				      const iint   * restrict vmapP,
+				      const iint   * restrict EToB,
+				      const dfloat time,
+				      const dfloat * restrict x,
+				      const dfloat * restrict y,
+				      const dfloat * restrict z,
+				      const dfloat * restrict q,
+				      dfloat       * restrict rhsq){
+				   
+  // for all elements
+  for(iint e=0;e<Nelements;++e;outer0){
+
+    // shared storage for flux terms
+    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    shared dfloat s_fluxw[p_Nfp*p_Nfaces];
+    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    
+    // for all face nodes of all elements
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+      if(n<p_Nfp*p_Nfaces){
+				// find face that owns this node
+				iint face = n/p_Nfp;
+
+				// load surface geofactors for this face
+				iint sid = p_Nsgeo*(e*p_Nfaces+face);
+				dfloat nx = sgeo[sid+0];
+				dfloat ny = sgeo[sid+1];
+				dfloat nz = sgeo[sid+2];
+				dfloat sJ = sgeo[sid+3];
+				dfloat invJ = sgeo[sid+4];
+
+				// indices of negative and positive traces of face node
+				iint id  = e*p_Nfp*p_Nfaces + n;
+				iint idM = vmapM[id];
+				iint idP = vmapP[id];
+
+				if(idP<0) idP = idM;
+				iint qidM = idM*p_Nfields, qidP = idP*p_Nfields;
+				
+				// load negative and positive trace node values of q
+				dfloat uM = q[qidM+0], vM = q[qidM+1], wM = q[qidM+2], pM = q[qidM+3];
+				dfloat uP = q[qidP+0], vP = q[qidP+1], wP = q[qidP+2], pP = q[qidP+3];
+				
+				// apply boundary condition
+				iint bc = EToB[face+p_Nfaces*e];
+				if(bc>0)
+				  boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], uM, vM, wM, pM, &uP, &vP, &wP, &pP);
+				
+				// compute (q^* - q^-)
+				dfloat duS = p_half*(uP-uM) + p_Lambda2*(-nx)*(pP-pM);
+				dfloat dvS = p_half*(vP-vM) + p_Lambda2*(-ny)*(pP-pM);
+				dfloat dwS = p_half*(wP-wM) + p_Lambda2*(-nz)*(pP-pM);
+				dfloat dpS = p_half*(pP-pM) + p_Lambda2*(-nx*(uP-uM)-ny*(vP-vM)-nz*(wP-wM));
+
+				// evaluate "flux" terms: (sJ/J)*(A*nx+B*ny+C*nz)*(q^* - q^-)
+				s_fluxu[n] = invJ*sJ*(-nx*dpS);
+				s_fluxv[n] = invJ*sJ*(-ny*dpS);
+				s_fluxw[n] = invJ*sJ*(-nz*dpS);
+				s_fluxp[n] = invJ*sJ*(-nx*duS-ny*dvS-nz*dwS);
+      }
+    }
+    
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // for each node in the element 
+    for(iint n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+				iint id = p_Nfields*(p_Np*e + n);
+
+				// load rhs data from volume fluxes
+				dfloat rhsu = rhsq[id];
+				dfloat rhsv = rhsq[id+1];
+				dfloat rhsw = rhsq[id+2];
+				dfloat rhsp = rhsq[id+3];
+			      
+				// rhs += LIFT*((sJ/J)*(A*nx+B*ny+C*nz)*(q^* - q^-))
+				for(int m=0;m<p_Nfp*p_Nfaces;++m){
+				  dfloat L = LIFTT[n+m*p_Np];
+				  rhsu += L*s_fluxu[m];
+				  rhsv += L*s_fluxv[m];
+				  rhsw += L*s_fluxw[m];
+				  rhsp += L*s_fluxp[m];
+				}
+
+				// store incremented rhs
+				rhsq[id]   = rhsu;
+				rhsq[id+1] = rhsv;
+				rhsq[id+2] = rhsw;
+				rhsq[id+3] = rhsp;
+      }
+    }
+  }
+}
+
+
+kernel void acousticsSurface3Dbbdg(const iint Nelements,
+              const dfloat * restrict sgeo,
+              const iint   * restrict L0ids,
+              const dfloat * restrict L0vals,  
+              const iint   * restrict ELids,
+              const dfloat * restrict ELvals,  
+              const iint   * restrict vmapM,
+              const iint   * restrict vmapP,
+              const iint   * restrict EToB,
+              const dfloat time,
+              const dfloat * restrict x,
+              const dfloat * restrict y,
+              const dfloat * restrict z,
+              const dfloat * restrict q,
+              dfloat       * restrict rhsq){
+           
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    // shared storage for flux terms
+    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
+    
+    shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxp_copy[p_NblockS][p_Nfp*p_Nfaces];
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            iint face = n/p_Nfp;
+
+            // load surface geofactors for this face
+            iint sid = p_Nsgeo*(e*p_Nfaces+face);
+            dfloat nx = sgeo[sid+0];
+            dfloat ny = sgeo[sid+1];
+            dfloat nz = sgeo[sid+2];
+            dfloat sJ = sgeo[sid+3];
+            dfloat invJ = sgeo[sid+4];
+
+            // indices of negative and positive traces of face node
+            iint id  = e*p_Nfp*p_Nfaces + n;
+            iint idM = vmapM[id];
+            iint idP = vmapP[id];
+
+            if(idP<0) idP = idM;
+            iint qidM = idM*p_Nfields, qidP = idP*p_Nfields;
+            
+            // load negative and positive trace node values of q
+            dfloat uM = q[qidM+0], vM = q[qidM+1], wM = q[qidM+2], pM = q[qidM+3];
+            dfloat uP = q[qidP+0], vP = q[qidP+1], wP = q[qidP+2], pP = q[qidP+3];
+            
+            // apply boundary condition
+            iint bc = EToB[face+p_Nfaces*e];
+            if(bc>0)
+              boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], uM, vM, wM, pM, &uP, &vP, &wP, &pP);
+            
+            // compute (q^* - q^-)
+            dfloat duS = 0.5*(uP-uM) + p_Lambda2*(-nx)*(pP-pM);
+            dfloat dvS = 0.5*(vP-vM) + p_Lambda2*(-ny)*(pP-pM);
+            dfloat dwS = 0.5*(wP-wM) + p_Lambda2*(-nz)*(pP-pM);
+            dfloat dpS = 0.5*(pP-pM) + p_Lambda2*(-nx*(uP-uM)-ny*(vP-vM)-nz*(wP-wM));
+
+            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny+C*nz)*(q^* - q^-)
+            s_fluxu[es][n] = invJ*sJ*(-nx*dpS);
+            s_fluxv[es][n] = invJ*sJ*(-ny*dpS);
+            s_fluxw[es][n] = invJ*sJ*(-nz*dpS);
+            s_fluxp[es][n] = invJ*sJ*(-nx*duS-ny*dvS-nz*dwS);
+          }
+        }
+      }
+    }
+    
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // apply L0 to fluxes. use sparse format
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+
+            iint id = n%p_Nfp;  // warning: redundant reads
+            iint f  = n/p_Nfp;
+
+            dfloat utmpflux = 0.0;
+            dfloat vtmpflux = 0.0;
+            dfloat wtmpflux = 0.0;
+            dfloat ptmpflux = 0.0;
+
+            // sparse application of L0
+            for (int m = 0; m < 7; ++m){
+              iint   L0id  = L0ids [id + p_Nfp*m];
+              dfloat L0val = L0vals[id + p_Nfp*m];
+              
+              utmpflux += L0val * s_fluxu[es][L0id+f*p_Nfp];
+              vtmpflux += L0val * s_fluxv[es][L0id+f*p_Nfp];
+              wtmpflux += L0val * s_fluxw[es][L0id+f*p_Nfp];
+              ptmpflux += L0val * s_fluxp[es][L0id+f*p_Nfp];
+            }
+
+            s_fluxu_copy[es][n] = utmpflux;
+            s_fluxv_copy[es][n] = vtmpflux;
+            s_fluxw_copy[es][n] = wtmpflux;
+            s_fluxp_copy[es][n] = ptmpflux;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // apply lift reduction and accumulate RHS
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            iint id = p_Nfields*(p_Np*e + n);
+            
+            // load RHS
+            dfloat rhsqnu = rhsq[id+0];
+            dfloat rhsqnv = rhsq[id+1];
+            dfloat rhsqnw = rhsq[id+1];
+            dfloat rhsqnp = rhsq[id+3];
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            occaUnroll(p_NfacesNfp)
+            for (int m = 0; m < p_max_EL_nnz; ++m){
+              iint id = n + m*p_Np;
+              dfloat ELval = ELvals[id];
+              iint   ELid  = ELids [id];
+              rhsqnu += ELval * s_fluxu_copy[es][ELid];
+              rhsqnv += ELval * s_fluxv_copy[es][ELid];
+              rhsqnw += ELval * s_fluxw_copy[es][ELid];
+              rhsqnp += ELval * s_fluxp_copy[es][ELid];
+            }
+            
+            // store incremented rhs
+            rhsq[id+0] = rhsqnu;
+            rhsq[id+1] = rhsqnv;
+            rhsq[id+2] = rhsqnw;  
+            rhsq[id+3] = rhsqnp;  
+          }
+        }
+      }
+    }
+  }
+}
+    
