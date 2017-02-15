@@ -36,6 +36,8 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       
       /* compute geometric factors for affine coordinate transform*/
       dfloat J = xr*ys - xs*yr;
+
+      if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
       dfloat rx =  ys/J;
       dfloat ry = -xs/J;
       dfloat sx = -yr/J;

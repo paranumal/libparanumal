@@ -203,6 +203,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_zP);
 
       ellipticParallelGatherScatter2D(mesh, precon->ogsP, o_zP, o_zP, type, "add");
+      
     }
     else{
       precon->preconKernel(mesh->Nelements,
@@ -229,9 +230,14 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     // extract block interiors on DEVICE
     mesh->device.finish();
     occa::tic("restrictKernel");
-    
+#if 0
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
-
+#else
+    //    o_z.copyFrom(o_r);
+    dfloat *zero = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+    o_z.copyFrom(zero);
+    free(zero);
+#endif
 #if  1
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
@@ -305,7 +311,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);
