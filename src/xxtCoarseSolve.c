@@ -85,7 +85,7 @@ void * xxtSetup(uint  numLocalRows,
     }
 #endif
   }
-  
+
   crsA->iintType = strdup(iintType);
   crsA->dfloatType = strdup(dfloatType);
 
@@ -112,17 +112,20 @@ int xxtSolve(void* x,
   crs_t *crsA = (crs_t *) A;
 
   if (!strcmp(crsA->dfloatType,"float")) {
+    
     float *xFloat   = (float *) x;
     float *rhsFloat = (float *) rhs;
     for (n=0;n<crsA->numLocalRows;n++) {
+
       crsA->x[n]   = (double) xFloat[n];
       crsA->rhs[n] = (double) rhsFloat[n];
     }
   } else {
+
     crsA->x   = (double*) x;
     crsA->rhs = (double*) rhs;
   }
-
+  
   crs_solve(crsA->x,crsA->A,crsA->rhs);
 
   return 0;
