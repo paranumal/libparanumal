@@ -1,15 +1,16 @@
 kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
+					const dfloat *restrict invDegree,
 					const dfloat * restrict V1,
 					const dfloat * restrict qN,
 					dfloat * restrict q1){
 
   for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Nverts;++n;inner1){
+    for(iint n=0;n<p_Nverts;++n;inner0){
       dfloat tmp = 0;
       for(iint i=0;i<p_Np;++i){
 	tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
       }
-      q1[e*p_Nverts+n] = tmp;
+      q1[e*p_Nverts+n] = tmp; 
     }
   }
 }

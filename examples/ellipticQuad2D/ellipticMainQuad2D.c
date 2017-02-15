@@ -43,7 +43,7 @@ void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuff
   }
 }
 
-				 
+
 void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op){
 
   mesh->device.finish();
@@ -101,6 +101,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
+    // TW NOTE WAS 2 !
     dfloat tau = 2.f*mesh->Nq*mesh->Nq; // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
@@ -173,6 +174,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			      precon_t *precon,
 			      dfloat *sendBuffer,
 			      dfloat *recvBuffer,
+			      occa::memory &o_invDegree,
 			      occa::memory &o_r,
 			      occa::memory &o_zP,
 			      occa::memory &o_z,
@@ -230,20 +232,14 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     // extract block interiors on DEVICE
     mesh->device.finish();
     occa::tic("restrictKernel");
-#if 0
+
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
-#else
-    //    o_z.copyFrom(o_r);
-    dfloat *zero = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    o_z.copyFrom(zero);
-    free(zero);
-#endif
-#if  1
+
+#if 1
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      
-      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, o_invDegree, precon->o_V1, o_r, precon->o_r1);
 
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
@@ -253,10 +249,8 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       precon->o_z1.copyFrom(precon->z1);
       
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, o_z);
-      
     }
 #endif
-    
     mesh->device.finish();
     occa::toc("restrictKernel");   
   }
@@ -299,8 +293,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -311,7 +305,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);
@@ -419,7 +413,7 @@ int main(int argc, char **argv){
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer,
+    ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_invDegree,
 			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
     
     // p = z
@@ -476,7 +470,7 @@ int main(int argc, char **argv){
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer,
+      ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_invDegree,
 			       o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
