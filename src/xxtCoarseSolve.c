@@ -32,8 +32,8 @@ void * xxtSetup(uint  numLocalRows,
                 void* Aj,
                 void* Avals,
                 int   nullSpace,
-                char* iintType, 
-                char* dfloatType) {
+                const char* iintType, 
+                const char* dfloatType) {
 
   int np, myId, n;
   struct comm com;
@@ -47,7 +47,7 @@ void * xxtSetup(uint  numLocalRows,
   crsA->numLocalRows = numLocalRows;
   crsA->nnz = nnz;
 
-  if (strcmp(dfloatType,"float")) { //float
+  if (!strcmp(dfloatType,"float")) { //float
     crsA->Avals = (double *) malloc(nnz*sizeof(double));
     crsA->x     = (double *) malloc(numLocalRows*sizeof(double));
     crsA->rhs   = (double *) malloc(numLocalRows*sizeof(double));
@@ -57,19 +57,37 @@ void * xxtSetup(uint  numLocalRows,
     crsA->Avals = (double*) Avals;
   }
 
-  if (strcmp(iintType,"int")) { //int
+  if (!strcmp(iintType,"int")) { //int
+    crsA->Ai = (uint*) calloc(nnz, sizeof(uint));
+    crsA->Aj = (uint*) calloc(nnz, sizeof(uint));      
+    
     crsA->rowIds = (ulong*) malloc(numLocalRows*sizeof(ulong));
     int *rowIdsInt = (int*) rowIds;
     for (n=0;n<numLocalRows;n++) crsA->rowIds[n] = (ulong) rowIdsInt[n];
+    
+    for(n=0;n<nnz;++n){
+      crsA->Ai[n] = ((int*)Ai)[n];
+      crsA->Aj[n] = ((int*)Aj)[n];
+    }
+    
   } else { //long
-    crsA->rowIds = (ulong *) rowIds;
-  }
+    printf("Exiting due to use of ulong in iintType %s\n", iintType);
+    exit(-1);
+#if 0
+    crsA->Ai = (ulong*) calloc(nnz, sizeof(ulong));
+    crsA->Aj = (ulong*) calloc(nnz, sizeof(ulong));  
 
-  crsA->Ai = (uint*) Ai; //this will break if iint = long
-  crsA->Aj = (uint*) Aj;
+    crsA->rowIds = (ulong *) rowIds;
+    
+    for(n=0;n<nnz;++n){
+      crsA->Ai[n] = ((ulong*)Ai)[n];
+      crsA->Aj[n] = ((ulong*)Aj)[n];
+    }
+#endif
+  }
   
-  crsA->iintType = iintType;
-  crsA->dfloatType = dfloatType;
+  crsA->iintType = strdup(iintType);
+  crsA->dfloatType = strdup(dfloatType);
 
   crsA->A = crs_setup(crsA->numLocalRows,
 		      crsA->rowIds,
@@ -93,7 +111,7 @@ int xxtSolve(void* x,
   
   crs_t *crsA = (crs_t *) A;
 
-  if (strcmp(crsA->dfloatType,"float")) {
+  if (!strcmp(crsA->dfloatType,"float")) {
     float *xFloat   = (float *) x;
     float *rhsFloat = (float *) rhs;
     for (n=0;n<crsA->numLocalRows;n++) {
@@ -115,13 +133,13 @@ int xxtFree(void* A) {
 
   crs_free(crsA->A);
 
-  if (strcmp(crsA->dfloatType,"float")) { 
+  if (!strcmp(crsA->dfloatType,"float")) { 
     free(crsA->Avals);
     free(crsA->x);  
     free(crsA->rhs);
   }
 
-  if (strcmp(crsA->iintType,"int")) { 
+  if (!strcmp(crsA->iintType,"int")) { 
     free(crsA->rowIds);
   }
 

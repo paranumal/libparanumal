@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -13,6 +13,7 @@
 #define iintFormat "%d"
 #define dfloatFormat "%f"
 #define dfloatString "float"
+#define iintString "int"
 #else
 #define iint int
 #define dfloat double
@@ -368,8 +369,8 @@ extern "C"
                   void*   A_j,
                   void* A_vals,
                   int null_space,
-                  char* inttype,
-                  char* floattype);
+                  const char* inttype,
+                  const char* floattype);
 
   int xxtSolve(void* x,
                void* A,
