@@ -360,23 +360,25 @@ extern "C"
   void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
+
+  void * xxtSetup(uint num_local_rows, 
+                  void* row_ids,
+                  uint nnz, 
+                  void*   A_i,
+                  void*   A_j,
+                  void* A_vals,
+                  int null_space,
+                  char* inttype,
+                  char* floattype);
+
+  int xxtSolve(void* x,
+               void* A,
+               void* rhs);
+
+  int xxtFree(void* A) ;
 }
 
-void * xxtSetup(uint num_local_rows, 
-                void* row_ids,
-                uint nnz, 
-                void*   A_i,
-                void*   A_j,
-                void* A_vals,
-		            int null_space,
-                char* inttype,
-                char* floattype);
 
-int xxtSolve(void* x,
-             void* A,
-	           void* rhs);
-
-int xxtFree(void* A) ;
 
 #endif
 
