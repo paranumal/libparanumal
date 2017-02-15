@@ -9,6 +9,7 @@ iint findBestMatch(dfloat x1, dfloat y1,
   iint matchIndex = nodeList[0];
   dfloat mindist2 = pow(x1-x2[nodeList[0]],2) + pow(y1-y2[nodeList[0]],2);
 
+  *nP = 0;
   for(int n=1;n<Np2;++n){
     
     /* next node */
