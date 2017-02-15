@@ -4,7 +4,7 @@ kernel void ellipticPreconProlongateQuad2D(const iint Nelements,
 					   dfloat * restrict qN){
   
   for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner1){
+    for(iint n=0;n<p_Np;++n;inner0){
       dfloat tmp = qN[e*p_Np+n] ;
 
       for(iint i=0;i<p_Nverts;++i){
