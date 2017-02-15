@@ -21,8 +21,9 @@ typedef struct {
   uint nnz;
 
   ulong *rowIds;
-  uint *Ai, *Aj;
-  double *Avals;
+  uint   *Ai; // row coordinates of non-zeros (local indexes)
+  uint   *Aj; // column coordinates  of non-zeros (local indexes)
+  double *Avals; // values of non-zeros
 
   double *x;
   double *rhs;
@@ -32,18 +33,19 @@ typedef struct {
 
 } crs_t;
 
-void * xxtSetup(uint numLocalRows, 
+void * xxtSetup(uint  numLocalRows, 
                 void* rowIds,
-                uint nnz, 
-                void*   Ai,
-                void*   Aj,
+                uint  nnz, 
+                void* Ai,
+                void* Aj,
                 void* Avals,
-                int nullSpace,
+                int   nullSpace,
                 char* iintType, 
                 char* dfloatType) {
+
   int np, myId, n;
   struct comm com;
-  crs_t *crsA;
+  crs_t *crsA = (crs_t*) calloc(1, sizeof(crs_t));
 
   MPI_Comm_size(MPI_COMM_WORLD,&np);
   comm_init(&com,(comm_ext) MPI_COMM_WORLD);
@@ -55,8 +57,8 @@ void * xxtSetup(uint numLocalRows,
 
   if (strcmp(dfloatType,"float")) { //float
     crsA->Avals = (double *) malloc(nnz*sizeof(double));
-    crsA->x   = (double *) malloc(numLocalRows*sizeof(double));
-    crsA->rhs = (double *) malloc(numLocalRows*sizeof(double));
+    crsA->x     = (double *) malloc(numLocalRows*sizeof(double));
+    crsA->rhs   = (double *) malloc(numLocalRows*sizeof(double));
     float *AvalsFloat = (float *) Avals;
     for (n=0;n<nnz;n++) crsA->Avals[n] = (double) AvalsFloat[n];
   } else { //double
@@ -77,9 +79,15 @@ void * xxtSetup(uint numLocalRows,
   crsA->iintType = iintType;
   crsA->dfloatType = dfloatType;
 
-  crsA->A = crs_setup(crsA->numLocalRows, crsA->rowIds,
-                   crsA->nnz, crsA->Ai, crsA->Aj, crsA->Avals,
-                   nullSpace, &com);
+  crsA->A = crs_setup(crsA->numLocalRows,
+		      crsA->rowIds,
+		      crsA->nnz,
+		      crsA->Ai,
+		      crsA->Aj,
+		      crsA->Avals,
+		      nullSpace,
+		      &com);
+
   crs_stats(crsA->A);
 
   return (void *) crsA;
