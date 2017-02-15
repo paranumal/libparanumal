@@ -4,14 +4,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#define UNDERSCORE 1
-#define USE_NAIVE_BLAS 
-#define NO_NEX_EXITT 1
-#define GLOBAL_LONG_LONG 1
-#define PREFIX jl_
-
-#define MPI 1
-
 #include "gslib.h"
 
 typedef struct {

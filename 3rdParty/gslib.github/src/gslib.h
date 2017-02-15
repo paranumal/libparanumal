@@ -1,3 +1,11 @@
+#define UNDERSCORE 1
+#define USE_NAIVE_BLAS 
+#define NO_NEX_EXITT 1
+#define GLOBAL_LONG_LONG 1
+#define PREFIX jl_
+
+#define MPI 1
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
