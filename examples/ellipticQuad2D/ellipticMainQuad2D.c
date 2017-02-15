@@ -242,7 +242,11 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
       
+<<<<<<< HEAD
       xxtSolve(precon->z1, precon->xxt,precon->r1);
+=======
+      xxtSolve(precon->r1,precon->xxt,precon->z1);
+>>>>>>> 5d4a0d871d0711714e22b3933309e44396d352c6
 
       precon->o_z1.copyFrom(precon->z1);
       
