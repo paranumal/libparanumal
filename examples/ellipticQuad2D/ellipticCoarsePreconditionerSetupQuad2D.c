@@ -7,7 +7,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint Nnum = mesh->Nverts*mesh->Nelements;
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
@@ -22,9 +21,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   for(iint j=0;j<mesh->Nq;++j){
     for(iint i=0;i<mesh->Nq;++i){
       iint n = i+j*mesh->Nq;
+      /*
       dfloat rn = mesh->r[n];
       dfloat sn = mesh->s[n];
-
+      */
+      dfloat rn = mesh->gllz[i];
+      dfloat sn = mesh->gllz[j];
       V1[0*mesh->Np+n] = 0.25*(1-rn)*(1-sn);
       V1[1*mesh->Np+n] = 0.25*(1+rn)*(1-sn);
       V1[2*mesh->Np+n] = 0.25*(1+rn)*(1+sn);
@@ -47,29 +49,29 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 
   // ------------------------------------------------------------------------------------
   // 3. Build non-zeros of stiffness matrix (unassembled)
-  iint NnonZeros = mesh->Nverts*mesh->Nverts*mesh->Nelements;
-  iint   *rowsA = (iint*) calloc(NnonZeros, sizeof(iint));
-  iint   *colsA = (iint*) calloc(NnonZeros, sizeof(iint));
-  dfloat *valsA = (dfloat*) calloc(NnonZeros, sizeof(dfloat));
+  iint nnz = mesh->Nverts*mesh->Nverts*mesh->Nelements;
+  iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
+  iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
+  dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
   
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
 	dfloat Snm = 0;
-
-	// use GLL nodes for integration (since Jacobian is high order tensor-product polynomial)
+ 
+	// use GLL nodes for integration
+	// (since Jacobian is high order tensor-product polynomial)
 	for(iint j=0;j<mesh->Nq;++j){
 	  for(iint i=0;i<mesh->Nq;++i){
 	    iint id = i+j*mesh->Nq;
 	    
 	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
 	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
+	    dfloat V1ni  = V1[n*mesh->Np+id];
 	    
 	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
 	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
-
-	    dfloat V1ni  = V1[n*mesh->Np+id];
 	    dfloat V1mi  = V1[m*mesh->Np+id];
 
 	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
@@ -77,34 +79,35 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
 	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
 	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
-	    
+
 	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
 	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
 	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
 	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
 	    
-	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi + lambda*V1ni*V1mi)*JW;
+	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
+	    Snm += (lambda*V1ni*V1mi)*JW;
 	  }
 	}
-	
+	//	Snm = (n==m) ? 1: 0;
+	printf("%g ", Snm);
 	valsA[cnt] = Snm;
 	rowsA[cnt] = e*mesh->Nverts+n;
 	colsA[cnt] = e*mesh->Nverts+m;
 	++cnt;
       }
+      printf("\n");
     }
+    printf("----------\n");
   }
 
-  uint localNumRows = mesh->Nverts*mesh->Nelements;
-  uint nnz = mesh->Nverts*mesh->Nverts*mesh->Nelements;
-
-  precon->xxt = xxtSetup(localNumRows,
+  precon->xxt = xxtSetup(Nnum,
 			 globalNumbering,
 			 nnz,
 			 rowsA,
 			 colsA,
 			 valsA,
-			 0,
+			 1,
 			 iintString,
 			 dfloatString); // 0 if no null space
   

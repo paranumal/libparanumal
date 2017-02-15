@@ -35,14 +35,11 @@ void * xxtSetup(uint  numLocalRows,
                 const char* iintType, 
                 const char* dfloatType) {
 
-  int np, myId, n;
+  int n;
   struct comm com;
   crs_t *crsA = (crs_t*) calloc(1, sizeof(crs_t));
 
-  MPI_Comm_size(MPI_COMM_WORLD,&np);
   comm_init(&com,(comm_ext) MPI_COMM_WORLD);
-
-  myId = com.id;
 
   crsA->numLocalRows = numLocalRows;
   crsA->nnz = nnz;
@@ -128,6 +125,15 @@ int xxtSolve(void* x,
   
   crs_solve(crsA->x,crsA->A,crsA->rhs);
 
+  if (!strcmp(crsA->dfloatType,"float")) {
+    
+    float *xFloat   = (float *) x;
+    float *rhsFloat = (float *) rhs;
+    for (n=0;n<crsA->numLocalRows;n++) {
+      xFloat[n] = (float) crsA->x[n];
+    }
+  }
+  
   return 0;
 }
 
