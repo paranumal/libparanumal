@@ -242,7 +242,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
       
-      xxtSolve(precon->xxt,precon->r1,precon->z1);
+      xxtSolve(precon->z1, precon->xxt,precon->r1);
 
       precon->o_z1.copyFrom(precon->z1);
       
@@ -305,7 +305,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 100;
+  dfloat lambda = 1;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);
