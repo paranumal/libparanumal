@@ -7,7 +7,7 @@ kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
     for(iint n=0;n<p_Nverts;++n;inner1){
       dfloat tmp = 0;
       for(iint i=0;i<p_Np;++i){
-	tmp += V1[n*p_Np + i]*qN[i];
+	tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
       }
       q1[e*p_Nverts+n] = tmp;
     }
