@@ -104,7 +104,9 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 			 rowsA,
 			 colsA,
 			 valsA,
-			 0,iintString,dfloatString); // 0 if no null space
+			 0,
+			 iintString,
+			 dfloatString); // 0 if no null space
   
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
