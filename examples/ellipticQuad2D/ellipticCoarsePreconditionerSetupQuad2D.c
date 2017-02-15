@@ -10,7 +10,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
   // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, Nnum);
+  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
   // ------------------------------------------------------------------------------------
   // 2. Build coarse grid element basis functions
