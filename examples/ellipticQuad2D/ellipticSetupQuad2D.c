@@ -180,6 +180,17 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
     mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictQuad2D.okl",
 				       "ellipticFooQuad2D",
 				       kernelInfo);
+
+  (*precon)->coarsenKernel =
+    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsenQuad2D.okl",
+				       "ellipticPreconCoarsenQuad2D",
+				       kernelInfo);
+
+  (*precon)->prolongateKernel =
+    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongateQuad2D.okl",
+				       "ellipticPreconProlongateQuad2D",
+				       kernelInfo);
+
   
   // find maximum degree
   {

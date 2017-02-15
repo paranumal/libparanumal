@@ -232,21 +232,21 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
 
-#if  0
+#if  1
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       
-      precon->coarsenKernel(mesh->Nelements, mesh->o_restrictMatrix, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
 
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
       
-      amgSolve(precon->amg,precon->r1,precon->z1);
+      xxtSolve(precon->xxt,precon->r1,precon->z1);
 
       precon->o_z1.copyFrom(precon->z1);
       
-      precon->prolongateKernel(mesh->Nelements, mesh->o_prolongateMatrix, precon->o_z1, o_z);
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, o_z);
       
     }
 #endif
@@ -293,8 +293,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
