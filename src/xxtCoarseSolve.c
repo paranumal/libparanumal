@@ -1,13 +1,18 @@
-#include <stddef.h>
-#include <stdlib.h>
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
-#include "name.h"
-#include "fail.h"
-#include "types.h"
-#include "comm.h"
-#include "crs.h"
-#include "mpi.h"
+
+#define UNDERSCORE 1
+#define USE_NAIVE_BLAS 
+#define NO_NEX_EXITT 1
+#define GLOBAL_LONG_LONG 1
+#define PREFIX jl_
+
+#define MPI 1
+
+#include "gslib.h"
 
 typedef struct {
   struct crs_data *A;
@@ -36,7 +41,7 @@ void * xxtSetup(uint numLocalRows,
                 int nullSpace,
                 char* iintType, 
                 char* dfloatType) {
-  int np, myId;
+  int np, myId, n;
   struct comm com;
   crs_t *crsA;
 
@@ -53,7 +58,7 @@ void * xxtSetup(uint numLocalRows,
     crsA->x   = (double *) malloc(numLocalRows*sizeof(double));
     crsA->rhs = (double *) malloc(numLocalRows*sizeof(double));
     float *AvalsFloat = (float *) Avals;
-    for (int n=0;n<nnz;n++) crsA->Avals[n] = (double) AvalsFloat[n];
+    for (n=0;n<nnz;n++) crsA->Avals[n] = (double) AvalsFloat[n];
   } else { //double
     crsA->Avals = (double*) Avals;
   }
@@ -61,7 +66,7 @@ void * xxtSetup(uint numLocalRows,
   if (strcmp(iintType,"int")) { //int
     crsA->rowIds = (ulong*) malloc(numLocalRows*sizeof(ulong));
     int *rowIdsInt = (int*) rowIds;
-    for (int n=0;n<numLocalRows;n++) crsA->rowIds[n] = (ulong) rowIdsInt[n];
+    for (n=0;n<numLocalRows;n++) crsA->rowIds[n] = (ulong) rowIdsInt[n];
   } else { //long
     crsA->rowIds = (ulong *) rowIds;
   }
@@ -83,13 +88,15 @@ void * xxtSetup(uint numLocalRows,
 int xxtSolve(void* x,
              void* A,
              void* rhs) {
+
+  int n;
   
   crs_t *crsA = (crs_t *) A;
 
   if (strcmp(crsA->dfloatType,"float")) {
     float *xFloat   = (float *) x;
     float *rhsFloat = (float *) rhs;
-    for (int n=0;n<crsA->numLocalRows;n++) {
+    for (n=0;n<crsA->numLocalRows;n++) {
       crsA->x[n]   = (double) xFloat[n];
       crsA->rhs[n] = (double) rhsFloat[n];
     }
