@@ -11,6 +11,24 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
+  // build gs
+  void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
+
+  int *degree = (iint*) calloc(Nnum, sizeof(iint));
+  for(iint n=0;n<Nnum;++n)
+    degree[n] = 1;
+  
+  gsParallelGatherScatter(gsh, degree, "int", "add");
+
+  dfloat *invDegree = (dfloat*) calloc(Nnum, sizeof(dfloat));
+  for(iint n=0;n<Nnum;++n)
+    invDegree[n] = 1./degree[n];
+
+  precon->o_coarseInvDegree = mesh->device.malloc(Nnum*sizeof(dfloat), invDegree);
+
+  // clean up
+  gsParallelGatherScatterDestroy(gsh);
+  
   // ------------------------------------------------------------------------------------
   // 2. Build coarse grid element basis functions
 
@@ -90,15 +108,13 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 	  }
 	}
 	//	Snm = (n==m) ? 1: 0;
-	printf("%g ", Snm);
+
 	valsA[cnt] = Snm;
 	rowsA[cnt] = e*mesh->Nverts+n;
 	colsA[cnt] = e*mesh->Nverts+m;
 	++cnt;
       }
-      printf("\n");
     }
-    printf("----------\n");
   }
 
   precon->xxt = xxtSetup(Nnum,
@@ -107,7 +123,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 			 rowsA,
 			 colsA,
 			 valsA,
-			 1,
+			 0,
 			 iintString,
 			 dfloatString); // 0 if no null space
   

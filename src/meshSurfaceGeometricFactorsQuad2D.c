@@ -63,9 +63,12 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
       iint baseP = mesh->mapP[baseM];
+      if(baseP<0) baseP = baseM;
+      
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+      
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
