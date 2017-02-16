@@ -25,7 +25,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
     invDegree[n] = 1./degree[n];
 
   precon->o_coarseInvDegree = mesh->device.malloc(Nnum*sizeof(dfloat), invDegree);
-
+  precon->o_ztmp = mesh->device.malloc(Nnum*sizeof(dfloat));
   // clean up
   gsParallelGatherScatterDestroy(gsh);
   
@@ -73,6 +73,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
   
   iint cnt = 0;
+
+  printf("Building coarse matrix system\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
@@ -116,7 +118,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
       }
     }
   }
-
+  printf("Done building coarse matrix system\n");
   precon->xxt = xxtSetup(Nnum,
 			 globalNumbering,
 			 nnz,
