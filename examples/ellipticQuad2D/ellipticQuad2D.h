@@ -35,6 +35,7 @@ typedef struct {
   void *xxt;
 
   occa::memory o_coarseInvDegree;
+  occa::memory o_ztmp;
   
 } precon_t;
 
