@@ -171,6 +171,7 @@ dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
 }
 
 void ellipticPreconditioner2D(mesh2D *mesh,
+			      ogs_t *ogs,
 			      precon_t *precon,
 			      dfloat *sendBuffer,
 			      dfloat *recvBuffer,
@@ -239,7 +240,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      precon->coarsenKernel(mesh->Nelements, o_invDegree, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
@@ -248,7 +249,10 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       precon->o_z1.copyFrom(precon->z1);
       
-      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, o_z);
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+
+      dfloat one = 1.;
+      ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
     }
 #endif
     mesh->device.finish();
@@ -294,7 +298,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
-  //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
+  //z  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -413,7 +417,7 @@ int main(int argc, char **argv){
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_invDegree,
+    ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, o_invDegree,
 			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
     
     // p = z
@@ -470,7 +474,7 @@ int main(int argc, char **argv){
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner2D(mesh, precon, sendBuffer, recvBuffer, o_invDegree,
+      ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, o_invDegree,
 			       o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
