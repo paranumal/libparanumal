@@ -14,20 +14,23 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
 
-  int *degree = (iint*) calloc(Nnum, sizeof(iint));
+  dfloat *degree = (dfloat*) calloc(Nnum, sizeof(dfloat));
   for(iint n=0;n<Nnum;++n)
     degree[n] = 1;
   
-  gsParallelGatherScatter(gsh, degree, "int", "add");
-
+  gsParallelGatherScatter(gsh, degree, dfloatString, "add");
+  
   dfloat *invDegree = (dfloat*) calloc(Nnum, sizeof(dfloat));
   for(iint n=0;n<Nnum;++n)
     invDegree[n] = 1./degree[n];
 
   precon->o_coarseInvDegree = mesh->device.malloc(Nnum*sizeof(dfloat), invDegree);
-  precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+
   // clean up
   gsParallelGatherScatterDestroy(gsh);
+
+  // temporary
+  precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
   
   // ------------------------------------------------------------------------------------
   // 2. Build coarse grid element basis functions
