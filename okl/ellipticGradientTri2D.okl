@@ -1,0 +1,48 @@
+// compute local gradients
+
+kernel void ellipticGradientTri2D(const int Nelements,
+				  const dfloat * restrict vgeo,
+				  const dfloat * restrict const Dr,
+				  const dfloat * restrict const Ds,
+				  const dfloat * restrict q,
+				  dfloat4 * restrict gradq){  
+
+  for(int e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_q[p_Np];
+
+    for(int n=0;n<p_Np;++n;inner0){
+	
+      // prefetch q
+      const iint id = e*p_Np+n;
+      s_q[n] = q[id];
+    }
+    
+    barrier(localMemFence);
+
+    for(int n=0;n<p_Np;++n;inner0){
+	
+      const int gid = e*p_Nvgeo;
+      
+      const dfloat drdx = vgeo[gid + p_RXID];
+      const dfloat drdy = vgeo[gid + p_RYID];
+      const dfloat dsdx = vgeo[gid + p_SXID];
+      const dfloat dsdy = vgeo[gid + p_SYID];
+
+      // compute 1D derivatives
+      dfloat qr = 0, qs = 0;
+      for(int i=0;i<p_Np;++i){
+	qr += Dr[n+i*p_Np]*s_q[i];
+	qs += Ds[n+i*p_Np]*s_q[i];
+      }
+      
+      dfloat4 gradqn;
+      gradqn.x = drdx*qr + dsdx*qs;
+      gradqn.y = drdy*qr + dsdy*qs;
+      gradqn.w = s_q[n];
+      
+      const iint id = e*p_Np+n; 
+      gradq[id] = gradqn;
+    }
+  }
+}

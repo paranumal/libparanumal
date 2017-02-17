@@ -372,6 +372,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_RYID", RYID);
   kernelInfo.addDefine("p_SYID", SYID);
 
+  kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
 
