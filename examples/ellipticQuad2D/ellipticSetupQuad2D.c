@@ -11,71 +11,14 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
-  // fix this later (initial conditions)
-  iint cnt = 0;
-  dfloat time = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat x = mesh->x[n + mesh->Np*e];
-      dfloat y = mesh->y[n + mesh->Np*e];
-      
-      cnt += mesh->Nfields;
-    }
-  }
-
-  // set penalty parameter
-  mesh->Lambda2 = 0.5;
-
-  printf("Nelements = %d, Nfaces = %d\n", mesh->Nelements, mesh->Nfaces);
-  
-  // set time step
-  dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
-
-    for(iint n=0;n<mesh->Nfaces*mesh->Nfp;++n){
-      iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e +  n);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
-
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-      
-      dfloat hest = .5/(sJ*invJ);
-      
-      hmin = mymin(hmin, hest);
-    }
-  }
-
-  printf("hmin = %g\n", hmin);
-  
-  dfloat cfl = 1; // depends on the stability region size
-
-  dfloat dt = cfl*hmin/((mesh->N+1)*(mesh->N+1)*mesh->Lambda2);
-
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-  //
-  mesh->finalTime = .4;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  mesh->dt = mesh->finalTime/mesh->NtimeSteps;
-
-  // errorStep
-  mesh->errorStep = 100;
-
-  printf("dt = %g\n", mesh->dt);
-
-  // output mesh
-  meshVTU2D(mesh, "foo.vtu");
-
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 
   occa::kernelInfo kernelInfo;
@@ -83,7 +26,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
   
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -183,16 +125,16 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       kernelInfo);
 
   (*precon)->coarsenKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsenQuad2D.okl",
-				       "ellipticPreconCoarsenQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsen.okl",
+				       "ellipticPreconCoarsen",
 				       kernelInfo);
 
   (*precon)->prolongateKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongateQuad2D.okl",
-				       "ellipticPreconProlongateQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongate.okl",
+				       "ellipticPreconProlongate",
 				       kernelInfo);
 
-  
+
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -219,7 +161,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
       printf("min degree = " dfloatFormat "\n", gatherMinDegree);
     }
   }
-
+  
   // build weights for continuous SEM L2 project --->
   iint Ntotal = mesh->Nelements*mesh->Np;
   dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -242,6 +184,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
-  
+
   
 }
