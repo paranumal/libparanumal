@@ -1,4 +1,49 @@
+#define B 256
 
+kernel void weightedInnerProduct2(const iint N,
+				  const dfloat * restrict w,
+				  const dfloat * restrict x,
+				  const dfloat * restrict y,
+				  dfloat * restrict wxy){
+  
+
+  for(iint b=0;b<(N+B-1)/B;++b;outer0){
+    
+    volatile shared dfloat s_wxy[B];
+
+    for(iint t=0;t<B;++t;inner0){
+      const iint id = t + B*b;
+      s_wxy[t] = (id<N) ? w[id]*x[id]*y[id] : 0.f;
+    }
+
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t<128) s_wxy[t] += s_wxy[t+128];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t< 64) s_wxy[t] += s_wxy[t+64];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t< 32) s_wxy[t] += s_wxy[t+32];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t< 16) s_wxy[t] += s_wxy[t+16];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t<  8) s_wxy[t] += s_wxy[t+8];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t<  4) s_wxy[t] += s_wxy[t+4];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t<  2) s_wxy[t] += s_wxy[t+2];
+    barrier(localMemFence);
+
+    for(iint t=0;t<B;++t;inner0) if(t<  1) wxy[b] = s_wxy[0] + s_wxy[1];
+  }
+}
+
+#if 0
 // barrier avoiding (partial) reduction
 kernel void weightedInnerProduct2(const iint N,
 				  const dfloat * restrict w,
@@ -24,7 +69,15 @@ kernel void weightedInnerProduct2(const iint N,
 	const dfloat ygs = (n<N) ? y[n]:0.f;
 
 	s_a[g][s] = wgs*xgs*ygs;
-	
+      }
+    }
+    
+    barrier(localMemFence);
+
+    for(int g=0;g<G;++g;inner1){
+      for(int s=0;s<S;++s;inner0){
+	const iint n = b*G*S + g*S + s;
+
         if(s<16) s_a[g][s] += s_a[g][s + 16];
         if(s< 8) s_a[g][s] += s_a[g][s +  8];
         if(s< 4) s_a[g][s] += s_a[g][s +  4];
@@ -38,11 +91,21 @@ kernel void weightedInnerProduct2(const iint N,
     for(int g=0;g<G;++g;inner1){
       for(int s=0;s<S;++s;inner0){
         if(g==0){
-          if(s< 4) s_b[s] += s_b[s +  4];
-          if(s< 2) s_b[s] += s_b[s +  2];
-          if(s==0) wxy[b] = s_b[0] + s_b[1];
+          if(s< 4) s_b[s] += s_b[s + 4];
+          if(s< 2) s_b[s] += s_b[s + 2];
+          if(s==0) s_b[s] += s_b[s + 1];
         }
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int g=0;g<G;++g;inner1){
+      for(int s=0;s<S;++s;inner0){
+        if(g==0 && s==0)
+	  wxy[b] = s_b[0];
       }
     }
   }
 }
+#endif
