@@ -298,7 +298,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
-  //z  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID"); 
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);

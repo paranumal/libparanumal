@@ -25,7 +25,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
     invDegree[n] = 1./degree[n];
 
   precon->o_coarseInvDegree = mesh->device.malloc(Nnum*sizeof(dfloat), invDegree);
-  precon->o_ztmp = mesh->device.malloc(Nnum*sizeof(dfloat));
+  precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
   // clean up
   gsParallelGatherScatterDestroy(gsh);
   
