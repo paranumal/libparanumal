@@ -6,11 +6,12 @@
 void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 4;
-  mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfaces, 
+  mesh->Nsgeo = 6;
+  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     int id = e*mesh->Nverts;
@@ -60,4 +61,30 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     mesh->sgeo[base+SJID] = d3/2.;
     mesh->sgeo[base+IJID] = 1./J;
   }
+
+  
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint baseM = e*mesh->Nfaces + f;
+
+      // awkward:
+      iint idP = mesh->mapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
+      iint eP = (idP>=0) ? idP/(mesh->Nfp*mesh->Nfaces):e;
+
+      iint fP = mesh->EToF[baseM];
+      fP = (fP==-1)?f:fP;
+
+      iint baseP = eP*mesh->Nfaces + fP;
+      
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+      dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+      dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+      
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      printf("e=%d f=%d (eP=%d,fP=%d) hinvM=%g, hinvP=%g\n",
+	     e,f,eP,fP,hinvM,hinvP);
+    }
+  }
+
 }

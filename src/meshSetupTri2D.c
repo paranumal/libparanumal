@@ -26,15 +26,18 @@ mesh2D *meshSetupTri2D(char *filename, int N){
   // compute geometric factors
   meshGeometricFactorsTri2D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTri2D(mesh);
-
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
-  
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTri2D(mesh);
+
+  // global nodes
+  //  meshParallelConnectNodes(mesh);
+  
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
 

@@ -199,7 +199,7 @@ typedef struct {
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
 
-  occa::memory o_Dr, o_Ds, o_Dt, o_LIFT;
+  occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
 
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)

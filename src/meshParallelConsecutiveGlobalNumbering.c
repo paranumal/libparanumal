@@ -104,7 +104,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering){
 		MPI_COMM_WORLD);
 
   // sort by global index
-  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareGlobalIndices);
+  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), compareOwner);
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
   iint cnt = 0;
