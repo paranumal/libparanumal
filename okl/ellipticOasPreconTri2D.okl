@@ -38,7 +38,7 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
   
   for(iint e=0; e<Nelements; ++e; outer0){
 
-    shared dfloat s_q1[p_Np];
+    shared dfloat s_q1[p_NpP];
     shared dfloat s_q2[p_NpP];
     
     for(iint n=0;n<p_NpP;++n;inner0){
@@ -46,24 +46,24 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
       if(n<p_Np)
 	s_q1[n] = q[n+e*p_Np];
 
-      iint i =n;
       // load overlap
-      while(i<p_Nfp*p_Nfaces){
-	const iint id = vmapPP[i+e*p_Nfaces*p_Nfp];
-	s_q1[p_Np+i] = q[id];
-	i += p_NpP;
+      if(n>=p_Np){
+	const iint id = vmapPP[n-p_Np+e*p_Nfaces*p_Nfp];
+	s_q1[n] = q[id];
       }
     }
     
     barrier(localMemFence);
+
     // forward transform and scaling
     for(iint n=0;n<p_NpP;++n;inner0){
       dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
       
       dfloat res = 0;
       for(iint i=0;i<p_NpP;++i){
-	res += forward[n+i*p_NpP]*s_q1[i];
+	res += forward[i+n*p_NpP]*s_q1[i];
       }
+
       s_q2[n] = res*r_diagInvOp;
     }
 
@@ -72,11 +72,10 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
     // backward transform
     for(iint n=0;n<p_NpP;++n;inner0){
       dfloat res = 0;
-      // transform to eigenvectors of approx lapaclian
       for(iint i=0;i<p_NpP;++i){
-	res += back[n+i*p_NpP]*s_q2[i];
+	res += back[i+n*p_NpP]*s_q2[i];
       }
-      Pq[n+e*p_Np] = res;
+      Pq[n+e*p_NpP] = res;
     }
   } 
 }

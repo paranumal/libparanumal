@@ -2,8 +2,8 @@
 
 kernel void ellipticGradientTri2D(const int Nelements,
 				  const dfloat * restrict vgeo,
-				  const dfloat * restrict const Dr,
-				  const dfloat * restrict const Ds,
+				  const dfloat * restrict const DrT,
+				  const dfloat * restrict const DsT,
 				  const dfloat * restrict q,
 				  dfloat4 * restrict gradq){  
 
@@ -32,8 +32,8 @@ kernel void ellipticGradientTri2D(const int Nelements,
       // compute 1D derivatives
       dfloat qr = 0, qs = 0;
       for(int i=0;i<p_Np;++i){
-	qr += Dr[n+i*p_Np]*s_q[i];
-	qs += Ds[n+i*p_Np]*s_q[i];
+	qr += DrT[n+i*p_Np]*s_q[i];
+	qs += DsT[n+i*p_Np]*s_q[i];
       }
       
       dfloat4 gradqn;

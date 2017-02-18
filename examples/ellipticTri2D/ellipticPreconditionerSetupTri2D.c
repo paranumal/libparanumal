@@ -33,10 +33,6 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
   // build gather-scatter
   iint NpP = mesh->Np + mesh->Nfaces*mesh->Nfp;
 
-  iint *faceNodesPrecon = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
-  for(iint i=0;i<mesh->Nfaces*mesh->Nfp;++i) faceNodesPrecon[i] = mesh->Np+i;
-  
-  // -------------------------------------------------------------------------------------------
   // build gather-scatter for overlapping patches
   iint *allNelements = (iint*) calloc(size, sizeof(iint));
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
@@ -170,7 +166,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     
     dfloat Jhrinv2 = J*(rx*rx+ry*ry);
     dfloat Jhsinv2 = J*(sx*sx+sy*sy);
-    dfloat Jhinv2 = mymax(Jhrinv2,Jhsinv2);
+    dfloat Jhinv2 = Jhrinv2 + Jhsinv2; mymin(Jhrinv2,Jhsinv2);
     
     for(iint n=0;n<NpP;++n){
       iint pid = n + e*NpP;
@@ -180,8 +176,8 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     }
   }
   
-  precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
-  precon->o_oasDiagInvOpDg = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
+  precon->o_oasDiagInvOpDg =
+    mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
   if(Nhalo){
     dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
