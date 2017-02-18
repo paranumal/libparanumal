@@ -28,8 +28,7 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
     shared dfloat s_nydq[p_NfacesNfp];
     shared dfloat s_lapflux[p_NfacesNfp];
 
-    exclusive dfloat dq, nx, ny, sJ, invJ, hinv;
-    exclusive dfloat4 gradqM, gradqP;
+    exclusive dfloat nx, ny, sJ, invJ, hinv;
     
     for(int n=0;n<p_Nmax;++n;inner0){
 
@@ -49,8 +48,8 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	// find face that owns this node
 	iint face = n/p_Nfp;
 
-	gradqM = gradq[idM];// could fetch from shared after barrier
-	gradqP = gradq[idP];					
+	dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
+	dfloat4 gradqP = gradq[idP];					
 	
 	// load surface geofactors for this face
 	iint sid = p_Nsgeo*(e*p_Nfaces+face);
@@ -65,8 +64,8 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	gradqP.x *= sc;
 	gradqP.y *= sc;
 	
-	dq = gradqP.w - gradqM.w;					
-
+	const dfloat dq = gradqP.w - gradqM.w;
+	
 	s_nxdq[n] = 0.5f*sJ*invJ*nx*dq;
 	s_nydq[n] = 0.5f*sJ*invJ*ny*dq;
 
