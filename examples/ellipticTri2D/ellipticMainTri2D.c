@@ -99,7 +99,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
 		       o_gradq);
   
   // TW NOTE WAS 2 !
-  dfloat tau = 20.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
+  dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
   mesh->ipdgKernel(mesh->Nelements,
 		   mesh->o_vmapM,
 		   mesh->o_vmapP,
@@ -182,7 +182,8 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			      const char *options){
 
   if(strstr(options, "OAS")){
-
+    printf("OAS precon\n");
+    
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
@@ -239,7 +240,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     occa::toc("restrictKernel");   
   }
   else if(strstr(options, "JACOBI")){
-
+    printf("JACOBI precon\n");
     occa::tic("dotDivideKernel");   
     mesh->device.finish();
     
@@ -250,8 +251,10 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     occa::toc("dotDivideKernel");   
     mesh->device.finish();
   }
-  else // turn off preconditioner
+  else{ // turn off preconditioner
+    printf("NO precon\n");
     o_z.copyFrom(o_r);
+  }
   
 }
 
@@ -277,8 +280,9 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
-  char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
   mesh2D *meshSetupTri2D(char *, iint);
@@ -289,7 +293,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 10;
   
   // set up
   ellipticSetupTri2D(mesh, &ogs, &precon, lambda);
@@ -327,12 +331,15 @@ int main(int argc, char **argv){
 
   // load rhs into r
   dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
+
+#if 1
     for(iint n=0;n<mesh->cubNp;++n){
       dfloat cx = 0, cy = 0;
       for(iint m=0;m<mesh->Np;++m){
-	cx += mesh->cubInterp[m+n*mesh->Np]*mesh->x[m];
-	cy += mesh->cubInterp[m+n*mesh->Np]*mesh->y[m];
+	cx += mesh->cubInterp[m+n*mesh->Np]*mesh->x[m+e*mesh->Np];
+	cy += mesh->cubInterp[m+n*mesh->Np]*mesh->y[m+e*mesh->Np];
       }
       dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
       dfloat w = mesh->cubw[n];
@@ -348,8 +355,30 @@ int main(int argc, char **argv){
       r[id] = -rhs;
       x[id] = 0; // initial guess
     }
+#else
+    dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat xn = mesh->x[n+e*mesh->Np];
+      dfloat yn = mesh->y[n+e*mesh->Np];
+      nrhs[n] = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
+    }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat rhs = 0;
+      for(iint m=0;m<mesh->Np;++m){
+	rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+      }
+      iint id = n+e*mesh->Np;
+      
+      r[id] = rhs*J;
+      x[id] = 0;
+      mesh->q[id] = nrhs[n];
+    }
+#endif
   }
+  free(nrhs);
   free(cf);
+
+  meshPlotVTU2D(mesh, "foo1", 0);
   
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -499,7 +528,7 @@ int main(int argc, char **argv){
       
       maxError = mymax(maxError, error);
 
-      mesh->q[id] -= exact;
+      //      mesh->q[id] -= exact;
     }
   }
 
