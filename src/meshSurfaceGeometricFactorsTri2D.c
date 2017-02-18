@@ -8,7 +8,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
   /* unified storage array for geometric factors */
   mesh->Nsgeo = 6;
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
-				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
+				mesh->Nsgeo*mesh->Nfaces, 
 				sizeof(dfloat));
   
   for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
@@ -67,7 +67,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint baseM = e*mesh->Nfaces + f;
 
-      // awkward:
+      // awkward: (need to find eP,fP relative to bulk+halo)
       iint idP = mesh->mapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
       iint eP = (idP>=0) ? idP/(mesh->Nfp*mesh->Nfaces):e;
 
@@ -82,8 +82,15 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
       
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-      printf("e=%d f=%d (eP=%d,fP=%d) hinvM=%g, hinvP=%g\n",
-	     e,f,eP,fP,hinvM,hinvP);
+#if 0
+      printf("e=%d f=%d (eP=%d,fP=%d) nx=%5.4f, ny=%5.4f, sJ=%5.4f, invJ=%5.4f, hinv=%f\n"
+	     ,e,f,eP,fP,
+	     mesh->sgeo[baseM*mesh->Nsgeo+NXID],
+	     mesh->sgeo[baseM*mesh->Nsgeo+NYID],
+	     mesh->sgeo[baseM*mesh->Nsgeo+SJID],
+	     mesh->sgeo[baseM*mesh->Nsgeo+IJID],
+	     mesh->sgeo[baseM*mesh->Nsgeo+IHID]);
+#endif
     }
   }
 
