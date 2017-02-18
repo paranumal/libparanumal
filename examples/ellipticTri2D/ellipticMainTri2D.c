@@ -89,11 +89,17 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
   ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
   
   // need start/end elements then can split into two parts
+  // NEED TO FIX ?
   iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
-  mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
+  mesh->gradientKernel(allNelements,
+		       mesh->o_vgeo,
+		       mesh->o_DrT,
+		       mesh->o_DsT,
+		       o_q,
+		       o_gradq);
   
   // TW NOTE WAS 2 !
-  dfloat tau = 2.f*mesh->Nq*mesh->Nq; // 1/h factor built into kernel 
+  dfloat tau = 20.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
   mesh->ipdgKernel(mesh->Nelements,
 		   mesh->o_vmapM,
 		   mesh->o_vmapP,
@@ -101,7 +107,10 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
 		   tau,
 		   mesh->o_vgeo,
 		   mesh->o_sgeo,
-		   mesh->o_D,
+		   mesh->o_DrT,
+		   mesh->o_DsT,
+		   mesh->o_LIFTT,
+		   mesh->o_MM,
 		   o_gradq,
 		   o_Aq);
 
@@ -185,14 +194,13 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
     precon->preconKernel(mesh->Nelements,
 			 mesh->o_vmapP,
-			 precon->o_faceNodesP,
 			 precon->o_oasForwardDg,
 			 precon->o_oasDiagInvOpDg,
 			 precon->o_oasBackDg,
 			 o_r,
 			 o_zP);
     
-    iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+    iint NtotalP = mesh->NpP*mesh->Nelements;
     diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
     
     // OAS => additive Schwarz => sum up patch solutions
@@ -269,7 +277,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
   mesh2D *meshSetupTri2D(char *, iint);
@@ -286,7 +295,7 @@ int main(int argc, char **argv){
   ellipticSetupTri2D(mesh, &ogs, &precon, lambda);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+  iint NtotalP = mesh->NpP*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
@@ -298,17 +307,8 @@ int main(int argc, char **argv){
 
   occa::memory o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
   
-  ellipticComputeDegreeVector(mesh, Ntotal, ogs, degree);
-
-  if(strstr(options, "CONTINUOUS")){
-    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-      if(degree[n] == 0) printf("WARNING!!!!\n");
-      invDegree[n] = 1./degree[n];
-    }
-  }
-  else
-    for(iint n=0;n<Ntotal;++n)
-      invDegree[n] = 1.;
+  for(iint n=0;n<Ntotal;++n)
+    invDegree[n] = 1.;
   
   o_invDegree.copyFrom(invDegree);
   
@@ -326,24 +326,31 @@ int main(int argc, char **argv){
   const dfloat tol = 1e-6;
 
   // load rhs into r
+  dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-
-      iint ggid = e*mesh->Np*mesh->Nggeo + n;
-      dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
-
-      iint   id = e*mesh->Np+n;
-      dfloat xn = mesh->x[id];
-      dfloat yn = mesh->y[id];
-
-      dfloat f = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
+    for(iint n=0;n<mesh->cubNp;++n){
+      dfloat cx = 0, cy = 0;
+      for(iint m=0;m<mesh->Np;++m){
+	cx += mesh->cubInterp[m+n*mesh->Np]*mesh->x[m];
+	cy += mesh->cubInterp[m+n*mesh->Np]*mesh->y[m];
+      }
+      dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
+      dfloat w = mesh->cubw[n];
       
-      r[id] = -wJ*f;
-
+      cf[n] = -J*w*(2*M_PI*M_PI+lambda)*cos(M_PI*cx)*cos(M_PI*cy);
+    }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat rhs = 0;
+      for(iint m=0;m<mesh->cubNp;++m){
+	rhs += mesh->cubInterp[n+m*mesh->Np]*cf[m];
+      }
+      iint id = n+e*mesh->Np;
+      r[id] = -rhs;
       x[id] = 0; // initial guess
     }
   }
-
+  free(cf);
+  
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
   

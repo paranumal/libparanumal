@@ -113,16 +113,16 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 				       kernelInfo);
 
   (*precon)->coarsenKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsenTri2D.okl",
-				       "ellipticPreconCoarsenTri2D",
+    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsen.okl",
+				       "ellipticPreconCoarsen",
 				       kernelInfo);
 
   (*precon)->prolongateKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongateTri2D.okl",
-				       "ellipticPreconProlongateTri2D",
+    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongate.okl",
+				       "ellipticPreconProlongate",
 				       kernelInfo);
 
-  
+#if 0
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -172,5 +172,5 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
-  
+#endif  
 }

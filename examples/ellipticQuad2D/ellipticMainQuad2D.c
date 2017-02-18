@@ -218,7 +218,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
-      iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+      iint NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
       diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
       
       // OAS => additive Schwarz => sum up patch solutions
@@ -315,7 +315,7 @@ int main(int argc, char **argv){
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+  iint NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
   iint Nblock = (Ntotal+B-1)/B;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
