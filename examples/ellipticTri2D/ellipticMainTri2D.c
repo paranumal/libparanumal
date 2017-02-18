@@ -293,7 +293,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 10;
+  dfloat lambda = 1;
   
   // set up
   ellipticSetupTri2D(mesh, &ogs, &precon, lambda);
