@@ -12,7 +12,7 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     iint id = e*mesh->Nverts;

@@ -303,7 +303,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->oasDiagOpDg = (dfloat*) calloc(mesh->NpP, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
+  for(int n=0;n<mesh->NpP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
   }
   fgets(buf, BUFSIZ, fp); // read comment

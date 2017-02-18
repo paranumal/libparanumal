@@ -30,7 +30,6 @@
 
 kernel void ellipticOasPreconTri2D(const iint Nelements,
 				   const iint   * restrict vmapPP,
-				   const iint   * restrict faceNodesP,
 				   const dfloat * restrict forward,
 				   const dfloat * restrict diagInvOp,
 				   const dfloat * restrict back,
@@ -75,7 +74,7 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
       dfloat res = 0;
       // transform to eigenvectors of approx lapaclian
       for(iint i=0;i<p_NpP;++i){
-	res += backward[n+i*p_NpP]*s_q2[i];
+	res += back[n+i*p_NpP]*s_q2[i];
       }
       Pq[n+e*p_Np] = res;
     }
