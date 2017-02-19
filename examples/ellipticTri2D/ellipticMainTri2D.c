@@ -194,9 +194,9 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
     precon->preconKernel(mesh->Nelements,
 			 mesh->o_vmapP,
-			 precon->o_oasForwardDg,
+			 precon->o_oasForwardDgT,
 			 precon->o_oasDiagInvOpDg,
-			 precon->o_oasBackDg,
+			 precon->o_oasBackDgT,
 			 o_r,
 			 o_zP);
     
@@ -291,7 +291,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 10;
   
   // set up
   ellipticSetupTri2D(mesh, &ogs, &precon, lambda);

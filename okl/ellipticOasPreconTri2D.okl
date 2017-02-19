@@ -28,13 +28,13 @@
 #endif
 
 
-kernel void ellipticOasPreconTri2D(const iint Nelements,
-				   const iint   * restrict vmapPP,
-				   const dfloat * restrict forward,
-				   const dfloat * restrict diagInvOp,
-				   const dfloat * restrict back,
-				   const dfloat * restrict q,
-				   dfloat * restrict Pq){
+kernel void ellipticOasPreconTri2_v0D(const iint Nelements,
+				      const iint   * restrict vmapPP,
+				      const dfloat * restrict forwardT,
+				      const dfloat * restrict diagInvOp,
+				      const dfloat * restrict backT,
+				      const dfloat * restrict q,
+				      dfloat * restrict Pq){
   
   for(iint e=0; e<Nelements; ++e; outer0){
 
@@ -61,7 +61,7 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
       
       dfloat res = 0;
       for(iint i=0;i<p_NpP;++i){
-	res += forward[i+n*p_NpP]*s_q1[i];
+	res += forwardT[n+i*p_NpP]*s_q1[i];
       }
 
       s_q2[n] = res*r_diagInvOp;
@@ -73,9 +73,160 @@ kernel void ellipticOasPreconTri2D(const iint Nelements,
     for(iint n=0;n<p_NpP;++n;inner0){
       dfloat res = 0;
       for(iint i=0;i<p_NpP;++i){
-	res += back[i+n*p_NpP]*s_q2[i];
+	res += backT[n+i*p_NpP]*s_q2[i];
       }
       Pq[n+e*p_NpP] = res;
+    }
+  } 
+}
+
+kernel void ellipticOasPreconTri2D_v1(const iint Nelements,
+				      const iint   * restrict vmapPP,
+				      const dfloat * restrict forwardT,
+				      const dfloat * restrict diagInvOp,
+				      const dfloat * restrict backT,
+				      const dfloat * restrict q,
+				      dfloat * restrict Pq){
+  
+  for(iint eo=0; eo<Nelements; eo+=p_NblockV; outer0){
+
+    shared dfloat s_q1[p_NblockV][p_NpP];
+    shared dfloat s_q2[p_NblockV][p_NpP];
+
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	if(e<Nelements){
+	  // load element
+	  if(n<p_Np)
+	    s_q1[e-eo][n] = q[e*p_Np+n];
+	  
+	  // load overlap
+	  if(n>=p_Np){
+	    const iint id = vmapPP[n-p_Np+e*p_Nfaces*p_Nfp];
+	    s_q1[e-eo][n] = q[id];
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // forward transform and scaling
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	if(e<Nelements){
+	  dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
+	  
+	  dfloat res = 0;
+	  for(iint i=0;i<p_NpP;++i){
+	    res += forwardT[n+i*p_NpP]*s_q1[e-eo][i];
+	  }
+	  
+	  s_q2[e-eo][n] = res*r_diagInvOp;
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // backward transform
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	if(e<Nelements){
+	  dfloat res = 0;
+	  for(iint i=0;i<p_NpP;++i){
+	    res += backT[n+i*p_NpP]*s_q2[e-eo][i];
+	  }
+	  Pq[n+e*p_NpP] = res;
+	}
+      }
+    }
+  } 
+}
+
+  
+kernel void ellipticOasPreconTri2D(const iint Nelements,
+				   const iint   * restrict vmapPP,
+				   const dfloat * restrict forwardT,
+				   const dfloat * restrict diagInvOp,
+				   const dfloat * restrict backT,
+				   const dfloat * restrict q,
+				   dfloat * restrict Pq){
+  
+  for(iint eo=0; eo<Nelements; eo+=p_NblockV; outer0){
+
+    shared dfloat s_q1[p_NblockV][p_Np];
+    shared dfloat s_q1halo[p_NblockV][p_NfacesNfp];
+    shared dfloat s_q2[p_NblockV][p_NpP];
+
+    shared dfloat s_forwardT[p_NpP][p_NpP];
+    shared dfloat s_backT[p_NpP][p_NpP];
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	iint e = eo + es;
+	iint t = es*p_NpP + n;
+	
+	if(t<p_NblockV*p_Np)
+	  if(t+eo*p_Np<p_Np*Nelements){
+	    s_q1[0][t] = q[eo*p_Np + t];
+	  }
+	
+	if(t<p_NblockV*p_NfacesNfp)
+	  if(t+eo*p_Nfp*p_Nfaces<p_Nfp*p_Nfaces*Nelements){
+	    iint idP = vmapPP[eo*p_Nfp*p_Nfaces + t];
+	    s_q1halo[0][t] = q[idP];
+	  }
+
+	while(t<p_NpP*p_NpP){
+	  s_forwardT[0][t] = forwardT[t];
+	  s_backT[0][t] = backT[t];
+	  t+=p_NblockV*p_NpP;
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // forward transform and scaling
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	const iint e = eo + es;
+	if(e<Nelements){
+	  dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
+	  
+	  dfloat res = 0;
+	  occaUnroll(p_Np)
+	    for(iint i=0;i<p_Np;++i){
+	      res += s_forwardT[i][n]*s_q1[es][i];
+	    }
+	  
+	  occaUnroll(p_NfacesNfp)
+	    for(iint i=0;i<p_NfacesNfp;++i){
+	      res += s_forwardT[i+p_Np][n]*s_q1halo[es][i];
+	    }
+	  
+	  s_q2[es][n] = res*r_diagInvOp;
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    // backward transform
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_NpP;++n;inner0){
+	const iint e = eo + es;
+	if(e<Nelements){
+	  dfloat res = 0;
+	  occaUnroll(p_NpP)
+	    for(iint i=0;i<p_NpP;++i){
+	      res += s_backT[i][n]*s_q2[es][i];
+	    }
+	  
+	  Pq[n+e*p_NpP] = res;
+	}
+      }
     }
   } 
 }

@@ -143,8 +143,20 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
   
   // -------------------------------------------------------------------------------------------
   // load prebuilt transform matrices
-  precon->o_oasForwardDg = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->oasForwardDg); // make sure load correct F/B
+  precon->o_oasForwardDg = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->oasForwardDg);
   precon->o_oasBackDg    = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->oasBackDg);
+
+  dfloat *oasForwardDgT = (dfloat*) calloc(NpP*NpP, sizeof(dfloat));
+  dfloat *oasBackDgT = (dfloat*) calloc(NpP*NpP, sizeof(dfloat));
+  for(iint n=0;n<NpP;++n){
+    for(iint m=0;m<NpP;++m){
+      oasForwardDgT[n+m*NpP] = mesh->oasForwardDg[m+n*NpP];
+      oasBackDgT[n+m*NpP] = mesh->oasBackDg[m+n*NpP];
+    }
+  }
+
+  precon->o_oasForwardDgT = mesh->device.malloc(NpP*NpP*sizeof(dfloat), oasForwardDgT);
+  precon->o_oasBackDgT    = mesh->device.malloc(NpP*NpP*sizeof(dfloat), oasBackDgT);
 
   
   /// ---------------------------------------------------------------------------

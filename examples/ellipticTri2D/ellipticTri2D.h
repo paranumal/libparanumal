@@ -18,6 +18,9 @@ typedef struct {
   occa::memory o_oasBackDg;
   occa::memory o_oasDiagInvOpDg;
 
+  occa::memory o_oasForwardDgT;
+  occa::memory o_oasBackDgT;
+  
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
 

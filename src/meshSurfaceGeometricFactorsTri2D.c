@@ -68,8 +68,8 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
       iint baseM = e*mesh->Nfaces + f;
 
       // awkward: (need to find eP,fP relative to bulk+halo)
-      iint idP = mesh->mapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
-      iint eP = (idP>=0) ? idP/(mesh->Nfp*mesh->Nfaces):e;
+      iint idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
+      iint eP = (idP>=0) ? (idP/mesh->Np):e;
 
       iint fP = mesh->EToF[baseM];
       fP = (fP==-1)?f:fP;

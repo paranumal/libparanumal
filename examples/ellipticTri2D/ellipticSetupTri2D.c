@@ -31,6 +31,9 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax); 
+
+  int NblockV = 256/mesh->Np; // get close to 256 threads
+  kernelInfo.addDefine("p_NblockV", NblockV);
   
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
