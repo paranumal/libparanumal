@@ -114,26 +114,32 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	iint id = idM%p_Np;
 	s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
-    }
-    
-    barrier(localMemFence);
-
-    for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-	dfloat lapr = 0, laps = 0, lap = 0;
+	dfloat lapr = 0, laps = 0;
 
 	for(int i=0;i<p_Np;++i){
 	  lapr += DrT[n+i*p_Np]*s_dqdx[i];
 	  laps += DsT[n+i*p_Np]*s_dqdy[i];
 	}
 
-	// lift surface terms
+	s_lapq[n] -= lapr+laps;
+      }
+      
+    }
+    
+    barrier(localMemFence);
+
+    for(int n=0;n<p_Nmax;++n;inner0){
+      if(n<p_Np){
+	dfloat lap = 0;
+	
+	// lift remaining surface terms
 	for(int i=0;i<p_NfacesNfp;++i){
 	  lap += LIFTT[n+i*p_Np]*s_lapflux[i];
 	}
-
-	s_lapq[n] += lap-lapr-laps;
+	
+	s_lapq[n] += lap;
       }
     }
 
@@ -145,7 +151,8 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 	
 	dfloat Mlapq = 0;
-	// multiply by mass matrix
+
+	// multiply by mass matrix 
 	for(int i=0;i<p_Np;++i){
 	  Mlapq += MM[n+i*p_Np]*s_lapq[i];
 	}
