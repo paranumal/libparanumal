@@ -8,12 +8,12 @@ mesh2D *meshSetupTri2D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition2D(mesh);
 
-  // print out connectivity statistics
-  meshPartitionStatistics(mesh);
-
   // connect elements using parallel sort
   meshParallelConnect(mesh);
 
+  // print out connectivity statistics
+  meshPartitionStatistics(mesh);
+  
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
   
