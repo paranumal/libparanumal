@@ -182,7 +182,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			      const char *options){
 
   if(strstr(options, "OAS")){
-    printf("OAS precon\n");
     
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
@@ -240,7 +239,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     occa::toc("restrictKernel");   
   }
   else if(strstr(options, "JACOBI")){
-    printf("JACOBI precon\n");
+
     occa::tic("dotDivideKernel");   
     mesh->device.finish();
     
@@ -252,7 +251,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     mesh->device.finish();
   }
   else{ // turn off preconditioner
-    printf("NO precon\n");
     o_z.copyFrom(o_r);
   }
   
