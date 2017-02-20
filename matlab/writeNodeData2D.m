@@ -1,6 +1,7 @@
 
-function writeNodeData2D(N)
-
+function writeNodeData2D(inN)
+Globals2D;
+N = inN;
 [r,s] = Nodes2D(N);
 [r,s] = xytors(r,s);
 
@@ -44,6 +45,15 @@ fprintf(fid, '%% s collocation differentation matrix\n');
 for n=1:Np
     for m=1:Np
         fprintf(fid, '%17.15E ', Ds(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+MM = inv(transpose(V))/V;
+fprintf(fid, '%% reference mass matrix\n');
+for n=1:Np
+    for m=1:Np
+        fprintf(fid, '%17.15E ', MM(n,m));
     end
     fprintf(fid, '\n');
 end
@@ -121,9 +131,9 @@ Ncub = length(cubr)
 fprintf(fid, '%% number of volume cubature nodes\n');
 fprintf(fid, '%d\n', length(cubr));
 
-fprintf(fid, '%% cubature node coordinates\n');
+fprintf(fid, '%% cubature node coordinates and weights\n');
 for n=1:Ncub
-    fprintf(fid, '%17.15E %17.15E\n', cubr(n), cubs(n));
+	fprintf(fid, '%17.15E %17.15E %17.15E\n', cubr(n), cubs(n), cubw(n));
 end
 
 fprintf(fid, '%% cubature interpolation matrix\n');
@@ -471,6 +481,88 @@ for n=1:Np
     fprintf(fid, '\n');
 end
 
-%%
+%% elliptic patch problem
+K = 4;
+
+%VX = [-1,+1,-1,-1,+1,-3];
+%VY = [-1,-1,+1,-3,+1,-1];
+
+VX = [-1,1,0,0,2,-2];
+VY = [0,0,sqrt(3),-sqrt(3),sqrt(3),sqrt(3)];
+
+EToV = [1,2,3;
+	2,1,4;
+	3,2,5;
+	1,3,6];
+
+BCType = [0,0,0;
+	  0,0,0;
+	  0,0,0;
+	  0,0,0];
+
+StartUp2D;
+
+
+% choose order to integrate exactly
+Nint = ceil(2*N/2);
+
+% build cubature nodes for all elements
+CubatureOrder = 2*(Nint+1); 
+cub = CubatureVolumeMesh2D(CubatureOrder);
+  
+% build Gauss node data for all element faces
+NGauss = (Nint+1); 
+gauss = GaussFaceMesh2D(NGauss);
+  
+% build weak Poisson operator matrices
+[A, M] = CurvedPoissonIPDG2D();
+
+%% hack since we know W&B face 1 nodes are first
+vmapP = reshape(vmapP, Nfp*Nfaces, K);
+idsP = vmapP(:,1)
+subind = [(1:Np)';idsP];
+
+subA = full(A(subind,subind))
+subM = full(M(subind,subind));
+
+spy(abs(subA)>1e-10);
+condSubA = cond(subA);
+
+[B,d] = eig(subA, subM)
+
+%% A = S + lambda*M 
+%%   = M*(M\S + lambda*I) 
+%%   ~ J*Mhat*(Mhat\Shat/hscale2 + lambda*I) 
+%%   ~ J*Mhat*Bhat*(d/scale + lambda*I)/Bhat
+%% inv(A) ~ Bhat*inv(J*(d/scale+lambda*I))*inv(Mhat*Bhat)
+
+forwardMatrix = inv(subM*B);
+diagOp = diag(d);
+backwardMatrix = B;
+
+NpP = size(subA,1);
+fprintf(fid, '%% stencil size for IPDG OAS NpP\n');
+fprintf(fid, '%d\n', NpP);
+fprintf(fid, '%% forward matrix [ change of basis for IPDG OAS precon ]\n');
+for n=1:NpP
+  for m=1:NpP
+	fprintf(fid, '%17.15E ', forwardMatrix(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% diagOp \n');
+for n=1:NpP
+    fprintf(fid, '%17.15E ', diagOp(n));
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% backward matrix [ reverse change of basis for IPDG OAS precon ]\n');
+for n=1:NpP
+  for m=1:NpP
+    fprintf(fid, '%17.15E ', backwardMatrix(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
 
 fclose(fid)
