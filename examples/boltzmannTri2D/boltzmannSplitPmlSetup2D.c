@@ -113,12 +113,11 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   // set BGK collision relaxation rate
   // nu = R*T*tau
   // 1/tau = RT/nu
-  //  dfloat nu = 1.e-2/.5;
-  //  dfloat nu = 1.e-3/.5;
-  //  dfloat nu = 5.e-4;
-  //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 1.e-3; 
-  mesh->tauInv = mesh->RT/nu; // TW
+  dfloat Re = 300; 
+  dfloat Ma = 0.1;
+  mesh->tauInv = mesh->sqrtRT * Re / Ma;
+
+  dfloat nu = mesh->RT/mesh->tauInv; 
   
   // set penalty parameter
   //  mesh->Lambda2 = 0.5/(sqrt(3.)*mesh->sqrtRT);
@@ -183,13 +182,18 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       pmlElementIds[pmlNelements++] = e;
     else
       nonPmlElementIds[nonPmlNelements++] = e;
+    
   }
+
+
 
   printf("detected pml: %d pml %d non-pml %d total \n", pmlNelements, nonPmlNelements, mesh->Nelements);
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(iint e=0;e<mesh->Nelements;++e){ 
+
+  //printf("global index: %d  pml = %d and Nonpml= %d\n",e, pmlElementIds[e], nonPmlElementIds[e]); 
 
     for(iint f=0;f<mesh->Nfaces;++f){
       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
@@ -207,13 +211,43 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = .8; // depends on the stability region size (was .4)
+  dfloat cfl = .5; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   // too small ???
+  
+
+  // AK: Set time step size
+  #if TIME_DISC==LSERK
+  printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
+
   dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+
   dfloat dt = cfl*mymin(hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT),
-			4./(mesh->tauInv*magVelocity));
+			        4./(mesh->tauInv*magVelocity));
+
+  #elif TIME_DISC==SAABV1
+  printf("Time discretization method: SAABV1  with CFL: %.2f \n",cfl);
+   // Adams-Bashforth stability region is approximated as 1/3 of LSERK scheme. 
+  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+  dfloat dt          = 0.1* cfl*mymin(hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT),
+                             4./(mesh->tauInv*magVelocity));
+
+  #elif TIME_DISC==SAABV2
+  printf("Time discretization method: SAABV2  with CFL: %.2f \n",cfl);
+
+
+  #elif TIME_DISC==LSIMEX
+  printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
+  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+
+  dfloat dt = cfl*mymin(hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT),
+              4./(mesh->tauInv*magVelocity));
+
+
+  #endif
+
+
 
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
@@ -225,7 +259,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = .2;
+  mesh->finalTime = 10.0;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -241,15 +275,24 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //    sprintf(deviceConfig, "mode = Serial");	  
+  // sprintf(deviceConfig, "mode = Serial");	 
+
+
+
+
+
 
   occa::kernelInfo kernelInfo;
 
   meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);
 
+
+
+
+  #if TIME_DISC==LSERK 
   // pml variables
   mesh->o_pmlqx =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
@@ -271,13 +314,141 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_respmlNT =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-
   
+  #elif TIME_DISC==SAABV1
+// Extra Storage for History, 
+   mesh->o_rhsq2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+   mesh->o_rhsq3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+  // pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_rhspmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
+  
+  
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_rhspmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
+ 
+
+  mesh->o_pmlNT =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+  mesh->o_rhspmlNT =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+
+  #elif TIME_DISC==SAABV2
+
+
+
+
+
+
+  #elif TIME_DISC==LSIMEX
+   mesh->o_qY =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+// pml variables
+  mesh->o_qZ =    
+     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+// 
+  mesh->o_qS =
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+
+// pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_qSx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_qYx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_qZx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+
+
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_qSy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_qYy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_qZy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+
+
+
+  mesh->o_pmlNT =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+  mesh->o_qSnt =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_qYnt =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_qZnt =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+
+  #endif  
+  
+  
+
+
+
   mesh->o_sigmax =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
 
   mesh->o_sigmay =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
+
+
+
+
+ // All Functions Related to Adams-Bashforth
+#if TIME_DISC==SAABV1
+    // Storage for coefficients of SAAB
+    mesh->expsigmax= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+    mesh->expsigmay= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+    //
+    for(int e=0; e<mesh->Nelements; e++){
+
+        for(int n=0; n<mesh->Np;n++){
+          mesh->expsigmax[e*mesh->Np+n] = exp(-mesh->sigmax[e*mesh->Np + n]*dt);
+          mesh->expsigmay[e*mesh->Np+n] = exp(-mesh->sigmay[e*mesh->Np + n]*dt);
+
+        }
+    }
+    mesh->o_expsigmax =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->expsigmax);
+
+    mesh->o_expsigmay =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->expsigmay);
+     
+  // AB coefficients
+  dfloat ab1 = 23./14.;
+  dfloat ab2 = -4./3. ;
+  dfloat ab3 = 5./12. ;
+  kernelInfo.addDefine("p_ab1",  ab1 );
+  kernelInfo.addDefine("p_ab2",  ab2  );
+  kernelInfo.addDefine("p_ab3",  ab3 );
+
+#endif
+    
+
+
+
 
   mesh->nonPmlNelements = nonPmlNelements;
   mesh->pmlNelements = pmlNelements;
@@ -315,6 +486,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
 
+
+
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
@@ -323,47 +496,330 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
 
-  printf("compiling volume kernel\n");
-  mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlVolume2D.okl",
-				       "boltzmannNonPmlVolume2D",
-				       kernelInfo);
+  #if TIME_DISC==LSIMEX
+  int G = pow(2, ceil( log(mesh->Np * NblockV / 32) /log(2) )) ;
+  int S = 32; 
 
-  printf("compiling surface kernel\n");
+  kernelInfo.addDefine("p_G", G);
+  kernelInfo.addDefine("p_S", S);
+
+  int imex_iter_max = 50 ;  
+  dfloat imex_tol   = 1e-7;  
+  dfloat nodetol     = 1e-12; 
+  kernelInfo.addDefine("p_LSIMEX_MAXITER", imex_iter_max);
+  kernelInfo.addDefine("p_LSIMEX_TOL", imex_tol);
+  kernelInfo.addDefine("p_NODETOL", nodetol);
+  #endif
+ 
+
+
+
+
+
+
+ #if TIME_DISC==LSERK
+    #if CUBATURE_ENABLED
+      printf("Compiling LSERK volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                   "boltzmannVolumeCub2D",
+                   kernelInfo);
+      
+      printf("Compiling LSERK pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolumeCub2D",
+               kernelInfo);
+      
+       printf("Compiling LSERK relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannRelaxationCub2D",
+               kernelInfo); 
+
+      printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannSplitPmlRelaxationCub2D",
+               kernelInfo);   
+    #else
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                 "boltzmannVolume2D",
+                 kernelInfo);
+
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolume2D",
+               kernelInfo); 
+    #endif
+
+
+  printf("Compiling surface kernel\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlSurface2D.okl",
-				       "boltzmannNonPmlSurface2D",
-				       kernelInfo);
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
 
-  printf("compiling update kernel\n");
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlUpdate2D.okl",
-				       "boltzmannNonPmlUpdate2D",
-				       kernelInfo);
-
-  mesh->pmlVolumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolume2D.okl",
-				       "boltzmannSplitPmlVolume2D",
-				       kernelInfo);
-
+  printf("Compiling pml surface kernel\n");
   mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlSurface2D.okl",
-				       "boltzmannSplitPmlSurface2D",
-				       kernelInfo);
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
 
-  mesh->relaxationKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlRelaxation2D.okl",
-				       "boltzmannSplitPmlRelaxation2D",
-				       kernelInfo);
-
+  printf("Compiling update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKUpdate2D",
+               kernelInfo);
+  
+  printf("Compiling pml update kernel\n");
   mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlUpdate2D.okl",
-				       "boltzmannSplitPmlUpdate2D",
-				       kernelInfo);
-
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKSplitPmlUpdate2D",
+               kernelInfo);
+  
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
-				       "meshHaloExtract2D",
-				       kernelInfo);
+               "meshHaloExtract2D",
+               kernelInfo);
+
+#elif TIME_DISC==SAABV1
+
+   #if CUBATURE_ENABLED
+      printf("Compiling SAABV1 volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Volume2D.okl",
+                   "boltzmannSAABV1NonPmlVolumeCub2D",
+                   kernelInfo);
+      
+      printf("Compiling SAABV1 pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Volume2D.okl",
+               "boltzmannSAABV1SplitPmlVolumeCub2D",
+               kernelInfo);
+      
+       printf("Compiling  relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannNonPmlRelaxation2D",
+               kernelInfo); 
+
+      printf("Compiling  pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannSplitPmlRelaxation2D",
+               kernelInfo);   
+
+
+    #else
+      printf("Compiling pml volume kernel\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Volume2D.okl",
+                 "boltzmannSAABV1NonPmlVolume2D",
+                 kernelInfo);
+
+      printf("Compiling pml volume kernel\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Volume2D.okl",
+               "boltzmannSAABV1SplitPmlVolume2D",
+               kernelInfo); 
+    #endif
+
+
+  printf("Compiling surface kernel\n");
+  mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannNonPmlSurface2D",
+               kernelInfo);
+
+  printf("Compiling pml surface kernel\n");
+  mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+
+   //SAAB FIRST ORDER UPDATE
+  printf("compiling non-pml 1st order update kernel\n");
+  mesh->updateFirstOrderKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1NonPmlUpdateFirst2D",
+               kernelInfo);
+
+    //SAAB SECOND ORDER UPDATE
+  printf("compiling non-pml 2nd order update kernel\n");
+  mesh->updateSecondOrderKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1NonPmlUpdateSecond2D",
+               kernelInfo);
+
+
+     //SAAB STAGE UPDATE
+  printf("compiling non-pml  update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1NonPmlUpdate2D",
+               kernelInfo); 
+
+
+
+      //SAAB FIRST ORDER UPDATE
+  printf("compiling pml 1st order update kernel\n");
+  mesh->pmlUpdateFirstOrderKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1SplitPmlUpdateFirst2D",
+               kernelInfo);
+
+    //SAAB SECOND ORDER UPDATE
+  printf("compiling pml 2nd order update kernel\n");
+  mesh->pmlUpdateSecondOrderKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1SplitPmlUpdateSecond2D",
+               kernelInfo);
+
+
+     //SAAB STAGE UPDATE
+  printf("compiling non-pml 1st order update kernel\n");
+  mesh->pmlUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSAABV1Update2D.okl",
+               "boltzmannSAABV1SplitPmlUpdate2D",
+               kernelInfo); 
+
+
+
+ #elif TIME_DISC==LSIMEX
+ 
+ // RESIDUAL UPDATE KERNELS
+  printf("Compiling LSIMEX non-pml residual update kernel\n");
+  mesh->residualUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXResidualUpdate2D",
+               kernelInfo);
+
+  printf("Compiling pml residual update kernel\n");
+  mesh->pmlResidualUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXSplitPmlResidualUpdate2D",
+               kernelInfo);
+
+  
+  printf("Compiling LSIMEX non-pml implicit update kernel\n");
+  mesh->implicitUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXImplicitUpdate2D",
+               kernelInfo);
+
+  printf("Compiling LSIMEX pml implicit update kernel\n");
+  mesh->pmlImplicitUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXSplitPmlImplicitUpdate2D",
+               kernelInfo);
+     
+    
+
+
+    #if CUBATURE_ENABLED
+       printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
+         mesh->NRIterationKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
+                 "boltzmannLSIMEXImplicitIterationCub2D",
+                 kernelInfo); 
+
+         printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
+         mesh->pmlNRIterationKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitIterationCub2D",
+                 kernelInfo); 
+
+
+        printf("Compiling LSIMEX non-pml implicit volume kernel\n");
+         mesh->implicitVolumeKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
+                 "boltzmannLSIMEXImplicitVolumeCub2D",
+                 kernelInfo); 
+
+        printf("Compiling LSIMEX pml implicit volume kernel\n");
+         mesh->pmlImplicitVolumeKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitVolumeCub2D",
+                 kernelInfo);
+
+    #else
+        printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
+         mesh->NRIterationKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
+                 "boltzmannLSIMEXImplicitIteration2D",
+                 kernelInfo); 
+
+         printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
+         mesh->pmlNRIterationKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitIteration2D",
+                 kernelInfo); 
+
+
+        printf("Compiling LSIMEX non-pml implicit volume kernel\n");
+         mesh->implicitVolumeKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
+                 "boltzmannLSIMEXImplicitVolume2D",
+                 kernelInfo); 
+
+        printf("Compiling LSIMEX pml implicit volume kernel\n");
+         mesh->pmlImplicitVolumeKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitVolume2D",
+                 kernelInfo);
+    #endif
+
+
+    printf("Compiling LSIMEX volume kernel no stiff term!\n");
+    mesh->volumeKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                 "boltzmannVolumeCub2D",
+                 kernelInfo);
+      
+    printf("Compiling LSIMEX pml volume kernel with cubature integration\n");
+    mesh->pmlVolumeKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+             "boltzmannSplitPmlVolumeCub2D",
+             kernelInfo);
+
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
+
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+
+   printf("Compiling LSIMEX non-pml update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXUpdate2D",
+               kernelInfo);
+
+  printf("Compiling LSIMEX pml update kernel\n");
+  mesh->pmlUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSIMEXSplitPmlUpdate2D",
+               kernelInfo);
+
+
+
+mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);
+
+#endif
+
   
 }
