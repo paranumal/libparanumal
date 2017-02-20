@@ -13,6 +13,43 @@ HDRDIR  = ../../include
 CC	= mpic++
 LD	= mpic++
 
+
+TIME_METHOD  = LSIMEX
+CUBATURE_USE = 1
+
+
+#LSERK TIME DISCRETIZATION
+flags += -DLSERK=1
+flags += -DSAABV1=2
+flags += -DSAABV2=3
+flags += -DLSIMEX=4
+
+ifeq ($(TIME_METHOD), LSERK)
+ flags += -DTIME_DISC=LSERK
+endif
+
+ifeq ($(TIME_METHOD), SAABV1)
+ flags += -DTIME_DISC=SAABV1
+endif
+
+ifeq ($(TIME_METHOD), SAABV2)
+ flags += -DTIME_DISC=SAABV2
+endif
+
+ifeq ($(TIME_METHOD), LSIMEX)
+ flags += -DTIME_DISC=LSIMEX
+endif
+
+ifeq ($(CUBATURE_USE), 1)
+flags += -DCUBATURE_ENABLED=1
+else
+flags += -DCUBATURE_ENABLED=0
+endif
+
+
+
+
+
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g
 
@@ -37,6 +74,8 @@ boltzmannError2D.o \
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
+boltzmannSplitPmlSaabV1Step2D.o \
+boltzmannSplitPmlLsimexStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 ../../src/meshParallelReaderTri2D.o \
@@ -69,6 +108,6 @@ boltzmannSplitPmlMain2D:$(OBJS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS)
-
+	rm -r $(OBJS) boltzmannSplitPmlMain2D
+ 
 
