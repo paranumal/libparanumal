@@ -11,7 +11,7 @@ kernel void boltzmannNonPmlVolume2D(const iint Nelements,
 				    const dfloat * restrict DrT,
 				    const dfloat * restrict DsT,
 				    const dfloat4 * restrict q,
-				    dfloat4 * restrict rhsq){
+				          dfloat4 * restrict rhsq){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
