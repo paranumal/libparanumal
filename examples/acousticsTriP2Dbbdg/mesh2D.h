@@ -53,7 +53,7 @@ void parallelSort(iint N, void *vv, size_t sz,
 void meshGeometricFactorsTri2D(mesh2D *mesh);
 void meshGeometricFactorsQuad2D(mesh2D *mesh);
 
-void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh);
+void meshSurfaceGeometricFactorsTriP2D(mesh2D *mesh);
 void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh);
 
 void meshPhysicalNodesTriP2D(mesh2D *mesh);

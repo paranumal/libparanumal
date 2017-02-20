@@ -76,6 +76,7 @@ typedef struct {
 
   dfloat **r, **s, **t;    // coordinates of local nodes
   dfloat **Dr,**Ds, **Dt; // collocation differentiation matrices
+  dfloat **MM;           // reference mass matrix
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
   // indices of vertex nodes
@@ -121,7 +122,7 @@ typedef struct {
 
   // cubature
   iint *cubNp;
-  dfloat **cubr, **cubs, **cubt;    // coordinates of local nodes
+  dfloat **cubr, **cubs, **cubt, **cubw;    // coordinates of local nodes
   dfloat **cubx, **cuby, **cubz;    // coordinates of physical nodes
   dfloat **cubInterp; // interpolate from W&B to cubature nodes
   dfloat **cubProject; // projection matrix from cubature nodes to W&B nodes

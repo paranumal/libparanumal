@@ -19,6 +19,7 @@ int main(int argc, char **argv){
 
     // set up acoustics stuff
     acousticsSetup2D(mesh);
+
     // run
     //acousticsRun2D(mesh);
     //acousticsRun2Dbbdg(mesh);

@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include "mpi.h"
 
-#include "mesh2D.h"
+#include "mesh3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
+void meshPlotVTU3DP(mesh3D *mesh, char *fileNameBase, iint fld){
   
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -31,15 +31,36 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
   
   // compute plot node coordinates on the fly
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->plotNp[NMax];++n){
-      dfloat plotxn = 0, plotyn = 0;
-      for(iint m=0;m<mesh->NpMax;++m){
-      	plotxn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->x[m+e*mesh->NpMax];
-      	plotyn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->y[m+e*mesh->NpMax];
-      }
+    iint id = e*mesh->Nverts;
 
+    dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+    dfloat xe2 = mesh->EX[id+1];
+    dfloat xe3 = mesh->EX[id+2];
+    dfloat xe4 = mesh->EX[id+3];
+
+    dfloat ye1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+    dfloat ye2 = mesh->EY[id+1];
+    dfloat ye3 = mesh->EY[id+2];
+    dfloat ye4 = mesh->EY[id+3];
+    
+    dfloat ze1 = mesh->EZ[id+0]; /* z-coordinates of vertices */
+    dfloat ze2 = mesh->EZ[id+1];
+    dfloat ze3 = mesh->EZ[id+2];
+    dfloat ze4 = mesh->EZ[id+3];
+
+    for(iint n=0;n<mesh->plotNp[NMax];++n){
+      /* (r,s,t) coordinates of plot nodes*/
+      dfloat rn = mesh->plotR[NMax][n]; 
+      dfloat sn = mesh->plotS[NMax][n];
+      dfloat tn = mesh->plotT[NMax][n];
+
+      /* physical coordinate of interpolation node */
+      dfloat plotxn = -0.5*(1+rn+sn+tn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3 + 0.5*(1+tn)*xe4;
+      dfloat plotyn = -0.5*(1+rn+sn+tn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4;
+      dfloat plotzn = -0.5*(1+rn+sn+tn)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4;
+      
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", plotxn,plotyn,0.);
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
     }
   }
   fprintf(fp, "        </DataArray>\n");
@@ -52,12 +73,10 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp[NMax];++n){
       dfloat plotpn = 0;
-
       for(iint m=0;m<mesh->NpMax;++m){
         dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->NpMax)];
         plotpn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*pm;
       }
-
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }
@@ -73,7 +92,7 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
     for(iint n=0;n<mesh->plotNelements[NMax];++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
-	       fprintf(fp, "%d ", e*mesh->plotNp[NMax] + mesh->plotEToV[NMax][n*mesh->plotNverts+m]);
+	fprintf(fp, "%d ", e*mesh->plotNp[NMax] + mesh->plotEToV[NMax][n*mesh->plotNverts+m]);
       }
       fprintf(fp, "\n");
     }
@@ -95,7 +114,7 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNelements[NMax];++n){
-      fprintf(fp, "5\n");
+      fprintf(fp, "10\n"); // TET code ?
     }
   }
   fprintf(fp, "        </DataArray>\n");

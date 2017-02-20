@@ -280,15 +280,36 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
     fscanf(fp, dfloatFormat, mesh->ELvals+n);
   }
-  fgets(buf, BUFSIZ, fp); // read rest of line
   
+  // BB degree raise matrix (sparse format)
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->BBRaiseids = (iint*) calloc(mesh->Nfp*2, sizeof(iint));
+  for (int n=0;n<mesh->Nfp*2;++n){
+    fscanf(fp, iintFormat, mesh->BBRaiseids+n);
+  }
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->BBRaiseVals = (dfloat*) calloc(mesh->Nfp*2, sizeof(dfloat));
+  for (int n=0;n<mesh->Nfp*2;++n){
+    fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
+  }
+
+  //BB degree lower matrix
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->BBLower = (dfloat*) calloc((mesh->Nfp+1)*mesh->Nfp, sizeof(dfloat));
+  for (int n=0;n<(mesh->Nfp+1)*mesh->Nfp;++n){
+    fscanf(fp, dfloatFormat, mesh->BBLower+n);
+  }
+  fgets(buf, BUFSIZ, fp);
   // ============ end BB stuff ==================
 #endif
 
 
   // IPDG OAS stuff
-
-  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp);
   fgets(buf, BUFSIZ, fp);
   int NpPcheck;
   sscanf(buf, "%d", &NpPcheck);
