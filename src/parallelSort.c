@@ -4,7 +4,7 @@
 
 #include "mpi.h"
 /* use this for iint */
-#include "mesh2D.h"
+#include "mesh.h"
 
 void mergeLists(size_t sz,
 		iint N1, char *v1,

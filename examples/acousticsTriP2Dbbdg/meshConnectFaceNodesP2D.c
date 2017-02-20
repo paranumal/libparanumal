@@ -42,7 +42,7 @@ void meshConnectFaceNodesP2D(mesh2D *mesh){
       iint eP = mesh->EToE[e*mesh->Nfaces+f];
       iint fP = mesh->EToF[e*mesh->Nfaces+f];
       iint NP = mesh->N[eP];
-
+ 
       if(eP<0 || fP<0){ // fake connections for unconnected faces
          eP = e;
          fP = f;
@@ -53,28 +53,15 @@ void meshConnectFaceNodesP2D(mesh2D *mesh){
       for(iint n=0;n<mesh->Nfp[N];++n){
         iint   id = e*mesh->Nfaces*mesh->NfpMax + f*mesh->NfpMax + n;     //face node index
       	iint  idM = e*mesh->NpMax + mesh->faceNodes[N][f*mesh->Nfp[N]+n]; //global index
-      	//dfloat xM = mesh->x[idM];
-      	//dfloat yM = mesh->y[idM];
-      	
-      	//iint  idP = findBestMatch(xM, yM, 
-        //              				  mesh->Nfp[NP], 
-        //              				  mesh->faceNodes[N]+fP*mesh->Nfp[NP],
-        //              				  mesh->x+eP*mesh->NpMax,
-        //              				  mesh->y+eP*mesh->NpMax);
-      	//
       	mesh->vmapM[id] = idM;
-        //mesh->vmapP[id] = idP + eP*mesh->NpMax;
       }
-
-      
-      
+    
       if (eP<0 || fP <0){
         // make vmapP map to the same point as vmapM 
         for(iint n=0;n<mesh->Nfp[N];++n){
           iint   id = e*mesh->Nfaces*mesh->NfpMax + f*mesh->NfpMax + n;     //face node index
           iint  idM = e*mesh->NpMax + mesh->faceNodes[N][f*mesh->Nfp[N]+n]; //global index
           mesh->vmapP[id] = idM;
-          //mesh->vmapP[id] = -1;
         }
       } else {
         for (iint n=0;n<mesh->Nfp[NP];++n){
@@ -95,8 +82,6 @@ void meshConnectFaceNodesP2D(mesh2D *mesh){
             }
           }
           mesh->vmapP[id] = idP;
-          //printf("Element %d, Side %d, Neighbour %d, Side %d \n", e, f, eP, fP);
-          //printf("Node %d tp node %d \n \n", mesh->faceNodes[N][f*mesh->Nfp[N]+n], idP-eP*mesh->NpMax);
         }
       }
     }

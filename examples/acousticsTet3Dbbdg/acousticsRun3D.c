@@ -323,7 +323,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       mesh->o_q.copyTo(mesh->q);
 
       //Transform to nodal basis
-      dfloat qtmp[mesh->Nfields*mesh->Np];
+      dfloat qtmp[mesh->Nfields*mesh->Np];  
       for (iint e =0;e<mesh->Nelements;e++){
         iint id = e*mesh->Np*mesh->Nfields;
         
@@ -331,15 +331,18 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
           qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
           qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
           qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
+          qtmp[n*mesh->Nfields + 3] = mesh->q[id+n*mesh->Nfields+3];
           mesh->q[id+n*mesh->Nfields+0] = 0.0;
           mesh->q[id+n*mesh->Nfields+1] = 0.0;
           mesh->q[id+n*mesh->Nfields+2] = 0.0;
+          mesh->q[id+n*mesh->Nfields+3] = 0.0;
         }
         for (iint n=0;n<mesh->Np;n++){
           for (iint m=0; m<mesh->Np; m++){
             mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
             mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
             mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
+            mesh->q[id+n*mesh->Nfields + 3] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+3];
           }
         }
       }

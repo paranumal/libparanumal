@@ -10,7 +10,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
   for (int e=0;e<mesh->Nelements;e++){
     mesh->N[e] = N;
-    if (e%2==0) mesh->N[e] = N-1;
+    //if (e%2==0) mesh->N[e] = N-1;
   }
 
   mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
@@ -25,6 +25,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
   mesh->s  = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->Dr = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->Ds = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
+  mesh->MM = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
   mesh->faceNodes = (iint**) malloc((N+1)*(sizeof(iint*)));  
   mesh->LIFT = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
@@ -36,6 +37,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
   mesh->cubr      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubs      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
+  mesh->cubw      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubInterp = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubDrW    = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubDsW    = (dfloat**) malloc((N+1)*sizeof(dfloat*));
@@ -103,7 +105,13 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
 
     fgets(buf, BUFSIZ, fp); // read comment
+    mesh->MM[nn] = (dfloat*) calloc(mesh->Np[nn]*mesh->Np[nn], sizeof(dfloat));
+    for(int n=0;n<mesh->Np[nn]*mesh->Np[nn];++n){
+      fscanf(fp, dfloatFormat, mesh->MM[nn]+n);
+    }
+    fgets(buf, BUFSIZ, fp); // read comment
 
+    fgets(buf, BUFSIZ, fp); // read comment
     mesh->faceNodes[nn] = (iint*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(iint));
     for(int n=0;n<mesh->Nfaces*mesh->Nfp[nn];++n){
       fscanf(fp, iintFormat, mesh->faceNodes[nn]+n);
@@ -170,9 +178,10 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
     mesh->cubr[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
     mesh->cubs[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
+    mesh->cubw[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
     for(int n=0;n<mesh->cubNp[nn];++n){
       fgets(buf, BUFSIZ, fp);
-      sscanf(buf, dfloatFormat dfloatFormat, mesh->cubr[nn]+n, mesh->cubs[nn]+n);
+      sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->cubr[nn]+n, mesh->cubs[nn]+n, mesh->cubw[nn]+n);
     } 
 
     // read volume cubature interpolation matrix

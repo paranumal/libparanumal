@@ -34,8 +34,8 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
     for(iint n=0;n<mesh->plotNp[NMax];++n){
       dfloat plotxn = 0, plotyn = 0;
       for(iint m=0;m<mesh->NpMax;++m){
-	plotxn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->x[m+e*mesh->NpMax];
-	plotyn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->y[m+e*mesh->NpMax];
+      	plotxn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->x[m+e*mesh->NpMax];
+      	plotyn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->y[m+e*mesh->NpMax];
       }
 
       fprintf(fp, "       ");
@@ -73,7 +73,7 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
     for(iint n=0;n<mesh->plotNelements[NMax];++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
-	fprintf(fp, "%d ", e*mesh->plotNp[NMax] + mesh->plotEToV[NMax][n*mesh->plotNverts+m]);
+	       fprintf(fp, "%d ", e*mesh->plotNp[NMax] + mesh->plotEToV[NMax][n*mesh->plotNverts+m]);
       }
       fprintf(fp, "\n");
     }

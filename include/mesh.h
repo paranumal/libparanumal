@@ -148,6 +148,9 @@ typedef struct {
   iint *ELids; // lift reduction matrix indices
   dfloat *ELvals; // lift reduction matrix values
   iint max_EL_nnz; // max number of non-zeros per row of EL
+  iint *BBRaiseids; //Bernstein elevate matrix indices
+  dfloat *BBRaiseVals; //Bernstein elevate matrix values
+  dfloat *BBLower; //Berstein projection matrix.
   
   // time stepping info
   dfloat dt; // time step

@@ -46,13 +46,13 @@ meshConnectFaceNodesP2D.o \
 meshPhysicalNodesTriP2D.o \
 meshPlotVTU2DP.o \
 meshHaloSetupP.o \
+meshSurfaceGeometricFactorsTriP2D.o \
 meshLoadReferenceNodesTriP2D.o 
 
 # library objects
 LOBJS = \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshGeometricFactorsTri2D.o \
-../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshGeometricPartition2D.o \

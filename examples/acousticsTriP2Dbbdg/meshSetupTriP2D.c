@@ -8,11 +8,11 @@ mesh2D *meshSetupTriP2D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition2D(mesh);
 
-  // print out connectivity statistics
-  meshPartitionStatistics(mesh);
-
   // connect elements using parallel sort
   meshParallelConnect(mesh);
+
+  // print out connectivity statistics
+  meshPartitionStatistics(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
@@ -26,14 +26,14 @@ mesh2D *meshSetupTriP2D(char *filename, int N){
   // compute geometric factors
   meshGeometricFactorsTri2D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTri2D(mesh);
-
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
-  
+ 
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP2D(mesh);
+
+   // compute surface geofacs
+  meshSurfaceGeometricFactorsTriP2D(mesh);
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

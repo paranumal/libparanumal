@@ -7,8 +7,8 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   
-  iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+    iint N = mesh->N[e];
 
     iint id = e*mesh->Nverts+0;
 
@@ -20,16 +20,15 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
     dfloat ye2 = mesh->EY[id+1];
     dfloat ye3 = mesh->EY[id+2];
     
-    for(iint n=0;n<mesh->NpMax;++n){ /* for each node */
+    for(iint n=0;n<mesh->Np[N];++n){ /* for each node */
       
       /* (r,s) coordinates of interpolation nodes*/
-      dfloat rn = mesh->r[mesh->NMax][n]; 
-      dfloat sn = mesh->s[mesh->NMax][n];
+      dfloat rn = mesh->r[N][n]; 
+      dfloat sn = mesh->s[N][n];
 
       /* physical coordinate of interpolation node */
-      mesh->x[cnt] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
-      mesh->y[cnt] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
-      ++cnt;
+      mesh->x[e*mesh->NpMax+n] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      mesh->y[e*mesh->NpMax+n] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
     }
   }
 }

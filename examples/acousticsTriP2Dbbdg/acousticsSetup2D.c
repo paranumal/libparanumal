@@ -364,18 +364,41 @@ void acousticsSetup2D(mesh2D *mesh){
 
   kernelInfo.addDefine("p_JWID", JWID);
 
-  kernelInfo.addDefine("p_N_max",mesh->NMax);
+  kernelInfo.addDefine("p_NMax",mesh->NMax);
   kernelInfo.addDefine("p_NpMax",mesh->NpMax);
   kernelInfo.addDefine("p_NfpMax",mesh->NfpMax);
 
-  int maxNodes = mymax(mesh->NpMax, (mesh->NfpMax*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  char p_maxNodesName[BUFSIZ];
+  char p_NblockVName[BUFSIZ];
+  char p_NblockSName[BUFSIZ];
+  for (iint p=1;p<=mesh->NMax;p++) {
+    sprintf(p_maxNodesName, "p_maxNodes_o%d", p);
+    sprintf(p_NblockVName, "p_NblockV_o%d", p);
+    sprintf(p_NblockSName, "p_NblockS_o%d", p);
 
-  int NblockV = 512/mesh->NpMax; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+    int maxNodes = mymax(mesh->Np[p], (mesh->Nfp[p]*mesh->Nfaces));
+    kernelInfo.addDefine(p_maxNodesName, maxNodes);
 
-  int NblockS = 512/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+    int NblockV = 512/mesh->Np[p]; // works for CUDA
+    kernelInfo.addDefine(p_NblockVName, NblockV);
+
+    int NblockS = 512/maxNodes; // works for CUDA
+    kernelInfo.addDefine(p_NblockSName, NblockS);
+  }
+  for (iint p=mesh->NMax+1;p<=10;p++) {
+    sprintf(p_maxNodesName, "p_maxNodes_o%d", p);
+    sprintf(p_NblockVName, "p_NblockV_o%d", p);
+    sprintf(p_NblockSName, "p_NblockS_o%d", p);
+
+    int maxNodes = mymax(mesh->Np[mesh->NMax], (mesh->Nfp[mesh->NMax]*mesh->Nfaces));
+    kernelInfo.addDefine(p_maxNodesName, maxNodes);
+
+    int NblockV = 512/mesh->Np[mesh->NMax]; // works for CUDA
+    kernelInfo.addDefine(p_NblockVName, NblockV);
+
+    int NblockS = 512/maxNodes; // works for CUDA
+    kernelInfo.addDefine(p_NblockSName, NblockS);
+  }
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
