@@ -57,25 +57,6 @@ void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q
   
 }
 
-void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
-
-  // build degree vector
-  for(iint n=0;n<Ntotal;++n)
-    deg[n] = 1;
-
-  occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
-  
-  o_deg.copyFrom(deg);
-  
-  ellipticParallelGatherScatter2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
-  
-  o_deg.copyTo(deg);
-
-  mesh->device.finish();
-  o_deg.free();
-  
-}
-
 void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
 			ogs_t *ogs, dfloat lambda,
 			occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *options){
@@ -88,8 +69,6 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
   
   ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
   
-  // need start/end elements then can split into two parts
-  // NEED TO FIX ?
   iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
   mesh->gradientKernel(allNelements,
 		       mesh->o_vgeo,
@@ -134,39 +113,35 @@ dfloat ellipticScaledAdd(mesh2D *mesh, dfloat alpha, occa::memory &o_a, dfloat b
   
 }
 
-dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
-				    iint Nblock,
-				    occa::memory &o_w,
-				    occa::memory &o_a,
-				    occa::memory &o_b,
-				    occa::memory &o_tmp,
-				    dfloat *tmp,
-				    const char *options){
+dfloat ellipticInnerProduct(mesh2D *mesh,
+			    iint Nblock,
+			    occa::memory &o_a,
+			    occa::memory &o_b,
+			    occa::memory &o_tmp,
+			    dfloat *tmp,
+			    const char *options){
 
   mesh->device.finish();
   occa::tic("weighted inner product2");
 
   iint Ntotal = mesh->Nelements*mesh->Np;
 
-  if(strstr(options,"CONTINUOUS"))
-    mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
-  else
-    mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+  mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
   
   mesh->device.finish();
   occa::toc("weighted inner product2");
   
   o_tmp.copyTo(tmp);
 
-  dfloat wab = 0;
+  dfloat ab = 0;
   for(iint n=0;n<Nblock;++n){
-    wab += tmp[n];
+    ab += tmp[n];
   }
       
-  dfloat globalwab = 0;
-  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  dfloat globalab = 0;
+  MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
-  return globalwab;
+  return globalab;
 }
 
 void ellipticPreconditioner2D(mesh2D *mesh,
@@ -174,7 +149,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			      precon_t *precon,
 			      dfloat *sendBuffer,
 			      dfloat *recvBuffer,
-			      occa::memory &o_invDegree,
 			      occa::memory &o_r,
 			      occa::memory &o_zP,
 			      occa::memory &o_z,
@@ -186,8 +160,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
-
-    //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
 
     mesh->device.finish();
     occa::tic("preconKernel");
@@ -277,7 +249,7 @@ int main(int argc, char **argv){
 
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
-  // method can be CONTINUOUS or IPDG
+  // method can be IPDG
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
   char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
   //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
@@ -288,10 +260,8 @@ int main(int argc, char **argv){
   ogs_t *ogs;
   precon_t *precon;
   
-  // set up elliptic stuff
-
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 10;
+  dfloat lambda = 1;
   
   // set up
   ellipticSetupTri2D(mesh, &ogs, &precon, lambda);
@@ -302,18 +272,7 @@ int main(int argc, char **argv){
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
-  
 
-  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-
-  occa::memory o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
-  
-  for(iint n=0;n<Ntotal;++n)
-    invDegree[n] = 1.;
-  
-  o_invDegree.copyFrom(invDegree);
-  
   dfloat *p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -415,14 +374,10 @@ int main(int argc, char **argv){
   // subtract r = b - A*x
   ellipticScaledAdd(mesh, -1.f, o_Ax, 1.f, o_r);
 
-  // gather-scatter 
-  if(strstr(options, "CONTINUOUS"))
-    ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString, "add");
-  
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, o_invDegree,
+    ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, 
 			     o_r, o_zP, o_z, dfloatString, options); // r => rP => zP => z
     
     // p = z
@@ -435,8 +390,8 @@ int main(int argc, char **argv){
 
 
   // dot(r,r)
-  dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
-  dfloat rdotz0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
+  dfloat rdotr0 = ellipticInnerProduct(mesh, Nblock, o_r, o_r, o_tmp, tmp, options);
+  dfloat rdotz0 = ellipticInnerProduct(mesh, Nblock, o_r, o_z, o_tmp, tmp, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   iint Niter = 0;
@@ -456,7 +411,7 @@ int main(int argc, char **argv){
     
     // dot(p,A*p)
     dfloat pAp =
-      ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_p, o_Ap, o_tmp, tmp, options);
+      ellipticInnerProduct(mesh, Nblock, o_p, o_Ap, o_tmp, tmp, options);
     
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -472,18 +427,18 @@ int main(int argc, char **argv){
     ellipticScaledAdd(mesh, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
-    rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
+    rdotr1 = ellipticInnerProduct(mesh, Nblock, o_r, o_r, o_tmp, tmp, options);
     
     if(rdotr1 < tol*tol) break;
 
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, o_invDegree,
+      ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, 
 			       o_r, o_zP, o_z, dfloatString, options);
       
       // dot(r,z)
-      rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
+      rdotz1 = ellipticInnerProduct(mesh, Nblock, o_r, o_z, o_tmp, tmp, options);
       
       beta = rdotz1/rdotz0;
 
@@ -525,11 +480,9 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
       
       maxError = mymax(maxError, error);
-
-      //      mesh->q[id] -= exact;
     }
   }
-
+  
   dfloat globalMaxError = 0;
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   if(rank==0)
@@ -539,7 +492,7 @@ int main(int argc, char **argv){
   
   // close down MPI
   MPI_Finalize();
-
+  
   exit(0);
   return 0;
 }
