@@ -1,0 +1,841 @@
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannSAABV1NonPmlUpdateFirst2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt,  
+            const dfloat4 * restrict rhsq,
+                  dfloat4 * restrict rhsq2,
+                  dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict q){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
+
+      dfloat4 rhsqa = rhsq[id0];
+      dfloat4 rhsqb = rhsq[id1];
+
+
+      dfloat4 qa  = q[id0];
+      dfloat4 qb  = q[id1];
+
+      qa += dt* rhsqa;
+      qb += dt* rhsqb;
+            
+      q[id0] = qa;
+      q[id1] = qb;
+      //
+      rhsq2[id0] = rhsqa;
+      rhsq2[id1] = rhsqb;
+      //
+      rhsq3[id0] = rhsqa;
+      rhsq3[id1] = rhsqb;
+
+    }
+  }
+}
+
+
+//
+kernel void boltzmannSAABV1NonPmlUpdateSecond2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt,  
+            const dfloat4 * restrict rhsq,
+                  dfloat4 * restrict rhsq2,
+                  dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict q){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
+
+      dfloat4 rhsq1a = rhsq[id0];
+      dfloat4 rhsq1b = rhsq[id1];
+      //
+      dfloat4 rhsq2a = rhsq2[id0];
+      dfloat4 rhsq2b = rhsq2[id1];
+      //
+      dfloat4 qa  = q[id0];
+      dfloat4 qb  = q[id1];
+
+      dfloat ab21 = 1.5; 
+      dfloat ab22 = -0.5; 
+      //
+      qa += dt* (ab21*rhsq1a+ab22*rhsq2a);
+      qb += dt* (ab21*rhsq1b+ab22*rhsq2b);
+      //
+            
+      q[id0] = qa;
+      q[id1] = qb;
+      //
+      rhsq2[id0] = rhsq1a;
+      rhsq2[id1] = rhsq1b;
+
+    }
+  }
+}
+
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannSAABV1NonPmlUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt,  
+            const dfloat4 * restrict rhsq,
+                  dfloat4 * restrict rhsq2,
+                  dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict q){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
+
+      dfloat4 rhsq1a = rhsq[id0];
+      dfloat4 rhsq1b = rhsq[id1];
+      //
+      dfloat4 rhsq2a = rhsq2[id0];
+      dfloat4 rhsq2b = rhsq2[id1];
+      //
+      dfloat4 rhsq3a = rhsq3[id0];
+      dfloat4 rhsq3b = rhsq3[id1];
+      //
+      dfloat4 qa  = q[id0];
+      dfloat4 qb  = q[id1];
+
+      const dfloat ab1 = p_ab1;
+      const dfloat ab2 = p_ab2;
+      const dfloat ab3 = p_ab3;
+
+      //
+      qa += dt*(ab1*rhsq1a + (ab2)*rhsq2a + ab3*rhsq3a);
+      qb += dt*(ab1*rhsq1b + (ab2)*rhsq2b + ab3*rhsq3b);
+      //
+            
+      q[id0] = qa;
+      q[id1] = qb;
+      //
+      rhsq2[id0] = rhsq1a;
+      rhsq2[id1] = rhsq1b;
+
+      rhsq3[id0] = rhsq2a;
+      rhsq3[id1] = rhsq2b;
+
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannSAABV1SplitPmlUpdateFirst2D(
+            const iint                Nelements,
+            const iint     * restrict elementIds,
+            const dfloat              dt, 
+            const dfloat             ramp,
+            const dfloat  * restrict sigmax,
+            const dfloat  * restrict sigmay,
+            const dfloat  * restrict expsigmax,
+            const dfloat  * restrict expsigmay,
+                  dfloat  * restrict rhsQX,
+                  dfloat  * restrict rhsQY,
+                  dfloat  * restrict rhsNT,
+                  dfloat  * restrict rhsQX2,
+                  dfloat  * restrict rhsQY2,
+                  dfloat  * restrict rhsNT2,
+                  dfloat  * restrict rhsQX3,
+                  dfloat  * restrict rhsQY3,
+                  dfloat  * restrict rhsNT3,
+                  dfloat  * restrict pmlQX,
+                  dfloat  * restrict pmlQY,
+                  dfloat  * restrict pmlNT,
+                  dfloat4 * restrict q)
+{  
+ // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      
+      //
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
+      //
+      const iint id0 = n+ element*p_Np;
+
+      // PML UPDATES
+      dfloat rhsqx11 = rhsQX[id1];
+      dfloat rhsqx12 = rhsQX[id2];
+      dfloat rhsqx13 = rhsQX[id3];
+      dfloat rhsqx14 = rhsQX[id4];
+      dfloat rhsqx15 = rhsQX[id5];
+      dfloat rhsqx16 = rhsQX[id6]; 
+      //
+      dfloat rhsqy11 = rhsQY[id1];
+      dfloat rhsqy12 = rhsQY[id2];
+      dfloat rhsqy13 = rhsQY[id3];
+      dfloat rhsqy14 = rhsQY[id4];
+      dfloat rhsqy15 = rhsQY[id5];
+      dfloat rhsqy16 = rhsQY[id6]; 
+
+      // PML UPDATES
+      dfloat rhsnt11 = rhsNT[id1];
+      dfloat rhsnt12 = rhsNT[id2];
+      dfloat rhsnt13 = rhsNT[id3];
+      dfloat rhsnt14 = rhsNT[id4];
+      dfloat rhsnt15 = rhsNT[id5];
+      dfloat rhsnt16 = rhsNT[id6];
+     
+      
+      //
+      dfloat qx1 = pmlQX[id1];
+      dfloat qx2 = pmlQX[id2];
+      dfloat qx3 = pmlQX[id3];
+      dfloat qx4 = pmlQX[id4];
+      dfloat qx5 = pmlQX[id5];
+      dfloat qx6 = pmlQX[id6]; 
+      //
+      dfloat qy1 = pmlQY[id1];
+      dfloat qy2 = pmlQY[id2];
+      dfloat qy3 = pmlQY[id3];
+      dfloat qy4 = pmlQY[id4];
+      dfloat qy5 = pmlQY[id5];
+      dfloat qy6 = pmlQY[id6]; 
+      //
+      dfloat nt1 = pmlNT[id1];
+      dfloat nt2 = pmlNT[id2];
+      dfloat nt3 = pmlNT[id3];
+      dfloat nt4 = pmlNT[id4];
+      dfloat nt5 = pmlNT[id5];
+      dfloat nt6 = pmlNT[id6]; 
+      //
+      //
+      dfloat  sgx =    sigmax[id0] ;
+      dfloat  sgy =    sigmay[id0] ;
+      dfloat esgx = expsigmax[id0];
+      dfloat esgy = expsigmay[id0];
+      
+      // First Order SAAB Coefficients
+      dfloat cx1=0.0, cy1=0.0; 
+      // Check division by zero, limiting to standard AB coefficients
+      cx1 = dt - sgx*dt*dt/2. + sgx*sgx*dt*dt*dt/6.0;  
+      cy1 = dt - sgy*dt*dt/2. + sgy*sgy*dt*dt*dt/6.0;  
+      
+      
+      qx1 = esgx*qx1 + cx1*rhsqx11;
+      qx2 = esgx*qx2 + cx1*rhsqx12;
+      qx3 = esgx*qx3 + cx1*rhsqx13;
+      qx4 = esgx*qx4 + cx1*rhsqx14;
+      qx5 = esgx*qx5 + cx1*rhsqx15;
+      qx6 = esgx*qx6 + cx1*rhsqx16;
+      //
+      qy1 = esgy*qy1 + cy1*rhsqy11;
+      qy2 = esgy*qy2 + cy1*rhsqy12;
+      qy3 = esgy*qy3 + cy1*rhsqy13;
+      qy4 = esgy*qy4 + cy1*rhsqy14;
+      qy5 = esgy*qy5 + cy1*rhsqy15;
+      qy6 = esgy*qy6 + cy1*rhsqy16;
+      //
+     //
+      nt1 += dt * rhsnt11;
+      nt2 += dt * rhsnt12;
+      nt3 += dt * rhsnt13;
+      nt4 += dt * rhsnt14;
+      nt5 += dt * rhsnt15;
+      nt6 += dt * rhsnt16;
+     //
+
+    // Update Fields
+      pmlQX[id1] = qx1 ;
+      pmlQX[id2] = qx2 ;
+      pmlQX[id3] = qx3 ;
+      pmlQX[id4] = qx4 ;
+      pmlQX[id5] = qx5 ;
+      pmlQX[id6] = qx6 ; 
+
+      pmlQY[id1] = qy1 ;
+      pmlQY[id2] = qy2 ;
+      pmlQY[id3] = qy3 ;
+      pmlQY[id4] = qy4 ;
+      pmlQY[id5] = qy5 ;
+      pmlQY[id6] = qy6 ; 
+
+      pmlNT[id1] = nt1 ;
+      pmlNT[id2] = nt2 ;
+      pmlNT[id3] = nt3 ;
+      pmlNT[id4] = nt4 ;
+      pmlNT[id5] = nt5 ;
+      pmlNT[id6] = nt6 ; 
+
+      //
+      rhsQX2[id1] = rhsqx11 ;
+      rhsQX2[id2] = rhsqx12 ;
+      rhsQX2[id3] = rhsqx13 ;
+      rhsQX2[id4] = rhsqx14 ;
+      rhsQX2[id5] = rhsqx15 ;
+      rhsQX2[id6] = rhsqx16 ;
+      //
+      rhsQX3[id1] = rhsqx11 ;
+      rhsQX3[id2] = rhsqx12 ;
+      rhsQX3[id3] = rhsqx13 ;
+      rhsQX3[id4] = rhsqx14 ;
+      rhsQX3[id5] = rhsqx15 ;
+      rhsQX3[id6] = rhsqx16 ;
+
+
+      //
+      rhsQY2[id1] = rhsqy11 ;
+      rhsQY2[id2] = rhsqy12 ;
+      rhsQY2[id3] = rhsqy13 ;
+      rhsQY2[id4] = rhsqy14 ;
+      rhsQY2[id5] = rhsqy15 ;
+      rhsQY2[id6] = rhsqy16 ;
+      //
+      rhsQY3[id1] = rhsqy11 ;
+      rhsQY3[id2] = rhsqy12 ;
+      rhsQY3[id3] = rhsqy13 ;
+      rhsQY3[id4] = rhsqy14 ;
+      rhsQY3[id5] = rhsqy15 ;
+      rhsQY3[id6] = rhsqy16 ;
+
+       //
+      rhsNT2[id1] = rhsnt11 ;
+      rhsNT2[id2] = rhsnt12 ;
+      rhsNT2[id3] = rhsnt13 ;
+      rhsNT2[id4] = rhsnt14 ;
+      rhsNT2[id5] = rhsnt15 ;
+      rhsNT2[id6] = rhsnt16 ;
+      //
+      rhsNT3[id1] = rhsnt11 ;
+      rhsNT3[id2] = rhsnt12 ;
+      rhsNT3[id3] = rhsnt13 ;
+      rhsNT3[id4] = rhsnt14 ;
+      rhsNT3[id5] = rhsnt15 ;
+      rhsNT3[id6] = rhsnt16 ;   
+      //
+      dfloat4 qa, qb;
+      qa.x = p_q1bar + qx1 + qy1;
+      qa.y = ramp*p_q2bar + qx2 + qy2;
+      qa.z = ramp*p_q3bar + qx3 + qy3;
+      qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+      qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+      qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+      qb.z = 0.0; 
+      qb.w = 0.0; 
+
+      q[2*(n+element*p_Np)]   = qa;
+      q[2*(n+element*p_Np)+1] = qb;
+      
+    }
+  }
+}
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannSAABV1SplitPmlUpdateSecond2D(
+            const iint                Nelements,
+            const iint     * restrict elementIds,
+            const dfloat              dt, 
+            const dfloat             ramp,
+            const dfloat  * restrict sigmax,
+            const dfloat  * restrict sigmay,
+                  dfloat  * restrict expsigmax,
+                  dfloat  * restrict expsigmay,
+                  dfloat  * restrict rhsQX,
+                  dfloat  * restrict rhsQY,
+                  dfloat  * restrict rhsNT,
+                  dfloat  * restrict rhsQX2,
+                  dfloat  * restrict rhsQY2,
+                  dfloat  * restrict rhsNT2,
+                  dfloat  * restrict rhsQX3,
+                  dfloat  * restrict rhsQY3,
+                  dfloat  * restrict rhsNT3,
+                  dfloat  * restrict pmlQX,
+                  dfloat  * restrict pmlQY,
+                  dfloat  * restrict pmlNT,
+                  dfloat4 * restrict q)
+{  
+ // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      
+      //
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
+      //
+      const iint id0 = n+ element*p_Np;
+
+      // PML UPDATES
+      dfloat rhsqx11 = rhsQX[id1];
+      dfloat rhsqx12 = rhsQX[id2];
+      dfloat rhsqx13 = rhsQX[id3];
+      dfloat rhsqx14 = rhsQX[id4];
+      dfloat rhsqx15 = rhsQX[id5];
+      dfloat rhsqx16 = rhsQX[id6]; 
+      //
+      // PML UPDATES
+      dfloat rhsqx21 = rhsQX2[id1];
+      dfloat rhsqx22 = rhsQX2[id2];
+      dfloat rhsqx23 = rhsQX2[id3];
+      dfloat rhsqx24 = rhsQX2[id4];
+      dfloat rhsqx25 = rhsQX2[id5];
+      dfloat rhsqx26 = rhsQX2[id6]; 
+      //
+      dfloat rhsqy11 = rhsQY[id1];
+      dfloat rhsqy12 = rhsQY[id2];
+      dfloat rhsqy13 = rhsQY[id3];
+      dfloat rhsqy14 = rhsQY[id4];
+      dfloat rhsqy15 = rhsQY[id5];
+      dfloat rhsqy16 = rhsQY[id6]; 
+      ////
+      dfloat rhsqy21 = rhsQY2[id1];
+      dfloat rhsqy22 = rhsQY2[id2];
+      dfloat rhsqy23 = rhsQY2[id3];
+      dfloat rhsqy24 = rhsQY2[id4];
+      dfloat rhsqy25 = rhsQY2[id5];
+      dfloat rhsqy26 = rhsQY2[id6]; 
+
+
+      // PML UPDATES
+      dfloat rhsnt11 = rhsNT[id1];
+      dfloat rhsnt12 = rhsNT[id2];
+      dfloat rhsnt13 = rhsNT[id3];
+      dfloat rhsnt14 = rhsNT[id4];
+      dfloat rhsnt15 = rhsNT[id5];
+      dfloat rhsnt16 = rhsNT[id6];
+
+      // PML UPDATES
+      dfloat rhsnt21 = rhsNT2[id1];
+      dfloat rhsnt22 = rhsNT2[id2];
+      dfloat rhsnt23 = rhsNT2[id3];
+      dfloat rhsnt24 = rhsNT2[id4];
+      dfloat rhsnt25 = rhsNT2[id5];
+      dfloat rhsnt26 = rhsNT2[id6];
+      
+      //
+      dfloat qx1 = pmlQX[id1];
+      dfloat qx2 = pmlQX[id2];
+      dfloat qx3 = pmlQX[id3];
+      dfloat qx4 = pmlQX[id4];
+      dfloat qx5 = pmlQX[id5];
+      dfloat qx6 = pmlQX[id6]; 
+      //
+      dfloat qy1 = pmlQY[id1];
+      dfloat qy2 = pmlQY[id2];
+      dfloat qy3 = pmlQY[id3];
+      dfloat qy4 = pmlQY[id4];
+      dfloat qy5 = pmlQY[id5];
+      dfloat qy6 = pmlQY[id6]; 
+      //
+      dfloat nt1 = pmlNT[id1];
+      dfloat nt2 = pmlNT[id2];
+      dfloat nt3 = pmlNT[id3];
+      dfloat nt4 = pmlNT[id4];
+      dfloat nt5 = pmlNT[id5];
+      dfloat nt6 = pmlNT[id6]; 
+      //
+      //
+      dfloat  sgx =    sigmax[id0] ;
+      dfloat  sgy =    sigmay[id0] ;
+      dfloat esgx = expsigmax[id0];
+      dfloat esgy = expsigmay[id0];
+      
+      // First Order SAAB Coefficients
+      dfloat cx1=0.0, cy1=0.0; 
+      dfloat cx2=0.0, cy2=0.0;
+
+      cx1 = - (sgx*sgx*sgx*dt*dt*dt*dt)/20. + (5.*sgx*sgx*dt*dt*dt)/24. - (2.*sgx*dt*dt)/3. + (3.*dt)/2.;
+      cy1 = - (sgy*sgy*sgy*dt*dt*dt*dt)/20. + (5.*sgy*sgy*dt*dt*dt)/24. - (2.*sgy*dt*dt)/3. + (3.*dt)/2.;
+
+      cx2 =   (sgx*sgx*sgx*dt*dt*dt*dt)/120. - (sgx*sgx*dt*dt*dt)/24. + (sgx*dt*dt)/6 - dt/2. ;
+      cx2 =   (sgy*sgy*sgy*dt*dt*dt*dt)/120. - (sgy*sgy*dt*dt*dt)/24. + (sgy*dt*dt)/6 - dt/2. ;
+      
+
+      
+      qx1 = esgx*qx1 + cx1*rhsqx11 + cx2*rhsqx21;
+      qx2 = esgx*qx2 + cx1*rhsqx12 + cx2*rhsqx22;
+      qx3 = esgx*qx3 + cx1*rhsqx13 + cx2*rhsqx23;
+      qx4 = esgx*qx4 + cx1*rhsqx14 + cx2*rhsqx24;
+      qx5 = esgx*qx5 + cx1*rhsqx15 + cx2*rhsqx25;
+      qx6 = esgx*qx6 + cx1*rhsqx16 + cx2*rhsqx26;
+      //
+      qy1 = esgy*qy1 + cy1*rhsqy11 + cy2*rhsqy21;
+      qy2 = esgy*qy2 + cy1*rhsqy12 + cy2*rhsqy22;
+      qy3 = esgy*qy3 + cy1*rhsqy13 + cy2*rhsqy23;
+      qy4 = esgy*qy4 + cy1*rhsqy14 + cy2*rhsqy24;
+      qy5 = esgy*qy5 + cy1*rhsqy15 + cy2*rhsqy25;
+      qy6 = esgy*qy6 + cy1*rhsqy16 + cy2*rhsqy26;
+      //
+     //
+      nt1 += dt * rhsnt11;
+      nt2 += dt * rhsnt12;
+      nt3 += dt * rhsnt13;
+      nt4 += dt * rhsnt14;
+      nt5 += dt * rhsnt15;
+      nt6 += dt * rhsnt16;
+     //
+
+    // Update Fields
+      pmlQX[id1] = qx1 ;
+      pmlQX[id2] = qx2 ;
+      pmlQX[id3] = qx3 ;
+      pmlQX[id4] = qx4 ;
+      pmlQX[id5] = qx5 ;
+      pmlQX[id6] = qx6 ; 
+
+      pmlQY[id1] = qy1 ;
+      pmlQY[id2] = qy2 ;
+      pmlQY[id3] = qy3 ;
+      pmlQY[id4] = qy4 ;
+      pmlQY[id5] = qy5 ;
+      pmlQY[id6] = qy6 ; 
+
+      pmlNT[id1] = nt1 ;
+      pmlNT[id2] = nt2 ;
+      pmlNT[id3] = nt3 ;
+      pmlNT[id4] = nt4 ;
+      pmlNT[id5] = nt5 ;
+      pmlNT[id6] = nt6 ; 
+
+      //
+      rhsQX2[id1] = rhsqx11 ;
+      rhsQX2[id2] = rhsqx12 ;
+      rhsQX2[id3] = rhsqx13 ;
+      rhsQX2[id4] = rhsqx14 ;
+      rhsQX2[id5] = rhsqx15 ;
+      rhsQX2[id6] = rhsqx16 ;
+     
+
+      //
+      rhsQY2[id1] = rhsqy11 ;
+      rhsQY2[id2] = rhsqy12 ;
+      rhsQY2[id3] = rhsqy13 ;
+      rhsQY2[id4] = rhsqy14 ;
+      rhsQY2[id5] = rhsqy15 ;
+      rhsQY2[id6] = rhsqy16 ;
+      
+       //
+      rhsNT2[id1] = rhsnt11 ;
+      rhsNT2[id2] = rhsnt12 ;
+      rhsNT2[id3] = rhsnt13 ;
+      rhsNT2[id4] = rhsnt14 ;
+      rhsNT2[id5] = rhsnt15 ;
+      rhsNT2[id6] = rhsnt16 ;
+      
+      //
+      dfloat4 qa, qb;
+      qa.x = p_q1bar + qx1 + qy1;
+      qa.y = ramp*p_q2bar + qx2 + qy2;
+      qa.z = ramp*p_q3bar + qx3 + qy3;
+      qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+      qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+      qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+      qb.z = 0.0; 
+      qb.w = 0.0; 
+
+      q[2*(n+element*p_Np)]   = qa;
+      q[2*(n+element*p_Np)+1] = qb;
+      
+    }
+  }
+}
+
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannSAABV1SplitPmlUpdate2D(
+            const iint                Nelements,
+            const iint     * restrict elementIds,
+            const dfloat              dt, 
+            const dfloat             ramp,
+            const dfloat  * restrict sigmax,
+            const dfloat  * restrict sigmay,
+            const dfloat  * restrict expsigmax,
+            const dfloat  * restrict expsigmay,
+                  dfloat  * restrict rhsQX,
+                  dfloat  * restrict rhsQY,
+                  dfloat  * restrict rhsNT,
+                  dfloat  * restrict rhsQX2,
+                  dfloat  * restrict rhsQY2,
+                  dfloat  * restrict rhsNT2,
+                  dfloat  * restrict rhsQX3,
+                  dfloat  * restrict rhsQY3,
+                  dfloat  * restrict rhsNT3,
+                  dfloat  * restrict pmlQX,
+                  dfloat  * restrict pmlQY,
+                  dfloat  * restrict pmlNT,
+                  dfloat4 * restrict q){  
+ // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      
+      //
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
+      //
+      const int id0 = n+ element*p_Np;
+
+      // PML UPDATES
+      dfloat rhsqx11 = rhsQX[id1];
+      dfloat rhsqx12 = rhsQX[id2];
+      dfloat rhsqx13 = rhsQX[id3];
+      dfloat rhsqx14 = rhsQX[id4];
+      dfloat rhsqx15 = rhsQX[id5];
+      dfloat rhsqx16 = rhsQX[id6]; 
+      //
+      dfloat rhsqy11 = rhsQY[id1];
+      dfloat rhsqy12 = rhsQY[id2];
+      dfloat rhsqy13 = rhsQY[id3];
+      dfloat rhsqy14 = rhsQY[id4];
+      dfloat rhsqy15 = rhsQY[id5];
+      dfloat rhsqy16 = rhsQY[id6]; 
+
+      dfloat rhsnt11 = rhsNT[id1];
+      dfloat rhsnt12 = rhsNT[id2];
+      dfloat rhsnt13 = rhsNT[id3];
+      dfloat rhsnt14 = rhsNT[id4];
+      dfloat rhsnt15 = rhsNT[id5];
+      dfloat rhsnt16 = rhsNT[id6];
+
+      // PML OLD VALUES
+      dfloat rhsqx21 = rhsQX2[id1];
+      dfloat rhsqx22 = rhsQX2[id2];
+      dfloat rhsqx23 = rhsQX2[id3];
+      dfloat rhsqx24 = rhsQX2[id4];
+      dfloat rhsqx25 = rhsQX2[id5];
+      dfloat rhsqx26 = rhsQX2[id6]; 
+      //
+      dfloat rhsqy21 = rhsQY2[id1];
+      dfloat rhsqy22 = rhsQY2[id2];
+      dfloat rhsqy23 = rhsQY2[id3];
+      dfloat rhsqy24 = rhsQY2[id4];
+      dfloat rhsqy25 = rhsQY2[id5];
+      dfloat rhsqy26 = rhsQY2[id6]; 
+
+      dfloat rhsnt21 = rhsNT2[id1];
+      dfloat rhsnt22 = rhsNT2[id2];
+      dfloat rhsnt23 = rhsNT2[id3];
+      dfloat rhsnt24 = rhsNT2[id4];
+      dfloat rhsnt25 = rhsNT2[id5];
+      dfloat rhsnt26 = rhsNT2[id6];
+
+      // PML OLD VALUES
+      dfloat rhsqx31 = rhsQX3[id1];
+      dfloat rhsqx32 = rhsQX3[id2];
+      dfloat rhsqx33 = rhsQX3[id3];
+      dfloat rhsqx34 = rhsQX3[id4];
+      dfloat rhsqx35 = rhsQX3[id5];
+      dfloat rhsqx36 = rhsQX3[id6]; 
+      //
+      dfloat rhsqy31 = rhsQY3[id1];
+      dfloat rhsqy32 = rhsQY3[id2];
+      dfloat rhsqy33 = rhsQY3[id3];
+      dfloat rhsqy34 = rhsQY3[id4];
+      dfloat rhsqy35 = rhsQY3[id5];
+      dfloat rhsqy36 = rhsQY3[id6]; 
+
+      dfloat rhsnt31 = rhsNT3[id1];
+      dfloat rhsnt32 = rhsNT3[id2];
+      dfloat rhsnt33 = rhsNT3[id3];
+      dfloat rhsnt34 = rhsNT3[id4];
+      dfloat rhsnt35 = rhsNT3[id5];
+      dfloat rhsnt36 = rhsNT3[id6];
+
+      //
+      dfloat qx1 = pmlQX[id1];
+      dfloat qx2 = pmlQX[id2];
+      dfloat qx3 = pmlQX[id3];
+      dfloat qx4 = pmlQX[id4];
+      dfloat qx5 = pmlQX[id5];
+      dfloat qx6 = pmlQX[id6]; 
+      //
+      dfloat qy1 = pmlQY[id1];
+      dfloat qy2 = pmlQY[id2];
+      dfloat qy3 = pmlQY[id3];
+      dfloat qy4 = pmlQY[id4];
+      dfloat qy5 = pmlQY[id5];
+      dfloat qy6 = pmlQY[id6]; 
+      //
+      dfloat nt1 = pmlNT[id1];
+      dfloat nt2 = pmlNT[id2];
+      dfloat nt3 = pmlNT[id3];
+      dfloat nt4 = pmlNT[id4];
+      dfloat nt5 = pmlNT[id5];
+      dfloat nt6 = pmlNT[id6]; 
+      //
+
+      // First Order SAAB Coefficients
+      dfloat cx1=0.0, cy1=0.0; 
+      dfloat cx2=0.0, cy2=0.0; 
+      dfloat cx3=0.0, cy3=0.0;
+      //
+      dfloat sgx = sigmax[id0]; 
+      dfloat sgy = sigmay[id0];
+
+      dfloat esgx = expsigmax[id0];
+      dfloat esgy = expsigmay[id0];
+      //
+
+      cx1 = - (sgx*sgx*sgx*dt*dt*dt*dt)/18. + (19.*sgx*sgx*dt*dt*dt)/80.
+             - (19.*sgx*dt*dt)/24. + (23.*dt)/12.;
+
+      cy1 = - (sgy*sgy*sgy*dt*dt*dt*dt)/18. + (19.*sgy*sgy*dt*dt*dt)/80.
+             - (19.*sgy*dt*dt)/24. + (23.*dt)/12.;
+
+      
+      cx2 = (7.*sgx*sgx*sgx*dt*dt*dt*dt)/360.  - (sgx*sgx*dt*dt*dt)/10. 
+           + (5.*sgx*dt*dt)/12. - (4.*dt)/3.;
+
+      cy2 = (7.*sgy*sgy*sgy*dt*dt*dt*dt)/360.  - (sgy*sgy*dt*dt*dt)/10. 
+           + (5.*sgy*dt*dt)/12. - (4.*dt)/3.;
+
+      cx3 = - (sgx*sgx*sgx*dt*dt*dt*dt)/180. + (7.*sgx*sgx*dt*dt*dt)/240.
+            - (sgx*dt*dt)/8. + (5.*dt)/12. ; 
+      cy3 = - (sgy*sgy*sgy*dt*dt*dt*dt)/180. + (7.*sgy*sgy*dt*dt*dt)/240.
+            - (sgy*dt*dt)/8. + (5.*dt)/12. ;         
+    //
+      
+      qx1  = esgx*qx1 +  cx1*rhsqx11 + cx2*rhsqx21 + cx3*rhsqx31;
+      qx2  = esgx*qx2 +  cx1*rhsqx12 + cx2*rhsqx22 + cx3*rhsqx32;
+      qx3  = esgx*qx3 +  cx1*rhsqx13 + cx2*rhsqx23 + cx3*rhsqx33;
+      qx4  = esgx*qx4 +  cx1*rhsqx14 + cx2*rhsqx24 + cx3*rhsqx34;
+      qx5  = esgx*qx5 +  cx1*rhsqx15 + cx2*rhsqx25 + cx3*rhsqx35;
+      qx6  = esgx*qx6 +  cx1*rhsqx16 + cx2*rhsqx26 + cx3*rhsqx36;
+      //
+      qy1  = esgy*qy1 +  cy1*rhsqy11 + cy2*rhsqy21 + cy3*rhsqy31;
+      qy2  = esgy*qy2 +  cy1*rhsqy12 + cy2*rhsqy22 + cy3*rhsqy32;
+      qy3  = esgy*qy3 +  cy1*rhsqy13 + cy2*rhsqy23 + cy3*rhsqy33;
+      qy4  = esgy*qy4 +  cy1*rhsqy14 + cy2*rhsqy24 + cy3*rhsqy34;
+      qy5  = esgy*qy5 +  cy1*rhsqy15 + cy2*rhsqy25 + cy3*rhsqy35;
+      qy6  = esgy*qy6 +  cy1*rhsqy16 + cy2*rhsqy26 + cy3*rhsqy36;
+      //
+      nt1 += dt*(p_ab1*rhsnt11 + p_ab2*rhsnt21 + p_ab3*rhsnt31);
+      nt2 += dt*(p_ab1*rhsnt12 + p_ab2*rhsnt22 + p_ab3*rhsnt32);
+      nt3 += dt*(p_ab1*rhsnt13 + p_ab2*rhsnt23 + p_ab3*rhsnt33);
+      nt4 += dt*(p_ab1*rhsnt14 + p_ab2*rhsnt24 + p_ab3*rhsnt34);
+      nt5 += dt*(p_ab1*rhsnt15 + p_ab2*rhsnt25 + p_ab3*rhsnt35);
+      nt6 += dt*(p_ab1*rhsnt16 + p_ab2*rhsnt26 + p_ab3*rhsnt36);
+
+    // Update Fields
+      pmlQX[id1] = qx1 ;
+      pmlQX[id2] = qx2 ;
+      pmlQX[id3] = qx3 ;
+      pmlQX[id4] = qx4 ;
+      pmlQX[id5] = qx5 ;
+      pmlQX[id6] = qx6 ; 
+
+      pmlQY[id1] = qy1 ;
+      pmlQY[id2] = qy2 ;
+      pmlQY[id3] = qy3 ;
+      pmlQY[id4] = qy4 ;
+      pmlQY[id5] = qy5 ;
+      pmlQY[id6] = qy6 ; 
+
+      pmlNT[id1] = nt1 ;
+      pmlNT[id2] = nt2 ;
+      pmlNT[id3] = nt3 ;
+      pmlNT[id4] = nt4 ;
+      pmlNT[id5] = nt5 ;
+      pmlNT[id6] = nt6 ; 
+
+      //
+      rhsQX2[id1] = rhsqx11 ;
+      rhsQX2[id2] = rhsqx12 ;
+      rhsQX2[id3] = rhsqx13 ;
+      rhsQX2[id4] = rhsqx14 ;
+      rhsQX2[id5] = rhsqx15 ;
+      rhsQX2[id6] = rhsqx16 ;
+      //
+      rhsQX3[id1] = rhsqx21 ;
+      rhsQX3[id2] = rhsqx22 ;
+      rhsQX3[id3] = rhsqx23 ;
+      rhsQX3[id4] = rhsqx24 ;
+      rhsQX3[id5] = rhsqx25 ;
+      rhsQX3[id6] = rhsqx26 ;
+
+
+      //
+      rhsQY2[id1] = rhsqy11 ;
+      rhsQY2[id2] = rhsqy12 ;
+      rhsQY2[id3] = rhsqy13 ;
+      rhsQY2[id4] = rhsqy14 ;
+      rhsQY2[id5] = rhsqy15 ;
+      rhsQY2[id6] = rhsqy16 ;
+      //
+      rhsQY3[id1] = rhsqy21 ;
+      rhsQY3[id2] = rhsqy22 ;
+      rhsQY3[id3] = rhsqy23 ;
+      rhsQY3[id4] = rhsqy24 ;
+      rhsQY3[id5] = rhsqy25 ;
+      rhsQY3[id6] = rhsqy26 ;
+
+       //
+      rhsNT2[id1] = rhsnt11 ;
+      rhsNT2[id2] = rhsnt12 ;
+      rhsNT2[id3] = rhsnt13 ;
+      rhsNT2[id4] = rhsnt14 ;
+      rhsNT2[id5] = rhsnt15 ;
+      rhsNT2[id6] = rhsnt16 ;
+      //
+      rhsNT3[id1] = rhsnt21 ;
+      rhsNT3[id2] = rhsnt22 ;
+      rhsNT3[id3] = rhsnt23 ;
+      rhsNT3[id4] = rhsnt24 ;
+      rhsNT3[id5] = rhsnt25 ;
+      rhsNT3[id6] = rhsnt26 ;   
+      //
+      dfloat4 qa, qb;
+
+      qa.x = p_q1bar           + qx1 + qy1;
+      qa.y = ramp*p_q2bar      + qx2 + qy2;
+      qa.z = ramp*p_q3bar      + qx3 + qy3;
+      qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+      qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+      qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+      qb.z = 0.0; 
+      qb.w = 0.0; 
+
+      q[2*(n+element*p_Np)]   = qa;
+      q[2*(n+element*p_Np)+1] = qb;
+      
+    }
+  }
+}
+
