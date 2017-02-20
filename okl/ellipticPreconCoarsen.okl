@@ -1,8 +1,8 @@
-kernel void ellipticPreconCoarsen(const iint Nelements,
-				  const dfloat * restrict invDegree,
-				  const dfloat * restrict V1,
-				  const dfloat * restrict qN,
-				  dfloat * restrict q1){
+kernel void ellipticPreconCoarsen_v0(const iint Nelements,
+				     const dfloat * restrict invDegree,
+				     const dfloat * restrict V1,
+				     const dfloat * restrict qN,
+				     dfloat * restrict q1){
 
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Nverts;++n;inner0){
@@ -14,6 +14,56 @@ kernel void ellipticPreconCoarsen(const iint Nelements,
     }
   }
 }
+
+
+kernel void ellipticPreconCoarsen(const iint Nelements,
+				  const dfloat * restrict invDegree,
+				  const dfloat * restrict V1,
+				  const dfloat * restrict qN,
+				  dfloat * restrict q1){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+    shared dfloat s_qN[p_NblockV][p_Np];
+    shared dfloat s_V1[p_Nverts][p_Np];
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Nverts;++n;inner0){
+	iint t = n + es*p_Nverts;
+
+	while(t<p_Np*p_NblockV){
+	  if(eo*p_Np + t<Nelements*p_Np)
+	    s_qN[0][t] = qN[eo*p_Np+t];
+	  t += p_Nverts*p_NblockV;
+	}
+	
+	t = n + es*p_Nverts;
+	
+	while(t<p_Np*p_Nverts){
+	  s_V1[0][t] = V1[t];
+	  t += p_Nverts*p_NblockV;
+	}
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Nverts;++n;inner0){
+	const iint e = eo + es;
+	if(e<Nelements){
+	  dfloat tmp = 0;
+	  occaUnroll(p_Np)
+	    for(iint i=0;i<p_Np;++i){
+	      tmp += s_V1[n][i]*s_qN[es][i]; // bank conflict ?
+	    }
+	  q1[e*p_Nverts+n] = tmp; // *invDegree[e*p_Nverts+n];
+	}
+      }
+    }
+  }
+}
+
 
 #if 0
 kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
