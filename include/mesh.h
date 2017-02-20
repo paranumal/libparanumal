@@ -75,13 +75,14 @@ typedef struct {
   iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
+  dfloat *MM;           // reference mass matrix
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
   // indices of vertex nodes
   iint *vertexNodes;
   
   // quad specific quantity
-  iint Nq, NqP;
+  iint Nq, NqP, NpP;
   
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
@@ -120,7 +121,7 @@ typedef struct {
 
   // cubature
   iint cubNp;
-  dfloat *cubr, *cubs, *cubt;    // coordinates of local nodes
+  dfloat *cubr, *cubs, *cubt, *cubw; // coordinates and weights of local cubature nodes
   dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
@@ -198,7 +199,7 @@ typedef struct {
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
 
-  occa::memory o_Dr, o_Ds, o_Dt, o_LIFT;
+  occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
 
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)

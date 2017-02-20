@@ -1,6 +1,6 @@
-#include "ellipticQuad2D.h"
+#include "ellipticTri2D.h"
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
 
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
@@ -39,30 +39,21 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
 
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint n = i+j*mesh->Nq;
-      /*
-      dfloat rn = mesh->r[n];
-      dfloat sn = mesh->s[n];
-      */
-      dfloat rn = mesh->gllz[i];
-      dfloat sn = mesh->gllz[j];
-      V1[0*mesh->Np+n] = 0.25*(1-rn)*(1-sn);
-      V1[1*mesh->Np+n] = 0.25*(1+rn)*(1-sn);
-      V1[2*mesh->Np+n] = 0.25*(1+rn)*(1+sn);
-      V1[3*mesh->Np+n] = 0.25*(1-rn)*(1+sn);
+  for(iint n=0;n<mesh->Np;++n){   
+    dfloat rn = mesh->r[n];
+    dfloat sn = mesh->s[n];
+    
+    V1[0*mesh->Np+n] = -0.5*(rn+sn);
+    V1[1*mesh->Np+n] = +0.5*(1.+rn);
+    V1[2*mesh->Np+n] = +0.5*(1.+sn);
 
-      Vr1[0*mesh->Np+n] = 0.25*(-1)*(1-sn);
-      Vr1[1*mesh->Np+n] = 0.25*(+1)*(1-sn);
-      Vr1[2*mesh->Np+n] = 0.25*(+1)*(1+sn);
-      Vr1[3*mesh->Np+n] = 0.25*(-1)*(1+sn);
+    Vr1[0*mesh->Np+n] = 0.5*(-1);
+    Vr1[1*mesh->Np+n] = 0.5*(+1);
+    Vr1[2*mesh->Np+n] = 0;
       
-      Vs1[0*mesh->Np+n] = 0.25*(1-rn)*(-1);
-      Vs1[1*mesh->Np+n] = 0.25*(1+rn)*(-1);
-      Vs1[2*mesh->Np+n] = 0.25*(1+rn)*(+1);
-      Vs1[3*mesh->Np+n] = 0.25*(1-rn)*(+1);
-    }
+    Vs1[0*mesh->Np+n] = 0.5*(-1);
+    Vs1[1*mesh->Np+n] = 0;
+    Vs1[2*mesh->Np+n] = 0.5*(+1);
   }
   precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
   precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
@@ -77,42 +68,64 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   
   iint cnt = 0;
 
+  dfloat *cV1  = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
+  dfloat *cVr1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
+  dfloat *cVs1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
+
+  for(iint n=0;n<mesh->cubNp;++n){   
+    dfloat rn = mesh->cubr[n];
+    dfloat sn = mesh->cubs[n];
+    
+    cV1[0*mesh->cubNp+n] = -0.5*(rn+sn);
+    cV1[1*mesh->cubNp+n] = +0.5*(1.+rn);
+    cV1[2*mesh->cubNp+n] = +0.5*(1.+sn);
+
+    cVr1[0*mesh->cubNp+n] = 0.5*(-1);
+    cVr1[1*mesh->cubNp+n] = 0.5*(+1);
+    cVr1[2*mesh->cubNp+n] = 0;
+      
+    cVs1[0*mesh->cubNp+n] = 0.5*(-1);
+    cVs1[1*mesh->cubNp+n] = 0;
+    cVs1[2*mesh->cubNp+n] = 0.5*(+1);
+  }
+
+  dfloat Srr1[3][3], Srs1[3][3], Sss1[3][3], MM1[3][3];
+  for(iint n=0;n<mesh->Nverts;++n){
+    for(iint m=0;m<mesh->Nverts;++m){
+      Srr1[n][m] = 0;
+      Srs1[n][m] = 0;
+      Sss1[n][m] = 0;
+      MM1[n][m] = 0;
+      
+      for(iint i=0;i<mesh->cubNp;++i){
+	iint idn = n*mesh->cubNp+i;
+	iint idm = m*mesh->cubNp+i;
+	dfloat cw = mesh->cubw[i];
+	Srr1[n][m] += cw*(cVr1[idn]*cVr1[idm]);
+	Srs1[n][m] += cw*(cVr1[idn]*cVs1[idm]);
+	Sss1[n][m] += cw*(cVs1[idn]*cVs1[idm]);
+	MM1[n][m] += cw*(cV1[idn]*cV1[idm]);
+      }
+    }
+  }	
+
+  
   printf("Building coarse matrix system\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
 	dfloat Snm = 0;
- 
-	// use GLL nodes for integration
-	// (since Jacobian is high order tensor-product polynomial)
-	for(iint j=0;j<mesh->Nq;++j){
-	  for(iint i=0;i<mesh->Nq;++i){
-	    iint id = i+j*mesh->Nq;
-	    
-	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
-	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
-	    dfloat V1ni  = V1[n*mesh->Np+id];
-	    
-	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
-	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
-	    dfloat V1mi  = V1[m*mesh->Np+id];
 
-	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
-	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
-	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
-	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
-	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
-
-	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
-	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
-	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
-	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
-	    
-	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
-	    Snm += (lambda*V1ni*V1mi)*JW;
-	  }
-	}
-	//	Snm = (n==m) ? 1: 0;
+	dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
+	dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
+	dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
+	dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
+	dfloat J  = mesh->vgeo[e*mesh->Nvgeo +  JID];
+	
+	Snm  = J*(rx*rx+ry*ry)*Srr1[n][m];
+	Snm += J*(rx*sx+ry*sy)*Srs1[n][m];
+	Snm += J*(sx*sx+sy*sy)*Sss1[n][m];
+	Snm += J*lambda*MM1[n][m];
 
 	valsA[cnt] = Snm;
 	rowsA[cnt] = e*mesh->Nverts+n;
@@ -121,6 +134,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
       }
     }
   }
+
   printf("Done building coarse matrix system\n");
   precon->xxt = xxtSetup(Nnum,
 			 globalNumbering,

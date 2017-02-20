@@ -192,16 +192,29 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			LIFTT);
 
-  // HARD CODED FOR QUADS
-  mesh->o_vgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-			mesh->vgeo);
-  
-  // HARD CODED FOR QUADS
-  mesh->o_sgeo =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-			mesh->sgeo);
+  if(mesh->Nverts==4){
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+			  mesh->vgeo);
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+			  mesh->sgeo);
+  }
+  else{
+    printf("LOADING TRIANGLE MASS MATRIX\n");
+    mesh->o_MM =
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+			  mesh->MM);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
+			  mesh->vgeo);
 
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+			  mesh->sgeo);
+  }
+  
   if(mesh->Nggeo)
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
@@ -372,6 +385,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_RYID", RYID);
   kernelInfo.addDefine("p_SYID", SYID);
 
+  kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
 

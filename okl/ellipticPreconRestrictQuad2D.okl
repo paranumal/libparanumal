@@ -1,8 +1,8 @@
 
 
-kernel void ellipticFooQuad2D(iint Nelements,
-			     dfloat * Pq,
-			     dfloat * Rq){
+kernel void ellipticFooQuad2D(const iint Nelements,
+			      const dfloat * restrict Pq,
+			      dfloat * restrict Rq){
   
   
   for(iint e=0;e<Nelements;++e;outer0){

@@ -1,6 +1,6 @@
-#include "ellipticQuad2D.h"
+#include "ellipticTri2D.h"
 
-void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda){
+void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda){
 
   mesh->Nfields = 1;
   
@@ -26,9 +26,14 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
   
-  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
-  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
+  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+
+  int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
+  kernelInfo.addDefine("p_Nmax", Nmax); 
+
+  int NblockV = 512/mesh->Np; // get close to 256 threads
+  kernelInfo.addDefine("p_NblockV", NblockV);
   
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
@@ -55,11 +60,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "put",
 				       kernelInfo);
 
-
-  mesh->AxKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticAxQuad2D.okl",
-				       "ellipticAxQuad2D_e0",
-				       kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
@@ -93,35 +93,27 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
 
   mesh->gradientKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticGradientQuad2D.okl",
-				       "ellipticGradientQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticGradientTri2D.okl",
+				       "ellipticGradientTri2D",
 					 kernelInfo);
 
 
   mesh->ipdgKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgQuad2D.okl",
-				       "ellipticAxIpdgQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgTri2D.okl",
+				       "ellipticAxIpdgTri2D",
 				       kernelInfo);  
 
 
-  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  *ogs = meshParallelGatherScatterSetup(mesh,
-					mesh->Np*mesh->Nelements,
-					sizeof(dfloat),
-					mesh->gatherLocalIds,
-					mesh->gatherBaseIds, 
-					mesh->gatherHaloFlags);
-
-  *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda);
+  *precon = ellipticPreconditionerSetupTri2D(mesh, *ogs, lambda);
 
   (*precon)->preconKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticOasPreconQuad2D.okl",
-				       "ellipticOasPreconQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticOasPreconTri2D.okl",
+				       "ellipticOasPreconTri2D",
 				       kernelInfo);
   
   (*precon)->restrictKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictQuad2D.okl",
-				       "ellipticFooQuad2D",
+    mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictTri2D.okl",
+				       "ellipticFooTri2D",
 				       kernelInfo);
 
   (*precon)->coarsenKernel =
@@ -134,7 +126,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 
-
+#if 0
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -161,7 +153,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
       printf("min degree = " dfloatFormat "\n", gatherMinDegree);
     }
   }
-  
+
   // build weights for continuous SEM L2 project --->
   iint Ntotal = mesh->Nelements*mesh->Np;
   dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -184,6 +176,5 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
-
-  
+#endif  
 }

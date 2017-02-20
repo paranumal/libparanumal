@@ -48,6 +48,14 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
 
   fgets(buf, BUFSIZ, fp); // read comment
+  mesh->MM = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->Np*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->MM+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  
+  fgets(buf, BUFSIZ, fp); // read comment
 
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
@@ -115,9 +123,10 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->cubr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   mesh->cubs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  mesh->cubw = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   for(int n=0;n<mesh->cubNp;++n){
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n);
+    sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n, mesh->cubw+n);
   } 
 
   // read volume cubature interpolation matrix
@@ -271,9 +280,42 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
     fscanf(fp, dfloatFormat, mesh->ELvals+n);
   }
+  fgets(buf, BUFSIZ, fp); // read rest of line
   
   // ============ end BB stuff ==================
 #endif
+
+
+  // IPDG OAS stuff
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp);
+  int NpPcheck;
+  sscanf(buf, "%d", &NpPcheck);
+  mesh->NpP = NpPcheck;
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->oasForwardDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));
+  for(int n=0;n<mesh->NpP*mesh->NpP;++n){
+    fscanf(fp, dfloatFormat, mesh->oasForwardDg+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->oasDiagOpDg = (dfloat*) calloc(mesh->NpP, sizeof(dfloat));
+  for(int n=0;n<mesh->NpP;++n){
+    fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->oasBackDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));
+  for(int n=0;n<mesh->NpP*mesh->NpP;++n){
+    fscanf(fp, dfloatFormat, mesh->oasBackDg+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  
   
 #if 0
   printf("Dr: \n");
