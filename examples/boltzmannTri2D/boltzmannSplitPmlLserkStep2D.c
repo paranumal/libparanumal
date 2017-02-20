@@ -70,21 +70,10 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::toc("volumeKernel");
       
-#if 0
-    // compute relaxation terms using cubature
-    if(mesh->nonPmlNelements)
-      mesh->relaxationKernel(mesh->nonPmlNelements,
-			     mesh->o_nonPmlElementIds,
-			     mesh->o_cubInterpT,
-			     mesh->o_cubProjectT,
-			     mesh->o_q,
-			     mesh->o_rhspmlqx,
-			     mesh->o_rhspmlqy,
-			     mesh->o_rhspmlNT);
-    
+#if CUBATURE_ENABLED
     // compute relaxation terms using cubature
     if(mesh->pmlNelements)
-      mesh->relaxationKernel(mesh->pmlNelements,
+      mesh->pmlRelaxationKernel(mesh->pmlNelements,
 			     mesh->o_pmlElementIds,
 			     mesh->o_cubInterpT,
 			     mesh->o_cubProjectT,
@@ -92,6 +81,16 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			     mesh->o_rhspmlqx,
 			     mesh->o_rhspmlqy,
 			     mesh->o_rhspmlNT);
+  
+    // compute relaxation terms using cubature
+    if(mesh->nonPmlNelements)
+      mesh->relaxationKernel(mesh->nonPmlNelements,
+			     mesh->o_nonPmlElementIds,
+			     mesh->o_cubInterpT,
+			     mesh->o_cubProjectT,
+			     mesh->o_q,
+			     mesh->o_rhsq);
+    
 #endif
 
     // complete halo exchange

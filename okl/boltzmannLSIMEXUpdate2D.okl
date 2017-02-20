@@ -229,19 +229,35 @@ kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       //
 
       // PML UPDATES
-      pmlqx[id1] = qxe1 + akk*dt*qxi1;
-      pmlqx[id2] = qxe2 + akk*dt*qxi2;
-      pmlqx[id3] = qxe3 + akk*dt*qxi3;
-      pmlqx[id4] = qxe4 + akk*dt*qxi4;
-      pmlqx[id5] = qxe5 + akk*dt*qxi5;
-      pmlqx[id6] = qxe6 + akk*dt*qxi6; 
+      qx1 = qxe1 + akk*dt*qxi1;
+      qx2 = qxe2 + akk*dt*qxi2;
+      qx3 = qxe3 + akk*dt*qxi3;
+      qx4 = qxe4 + akk*dt*qxi4;
+      qx5 = qxe5 + akk*dt*qxi5;
+      qx6 = qxe6 + akk*dt*qxi6; 
        // PML UPDATES
-      pmlqy[id1] = qye1 + akk*dt*qyi1;
-      pmlqy[id2] = qye2 + akk*dt*qyi2;
-      pmlqy[id3] = qye3 + akk*dt*qyi3;
-      pmlqy[id4] = qye4 + akk*dt*qyi4;
-      pmlqy[id5] = qye5 + akk*dt*qyi5;
-      pmlqy[id6] = qye6 + akk*dt*qyi6; 
+      qy1 = qye1 + akk*dt*qyi1;
+      qy2 = qye2 + akk*dt*qyi2;
+      qy3 = qye3 + akk*dt*qyi3;
+      qy4 = qye4 + akk*dt*qyi4;
+      qy5 = qye5 + akk*dt*qyi5;
+      qy6 = qye6 + akk*dt*qyi6; 
+
+      
+      // PML UPDATES
+      pmlqx[id1] = qx1;
+      pmlqx[id2] = qx2;
+      pmlqx[id3] = qx3;
+      pmlqx[id4] = qx4;
+      pmlqx[id5] = qx5;
+      pmlqx[id6] = qx6; 
+       // PML UPDATES
+      pmlqy[id1] = qy1;
+      pmlqy[id2] = qy2;
+      pmlqy[id3] = qy3;
+      pmlqy[id4] = qy4;
+      pmlqy[id5] = qy5;
+      pmlqy[id6] = qy6; 
 
       // PML UPDATES
       pmlNT[id1] = nte1 + akk*dt*nti1;
@@ -251,7 +267,7 @@ kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       pmlNT[id5] = nte5 + akk*dt*nti5;
       pmlNT[id6] = nte6 + akk*dt*nti6; 
 
-      //
+
       dfloat4 temp;
 
       temp.x =  p_q1bar                 + qx1 + qy1;

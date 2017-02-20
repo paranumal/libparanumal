@@ -49,7 +49,7 @@ void boundaryConditions2D(const iint bc,
 }
 
 
-kernel void boltzmannNonPmlSurface2D(const iint Nelements,
+kernel void boltzmannSurface2D(const iint Nelements,
 				     const iint * restrict elementIds,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
@@ -346,7 +346,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 
 
 
-kernel void boltzmannNonPmlSurface2Dbbdg(const iint Nelements,
+kernel void boltzmannSurface2Dbbdg(const iint Nelements,
 					 const iint   * restrict elementIds,
 					 const dfloat * restrict sgeo,
 					 const dfloat * restrict L0vals,

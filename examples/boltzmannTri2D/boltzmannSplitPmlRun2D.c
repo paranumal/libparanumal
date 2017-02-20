@@ -13,7 +13,18 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
     // perform a 5-stage LSERK4 time step
-    boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #if TIME_DISC==LSERK
+      boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif
+    
+   // Perform semi-analytic integration for pml damping term
+    #if TIME_DISC==SAABV1
+      boltzmannSplitPmlSaabV1Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif
+
+    #if TIME_DISC==LSIMEX
+      boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif  
 
     // output statistics if this is an output step
     if((tstep%mesh->errorStep)==0){
