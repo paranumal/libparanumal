@@ -1,5 +1,5 @@
 
-kernel void boltzmannNonPmlRelaxation2D(const iint Nelements,
+kernel void boltzmannRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
@@ -113,7 +113,7 @@ kernel void boltzmannNonPmlRelaxation2D(const iint Nelements,
 
 
 
-kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
+kernel void boltzmannSplitPmlRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
@@ -230,6 +230,8 @@ kernel void boltzmannSplitPmlRelaxation2D(const iint Nelements,
     }
   }
 }
+
+
 
 // c1: working (reproduces c0)
 kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,

@@ -60,6 +60,46 @@ mesh2D *meshSetupTri2D(char *filename, int N){
   memcpy(mesh->rka, rka, Nrk*sizeof(dfloat));
   memcpy(mesh->rkb, rkb, Nrk*sizeof(dfloat));
   memcpy(mesh->rkc, rkc, (Nrk+1)*sizeof(dfloat));
+
+  int Nimex = 4; 
+
+
+  dfloat ImB[4] ={0.0,   
+              673488652607.0 /2334033219546.0,      
+              493801219040.0/853653026979.0,               
+              184814777513.0/1389668723319.0 };
+
+
+  dfloat ImC[4] = { 0.0,  
+                    3375509829940.0/4525919076317.0, 
+                    272778623835.0/1039454778728.0,  
+                    1.0};
+
+
+
+  dfloat ImAd[4] = {0.0,
+                3375509829940.0/4525919076317.0,
+                566138307881.0/912153721139.0,
+                184814777513.0/1389668723319.0};
+
+  dfloat ImAmBim[4] = {0.0,
+                    0.0,
+                  -11712383888607531889907.0/32694570495602105556248.0 - 673488652607.0 /2334033219546.0,
+                   0.0}; 
+
+  dfloat ImAmBex[4] = {0.0,
+                    3375509829940.0/4525919076317.0,
+                    272778623835.0/1039454778728.0 - 673488652607.0 /2334033219546.0,
+                    1660544566939.0/2334033219546.0-493801219040.0/853653026979.0 };                              
+
+
+  mesh->Nimex = Nimex;
+  memcpy(mesh->LsimexB, ImB, Nimex*sizeof(dfloat));
+  memcpy(mesh->LsimexC, ImC, Nimex*sizeof(dfloat));
+  memcpy(mesh->LsimexAd, ImAd, Nimex*sizeof(dfloat));
+  memcpy(mesh->LsimexABi, ImAmBim, Nimex*sizeof(dfloat));
+  memcpy(mesh->LsimexABe, ImAmBex, Nimex*sizeof(dfloat));
+ 
     
   return mesh;
 }
