@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -156,7 +156,9 @@ typedef struct {
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
-
+  //LS Imex
+  dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
+  iint Nimex;
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
   iint    plotNp;        // number of plot nodes per element
@@ -183,11 +185,14 @@ typedef struct {
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
+  dfloat *expsigmax;
+ 
 
   dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
+  dfloat *expsigmay; // hold exp(-sigma*dt)
   
   dfloat *pmlNT;    // time integrated relaxtion term
   dfloat *rhspmlNT; //
@@ -236,10 +241,23 @@ typedef struct {
   iint nonPmlNelements;
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
-
+  
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT;
+  
+  // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used 
+  occa::memory o_expsigmax, o_expsigmay;
+  occa::memory o_rhsq2,     o_rhsq3;
+  occa::memory o_rhspmlqx2, o_rhspmlqx3;
+  occa::memory o_rhspmlqy2, o_rhspmlqy3;
+  occa::memory o_rhspmlNT2, o_rhspmlNT3;
+  // LS Imex vars
+  occa::memory o_qY,   o_qZ,   o_qS;
+  occa::memory o_qYx,  o_qZx,  o_qSx;
+  occa::memory o_qYy,  o_qZy,  o_qSy;
+  occa::memory o_qYnt, o_qZnt, o_qSnt;
+
   
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
@@ -293,13 +311,49 @@ typedef struct {
 
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
+  
 
+  // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
+  occa::kernel pmlRelaxationKernel;
+  
+  // Boltzmann SAAB low order updates
+  occa::kernel updateFirstOrderKernel;
+  occa::kernel updateSecondOrderKernel;
+  occa::kernel pmlUpdateFirstOrderKernel;
+  occa::kernel pmlUpdateSecondOrderKernel;
+  
+  // //Boltzmann Imex Kernels
+   occa::kernel implicitVolumeKernel;
+   occa::kernel pmlImplicitVolumeKernel;
+   
+   occa::kernel implicitUpdateKernel;
+   occa::kernel pmlImplicitUpdateKernel;
+
+
+  // occa::kernel ImexExNonPmlVolumeKernel;
+  // occa::kernel ImexImSplitPmlVolumeKernel;
+  // occa::kernel ImexExSplitPmlVolumeKernel;
+  // //
+  // occa::kernel explicitSurfaceKernel; 
+  // occa::kernel pmlExplicitSurfaceKernel;
+
+
+
+  // //
+  occa::kernel NRIterationKernel;
+  occa::kernel pmlNRIterationKernel;
+  //
+  occa::kernel residualUpdateKernel;
+  occa::kernel pmlResidualUpdateKernel;
+
+
   
   occa::kernel pmlKernel; // deprecated
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
+  
 
   
 }mesh_t;
