@@ -1,7 +1,7 @@
 #include "ellipticTri2D.h"
 
 void diagnostic(int N, occa::memory &o_x, const char *message){
-#if 0
+#if 1
   dfloat *x = (dfloat*) calloc(N, sizeof(dfloat));
 
   o_x.copyTo(x, N*sizeof(dfloat), 0);

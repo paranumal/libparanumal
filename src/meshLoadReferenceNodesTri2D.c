@@ -33,6 +33,18 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     sscanf(buf, dfloatFormat dfloatFormat, mesh->r+n, mesh->s+n);
   }
 
+  // find node indices of vertex nodes
+  dfloat NODETOL = 1e-6;
+  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
+  for(iint n=0;n<mesh->Np;++n){
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
+      mesh->vertexNodes[0] = n;
+    if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
+      mesh->vertexNodes[1] = n;
+    if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)<NODETOL)
+      mesh->vertexNodes[2] = n;
+  }
+  
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){
