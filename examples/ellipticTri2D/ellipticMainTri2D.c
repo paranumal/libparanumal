@@ -155,6 +155,11 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			      const char *type,
 			      const char *options){
 
+  if(strstr(options,"PROJECT")){
+    ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString, "add");
+    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
+  }
+  
   if(strstr(options, "OAS")){
     
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
@@ -207,6 +212,12 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
     }
 
+    if(strstr(options,"PROJECT")){
+      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
+      ellipticParallelGatherScatter2D(mesh, ogs, o_z, o_z, dfloatString, "add");
+    }
+
+    
     mesh->device.finish();
     occa::toc("restrictKernel");   
   }
@@ -251,7 +262,8 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be IPDG
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
+  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
   //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
