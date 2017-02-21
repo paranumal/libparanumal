@@ -101,8 +101,9 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
       }
     }
 
+#if 0
     barrier(localMemFence);
-	  
+
     // loop over faces to add pseudo-gradient
 
     // face 0 & 2
@@ -124,7 +125,7 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
       surfaceTerms(sk1,p_Nq-1,j);
       surfaceTerms(sk3,0,j); 
     }
-
+#endif
     barrier(localMemFence);
 
     // prescale by geofacs

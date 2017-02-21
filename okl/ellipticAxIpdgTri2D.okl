@@ -4,8 +4,7 @@
 // sgeo stores dfloat4s with nx,ny,nz,(sJ/J)*(w1*w2*w3/(ws1*ws2))
 
 // nx,ny,nz,sJ,invJ - need WsJ
-
-
+ 
 kernel void ellipticAxIpdgTri2D(const int Nelements,
 				const iint * restrict vmapM,
 				const iint * restrict vmapP,
@@ -92,10 +91,12 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	
 	dfloat Lnxdq = 0;
 	dfloat Lnydq = 0;
-	for(iint i=0;i<p_NfacesNfp;++i){
-	  Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
-	  Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
-	}
+	
+	occaUnroll(p_NfacesNfp)
+	  for(iint i=0;i<p_NfacesNfp;++i){
+	    Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
+	    Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
+	  }
 
 	dfloat dqdx = s_dqdx[n] + Lnxdq;
 	dfloat dqdy = s_dqdy[n] + Lnydq;
@@ -118,12 +119,13 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       if(n<p_Np){
 	dfloat lapr = 0, laps = 0;
 
-	for(int i=0;i<p_Np;++i){
-	  lapr += DrT[n+i*p_Np]*s_dqdx[i];
-	  laps += DsT[n+i*p_Np]*s_dqdy[i];
-	}
+	occaUnroll(p_Np)
+	  for(int i=0;i<p_Np;++i){
+	    lapr += DrT[n+i*p_Np]*s_dqdx[i];
+	    laps += DsT[n+i*p_Np]*s_dqdy[i];
+	  }
 
-	s_lapq[n] -= lapr+laps;
+	s_lapq[n] -= (lapr+laps);
       }
       
     }
@@ -135,9 +137,10 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	dfloat lap = 0;
 	
 	// lift remaining surface terms
-	for(int i=0;i<p_NfacesNfp;++i){
-	  lap += LIFTT[n+i*p_Np]*s_lapflux[i];
-	}
+	occaUnroll(p_NfacesNfp)
+	  for(int i=0;i<p_NfacesNfp;++i){
+	    lap += LIFTT[n+i*p_Np]*s_lapflux[i];
+	  }
 	
 	s_lapq[n] += lap;
       }
@@ -152,13 +155,15 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	
 	dfloat Mlapq = 0;
 
-	// multiply by mass matrix 
-	for(int i=0;i<p_Np;++i){
-	  Mlapq += MM[n+i*p_Np]*s_lapq[i];
-	}
+	// multiply by mass matrix
+	occaUnroll(p_Np)
+	  for(int i=0;i<p_Np;++i){
+	    Mlapq += MM[n+i*p_Np]*s_lapq[i];
+	  }
 	
 	Aq[n+e*p_Np] = J*Mlapq;
       }
     }
   }
 }
+
