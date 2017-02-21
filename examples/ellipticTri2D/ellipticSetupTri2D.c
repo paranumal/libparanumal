@@ -104,6 +104,15 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 				       kernelInfo);  
 
 
+  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+  *ogs = meshParallelGatherScatterSetup(mesh,
+					mesh->Np*mesh->Nelements,
+					sizeof(dfloat),
+					mesh->gatherLocalIds,
+					mesh->gatherBaseIds, 
+					mesh->gatherHaloFlags);
+
+  
   *precon = ellipticPreconditionerSetupTri2D(mesh, *ogs, lambda);
 
   (*precon)->preconKernel = 
@@ -126,7 +135,7 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 
-#if 0
+#if 1
   // find maximum degree
   {
     for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -160,8 +169,8 @@ void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
-      dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
-      localMM[n+e*mesh->Np] = wJ;
+      dfloat J = mesh->vgeo[e*mesh->Nvgeo + JID];
+      localMM[n+e*mesh->Np] = J;
     }
   }
 
