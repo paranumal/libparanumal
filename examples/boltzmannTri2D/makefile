@@ -14,31 +14,28 @@ CC	= mpic++
 LD	= mpic++
 
 
-TIME_METHOD  = LSIMEX
-CUBATURE_USE = 1
+TIME_METHOD  = SAAB
+CUBATURE_USE = 0
 
 
 #LSERK TIME DISCRETIZATION
 flags += -DLSERK=1
-flags += -DSAABV1=2
-flags += -DSAABV2=3
-flags += -DLSIMEX=4
+flags += -DSAAB=2
+flags += -DLSIMEX=3
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
 endif
 
-ifeq ($(TIME_METHOD), SAABV1)
- flags += -DTIME_DISC=SAABV1
-endif
-
-ifeq ($(TIME_METHOD), SAABV2)
- flags += -DTIME_DISC=SAABV2
+ifeq ($(TIME_METHOD), SAAB)
+ flags += -DTIME_DISC=SAAB
 endif
 
 ifeq ($(TIME_METHOD), LSIMEX)
  flags += -DTIME_DISC=LSIMEX
 endif
+
+
 
 ifeq ($(CUBATURE_USE), 1)
 flags += -DCUBATURE_ENABLED=1
@@ -74,7 +71,7 @@ boltzmannError2D.o \
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
-boltzmannSplitPmlSaabV1Step2D.o \
+boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
