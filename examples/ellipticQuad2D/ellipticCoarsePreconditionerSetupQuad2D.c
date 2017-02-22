@@ -7,10 +7,14 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint Nnum = mesh->Nverts*mesh->Nelements;
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
-
+  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+  
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
+  // squeeze numbering
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners);
+  
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
 
