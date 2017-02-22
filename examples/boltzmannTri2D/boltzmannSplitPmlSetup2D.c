@@ -482,16 +482,43 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
                 - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
                  /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-   printf("%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
+   printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
 
 
   kernelInfo.addDefine("p_saab1",  saab1 );
-  kernelInfo.addDefine("p_saab2",  saab2  );
+  kernelInfo.addDefine("p_saab2",  saab2 );
   kernelInfo.addDefine("p_saab3",  saab3 );
 
-  dfloat expdt = exp(-mesh->tauInv*dt);
-  kernelInfo.addDefine("p_expdt",  expdt);
+  
+  // Define coefficients for PML Region
+  dfloat itau = 0.5*mesh->tauInv; 
+// Modefied AB Coefficients
+  dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
+                  - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
+                   /(2.*pow(mesh->dt,2)*pow(itau,3));
 
+
+  dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
+                 + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+                  /(pow(mesh->dt,2)*pow(itau,3));
+
+  dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
+                - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+                 /(2*pow(mesh->dt,2)*pow(itau,3));
+
+   printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
+
+
+  kernelInfo.addDefine("p_pmlsaab1",  psaab1 );
+  kernelInfo.addDefine("p_pmlsaab2",  psaab2 );
+  kernelInfo.addDefine("p_pmlsaab3",  psaab3 );
+
+
+  //Define exp(tauInv*dt) 
+  dfloat expdt = exp(-mesh->tauInv*dt);
+  dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+  kernelInfo.addDefine("p_expdt",  expdt);
+  kernelInfo.addDefine("p_pmlexpdt",  pmlexpdt);
 
 #endif
     
