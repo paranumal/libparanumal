@@ -127,15 +127,7 @@ void ellipticPreconditioner2D(solver_t *solver,
   
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
-  
-  if(strstr(options,"PROJECT")){
-    // S*G*r
-    ellipticParallelGatherScatterTri2D(mesh, ogs, o_r, o_r, dfloatString, "add");
 
-    // W*S*G*r (Project^t*r)
-    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
-  }
-  
   if(strstr(options, "OAS")){
     
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
@@ -209,11 +201,6 @@ void ellipticPreconditioner2D(solver_t *solver,
       occa::toc("coarseGrid");
     }
 
-    if(strstr(options,"PROJECT")){
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-      ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
-    }
-    
   }
   else if(strstr(options, "JACOBI")){
 
@@ -282,7 +269,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options); 
-    
+   
     // dot(p,A*p)
     dfloat pAp =  ellipticInnerProduct(solver, o_p, o_Ap);
     
@@ -299,6 +286,14 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // r <= r - alpha*A*p
     ellipticScaledAdd(solver, -alpha, o_Ap, 1.f, o_r);
 
+    if(strstr(options,"PROJECT")){
+      // r <= S*G*r 
+      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+      
+      // r <= W*S*G*r (Project^t*r)
+      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
+    }
+    
     // dot(r,r)
     rdotr1 = ellipticInnerProduct(solver, o_r, o_r);
     
@@ -307,6 +302,16 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // z = Precon^{-1} r
     ellipticPreconditioner2D(solver, o_r, o_zP, o_z, options);
 
+    if(strstr(options,"PROJECT")){
+      // z <= S*G*W*z (Project z)
+      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
+
+      // z <= S*G*z
+      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
+    }
+    
+
+    
     // dot(r,z)
     rdotz1 = ellipticInnerProduct(solver, o_r, o_z);
 
