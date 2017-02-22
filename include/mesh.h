@@ -414,6 +414,7 @@ void meshPartitionStatistics(mesh_t *mesh);
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
+
 extern "C"
 {
   void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
@@ -435,6 +436,40 @@ extern "C"
                void* rhs);
 
   int xxtFree(void* A) ;
+
+  void * amg2013SetupCSR(int global_size,      //Global matrix size
+                       int *row_starts,     //[numproc+1] global partition array
+                       int numLocalRows,   
+                       int    *diag_i,      //local crs sparse matrix (locally indexed)
+                       int    *diag_j,
+                       void   *diag_data,
+                       int    *offd_i,      //nonlocal crs sparse matrix (globally indexed)
+                       int    *colMap,
+                       void   *offd_data,
+                       const char* iintType, 
+                       const char* dfloatType);
+
+
+  void * amg2013SetupCOO(int global_size,      //Global matrix size
+                        int *row_starts,     //[numproc+1] global partition array
+                        int numLocalRows,  
+                        int    diag_nnz, 
+                        int    *Ai,      //local coo sparse matrix (locally indexed)
+                        int    *diag_j,
+                        void   *diag_data,
+                        int    offd_nnz,
+                        int    *Bi,      //nonlocal coo sparse matrix (globally indexed)
+                        int    *colMap,
+                        void   *offd_data,
+                        const char* iintType, 
+                        const char* dfloatType);
+
+  int amg2013Solve(void* x,
+                 void* A,
+                 void* rhs);
+
+
+  int amg2013Free(void* A);
 }
 
 
