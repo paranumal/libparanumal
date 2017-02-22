@@ -310,8 +310,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
       ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
     }
     
-
-    
     // dot(r,z)
     rdotz1 = ellipticInnerProduct(solver, o_r, o_z);
 

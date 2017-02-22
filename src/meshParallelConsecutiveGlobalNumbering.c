@@ -59,7 +59,8 @@ int parallelCompareOwners(const void *a, const void *b){
 
 
 // squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners){
+void meshParallelConsecutiveGlobalNumbering(iint Nnum,
+					    iint *globalNumbering, iint *globalOwners, iint *globalStarts){
 
   // need to handle globalNumbering = 0
   
@@ -144,6 +145,8 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, ii
   for(iint r=0;r<size;++r)
     allOffsets[r+1] = allOffsets[r] + allCounts[r];
 
+  memcpy(globalStarts, allOffsets, (size+1)*sizeof(iint));
+  
   // shift numbering
   for(iint n=0;n<recvNtotal;++n)
     recvNodes[n].newGlobalId += allOffsets[rank];

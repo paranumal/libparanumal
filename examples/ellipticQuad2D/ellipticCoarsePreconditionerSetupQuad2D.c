@@ -1,19 +1,50 @@
 #include "ellipticQuad2D.h"
 
+typedef struct{
+
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+}nonZero_t;
+
+// compare on global indices 
+int parallelCompareRowColumn(const void *a, const void *b){
+
+  nonZero_t *fa = (nonZero_t*) a;
+  nonZero_t *fb = (nonZero_t*) b;
+  
+  if(fa->row < fb->row) return -1;
+  if(fa->row > fb->row) return +1;
+
+  if(fa->col < fb->col) return -1;
+  if(fa->col > fb->col) return +1;
+
+  return 0;
+
+}
+
+
 void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
 
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
   iint Nnum = mesh->Nverts*mesh->Nelements;
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
   // squeeze numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners);
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
   
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
@@ -78,6 +109,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
   iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
+
+  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+  iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
   
   iint cnt = 0;
 
@@ -121,10 +158,70 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 	valsA[cnt] = Snm;
 	rowsA[cnt] = e*mesh->Nverts+n;
 	colsA[cnt] = e*mesh->Nverts+m;
+
+	// pack non-zero
+	sendNonZeros[cnt].val = Snm;
+	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+	
 	++cnt;
       }
     }
   }
+
+  // count how many non-zeros to send to each process
+  for(iint n=0;n<cnt;++n)
+    sendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+
+  // sort by row ordering
+  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // find send and recv offsets for gather
+  iint recvNtotal = 0;
+  for(iint r=0;r<size;++r){
+    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
+    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
+    recvNtotal += recvCounts[r]/sizeof(nonZero_t);
+  }
+
+  nonZero_t *recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
+  
+  // determine number to receive
+  MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_CHAR,
+		recvNonZeros, recvCounts, recvOffsets, MPI_CHAR,
+		MPI_COMM_WORLD);
+
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
+
+  // compress duplicates
+  cnt = 0;
+  for(iint n=1;n<recvNtotal;++n){
+    if(recvNonZeros[n].row == recvNonZeros[cnt].row &&
+       recvNonZeros[n].col == recvNonZeros[cnt].col){
+      recvNonZeros[cnt].val += recvNonZeros[n].val;
+    }
+    else{
+      ++cnt;
+      recvNonZeros[cnt] = recvNonZeros[n];
+    }
+  }
+  recvNtotal = cnt+1;
+  
+  for(iint n=0;n<recvNtotal;++n){
+    printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
+	   rank, n,
+	   recvNonZeros[n].row,
+	   recvNonZeros[n].col,
+	   recvNonZeros[n].val,
+	   recvNonZeros[n].ownerRank);
+  }
+  
+  
   printf("Done building coarse matrix system\n");
   precon->xxt = xxtSetup(Nnum,
 			 globalNumbering,
