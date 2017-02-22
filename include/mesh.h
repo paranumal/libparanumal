@@ -436,9 +436,7 @@ extern "C"
 
   int xxtFree(void* A) ;
 
-  void * amg2013SetupCSR(int global_size,      //Global matrix size
-                       int *row_starts,     //[numproc+1] global partition array
-                       int numLocalRows,   
+  void * amg2013SetupCSR(int *row_starts,     //[numproc+1] global partition array   
                        int    *diag_i,      //local crs sparse matrix (locally indexed)
                        int    *diag_j,
                        void   *diag_data,
@@ -449,9 +447,7 @@ extern "C"
                        const char* dfloatType);
 
 
-  void * amg2013SetupCOO(int global_size,      //Global matrix size
-                        int *row_starts,     //[numproc+1] global partition array
-                        int numLocalRows,  
+  void * amg2013SetupCOO(int *row_starts,     //[numproc+1] global partition array  
                         int    diag_nnz, 
                         int    *Ai,      //local coo sparse matrix (locally indexed)
                         int    *diag_j,

@@ -42,9 +42,7 @@ typedef struct {
 } amg2013_t;
 
 
-void * amg2013SetupCSR(int global_size,      //Global matrix size
-                       int *row_starts,     //[numproc+1] global partition array
-                       int numLocalRows,   
+void * amg2013SetupCSR(int *row_starts,     //[numproc+1] global partition array   
                        int    *diag_i,      //local crs sparse matrix (locally indexed)
                        int    *diag_j,
                        void   *diag_data,
@@ -59,6 +57,7 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
   int    maxit_sol = 500;
   
   int num_procs, myid;
+  int numLocalRows;
   int n,i,j;
 
   hypre_ParCSRMatrix *A;
@@ -81,10 +80,11 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
     amg->rhsDouble = (double *) malloc(numLocalRows*sizeof(double));
   } 
 
-  amg->global_size = (HYPRE_BigInt) global_size;
+  amg->global_size = (HYPRE_BigInt) row_starts[num_procs];
   amg->row_starts = (HYPRE_BigInt*) malloc((num_procs+1)*sizeof(HYPRE_BigInt));
   for (n =0;n<=num_procs;n++) amg->row_starts[n] = (HYPRE_BigInt) row_starts[n];
   
+  numLocalRows = row_starts[myid+1]-row_starts[myid];
   amg->numLocalRows = numLocalRows;
   amg->diag_nnz = diag_i[numLocalRows];
   amg->offd_nnz = offd_i[numLocalRows];
@@ -210,9 +210,7 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
 }
 
 
-void * amg2013SetupCOO(int global_size,      //Global matrix size
-                    int *row_starts,     //[numproc+1] global partition array
-                    int numLocalRows,  
+void * amg2013SetupCOO(int *row_starts,     //[numproc+1] global partition array 
                     int    diag_nnz, 
                     int    *Ai,      //local coo sparse matrix (locally indexed)
                     int    *diag_j,
@@ -226,8 +224,16 @@ void * amg2013SetupCOO(int global_size,      //Global matrix size
 
   void *amg;
 
+  int num_procs, myid;
+  int numLocalRows;
   int *diag_i, *offd_i;
   int n;
+
+
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs );
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid );
+
+  numLocalRows = row_starts[myid+1]-row_starts[myid];
 
   diag_i = (int*) calloc(numLocalRows+1,sizeof(int));
   offd_i = (int*) calloc(numLocalRows+1,sizeof(int));
@@ -262,7 +268,7 @@ void * amg2013SetupCOO(int global_size,      //Global matrix size
   }
   offd_i[numLocalRows] = offd_nnz;
 
-  amg = amg2013SetupCSR(global_size, row_starts, numLocalRows,   
+  amg = amg2013SetupCSR(row_starts,    
                          diag_i, diag_j, diag_data,
                          offd_i, colMap, offd_data,
                          iintType, dfloatType);
