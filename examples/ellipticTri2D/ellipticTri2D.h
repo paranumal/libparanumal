@@ -89,7 +89,8 @@ typedef struct {
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
   occa::memory o_grad; // temporary gradient storage (part of A*)
-
+  occa::memory o_rtmp;
+  
   dfloat *sendBuffer, *recvBuffer;
 
   // HOST shadow copies
