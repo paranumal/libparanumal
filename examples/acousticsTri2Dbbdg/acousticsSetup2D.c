@@ -85,7 +85,7 @@ void acousticsSetup2D(mesh2D *mesh){
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
     //
-    mesh->finalTime = 0.1;
+    mesh->finalTime = 0.5;
     mesh->NtimeSteps = mesh->finalTime/mesh->dt;
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 

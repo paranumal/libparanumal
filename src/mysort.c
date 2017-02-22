@@ -1,4 +1,4 @@
-#include "mesh3D.h"
+#include "mesh.h"
 #include <stdlib.h>
 
 int isHigher(const void *a, const void *b){
