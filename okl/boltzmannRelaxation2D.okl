@@ -409,8 +409,7 @@ kernel void boltzmannSAABSplitPmlRelaxationCub2D(const iint Nelements,
 	      cubq2 += Icn*s_q[es][1][m];
 	      cubq3 += Icn*s_q[es][2][m];
 	      
-	    }
-	    
+	    }    
 	    // BGK relaxation approximation to the Boltzmann collision operator
 	    s_cubN4[es][n] =  p_tauInv*cubq2*cubq3/cubq1;
 	    s_cubN5[es][n] =  p_tauInv*p_invsqrt2*cubq2*cubq2/cubq1;

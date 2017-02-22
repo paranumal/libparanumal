@@ -647,7 +647,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       printf("Compiling SAAB pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSplitPmlVolumeCub2D",
+               "boltzmannSAABSplitPmlVolumeCub2D",
                kernelInfo);
 
        printf("Compiling SAAB relaxation kernel with cubature integration\n");

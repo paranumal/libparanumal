@@ -30,8 +30,6 @@ if(mesh->totalHaloPairs>0){
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
 
-
-
 // compute volume contribution to DG boltzmann RHS
 	if(mesh->pmlNelements)
   		mesh->pmlVolumeKernel(mesh->pmlNelements,
