@@ -46,7 +46,7 @@ void ellipticRunTri2D(mesh2D *mesh);
 
 void ellipticOccaRunTri2D(mesh2D *mesh);
 
-void ellipticSetupTri2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda);
+void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 
 void ellipticVolumeTri2D(mesh2D *mesh);
 
@@ -56,8 +56,8 @@ void ellipticUpdateTri2D(mesh2D *mesh, dfloat rka, dfloat rkb);
 
 void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 
-void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
-				     const char *type, const char *op);
+void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+					const char *type, const char *op);
 
 precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
 
@@ -66,3 +66,41 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda);
+
+
+typedef struct {
+
+  mesh_t *mesh;
+
+  precon_t *precon;
+
+  ogs_t *ogs;
+
+  ogs_t *ogsDg;
+
+  char *type;
+
+  iint Nblock;
+  
+  occa::memory o_p; // search direction
+  occa::memory o_z; // preconditioner solution
+  occa::memory o_zP; // extended OAS preconditioner patch solution
+  occa::memory o_Ax; // A*initial guess
+  occa::memory o_Ap; // A*search direction
+  occa::memory o_tmp; // temporary
+  occa::memory o_grad; // temporary gradient storage (part of A*)
+
+  dfloat *sendBuffer, *recvBuffer;
+
+  // HOST shadow copies
+  dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
+  
+}solver_t;
+
+// block size for reduction (hard coded)
+#define blockSize 256 
+
+
+int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
+
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo);
