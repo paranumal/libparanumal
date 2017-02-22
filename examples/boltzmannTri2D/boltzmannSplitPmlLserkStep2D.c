@@ -105,7 +105,8 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
     mesh->device.finish();
     occa::tic("surfaceKernel");
-    
+     
+     if(mesh->pmlNelements)
     // compute surface contribution to DG boltzmann RHS
     mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
