@@ -37,6 +37,10 @@ AOBJS    = \
 ellipticSetupTri2D.o \
 ellipticPreconditionerSetupTri2D.o\
 ellipticCoarsePreconditionerSetupTri2D.o\
+ellipticSolveTri2D.o\
+ellipticSolveSetupTri2D.o\
+ellipticHaloExchange2D.o\
+ellipticParallelGatherScatterTri2D.o
 
 # library objects
 LOBJS = \
