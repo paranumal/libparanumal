@@ -156,6 +156,7 @@ typedef struct {
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
+
   //LS Imex
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
   iint Nimex;
@@ -185,15 +186,13 @@ typedef struct {
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
-  dfloat *expsigmax;
- 
+   
 
   dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
-  dfloat *expsigmay; // hold exp(-sigma*dt)
-  
+    
   dfloat *pmlNT;    // time integrated relaxtion term
   dfloat *rhspmlNT; //
   dfloat *respmlNT; //
