@@ -18,8 +18,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
     #endif
     
    // Perform semi-analytic integration for pml damping term
-    #if TIME_DISC==SAABV1
-      boltzmannSplitPmlSaabV1Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #if TIME_DISC==SAAB
+      boltzmannSplitPmlSaabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
     #endif
 
     #if TIME_DISC==LSIMEX

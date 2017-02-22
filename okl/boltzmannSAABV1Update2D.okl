@@ -146,7 +146,7 @@ kernel void boltzmannSAABV1NonPmlUpdate2D(const iint Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannSAABV1SplitPmlUpdateFirst2D(
+kernel void boltzmannSAABSplitPmlUpdateFirst2D(
             const iint                Nelements,
             const iint     * restrict elementIds,
             const dfloat              dt, 
@@ -230,35 +230,25 @@ kernel void boltzmannSAABV1SplitPmlUpdateFirst2D(
       dfloat nt4 = pmlNT[id4];
       dfloat nt5 = pmlNT[id5];
       dfloat nt6 = pmlNT[id6]; 
-      //
-      //
-      dfloat  sgx =    sigmax[id0] ;
-      dfloat  sgy =    sigmay[id0] ;
-      dfloat esgx = expsigmax[id0];
-      dfloat esgy = expsigmay[id0];
       
+
       // First Order SAAB Coefficients
-      dfloat cx1=0.0, cy1=0.0; 
-      // Check division by zero, limiting to standard AB coefficients
-      cx1 = dt - sgx*dt*dt/2. + sgx*sgx*dt*dt*dt/6.0;  
-      cy1 = dt - sgy*dt*dt/2. + sgy*sgy*dt*dt*dt/6.0;  
+      dfloat c1 = -(p_expdt - 1.)/p_tauInv;
       
-      
-      qx1 = esgx*qx1 + cx1*rhsqx11;
-      qx2 = esgx*qx2 + cx1*rhsqx12;
-      qx3 = esgx*qx3 + cx1*rhsqx13;
-      qx4 = esgx*qx4 + cx1*rhsqx14;
-      qx5 = esgx*qx5 + cx1*rhsqx15;
-      qx6 = esgx*qx6 + cx1*rhsqx16;
+      qx1 = qx1 + dt*rhsqx11;
+      qx2 = qx2 + dt*rhsqx12;
+      qx3 = qx3 + dt*rhsqx13;
+      qx4 = p_expdt*qx4 + c1*rhsqx14;
+      qx5 = p_expdt*qx5 + c1*rhsqx15;
+      qx6 = p_expdt*qx6 + c1*rhsqx16;
       //
-      qy1 = esgy*qy1 + cy1*rhsqy11;
-      qy2 = esgy*qy2 + cy1*rhsqy12;
-      qy3 = esgy*qy3 + cy1*rhsqy13;
-      qy4 = esgy*qy4 + cy1*rhsqy14;
-      qy5 = esgy*qy5 + cy1*rhsqy15;
-      qy6 = esgy*qy6 + cy1*rhsqy16;
+      qy1 = qy1 + dt*rhsqy11;
+      qy2 = qy2 + dt*rhsqy12;
+      qy3 = qy3 + dt*rhsqy13;
+      qy4 = p_expdt*qy4 + c1*rhsqy14;
+      qy5 = p_expdt*qy5 + c1*rhsqy15;
+      qy6 = p_expdt*qy6 + c1*rhsqy16;
       //
-     //
       nt1 += dt * rhsnt11;
       nt2 += dt * rhsnt12;
       nt3 += dt * rhsnt13;
@@ -355,7 +345,7 @@ kernel void boltzmannSAABV1SplitPmlUpdateFirst2D(
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannSAABV1SplitPmlUpdateSecond2D(
+kernel void boltzmannSAABSplitPmlUpdateSecond2D(
             const iint                Nelements,
             const iint     * restrict elementIds,
             const dfloat              dt, 
@@ -463,45 +453,33 @@ kernel void boltzmannSAABV1SplitPmlUpdateSecond2D(
       dfloat nt5 = pmlNT[id5];
       dfloat nt6 = pmlNT[id6]; 
       //
+      //Computes only once
+      dfloat c1 = (p_expdt + 2.*dt*p_tauInv - dt*p_tauInv*p_expdt - 1.)/(dt*p_tauInv*p_tauInv);
+      dfloat c2 = -(p_expdt + dt*p_tauInv - 1.)/(dt*p_tauInv*p_tauInv);
+
+      
+      qx1 = qx1 + 1.5*dt*rhsqx11 - 0.5*dt*rhsqx21;
+      qx2 = qx2 + 1.5*dt*rhsqx12 - 0.5*dt*rhsqx22;
+      qx3 = qx3 + 1.5*dt*rhsqx13 - 0.5*dt*rhsqx23;
+      qx4 = p_expdt*qx4 + c1*rhsqx14 + c2*rhsqx24;
+      qx5 = p_expdt*qx5 + c1*rhsqx15 + c2*rhsqx25;
+      qx6 = p_expdt*qx6 + c1*rhsqx16 + c2*rhsqx26;
       //
-      dfloat  sgx =    sigmax[id0] ;
-      dfloat  sgy =    sigmay[id0] ;
-      dfloat esgx = expsigmax[id0];
-      dfloat esgy = expsigmay[id0];
-      
-      // First Order SAAB Coefficients
-      dfloat cx1=0.0, cy1=0.0; 
-      dfloat cx2=0.0, cy2=0.0;
-
-      cx1 = - (sgx*sgx*sgx*dt*dt*dt*dt)/20. + (5.*sgx*sgx*dt*dt*dt)/24. - (2.*sgx*dt*dt)/3. + (3.*dt)/2.;
-      cy1 = - (sgy*sgy*sgy*dt*dt*dt*dt)/20. + (5.*sgy*sgy*dt*dt*dt)/24. - (2.*sgy*dt*dt)/3. + (3.*dt)/2.;
-
-      cx2 =   (sgx*sgx*sgx*dt*dt*dt*dt)/120. - (sgx*sgx*dt*dt*dt)/24. + (sgx*dt*dt)/6 - dt/2. ;
-      cx2 =   (sgy*sgy*sgy*dt*dt*dt*dt)/120. - (sgy*sgy*dt*dt*dt)/24. + (sgy*dt*dt)/6 - dt/2. ;
-      
-
-      
-      qx1 = esgx*qx1 + cx1*rhsqx11 + cx2*rhsqx21;
-      qx2 = esgx*qx2 + cx1*rhsqx12 + cx2*rhsqx22;
-      qx3 = esgx*qx3 + cx1*rhsqx13 + cx2*rhsqx23;
-      qx4 = esgx*qx4 + cx1*rhsqx14 + cx2*rhsqx24;
-      qx5 = esgx*qx5 + cx1*rhsqx15 + cx2*rhsqx25;
-      qx6 = esgx*qx6 + cx1*rhsqx16 + cx2*rhsqx26;
-      //
-      qy1 = esgy*qy1 + cy1*rhsqy11 + cy2*rhsqy21;
-      qy2 = esgy*qy2 + cy1*rhsqy12 + cy2*rhsqy22;
-      qy3 = esgy*qy3 + cy1*rhsqy13 + cy2*rhsqy23;
-      qy4 = esgy*qy4 + cy1*rhsqy14 + cy2*rhsqy24;
-      qy5 = esgy*qy5 + cy1*rhsqy15 + cy2*rhsqy25;
-      qy6 = esgy*qy6 + cy1*rhsqy16 + cy2*rhsqy26;
+      qy1 = qy1 + 1.5*dt*rhsqy11 -0.5*dt*rhsqy21;
+      qy2 = qy2 + 1.5*dt*rhsqy12 -0.5*dt*rhsqy22;
+      qy3 = qy3 + 1.5*dt*rhsqy13 -0.5*dt*rhsqy23;
+      qy4 = p_expdt*qy4 + c1*rhsqy14 + c2*rhsqy24;
+      qy5 = p_expdt*qy5 + c1*rhsqy15 + c2*rhsqy25;
+      qy6 = p_expdt*qy6 + c1*rhsqy16 + c2*rhsqy26;
       //
      //
-      nt1 += dt * rhsnt11;
-      nt2 += dt * rhsnt12;
-      nt3 += dt * rhsnt13;
-      nt4 += dt * rhsnt14;
-      nt5 += dt * rhsnt15;
-      nt6 += dt * rhsnt16;
+      nt1 += 1.5*dt*rhsnt11 -0.5*dt*rhsnt21;
+      nt2 += 1.5*dt*rhsnt12 -0.5*dt*rhsnt22;
+      nt3 += 1.5*dt*rhsnt13 -0.5*dt*rhsnt23;
+      nt4 += 1.5*dt*rhsnt14 -0.5*dt*rhsnt24;
+      nt5 += 1.5*dt*rhsnt15 -0.5*dt*rhsnt25;
+      nt6 += 1.5*dt*rhsnt16 -0.5*dt*rhsnt26;
+      
      //
 
     // Update Fields
@@ -573,7 +551,7 @@ kernel void boltzmannSAABV1SplitPmlUpdateSecond2D(
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannSAABV1SplitPmlUpdate2D(
+kernel void boltzmannSAABSplitPmlUpdate2D(
             const iint                Nelements,
             const iint     * restrict elementIds,
             const dfloat              dt, 
@@ -700,50 +678,22 @@ kernel void boltzmannSAABV1SplitPmlUpdate2D(
       dfloat nt6 = pmlNT[id6]; 
       //
 
-      // First Order SAAB Coefficients
-      dfloat cx1=0.0, cy1=0.0; 
-      dfloat cx2=0.0, cy2=0.0; 
-      dfloat cx3=0.0, cy3=0.0;
-      //
-      dfloat sgx = sigmax[id0]; 
-      dfloat sgy = sigmay[id0];
-
-      dfloat esgx = expsigmax[id0];
-      dfloat esgy = expsigmay[id0];
-      //
-
-      cx1 = - (sgx*sgx*sgx*dt*dt*dt*dt)/18. + (19.*sgx*sgx*dt*dt*dt)/80.
-             - (19.*sgx*dt*dt)/24. + (23.*dt)/12.;
-
-      cy1 = - (sgy*sgy*sgy*dt*dt*dt*dt)/18. + (19.*sgy*sgy*dt*dt*dt)/80.
-             - (19.*sgy*dt*dt)/24. + (23.*dt)/12.;
-
-      
-      cx2 = (7.*sgx*sgx*sgx*dt*dt*dt*dt)/360.  - (sgx*sgx*dt*dt*dt)/10. 
-           + (5.*sgx*dt*dt)/12. - (4.*dt)/3.;
-
-      cy2 = (7.*sgy*sgy*sgy*dt*dt*dt*dt)/360.  - (sgy*sgy*dt*dt*dt)/10. 
-           + (5.*sgy*dt*dt)/12. - (4.*dt)/3.;
-
-      cx3 = - (sgx*sgx*sgx*dt*dt*dt*dt)/180. + (7.*sgx*sgx*dt*dt*dt)/240.
-            - (sgx*dt*dt)/8. + (5.*dt)/12. ; 
-      cy3 = - (sgy*sgy*sgy*dt*dt*dt*dt)/180. + (7.*sgy*sgy*dt*dt*dt)/240.
-            - (sgy*dt*dt)/8. + (5.*dt)/12. ;         
+         
     //
       
-      qx1  = esgx*qx1 +  cx1*rhsqx11 + cx2*rhsqx21 + cx3*rhsqx31;
-      qx2  = esgx*qx2 +  cx1*rhsqx12 + cx2*rhsqx22 + cx3*rhsqx32;
-      qx3  = esgx*qx3 +  cx1*rhsqx13 + cx2*rhsqx23 + cx3*rhsqx33;
-      qx4  = esgx*qx4 +  cx1*rhsqx14 + cx2*rhsqx24 + cx3*rhsqx34;
-      qx5  = esgx*qx5 +  cx1*rhsqx15 + cx2*rhsqx25 + cx3*rhsqx35;
-      qx6  = esgx*qx6 +  cx1*rhsqx16 + cx2*rhsqx26 + cx3*rhsqx36;
+      qx1  = qx1 +  p_ab1*rhsqx11 + p_ab2*rhsqx21 + p_ab3*rhsqx31;
+      qx2  = qx2 +  p_ab1*rhsqx12 + p_ab2*rhsqx22 + p_ab3*rhsqx32;
+      qx3  = qx3 +  p_ab1*rhsqx13 + p_ab2*rhsqx23 + p_ab3*rhsqx33;
+      qx4  = p_expdt*qx4 +  p_saab1*rhsqx14 + p_saab2*rhsqx24 + p_saab3*rhsqx34;
+      qx5  = p_expdt*qx5 +  p_saab1*rhsqx15 + p_saab2*rhsqx25 + p_saab3*rhsqx35;
+      qx6  = p_expdt*qx6 +  p_saab1*rhsqx16 + p_saab2*rhsqx26 + p_saab3*rhsqx36;
       //
-      qy1  = esgy*qy1 +  cy1*rhsqy11 + cy2*rhsqy21 + cy3*rhsqy31;
-      qy2  = esgy*qy2 +  cy1*rhsqy12 + cy2*rhsqy22 + cy3*rhsqy32;
-      qy3  = esgy*qy3 +  cy1*rhsqy13 + cy2*rhsqy23 + cy3*rhsqy33;
-      qy4  = esgy*qy4 +  cy1*rhsqy14 + cy2*rhsqy24 + cy3*rhsqy34;
-      qy5  = esgy*qy5 +  cy1*rhsqy15 + cy2*rhsqy25 + cy3*rhsqy35;
-      qy6  = esgy*qy6 +  cy1*rhsqy16 + cy2*rhsqy26 + cy3*rhsqy36;
+      qy1  = qy1 +  p_ab1*rhsqy11 + p_ab2*rhsqy21 + p_ab3*rhsqy31;
+      qy2  = qy2 +  p_ab1*rhsqy12 + p_ab2*rhsqy22 + p_ab3*rhsqy32;
+      qy3  = qy3 +  p_ab1*rhsqy13 + p_ab2*rhsqy23 + p_ab3*rhsqy33;
+      qy4  = p_expdt*qy4 +  p_saab1*rhsqy14 + p_saab2*rhsqy24 + p_saab3*rhsqy34;
+      qy5  = p_expdt*qy5 +  p_saab1*rhsqy15 + p_saab2*rhsqy25 + p_saab3*rhsqy35;
+      qy6  = p_expdt*qy6 +  p_saab1*rhsqy16 + p_saab2*rhsqy26 + p_saab3*rhsqy36;
       //
       nt1 += dt*(p_ab1*rhsnt11 + p_ab2*rhsnt21 + p_ab3*rhsnt31);
       nt2 += dt*(p_ab1*rhsnt12 + p_ab2*rhsnt22 + p_ab3*rhsnt32);
