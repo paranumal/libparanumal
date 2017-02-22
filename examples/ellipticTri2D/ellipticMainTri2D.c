@@ -21,7 +21,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be IPDG
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
+  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
   //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
   //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
@@ -53,7 +53,7 @@ int main(int argc, char **argv){
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
 
-#if 1
+#if 0
     for(iint n=0;n<mesh->cubNp;++n){
       dfloat cx = 0, cy = 0;
       for(iint m=0;m<mesh->Np;++m){
@@ -88,7 +88,7 @@ int main(int argc, char **argv){
       }
       iint id = n+e*mesh->Np;
       
-      r[id] = rhs*J;
+      r[id] = -rhs*J;
       x[id] = 0;
       mesh->q[id] = nrhs[n];
     }

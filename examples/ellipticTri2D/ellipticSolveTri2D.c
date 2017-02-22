@@ -21,6 +21,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
+
+    mesh->device.finish();
+    occa::tic("gradientKernel");    
     
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
     mesh->gradientKernel(allNelements,
@@ -29,6 +32,10 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 			 mesh->o_DsT,
 			 o_q,
 			 solver->o_grad);
+
+    mesh->device.finish();
+    occa::toc("gradientKernel");
+    occa::tic("ipdgKernel");
     
     // TW NOTE WAS 2 !
     dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
@@ -45,6 +52,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 		     mesh->o_MM,
 		     solver->o_grad,
 		     o_Aq);
+
+    mesh->device.finish();
+    occa::toc("ipdgKernel");
   }
   else{
     
@@ -162,22 +172,40 @@ void ellipticPreconditioner2D(solver_t *solver,
 
       mesh->device.finish();
       occa::tic("coarseGrid");
+
+      mesh->device.finish();
+      occa::tic("coarsenKernel");
       
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
+      mesh->device.finish();
+      occa::toc("coarsenKernel");
+      occa::tic("xxtSolve");
+      
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
-      
+
+      // solve coarse problem using xxt
       xxtSolve(precon->z1, precon->xxt,precon->r1);
 
+      // copy coarse solution to DEVICE
       precon->o_z1.copyFrom(precon->z1);
+
+      occa::toc("xxtSolve");
+      occa::tic("prolongateKernel");
       
+      // prolongate from P1 to PN
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
+      // increment z
       dfloat one = 1.;
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
 
+      mesh->device.finish();
+      occa::toc("prolongateKernel");
+
+      
       occa::toc("coarseGrid");
     }
 
@@ -278,12 +306,12 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     // z = Precon^{-1} r
     ellipticPreconditioner2D(solver, o_r, o_zP, o_z, options);
-    
+
     // dot(r,z)
     rdotz1 = ellipticInnerProduct(solver, o_r, o_z);
-    
+
     beta = rdotz1/rdotz0;
-    
+
     // p = z + beta*p
     ellipticScaledAdd(solver, 1.f, o_z, beta, o_p);
     
