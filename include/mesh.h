@@ -385,7 +385,7 @@ void meshParallelConnect(mesh_t *mesh);
 void meshParallelConnectNodes(mesh_t *mesh);
 
 /* renumber global nodes to remove gaps */
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners);
+void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners, iint *globalStarts);
 
 void meshHaloSetup(mesh_t *mesh);
 
