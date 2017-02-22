@@ -23,6 +23,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->grad = (dfloat*) calloc(Nall*4, sizeof(dfloat));
 
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
