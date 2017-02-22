@@ -12,7 +12,8 @@ typedef struct {
   iint globalId;
   iint newGlobalId;
   iint originalRank;
-
+  iint ownerRank;
+  
 }parallelNode_t;
 
 // compare on global indices 
@@ -43,9 +44,23 @@ int parallelCompareSourceIndices(const void *a, const void *b){
 
 }
 
+// compare on global indices 
+int parallelCompareOwners(const void *a, const void *b){
+
+  parallelNode_t *fa = (parallelNode_t*) a;
+  parallelNode_t *fb = (parallelNode_t*) b;
+
+  if(fa->ownerRank < fb->ownerRank) return -1;
+  if(fa->ownerRank > fb->ownerRank) return +1;
+
+  return 0;  
+}
+
+
 
 // squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering){
+void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners){
+
   // need to handle globalNumbering = 0
   
   int rank, size;
@@ -94,8 +109,12 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering){
     sendNodes[n].globalId = globalNumbering[n];
     sendNodes[n].newGlobalId = -1;
     sendNodes[n].originalRank = rank;
+    sendNodes[n].ownerRank = ranks[n];
   }
 
+  // sort by global index
+  qsort(sendNodes, Nnum, sizeof(parallelNode_t), parallelCompareOwners);
+  
   parallelNode_t *recvNodes = (parallelNode_t*) calloc(recvNtotal, sizeof(parallelNode_t));
   
   // load up node data to send (NEED TO SCALE sendCounts, sendOffsets etc by sizeof(parallelNode_t)
@@ -104,7 +123,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering){
 		MPI_COMM_WORLD);
 
   // sort by global index
-  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), compareOwner);
+  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareGlobalIndices);
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
   iint cnt = 0;
@@ -152,7 +171,10 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering){
 
   // extract new global indices and push back to original numbering array
   for(iint n=0;n<Nnum;++n){
-    globalNumbering[n] = sendNodes[n].newGlobalId;
+    // shuffle incoming nodes based on local id
+    iint id = sendNodes[n].localId;
+    globalNumbering[id] = sendNodes[n].newGlobalId;
+    globalOwners[id] = sendNodes[n].ownerRank;
   }
 
   free(ranks);

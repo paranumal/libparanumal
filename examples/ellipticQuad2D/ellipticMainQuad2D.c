@@ -196,9 +196,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
     //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
 
-    mesh->device.finish();
-    occa::tic("preconKernel");
-
     // compute local precon on DEVICE
     if(strstr(options, "CONTINUOUS")) {
 
@@ -215,6 +212,10 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       
     }
     else{
+
+      mesh->device.finish();
+      occa::tic("preconKernel");
+      
       precon->preconKernel(mesh->Nelements,
 			   mesh->o_vmapP,
 			   precon->o_faceNodesP,
@@ -224,26 +225,29 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
-      iint NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
-      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
+      mesh->device.finish();
+      occa::toc("preconKernel");
       
       // OAS => additive Schwarz => sum up patch solutions
       ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
 
-      diagnostic(NtotalP, o_zP, "o_zP after GS");
     }
 
-    mesh->device.finish();
-    occa::toc("preconKernel");
-    
     // extract block interiors on DEVICE
     mesh->device.finish();
     occa::tic("restrictKernel");
 
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
 
+    mesh->device.finish();
+    occa::toc("restrictKernel");   
+
+    
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
+      mesh->device.finish();
+      occa::tic("coarseGrid");
+      
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
@@ -258,6 +262,8 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       dfloat one = 1.;
       ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
+
+      occa::toc("coarseGrid");
     }
 
     if(strstr(options,"PROJECT")){
@@ -265,8 +271,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       ellipticParallelGatherScatter2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     }
     
-    mesh->device.finish();
-    occa::toc("restrictKernel");   
   }
   else if(strstr(options, "JACOBI")){
 
@@ -308,7 +312,9 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
-  //  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  //  char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
+  //  char *options = strdup("solver=PCG preconditioner=NONE method=CONTINUOUS");
   //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=CONTINUOUS coarse=COARSEGRID"); 
   
   // set up mesh stuff
@@ -517,6 +523,8 @@ int main(int argc, char **argv){
   }while(rdotr0>(tol*tol));
 
   occa::printTimer();
+
+  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
   
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);

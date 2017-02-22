@@ -63,6 +63,7 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
