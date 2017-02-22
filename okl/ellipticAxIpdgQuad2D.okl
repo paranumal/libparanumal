@@ -101,7 +101,7 @@ kernel void ellipticAxIpdgQuad2D(const int Nelements,
       }
     }
 
-#if 0
+#if 1
     barrier(localMemFence);
 
     // loop over faces to add pseudo-gradient
