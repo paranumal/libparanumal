@@ -90,7 +90,7 @@ void acousticsSetup2D(mesh2D *mesh){
 
   // generic occa device set up
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
-
+printf("\n TEST\n");
   // specialization
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);

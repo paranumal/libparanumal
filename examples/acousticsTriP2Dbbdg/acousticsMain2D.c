@@ -15,16 +15,14 @@ int main(int argc, char **argv){
     int N = atoi(argv[2]);
 
     // set up mesh stuff
-    mesh2D *mesh = meshSetupTri2D(argv[1], N);
+    mesh2D *mesh = meshSetupTriP2D(argv[1], N);
 
     // set up acoustics stuff
     acousticsSetup2D(mesh);
-
+    
     // run
-    //acousticsRun2D(mesh);
-    //acousticsRun2Dbbdg(mesh);
-    //acousticsOccaRun2D(mesh);
-    acousticsOccaRun2Dbbdg(mesh);
+    acousticsRun2Dbbdg(mesh);
+    //acousticsOccaRun2Dbbdg(mesh);
 
     // close down MPI
     MPI_Finalize();

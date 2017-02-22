@@ -20,7 +20,8 @@ LD	= mpic++
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github -lgs
+LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github \
+			-L../../3rdParty/amg2013 -lgs -lamg2013
 
 # libraries to be linked in
 LIBS	=  $(links)

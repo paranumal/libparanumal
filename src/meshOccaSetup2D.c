@@ -372,7 +372,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-
   kernelInfo.addDefine("p_G00ID", G00ID);
   kernelInfo.addDefine("p_G01ID", G01ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
