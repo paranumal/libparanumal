@@ -59,6 +59,7 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
   int    maxit_sol = 500;
   
   int num_procs, myid;
+  int n,i,j;
 
   hypre_ParCSRMatrix *A;
   hypre_CSRMatrix *diag;
@@ -82,7 +83,7 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
 
   amg->global_size = (HYPRE_BigInt) global_size;
   amg->row_starts = (HYPRE_BigInt*) malloc((num_procs+1)*sizeof(HYPRE_BigInt));
-  for (int n =0;n<=num_procs;n++) amg->row_starts[n] = (HYPRE_BigInt) row_starts[n];
+  for (n =0;n<=num_procs;n++) amg->row_starts[n] = (HYPRE_BigInt) row_starts[n];
   
   amg->numLocalRows = numLocalRows;
   amg->diag_nnz = diag_i[numLocalRows];
@@ -104,18 +105,18 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
   }
 
   //copy data into amg struct
-  for (int n=0;n<numLocalRows+1;n++) {
+  for (n=0;n<numLocalRows+1;n++) {
     amg->diag_i[n] = diag_i[n];
     amg->offd_i[n] = offd_i[n];
   }
-  for (int n=0;n<amg->diag_nnz;n++) {
+  for (n=0;n<amg->diag_nnz;n++) {
     amg->diag_j[n] = diag_j[n];
     if (!strcmp(dfloatType,"float")) 
       amg->diag_data[n] = ((float*) diag_data)[n];
     else 
       amg->diag_data[n] = ((double*) diag_data)[n];
   }
-  for (int n=0;n<amg->offd_nnz;n++) {
+  for (n=0;n<amg->offd_nnz;n++) {
     amg->colMap[n] = (HYPRE_BigInt) colMap[n];
     if (!strcmp(dfloatType,"float")) 
       amg->offd_data[n] = ((float*) offd_data)[n];
@@ -146,14 +147,14 @@ void * amg2013SetupCSR(int global_size,      //Global matrix size
   if (amg->offd_nnz) {
     tmp_j = (int*) malloc(amg->offd_nnz*sizeof(int));  
   }
-  for (int i=0; i < amg->offd_nnz; i++) {
+  for (i=0; i < amg->offd_nnz; i++) {
     amg->offd_j[i] = i;
     tmp_j[i] = i;
   }
   if (num_procs > 1) {
     hypre_BigQsortbi(amg->colMap, tmp_j, 0, amg->offd_nnz-1);
-    for (int i=0; i < amg->offd_nnz; i++){
-      for (int j=0; j < amg->offd_nnz; j++){
+    for (i=0; i < amg->offd_nnz; i++){
+      for (j=0; j < amg->offd_nnz; j++){
         if (amg->offd_j[i] == tmp_j[j]){
           amg->offd_j[i] = j;
           break;
@@ -226,6 +227,7 @@ void * amg2013SetupCOO(int global_size,      //Global matrix size
   void *amg;
 
   int *diag_i, *offd_i;
+  int n;
 
   diag_i = (int*) calloc(numLocalRows+1,sizeof(int));
   offd_i = (int*) calloc(numLocalRows+1,sizeof(int));
@@ -238,7 +240,7 @@ void * amg2013SetupCOO(int global_size,      //Global matrix size
   int o_cnt = 0;
 
   int rowIndex =1;
-  for (int n=0;n<diag_nnz;n++){
+  for (n=0;n<diag_nnz;n++){
     if (Ai[n]>=rowIndex) {
       diag_i[rowIndex++] = cnt;
       n--;
@@ -249,7 +251,7 @@ void * amg2013SetupCOO(int global_size,      //Global matrix size
   diag_i[numLocalRows] = diag_nnz;
 
   rowIndex =1;
-  for (int n=0;n<offd_nnz;n++) {
+  for (n=0;n<offd_nnz;n++) {
     if (Bi[n]>=rowIndex) {
       offd_i[rowIndex++] = o_cnt;
       n--;
@@ -278,13 +280,15 @@ int amg2013Solve(void* x,
   int    num_iterations;
   double final_res_norm;
 
+  int n;
+
   hypre_Vector *rhsLocal;
   hypre_Vector *xLocal;
 
   amg2013_t *amg = (amg2013_t *) AMG;
 
   if (!strcmp(amg->dfloatType,"float")) { 
-    for (int n=0;n<amg->numLocalRows;n++) {
+    for (n=0;n<amg->numLocalRows;n++) {
       amg->xDouble[n]   = ((float*) x)[n];
       amg->rhsDouble[n] = ((float*) rhs)[n];
     }
@@ -307,7 +311,7 @@ int amg2013Solve(void* x,
   HYPRE_PCGGetFinalRelativeResidualNorm( amg->solver, &final_res_norm );
 
   if (!strcmp(amg->dfloatType,"float")) { 
-    for (int n=0;n<amg->numLocalRows;n++) {
+    for (n=0;n<amg->numLocalRows;n++) {
       ((float*) x)[n]   = (float) amg->xDouble[n];
       ((float*) rhs)[n] = (float) amg->rhsDouble[n];
     }
