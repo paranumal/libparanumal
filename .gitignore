@@ -2,3 +2,7 @@
 *.a
 .DS_STORE
 *.vtu
+
+**/*.o
+**/*.c~
+**/makefile~
