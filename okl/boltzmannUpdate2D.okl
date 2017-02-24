@@ -1537,9 +1537,9 @@ kernel void boltzmannSAABSplitPmlUpdate2D(
          
     //
       
-      qx1  = qx1 +  p_ab1*rhsqx11 + p_ab2*rhsqx21 + p_ab3*rhsqx31;
-      qx2  = qx2 +  p_ab1*rhsqx12 + p_ab2*rhsqx22 + p_ab3*rhsqx32;
-      qx3  = qx3 +  p_ab1*rhsqx13 + p_ab2*rhsqx23 + p_ab3*rhsqx33;
+      qx1  = qx1 +            p_ab1*rhsqx11 +       p_ab2*rhsqx21 + p_ab3*rhsqx31;
+      qx2  = qx2 +            p_ab1*rhsqx12 +       p_ab2*rhsqx22 + p_ab3*rhsqx32;
+      qx3  = qx3 +              p_ab1*rhsqx13 +      p_ab2*rhsqx23 + p_ab3*rhsqx33;
       qx4  = p_pmlexpdt*qx4 +  p_pmlsaab1*rhsqx14 + p_pmlsaab2*rhsqx24 + p_pmlsaab3*rhsqx34;
       qx5  = p_pmlexpdt*qx5 +  p_pmlsaab1*rhsqx15 + p_pmlsaab2*rhsqx25 + p_pmlsaab3*rhsqx35;
       qx6  = p_pmlexpdt*qx6 +  p_pmlsaab1*rhsqx16 + p_pmlsaab2*rhsqx26 + p_pmlsaab3*rhsqx36;

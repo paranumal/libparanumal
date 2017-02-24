@@ -156,7 +156,7 @@ typedef struct {
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
- 
+
 
   //LS Imex
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
