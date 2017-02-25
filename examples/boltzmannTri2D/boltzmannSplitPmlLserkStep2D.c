@@ -33,7 +33,8 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
     
-    mesh->device.finish();
+
+     mesh->device.finish();
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
@@ -52,6 +53,9 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
 			    mesh->o_rhspmlNT);
+
+
+   
     
     // compute volume contribution to DG boltzmann RHS
     // added d/dt (ramp(qbar)) to RHS
@@ -69,6 +73,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
     mesh->device.finish();
     occa::toc("volumeKernel");
+
       
 #if CUBATURE_ENABLED
     // compute relaxation terms using cubature
@@ -150,7 +155,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("updateKernel");
     
     //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
-    if (mesh->pmlNelements){    
+    if (mesh->pmlNelements)   
       mesh->pmlUpdateKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
@@ -167,7 +172,6 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_pmlqy,
 			    mesh->o_pmlNT,
 			    mesh->o_q);
-    }
     
     if(mesh->nonPmlNelements)
       mesh->updateKernel(mesh->nonPmlNelements,

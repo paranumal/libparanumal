@@ -284,19 +284,19 @@ kernel void boltzmannSAABRelaxationCub2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_cubNp){
-	    dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
-	   	    
+	    dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;   
 	    for(iint m=0;m<p_Np;++m){
 	      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 	      cubq1 += Icn*s_q[es][0][m];
 	      cubq2 += Icn*s_q[es][1][m];
 	      cubq3 += Icn*s_q[es][2][m];
 	    }
-	    
+
+	    dfloat icubq1 = 1./cubq1; 	    
 	    // BGK relaxation approximation to the Boltzmann collision operator
-	    s_cubN4[es][n] = p_tauInv* cubq2*cubq3/cubq1;
-	    s_cubN5[es][n] = p_tauInv*p_invsqrt2*cubq2*cubq2/cubq1;
-	    s_cubN6[es][n] = p_tauInv*p_invsqrt2*cubq3*cubq3/cubq1;
+	    s_cubN4[es][n] = p_tauInv* cubq2*cubq3*icubq1;
+	    s_cubN5[es][n] = p_tauInv*p_invsqrt2*cubq2*cubq2*icubq1;
+	    s_cubN6[es][n] = p_tauInv*p_invsqrt2*cubq3*cubq3*icubq1;
 	  }
 	}
       }

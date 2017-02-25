@@ -42,48 +42,65 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   
   // set temperature, gas constant, wave speeds
 
-  // // // Define problem parameters
-  // dfloat Re = 1000.;
-  // dfloat Ma = 0.1;
+#if 1
+  // // Define problem parameters
+  // Define referance Mach number
+  dfloat Ma = 0.1;
 
-  // dfloat Lc = 1.0;
-  // dfloat Uc = 1.0; 
-  // mesh->RT  = Uc*Uc/(Ma*Ma);; 
-  // mesh->sqrtRT = sqrt(mesh->RT);   
+  dfloat Lc = 0.5;
+  dfloat Uc = 1.0; 
+  mesh->RT  = Uc*Uc/(Ma*Ma); 
+  mesh->sqrtRT = sqrt(mesh->RT);   
 
 
-  // dfloat nu = Uc*Lc/Re; 
-  // mesh->tauInv = mesh->RT/nu;
+  dfloat nu = 0.01; 
+  mesh->tauInv = mesh->RT/nu;
 
-  // printf("Tauinv = %.4f\n", mesh->tauInv);
+  
 
-  // printf("starting initial conditions\n");
-  // dfloat rho = 1, u = 1.0, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
-  // dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
-  // //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
-  // dfloat ramp, drampdt;
-  // boltzmannRampFunction2D(0, &ramp, &drampdt);
+  printf("starting initial conditions\n");
+  dfloat rho = 1, u = Uc, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
+  dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   
   
+  dfloat Re = Uc*Lc/nu ; 
+
+  printf("Ma = %.4e - Re = %.4e\n",Ma,Re);
+  printf("Tauinv = %.4f - nu = %.4e\n", mesh->tauInv,nu);
+
+#endif
      
 
   
 
   
 
+#if 0
+   dfloat Re = 1000; 
+   dfloat Ma = 0.1;
 
+   mesh->RT = 9.0;
 
+  mesh->tauInv = mesh->sqrtRT * Re / Ma;
 
-  mesh->RT = 9.0;
+  dfloat nu = mesh->RT/mesh->tauInv; 
+
+ 
   mesh->sqrtRT = sqrt(mesh->RT);  
   
   printf("starting initial conditions\n");
    dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
+  
+ #endif 
+
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
-  
+
+
+
+
 
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
@@ -140,19 +157,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   }
 
   printf("starting parameters\n");
-
-  // set BGK collision relaxation rate
-  // nu = R*T*tau
-  // 1/tau = RT/nu
-  
-  dfloat Re = 300; 
-  dfloat Ma = 0.1;
-  mesh->tauInv = mesh->sqrtRT * Re / Ma;
-
-  dfloat nu = mesh->RT/mesh->tauInv; 
-
-  
-
 
 
 
@@ -250,7 +254,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = .5; // depends on the stability region size (was .4)
+  dfloat cfl = 0.5; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   // too small ???
@@ -260,37 +264,54 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   #if TIME_DISC==LSERK
   printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
 
-  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      #if 0
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
 
-  dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
 
-  dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
 
-  dfloat dt = mymin(dtex,dtim);
+      dfloat dt = mymin(dtex,dtim);
 
-  printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
+      #endif
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt = 1. * mymin(dtex,dtim);
+
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
 
   #elif TIME_DISC==SAAB
   printf("Time discretization method: SAAB  with 1/3*CFL(%.2f)\n",cfl);
-   // Adams-Bashforth stability region is approximated as 1/3 of LSERK scheme. 
-  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
 
-  dfloat dtex = 1./3. * cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      #if 0
+       // Adams-Bashforth stability region is approximated as 1/3 of LSERK scheme. 
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      dfloat dtex = 1./3. * cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = 1./3. * cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt = mymin(dtex,dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
+      #endif
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      dfloat dtex = 1.0/3.0* cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = 1.0/3.0* cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt = 0.1*mymax(dtex,dtim);
 
-  dfloat dtim = 1./3. * cfl*4./(mesh->tauInv*magVelocity);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-  dfloat dt = mymin(dtex,dtim);
-
-  printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
-  
   #elif TIME_DISC==LSIMEX
   printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
   dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt = 1.0* mymax(dtex,dtim);
 
-  // dfloat dt = cfl*mymin(hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT),
-  //             4./(mesh->tauInv*magVelocity));
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+
+
   #endif
 
 
@@ -305,12 +326,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 10.0;
+  mesh->finalTime = 0.1;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 100;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -456,7 +477,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
 
  // All Functions Related to Adams-Bashforth
-#if TIME_DISC==SAAB
+#if TIME_DISC
     
          
   // Clasical AB coefficients
@@ -482,16 +503,44 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
                 - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
                  /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-   printf("%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
+  // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
 
 
-  kernelInfo.addDefine("p_saab1",  saab1 );
-  kernelInfo.addDefine("p_saab2",  saab2  );
-  kernelInfo.addDefine("p_saab3",  saab3 );
+  kernelInfo.addDefine("p_saab1",  (float)saab1 );
+  kernelInfo.addDefine("p_saab2",  (float)saab2 );
+  kernelInfo.addDefine("p_saab3",  (float)saab3 );
 
+  
+  // Define coefficients for PML Region
+  dfloat itau = 0.5*mesh->tauInv; 
+// Modefied AB Coefficients
+  dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
+                     + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
+                     - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
+                      /(2.*pow(mesh->dt,2)*pow(itau,3));
+
+
+  dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
+                 + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+                  /(pow(mesh->dt,2)*pow(itau,3));
+
+  dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
+                - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+                 /(2*pow(mesh->dt,2)*pow(itau,3));
+
+  // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
+
+
+  kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
+  kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
+  kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
+
+
+  //Define exp(tauInv*dt) 
   dfloat expdt = exp(-mesh->tauInv*dt);
-  kernelInfo.addDefine("p_expdt",  expdt);
-
+  dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+  kernelInfo.addDefine("p_expdt",  (float)expdt);
+  kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
 
 #endif
     
