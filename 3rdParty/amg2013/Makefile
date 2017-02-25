@@ -13,54 +13,14 @@
 .SUFFIXES:
 .SUFFIXES: .c .o
                                                                                                
-srcdir = .
+srcdir = $(shell pwd)
 
 CC = mpicc
 
 AMGDIR= ../../../AMG2013
 AR=ar
-                                                                                               
-CFLAGS = \
- -I$(AMGDIR) \
- -I$(AMGDIR)/utilities\
- -I$(AMGDIR)/struct_mv\
- -I$(AMGDIR)/sstruct_mv\
- -I$(AMGDIR)/IJ_mv\
- -I$(AMGDIR)/seq_mv\
- -I$(AMGDIR)/parcsr_mv\
- -I$(AMGDIR)/parcsr_ls\
- -I$(AMGDIR)/krylov\
- ${INCLUDE_CFLAGS}\
- -DHYPRE_TIMING
-                                                                                               
-LFLAGS =\
- -L.\
- -L$(AMGDIR)/parcsr_ls\
- -L$(AMGDIR)/parcsr_mv\
- -L$(AMGDIR)/IJ_mv\
- -L$(AMGDIR)/seq_mv\
- -L$(AMGDIR)/sstruct_mv\
- -L$(AMGDIR)/struct_mv\
- -L$(AMGDIR)/krylov\
- -L$(AMGDIR)/utilities\
- -lparcsr_ls\
- -lparcsr_mv\
- -lseq_mv\
- -lsstruct_mv\
- -lIJ_mv\
- -lHYPRE_struct_mv\
- -lkrylov\
- -lHYPRE_utilities\
- ${INCLUDE_LFLAGS}
+             
 
-libs = $(AMGDIR)/parcsr_ls/libparcsr_ls.a\
- $(AMGDIR)/parcsr_mv/libparcsr_mv.a\
- $(AMGDIR)/seq_mv/libseq_mv.a\
- $(AMGDIR)/sstruct_mv/libsstruct_mv.a\
- $(AMGDIR)/IJ_mv/libIJ_mv.a\
- $(AMGDIR)/struct_mv/libHYPRE_struct_mv.a\
- $(AMGDIR)/krylov/libkrylov.a\
- $(AMGDIR)/utilities/libHYPRE_utilities.a
 
 ##################################################################
 # Targets
@@ -78,13 +38,23 @@ veryclean: clean
 # Rules
 ##################################################################
                                                                                                                                          
-libamg2013.a: $(AMGDIR) amg2013CoarseSolve.o $(libs)
-	@echo  "Linking... "
-	${AR} -rcT libamg2013.a amg2013CoarseSolve.o $(libs)                                                                                                                       
-                 
+libamg2013.a: $(AMGDIR)
+	echo  "Linking... " 
+	${AR} -x $(AMGDIR)/parcsr_ls/libparcsr_ls.a; \
+	${AR} -x $(AMGDIR)/parcsr_mv/libparcsr_mv.a; \
+	${AR} -x $(AMGDIR)/seq_mv/libseq_mv.a;       \
+	${AR} -x $(AMGDIR)/sstruct_mv/libsstruct_mv.a; \
+	${AR} -x $(AMGDIR)/IJ_mv/libIJ_mv.a; \
+	${AR} -x $(AMGDIR)/struct_mv/libHYPRE_struct_mv.a; \
+	${AR} -x $(AMGDIR)/krylov/libkrylov.a; \
+	${AR} -x $(AMGDIR)/utilities/libHYPRE_utilities.a; \
+	${AR} rc libamg2013.a *.o; \
+	rm *.o
+
 $(AMGDIR):
 	cd ../../../ && wget https://codesign.llnl.gov/amg2013/amg2013.tgz && \
-	tar xvzf amg2013.tgz && rm amg2013.tgz && \
+	tar xvzf amg2013.tgz && rm amg2013.tgz; \
+	cp $(srcdir)/Makefile.include AMG2013/; \
 	cd AMG2013  && $(MAKE)
 
 ##################################################################
