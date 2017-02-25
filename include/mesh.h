@@ -385,7 +385,10 @@ void meshParallelConnect(mesh_t *mesh);
 void meshParallelConnectNodes(mesh_t *mesh);
 
 /* renumber global nodes to remove gaps */
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners, iint *globalStarts);
+void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners, iint *globalStarts,
+                                            iint *sendSortId, iint *globalSortId, iint **compressId,
+                                            iint *sendCounts, iint *sendOffsets,
+                                            iint *recvCounts, iint *recvOffsets);
 
 void meshHaloSetup(mesh_t *mesh);
 
@@ -436,28 +439,22 @@ extern "C"
 
   int xxtFree(void* A) ;
 
-  void * amg2013SetupCSR(int *row_starts,     //[numproc+1] global partition array   
-                       int    *diag_i,      //local crs sparse matrix (locally indexed)
-                       int    *diag_j,
-                       void   *diag_data,
-                       int    *offd_i,      //nonlocal crs sparse matrix (globally indexed)
-                       int    *colMap,
-                       void   *offd_data,
+  void * amg2013Setup( int Nnum,
+                       int *row_starts,     //[numproc+1] global partition array   
+                       int     nnz,
+                       int    *Ai,      //coo sparse matrix (globally indexed)
+                       int    *Aj,
+                       void   *Avals,
+                       int    *sendSortId, 
+                       int    *globalSortId, 
+                       int    *compressId,
+                       int    *sendCounts, 
+                       int    *sendOffsets, 
+                       int    *recvCounts, 
+                       int    *recvOffsets,
                        const char* iintType, 
                        const char* dfloatType);
 
-
-  void * amg2013SetupCOO(int *row_starts,     //[numproc+1] global partition array  
-                        int    diag_nnz, 
-                        int    *Ai,      //local coo sparse matrix (locally indexed)
-                        int    *diag_j,
-                        void   *diag_data,
-                        int    offd_nnz,
-                        int    *Bi,      //nonlocal coo sparse matrix (globally indexed)
-                        int    *colMap,
-                        void   *offd_data,
-                        const char* iintType, 
-                        const char* dfloatType);
 
   int amg2013Solve(void* x,
                  void* A,

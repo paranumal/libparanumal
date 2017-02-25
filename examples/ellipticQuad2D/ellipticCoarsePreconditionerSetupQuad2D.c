@@ -40,11 +40,22 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   
+  iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
+
+  iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
+  iint *globalSortId = (iint *) calloc(Nnum,sizeof(iint));
+  iint *compressId;
+
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
   // squeeze numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
+                                         sendSortId, globalSortId, &compressId,
+                                         sendCounts, sendOffsets, recvCounts, recvOffsets);
   
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
@@ -111,10 +122,10 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
-  iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
   
   iint cnt = 0;
 
@@ -172,27 +183,27 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 
   // count how many non-zeros to send to each process
   for(iint n=0;n<cnt;++n)
-    sendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
   
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   iint recvNtotal = 0;
   for(iint r=0;r<size;++r){
-    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
-    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(nonZero_t);
+    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+    recvNtotal += ArecvCounts[r]/sizeof(nonZero_t);
   }
 
   nonZero_t *recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
   
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_CHAR,
-		recvNonZeros, recvCounts, recvOffsets, MPI_CHAR,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
+		recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
 		MPI_COMM_WORLD);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -211,31 +222,71 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
     }
   }
   recvNtotal = cnt+1;
+
+  iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
+  iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
+  dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
   
-  for(iint n=0;n<recvNtotal;++n){
-    printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
-	   rank, n,
-	   recvNonZeros[n].row,
-	   recvNonZeros[n].col,
-	   recvNonZeros[n].val,
-	   recvNonZeros[n].ownerRank);
+  for (iint n=0;n<recvNtotal;n++) {
+    recvRows[n] = recvNonZeros[n].row;
+    recvCols[n] = recvNonZeros[n].col;
+    recvVals[n] = recvNonZeros[n].val;
   }
-  
+
+  #if 0
+    for(iint r=0;r<size;++r){
+      if(r==rank){
+        for(iint n=0;n<recvNtotal;++n){
+          printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
+           rank, n,
+           recvNonZeros[n].row,
+           recvNonZeros[n].col,
+           recvNonZeros[n].val,
+           recvNonZeros[n].ownerRank);
+        }
+        fflush(stdout);
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+  #endif
   
   printf("Done building coarse matrix system\n");
-  precon->xxt = xxtSetup(Nnum,
-			 globalNumbering,
-			 nnz,
-			 rowsA,
-			 colsA,
-			 valsA,
-			 0,
-			 iintString,
-			 dfloatString); // 0 if no null space
-  
+  //#if 0
+    precon->xxt = xxtSetup(Nnum,
+  			 globalNumbering,
+  			 nnz,
+  			 rowsA,
+  			 colsA,
+  			 valsA,
+  			 0,
+  			 iintString,
+  			 dfloatString); // 0 if no null space
+  //#else
+    precon->amg = amg2013Setup(Nnum,
+         globalStarts, //global partitioning
+         recvNtotal,                                
+         recvRows,
+         recvCols,
+         recvVals,
+         sendSortId, 
+         globalSortId, 
+         compressId,
+         sendCounts, 
+         sendOffsets, 
+         recvCounts, 
+         recvOffsets,
+         iintString,
+         dfloatString);
+  printf("Done coarse solve setup\n");
+  //#endif 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   
+
+  free(AsendCounts);
+  free(ArecvCounts);
+  free(AsendOffsets);
+  free(ArecvOffsets);
 }
