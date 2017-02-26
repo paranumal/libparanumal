@@ -253,8 +253,11 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
-      
-      xxtSolve(precon->z1, precon->xxt,precon->r1);
+
+      if(strstr(options,"XXT"))
+	xxtSolve(precon->z1, precon->xxt,precon->r1);
+      if(strstr(options,"AMG"))
+	amg2013Solve(precon->z1, precon->amg, precon->r1);
 
       precon->o_z1.copyFrom(precon->z1);
       
@@ -311,7 +314,10 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,AMG");
+  //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,XXT");
+  //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
+  //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
   //  char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   //  char *options = strdup("solver=PCG preconditioner=NONE method=CONTINUOUS");
@@ -493,11 +499,18 @@ int main(int argc, char **argv){
       // z = Precon^{-1} r
       ellipticPreconditioner2D(mesh, ogs, precon, sendBuffer, recvBuffer, o_invDegree,
 			       o_r, o_zP, o_z, dfloatString, options);
-      
+
       // dot(r,z)
       rdotz1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_z, o_tmp, tmp, options);
       
-      beta = rdotz1/rdotz0;
+      // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
+      if(strstr(options,"FLEXIBLE")){
+	dfloat zdotAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_z, o_Ap, o_tmp, tmp, options);
+	beta = -alpha*zdotAp/rdotz0;
+      }
+      else{
+	beta = rdotz1/rdotz0;
+      }
 
       // p = z + beta*p
       ellipticScaledAdd(mesh, 1.f, o_z, beta, o_p);
