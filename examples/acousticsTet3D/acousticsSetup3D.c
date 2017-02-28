@@ -90,22 +90,22 @@ void acousticsSetup3D(mesh3D *mesh){
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsVolume3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsVolume3D.okl",
 				       "acousticsVolume3D_o0",
 				       kernelInfo);
 
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsSurface3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsSurface3D.okl",
 				       "acousticsSurface3D_s0",
 				       kernelInfo);
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate3D.okl",
 				       "acousticsUpdate3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
@@ -122,7 +122,7 @@ void acousticsSetup3D(mesh3D *mesh){
     sprintf(kernelNames[ker], "acousticsVolume3D_o%d", ker);
     
     acousticsVolumeKernels[ker] =
-      mesh->device.buildKernelFromSource("okl/acousticsVolume3D.okl", kernelNames[ker], kernelInfo);
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsVolume3D.okl", kernelNames[ker], kernelInfo);
     
     mesh->device.finish();
     occa::tic(kernelNames[ker]);
@@ -155,7 +155,7 @@ void acousticsSetup3D(mesh3D *mesh){
     sprintf(surfaceKernelNames[ker], "acousticsSurface3D_s%d", ker);
     
     acousticsSurfaceKernels[ker] =
-      mesh->device.buildKernelFromSource("okl/acousticsSurface3D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsSurface3D.okl",
 					 surfaceKernelNames[ker], kernelInfo);
     
     mesh->device.finish();

@@ -216,22 +216,22 @@ void acousticsSetupHex3D(mesh3D *mesh){
   }
 
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsVolumeHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsVolumeHex3D.okl",
 				       "acousticsVolumeHex3D",
 				       kernelInfo);
 
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsSurfaceHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsSurfaceHex3D.okl",
 				       "acousticsSurfaceHex3D",
 				       kernelInfo);
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdateHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdateHex3D.okl",
 				       "acousticsUpdateHex3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
