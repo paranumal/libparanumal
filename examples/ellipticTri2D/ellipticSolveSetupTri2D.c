@@ -51,69 +51,69 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   kernelInfo.addDefine("p_NblockV", NblockV);
   
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
 
   mesh->gatherKernel =
-    mesh->device.buildKernelFromSource("okl/gather.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
 				       "gather",
 				       kernelInfo);
 
   mesh->scatterKernel =
-    mesh->device.buildKernelFromSource("okl/scatter.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
 				       "scatter",
 				       kernelInfo);
 
   mesh->getKernel =
-    mesh->device.buildKernelFromSource("okl/get.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
 				       "get",
 				       kernelInfo);
 
   mesh->putKernel =
-    mesh->device.buildKernelFromSource("okl/put.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
 				       "put",
 				       kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
-    mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
   mesh->weightedInnerProduct2Kernel =
-    mesh->device.buildKernelFromSource("okl/weightedInnerProduct2.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
   mesh->innerProductKernel =
-    mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
   
   mesh->scaledAddKernel =
-      mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
   mesh->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource("okl/dotMultiply.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
   mesh->dotDivideKernel = 
-      mesh->device.buildKernelFromSource("okl/dotDivide.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
   mesh->gradientKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticGradientTri2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
 				       "ellipticGradientTri2D",
 					 kernelInfo);
 
 
   mesh->ipdgKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgTri2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
 				       "ellipticAxIpdgTri2D",
 				       kernelInfo);  
 
@@ -130,22 +130,22 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda);
   
   solver->precon->preconKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticOasPreconTri2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
 				       "ellipticOasPreconTri2D",
 				       kernelInfo);
   
   solver->precon->restrictKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictTri2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
 				       "ellipticFooTri2D",
 				       kernelInfo);
 
   solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconCoarsen.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
 				       "ellipticPreconCoarsen",
 				       kernelInfo);
 
   solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconProlongate.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 

@@ -106,37 +106,37 @@ printf("\n TEST\n");
 
   
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsVolume2D.okl",
 				       "acousticsVolume2D_o0",
 				       kernelInfo);
 
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsSurface2D.okl",
 				       "acousticsSurface2D_s0",
 				       kernelInfo);
 
   mesh->partialSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsPartialSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsPartialSurface2D.okl",
 				       "acousticsPartialSurface2D_s0",
 				       kernelInfo);
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate2D.okl",
 				       "acousticsUpdate2D",
 				       kernelInfo);
   
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
 
   mesh->pmlKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsPml2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsPml2D.okl",
 				       "acousticsPml2D",
 				       kernelInfo);
 
   mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsPmlUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsPmlUpdate2D.okl",
 				       "acousticsPmlUpdate2D",
 				       kernelInfo);
 
@@ -154,7 +154,7 @@ printf("\n TEST\n");
     sprintf(kernelNames[ker], "acousticsVolume2D_o%d", ker);
     
     acousticsVolumeKernels[ker] =
-      mesh->device.buildKernelFromSource("okl/acousticsVolume2D.okl", kernelNames[ker], kernelInfo);
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsVolume2D.okl", kernelNames[ker], kernelInfo);
     
     mesh->device.finish();
     occa::tic(kernelNames[ker]);
@@ -186,7 +186,7 @@ printf("\n TEST\n");
     sprintf(surfaceKernelNames[ker], "acousticsSurface2D_s%d", ker);
     
     acousticsSurfaceKernels[ker] =
-      mesh->device.buildKernelFromSource("okl/acousticsSurface2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsSurface2D.okl",
 					 surfaceKernelNames[ker], kernelInfo);
     
     mesh->device.finish();
@@ -226,7 +226,7 @@ printf("\n TEST\n");
     sprintf(partialSurfaceKernelNames[ker], "acousticsPartialSurface2D_s%d", ker);
     
     acousticsPartialSurfaceKernels[ker] =
-      mesh->device.buildKernelFromSource("okl/acousticsPartialSurface2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsPartialSurface2D.okl",
 					 partialSurfaceKernelNames[ker], kernelInfo);
     
     mesh->device.finish();
