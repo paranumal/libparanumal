@@ -179,6 +179,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     dfloat Jhrinv2 = J*(rx*rx+ry*ry);
     dfloat Jhsinv2 = J*(sx*sx+sy*sy);
     dfloat Jhinv2 = Jhrinv2 + Jhsinv2; mymin(Jhrinv2,Jhsinv2);
+    //    dfloat Jhinv2 = mymax(Jhrinv2,Jhsinv2);
     
     for(iint n=0;n<NpP;++n){
       iint pid = n + e*NpP;

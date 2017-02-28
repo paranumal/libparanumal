@@ -66,6 +66,7 @@ LOBJS = \
 ../../src/meshConnectFaceNodes2D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloExtract.o \
