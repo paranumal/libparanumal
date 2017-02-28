@@ -251,6 +251,18 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   #endif
   
   printf("Done building coarse matrix system\n");
+
+  
+  precon->almond = almondSetup(globalStarts[1],
+			       globalNumbering,
+			       recvNtotal, // number of nonzeros
+			       recvRows,
+			       recvCols, 
+			       recvVals,
+			       0,
+			       iintString,
+			       dfloatString); // 0 if no null space
+  
   //#if 0
     precon->xxt = xxtSetup(Nnum,
   			 globalNumbering,
@@ -263,21 +275,21 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   			 dfloatString); // 0 if no null space
   //#else
     precon->amg = amg2013Setup(Nnum,
-         globalStarts, //global partitioning
-         recvNtotal,                                
-         recvRows,
-         recvCols,
-         recvVals,
-         sendSortId, 
-         globalSortId, 
-         compressId,
-         sendCounts, 
-         sendOffsets, 
-         recvCounts, 
-         recvOffsets,
-         iintString,
-         dfloatString);
-  printf("Done coarse solve setup\n");
+			       globalStarts, //global partitioning
+			       recvNtotal,                                
+			       recvRows,
+			       recvCols,
+			       recvVals,
+			       sendSortId, 
+			       globalSortId, 
+			       compressId,
+			       sendCounts, 
+			       sendOffsets, 
+			       recvCounts, 
+			       recvOffsets,
+			       iintString,
+			       dfloatString);
+    printf("Done coarse solve setup\n");
   //#endif 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));

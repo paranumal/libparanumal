@@ -32,7 +32,7 @@ typedef struct {
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
   occa::memory o_r1, o_z1;
   dfloat *r1, *z1;
-  void *xxt, *amg;
+  void *xxt, *amg, *almond;
 
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;

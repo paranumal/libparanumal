@@ -255,8 +255,10 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       precon->o_r1.copyTo(precon->r1); 
 
       FILE *fpXxt = fopen("xxt.dat", "w");
-      FILE *fpAmg = fopen("amg.dat", "w");	
+      FILE *fpAmg = fopen("amg.dat", "w");
+      FILE *fpAlm = fopen("alm.dat", "w");	
 
+#if 0
       //      if(strstr(options,"AMG"))
       amg2013Solve(precon->z1, precon->amg, precon->r1);
 
@@ -268,13 +270,17 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
 	fprintf(fpXxt, "%d %17.15lf\n", n, precon->z1[n]);
+#endif
+      
+      almondSolve(precon->z1, precon->almond, precon->r1);
+
+      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
+	fprintf(fpAlm, "%d %17.15lf\n", n, precon->z1[n]);
       
       fclose(fpXxt);
       fclose(fpAmg);
+      fclose(fpAlm);
 
-      //      exit(0);
-	
-	
       precon->o_z1.copyFrom(precon->z1);
       
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
@@ -349,7 +355,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 100;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda);

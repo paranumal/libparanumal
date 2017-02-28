@@ -29,14 +29,15 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) $(AMGINCL) -O3 -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) $(AMGINCL) -O3 -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."' -I../../3rdParty/ALMOND/include
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../3rdParty/gslib.github \
-			-L../../3rdParty/amg2013 -lgs -lamg2013
+LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../3rdParty/gslib.github -lgs \
+			-L../../3rdParty/amg2013 -lamg2013 \
+			-L../../3rdParty/ALMOND -lALMOND
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=  $(links) -llapack -lblas
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -51,6 +52,7 @@ ellipticSetupQuad2D.o \
 ellipticPreconditionerSetupQuad2D.o\
 ellipticCoarsePreconditionerSetupQuad2D.o\
 ellipticCoarsePreconditionerQuad2D.o\
+../../src/almondCoarseSolve.o
 
 # library objects
 LOBJS = \
