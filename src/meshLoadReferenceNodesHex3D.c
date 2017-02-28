@@ -5,7 +5,7 @@
 void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   char fname[BUFSIZ];
-  sprintf(fname, "nodes/hexN%02d.dat", N);
+  sprintf(fname, DHOLMES "/nodes/hexN%02d.dat", N);
 
   FILE *fp = fopen(fname, "r");
 
