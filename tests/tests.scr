@@ -1,57 +1,41 @@
 
-cd examples/acousticsQuad2D; make -j 8;  cd ../../;
+cd examples/acousticsQuad2D; make -j 8;
 
-./examples/acousticsQuad2D/acousticsMainQuad2D  meshes/cavityQuadH02.msh 3
+./acousticsMainQuad2D  ../../meshes/cavityQuadH02.msh 3
 
+cd ../acousticsTet3D;  make -j 8;
 
-cd examples/acousticsTet3D;
-
- make -j 8; cd ../../;
-
-./examples/acousticsTet3D/acousticsMain3D  meshes/cavity3D.msh 3
+./acousticsMain3D  ../../meshes/cavity3D.msh 3
 
 
-cd examples/acousticsTri2D;
+cd ../acousticsTri2D; make -j 8; 
 
- make -j 8; cd ../../;
+./examples/acousticsTri2D/acousticsMain2D  ../../meshes/cavityH01.msh 3
 
-./examples/acousticsTri2D/acousticsMain2D  meshes/cavityH01.msh 3
+cd ../boltzmannQuad2D; make -j 8;
 
-cd examples/boltzmannQuad2D
+./boltzmannSplitPmlMain2D ../../meshes/boltzmannSquareCylinderUnboundedQuadV2.msh 3
 
- make -j 8; cd ../../
+cd ../boltzmannTri2D;  make -j 8;
 
-./examples/boltzmannQuad2D/boltzmannSplitPmlMain2D meshes/boltzmannSquareCylinderUnboundedQuadV2.msh 3
+./boltzmannSplitPmlMain2D ../../meshes/boltzmannSquareCylinderUnboundedBC.msh 3
 
-cd examples/boltzmannTri2D
+cd ../ellipticQuad2D; make -j 8;
 
- make -j 8; cd ../../
+./ellipticMainQuad2D ../../meshes/cavityQuadH02.msh 3
 
-./examples/boltzmannTri2D/boltzmannSplitPmlMain2D meshes/boltzmannSquareCylinderUnboundedBC.msh 3
+cd ../ellipticHex3D;  make -j 8;
 
-cd examples/ellipticQuad2D
-
- make -j 8; cd ../../
-
-./examples/ellipticQuad2D/ellipticMainQuad2D meshes/cavityQuadH02.msh 3
+./ellipticMainHex3D ../../meshes/cubeHexa.msh 3
 
 
-cd examples/ellipticHex3D
+cd ../eulerTri2D; make -j 8; 
 
- make -j 8; cd ../../
-
-./examples/ellipticHex3D/ellipticMainHex3D meshes/cubeHexa.msh 3
-
-
-cd examples/eulerTri2D
-
- make -j 8; cd ../../
-
-./examples/eulerTri2D/eulerMain2D meshes/cavityH01.msh 3
+./eulerMain2D ../../meshes/cavityH01.msh 3
 
 # broken because of Dr
-#cd examples/acousticsHex3D;
+#cd ../acousticsHex3D;
 #
 # make -j 8; cd ../../;
 #
-#./examples/acousticsHex3D/acousticsMain3D meshes/cubeHexa.msh 3
+#./examples/acousticsHex3D/acousticsMain3D ../../meshes/cubeHexa.msh 3
