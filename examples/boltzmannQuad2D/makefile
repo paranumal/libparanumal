@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -pg -O3
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -pg -O3  -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -pg -O3

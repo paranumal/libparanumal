@@ -304,35 +304,35 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
 
 
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolumeQuad2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlVolumeQuad2D.okl",
 				       "boltzmannSplitPmlVolumeQuad2D",
 				       kernelInfo);
   printf("starting surface\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlSurfaceQuad2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlSurfaceQuad2D.okl",
 				       "boltzmannSplitPmlSurfaceQuad2D",
 				       kernelInfo);
   printf("ending surface\n");
 
 #if 0
   mesh->relaxationKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlRelaxationQuad2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlRelaxationQuad2D.okl",
 				       "boltzmannSplitPmlRelaxationQuad2D",
 				       kernelInfo);
 
   mesh->boltzmannPartialSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannPartialSurfaceQuad2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannPartialSurfaceQuad2D.okl",
 				       "boltzmannPartialSurfaceQuad2D",
 				       kernelInfo);
 #endif
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlUpdateQuad2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlUpdateQuad2D.okl",
 				       "boltzmannSplitPmlUpdateQuad2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
   

@@ -326,12 +326,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 #if 0
   printf("compiling volume kernel\n");  
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannNonPmlVolume2D.okl",
 				       "boltzmannNonPmlVolume2D",
 				       kernelInfo);
   printf("compiling surface kernel\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannNonPmlSurface2D.okl",
 				       "boltzmannNonPmlSurface2D",
 				       kernelInfo);
   
@@ -339,13 +339,13 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   printf("compiling bbdg volume kernel\n");
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannNonPmlVolume2D.okl",
 				       "boltzmannNonPmlVolume2Dbbdg",
 				       kernelInfo);
   
   printf("compiling bbdg surface kernel\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannNonPmlSurface2D.okl",
 				       "boltzmannNonPmlSurface2Dbbdg",
 				       kernelInfo);
   
@@ -354,32 +354,32 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
   printf("compiling update kernel\n");
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannNonPmlUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannNonPmlUpdate2D.okl",
 				       "boltzmannNonPmlUpdate2D",
 				       kernelInfo);
 
   mesh->pmlVolumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlVolume2D.okl",
 				       "boltzmannSplitPmlVolume2D",
 				       kernelInfo);
 
   mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlSurface2D.okl",
 				       "boltzmannSplitPmlSurface2D",
 				       kernelInfo);
 
   mesh->relaxationKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlRelaxation2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlRelaxation2D.okl",
 				       "boltzmannSplitPmlRelaxation2D",
 				       kernelInfo);
 
   mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSplitPmlUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSplitPmlUpdate2D.okl",
 				       "boltzmannSplitPmlUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
   
