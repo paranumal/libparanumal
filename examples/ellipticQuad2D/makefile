@@ -29,10 +29,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) $(AMGINCL) -g -I../../3rdParty/gslib.github/src
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) $(AMGINCL) -O3 -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github \
+LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../3rdParty/gslib.github \
 			-L../../3rdParty/amg2013 -lgs -lamg2013
 
 # libraries to be linked in
