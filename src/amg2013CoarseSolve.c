@@ -74,8 +74,8 @@ void * amg2013SetupCSR(int    Nnum,            //unassembled size (Nverts*Neleme
                        const char* iintType, 
                        const char* dfloatType) {
   //defaults
-  double tol = 1.e-6;
-  int    maxit_prec = 100;
+  double tol = 1.e-8;
+  int    maxit_prec = 40000;
   int    maxit_sol = 500;
   
   int num_procs, myid;
@@ -423,6 +423,8 @@ int amg2013Solve(void* x,
   HYPRE_PCGGetNumIterations( amg->solver, &num_iterations );
   HYPRE_PCGGetFinalRelativeResidualNorm( amg->solver, &final_res_norm );
 
+  printf("num it = %d, final res = %g\n", num_iterations, final_res_norm);
+  
   //scatter
   for(n=0;n<amg->numLocalRows;++n){
     for (id = amg->compressId[n];id<amg->compressId[n+1];id++) 

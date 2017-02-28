@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -465,7 +465,19 @@ extern "C"
   int amg2013Free(void* A);
 }
 
+void * almondSetup(uint  numLocalRows, 
+		   void* rowIds,
+		   uint  nnz, 
+		   void* Ai,
+		   void* Aj,
+		   void* Avals,
+		   int   nullSpace,
+		   const char* iintType, 
+		   const char* dfloatType) ;
 
+int almondSolve(void* x,
+		void* A,
+		void* rhs) ;
 
 #endif
 
