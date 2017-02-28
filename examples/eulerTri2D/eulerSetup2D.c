@@ -132,20 +132,20 @@ void eulerSetup2D(mesh2D *mesh){
 
   // build euler specific kernels
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/eulerVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/eulerVolume2D.okl",
 				       "eulerVolume2D_c1",
 				       kernelInfo);
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/eulerSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/eulerSurface2D.okl",
 				       "eulerSurface2D",
 				       kernelInfo);
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/eulerUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/eulerUpdate2D.okl",
 				       "eulerUpdate2D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
   
