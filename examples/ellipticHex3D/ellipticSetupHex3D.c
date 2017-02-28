@@ -90,74 +90,74 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
 
   
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
   mesh->gatherKernel =
-    mesh->device.buildKernelFromSource("okl/gather.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
 				       "gather",
 				       kernelInfo);
 
   mesh->scatterKernel =
-    mesh->device.buildKernelFromSource("okl/scatter.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
 				       "scatter",
 				       kernelInfo);
 
   mesh->getKernel =
-    mesh->device.buildKernelFromSource("okl/get.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
 				       "get",
 				       kernelInfo);
 
   mesh->putKernel =
-    mesh->device.buildKernelFromSource("okl/put.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
 				       "put",
 				       kernelInfo);
 
 
   mesh->AxKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticAxHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
 				       "ellipticAxHex3D_e1",
 				       kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
-    mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
   mesh->weightedInnerProduct2Kernel =
-    mesh->device.buildKernelFromSource("okl/weightedInnerProduct2.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
   mesh->innerProductKernel =
-    mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
 
   mesh->scaledAddKernel =
-      mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
   mesh->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource("okl/dotMultiply.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
   mesh->dotDivideKernel = 
-      mesh->device.buildKernelFromSource("okl/dotDivide.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
   mesh->gradientKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticGradientHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
 				       "ellipticGradientHex3D",
 					 kernelInfo);
 
 
   mesh->ipdgKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticAxIpdgHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
 				       "ellipticAxIpdgHex3D",
 				       kernelInfo);
   
@@ -172,12 +172,12 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   *precon = ellipticPreconditionerSetupHex3D(mesh, *ogs, lambda);
 
   (*precon)->preconKernel = 
-    mesh->device.buildKernelFromSource("okl/ellipticOasPreconHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconHex3D.okl",
 				       "ellipticOasPreconHex3D",
 				       kernelInfo);
   
   (*precon)->restrictKernel =
-    mesh->device.buildKernelFromSource("okl/ellipticPreconRestrictHex3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictHex3D.okl",
 				       "ellipticFooHex3D",
 				       kernelInfo);
   

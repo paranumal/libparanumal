@@ -6,7 +6,7 @@
 void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   char fname[BUFSIZ];
-  sprintf(fname, "nodes/triangleN%02d.dat", N);
+  sprintf(fname, DHOLMES "/nodes/triangleN%02d.dat", N);
 
   FILE *fp = fopen(fname, "r");
 

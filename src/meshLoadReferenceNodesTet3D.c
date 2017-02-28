@@ -6,7 +6,7 @@
 void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   char fname[BUFSIZ];
-  sprintf(fname, "nodes/tetN%02d.dat", N);
+  sprintf(fname, DHOLMES "/nodes/tetN%02d.dat", N);
 
   FILE *fp = fopen(fname, "r");
 
