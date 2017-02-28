@@ -254,11 +254,27 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
 
-      if(strstr(options,"XXT"))
-	xxtSolve(precon->z1, precon->xxt,precon->r1);
-      if(strstr(options,"AMG"))
-	amg2013Solve(precon->z1, precon->amg, precon->r1);
+      FILE *fpXxt = fopen("xxt.dat", "w");
+      FILE *fpAmg = fopen("amg.dat", "w");	
 
+      //      if(strstr(options,"AMG"))
+      amg2013Solve(precon->z1, precon->amg, precon->r1);
+
+      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
+	fprintf(fpAmg, "%d %17.15lf\n", n, precon->z1[n]);
+      
+      //      if(strstr(options,"XXT"))
+      //      xxtSolve(precon->z1, precon->xxt,precon->r1);
+
+      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
+	fprintf(fpXxt, "%d %17.15lf\n", n, precon->z1[n]);
+      
+      fclose(fpXxt);
+      fclose(fpAmg);
+
+      //      exit(0);
+	
+	
       precon->o_z1.copyFrom(precon->z1);
       
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
@@ -314,7 +330,8 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,AMG");
+  // opt: coarse=COARSEGRID with XXT or AMG
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,XXT");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,XXT");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
   //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
