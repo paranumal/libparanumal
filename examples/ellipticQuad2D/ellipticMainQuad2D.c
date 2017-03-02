@@ -260,7 +260,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       FILE *fpAlm = fopen("alm.dat", "w");	
       */
       
-      if(strstr(options,"AMG"))
+      if(strstr(options,"AMG2013"))
 	amg2013Solve(precon->z1, precon->amg, precon->r1);
 
       /*
