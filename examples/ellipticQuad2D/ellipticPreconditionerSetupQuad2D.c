@@ -20,7 +20,7 @@ int parallelCompareBaseId(const void *a, const void *b){
 
 }
 
-precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda){
+precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -383,7 +383,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   free(diagA);
     
   // coarse grid preconditioner (only continous elements)
-  ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, lambda);
+  ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, lambda, options);
 
   return precon;
 }

@@ -43,7 +43,7 @@ void ellipticRunQuad2D(mesh2D *mesh);
 
 void ellipticOccaRunQuad2D(mesh2D *mesh);
 
-void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda);
+void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda, const char *options);
 
 void ellipticVolumeQuad2D(mesh2D *mesh);
 
@@ -56,10 +56,10 @@ void ellipticErrorQuad2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatter2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 				     const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
+precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerQuad2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda);
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
