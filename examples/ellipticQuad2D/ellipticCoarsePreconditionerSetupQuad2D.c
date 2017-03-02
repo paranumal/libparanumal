@@ -26,7 +26,7 @@ int parallelCompareRowColumn(const void *a, const void *b){
 }
 
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -252,32 +252,43 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   
   printf("Done building coarse matrix system\n");
 
-  
-  precon->almond = almondSetup(mesh->device,
-             Nnum,
-             globalStarts[1],
-			       globalNumbering,
-			       recvNtotal, // number of nonzeros
-			       recvRows,
-			       recvCols, 
-			       recvVals,
-             globalSortId,
-             compressId,
-			       0,
-			       iintString,
-			       dfloatString); // 0 if no null space
-  
-  //#if 0
+  if(strstr(options ,"ALMOND")){
+    printf("Starting Almond setup\n");
+    precon->almond = almondSetup(mesh->device,
+				 Nnum,
+				 globalStarts[1],
+				 globalNumbering,
+				 recvNtotal, // number of nonzeros
+				 recvRows,
+				 recvCols, 
+				 recvVals,
+				 globalSortId,
+				 compressId,
+				 0,
+				 iintString,
+				 dfloatString); // 0 if no null space
+    
+    printf("Done Almond setup\n");
+  }
+
+  if(strstr(options ,"XXT")){
+    printf("Starting xxt setup\n");
     precon->xxt = xxtSetup(Nnum,
-  			 globalNumbering,
-  			 nnz,
-  			 rowsA,
-  			 colsA,
-  			 valsA,
-  			 0,
-  			 iintString,
-  			 dfloatString); // 0 if no null space
-  //#else
+			   globalNumbering,
+			   nnz,
+			   rowsA,
+			   colsA,
+			   valsA,
+			   0,
+			   iintString,
+			   dfloatString); // 0 if no null space
+    
+    printf("Done xxt setup\n");
+  }
+
+  if(strstr(options ,"AMG2013")){
+    printf("Starting amg2013 setup\n");
+    
     precon->amg = amg2013Setup(Nnum,
 			       globalStarts, //global partitioning
 			       recvNtotal,                                
@@ -293,8 +304,10 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 			       recvOffsets,
 			       iintString,
 			       dfloatString);
-    printf("Done coarse solve setup\n");
-  //#endif 
+
+    printf("Done amg2013 setup\n");
+  }
+
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));

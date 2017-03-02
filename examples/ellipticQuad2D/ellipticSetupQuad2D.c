@@ -1,6 +1,6 @@
 #include "ellipticQuad2D.h"
 
-void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda){
+void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda, const char *options){
 
   mesh->Nfields = 1;
   
@@ -118,7 +118,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 					mesh->gatherBaseIds, 
 					mesh->gatherHaloFlags);
 
-  *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda);
+  *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda, options);
 
   (*precon)->preconKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconQuad2D.okl",
