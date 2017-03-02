@@ -6,7 +6,9 @@
 
 #include <map>
 #include <vector>
+#include <occa.hpp>
 #include <almondHeaders.hpp>
+#include "mpi.h"
 
 #pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
 
@@ -16,23 +18,37 @@
 typedef struct {
   almond::csr<dfloat> *A;
   almond::agmg<dfloat> M;
-  std::vector<dfloat>  nullA;
   std::vector<dfloat>  rhs;
-  std::vector<dfloat>  sol;
+  std::vector<dfloat>  x;
+  std::vector<dfloat>  nullA;
+
   uint numLocalRows;
+  uint Nnum;
   uint nnz;
+
+  int *globalSortId, *compressId;
+
+  double *xUnassembled;
+  double *rhsUnassembled;
+
+  double *xSort;
+  double *rhsSort;
 
   char* iintType;
   char* dfloatType;
 
 } almond_t;
 
-void * almondSetup(uint  numLocalRows, 
+void * almondSetup(occa::device device,
+       uint  Nnum,
+       uint  numLocalRows, 
 		   void* rowIds,
 		   uint  nnz, 
 		   void* Ai,
 		   void* Aj,
 		   void* Avals,
+       int  *globalSortId, 
+       int  *compressId,
 		   int   nullSpace,
 		   const char* iintType, 
 		   const char* dfloatType) {
@@ -65,19 +81,32 @@ void * almondSetup(uint  numLocalRows,
   }
   vRowStarts[cnt] = n;
   printf("cnt=%d, numLocalRows=%d\n", cnt, numLocalRows);
+
+  almond->Nnum = Nnum;
+  almond->numLocalRows = numLocalRows;
+
+  almond->globalSortId = (int*) calloc(Nnum,sizeof(int));
+  almond->compressId  = (int*) calloc(numLocalRows+1,sizeof(int));
+
+  for (n=0;n<Nnum;n++) almond->globalSortId[n] = globalSortId[n];
+  for (n=0;n<numLocalRows+1;n++) almond->compressId[n] = compressId[n];
+  
+  almond->xUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
+  almond->rhsUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
+  almond->xSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
+  almond->rhsSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
+
+  almond->rhs.resize(numLocalRows);
+  almond->x.resize(numLocalRows);
   
   almond->A = new almond::csr<dfloat>(vRowStarts, vAj, vAvals);
 
-  almond->rhs.resize(numLocalRows);
-  almond->sol.resize(numLocalRows);
   almond->nullA.resize(numLocalRows);
   for (int i=0;i<numLocalRows;i++)almond->nullA[i] = 1;
   
   almond->M.setup(*(almond->A), almond->nullA);
   almond->M.report();
   almond->M.ktype = almond::PCG;
-
-  almond->numLocalRows = numLocalRows;
   
   almond->iintType = strdup(iintType);
   almond->dfloatType = strdup(dfloatType);
@@ -86,18 +115,39 @@ void * almondSetup(uint  numLocalRows,
 }
 
 int almondSolve(void* x,
-		void* A,
-		void* rhs) {
+            		void* A,
+            		void* rhs) {
 
   almond_t *almond = (almond_t*) A;
-  dfloat *dx = (dfloat*)x;
-  dfloat *drhs = (dfloat*)rhs;
-  int N = almond->numLocalRows;
-  for(iint i=0;i<N;++i) almond->rhs[i] = drhs[i];
 
-  almond->M.solve(almond->rhs, almond->sol);
+  almond->rhsUnassembled = (dfloat*) rhs;
+  dfloat *dx = (dfloat*) x;
 
-  for(iint i=0;i<N;++i) dx[i] = almond->sol[i];
+  //sort by globalid 
+  for (iint n=0;n<almond->Nnum;n++) 
+    almond->rhsSort[n] = almond->rhsUnassembled[almond->globalSortId[n]];
+
+  //gather
+  for (iint n=0;n<almond->numLocalRows;++n){
+    almond->rhs[n] = 0.;
+    almond->x[n] = 0.;
+    for (iint id=almond->compressId[n];id<almond->compressId[n+1];id++) 
+      almond->rhs[n] += almond->rhsSort[id];
+  }
+
+  almond->M.solve(almond->rhs, almond->x);
+
+  //scatter
+  for (iint n=0;n<almond->numLocalRows;++n){
+    for (iint id = almond->compressId[n];id<almond->compressId[n+1];id++) 
+      almond->xSort[id] = almond->x[n]; 
+  }
+
+  //sort by to original numbering
+  for (iint n=0;n<almond->Nnum;n++) 
+    almond->xUnassembled[almond->globalSortId[n]] = almond->xSort[n];
+
+  for(iint i=0;i<almond->Nnum;++i) dx[i] = almond->xUnassembled[i];
   
   return 0;
 }

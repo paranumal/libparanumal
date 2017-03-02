@@ -63,7 +63,7 @@ int parallelCompareOwners(const void *a, const void *b){
 void meshParallelConsecutiveGlobalNumbering(iint Nnum,
 					    iint *globalNumbering, iint *globalOwners, 
               iint *globalStarts, iint *sendSortId,
-              iint *globalSortId, iint **compressId,
+              iint **globalSortId, iint **compressId,
               iint *sendCounts, iint *sendOffsets,
               iint *recvCounts, iint *recvOffsets){
 
@@ -134,7 +134,8 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareGlobalIndices);
 
   //record global indexing
-  for (iint n=0;n<recvNtotal;n++) globalSortId[n] = recvNodes[n].recvId;
+  *globalSortId = (iint *) calloc(Nnum,sizeof(iint));
+  for (iint n=0;n<recvNtotal;n++) (*globalSortId)[n] = recvNodes[n].recvId;
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
   iint cnt = 0;

@@ -263,19 +263,19 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       amg2013Solve(precon->z1, precon->amg, precon->r1);
 
       for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	fprintf(fpAmg, "%d %17.15lf\n", n, precon->z1[n]);
+	      fprintf(fpAmg, "%d %17.15lf\n", n, precon->z1[n]);
       
       //      if(strstr(options,"XXT"))
-      //      xxtSolve(precon->z1, precon->xxt,precon->r1);
+      xxtSolve(precon->z1, precon->xxt,precon->r1);
 
       for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	fprintf(fpXxt, "%d %17.15lf\n", n, precon->z1[n]);
+	      fprintf(fpXxt, "%d %17.15lf\n", n, precon->z1[n]);
 #endif
       
       almondSolve(precon->z1, precon->almond, precon->r1);
 
       for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	fprintf(fpAlm, "%d %17.15lf\n", n, precon->z1[n]);
+	      fprintf(fpAlm, "%d %17.15lf\n", n, precon->z1[n]);
       
       fclose(fpXxt);
       fclose(fpAmg);
