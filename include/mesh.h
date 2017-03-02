@@ -387,7 +387,7 @@ void meshParallelConnectNodes(mesh_t *mesh);
 
 /* renumber global nodes to remove gaps */
 void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners, iint *globalStarts,
-                                            iint *sendSortId, iint *globalSortId, iint **compressId,
+                                            iint *sendSortId, iint **globalSortId, iint **compressId,
                                             iint *sendCounts, iint *sendOffsets,
                                             iint *recvCounts, iint *recvOffsets);
 
@@ -465,12 +465,16 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(uint  numLocalRows, 
+void * almondSetup(occa::device device,
+       uint Nnum,
+       uint  numLocalRows, 
 		   void* rowIds,
 		   uint  nnz, 
 		   void* Ai,
 		   void* Aj,
 		   void* Avals,
+       int  *globalSortId, 
+       int  *compressId,
 		   int   nullSpace,
 		   const char* iintType, 
 		   const char* dfloatType) ;

@@ -46,7 +46,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
   iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
-  iint *globalSortId = (iint *) calloc(Nnum,sizeof(iint));
+  iint *globalSortId;
   iint *compressId;
 
   // use original vertex numbering
@@ -54,7 +54,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
-                                         sendSortId, globalSortId, &compressId,
+                                         sendSortId, &globalSortId, &compressId,
                                          sendCounts, sendOffsets, recvCounts, recvOffsets);
   
   // build gs
@@ -253,12 +253,16 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   printf("Done building coarse matrix system\n");
 
   
-  precon->almond = almondSetup(globalStarts[1],
+  precon->almond = almondSetup(mesh->device,
+             Nnum,
+             globalStarts[1],
 			       globalNumbering,
 			       recvNtotal, // number of nonzeros
 			       recvRows,
 			       recvCols, 
 			       recvVals,
+             globalSortId,
+             compressId,
 			       0,
 			       iintString,
 			       dfloatString); // 0 if no null space

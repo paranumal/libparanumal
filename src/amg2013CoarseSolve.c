@@ -104,11 +104,7 @@ void * amg2013SetupCSR(int    Nnum,            //unassembled size (Nverts*Neleme
   amg->recvNnum = compressId[numLocalRows];
 
   amg->sendSortId = (int*) calloc(Nnum,sizeof(int));
-  amg->globalSortId = (int*) calloc(Nnum,sizeof(int));
-  for (n=0;n<Nnum;n++) {
-    amg->sendSortId[n] = sendSortId[n];
-    amg->globalSortId[n] = globalSortId[n];
-  }
+  for (n=0;n<Nnum;n++)  amg->sendSortId[n] = sendSortId[n];
 
   amg->sendCounts = (int*) calloc(num_procs,sizeof(int));
   amg->recvCounts = (int*) calloc(num_procs,sizeof(int));
@@ -123,6 +119,9 @@ void * amg2013SetupCSR(int    Nnum,            //unassembled size (Nverts*Neleme
     amg->sendOffsets[n] = sendOffsets[n]*sizeof(double);
     amg->recvOffsets[n] = recvOffsets[n]*sizeof(double);
   }
+
+  amg->globalSortId = (int*) calloc(amg->recvNnum,sizeof(int));
+  for (n=0;n<amg->recvNnum;n++) amg->globalSortId[n] = globalSortId[n];
 
   amg->compressId  = (int*) calloc(numLocalRows+1,sizeof(int));
   for (n=0;n<numLocalRows+1;n++) amg->compressId[n] = compressId[n];

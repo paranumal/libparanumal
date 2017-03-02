@@ -39,7 +39,7 @@ veryclean: clean
 ##################################################################
                                                                                                                                          
 libamg2013.a: $(AMGDIR)
-	echo  "Linking... " 
+	@echo  "Linking... " 
 	${AR} -x $(AMGDIR)/parcsr_ls/libparcsr_ls.a; \
 	${AR} -x $(AMGDIR)/parcsr_mv/libparcsr_mv.a; \
 	${AR} -x $(AMGDIR)/seq_mv/libseq_mv.a;       \
