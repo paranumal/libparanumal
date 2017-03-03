@@ -115,9 +115,9 @@ void * almondSetup(occa::device device,
 }
 
 int almondSolve(void* x,
-            		void* A,
-            		void* rhs) {
-
+		void* A,
+		void* rhs) {
+  
   almond_t *almond = (almond_t*) A;
 
   almond->rhsUnassembled = (dfloat*) rhs;
@@ -135,7 +135,15 @@ int almondSolve(void* x,
       almond->rhs[n] += almond->rhsSort[id];
   }
 
-  almond->M.solve(almond->rhs, almond->x);
+  //  almond->M.solve(almond->rhs, almond->x);
+  int maxIt = 40;
+  dfloat tol = 1e-3;
+  almond::pcg<dfloat>(almond->A[0],
+		      almond->rhs,
+		      almond->x,
+		      almond->M,
+		      maxIt,
+		      tol);
 
   //scatter
   for (iint n=0;n<almond->numLocalRows;++n){

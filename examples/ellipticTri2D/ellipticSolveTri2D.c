@@ -173,21 +173,32 @@ void ellipticPreconditioner2D(solver_t *solver,
 
       mesh->device.finish();
       occa::toc("coarsenKernel");
-      occa::tic("xxtSolve");
       
       // do we need to gather (or similar) here ?
       precon->o_r1.copyTo(precon->r1); 
 
       // solve coarse problem using xxt
-      xxtSolve(precon->z1, precon->xxt,precon->r1);
+      if(strstr(options, "XXT")){
+	occa::tic("xxtSolve");
+	
+	xxtSolve(precon->z1, precon->xxt,precon->r1);
+
+	occa::toc("xxtSolve");
+      }
+
+      if(strstr(options,"ALMOND")){
+	occa::tic("ALMOND");
+		
+	almondSolve(precon->z1, precon->almond, precon->r1);
+
+	occa::toc("ALMOND");
+      }
 
       // copy coarse solution to DEVICE
       precon->o_z1.copyFrom(precon->z1);
-
-      occa::toc("xxtSolve");
-      occa::tic("prolongateKernel");
       
       // prolongate from P1 to PN
+      occa::tic("prolongateKernel");
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
       // increment z
@@ -313,7 +324,13 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // dot(r,z)
     rdotz1 = ellipticInnerProduct(solver, o_r, o_z);
 
-    beta = rdotz1/rdotz0;
+    if(strstr(options,"FLEXIBLE")){
+      dfloat zdotAp = ellipticInnerProduct(solver, o_z, o_Ap);
+      beta = -alpha*zdotAp/rdotz0;
+    }
+    else{
+      beta = rdotz1/rdotz0;
+    }
 
     // p = z + beta*p
     ellipticScaledAdd(solver, 1.f, o_z, beta, o_p);

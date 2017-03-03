@@ -35,7 +35,9 @@ typedef struct {
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
   occa::memory o_r1, o_z1;
   dfloat *r1, *z1;
+
   void *xxt;
+  void *almond;
 
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;
@@ -59,13 +61,13 @@ void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda);
+precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda);
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
 
 
 typedef struct {
@@ -104,4 +106,4 @@ typedef struct {
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo);
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options);

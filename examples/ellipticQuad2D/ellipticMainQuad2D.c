@@ -343,7 +343,8 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,ALMOND");
+  //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,XXT");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
   //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
@@ -361,7 +362,7 @@ int main(int argc, char **argv){
   // set up elliptic stuff
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 100;
+  dfloat lambda = 1;
   
   // set up
   ellipticSetupQuad2D(mesh, &ogs, &precon, lambda, options);
@@ -491,6 +492,8 @@ int main(int argc, char **argv){
 
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
+
+  occa::tic("PCG");
   
   do{
 
@@ -564,6 +567,8 @@ int main(int argc, char **argv){
     
   }while(rdotr0>(tol*tol));
 
+  occa::toc("PCG");
+  
   occa::printTimer();
 
   printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);

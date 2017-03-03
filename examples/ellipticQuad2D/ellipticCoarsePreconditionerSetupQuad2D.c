@@ -37,6 +37,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   iint Nnum = mesh->Nverts*mesh->Nelements;
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   
@@ -251,8 +252,22 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   #endif
   
   printf("Done building coarse matrix system\n");
+  if(strstr(options, "XXT")){
+    printf("Starting xxt setup\n");
+    precon->xxt = xxtSetup(Nnum,
+			   globalNumbering,
+			   nnz,
+			   rowsA,
+			   colsA,
+			   valsA,
+			   0,
+			   iintString,
+			   dfloatString); // 0 if no null space
+    
+    printf("Done xxt setup\n");
+  }
 
-  if(strstr(options ,"ALMOND")){
+  if(strstr(options, "ALMOND")){
     printf("Starting Almond setup\n");
     precon->almond = almondSetup(mesh->device,
 				 Nnum,
@@ -270,22 +285,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
     
     printf("Done Almond setup\n");
   }
-
-  if(strstr(options ,"XXT")){
-    printf("Starting xxt setup\n");
-    precon->xxt = xxtSetup(Nnum,
-			   globalNumbering,
-			   nnz,
-			   rowsA,
-			   colsA,
-			   valsA,
-			   0,
-			   iintString,
-			   dfloatString); // 0 if no null space
-    
-    printf("Done xxt setup\n");
-  }
-
+  
   if(strstr(options ,"AMG2013")){
     printf("Starting amg2013 setup\n");
     

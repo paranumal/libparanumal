@@ -276,9 +276,9 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
       fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
-      printf("%g ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
+      //      printf("%g ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
     }
-    printf("\n");
+    //    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 

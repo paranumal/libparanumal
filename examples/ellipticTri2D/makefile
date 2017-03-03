@@ -17,14 +17,15 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  -I../../3rdParty/ALMOND/include
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github \
-			-L../../3rdParty/amg2013 -lgs -lamg2013
+			-L../../3rdParty/amg2013 -lgs -lamg2013 \
+			-L../../3rdParty/ALMOND -lALMOND
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=  $(links) -llapack -lblas
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -66,12 +67,13 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ./diagnostic.o\
-
+../../src/almondCoarseSolve.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
