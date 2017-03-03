@@ -1,6 +1,37 @@
 #include "ellipticTri2D.h"
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda){
+typedef struct{
+
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+}nonZero_t;
+
+// compare on global indices 
+int parallelCompareRowColumn(const void *a, const void *b){
+
+  nonZero_t *fa = (nonZero_t*) a;
+  nonZero_t *fb = (nonZero_t*) b;
+  
+  if(fa->row < fb->row) return -1;
+  if(fa->row > fb->row) return +1;
+
+  if(fa->col < fb->col) return -1;
+  if(fa->col > fb->col) return +1;
+
+  return 0;
+
+}
+
+
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options){
+
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
 
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
@@ -8,9 +39,32 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
+#if 0
+  // use original vertex numbering
+  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
+#else
+  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+  
+  iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
+
+  iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
+  iint *globalSortId;
+  iint *compressId;
+
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
+  // squeeze numbering
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
+                                         sendSortId, &globalSortId, &compressId,
+                                         sendCounts, sendOffsets, recvCounts, recvOffsets);
+  
+#endif
+  
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
 
@@ -65,7 +119,13 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
   iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
-  
+
+  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+    
   iint cnt = 0;
 
   dfloat *cV1  = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
@@ -130,21 +190,102 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 	valsA[cnt] = Snm;
 	rowsA[cnt] = e*mesh->Nverts+n;
 	colsA[cnt] = e*mesh->Nverts+m;
+
+	// pack non-zero
+	sendNonZeros[cnt].val = Snm;
+	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+	
 	++cnt;
       }
     }
   }
 
+  // count how many non-zeros to send to each process
+  for(iint n=0;n<cnt;++n)
+    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+
+  // sort by row ordering
+  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // find send and recv offsets for gather
+  iint recvNtotal = 0;
+  for(iint r=0;r<size;++r){
+    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+    recvNtotal += ArecvCounts[r]/sizeof(nonZero_t);
+  }
+
+  nonZero_t *recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
+  
+  // determine number to receive
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
+		recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
+		MPI_COMM_WORLD);
+
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
+
+  // compress duplicates
+  cnt = 0;
+  for(iint n=1;n<recvNtotal;++n){
+    if(recvNonZeros[n].row == recvNonZeros[cnt].row &&
+       recvNonZeros[n].col == recvNonZeros[cnt].col){
+      recvNonZeros[cnt].val += recvNonZeros[n].val;
+    }
+    else{
+      ++cnt;
+      recvNonZeros[cnt] = recvNonZeros[n];
+    }
+  }
+  recvNtotal = cnt+1;
+
+  iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
+  iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
+  dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
+  
+  for (iint n=0;n<recvNtotal;n++) {
+    recvRows[n] = recvNonZeros[n].row;
+    recvCols[n] = recvNonZeros[n].col;
+    recvVals[n] = recvNonZeros[n].val;
+  }
+  
+  
   printf("Done building coarse matrix system\n");
-  precon->xxt = xxtSetup(Nnum,
-			 globalNumbering,
-			 nnz,
-			 rowsA,
-			 colsA,
-			 valsA,
-			 0,
-			 iintString,
-			 dfloatString); // 0 if no null space
+  if(strstr(options, "XXT")){
+    precon->xxt = xxtSetup(Nnum,
+			   globalNumbering,
+			   nnz,
+			   rowsA,
+			   colsA,
+			   valsA,
+			   0,
+			   iintString,
+			   dfloatString); // 0 if no null space
+  }
+
+  if(strstr(options, "ALMOND")){
+    printf("Starting Almond setup\n");
+    precon->almond = almondSetup(mesh->device,
+				 Nnum,
+				 globalStarts[1],
+				 globalNumbering,
+				 recvNtotal, // number of nonzeros
+				 recvRows,
+				 recvCols, 
+				 recvVals,
+				 globalSortId,
+				 compressId,
+				 0,
+				 iintString,
+				 dfloatString); // 0 if no null space
+    
+    printf("Done Almond setup\n");
+  }
   
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
