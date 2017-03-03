@@ -1,6 +1,6 @@
 #include "ellipticTri2D.h"
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo){
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NpP*mesh->Nelements;
@@ -127,7 +127,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 					       mesh->gatherHaloFlags);
   
   
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda);
+  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda, options);
   
   solver->precon->preconKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",

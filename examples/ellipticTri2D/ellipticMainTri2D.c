@@ -22,7 +22,7 @@ int main(int argc, char **argv){
   // method can be IPDG
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
   //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG coarse=COARSEGRID");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,ALMOND,PROJECT method=IPDG coarse=COARSEGRID");
   //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
@@ -39,7 +39,7 @@ int main(int argc, char **argv){
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
 
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, lambda, kernelInfo);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, lambda, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
