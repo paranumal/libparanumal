@@ -26,7 +26,7 @@ int parallelCompareRowColumn(const void *a, const void *b){
 }
 
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options){
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs_t *ogs, dfloat lambda, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -319,30 +319,39 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   free(AsendOffsets);
   free(ArecvOffsets);
 
-#if 0
+#if 1
   /* pseudo code for building (really) coarse system */
   iint coarseN = 1;
   iint coarseNp = (coarseN+1)*(coarseN+2)/2;
   iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
   
   iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
-  dfloat *b    = (dfloat*) calloc(coarseNp*Ntotal, sizeof(dfloat));
   dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
+  precon->coarseNp = coarseNp;
+  precon->B    = (dfloat*) calloc(coarseNp*Ntotal, sizeof(dfloat));
+
   /* populate b here */
-  iint cnt = 0;
-  for(iint j=0;j<coarseN++j){
+  cnt = 0;
+  for(iint j=0;j<coarseN;++j){
     for(iint i=0;i<coarseN-j;++i){
       
       for(iint m=0;m<Ntotal;++m){
-	b[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
+	precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
       }
       globalNumbering2[cnt] = cnt + rank*coarseNp;
       
       ++cnt;
     }
   }
+  
+  precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
+  for(iint n=0;n<coarseNp;++n)
+    precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
 
+  precon->o_tmp2 = mesh->device.malloc(Ntotal*sizeof(dfloat)); // sloppy
+  precon->tmp2 = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  
   // storage for A*b operation
   dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
   dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
@@ -360,7 +369,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   dfloat *valsA2 = (dfloat*) calloc(coarseNp*coarseNp*size, sizeof(dfloat));  
   
   // assume coarseNp on every process (can generalize to variable number of dofs per process)
-  iint nnz2 =0;
+  iint nnz2 = 0;
   for(iint r=0;r<size;++r){
 
     o_b.copyFrom(zero);
@@ -368,7 +377,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
     for(iint n=0;n<coarseNp;++n){
 
       if(r==rank) // each rank takes turn populating b
-	o_b.copyFrom(b+n*Ntotal);
+	o_b.copyFrom(precon->B+n*Ntotal);
       
       // need to provide ogs for A*b 
       ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
@@ -379,7 +388,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
       for(iint m=0;m<coarseNp;++m){
 	dfloat val = 0;
 	for(iint i=0;i<Ntotal;++i){
-	  val  += b[m*Ntotal+i]*Ab[i];
+	  val  += precon->B[m*Ntotal+i]*Ab[i];
 	}
 
 	// only store entries larger than machine precision (dodgy)
@@ -396,7 +405,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
       }
     }
   }
-
+  
   // need to create numbering for really coarse grid on each process for xxt
   precon->xxt2 = xxtSetup(coarseNp,
 			  globalNumbering2,

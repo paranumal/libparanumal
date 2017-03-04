@@ -135,15 +135,19 @@ int almondSolve(void* x,
       almond->rhs[n] += almond->rhsSort[id];
   }
 
-  //  almond->M.solve(almond->rhs, almond->x);
-  int maxIt = 40;
-  dfloat tol = 1e-3;
-  almond::pcg<dfloat>(almond->A[0],
-		      almond->rhs,
-		      almond->x,
-		      almond->M,
-		      maxIt,
-		      tol);
+  if(1){
+    almond->M.solve(almond->rhs, almond->x);
+  }
+  else{
+    int maxIt = 40;
+    dfloat tol = 1e-1;
+    almond::pcg<dfloat>(almond->A[0],
+			almond->rhs,
+			almond->x,
+			almond->M,
+			maxIt,
+			tol);
+  }
 
   //scatter
   for (iint n=0;n<almond->numLocalRows;++n){

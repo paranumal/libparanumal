@@ -36,6 +36,12 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;
+
+  iint coarseNp;
+  dfloat *B, *tmp2;
+  occa::memory *o_B, o_tmp2;
+  void *xxt2;
+  
   
 } precon_t;
 
@@ -62,4 +68,8 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerQuad2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs_t *ogs, dfloat lambda, const char *options);
+
+void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
+			ogs_t *ogs, dfloat lambda,
+			occa::memory &o_q, occa::memory &o_gradq, occa::memory &o_Aq, const char *options);
