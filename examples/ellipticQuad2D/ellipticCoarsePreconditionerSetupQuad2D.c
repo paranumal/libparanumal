@@ -318,4 +318,106 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   free(ArecvCounts);
   free(AsendOffsets);
   free(ArecvOffsets);
+
+#if 0
+  /* pseudo code for building (really) coarse system */
+  iint coarseN = 1;
+  iint coarseNp = (coarseN+1)*(coarseN+2)/2;
+  iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
+  
+  iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
+  dfloat *b    = (dfloat*) calloc(coarseNp*Ntotal, sizeof(dfloat));
+  dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  /* populate b here */
+  iint cnt = 0;
+  for(iint j=0;j<coarseN++j){
+    for(iint i=0;i<coarseN-j;++i){
+      
+      for(iint m=0;m<Ntotal;++m){
+	b[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
+      }
+      globalNumbering2[cnt] = cnt + rank*coarseNp;
+      
+      ++cnt;
+    }
+  }
+
+  // storage for A*b operation
+  dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+  dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+
+  occa::memory o_b = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  occa::memory o_gradb = mesh->device.malloc(4*Ntotal*sizeof(dfloat));
+  occa::memory o_Ab = mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+  dfloat *Ab = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat cutoff = (sizeof(dfloat)==4) ? 1e-6:1e-15;
+
+  // maximum fixed size coarseNp x coarseNp from every rank
+  iint *rowsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
+  iint *colsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
+  dfloat *valsA2 = (dfloat*) calloc(coarseNp*coarseNp*size, sizeof(dfloat));  
+  
+  // assume coarseNp on every process (can generalize to variable number of dofs per process)
+  iint nnz2 =0;
+  for(iint r=0;r<size;++r){
+
+    o_b.copyFrom(zero);
+
+    for(iint n=0;n<coarseNp;++n){
+
+      if(r==rank) // each rank takes turn populating b
+	o_b.copyFrom(b+n*Ntotal);
+      
+      // need to provide ogs for A*b 
+      ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
+      
+      o_Ab.copyTo(Ab);
+      
+      // project onto coarse basis
+      for(iint m=0;m<coarseNp;++m){
+	dfloat val = 0;
+	for(iint i=0;i<Ntotal;++i){
+	  val  += b[m*Ntotal+i]*Ab[i];
+	}
+
+	// only store entries larger than machine precision (dodgy)
+	if(fabs(val)>cutoff){
+	  // now by symmetry
+	  iint col = r*coarseNp + n;
+	  iint row = rank*coarseNp + m; 
+	  // save this non-zero
+	  rowsA2[nnz2] = row;
+	  colsA2[nnz2] = col;
+	  valsA2[nnz2] = val;
+	  ++nnz2;
+	}
+      }
+    }
+  }
+
+  // need to create numbering for really coarse grid on each process for xxt
+  precon->xxt2 = xxtSetup(coarseNp,
+			  globalNumbering2,
+			  nnz2,
+			  rowsA2,
+			  colsA2,
+			  valsA2,
+			  0,
+			  iintString,
+			  dfloatString);
+
+  // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
+
+  
+  free(sendBuffer);
+  free(recvBuffer);
+  free(Ab);
+  
+  o_b.free();
+  o_gradb.free();
+  o_Ab.free();
+#endif
+  
 }
