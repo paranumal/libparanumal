@@ -120,7 +120,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
 
 }
 
-dfloat ellipticScaledAdd(mesh2D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
+void ellipticScaledAdd(mesh2D *mesh, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   iint Ntotal = mesh->Nelements*mesh->Np;
 
@@ -168,6 +168,34 @@ dfloat ellipticWeightedInnerProduct(mesh2D *mesh,
   MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   return globalwab;
+}
+
+
+
+dfloat ellipticLocalInnerProduct(mesh2D *mesh,
+				 iint Nblock,
+				 occa::memory &o_a,
+				 occa::memory &o_b,
+				 occa::memory &o_tmp,
+				 dfloat *tmp){
+  
+  mesh->device.finish();
+  occa::tic("inner product2");
+  
+  iint Ntotal = mesh->Nelements*mesh->Np;
+
+  mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+  
+  mesh->device.finish();
+  occa::toc("inner product2");
+  
+  o_tmp.copyTo(tmp);
+  
+  dfloat ab = 0;
+  for(iint n=0;n<Nblock;++n)
+    ab += tmp[n];
+
+  return ab;
 }
 
 void ellipticPreconditioner2D(mesh2D *mesh,
@@ -241,7 +269,24 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
     mesh->device.finish();
     occa::toc("restrictKernel");   
+    
+    if(strstr(options, "UBERGRID")){
+      
+      iint Nblock = (mesh->Np*mesh->Nelements+B-1)/B;
+      dfloat *rcoarse = (dfloat*) calloc(precon->coarseNp, sizeof(dfloat));
+      dfloat *zcoarse = (dfloat*) calloc(precon->coarseNp, sizeof(dfloat));
 
+      for(iint n=0;n<precon->coarseNp;++n)
+	rcoarse[n] = ellipticLocalInnerProduct(mesh, Nblock, precon->o_B[n], o_r, precon->o_tmp2, precon->tmp2);
+
+      xxtSolve(zcoarse, precon->xxt2, rcoarse);
+
+      for(iint n=0;n<precon->coarseNp;++n)
+	ellipticScaledAdd(mesh, zcoarse[n], precon->o_B[n], 1.f, o_z);
+      
+      free(rcoarse);
+      free(zcoarse);
+    }
     
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
@@ -343,7 +388,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,ALMOND");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,ALMOND,UBERGRID");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID,XXT");
   //  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
