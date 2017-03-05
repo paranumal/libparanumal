@@ -465,9 +465,8 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(occa::device device,
-       uint Nnum,
-       uint  numLocalRows, 
+void * almondSetup(uint Nnum,
+       int  *rowStarts,
 		   void* rowIds,
 		   uint  nnz, 
 		   void* Ai,

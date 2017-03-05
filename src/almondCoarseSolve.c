@@ -24,6 +24,7 @@ typedef struct {
 
   uint numLocalRows;
   uint Nnum;
+  uint recvNnum;
   uint nnz;
 
   int *globalSortId, *compressId;
@@ -39,9 +40,8 @@ typedef struct {
 
 } almond_t;
 
-void * almondSetup(occa::device device,
-       uint  Nnum,
-       uint  numLocalRows, 
+void * almondSetup(uint  Nnum,
+       int* rowStarts, 
 		   void* rowIds,
 		   uint  nnz, 
 		   void* Ai,
@@ -56,19 +56,28 @@ void * almondSetup(occa::device device,
   int n;
   almond_t *almond = (almond_t*) calloc(1, sizeof(almond_t));
 
-  std::vector<int>    vAj(nnz);
-  std::vector<dfloat> vAvals(nnz);
-  std::vector<int>    vRowStarts(numLocalRows+1);
-
   int *iAi = (int*) Ai;
   int *iAj = (int*) Aj;
   dfloat *dAvals = (dfloat*) Avals;
 
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid );
+
+  almond->numLocalRows = rowStarts[myid+1]-rowStarts[myid];
+  int globalOffset = rowStarts[myid];
+  printf("rank %d, numLocalRows %d, offset %d, \n", myid, almond->numLocalRows, globalOffset);
+
+
+  std::vector<int>    vAj(nnz);
+  std::vector<dfloat> vAvals(nnz);
+  std::vector<int>    vRowStarts(almond->numLocalRows+1);
+
   // assumes presorted
   int cnt = 0;
   for(n=0;n<nnz;++n){
-    if(iAi[n]>=numLocalRows || iAj[n]>=numLocalRows)
-      printf("errant nonzero %d,%d,%g\n", iAi[n], iAj[n], dAvals[n]);
+    if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAj[n] >= (almond->numLocalRows + globalOffset))
+      || (iAi[n] <  globalOffset)                  || (iAj[n] < globalOffset) ) 
+      printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
     if(n==0 || (iAi[n]!=iAi[n-1])){
       //      printf("*\n");
       vRowStarts[cnt] = n;
@@ -80,29 +89,30 @@ void * almondSetup(occa::device device,
     vAvals[n] = dAvals[n];
   }
   vRowStarts[cnt] = n;
-  printf("cnt=%d, numLocalRows=%d\n", cnt, numLocalRows);
+  printf("cnt=%d, numLocalRows=%d\n", cnt, almond->numLocalRows);
 
   almond->Nnum = Nnum;
-  almond->numLocalRows = numLocalRows;
+  //almond->numLocalRows = numLocalRows;
+  almond->recvNnum = compressId[almond->numLocalRows];
 
-  almond->globalSortId = (int*) calloc(Nnum,sizeof(int));
-  almond->compressId  = (int*) calloc(numLocalRows+1,sizeof(int));
+  almond->globalSortId = (int*) calloc(almond->recvNnum,sizeof(int));
+  almond->compressId  = (int*) calloc(almond->numLocalRows+1,sizeof(int));
 
   for (n=0;n<Nnum;n++) almond->globalSortId[n] = globalSortId[n];
-  for (n=0;n<numLocalRows+1;n++) almond->compressId[n] = compressId[n];
+  for (n=0;n<almond->numLocalRows+1;n++) almond->compressId[n] = compressId[n];
   
   almond->xUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
   almond->rhsUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
   almond->xSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
   almond->rhsSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
 
-  almond->rhs.resize(numLocalRows);
-  almond->x.resize(numLocalRows);
+  almond->rhs.resize(almond->numLocalRows);
+  almond->x.resize(almond->numLocalRows);
   
   almond->A = new almond::csr<dfloat>(vRowStarts, vAj, vAvals);
 
-  almond->nullA.resize(numLocalRows);
-  for (int i=0;i<numLocalRows;i++)almond->nullA[i] = 1;
+  almond->nullA.resize(almond->numLocalRows);
+  for (int i=0;i<almond->numLocalRows;i++)almond->nullA[i] = 1;
   
   almond->M.setup(*(almond->A), almond->nullA);
   almond->M.report();
