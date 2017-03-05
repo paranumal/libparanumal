@@ -134,7 +134,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareGlobalIndices);
 
   //record global indexing
-  *globalSortId = (iint *) calloc(Nnum,sizeof(iint));
+  *globalSortId = (iint *) calloc(recvNtotal,sizeof(iint));
   for (iint n=0;n<recvNtotal;n++) (*globalSortId)[n] = recvNodes[n].recvId;
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
