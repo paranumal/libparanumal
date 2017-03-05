@@ -274,9 +274,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     // TW: to here.
     
     printf("Starting Almond setup\n");
-    precon->almond = almondSetup(mesh->device,
-				 Nnum, 
-				 globalStarts[rank+1]-globalStarts[rank], // TW: need to replace this
+    precon->almond = almondSetup(Nnum, 
+				 globalStarts, // TW: need to replace this
 				 globalNumbering,
 				 recvNtotal,      // TW: number of nonzeros
 				 recvRows,        // TW: need to use local numbering
