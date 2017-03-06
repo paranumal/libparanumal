@@ -296,44 +296,25 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
-      // do we need to gather (or similar) here ?
-      precon->o_r1.copyTo(precon->r1); 
-
-      /*
-      FILE *fpXxt = fopen("xxt.dat", "w");
-      FILE *fpAmg = fopen("amg.dat", "w");
-      FILE *fpAlm = fopen("alm.dat", "w");	
-      */
-      
-      if(strstr(options,"AMG2013"))
+      if(strstr(options,"AMG2013")){
+	precon->o_r1.copyTo(precon->r1); 
 	amg2013Solve(precon->z1, precon->amg, precon->r1);
+	precon->o_z1.copyFrom(precon->z1);
+      }
 
-      /*
-      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	      fprintf(fpAmg, "%d %17.15lf\n", n, precon->z1[n]);
-      */
-      if(strstr(options,"XXT"))
+      if(strstr(options,"XXT")){
+	precon->o_r1.copyTo(precon->r1); 
 	xxtSolve(precon->z1, precon->xxt,precon->r1);
+	precon->o_z1.copyFrom(precon->z1);
+      }
 
-      /*
-      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	      fprintf(fpXxt, "%d %17.15lf\n", n, precon->z1[n]);
-      */
-
-      if(strstr(options,"ALMOND"))
+      if(strstr(options,"ALMOND")){
+	// should eliminate these copies
+	precon->o_r1.copyTo(precon->r1); 
 	almondSolve(precon->z1, precon->almond, precon->r1);
+	precon->o_z1.copyFrom(precon->z1);
+      }
 
-      /*
-      for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n)
-	      fprintf(fpAlm, "%d %17.15lf\n", n, precon->z1[n]);
-      
-      fclose(fpXxt);
-      fclose(fpAmg);
-      fclose(fpAlm);
-      */
-      
-      precon->o_z1.copyFrom(precon->z1);
-      
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
       dfloat one = 1.;
