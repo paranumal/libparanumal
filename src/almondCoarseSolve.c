@@ -6,15 +6,15 @@
 
 #include <map>
 #include <vector>
-#include <occa.hpp>
-#include <almondHeaders.hpp>
+
+#include "occa.hpp"
+#include "almondHeaders.hpp"
+#include "mesh.h"
 #include "mpi.h"
 
 #pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
 
-#define dfloat double
-#define iint int
-#define amgFloat float
+#define amgFloat double
 
 typedef struct {
   almond::csr<amgFloat> *A;
