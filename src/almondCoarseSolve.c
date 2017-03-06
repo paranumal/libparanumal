@@ -6,21 +6,22 @@
 
 #include <map>
 #include <vector>
-#include <occa.hpp>
-#include <almondHeaders.hpp>
+
+#include "occa.hpp"
+#include "almondHeaders.hpp"
+#include "mesh.h"
 #include "mpi.h"
 
 #pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
 
-#define dfloat double
-#define iint int
+#define amgFloat double
 
 typedef struct {
-  almond::csr<dfloat> *A;
-  almond::agmg<dfloat> M;
-  std::vector<dfloat>  rhs;
-  std::vector<dfloat>  x;
-  std::vector<dfloat>  nullA;
+  almond::csr<amgFloat> *A;
+  almond::agmg<amgFloat> M;
+  std::vector<amgFloat>  rhs;
+  std::vector<amgFloat>  x;
+  std::vector<amgFloat>  nullA;
 
   uint numLocalRows;
   uint Nnum;
@@ -29,11 +30,10 @@ typedef struct {
 
   int *globalSortId, *compressId;
 
-  double *xUnassembled;
-  double *rhsUnassembled;
+  amgFloat *xUnassembled;
 
-  double *xSort;
-  double *rhsSort;
+  amgFloat *xSort;
+  amgFloat *rhsSort;
 
   char* iintType;
   char* dfloatType;
@@ -41,14 +41,14 @@ typedef struct {
 } almond_t;
 
 void * almondSetup(uint  Nnum,
-       int* rowStarts, 
+		   int* rowStarts, 
 		   void* rowIds,
 		   uint  nnz, 
 		   void* Ai,
 		   void* Aj,
 		   void* Avals,
-       int  *globalSortId, 
-       int  *compressId,
+		   int  *globalSortId, 
+		   int  *compressId,
 		   int   nullSpace,
 		   const char* iintType, 
 		   const char* dfloatType) {
@@ -69,14 +69,14 @@ void * almondSetup(uint  Nnum,
 
 
   std::vector<int>    vAj(nnz);
-  std::vector<dfloat> vAvals(nnz);
+  std::vector<amgFloat> vAvals(nnz);
   std::vector<int>    vRowStarts(almond->numLocalRows+1);
 
   // assumes presorted
   int cnt = 0;
   for(n=0;n<nnz;++n){
     if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAj[n] >= (almond->numLocalRows + globalOffset))
-      || (iAi[n] <  globalOffset)                  || (iAj[n] < globalOffset) ) 
+	 || (iAi[n] <  globalOffset)                  || (iAj[n] < globalOffset) ) 
       printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
     if(n==0 || (iAi[n]!=iAi[n-1])){
       //      printf("*\n");
@@ -101,15 +101,14 @@ void * almondSetup(uint  Nnum,
   for (n=0;n<Nnum;n++) almond->globalSortId[n] = globalSortId[n];
   for (n=0;n<almond->numLocalRows+1;n++) almond->compressId[n] = compressId[n];
   
-  almond->xUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
-  almond->rhsUnassembled = (dfloat*) calloc(Nnum,sizeof(dfloat));
-  almond->xSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
-  almond->rhsSort = (dfloat*) calloc(Nnum,sizeof(dfloat));
+  almond->xUnassembled = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
+  almond->xSort = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
+  almond->rhsSort = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
 
   almond->rhs.resize(almond->numLocalRows);
   almond->x.resize(almond->numLocalRows);
   
-  almond->A = new almond::csr<dfloat>(vRowStarts, vAj, vAvals);
+  almond->A = new almond::csr<amgFloat>(vRowStarts, vAj, vAvals);
 
   almond->nullA.resize(almond->numLocalRows);
   for (int i=0;i<almond->numLocalRows;i++)almond->nullA[i] = 1;
@@ -130,12 +129,12 @@ int almondSolve(void* x,
   
   almond_t *almond = (almond_t*) A;
 
-  almond->rhsUnassembled = (dfloat*) rhs;
   dfloat *dx = (dfloat*) x;
-
+  dfloat *drhs = (dfloat*) rhs;
+  
   //sort by globalid 
   for (iint n=0;n<almond->Nnum;n++) 
-    almond->rhsSort[n] = almond->rhsUnassembled[almond->globalSortId[n]];
+    almond->rhsSort[n] = drhs[almond->globalSortId[n]];
 
   //gather
   for (iint n=0;n<almond->numLocalRows;++n){
@@ -150,8 +149,8 @@ int almondSolve(void* x,
   }
   else{
     int maxIt = 40;
-    dfloat tol = 1e-1;
-    almond::pcg<dfloat>(almond->A[0],
+    amgFloat tol = 1e-1;
+    almond::pcg<amgFloat>(almond->A[0],
 			almond->rhs,
 			almond->x,
 			almond->M,
@@ -175,20 +174,5 @@ int almondSolve(void* x,
 }
 
 int almondFree(void* A) {
-#if 0
-  almond_t *almond = (almond_t *) A;
-
-  crs_free(almond->A);
-
-  if (!strcmp(almond->dfloatType,"float")) { 
-    free(almond->Avals);
-    free(almond->x);  
-    free(almond->rhs);
-  }
-
-  if (!strcmp(almond->iintType,"int")) { 
-    free(almond->rowIds);
-  }
-#endif
   return 0;
 }
