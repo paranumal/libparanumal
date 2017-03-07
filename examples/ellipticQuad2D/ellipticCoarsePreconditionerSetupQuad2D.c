@@ -346,14 +346,15 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   for(iint j=0;j<coarseN+1;++j){
     for(iint i=0;i<coarseN+1-j;++i){
       
-      for(iint m=0;m<Ntotal;++m){
+      for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
 	precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
       }
-      globalNumbering2[cnt] = cnt + rank*coarseNp + 1;
+      globalNumbering2[cnt] = cnt + rank*coarseNp ;
       
       ++cnt;
     }
   }
+
   printf("CNT = %d\n", cnt);
   
   precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
@@ -394,16 +395,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       else
 	o_b.copyFrom(zero);
       
-      for(iint i=0;i<mesh->Nelements*mesh->Np;++i)
-	fprintf(fp,"-x- %g\n", precon->B[n*Ntotal+i]);
-      
       // need to provide ogs for A*b 
       ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
       
       o_Ab.copyTo(Ab);
       
       // project onto coarse basis
-      fprintf(fp, "UM: ");
       for(iint m=0;m<coarseNp;++m){
 	dfloat val = 0;
 	for(iint i=0;i<mesh->Np*mesh->Nelements;++i){
@@ -411,26 +408,28 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	}
 
 	// only store entries larger than machine precision (dodgy)
-	if(fabs(val)>cutoff){
+	if(1){//if(fabs(val)>cutoff){
 	  // now by symmetry
-	  iint col = r*coarseNp + n + 1;
-	  iint row = rank*coarseNp + m + 1; 
+	  iint col = r*coarseNp + n ;
+	  iint row = rank*coarseNp + m; 
 	  // save this non-zero
 	  rowsA2[nnz2] = row;
 	  colsA2[nnz2] = col;
 	  valsA2[nnz2] = val;
-	  fprintf(fp, " %g", val);
 	  ++nnz2;
 	}
-	else
-	  fprintf(fp, " (%g)", 0.0);
       }
-
-      fprintf(fp, "\n");
     }
-    fprintf(fp, "UM ---------\n");
   }
+
+  for(iint n=0;n<nnz2;++n){
+    fprintf(fp, "%d %d %g\n", rowsA2[n], colsA2[n], valsA2[n]);
+  }
+  
+  
   fclose(fp);
+
+
   
   // need to create numbering for really coarse grid on each process for xxt
   precon->xxt2 = xxtSetup(coarseNp,
