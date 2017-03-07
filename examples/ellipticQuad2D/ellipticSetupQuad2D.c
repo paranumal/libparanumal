@@ -120,6 +120,13 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
   *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda, options);
 
+  // coarse grid preconditioner (only continous elements)
+  // do this here since we need A*x
+  ellipticCoarsePreconditionerSetupQuad2D(mesh, *precon, *ogs, lambda, options);
+
+
+
+  
   (*precon)->preconKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconQuad2D.okl",
 				       "ellipticOasPreconQuad2D",
@@ -190,11 +197,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
-
-  // coarse grid preconditioner (only continous elements)
-  // do this here since we need A*x
-  ellipticCoarsePreconditionerSetupQuad2D(mesh, *precon, *ogs, lambda, options);
-
 
   
 }

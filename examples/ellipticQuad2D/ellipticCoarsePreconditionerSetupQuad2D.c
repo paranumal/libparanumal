@@ -90,8 +90,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     for(iint i=0;i<mesh->Nq;++i){
       iint n = i+j*mesh->Nq;
       /*
-      dfloat rn = mesh->r[n];
-      dfloat sn = mesh->s[n];
+	dfloat rn = mesh->r[n];
+	dfloat sn = mesh->s[n];
       */
       dfloat rn = mesh->gllz[i];
       dfloat sn = mesh->gllz[j];
@@ -235,25 +235,26 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   }
 
 
-  #if 0
-    for(iint r=0;r<size;++r){
-      if(r==rank){
-        for(iint n=0;n<recvNtotal;++n){
-          printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
-           rank, n,
-           recvNonZeros[n].row,
-           recvNonZeros[n].col,
-           recvNonZeros[n].val,
-           recvNonZeros[n].ownerRank);
-        }
-        fflush(stdout);
+#if 0
+  for(iint r=0;r<size;++r){
+    if(r==rank){
+      for(iint n=0;n<recvNtotal;++n){
+	printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
+	       rank, n,
+	       recvNonZeros[n].row,
+	       recvNonZeros[n].col,
+	       recvNonZeros[n].val,
+	       recvNonZeros[n].ownerRank);
       }
-      MPI_Barrier(MPI_COMM_WORLD);
+      fflush(stdout);
     }
-  #endif
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+#endif
   
   printf("Done building coarse matrix system\n");
   if(strstr(options, "XXT")){
+
     printf("Starting xxt setup\n");
     precon->xxt = xxtSetup(Nnum,
 			   globalNumbering,
@@ -283,12 +284,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 				 recvCols,        // TW: need to use local numbering 
 				 recvVals,
 				 sendSortId, 
-         globalSortId, 
-         compressId,
-         sendCounts, 
-         sendOffsets, 
-         recvCounts, 
-         recvOffsets,    
+				 globalSortId, 
+				 compressId,
+				 sendCounts, 
+				 sendOffsets, 
+				 recvCounts, 
+				 recvOffsets,    
 				 0,
 				 iintString,
 				 dfloatString); // 0 if no null space
@@ -329,129 +330,128 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   free(AsendOffsets);
   free(ArecvOffsets);
 
-#if 1
-  /* pseudo code for building (really) coarse system */
-  iint coarseN = 1;
-  iint coarseNp = (coarseN+1)*(coarseN+2)/2;
-  iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
+  if(strstr(options, "UBERGRID")){
+    /* pseudo code for building (really) coarse system */
+    iint coarseN = 1;
+    iint coarseNp = (coarseN+1)*(coarseN+2)/2;
+    iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
   
-  iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
-  dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
+    dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
-  precon->coarseNp = coarseNp;
-  precon->B    = (dfloat*) calloc(coarseNp*Ntotal, sizeof(dfloat));
+    precon->coarseNp = coarseNp;
+    precon->B    = (dfloat*) calloc(coarseNp*Ntotal, sizeof(dfloat));
 
-  /* populate b here */
-  cnt = 0;
-  for(iint j=0;j<coarseN+1;++j){
-    for(iint i=0;i<coarseN+1-j;++i){
+    /* populate b here */
+    cnt = 0;
+    for(iint j=0;j<coarseN+1;++j){
+      for(iint i=0;i<coarseN+1-j;++i){
       
-      for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
-	precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
-      }
-      globalNumbering2[cnt] = cnt + rank*coarseNp ;
-      
-      ++cnt;
-    }
-  }
-
-  printf("CNT = %d\n", cnt);
-  
-  precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
-  for(iint n=0;n<coarseNp;++n)
-    precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
-
-  precon->o_tmp2 = mesh->device.malloc(Ntotal*sizeof(dfloat)); // sloppy
-  precon->tmp2 = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  
-  // storage for A*b operation
-  dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-  dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-
-  occa::memory o_b = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  occa::memory o_gradb = mesh->device.malloc(4*Ntotal*sizeof(dfloat));
-  occa::memory o_Ab = mesh->device.malloc(Ntotal*sizeof(dfloat));
-
-  dfloat *Ab = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat cutoff = (sizeof(dfloat)==4) ? 1e-6:1e-15;
-
-  // maximum fixed size coarseNp x coarseNp from every rank
-  iint *rowsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
-  iint *colsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
-  dfloat *valsA2 = (dfloat*) calloc(coarseNp*coarseNp*size, sizeof(dfloat));  
-
-  char fname[BUFSIZ];
-  sprintf(fname, "uberA%05d.dat", rank);
-  FILE *fp = fopen(fname, "w");
-  
-  // assume coarseNp on every process (can generalize to variable number of dofs per process)
-  iint nnz2 = 0;
-  for(iint r=0;r<size;++r){
-
-    for(iint n=0;n<coarseNp;++n){
-
-      if(r==rank) // each rank takes turn populating b
-	o_b.copyFrom(precon->B+n*Ntotal);
-      else
-	o_b.copyFrom(zero);
-      
-      // need to provide ogs for A*b 
-      ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
-      
-      o_Ab.copyTo(Ab);
-      
-      // project onto coarse basis
-      for(iint m=0;m<coarseNp;++m){
-	dfloat val = 0;
-	for(iint i=0;i<mesh->Np*mesh->Nelements;++i){
-	  val  += precon->B[m*Ntotal+i]*Ab[i];
+	for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
+	  precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
 	}
+	globalNumbering2[cnt] = cnt + rank*coarseNp ;
+      
+	++cnt;
+      }
+    }
 
-	// only store entries larger than machine precision (dodgy)
-	if(1){//if(fabs(val)>cutoff){
-	  // now by symmetry
-	  iint col = r*coarseNp + n ;
-	  iint row = rank*coarseNp + m; 
-	  // save this non-zero
-	  rowsA2[nnz2] = row;
-	  colsA2[nnz2] = col;
-	  valsA2[nnz2] = val;
-	  ++nnz2;
+    printf("CNT = %d\n", cnt);
+  
+    precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
+    for(iint n=0;n<coarseNp;++n)
+      precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
+
+    precon->o_tmp2 = mesh->device.malloc(Ntotal*sizeof(dfloat)); // sloppy
+    precon->tmp2 = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  
+    // storage for A*b operation
+    dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+    dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+
+    occa::memory o_b = mesh->device.malloc(Ntotal*sizeof(dfloat));
+    occa::memory o_gradb = mesh->device.malloc(4*Ntotal*sizeof(dfloat));
+    occa::memory o_Ab = mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+    dfloat *Ab = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    dfloat cutoff = (sizeof(dfloat)==4) ? 1e-6:1e-15;
+
+    // maximum fixed size coarseNp x coarseNp from every rank
+    iint *rowsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
+    iint *colsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
+    dfloat *valsA2 = (dfloat*) calloc(coarseNp*coarseNp*size, sizeof(dfloat));  
+
+    // assume coarseNp on every process (can generalize to variable number of dofs per process)
+    iint nnz2 = 0;
+    for(iint r=0;r<size;++r){
+
+      for(iint n=0;n<coarseNp;++n){
+
+	if(r==rank) // each rank takes turn populating b
+	  o_b.copyFrom(precon->B+n*Ntotal);
+	else
+	  o_b.copyFrom(zero);
+      
+	// need to provide ogs for A*b 
+	ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
+      
+	o_Ab.copyTo(Ab);
+      
+	// project onto coarse basis
+	for(iint m=0;m<coarseNp;++m){
+	  dfloat val = 0;
+	  for(iint i=0;i<mesh->Np*mesh->Nelements;++i){
+	    val  += precon->B[m*Ntotal+i]*Ab[i];
+	  }
+
+	  // only store entries larger than machine precision (dodgy)
+	  if(fabs(val)>cutoff){
+	    // now by symmetry
+	    iint col = r*coarseNp + n ;
+	    iint row = rank*coarseNp + m; 
+	    // save this non-zero
+	    rowsA2[nnz2] = row;
+	    colsA2[nnz2] = col;
+	    valsA2[nnz2] = val;
+	    ++nnz2;
+	  }
 	}
       }
     }
+
+    // TW: FOR TESTING CAN USE MPI_Allgather TO COLLECT ALL CHUNKS ON ALL PROCESSES - THEN USE dgesv
+    
+    char fname[BUFSIZ];
+    sprintf(fname, "uberA%05d.dat", rank);
+    FILE *fp = fopen(fname, "w");
+    
+    for(iint n=0;n<nnz2;++n){
+      fprintf(fp, "%d %d %g\n", rowsA2[n], colsA2[n], valsA2[n]);
+    }
+  
+    fclose(fp);
+  
+    // need to create numbering for really coarse grid on each process for xxt
+    precon->xxt2 = xxtSetup(coarseNp,
+			    globalNumbering2,
+			    nnz2,
+			    rowsA2,
+			    colsA2,
+			    valsA2,
+			    0,
+			    iintString,
+			    dfloatString);
+
+    // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
+
+  
+    free(sendBuffer);
+    free(recvBuffer);
+    free(Ab);
+  
+    o_b.free();
+    o_gradb.free();
+    o_Ab.free();
   }
-
-  for(iint n=0;n<nnz2;++n){
-    fprintf(fp, "%d %d %g\n", rowsA2[n], colsA2[n], valsA2[n]);
-  }
-  
-  
-  fclose(fp);
-
-
-  
-  // need to create numbering for really coarse grid on each process for xxt
-  precon->xxt2 = xxtSetup(coarseNp,
-			  globalNumbering2,
-			  nnz2,
-			  rowsA2,
-			  colsA2,
-			  valsA2,
-			  0,
-			  iintString,
-			  dfloatString);
-
-  // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
-
-  
-  free(sendBuffer);
-  free(recvBuffer);
-  free(Ab);
-  
-  o_b.free();
-  o_gradb.free();
-  o_Ab.free();
-#endif
 
 }
