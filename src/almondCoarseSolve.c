@@ -50,12 +50,12 @@ void * almondSetup(uint  Nnum,
 		   void* Aj,
 		   void* Avals,
 		   int    *sendSortId, 
-       int    *globalSortId, 
-       int    *compressId,
-       int    *sendCounts, 
-       int    *sendOffsets, 
-       int    *recvCounts, 
-       int    *recvOffsets,
+		   int    *globalSortId, 
+		   int    *compressId,
+		   int    *sendCounts, 
+		   int    *sendOffsets, 
+		   int    *recvCounts, 
+		   int    *recvOffsets,
 		   int   nullSpace,
 		   const char* iintType, 
 		   const char* dfloatType) {
@@ -65,7 +65,7 @@ void * almondSetup(uint  Nnum,
 
   int *iAi = (int*) Ai;
   int *iAj = (int*) Aj;
-  amgFloat *dAvals = (amgFloat*) Avals;
+  dfloat *dAvals = (dloat*) Avals;
 
   int num_procs, myid;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs );
@@ -85,7 +85,7 @@ void * almondSetup(uint  Nnum,
   int cnt2 =0; //row start counter
   for(n=0;n<nnz;++n){
     if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAi[n] < globalOffset))
-	     printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
+      printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
 
     if(cnt2==0 || (iAi[n]!=iAi[n-1])) vRowStarts[cnt2++] = cnt;
       
@@ -165,7 +165,7 @@ int almondSolve(void* x,
   almond_t *almond = (almond_t*) A;
 
   for (iint n=0;n<almond->Nnum;n++)
-    almond->rhsUnassembled[n] = ((amgFloat*) rhs)[n];
+    almond->rhsUnassembled[n] = ((dfloat*) rhs)[n];
   
   //sort by owner
   for (iint n=0;n<almond->Nnum;n++) 
@@ -196,11 +196,11 @@ int almondSolve(void* x,
     int maxIt = 40;
     amgFloat tol = 1e-1;
     almond::pcg<amgFloat>(almond->A[0],
-      almond->rhs,
-      almond->x,
-      almond->M,
-      maxIt,
-      tol);
+			  almond->rhs,
+			  almond->x,
+			  almond->M,
+			  maxIt,
+			  tol);
   }
 
   //scatter
@@ -223,7 +223,7 @@ int almondSolve(void* x,
     almond->xUnassembled[almond->sendSortId[n]] = almond->xSort[n];
 
 
-  for(iint i=0;i<almond->Nnum;++i) ((amgFloat *) x)[i] = almond->xUnassembled[i];
+  for(iint i=0;i<almond->Nnum;++i) ((dfloat *) x)[i] = almond->xUnassembled[i];
   
   return 0;
 }
