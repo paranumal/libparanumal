@@ -14,7 +14,7 @@
 
 #pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
 
-#define amgFloat float
+#define amgFloat double
 
 typedef struct {
   almond::csr<amgFloat> *A;
