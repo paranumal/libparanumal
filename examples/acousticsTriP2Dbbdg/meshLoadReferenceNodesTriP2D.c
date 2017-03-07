@@ -63,7 +63,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
   for (int nn=1;nn<=N;nn++) {
 
     char fname[BUFSIZ];
-    sprintf(fname, "nodes/triangleN%02d.dat", nn);
+    sprintf(fname, DHOLMES "/nodes/triangleN%02d.dat", nn);
 
     FILE *fp = fopen(fname, "r");
 

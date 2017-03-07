@@ -422,23 +422,23 @@ void acousticsSetup3D(mesh3D *mesh){
     sprintf(surfacekernelName, "acousticsSurface3Dbbdg_o%d", p);
 
     mesh->volumeKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgVolumeP3D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolumeP3D.okl",
                  volumekernelName,
                  kernelInfo);
 
     mesh->surfaceKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgSurfaceP3D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurfaceP3D.okl",
                  surfacekernelName,
                  kernelInfo);
   }
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate3D.okl",
 				       "acousticsUpdate3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 

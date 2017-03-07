@@ -150,22 +150,22 @@ void acousticsSetup3D(mesh3D *mesh){
   }
 
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsbbdgVolume3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolume3D.okl",
 				       "acousticsVolume3Dbbdg",
 				       kernelInfo);
 
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsbbdgSurface3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurface3D.okl",
 				       "acousticsSurface3Dbbdg",
 				       kernelInfo);
   
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate3D.okl",
 				       "acousticsUpdate3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 
