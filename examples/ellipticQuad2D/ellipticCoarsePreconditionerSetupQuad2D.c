@@ -343,8 +343,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   /* populate b here */
   cnt = 0;
-  for(iint j=0;j<=coarseN;++j){
-    for(iint i=0;i<=coarseN-j;++i){
+  for(iint j=0;j<coarseN+1;++j){
+    for(iint i=0;i<coarseN+1-j;++i){
       
       for(iint m=0;m<Ntotal;++m){
 	precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
@@ -354,6 +354,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       ++cnt;
     }
   }
+  printf("CNT = %d\n", cnt);
   
   precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
   for(iint n=0;n<coarseNp;++n)
@@ -377,17 +378,24 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   iint *rowsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
   iint *colsA2 = (iint*) calloc(coarseNp*coarseNp*size, sizeof(iint));
   dfloat *valsA2 = (dfloat*) calloc(coarseNp*coarseNp*size, sizeof(dfloat));  
+
+  char fname[BUFSIZ];
+  sprintf(fname, "uberA%05d.dat", rank);
+  FILE *fp = fopen(fname, "w");
   
   // assume coarseNp on every process (can generalize to variable number of dofs per process)
   iint nnz2 = 0;
   for(iint r=0;r<size;++r){
 
-    o_b.copyFrom(zero);
-
     for(iint n=0;n<coarseNp;++n){
 
       if(r==rank) // each rank takes turn populating b
 	o_b.copyFrom(precon->B+n*Ntotal);
+      else
+	o_b.copyFrom(zero);
+      
+      for(iint i=0;i<mesh->Nelements*mesh->Np;++i)
+	fprintf(fp,"-x- %g\n", precon->B[n*Ntotal+i]);
       
       // need to provide ogs for A*b 
       ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
@@ -397,7 +405,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       // project onto coarse basis
       for(iint m=0;m<coarseNp;++m){
 	dfloat val = 0;
-	for(iint i=0;i<Ntotal;++i){
+	for(iint i=0;i<mesh->Np*mesh->Nelements;++i){
 	  val  += precon->B[m*Ntotal+i]*Ab[i];
 	}
 
@@ -410,11 +418,18 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	  rowsA2[nnz2] = row;
 	  colsA2[nnz2] = col;
 	  valsA2[nnz2] = val;
+	  fprintf(fp, "UM xx %g \n", val);
 	  ++nnz2;
 	}
+	else
+	  fprintf(fp, "UM oo %g \n", 0.0);
       }
+
+      fprintf(fp, "\n");
     }
+    fprintf(fp, "-----\n");
   }
+  fclose(fp);
   
   // need to create numbering for really coarse grid on each process for xxt
   precon->xxt2 = xxtSetup(coarseNp,
