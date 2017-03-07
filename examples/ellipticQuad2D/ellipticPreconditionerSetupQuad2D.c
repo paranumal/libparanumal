@@ -382,8 +382,5 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   
   free(diagA);
     
-  // coarse grid preconditioner (only continous elements)
-  ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, ogs, lambda, options);
-
   return precon;
 }
