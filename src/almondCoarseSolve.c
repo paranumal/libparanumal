@@ -65,7 +65,7 @@ void * almondSetup(uint  Nnum,
 
   int *iAi = (int*) Ai;
   int *iAj = (int*) Aj;
-  dfloat *dAvals = (dloat*) Avals;
+  dfloat *dAvals = (dfloat*) Avals;
 
   int num_procs, myid;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs );
