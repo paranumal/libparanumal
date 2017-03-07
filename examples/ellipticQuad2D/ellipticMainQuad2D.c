@@ -271,18 +271,21 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     occa::toc("restrictKernel");   
     
     if(strstr(options, "UBERGRID")){
+      int size, rank;
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       
       iint Nblock = (mesh->Np*mesh->Nelements+B-1)/B;
-      dfloat *rcoarse = (dfloat*) calloc(precon->coarseNp, sizeof(dfloat));
-      dfloat *zcoarse = (dfloat*) calloc(precon->coarseNp, sizeof(dfloat));
+      dfloat *rcoarse = (dfloat*) calloc(size*precon->coarseNp, sizeof(dfloat));
+      dfloat *zcoarse = (dfloat*) calloc(size*precon->coarseNp, sizeof(dfloat));
 
       for(iint n=0;n<precon->coarseNp;++n)
-	rcoarse[n] = ellipticLocalInnerProduct(mesh, Nblock, precon->o_B[n], o_r, precon->o_tmp2, precon->tmp2);
+	rcoarse[n+rank*precon->coarseNp] = ellipticLocalInnerProduct(mesh, Nblock, precon->o_B[n], o_r, precon->o_tmp2, precon->tmp2);
 
       xxtSolve(zcoarse, precon->xxt2, rcoarse);
 
       for(iint n=0;n<precon->coarseNp;++n)
-	ellipticScaledAdd(mesh, zcoarse[n], precon->o_B[n], 1.f, o_z);
+	ellipticScaledAdd(mesh, zcoarse[n+rank*precon->coarseNp], precon->o_B[n], 1.f, o_z);
       
       free(rcoarse);
       free(zcoarse);

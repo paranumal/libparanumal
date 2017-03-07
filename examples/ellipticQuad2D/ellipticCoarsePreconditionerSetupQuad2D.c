@@ -334,7 +334,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     /* pseudo code for building (really) coarse system */
     iint coarseN = 1;
     iint coarseNp = (coarseN+1)*(coarseN+1);
-    iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
+    iint *globalNumbering2 = (iint*) calloc(size*coarseNp, sizeof(iint)); // hack 
   
     iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
     dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -350,10 +350,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
 	  precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
 	}
-	globalNumbering2[cnt] = cnt + rank*coarseNp +1;
-      
-	++cnt;
       }
+    }
+
+    // hack
+    for(iint n=0;n<size*coarseNp;++n){
+      globalNumbering2[n] = n;
     }
 
     printf("CNT = %d\n", cnt);
@@ -407,11 +409,11 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	  // only store entries larger than machine precision (dodgy)
 	  if(fabs(val)>cutoff){
 	    // now by symmetry
-	    iint col = r*coarseNp + n + 1 ;
-	    iint row = rank*coarseNp + m + 1; 
+	    iint col = r*coarseNp + n ;
+	    iint row = rank*coarseNp + m; 
 	    // save this non-zero
-	    rowsA2[nnz2] = row;
-	    colsA2[nnz2] = col;
+	    rowsA2[nnz2] = col;
+	    colsA2[nnz2] = row;
 	    valsA2[nnz2] = val;
 	    ++nnz2;
 	  }
@@ -424,15 +426,22 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     char fname[BUFSIZ];
     sprintf(fname, "uberA%05d.dat", rank);
     FILE *fp = fopen(fname, "w");
-    
+
+    fprintf(fp, "%d  # number of local nodes\n", coarseNp);
+
+    for(iint n=0;n<coarseNp;++n){
+      fprintf(fp,"%d\n", globalNumbering2[n]);
+    }
+
+    fprintf(fp, "%d  # number of non-zeros\n", nnz2);
     for(iint n=0;n<nnz2;++n){
-      fprintf(fp, "%d %d %g\n", rowsA2[n], colsA2[n], valsA2[n]);
+      fprintf(fp, "%d %d %17.15g\n", rowsA2[n], colsA2[n], valsA2[n]);
     }
   
     fclose(fp);
   
     // need to create numbering for really coarse grid on each process for xxt
-    precon->xxt2 = xxtSetup(coarseNp,
+    precon->xxt2 = xxtSetup(coarseNp*size,
 			    globalNumbering2,
 			    nnz2,
 			    rowsA2,
