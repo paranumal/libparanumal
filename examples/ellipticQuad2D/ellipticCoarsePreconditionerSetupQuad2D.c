@@ -252,10 +252,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   }
 #endif
   
-  printf("Done building coarse matrix system\n");
   if(strstr(options, "XXT")){
 
-    printf("Starting xxt setup\n");
     precon->xxt = xxtSetup(Nnum,
 			   globalNumbering,
 			   nnz,
@@ -266,7 +264,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 			   iintString,
 			   dfloatString); // 0 if no null space
     
-    printf("Done xxt setup\n");
   }
 
   if(strstr(options, "ALMOND")){
@@ -275,7 +272,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
     // TW: to here.
     
-    printf("Starting Almond setup\n");
     precon->almond = almondSetup(Nnum, 
 				 globalStarts, // TW: need to replace this
 				 globalNumbering,
@@ -294,11 +290,9 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 				 iintString,
 				 dfloatString); // 0 if no null space
     
-    printf("Done Almond setup\n");
   }
   
   if(strstr(options ,"AMG2013")){
-    printf("Starting amg2013 setup\n");
     
     precon->amg = amg2013Setup(Nnum,
 			       globalStarts, //global partitioning
@@ -316,7 +310,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 			       iintString,
 			       dfloatString);
 
-    printf("Done amg2013 setup\n");
   }
 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -332,7 +325,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   if(strstr(options, "UBERGRID")){
     /* pseudo code for building (really) coarse system */
-    iint coarseN = 1;
+    iint coarseN = mesh->N;
     iint coarseNp = (coarseN+1)*(coarseN+1);
     iint *globalNumbering2 = (iint*) calloc(size*coarseNp, sizeof(iint)); // hack 
   
@@ -350,16 +343,15 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
 	  precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
 	}
+	++cnt;
       }
     }
 
     // hack
     for(iint n=0;n<size*coarseNp;++n){
-      globalNumbering2[n] = n;
+      globalNumbering2[n] = n + 1;
     }
 
-    printf("CNT = %d\n", cnt);
-  
     precon->o_B  = (occa::memory*) calloc(coarseNp, sizeof(occa::memory));
     for(iint n=0;n<coarseNp;++n)
       precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
@@ -409,18 +401,18 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 	  // only store entries larger than machine precision (dodgy)
 	  if(fabs(val)>cutoff){
 	    // now by symmetry
-	    iint col = r*coarseNp + n ;
+	    iint col = r*coarseNp + n;
 	    iint row = rank*coarseNp + m; 
 	    // save this non-zero
-	    rowsA2[nnz2] = col;
-	    colsA2[nnz2] = row;
+	    rowsA2[nnz2] = row;
+	    colsA2[nnz2] = col;
 	    valsA2[nnz2] = val;
 	    ++nnz2;
 	  }
 	}
       }
     }
-
+#if 1
     // TW: FOR TESTING CAN USE MPI_Allgather TO COLLECT ALL CHUNKS ON ALL PROCESSES - THEN USE dgesv
     
     char fname[BUFSIZ];
@@ -437,9 +429,9 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     for(iint n=0;n<nnz2;++n){
       fprintf(fp, "%d %d %17.15g\n", rowsA2[n], colsA2[n], valsA2[n]);
     }
-  
     fclose(fp);
-  
+#endif
+    
     // need to create numbering for really coarse grid on each process for xxt
     precon->xxt2 = xxtSetup(coarseNp*size,
 			    globalNumbering2,
