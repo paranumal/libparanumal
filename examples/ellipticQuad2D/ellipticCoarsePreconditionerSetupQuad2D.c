@@ -234,6 +234,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     recvVals[n] = recvNonZeros[n].val;
   }
 
+
   #if 0
     for(iint r=0;r<size;++r){
       if(r==rank){
@@ -281,8 +282,13 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 				 recvRows,        // TW: need to use local numbering
 				 recvCols,        // TW: need to use local numbering 
 				 recvVals,
-				 globalSortId,    // TW: not sure what this is
-				 compressId,      
+				 sendSortId, 
+         globalSortId, 
+         compressId,
+         sendCounts, 
+         sendOffsets, 
+         recvCounts, 
+         recvOffsets,    
 				 0,
 				 iintString,
 				 dfloatString); // 0 if no null space
@@ -432,5 +438,5 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   o_gradb.free();
   o_Ab.free();
 #endif
-  
+
 }

@@ -431,7 +431,7 @@ int amg2013Solve(void* x,
   }
 
   //sort by original rank
-  for (n=0;n<amg->Nnum;n++) 
+  for (n=0;n<amg->recvNnum;n++) 
     amg->xUnassembled[amg->globalSortId[n]] = amg->xSort[n];
 
   //Scatter nodes back to their original rank
