@@ -343,8 +343,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   /* populate b here */
   cnt = 0;
-  for(iint j=0;j<coarseN;++j){
-    for(iint i=0;i<coarseN-j;++i){
+  for(iint j=0;j<=coarseN;++j){
+    for(iint i=0;i<=coarseN-j;++i){
       
       for(iint m=0;m<Ntotal;++m){
 	precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
