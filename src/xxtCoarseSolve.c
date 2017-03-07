@@ -65,6 +65,7 @@ void * xxtSetup(uint  numLocalRows,
     for(n=0;n<nnz;++n){
       crsA->Ai[n] = ((int*)Ai)[n];
       crsA->Aj[n] = ((int*)Aj)[n];
+      printf("crsA->Ai[%d],j=%d,%d\n", n,crsA->Ai[n], crsA->Aj[n]);
     }
     
   } else { //long
