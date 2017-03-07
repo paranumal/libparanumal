@@ -413,23 +413,23 @@ void acousticsSetup2D(mesh2D *mesh){
     sprintf(surfacekernelName, "acousticsSurface2Dbbdg_o%d", p);
 
     mesh->volumeKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgVolumeP2D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolumeP2D.okl",
                  volumekernelName,
                  kernelInfo);
 
     mesh->surfaceKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgSurfaceP2D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurfaceP2D.okl",
                  surfacekernelName,
                  kernelInfo);
   }
   
   mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/acousticsUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate2D.okl",
                "acousticsUpdate2D",
                kernelInfo);
 
   mesh->haloExtractKernel =
-      mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
   

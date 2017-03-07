@@ -21,8 +21,8 @@ int main(int argc, char **argv){
     acousticsSetup2D(mesh);
     
     // run
-    acousticsRun2Dbbdg(mesh);
-    //acousticsOccaRun2Dbbdg(mesh);
+    //acousticsRun2Dbbdg(mesh);
+    acousticsOccaRun2Dbbdg(mesh);
 
     // close down MPI
     MPI_Finalize();
