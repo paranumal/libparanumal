@@ -333,7 +333,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   if(strstr(options, "UBERGRID")){
     /* pseudo code for building (really) coarse system */
     iint coarseN = 1;
-    iint coarseNp = (coarseN+1)*(coarseN+2)/2;
+    iint coarseNp = (coarseN+1)*(coarseN+1);
     iint *globalNumbering2 = (iint*) calloc(coarseNp, sizeof(iint));
   
     iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
@@ -345,7 +345,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     /* populate b here */
     cnt = 0;
     for(iint j=0;j<coarseN+1;++j){
-      for(iint i=0;i<coarseN+1-j;++i){
+      for(iint i=0;i<coarseN+1;++i){
       
 	for(iint m=0;m<mesh->Np*mesh->Nelements;++m){
 	  precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
