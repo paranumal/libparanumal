@@ -14,7 +14,7 @@
 
 #pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
 
-#define amgFloat double
+#define amgFloat float
 
 typedef struct {
   almond::csr<amgFloat> *A;
@@ -28,9 +28,11 @@ typedef struct {
   uint recvNnum;
   uint nnz;
 
-  int *globalSortId, *compressId;
+  int *sendSortId, *globalSortId, *compressId;
+  int *sendCounts, *sendOffsets,  *recvCounts, *recvOffsets;
 
   amgFloat *xUnassembled;
+  amgFloat *rhsUnassembled;
 
   amgFloat *xSort;
   amgFloat *rhsSort;
@@ -47,8 +49,13 @@ void * almondSetup(uint  Nnum,
 		   void* Ai,
 		   void* Aj,
 		   void* Avals,
-		   int  *globalSortId, 
-		   int  *compressId,
+		   int    *sendSortId, 
+       int    *globalSortId, 
+       int    *compressId,
+       int    *sendCounts, 
+       int    *sendOffsets, 
+       int    *recvCounts, 
+       int    *recvOffsets,
 		   int   nullSpace,
 		   const char* iintType, 
 		   const char* dfloatType) {
@@ -58,9 +65,10 @@ void * almondSetup(uint  Nnum,
 
   int *iAi = (int*) Ai;
   int *iAj = (int*) Aj;
-  dfloat *dAvals = (dfloat*) Avals;
+  amgFloat *dAvals = (amgFloat*) Avals;
 
-  int myid;
+  int num_procs, myid;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs );
   MPI_Comm_rank(MPI_COMM_WORLD, &myid );
 
   almond->numLocalRows = rowStarts[myid+1]-rowStarts[myid];
@@ -68,46 +76,72 @@ void * almondSetup(uint  Nnum,
   printf("rank %d, numLocalRows %d, offset %d, \n", myid, almond->numLocalRows, globalOffset);
 
 
-  std::vector<int>    vAj(nnz);
-  std::vector<amgFloat> vAvals(nnz);
+  //std::vector<int>    vAj(nnz);
+  //std::vector<amgFloat> vAvals(nnz);
   std::vector<int>    vRowStarts(almond->numLocalRows+1);
 
   // assumes presorted
-  int cnt = 0;
+  int cnt = 0; //nnz counter
+  int cnt2 =0; //row start counter
   for(n=0;n<nnz;++n){
-    if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAj[n] >= (almond->numLocalRows + globalOffset))
-	 || (iAi[n] <  globalOffset)                  || (iAj[n] < globalOffset) ) 
-      printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
-    if(n==0 || (iAi[n]!=iAi[n-1])){
-      //      printf("*\n");
-      vRowStarts[cnt] = n;
-      ++cnt;
-    }else{
-      //      printf("\n");
-    }
-    vAj[n] = iAj[n];
-    vAvals[n] = dAvals[n];
+    if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAi[n] < globalOffset))
+	     printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], myid);
+
+    if(cnt2==0 || (iAi[n]!=iAi[n-1])) vRowStarts[cnt2++] = cnt;
+      
+    if (iAj[n] >= globalOffset && iAj[n] < almond->numLocalRows + globalOffset) cnt++;
   }
-  vRowStarts[cnt] = n;
-  printf("cnt=%d, numLocalRows=%d\n", cnt, almond->numLocalRows);
+
+  vRowStarts[cnt2] = cnt;
+  printf("cnt2=%d, numLocalRows=%d\n", cnt2, almond->numLocalRows);
+
+  std::vector<int>    vAj(cnt);
+  std::vector<amgFloat> vAvals(cnt);
+
+  cnt = 0;
+  for(n=0;n<nnz;++n){
+    if (iAj[n] >= globalOffset && iAj[n] < almond->numLocalRows + globalOffset) {
+      vAj[cnt] = iAj[n]-globalOffset;
+      vAvals[cnt++] = dAvals[n];  
+    }
+  }
 
   almond->Nnum = Nnum;
   //almond->numLocalRows = numLocalRows;
   almond->recvNnum = compressId[almond->numLocalRows];
 
-  almond->globalSortId = (int*) calloc(almond->recvNnum,sizeof(int));
-  almond->compressId  = (int*) calloc(almond->numLocalRows+1,sizeof(int));
+  almond->sendSortId = (int*) calloc(Nnum,sizeof(int));
+  for (n=0;n<Nnum;n++)  almond->sendSortId[n] = sendSortId[n];
 
-  for (n=0;n<Nnum;n++) almond->globalSortId[n] = globalSortId[n];
+  almond->sendCounts = (int*) calloc(num_procs,sizeof(int));
+  almond->recvCounts = (int*) calloc(num_procs,sizeof(int));
+  for (n=0;n<num_procs;n++){
+    almond->sendCounts[n] = sendCounts[n]*sizeof(amgFloat);
+    almond->recvCounts[n] = recvCounts[n]*sizeof(amgFloat);
+  }
+
+  almond->sendOffsets = (int*) calloc(num_procs+1,sizeof(int));
+  almond->recvOffsets = (int*) calloc(num_procs+1,sizeof(int));
+  for (n=0;n<num_procs+1;n++){
+    almond->sendOffsets[n] = sendOffsets[n]*sizeof(amgFloat);
+    almond->recvOffsets[n] = recvOffsets[n]*sizeof(amgFloat);
+  }
+
+  almond->globalSortId = (int*) calloc(almond->recvNnum,sizeof(int));
+  for (n=0;n<almond->recvNnum;n++) almond->globalSortId[n] = globalSortId[n];
+
+  almond->compressId  = (int*) calloc(almond->numLocalRows+1,sizeof(int));
   for (n=0;n<almond->numLocalRows+1;n++) almond->compressId[n] = compressId[n];
-  
-  almond->xUnassembled = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
-  almond->xSort = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
-  almond->rhsSort = (amgFloat*) calloc(Nnum,sizeof(amgFloat));
+
+  int Nmax =  (Nnum >almond->recvNnum)? Nnum : almond->recvNnum;
+  almond->xUnassembled   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
+  almond->rhsUnassembled = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
+  almond->xSort   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
+  almond->rhsSort = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
 
   almond->rhs.resize(almond->numLocalRows);
   almond->x.resize(almond->numLocalRows);
-  
+
   almond->A = new almond::csr<amgFloat>(vRowStarts, vAj, vAvals);
 
   almond->nullA.resize(almond->numLocalRows);
@@ -127,22 +161,33 @@ int almondSolve(void* x,
 		void* A,
 		void* rhs) {
   
+
   almond_t *almond = (almond_t*) A;
 
-  dfloat *dx = (dfloat*) x;
-  dfloat *drhs = (dfloat*) rhs;
+  for (iint n=0;n<almond->Nnum;n++)
+    almond->rhsUnassembled[n] = ((amgFloat*) rhs)[n];
   
-  //sort by globalid 
+  //sort by owner
   for (iint n=0;n<almond->Nnum;n++) 
-    almond->rhsSort[n] = drhs[almond->globalSortId[n]];
+    almond->rhsSort[n] = almond->rhsUnassembled[almond->sendSortId[n]];
+
+  //Scatter nodes to their owners
+  MPI_Alltoallv(almond->rhsSort, almond->sendCounts, almond->sendOffsets, MPI_CHAR,
+                almond->rhsUnassembled, almond->recvCounts, almond->recvOffsets, MPI_CHAR,
+                MPI_COMM_WORLD);
+
+  //sort by globalid 
+  for (iint n=0;n<almond->recvNnum;n++) 
+    almond->rhsSort[n] = almond->rhsUnassembled[almond->globalSortId[n]];
 
   //gather
-  for (iint n=0;n<almond->numLocalRows;++n){
+  for(iint n=0;n<almond->numLocalRows;++n){
     almond->rhs[n] = 0.;
     almond->x[n] = 0.;
     for (iint id=almond->compressId[n];id<almond->compressId[n+1];id++) 
       almond->rhs[n] += almond->rhsSort[id];
   }
+
 
   if(1){
     almond->M.solve(almond->rhs, almond->x);
@@ -151,24 +196,34 @@ int almondSolve(void* x,
     int maxIt = 40;
     amgFloat tol = 1e-1;
     almond::pcg<amgFloat>(almond->A[0],
-			almond->rhs,
-			almond->x,
-			almond->M,
-			maxIt,
-			tol);
+      almond->rhs,
+      almond->x,
+      almond->M,
+      maxIt,
+      tol);
   }
 
   //scatter
-  for (iint n=0;n<almond->numLocalRows;++n){
+  for(iint n=0;n<almond->numLocalRows;++n){
     for (iint id = almond->compressId[n];id<almond->compressId[n+1];id++) 
       almond->xSort[id] = almond->x[n]; 
   }
 
-  //sort by to original numbering
-  for (iint n=0;n<almond->Nnum;n++) 
+  //sort by original rank
+  for (iint n=0;n<almond->recvNnum;n++) 
     almond->xUnassembled[almond->globalSortId[n]] = almond->xSort[n];
 
-  for(iint i=0;i<almond->Nnum;++i) dx[i] = almond->xUnassembled[i];
+  //Scatter nodes back to their original rank
+  MPI_Alltoallv(almond->xUnassembled, almond->recvCounts, almond->recvOffsets, MPI_CHAR,
+                almond->xSort, almond->sendCounts, almond->sendOffsets, MPI_CHAR,
+                MPI_COMM_WORLD);
+
+  //sort back to original ordering
+  for (iint n=0;n<almond->Nnum;n++) 
+    almond->xUnassembled[almond->sendSortId[n]] = almond->xSort[n];
+
+
+  for(iint i=0;i<almond->Nnum;++i) ((amgFloat *) x)[i] = almond->xUnassembled[i];
   
   return 0;
 }
