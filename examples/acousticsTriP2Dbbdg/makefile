@@ -72,6 +72,6 @@ acousticsMain2D:$(AOBJS) $(LOBJS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(ABJS) $(LOBJS)
+	rm -r $(AOBJS) $(LOBJS)
 
 
