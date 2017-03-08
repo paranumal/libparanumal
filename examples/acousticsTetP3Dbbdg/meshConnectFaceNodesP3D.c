@@ -50,12 +50,12 @@ void meshConnectFaceNodesP3D(mesh3D *mesh){
     for (iint f=0;f<mesh->Nfaces;f++) {      
       iint eP = mesh->EToE[e*mesh->Nfaces+f];
       iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      iint NP = mesh->N[eP];
+      
       if(eP<0 || fP<0){ // fake connections for unconnected faces
       	eP = e;
       	fP = f;
-        NP = N;
       }
+      iint NP = mesh->N[eP];
 
       for(iint n=0;n<mesh->Nfp[N];++n){
         iint  idM = mesh->faceNodes[N][f*mesh->Nfp[N]+n] + e*mesh->NpMax;

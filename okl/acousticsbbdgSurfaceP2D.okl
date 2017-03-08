@@ -73,10 +73,13 @@ kernel void acousticsSurface2Dbbdg_o1(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 1; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 1; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -106,10 +109,13 @@ kernel void acousticsSurface2Dbbdg_o1(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 1; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 1; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 1) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -312,10 +318,13 @@ kernel void acousticsSurface2Dbbdg_o2(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 2; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 2; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -345,10 +354,13 @@ kernel void acousticsSurface2Dbbdg_o2(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 2; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 2; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 2) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -551,10 +563,13 @@ kernel void acousticsSurface2Dbbdg_o3(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 3; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 3; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -584,10 +599,13 @@ kernel void acousticsSurface2Dbbdg_o3(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 3; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 3; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 3) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -790,10 +808,13 @@ kernel void acousticsSurface2Dbbdg_o4(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 4; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 4; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -823,10 +844,13 @@ kernel void acousticsSurface2Dbbdg_o4(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 4; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 4; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 4) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -1029,10 +1053,13 @@ kernel void acousticsSurface2Dbbdg_o5(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 5; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 5; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -1062,10 +1089,13 @@ kernel void acousticsSurface2Dbbdg_o5(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 5; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 5; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 5) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -1268,10 +1298,13 @@ kernel void acousticsSurface2Dbbdg_o6(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 6; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 6; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -1301,10 +1334,13 @@ kernel void acousticsSurface2Dbbdg_o6(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 6; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 6; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 6) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -1507,10 +1543,13 @@ kernel void acousticsSurface2Dbbdg_o7(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 7; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 7; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -1540,10 +1579,13 @@ kernel void acousticsSurface2Dbbdg_o7(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 7; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 7; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 7) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -1746,10 +1788,13 @@ kernel void acousticsSurface2Dbbdg_o8(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 8; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 8; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -1779,10 +1824,13 @@ kernel void acousticsSurface2Dbbdg_o8(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 8; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 8; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 8) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -1985,10 +2033,13 @@ kernel void acousticsSurface2Dbbdg_o9(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 9; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 9; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -2018,10 +2069,13 @@ kernel void acousticsSurface2Dbbdg_o9(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 9; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 9; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 9) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;
@@ -2224,10 +2278,13 @@ kernel void acousticsSurface2Dbbdg_o10(const iint Nelements,
           // load element and face number of neighbour
           iint eP = EToE[e*p_Nfaces+f];
           iint fP = EToF[e*p_Nfaces+f];
-          iint NP = N[eP]; 
 
-          if (eP<0 || fP<0) NP = 10; //boundary
-
+          iint NP;
+          if (eP<0 || fP<0) {
+            NP = 10; //boundary
+          } else {
+            NP = N[eP]; 
+          }
           iint id  = e*p_Nfaces*p_NfpMax + n;
           iint idP = vmapP[id];
           iint qidP = p_Nfields*idP;
@@ -2257,10 +2314,13 @@ kernel void acousticsSurface2Dbbdg_o10(const iint Nelements,
             // load element and face number of neighbour
             iint eP = EToE[e*p_Nfaces+f];
             iint fP = EToF[e*p_Nfaces+f];
-            iint NP = N[eP]; 
 
-            if (eP<0 || fP<0) NP = 10; //boundary
-
+            iint NP;
+            if (eP<0 || fP<0) {
+              NP = 10; //boundary
+            } else {
+              NP = N[eP]; 
+            }
             if (NP < 10) { 
               s_fluxu_copy[es][n] = 0.0;
               s_fluxv_copy[es][n] = 0.0;

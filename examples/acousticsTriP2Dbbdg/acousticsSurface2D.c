@@ -161,7 +161,7 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t){
         vtmpflux += mesh->L0vals[N][3*id]*fluxv[n-1]; // add previous term
         ptmpflux += mesh->L0vals[N][3*id]*fluxp[n-1]; // add previous term
       }
-      if (id < mesh->Nfp[N]){
+      if (id < mesh->Nfp[N]-1){
         utmpflux += mesh->L0vals[N][3*id+2]*fluxu[n+1];// add next term
         vtmpflux += mesh->L0vals[N][3*id+2]*fluxv[n+1];// add next term
         ptmpflux += mesh->L0vals[N][3*id+2]*fluxp[n+1];// add next term

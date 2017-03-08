@@ -128,6 +128,7 @@ void acousticsSetup2D(mesh2D *mesh){
   //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -222,14 +223,12 @@ void acousticsSetup2D(mesh2D *mesh){
     free(L0vals); free(ELids); free(ELvals);
   }
 
-  mesh->o_N = mesh->device.malloc(mesh->Nelements*sizeof(iint), mesh->N);  
 
-  // HARD CODED FOR QUADS
-  mesh->o_vgeo = mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->NpMax*sizeof(dfloat), mesh->vgeo);
-  
-  // HARD CODED FOR QUADS
-  mesh->o_sgeo = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->NfpMax*mesh->Nsgeo*sizeof(dfloat), mesh->sgeo);
-  mesh->o_ggeo = mesh->device.malloc(mesh->Nelements*mesh->NpMax*mesh->Nggeo*sizeof(dfloat), mesh->ggeo);
+  mesh->o_N = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*sizeof(iint), mesh->N);  
+
+  mesh->o_vgeo = mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);  
+  mesh->o_sgeo = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat), mesh->sgeo);
+  //mesh->o_ggeo = mesh->device.malloc(mesh->Nelements*mesh->NpMax*mesh->Nggeo*sizeof(dfloat), mesh->ggeo);
   
 
   mesh->o_vmapM = mesh->device.malloc(mesh->Nelements*mesh->NfpMax*mesh->Nfaces*sizeof(iint), mesh->vmapM);
