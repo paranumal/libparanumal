@@ -342,7 +342,7 @@ void meshParallelConnectNodes(mesh_t *mesh);
 /* renumber global nodes to remove gaps */
 void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering);
 
-void meshHaloSetup(mesh_t *mesh);
+void meshHaloSetupP(mesh_t *mesh);
 
 /* extract whole elements for the halo exchange */
 void meshHaloExtract(mesh_t *mesh, size_t Nbytes, void *sourceBuffer, void *haloBuffer);

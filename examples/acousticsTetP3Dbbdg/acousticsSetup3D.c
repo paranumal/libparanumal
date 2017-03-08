@@ -232,7 +232,7 @@ void acousticsSetup3D(mesh3D *mesh){
     free(L0ids); free(L0vals); free(ELids); free(ELvals);
   }
 
-  mesh->o_N = mesh->device.malloc(mesh->Nelements*sizeof(iint), mesh->N);  
+  mesh->o_N = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint), mesh->N);  
 
   printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
   if (mesh->Nverts==8){     // hardcoded for hexes

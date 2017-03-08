@@ -5,7 +5,7 @@
 
 typedef struct {
   
-  iint element, face;
+  iint element, face, N;
   iint elementN, faceN, rankN;
 
 }facePair_t;
@@ -13,7 +13,7 @@ typedef struct {
 /* comparison function that orders halo element/face
    based on their indexes */
 int compareHaloFaces(const void *a, 
-		     const void *b){
+         const void *b){
   
   facePair_t *fa = (facePair_t*) a;
   facePair_t *fb = (facePair_t*) b;
@@ -50,8 +50,8 @@ void meshHaloSetupP(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint r = mesh->EToP[e*mesh->Nfaces+f]; // rank of neighbor
       if(r!=-1){
-	mesh->totalHaloPairs += 1;
-	mesh->NhaloPairs[r] += 1;
+  mesh->totalHaloPairs += 1;
+  mesh->NhaloPairs[r] += 1;
       }
     }
   }
@@ -71,13 +71,14 @@ void meshHaloSetupP(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint ef = e*mesh->Nfaces+f;
       if(mesh->EToP[ef]!=-1){
-	haloElements[cnt].element  = e;
-	haloElements[cnt].face     = f;
-	haloElements[cnt].elementN = mesh->EToE[ef];
-	haloElements[cnt].faceN    = mesh->EToF[ef];
-	haloElements[cnt].rankN    = mesh->EToP[ef];
+  haloElements[cnt].element  = e;
+  haloElements[cnt].face     = f;
+  haloElements[cnt].elementN = mesh->EToE[ef];
+  haloElements[cnt].faceN    = mesh->EToF[ef];
+  haloElements[cnt].rankN    = mesh->EToP[ef];
+  haloElements[cnt].N        = mesh->N[e];
 
-	++cnt;
+  ++cnt;
       }
     }
   }
@@ -98,9 +99,9 @@ void meshHaloSetupP(mesh_t *mesh){
   for(iint r=0;r<size;++r){
     for(iint e=0;e<mesh->Nelements;++e){
       for(iint f=0;f<mesh->Nfaces;++f){
-	iint ef = e*mesh->Nfaces+f;
-	if(mesh->EToP[ef]==r)
-	  mesh->EToE[ef] = cnt++;
+  iint ef = e*mesh->Nfaces+f;
+  if(mesh->EToP[ef]==r)
+    mesh->EToE[ef] = cnt++;
       }
     }
   }
@@ -136,6 +137,14 @@ void meshHaloSetupP(mesh_t *mesh){
   if(mesh->dim==3)
     meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EZ, sendBuffer, mesh->EZ + mesh->Nverts*mesh->Nelements);
   
+  iint *intSendBuffer = (iint *) calloc(totalHaloNodes,sizeof(iint));
+
+  mesh->N = (iint*) realloc(mesh->N, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+  
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, sizeof(iint), mesh->N, sendBuffer, mesh->N + mesh->Nelements);  
+
   free(haloElements);
   free(sendBuffer);
+  free(intSendBuffer);
 }

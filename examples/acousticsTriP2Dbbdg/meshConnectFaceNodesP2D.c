@@ -41,13 +41,12 @@ void meshConnectFaceNodesP2D(mesh2D *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint eP = mesh->EToE[e*mesh->Nfaces+f];
       iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      iint NP = mesh->N[eP];
  
       if(eP<0 || fP<0){ // fake connections for unconnected faces
          eP = e;
          fP = f;
-         NP = N;
       }
+      iint NP = mesh->N[eP];
 
       /* for each node on this face find the neighbor node */
       for(iint n=0;n<mesh->Nfp[N];++n){
