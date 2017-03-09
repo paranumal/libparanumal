@@ -38,8 +38,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){
-      printf("Testing shouldnt ne there \n");	
+    if(mesh->pmlNelements){	
       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->o_vgeo,
@@ -61,7 +60,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
     // compute volume contribution to DG boltzmann RHS
     // added d/dt (ramp(qbar)) to RHS
-    if(mesh->nonPmlNelements)
+    if(mesh->nonPmlNelements){
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -71,6 +70,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq);
+    }
     
     
     mesh->device.finish();
