@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 10001/mesh->sqrtRT; 
+   dfloat Re = 1000/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -308,61 +308,42 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   // too small ???
   
 dfloat cfl = 0.5; 
+
+//
+  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+  magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
+  //
+  dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+  dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+
   // AK: Set time step size
   #if TIME_DISC==LSERK
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
-      //
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
-      //
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
       dfloat dt = mymin(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
  #elif TIME_DISC==LSIMEX
       printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-      //
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
-      //
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt   = mymax(dtex,dtim); // Should be max, correct it later!!!!
+      dfloat dt   = mymax(dtex,dtim); // 
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-#elif TIME_DISC==MRAB3
-      printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-      //
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
-      //
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt   = mymin(dtex,dtim); // Should be max, correct it later!!!!
+#elif TIME_DISC==MRAB
+      printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+      // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
+      dfloat dt   = 0.5*1.0/3.0* mymin(dtex,dtim); 
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
 
 
-  #elif TIME_DISC==SAAB
-  printf("Time discretization method: SAAB  with 1/3*CFL(%.2f)\n",cfl);
+#elif TIME_DISC==SAAB
+     printf("Time discretization method: SAAB  with 1/3*CFL(%.2f)\n",cfl);
+     dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
 
-      #if 0
-       // Adams-Bashforth stability region is approximated as 1/3 of LSERK scheme. 
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = 1./3. * cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = 1./3. * cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = mymin(dtex,dtim);
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
-      #endif
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = 1.0/3.0* cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = 1.0/3.0* cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 0.1*mymax(dtex,dtim);
+     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
   #endif
 
 
@@ -377,12 +358,12 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 100;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 6000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -432,43 +413,6 @@ dfloat cfl = 0.5;
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_respmlNT =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-  
-  #elif TIME_DISC==SAAB
-// Extra Storage for History, 
-   mesh->o_rhsq2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-   mesh->o_rhsq3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
-  
-  
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
- 
-
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
   #elif TIME_DISC==LSIMEX
    mesh->o_qY =    
@@ -511,6 +455,58 @@ dfloat cfl = 0.5;
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_qZnt =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    
+ #elif TIME_DISC==MRAB
+ // Extra Storage for History, 
+   mesh->o_rhsq2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+   mesh->o_rhsq3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+
+  
+  mesh->mrab[0] = 23.*dt/12. ;
+  mesh->mrab[1] = -4.*dt/3. ;
+  mesh->mrab[2] =  5.*dt/12. ;
+  
+  printf("%.5f\t%.5f\t%.5f\n",mesh->mrab[0],mesh->mrab[1],mesh->mrab[2]);
+
+  #elif TIME_DISC==SAAB
+// Extra Storage for History, 
+   mesh->o_rhsq2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
+   mesh->o_rhsq3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
+
+  // pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_rhspmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
+  
+  
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_rhspmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
+ 
+
+  mesh->o_pmlNT =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+  mesh->o_rhspmlNT =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
   #endif  
   
@@ -530,9 +526,15 @@ dfloat cfl = 0.5;
  // All Functions Related to Adams-Bashforth
 #if TIME_DISC
     
+  
+
+
+
+
+
          
   // Clasical AB coefficients
-  dfloat ab1 = 23./14.*dt;
+  dfloat ab1 = 23./12.*dt;
   dfloat ab2 = -4./3. *dt;
   dfloat ab3 = 5./12. *dt;
   kernelInfo.addDefine("p_ab1",  ab1 );
@@ -734,6 +736,81 @@ dfloat cfl = 0.5;
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
+
+
+
+#elif TIME_DISC==MRAB // NOT CHECKED PML KERNELS !!!!!!!!!
+ #if CUBATURE_ENABLED
+      printf("Compiling LSERK volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                   "boltzmannVolumeCub2D",
+                   kernelInfo);
+      
+      printf("Compiling LSERK pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolumeCub2D",
+               kernelInfo);
+      
+       printf("Compiling LSERK relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannRelaxationCub2D",
+               kernelInfo); 
+
+      printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannSplitPmlRelaxationCub2D",
+               kernelInfo);   
+    #else
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                 "boltzmannVolume2D",
+                 kernelInfo);
+
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolume2D",
+               kernelInfo); 
+    #endif
+
+
+  printf("Compiling surface kernel\n");
+  mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
+
+  printf("Compiling pml surface kernel\n");
+  mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+ printf("Compiling update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannMRABUpdate2D",
+               kernelInfo);
+  
+  printf("Compiling pml update kernel\n");
+  mesh->pmlUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKSplitPmlUpdate2D",
+               kernelInfo);
+  
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);
+
+
+
+
 
 #elif TIME_DISC==SAAB
 
