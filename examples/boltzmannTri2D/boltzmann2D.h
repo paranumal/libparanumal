@@ -26,3 +26,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 
 // output run statistics for Boltzmann simulation
 void boltzmannReport2D(mesh2D *mesh, iint tstep);
+
+//Make Perodic Connection
+
+void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);

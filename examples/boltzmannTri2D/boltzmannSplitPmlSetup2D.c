@@ -42,9 +42,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   
   // set temperature, gas constant, wave speeds
 
-#if 1
+#if 0
   // // Define problem parameters
-  // Define referance Mach number
   dfloat Ma = 0.1;
 
   dfloat Lc = 0.5;
@@ -69,31 +68,33 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   printf("Tauinv = %.4f - nu = %.4e\n", mesh->tauInv,nu);
 
 #endif
-     
+    
+
 
   
 
   
 
-#if 0
-   dfloat Re = 1000; 
+#if 1
    dfloat Ma = 0.1;
+   mesh->RT  = 9.0;
+   mesh->sqrtRT = sqrt(mesh->RT);  
 
-   mesh->RT = 9.0;
-
-  mesh->tauInv = mesh->sqrtRT * Re / Ma;
-
-  dfloat nu = mesh->RT/mesh->tauInv; 
+   dfloat Re = 100/mesh->sqrtRT; 
+   mesh->tauInv = mesh->sqrtRT * Re / Ma;
+   dfloat nu = mesh->RT/mesh->tauInv; 
 
  
-  mesh->sqrtRT = sqrt(mesh->RT);  
+  
   
   printf("starting initial conditions\n");
-   dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
+   dfloat rho = 1, u = 0., v = 0.; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
   
  #endif 
+
+  
 
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
@@ -155,6 +156,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->pmlqy[id+5*mesh->Np] = 0.f*q6bar;
     }
   }
+
+//
+  printf("Creating periodic connections if exisits\n");
+  dfloat xper = 1.0; 
+  dfloat yper = 0.0;
+  boltzmannPeriodic2D(mesh,xper,yper);
 
   printf("starting parameters\n");
 
@@ -254,31 +261,63 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = 0.5; // depends on the stability region size (was .4)
+// for(iint e=0;e<mesh->Nelements;++e)
+// {  
+
+//     for(iint f=0;f<mesh->Nfaces;++f)
+//     {
+//        for(iint n=0;n<mesh->Nfp;++n)
+//        {
+//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+
+//       if(e==8)
+//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
+//     }
+//   }
+// }
+
+
+  
+
+  // dfloat xper = 1.0; 
+  // dfloat yper = 0.0;
+
+  // boltzmannPeriodic2D(mesh,xper,yper);
+
+
+// for(iint e=0;e<mesh->Nelements;++e)
+// {  
+
+//     for(iint f=0;f<mesh->Nfaces;++f)
+//     {
+//        for(iint n=0;n<mesh->Nfp;++n)
+//        {
+//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+
+//       if(e==8)
+//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
+//     }
+//   }
+// }
+
+  // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   // too small ???
   
-
+dfloat cfl = 0.5; 
   // AK: Set time step size
   #if TIME_DISC==LSERK
-  printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
-
-      #if 0
+      printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
+      //
       dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-
+      magVelocity = mymax(magVelocity,1.0);
+      //
       dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-
       dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-
       dfloat dt = mymin(dtex,dtim);
-
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
-      #endif
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 1. * mymin(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
@@ -326,12 +365,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 0.1;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 

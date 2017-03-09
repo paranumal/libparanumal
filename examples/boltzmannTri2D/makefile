@@ -15,7 +15,7 @@ LD	= mpic++
 
 
 TIME_METHOD  = LSERK
-CUBATURE_USE = 0
+CUBATURE_USE = 1
 
 
 #LSERK TIME DISCRETIZATION
@@ -68,6 +68,7 @@ OBJS    = \
 boltzmannSplitPmlMain2D.o \
 boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
+boltzmannPeriodic2D.o\
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
@@ -89,6 +90,7 @@ boltzmannReport2D.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
