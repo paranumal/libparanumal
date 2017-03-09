@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 
-TIME_METHOD  = LSERK
+TIME_METHOD  = MRAB
 CUBATURE_USE = 0
 
 
@@ -22,6 +22,7 @@ CUBATURE_USE = 0
 flags += -DLSERK=1
 flags += -DSAAB=2
 flags += -DLSIMEX=3
+flags += -DMRAB=4
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
@@ -29,6 +30,10 @@ endif
 
 ifeq ($(TIME_METHOD), LSIMEX)
  flags += -DTIME_DISC=LSIMEX
+endif
+
+ifeq ($(TIME_METHOD), MRAB)
+ flags += -DTIME_DISC=MRAB
 endif
 
 ifeq ($(TIME_METHOD), SAAB)
@@ -74,6 +79,7 @@ boltzmannPeriodic2D.o\
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
+boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannRampFunction2D.o \

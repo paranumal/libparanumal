@@ -39,6 +39,54 @@ kernel void boltzmannLSERKUpdate2D(const iint Nelements,
   }
 }
 
+
+
+
+kernel void boltzmannMRABUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt,  
+            const dfloat ab1,
+            const dfloat ab2,
+            const dfloat ab3,
+                  dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict rhsq2,
+                  dfloat4 * restrict rhsq1,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+
+      const iint base = 2*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[base+0];
+      dfloat4 rhsq1b = rhsq1[base+1];
+
+      dfloat4 rhsq2a = rhsq2[base+0];
+      dfloat4 rhsq2b = rhsq2[base+1];
+
+      dfloat4 rhsq3a = rhsq3[base+0];
+      dfloat4 rhsq3b = rhsq3[base+1];
+      //
+      dfloat4 qa = q[base+0];
+      dfloat4 qb = q[base+1];
+
+      qa += ab1*rhsq1a + ab2*rhsq2a + ab3*rhsq3a;
+      qb += ab1*rhsq1b + ab2*rhsq2b + ab3*rhsq3b;
+
+           
+      rhsq3[base+0] = rhsq2a;
+      rhsq3[base+1] = rhsq2b;
+      //
+      rhsq2[base+0] = rhsq1a;
+      rhsq2[base+1] = rhsq1b;
+      //
+      q[base+0] = qa;
+      q[base+1] = qb;
+    }
+  }
+}
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
 kernel void boltzmannSAABUpdateFirst2D(const iint Nelements,
             const iint * restrict elementIds,
