@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 100/mesh->sqrtRT; 
+   dfloat Re = 10001/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -313,11 +313,35 @@ dfloat cfl = 0.5;
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       //
       dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      magVelocity = mymax(magVelocity,1.0);
+      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
       //
       dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
       dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
       dfloat dt = mymin(dtex,dtim);
+
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
+ #elif TIME_DISC==LSIMEX
+      printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
+      //
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
+      //
+      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt   = mymax(dtex,dtim); // Should be max, correct it later!!!!
+
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
+#elif TIME_DISC==MRAB3
+      printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
+      //
+      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+      magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
+      //
+      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+      dfloat dt   = mymin(dtex,dtim); // Should be max, correct it later!!!!
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
@@ -339,18 +363,6 @@ dfloat cfl = 0.5;
       dfloat dt = 0.1*mymax(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-  #elif TIME_DISC==LSIMEX
-  printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 1.0* mymax(dtex,dtim);
-
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-
-
   #endif
 
 
@@ -365,12 +377,12 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 10;
+  mesh->finalTime = 100;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 10000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -813,8 +825,7 @@ dfloat cfl = 0.5;
 
     //SAAB SECOND ORDER UPDATE
   printf("Compiling SAAB pml 2nd order update kernel\n");
-  mesh->pmlUpdateSecondOrderKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  mesh->pmlUpdateSecondOrderKernel hi    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
                "boltzmannSAABSplitPmlUpdateSecond2D",
                kernelInfo);
 

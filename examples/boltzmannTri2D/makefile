@@ -15,7 +15,7 @@ LD	= mpic++
 
 
 TIME_METHOD  = LSERK
-CUBATURE_USE = 1
+CUBATURE_USE = 0
 
 
 #LSERK TIME DISCRETIZATION
@@ -27,13 +27,15 @@ ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
 endif
 
+ifeq ($(TIME_METHOD), LSIMEX)
+ flags += -DTIME_DISC=LSIMEX
+endif
+
 ifeq ($(TIME_METHOD), SAAB)
  flags += -DTIME_DISC=SAAB
 endif
 
-ifeq ($(TIME_METHOD), LSIMEX)
- flags += -DTIME_DISC=LSIMEX
-endif
+
 
 
 
