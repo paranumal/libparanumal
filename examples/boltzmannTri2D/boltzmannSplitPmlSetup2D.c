@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 1000/mesh->sqrtRT; 
+   dfloat Re = 10001/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -332,19 +332,17 @@ dfloat cfl = 0.5;
 #elif TIME_DISC==MRAB
       printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
       // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
-      dfloat dt   = 0.5*1.0/3.0* mymin(dtex,dtim); 
+      dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
 
 
 #elif TIME_DISC==SAAB
-     printf("Time discretization method: SAAB  with 1/3*CFL(%.2f)\n",cfl);
-     dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
+     printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+     dfloat dt   = 3*1.0/3.0* mymin(dtex,dtim); 
 
-     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-
-  #endif
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
+#endif
 
 
 
@@ -358,12 +356,12 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 10;
+  mesh->finalTime = 100;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 6000;
+  mesh->errorStep = 10000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -469,8 +467,7 @@ dfloat cfl = 0.5;
   mesh->mrab[1] = -4.*dt/3. ;
   mesh->mrab[2] =  5.*dt/12. ;
   
-  printf("%.5f\t%.5f\t%.5f\n",mesh->mrab[0],mesh->mrab[1],mesh->mrab[2]);
-
+  
   #elif TIME_DISC==SAAB
 // Extra Storage for History, 
    mesh->o_rhsq2 =
@@ -508,6 +505,32 @@ dfloat cfl = 0.5;
   mesh->o_rhspmlNT3 =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
+
+
+
+  // Classical Adams Bashforth Coefficients
+  mesh->mrab[0] = 23.*dt/12. ;
+  mesh->mrab[1] = -4.*dt/3. ;
+  mesh->mrab[2] =  5.*dt/12. ;
+  
+  // SAAB NONPML Coefficients, expanded to fix very small tauInv case
+  dfloat cc = -mesh->tauInv;
+  dfloat dtc = mesh->dt; 
+  mesh->saab[0] = (pow(cc,3)*pow(dtc,4))/18. + (19.*pow(cc,2)*pow(dtc,3))/80. + (19.*cc*pow(dtc,2))/24. + (23.*dtc)/12.;
+  mesh->saab[1] = -( (7.*pow(cc,3)*pow(dtc,4))/360. + (pow(cc,2)*pow(dtc,3))/10. + (5.*cc*pow(dtc,2))/12.  + (4.*dtc)/3. );
+  mesh->saab[2] = (pow(cc,3)*pow(dtc,4))/180. + (7.*pow(cc,2)*pow(dtc,3))/240. + (cc*pow(dtc,2))/8. + (5.*dtc)/12.;
+ //Define exp(tauInv*dt) 
+  mesh->saabexp = exp(-mesh->tauInv*dt);
+
+
+
+
+
+//   dfloat expdt = exp(-mesh->tauInv*dt);
+//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+//   kernelInfo.addDefine("p_expdt",  (float)expdt);
+//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+
   #endif  
   
   
@@ -523,8 +546,8 @@ dfloat cfl = 0.5;
 
 
 
- // All Functions Related to Adams-Bashforth
-#if TIME_DISC
+//  // All Functions Related to Adams-Bashforth
+// #if TIME_DISC
     
   
 
@@ -533,69 +556,69 @@ dfloat cfl = 0.5;
 
 
          
-  // Clasical AB coefficients
-  dfloat ab1 = 23./12.*dt;
-  dfloat ab2 = -4./3. *dt;
-  dfloat ab3 = 5./12. *dt;
-  kernelInfo.addDefine("p_ab1",  ab1 );
-  kernelInfo.addDefine("p_ab2",  ab2  );
-  kernelInfo.addDefine("p_ab3",  ab3 );
-  //
-  // Modefied AB Coefficients
-  dfloat saab1 =  -(2.*exp(-mesh->dt*mesh->tauInv)  + 5.*mesh->dt*mesh->tauInv 
-                  - 6.*pow(mesh->dt*mesh->tauInv,2) + 2.*pow(mesh->dt*mesh->tauInv,2)*exp(-mesh->dt*mesh->tauInv) 
-                  - 3.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) - 2.)
-                   /(2.*pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   // Clasical AB coefficients
+//   dfloat ab1 = 23./12.*dt;
+//   dfloat ab2 = -4./3. *dt;
+//   dfloat ab3 = 5./12. *dt;
+//   kernelInfo.addDefine("p_ab1",  ab1 );
+//   kernelInfo.addDefine("p_ab2",  ab2  );
+//   kernelInfo.addDefine("p_ab3",  ab3 );
+//   //
+//   // Modefied AB Coefficients
+//   dfloat saab1 =  -(2.*exp(-mesh->dt*mesh->tauInv)  + 5.*mesh->dt*mesh->tauInv 
+//                   - 6.*pow(mesh->dt*mesh->tauInv,2) + 2.*pow(mesh->dt*mesh->tauInv,2)*exp(-mesh->dt*mesh->tauInv) 
+//                   - 3.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) - 2.)
+//                    /(2.*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
 
-  dfloat saab2 = -(3.*pow(mesh->dt*mesh->tauInv,2) - 4.*mesh->dt*mesh->tauInv - 2.*exp(-mesh->dt*mesh->tauInv) 
-                 + 2.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-                  /(pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   dfloat saab2 = -(3.*pow(mesh->dt*mesh->tauInv,2) - 4.*mesh->dt*mesh->tauInv - 2.*exp(-mesh->dt*mesh->tauInv) 
+//                  + 2.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
+//                   /(pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-  dfloat saab3 = (2.*pow(mesh->dt*mesh->tauInv,2) - 3.*mesh->dt*mesh->tauInv 
-                - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-                 /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   dfloat saab3 = (2.*pow(mesh->dt*mesh->tauInv,2) - 3.*mesh->dt*mesh->tauInv 
+//                 - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
+//                  /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-  // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
+//   // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
 
 
-  kernelInfo.addDefine("p_saab1",  (float)saab1 );
-  kernelInfo.addDefine("p_saab2",  (float)saab2 );
-  kernelInfo.addDefine("p_saab3",  (float)saab3 );
+//   kernelInfo.addDefine("p_saab1",  (float)saab1 );
+//   kernelInfo.addDefine("p_saab2",  (float)saab2 );
+//   kernelInfo.addDefine("p_saab3",  (float)saab3 );
 
   
-  // Define coefficients for PML Region
-  dfloat itau = 0.5*mesh->tauInv; 
-// Modefied AB Coefficients
-  dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
-                     + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
-                     - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
-                      /(2.*pow(mesh->dt,2)*pow(itau,3));
+//   // Define coefficients for PML Region
+//   dfloat itau = 0.5*mesh->tauInv; 
+// // Modefied AB Coefficients
+//   dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
+//                      + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
+//                      - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
+//                       /(2.*pow(mesh->dt,2)*pow(itau,3));
 
 
-  dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
-                 + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-                  /(pow(mesh->dt,2)*pow(itau,3));
+//   dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
+//                  + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+//                   /(pow(mesh->dt,2)*pow(itau,3));
 
-  dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
-                - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-                 /(2*pow(mesh->dt,2)*pow(itau,3));
+//   dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
+//                 - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+//                  /(2*pow(mesh->dt,2)*pow(itau,3));
 
-  // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
-
-
-  kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
-  kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
-  kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
+//   // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
 
 
-  //Define exp(tauInv*dt) 
-  dfloat expdt = exp(-mesh->tauInv*dt);
-  dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
-  kernelInfo.addDefine("p_expdt",  (float)expdt);
-  kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+//   kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
+//   kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
+//   kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
 
-#endif
+
+//   //Define exp(tauInv*dt) 
+//   dfloat expdt = exp(-mesh->tauInv*dt);
+//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+//   kernelInfo.addDefine("p_expdt",  (float)expdt);
+//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+
+// #endif
     
 
 
@@ -807,11 +830,6 @@ dfloat cfl = 0.5;
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
-
-
-
-
-
 #elif TIME_DISC==SAAB
 
    #if CUBATURE_ENABLED
@@ -869,19 +887,19 @@ dfloat cfl = 0.5;
 
 
 
-   //SAAB FIRST ORDER UPDATE
-  printf("compiling non-pml 1st order update kernel\n");
-  mesh->updateFirstOrderKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABUpdateFirst2D",
-               kernelInfo);
+  //  //SAAB FIRST ORDER UPDATE
+  // printf("compiling non-pml 1st order update kernel\n");
+  // mesh->updateFirstOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABUpdateFirst2D",
+  //              kernelInfo);
 
-    //SAAB SECOND ORDER UPDATE
-  printf("compiling non-pml 2nd order update kernel\n");
-  mesh->updateSecondOrderKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABUpdateSecond2D",
-               kernelInfo);
+  //   //SAAB SECOND ORDER UPDATE
+  // printf("compiling non-pml 2nd order update kernel\n");
+  // mesh->updateSecondOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABUpdateSecond2D",
+  //              kernelInfo);
 
 
      //SAAB STAGE UPDATE
@@ -893,26 +911,26 @@ dfloat cfl = 0.5;
 
 
 
-      //SAAB FIRST ORDER UPDATE
-  printf("Compiling SAAB pml 1st order update kernel\n");
-  mesh->pmlUpdateFirstOrderKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdateFirst2D",
-               kernelInfo);
+  //     //SAAB FIRST ORDER UPDATE
+  // printf("Compiling SAAB pml 1st order update kernel\n");
+  // mesh->pmlUpdateFirstOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdateFirst2D",
+  //              kernelInfo);
 
-    //SAAB SECOND ORDER UPDATE
-  printf("Compiling SAAB pml 2nd order update kernel\n");
-  mesh->pmlUpdateSecondOrderKernel hi    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdateSecond2D",
-               kernelInfo);
+  //   //SAAB SECOND ORDER UPDATE
+  // printf("Compiling SAAB pml 2nd order update kernel\n");
+  // mesh->pmlUpdateSecondOrderKernel hi    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdateSecond2D",
+  //              kernelInfo);
 
 
-     //SAAB STAGE UPDATE
-  printf("Compiling SAAB non-pml update kernel\n");
-  mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdate2D",
-               kernelInfo); 
+  //    //SAAB STAGE UPDATE
+  // printf("Compiling SAAB non-pml update kernel\n");
+  // mesh->pmlUpdateKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdate2D",
+  //              kernelInfo); 
 
 
 

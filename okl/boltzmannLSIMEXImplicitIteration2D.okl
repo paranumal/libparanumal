@@ -627,7 +627,7 @@ if(akk>0)
      {
         for(int s=0;s<p_S;++s;inner0)
         {
-          if(g==0) // Squential now
+          if(g==0) // Squential
           {
             if(p_G>8){
             if(s<8)  s_b[s] = GET_MAX2(s_b[s],s_b[s + 8]);}
@@ -665,7 +665,7 @@ if(akk>0)
 
 
 
-    // prefetch q to shared
+    // If converged update solution
     for(iint es=0;es<p_NblockV;++es;inner1)
     {
       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
