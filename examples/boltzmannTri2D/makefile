@@ -88,6 +88,7 @@ boltzmannReport2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
