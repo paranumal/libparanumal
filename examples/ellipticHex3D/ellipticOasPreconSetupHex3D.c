@@ -129,12 +129,12 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     iint change = 0;
 
     // exchange one element halo (fix later if warranted)
-    meshHaloExchange3D(mesh,
-		       mesh->Np*sizeof(preconGatherInfo_t),
-		       gatherInfo,
-		       sendBuffer,
-		       gatherInfo+Nlocal);
-
+    meshHaloExchange(mesh,
+		     mesh->Np*sizeof(preconGatherInfo_t),
+		     gatherInfo,
+		     sendBuffer,
+		     gatherInfo+Nlocal);
+    
     // compare trace nodes
     for(iint e=0;e<mesh->Nelements;++e){
       for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
