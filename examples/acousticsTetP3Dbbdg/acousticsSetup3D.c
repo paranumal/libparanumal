@@ -232,7 +232,7 @@ void acousticsSetup3D(mesh3D *mesh){
     free(L0ids); free(L0vals); free(ELids); free(ELvals);
   }
 
-  mesh->o_N = mesh->device.malloc(mesh->Nelements*sizeof(iint), mesh->N);  
+  mesh->o_N = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint), mesh->N);  
 
   printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
   if (mesh->Nverts==8){     // hardcoded for hexes
@@ -422,23 +422,23 @@ void acousticsSetup3D(mesh3D *mesh){
     sprintf(surfacekernelName, "acousticsSurface3Dbbdg_o%d", p);
 
     mesh->volumeKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgVolumeP3D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolumeP3D.okl",
                  volumekernelName,
                  kernelInfo);
 
     mesh->surfaceKernel[p] =
-        mesh->device.buildKernelFromSource("okl/acousticsbbdgSurfaceP3D.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurfaceP3D.okl",
                  surfacekernelName,
                  kernelInfo);
   }
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/acousticsUpdate3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate3D.okl",
 				       "acousticsUpdate3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 

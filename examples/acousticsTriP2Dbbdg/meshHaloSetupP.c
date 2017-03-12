@@ -5,7 +5,7 @@
 
 typedef struct {
   
-  iint element, face;
+  iint element, face, N;
   iint elementN, faceN, rankN;
 
 }facePair_t;
@@ -32,7 +32,7 @@ int compareHaloFaces(const void *a,
 
 // set up halo infomation for inter-processor MPI 
 // exchange of trace nodes
-void meshHaloSetup(mesh_t *mesh){
+void meshHaloSetupP(mesh_t *mesh){
 
   // MPI info
   int rank, size;
@@ -73,9 +73,10 @@ void meshHaloSetup(mesh_t *mesh){
       if(mesh->EToP[ef]!=-1){
 	haloElements[cnt].element  = e;
 	haloElements[cnt].face     = f;
-	haloElements[cnt].elementN = mesh->EToE[ef];
-	haloElements[cnt].faceN    = mesh->EToF[ef];
-	haloElements[cnt].rankN    = mesh->EToP[ef];
+  haloElements[cnt].elementN = mesh->EToE[ef];
+  haloElements[cnt].faceN    = mesh->EToF[ef];
+  haloElements[cnt].rankN    = mesh->EToP[ef];
+  haloElements[cnt].N        = mesh->N[e];
 
 	++cnt;
       }
@@ -136,6 +137,14 @@ void meshHaloSetup(mesh_t *mesh){
   if(mesh->dim==3)
     meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EZ, sendBuffer, mesh->EZ + mesh->Nverts*mesh->Nelements);
   
+  iint *intSendBuffer = (iint *) calloc(totalHaloNodes,sizeof(iint));
+
+  mesh->N = (iint*) realloc(mesh->N, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+  
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, sizeof(iint), mesh->N, sendBuffer, mesh->N + mesh->Nelements);  
+
   free(haloElements);
   free(sendBuffer);
+  free(intSendBuffer);
 }
