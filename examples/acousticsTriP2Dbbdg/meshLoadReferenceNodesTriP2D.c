@@ -10,7 +10,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
   for (int e=0;e<mesh->Nelements;e++){
     mesh->N[e] = N;
-    //if (e%2==0) mesh->N[e] = N-1;
+    if (e%2==0) mesh->N[e] = N-1;
   }
 
   mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
@@ -63,9 +63,11 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
   for (int nn=1;nn<=N;nn++) {
 
     char fname[BUFSIZ];
-    sprintf(fname, "nodes/triangleN%02d.dat", nn);
+    sprintf(fname, DHOLMES "/nodes/triangleN%02d.dat", nn);
 
     FILE *fp = fopen(fname, "r");
+
+    printf("%s \n", fname);
 
     char buf[BUFSIZ];
     fgets(buf, BUFSIZ, fp); // read comment
