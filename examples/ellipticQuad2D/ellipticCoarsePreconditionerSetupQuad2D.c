@@ -89,7 +89,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   gsParallelGatherScatterDestroy(gsh);
 
   // temporary
-  precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+  precon->o_ztmp = mesh->device.malloc(mesh->Np*(mesh->Nelements+mesh->totalHaloPairs)*sizeof(dfloat));
   
   // ------------------------------------------------------------------------------------
   // 2. Build coarse grid element basis functions
@@ -338,7 +338,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   if(strstr(options, "UBERGRID")){
     /* pseudo code for building (really) coarse system */
     iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
-    iint coarseNtotal = mesh->Nelements*mesh->Nverts;
+    iint coarseNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts;
     dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
     iint localCoarseNp;
@@ -366,7 +366,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
         precon->o_z1.copyFrom(precon->z1);  
 
-        precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+        precon->prolongateKernel(mesh->Nelements+mesh->totalHaloPairs, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
         precon->o_ztmp.copyTo(precon->B + m*Ntotal);
       }
@@ -382,7 +382,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       cnt = 0;    
       for(iint j=0;j<coarseN+1;++j) {
         for(iint i=0;i<coarseN+1;++i) {
-          for(iint m=0;m<mesh->Np*mesh->Nelements;++m)
+          for(iint m=0;m<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++m)
             precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
           cnt++;
         }
@@ -444,7 +444,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       // project onto coarse basis
       for(iint m=0;m<localCoarseNp;++m){
         dfloat val = 0;
-        for(iint i=0;i<mesh->Np*mesh->Nelements;++i){
+        for(iint i=0;i<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++i){
           val  += precon->B[m*Ntotal+i]*Ab[i];
         }
 

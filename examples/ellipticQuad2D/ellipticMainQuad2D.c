@@ -298,9 +298,15 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       mesh->device.finish();
       occa::tic("coarseGrid");
+
+      // halo exchange to make sure each vertex patch has available halo
+      ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+      
+      ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+      
       
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements+mesh->totalHaloPairs, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
       if(strstr(options,"AMG2013")){
 	precon->o_r1.copyTo(precon->r1); 
@@ -338,6 +344,8 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
+      // do we have to DG gatherscatter here 
+      
       dfloat one = 1.;
       ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
 
@@ -391,8 +399,9 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
-    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
-    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,ALMOND,UBERGRID");
+    //    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,ALMOND,UBERGRID");
+    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
+  
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
