@@ -58,7 +58,7 @@ kernel void boltzmannLSIMEXImplicitIteration2D(const iint Nelements,
       dfloat qim5 = qex5;
       dfloat qim6 = qex6; 
       //         
-     if(akk>0)
+     if(akk>0) // No need to itearte if akk=0
      {
      dfloat err = 0.0;  
      dfloat coeff  = akk * dt * p_tauInv;
@@ -112,6 +112,9 @@ kernel void boltzmannLSIMEXImplicitIteration2D(const iint Nelements,
          if(err<p_LSIMEX_TOL) break;
 
       }
+
+     
+
     }
     
      // do not update q1 ,q2 ,q3 
@@ -448,7 +451,7 @@ kernel void boltzmannLSIMEXImplicitIterationCub2D(const iint Nelements,
       	    qe4  = qea.w;   
       	    qe5  = qeb.x;
       	    qe6  = qeb.y;	 
-              //
+            // Initialize solution
             q1  = qe1;
       	    q2  = qe2;
       	    q3  = qe3;
@@ -468,7 +471,9 @@ if(akk>0)
  {
   for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
   { 
-       // prefetch q to shared
+       
+
+       // prefetch solution to shared memory
       for(iint es=0;es<p_NblockV;++es;inner1)
       {
         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
@@ -560,7 +565,7 @@ if(akk>0)
               dfloat z5 =  qe5 - q5 +  N5 ;
               dfloat z6 =  qe6 - q6 +  N6 ;
               
-              //
+              // Store solution for error check
               dfloat q4o = q4;
               dfloat q5o = q5;
               dfloat q6o = q6;
@@ -583,13 +588,13 @@ if(akk>0)
                            -  p_sqrt2* ( z1*(q3*q3)/(2.0*(q1*q1)*(1.0+icc)));
 
 
-              // Compute errors for q4 q5 a6
+              // Compute errors 
                dfloat err4 = fabs(q4-q4o);
                dfloat err5 = fabs(q5-q5o);
                dfloat err6 = fabs(q6-q6o);
-
+              // Compute maximum of error
                err = GET_MAX3(err4,err5,err6);
-
+              // Hold error in shared for local reduction
                s_E[es*p_Np + n] = err; 
             }
           }
@@ -597,9 +602,10 @@ if(akk>0)
       }
 
 
-    // make sure all cubature node data is loaded into shared
+    // make sure error vector is loaded into shared
     barrier(localMemFence);
-
+     
+     // Reduction->Step 1 // All parallel
       for(int g=0;g<p_G;++g;inner1)
       {
         for(int s=0;s<p_S;++s;inner0)
@@ -616,12 +622,12 @@ if(akk>0)
       }
     
     barrier(localMemFence);
-
+   // Reduction->step 2 // Squential now
      for(int g=0;g<p_G;++g;inner1)
      {
         for(int s=0;s<p_S;++s;inner0)
         {
-          if(g==0)
+          if(g==0) // Squential
           {
             if(p_G>8){
             if(s<8)  s_b[s] = GET_MAX2(s_b[s],s_b[s + 8]);}
@@ -635,10 +641,10 @@ if(akk>0)
       }
      
 
-   // make sure all cubature node data is loaded into shared
+   // 
     barrier(localMemFence);
     
-    // partial projection to nodes from cubature-sub-group
+    // This is for making all threads in the same group exit  at the same time
     for(iint es=0;es<p_NblockV;++es;inner1)
     {
       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
@@ -647,7 +653,7 @@ if(akk>0)
          }
        }
 
-
+   // This is for making all threads in the same group exit  at the same time
    if (err<p_LSIMEX_TOL) break;
 
 
@@ -659,7 +665,7 @@ if(akk>0)
 
 
 
-    // prefetch q to shared
+    // If converged update solution
     for(iint es=0;es<p_NblockV;++es;inner1)
     {
       for(iint n=0;n<p_maxNodesVolume;++n;inner0)

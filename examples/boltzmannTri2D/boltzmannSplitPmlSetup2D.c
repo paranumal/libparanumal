@@ -42,9 +42,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   
   // set temperature, gas constant, wave speeds
 
-#if 1
+#if 0
   // // Define problem parameters
-  // Define referance Mach number
   dfloat Ma = 0.1;
 
   dfloat Lc = 0.5;
@@ -69,31 +68,33 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   printf("Tauinv = %.4f - nu = %.4e\n", mesh->tauInv,nu);
 
 #endif
-     
+    
+
 
   
 
   
 
-#if 0
-   dfloat Re = 1000; 
+#if 1
    dfloat Ma = 0.1;
+   mesh->RT  = 9.0;
+   mesh->sqrtRT = sqrt(mesh->RT);  
 
-   mesh->RT = 9.0;
-
-  mesh->tauInv = mesh->sqrtRT * Re / Ma;
-
-  dfloat nu = mesh->RT/mesh->tauInv; 
+   dfloat Re = 100/mesh->sqrtRT; 
+   mesh->tauInv = mesh->sqrtRT * Re / Ma;
+   dfloat nu = mesh->RT/mesh->tauInv; 
 
  
-  mesh->sqrtRT = sqrt(mesh->RT);  
+  
   
   printf("starting initial conditions\n");
-   dfloat rho = 1, u = 1, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
+   dfloat rho = 1, u = 0., v = 0.; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
   dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
   
  #endif 
+
+  
 
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
@@ -155,6 +156,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->pmlqy[id+5*mesh->Np] = 0.f*q6bar;
     }
   }
+
+//
+  printf("Creating periodic connections if exisits\n");
+  dfloat xper = 1.0; 
+  dfloat yper = 0.0;
+  boltzmannPeriodic2D(mesh,xper,yper);
 
   printf("starting parameters\n");
 
@@ -254,65 +261,87 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-  dfloat cfl = 0.5; // depends on the stability region size (was .4)
+// for(iint e=0;e<mesh->Nelements;++e)
+// {  
+
+//     for(iint f=0;f<mesh->Nfaces;++f)
+//     {
+//        for(iint n=0;n<mesh->Nfp;++n)
+//        {
+//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+
+//       if(e==8)
+//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
+//     }
+//   }
+// }
+
+
+  
+
+  // dfloat xper = 1.0; 
+  // dfloat yper = 0.0;
+
+  // boltzmannPeriodic2D(mesh,xper,yper);
+
+
+// for(iint e=0;e<mesh->Nelements;++e)
+// {  
+
+//     for(iint f=0;f<mesh->Nfaces;++f)
+//     {
+//        for(iint n=0;n<mesh->Nfp;++n)
+//        {
+//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+
+//       if(e==8)
+//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
+//     }
+//   }
+// }
+
+  // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   // too small ???
   
+dfloat cfl = 0.5; 
+
+//
+  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
+  magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
+  //
+  dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+  dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
 
   // AK: Set time step size
   #if TIME_DISC==LSERK
-  printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
-
-      #if 0
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-
+      printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       dfloat dt = mymin(dtex,dtim);
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
-      #endif
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 1. * mymin(dtex,dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
+ #elif TIME_DISC==LSIMEX
+      printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
+      dfloat dt   = mymax(dtex,dtim); // 
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
+#elif TIME_DISC==MRAB
+      printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+      // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
+      dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
 
-  #elif TIME_DISC==SAAB
-  printf("Time discretization method: SAAB  with 1/3*CFL(%.2f)\n",cfl);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
 
-      #if 0
-       // Adams-Bashforth stability region is approximated as 1/3 of LSERK scheme. 
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = 1./3. * cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = 1./3. * cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = mymin(dtex,dtim);
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e \n", dt,dtex,dtim);
-      #endif
-      dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = 1.0/3.0* cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = 1.0/3.0* cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 0.1*mymax(dtex,dtim);
+#elif TIME_DISC==SAAB
+     printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+     dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-  #elif TIME_DISC==LSIMEX
-  printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-  dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
-      dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-      dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
-      dfloat dt = 1.0* mymax(dtex,dtim);
-
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-
-
-  #endif
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
+#endif
 
 
 
@@ -326,12 +355,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 0.1;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -381,43 +410,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_respmlNT =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-  
-  #elif TIME_DISC==SAAB
-// Extra Storage for History, 
-   mesh->o_rhsq2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-   mesh->o_rhsq3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
-  
-  
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
- 
-
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
   #elif TIME_DISC==LSIMEX
    mesh->o_qY =    
@@ -460,6 +452,83 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_qZnt =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    
+ #elif TIME_DISC==MRAB
+ // Extra Storage for History, 
+   mesh->o_rhsq2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+   mesh->o_rhsq3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+
+  
+  mesh->mrab[0] = 23.*dt/12. ;
+  mesh->mrab[1] = -4.*dt/3. ;
+  mesh->mrab[2] =  5.*dt/12. ;
+  
+  
+  #elif TIME_DISC==SAAB
+// Extra Storage for History, 
+   mesh->o_rhsq2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
+   mesh->o_rhsq3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
+
+  // pml variables
+  mesh->o_pmlqx =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  mesh->o_rhspmlqx =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  mesh->o_rhspmlqx3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
+  
+  
+  mesh->o_pmlqy =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  mesh->o_rhspmlqy =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  mesh->o_rhspmlqy3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
+ 
+
+  mesh->o_pmlNT =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+  mesh->o_rhspmlNT =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT2 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+  mesh->o_rhspmlNT3 =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+
+
+
+
+  // Classical Adams Bashforth Coefficients
+  mesh->mrab[0] = 23.*dt/12. ;
+  mesh->mrab[1] = -4.*dt/3. ;
+  mesh->mrab[2] =  5.*dt/12. ;
+  
+  // SAAB NONPML Coefficients, expanded to fix very small tauInv case
+  dfloat cc = -mesh->tauInv;
+  dfloat dtc = mesh->dt; 
+  mesh->saab[0] = (pow(cc,3)*pow(dtc,4))/18. + (19.*pow(cc,2)*pow(dtc,3))/80. + (19.*cc*pow(dtc,2))/24. + (23.*dtc)/12.;
+  mesh->saab[1] = -( (7.*pow(cc,3)*pow(dtc,4))/360. + (pow(cc,2)*pow(dtc,3))/10. + (5.*cc*pow(dtc,2))/12.  + (4.*dtc)/3. );
+  mesh->saab[2] = (pow(cc,3)*pow(dtc,4))/180. + (7.*pow(cc,2)*pow(dtc,3))/240. + (cc*pow(dtc,2))/8. + (5.*dtc)/12.;
+ //Define exp(tauInv*dt) 
+  mesh->saabexp = exp(-mesh->tauInv*dt);
+
+
+
+
+
+//   dfloat expdt = exp(-mesh->tauInv*dt);
+//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+//   kernelInfo.addDefine("p_expdt",  (float)expdt);
+//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
 
   #endif  
   
@@ -476,73 +545,79 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
 
 
- // All Functions Related to Adams-Bashforth
-#if TIME_DISC
+//  // All Functions Related to Adams-Bashforth
+// #if TIME_DISC
     
+  
+
+
+
+
+
          
-  // Clasical AB coefficients
-  dfloat ab1 = 23./14.*dt;
-  dfloat ab2 = -4./3. *dt;
-  dfloat ab3 = 5./12. *dt;
-  kernelInfo.addDefine("p_ab1",  ab1 );
-  kernelInfo.addDefine("p_ab2",  ab2  );
-  kernelInfo.addDefine("p_ab3",  ab3 );
-  //
-  // Modefied AB Coefficients
-  dfloat saab1 =  -(2.*exp(-mesh->dt*mesh->tauInv)  + 5.*mesh->dt*mesh->tauInv 
-                  - 6.*pow(mesh->dt*mesh->tauInv,2) + 2.*pow(mesh->dt*mesh->tauInv,2)*exp(-mesh->dt*mesh->tauInv) 
-                  - 3.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) - 2.)
-                   /(2.*pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   // Clasical AB coefficients
+//   dfloat ab1 = 23./12.*dt;
+//   dfloat ab2 = -4./3. *dt;
+//   dfloat ab3 = 5./12. *dt;
+//   kernelInfo.addDefine("p_ab1",  ab1 );
+//   kernelInfo.addDefine("p_ab2",  ab2  );
+//   kernelInfo.addDefine("p_ab3",  ab3 );
+//   //
+//   // Modefied AB Coefficients
+//   dfloat saab1 =  -(2.*exp(-mesh->dt*mesh->tauInv)  + 5.*mesh->dt*mesh->tauInv 
+//                   - 6.*pow(mesh->dt*mesh->tauInv,2) + 2.*pow(mesh->dt*mesh->tauInv,2)*exp(-mesh->dt*mesh->tauInv) 
+//                   - 3.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) - 2.)
+//                    /(2.*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
 
-  dfloat saab2 = -(3.*pow(mesh->dt*mesh->tauInv,2) - 4.*mesh->dt*mesh->tauInv - 2.*exp(-mesh->dt*mesh->tauInv) 
-                 + 2.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-                  /(pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   dfloat saab2 = -(3.*pow(mesh->dt*mesh->tauInv,2) - 4.*mesh->dt*mesh->tauInv - 2.*exp(-mesh->dt*mesh->tauInv) 
+//                  + 2.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
+//                   /(pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-  dfloat saab3 = (2.*pow(mesh->dt*mesh->tauInv,2) - 3.*mesh->dt*mesh->tauInv 
-                - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-                 /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
+//   dfloat saab3 = (2.*pow(mesh->dt*mesh->tauInv,2) - 3.*mesh->dt*mesh->tauInv 
+//                 - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
+//                  /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
 
-  // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
+//   // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
 
 
-  kernelInfo.addDefine("p_saab1",  (float)saab1 );
-  kernelInfo.addDefine("p_saab2",  (float)saab2 );
-  kernelInfo.addDefine("p_saab3",  (float)saab3 );
+//   kernelInfo.addDefine("p_saab1",  (float)saab1 );
+//   kernelInfo.addDefine("p_saab2",  (float)saab2 );
+//   kernelInfo.addDefine("p_saab3",  (float)saab3 );
 
   
-  // Define coefficients for PML Region
-  dfloat itau = 0.5*mesh->tauInv; 
-// Modefied AB Coefficients
-  dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
-                     + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
-                     - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
-                      /(2.*pow(mesh->dt,2)*pow(itau,3));
+//   // Define coefficients for PML Region
+//   dfloat itau = 0.5*mesh->tauInv; 
+// // Modefied AB Coefficients
+//   dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
+//                      + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
+//                      - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
+//                       /(2.*pow(mesh->dt,2)*pow(itau,3));
 
 
-  dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
-                 + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-                  /(pow(mesh->dt,2)*pow(itau,3));
+//   dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
+//                  + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+//                   /(pow(mesh->dt,2)*pow(itau,3));
 
-  dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
-                - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-                 /(2*pow(mesh->dt,2)*pow(itau,3));
+//   dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
+//                 - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
+//                  /(2*pow(mesh->dt,2)*pow(itau,3));
 
-  // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
-
-
-  kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
-  kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
-  kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
+//   // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
 
 
-  //Define exp(tauInv*dt) 
-  dfloat expdt = exp(-mesh->tauInv*dt);
-  dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
-  kernelInfo.addDefine("p_expdt",  (float)expdt);
-  kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+//   kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
+//   kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
+//   kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
 
-#endif
+
+//   //Define exp(tauInv*dt) 
+//   dfloat expdt = exp(-mesh->tauInv*dt);
+//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
+//   kernelInfo.addDefine("p_expdt",  (float)expdt);
+//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+
+// #endif
     
 
 
@@ -684,6 +759,76 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
                "meshHaloExtract2D",
                kernelInfo);
 
+
+
+#elif TIME_DISC==MRAB // NOT CHECKED PML KERNELS !!!!!!!!!
+ #if CUBATURE_ENABLED
+      printf("Compiling LSERK volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                   "boltzmannVolumeCub2D",
+                   kernelInfo);
+      
+      printf("Compiling LSERK pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolumeCub2D",
+               kernelInfo);
+      
+       printf("Compiling LSERK relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannRelaxationCub2D",
+               kernelInfo); 
+
+      printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+               "boltzmannSplitPmlRelaxationCub2D",
+               kernelInfo);   
+    #else
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+                 "boltzmannVolume2D",
+                 kernelInfo);
+
+      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+               "boltzmannSplitPmlVolume2D",
+               kernelInfo); 
+    #endif
+
+
+  printf("Compiling surface kernel\n");
+  mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
+
+  printf("Compiling pml surface kernel\n");
+  mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+ printf("Compiling update kernel\n");
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannMRABUpdate2D",
+               kernelInfo);
+  
+  printf("Compiling pml update kernel\n");
+  mesh->pmlUpdateKernel =
+    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKSplitPmlUpdate2D",
+               kernelInfo);
+  
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);
 #elif TIME_DISC==SAAB
 
    #if CUBATURE_ENABLED
@@ -741,19 +886,19 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
 
 
-   //SAAB FIRST ORDER UPDATE
-  printf("compiling non-pml 1st order update kernel\n");
-  mesh->updateFirstOrderKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABUpdateFirst2D",
-               kernelInfo);
+  //  //SAAB FIRST ORDER UPDATE
+  // printf("compiling non-pml 1st order update kernel\n");
+  // mesh->updateFirstOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABUpdateFirst2D",
+  //              kernelInfo);
 
-    //SAAB SECOND ORDER UPDATE
-  printf("compiling non-pml 2nd order update kernel\n");
-  mesh->updateSecondOrderKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABUpdateSecond2D",
-               kernelInfo);
+  //   //SAAB SECOND ORDER UPDATE
+  // printf("compiling non-pml 2nd order update kernel\n");
+  // mesh->updateSecondOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABUpdateSecond2D",
+  //              kernelInfo);
 
 
      //SAAB STAGE UPDATE
@@ -765,27 +910,26 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
 
 
-      //SAAB FIRST ORDER UPDATE
-  printf("Compiling SAAB pml 1st order update kernel\n");
-  mesh->pmlUpdateFirstOrderKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdateFirst2D",
-               kernelInfo);
+  //     //SAAB FIRST ORDER UPDATE
+  // printf("Compiling SAAB pml 1st order update kernel\n");
+  // mesh->pmlUpdateFirstOrderKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdateFirst2D",
+  //              kernelInfo);
 
-    //SAAB SECOND ORDER UPDATE
-  printf("Compiling SAAB pml 2nd order update kernel\n");
-  mesh->pmlUpdateSecondOrderKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdateSecond2D",
-               kernelInfo);
+  //   //SAAB SECOND ORDER UPDATE
+  // printf("Compiling SAAB pml 2nd order update kernel\n");
+  // mesh->pmlUpdateSecondOrderKernel hi    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdateSecond2D",
+  //              kernelInfo);
 
 
-     //SAAB STAGE UPDATE
-  printf("Compiling SAAB non-pml update kernel\n");
-  mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABSplitPmlUpdate2D",
-               kernelInfo); 
+  //    //SAAB STAGE UPDATE
+  // printf("Compiling SAAB non-pml update kernel\n");
+  // mesh->pmlUpdateKernel =
+  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+  //              "boltzmannSAABSplitPmlUpdate2D",
+  //              kernelInfo); 
 
 
 

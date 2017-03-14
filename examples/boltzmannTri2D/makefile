@@ -14,25 +14,40 @@ CC	= mpic++
 LD	= mpic++
 
 
-TIME_METHOD  = LSERK
-CUBATURE_USE = 0
+TIME_METHOD  = SAAB
+CUBATURE_USE = 1
 
 
 #LSERK TIME DISCRETIZATION
 flags += -DLSERK=1
 flags += -DSAAB=2
 flags += -DLSIMEX=3
+flags += -DMRAB=4
+flags += -DSAERK=5
+flags += -DSALSERK=6
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
+endif
+
+ifeq ($(TIME_METHOD), LSIMEX)
+ flags += -DTIME_DISC=LSIMEX
+endif
+
+ifeq ($(TIME_METHOD), MRAB)
+ flags += -DTIME_DISC=MRAB
 endif
 
 ifeq ($(TIME_METHOD), SAAB)
  flags += -DTIME_DISC=SAAB
 endif
 
-ifeq ($(TIME_METHOD), LSIMEX)
- flags += -DTIME_DISC=LSIMEX
+ifeq ($(TIME_METHOD), SAERK)
+ flags += -DTIME_DISC=SAERK
+endif
+
+ifeq ($(TIME_METHOD), SALSERK)
+ flags += -DTIME_DISC=SALSERK
 endif
 
 
@@ -68,9 +83,11 @@ OBJS    = \
 boltzmannSplitPmlMain2D.o \
 boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
+boltzmannPeriodic2D.o\
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
+boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannRampFunction2D.o \
@@ -90,6 +107,7 @@ boltzmannReport2D.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
