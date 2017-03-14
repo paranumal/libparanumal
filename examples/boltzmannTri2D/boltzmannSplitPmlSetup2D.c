@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 10001/mesh->sqrtRT; 
+   dfloat Re = 100/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -336,10 +336,9 @@ dfloat cfl = 0.5;
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
 
-
 #elif TIME_DISC==SAAB
      printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-     dfloat dt   = 3*1.0/3.0* mymin(dtex,dtim); 
+     dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
 #endif
@@ -356,12 +355,12 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 100;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 

@@ -23,6 +23,8 @@ flags += -DLSERK=1
 flags += -DSAAB=2
 flags += -DLSIMEX=3
 flags += -DMRAB=4
+flags += -DSAERK=5
+flags += -DSALSERK=6
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
@@ -40,7 +42,13 @@ ifeq ($(TIME_METHOD), SAAB)
  flags += -DTIME_DISC=SAAB
 endif
 
+ifeq ($(TIME_METHOD), SAERK)
+ flags += -DTIME_DISC=SAERK
+endif
 
+ifeq ($(TIME_METHOD), SALSERK)
+ flags += -DTIME_DISC=SALSERK
+endif
 
 
 
