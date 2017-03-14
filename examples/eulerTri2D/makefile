@@ -49,6 +49,7 @@ eulerSetup2D.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
