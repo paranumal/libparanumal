@@ -34,7 +34,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Nverts*mesh->Nelements;
+  iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
@@ -51,8 +51,20 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   iint *compressId;
 
   // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
+  memcpy(globalNumbering, mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
 
+  if(mesh->totalHaloPairs){
+    // send buffer for outgoing halo
+    iint *sendBuffer = (iint*) calloc(mesh->totalHaloPairs*mesh->Nverts, sizeof(iint));
+    
+    meshHaloExchange(mesh,
+		     mesh->Nverts*sizeof(iint),
+		     globalNumbering,
+		     sendBuffer,
+		     globalNumbering+mesh->Nelements*mesh->Nverts);
+  }
+
+  
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
                                          sendSortId, &globalSortId, &compressId,
@@ -90,8 +102,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     for(iint i=0;i<mesh->Nq;++i){
       iint n = i+j*mesh->Nq;
       /*
-  dfloat rn = mesh->r[n];
-  dfloat sn = mesh->s[n];
+	dfloat rn = mesh->r[n];
+	dfloat sn = mesh->s[n];
       */
       dfloat rn = mesh->gllz[i];
       dfloat sn = mesh->gllz[j];
@@ -117,7 +129,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   // ------------------------------------------------------------------------------------
   // 3. Build non-zeros of stiffness matrix (unassembled)
-  iint nnz = mesh->Nverts*mesh->Nverts*mesh->Nelements;
+  iint nnz = mesh->Nverts*mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
   iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
   iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
@@ -131,53 +143,53 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   iint cnt = 0;
 
   printf("Building coarse matrix system\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
-  dfloat Snm = 0;
+	dfloat Snm = 0;
  
-  // use GLL nodes for integration
-  // (since Jacobian is high order tensor-product polynomial)
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint id = i+j*mesh->Nq;
+	// use GLL nodes for integration
+	// (since Jacobian is high order tensor-product polynomial)
+	for(iint j=0;j<mesh->Nq;++j){
+	  for(iint i=0;i<mesh->Nq;++i){
+	    iint id = i+j*mesh->Nq;
       
-      dfloat Vr1ni = Vr1[n*mesh->Np+id];
-      dfloat Vs1ni = Vs1[n*mesh->Np+id];
-      dfloat V1ni  = V1[n*mesh->Np+id];
+	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
+	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
+	    dfloat V1ni  = V1[n*mesh->Np+id];
       
-      dfloat Vr1mi = Vr1[m*mesh->Np+id];
-      dfloat Vs1mi = Vs1[m*mesh->Np+id];
-      dfloat V1mi  = V1[m*mesh->Np+id];
+	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
+	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
+	    dfloat V1mi  = V1[m*mesh->Np+id];
 
-      dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
-      dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
-      dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
-      dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
-      dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
+	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
+	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
+	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
+	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
+	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
 
-      dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
-      dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
-      dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
-      dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
+	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
+	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
+	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
+	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
       
-      Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
-      Snm += (lambda*V1ni*V1mi)*JW;
-    }
-  }
-  //  Snm = (n==m) ? 1: 0;
+	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
+	    Snm += (lambda*V1ni*V1mi)*JW;
+	  }
+	}
+	//  Snm = (n==m) ? 1: 0;
 
-  valsA[cnt] = Snm;
-  rowsA[cnt] = e*mesh->Nverts+n;
-  colsA[cnt] = e*mesh->Nverts+m;
+	valsA[cnt] = Snm;
+	rowsA[cnt] = e*mesh->Nverts+n;
+	colsA[cnt] = e*mesh->Nverts+m;
 
-  // pack non-zero
-  sendNonZeros[cnt].val = Snm;
-  sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
-  sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
-  sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+	// pack non-zero
+	sendNonZeros[cnt].val = Snm;
+	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
   
-  ++cnt;
+	++cnt;
       }
     }
   }
@@ -204,8 +216,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
-    recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
-    MPI_COMM_WORLD);
+		recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
+		MPI_COMM_WORLD);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -239,12 +251,12 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   for(iint r=0;r<size;++r){
     if(r==rank){
       for(iint n=0;n<recvNtotal;++n){
-  printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
-         rank, n,
-         recvNonZeros[n].row,
-         recvNonZeros[n].col,
-         recvNonZeros[n].val,
-         recvNonZeros[n].ownerRank);
+	printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
+	       rank, n,
+	       recvNonZeros[n].row,
+	       recvNonZeros[n].col,
+	       recvNonZeros[n].val,
+	       recvNonZeros[n].ownerRank);
       }
       fflush(stdout);
     }
@@ -255,14 +267,14 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   if(strstr(options, "XXT")){
 
     precon->xxt = xxtSetup(Nnum,
-         globalNumbering,
-         nnz,
-         rowsA,
-         colsA,
-         valsA,
-         0,
-         iintString,
-         dfloatString); // 0 if no null space
+			   globalNumbering,
+			   nnz,
+			   rowsA,
+			   colsA,
+			   valsA,
+			   0,
+			   iintString,
+			   dfloatString); // 0 if no null space
     
   }
 
@@ -273,42 +285,42 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     // TW: to here.
     
     precon->almond = almondSetup(Nnum, 
-         globalStarts, // TW: need to replace this
-         globalNumbering,
-         recvNtotal,      // TW: number of nonzeros
-         recvRows,        // TW: need to use local numbering
-         recvCols,        // TW: need to use local numbering 
-         recvVals,
-         sendSortId, 
-         globalSortId, 
-         compressId,
-         sendCounts, 
-         sendOffsets, 
-         recvCounts, 
-         recvOffsets,    
-         0,
-         iintString,
-         dfloatString); // 0 if no null space
+				 globalStarts, // TW: need to replace this
+				 globalNumbering,
+				 recvNtotal,      // TW: number of nonzeros
+				 recvRows,        // TW: need to use local numbering
+				 recvCols,        // TW: need to use local numbering 
+				 recvVals,
+				 sendSortId, 
+				 globalSortId, 
+				 compressId,
+				 sendCounts, 
+				 sendOffsets, 
+				 recvCounts, 
+				 recvOffsets,    
+				 0,
+				 iintString,
+				 dfloatString); // 0 if no null space
     
   }
   
   if(strstr(options ,"AMG2013")){
     
     precon->amg = amg2013Setup(Nnum,
-             globalStarts, //global partitioning
-             recvNtotal,                                
-             recvRows,
-             recvCols,
-             recvVals,
-             sendSortId, 
-             globalSortId, 
-             compressId,
-             sendCounts, 
-             sendOffsets, 
-             recvCounts, 
-             recvOffsets,
-             iintString,
-             dfloatString);
+			       globalStarts, //global partitioning
+			       recvNtotal,                                
+			       recvRows,
+			       recvCols,
+			       recvVals,
+			       sendSortId, 
+			       globalSortId, 
+			       compressId,
+			       sendCounts, 
+			       sendOffsets, 
+			       recvCounts, 
+			       recvOffsets,
+			       iintString,
+			       dfloatString);
 
   }
 
@@ -471,14 +483,14 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     
     // need to create numbering for really coarse grid on each process for xxt
     precon->xxt2 = xxtSetup(coarseTotal,
-          globalNumbering2,
-          nnz2,
-          rowsA2,
-          colsA2,
-          valsA2,
-          0,
-          iintString,
-          dfloatString);
+			    globalNumbering2,
+			    nnz2,
+			    rowsA2,
+			    colsA2,
+			    valsA2,
+			    0,
+			    iintString,
+			    dfloatString);
 
     // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
     printf("Done UberCoarse setup\n");
