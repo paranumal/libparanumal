@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -434,11 +434,11 @@ extern "C"
                   const char* inttype,
                   const char* floattype);
 
-  int xxtSolve(void* x,
+  void xxtSolve(void* x,
                void* A,
                void* rhs);
 
-  int xxtFree(void* A) ;
+  void xxtFree(void* A) ;
 
   void * amg2013Setup( int Nnum,
                        int *row_starts,     //[numproc+1] global partition array   
@@ -485,7 +485,13 @@ void * almondSetup(uint Nnum,
 
 int almondSolve(void* x,
 		void* A,
-		void* rhs) ;
+		void* rhs,
+    void (*coarseSolve)(void *x, void *A, void *rhs),
+    void *coarseA,
+    int coarseTotal,
+    int coarseOffset) ;
+
+void almondProlongateCoarseProblem(void* almond, int *coarseNp, int *coarseOffsets, void **B);
 
 #endif
 
