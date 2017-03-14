@@ -21,7 +21,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("residualUpdateKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements)
+    if(mesh->pmlNelements){
       mesh->pmlResidualUpdateKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
@@ -38,10 +38,8 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_qYy,
 			    mesh->o_qYnt,
 			    mesh->o_qY);
-    
-    
-
-    if(mesh->nonPmlNelements)
+    }
+    if(mesh->nonPmlNelements){
       mesh->residualUpdateKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -50,6 +48,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_q,
 			 mesh->o_qZ,
 			 mesh->o_qY);
+    }
     
      
     
@@ -171,7 +170,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     //compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements)
+    if(mesh->pmlNelements){
       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->o_vgeo,
@@ -186,10 +185,11 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_qYx,
 			    mesh->o_qYy,
 			    mesh->o_qYnt);
+    }
     
    // compute volume contribution to DG boltzmann RHS
    // added d/dt (ramp(qbar)) to RHS
-    if(mesh->nonPmlNelements)
+    if(mesh->nonPmlNelements){
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -199,6 +199,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_qY);
+    }
     
     
     mesh->device.finish();
@@ -217,7 +218,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
     mesh->device.finish();
     occa::tic("surfaceKernel");
-    
+    if (mesh->pmlNelements){  
     // compute surface contribution to DG boltzmann RHS
     mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
@@ -233,6 +234,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			   mesh->o_q,
 			   mesh->o_qYx,
 			   mesh->o_qYy);
+}
     
     if(mesh->nonPmlNelements)
       mesh->surfaceKernel(mesh->nonPmlNelements,
@@ -257,7 +259,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("updateKernel");
     
     //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
-    if (mesh->pmlNelements)   
+    if (mesh->pmlNelements){   
       mesh->pmlUpdateKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
@@ -276,8 +278,9 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_pmlqy,
 			    mesh->o_pmlNT,
 			    mesh->o_q);
+  }
     
-    if(mesh->nonPmlNelements)
+    if(mesh->nonPmlNelements){
       mesh->updateKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -286,6 +289,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_qY,
 			 mesh->o_qS,
 			 mesh->o_q);
+    }
     
     mesh->device.finish();
     occa::toc("updateKernel");      

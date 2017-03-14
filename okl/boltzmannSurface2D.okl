@@ -38,14 +38,22 @@ void boundaryConditions2D(const iint bc,
     *q5B = q5M;
     *q6B = q6M;
   }
-  if(bc>1){ // wall for non-mean flow
-    *q1B = 2.f*p_q1bar - q1M; 
-    *q2B = 2.f*ramp*p_q2bar - q2M; 
-    *q3B = 2.f*ramp*p_q3bar - q3M; 
-    *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
-    *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
-    *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+  if(bc==2){
+    *q1B = q1M; 
+    *q2B = 1.0/p_sqrtRT;
+    *q3B = 0.0;
+    *q4B = q4M;
+    *q5B = q5M;
+    *q6B = q6M;
   }
+  // if(bc>1){ // wall for non-mean flow
+  //   *q1B = 2.f*p_q1bar - q1M; 
+  //   *q2B = 2.f*ramp*p_q2bar - q2M; 
+  //   *q3B = 2.f*ramp*p_q3bar - q3M; 
+  //   *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+  //   *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+  //   *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+  // }
 }
 
 

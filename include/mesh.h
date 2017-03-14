@@ -159,7 +159,8 @@ typedef struct {
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
-
+  // MRAB,SAAB coefficients
+  dfloat mrab[3], saab[3], saabexp; // exp(-tauInv*dt)
 
   //LS Imex
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
