@@ -159,7 +159,11 @@ void * almondSetup(uint  Nnum,
 
 int almondSolve(void* x,
 		void* A,
-		void* rhs) {
+		void* rhs,
+    void (*coarseSolve)(void *x, void *A, void *rhs),
+    void *coarseA,
+    int coarseTotal,
+    int coarseOffset) {
   
 
   almond_t *almond = (almond_t*) A;
@@ -189,18 +193,20 @@ int almondSolve(void* x,
   }
 
 
-  if(1){
-    almond->M.solve(almond->rhs, almond->x);
+  if(0){
+    almond->M.solve(almond->rhs, almond->x,coarseSolve,coarseA,coarseTotal,coarseOffset);
   }
   else{
     int maxIt = 40;
-    amgFloat tol = 1e-1;
+    amgFloat tol = 1e-2;
     almond::pcg<amgFloat>(almond->A[0],
 			  almond->rhs,
 			  almond->x,
 			  almond->M,
 			  maxIt,
-			  tol);
+			  tol,
+        coarseSolve,coarseA,
+        coarseTotal,coarseOffset);
   }
 
   //scatter
@@ -230,4 +236,69 @@ int almondSolve(void* x,
 
 int almondFree(void* A) {
   return 0;
+}
+
+
+void almondProlongateCoarseProblem(void *ALMOND, int *coarseNp, int *coarseOffsets, void **B) { 
+
+  almond_t *almond = (almond_t*) ALMOND;
+
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size );
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank );
+
+  int numLevels = almond->M.levels.size();
+  
+  //number of coarse basis vectors
+  int localCoarseNp = almond->M.levels[numLevels-1]->A.nrows();
+
+  MPI_Allgather(&localCoarseNp, 1, MPI_INT, coarseNp, 1, MPI_INT, MPI_COMM_WORLD);
+
+  for (iint n=0;n<size;n++) coarseOffsets[n+1] = coarseOffsets[n] + coarseNp[n];
+
+  int coarseTotal = coarseOffsets[size];
+
+  *B = (amgFloat *) calloc(localCoarseNp*almond->Nnum, sizeof(amgFloat));
+
+  //allocate storage for prolanged basis vector at all levels
+  std::vector<amgFloat> *b = (std::vector<amgFloat> *) calloc(numLevels,sizeof(std::vector<amgFloat>));
+  for (int n=0; n<numLevels;n++)
+    b[n].resize(almond->M.levels[n]->A.nrows());
+
+
+
+  for (int k=0;k<localCoarseNp;k++) {
+    //fill coarsest vector
+    for (int n=0;n<localCoarseNp;n++) b[numLevels-1][n] = 0.0;
+    b[numLevels-1][k] = 1.0;
+
+    //prolongate
+    for (int m=numLevels-1;m>0;m--) 
+      almond->M.levels[m-1]->interpolate(b[m], b[m-1]);
+    
+    //scatter
+    for(int n=0;n<almond->numLocalRows;++n){
+      for (iint id = almond->compressId[n];id<almond->compressId[n+1];id++) 
+        almond->xSort[id] = b[0][n]; 
+    }
+
+    //sort by original rank
+    for (int n=0;n<almond->recvNnum;n++) 
+      almond->xUnassembled[almond->globalSortId[n]] = almond->xSort[n];
+
+    //Fake scatter nodes back to their original rank
+    int recvCount = almond->recvCounts[rank]/sizeof(amgFloat);
+    int recvOffset = almond->recvOffsets[rank]/sizeof(amgFloat);
+    int sendOffset = almond->sendOffsets[rank]/sizeof(amgFloat);
+    for (int n=0; n<almond->Nnum; n++) almond->xSort[n] = 0.;
+    for (int n=0; n<recvCount;n++) almond->xSort[n+sendOffset] = almond->xUnassembled[n+recvOffset];
+
+    //sort back to original ordering
+    for (int n=0;n<almond->Nnum;n++) 
+      almond->xUnassembled[almond->sendSortId[n]] = almond->xSort[n];
+    
+    //save
+    for (int n=0;n<almond->Nnum;n++) 
+      ((amgFloat *)*B)[n+k*almond->Nnum] = almond->xUnassembled[n];
+  }
 }

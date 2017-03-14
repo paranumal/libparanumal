@@ -14,7 +14,7 @@ libgs.a: $(OBJECTS)
 
 obj/%.o: src/%.c 
 	mkdir -p obj
-	$(CC) $(CPP) -c $< -o $@
+	$(CC) $(CPP) -g -c $< -o $@
 
 clean:
 	rm -rf obj

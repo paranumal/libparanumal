@@ -276,19 +276,20 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       
       iint Nblock = (mesh->Np*mesh->Nelements+B-1)/B;
-      dfloat *rcoarse = (dfloat*) calloc(size*precon->coarseNp, sizeof(dfloat));
-      dfloat *zcoarse = (dfloat*) calloc(size*precon->coarseNp, sizeof(dfloat));
+      dfloat *rcoarse = (dfloat*) calloc(precon->coarseTotal, sizeof(dfloat));
+      dfloat *zcoarse = (dfloat*) calloc(precon->coarseTotal, sizeof(dfloat));
 
+      /*
       for(iint n=0;n<precon->coarseNp;++n)
-	rcoarse[n+rank*precon->coarseNp] =
+	rcoarse[n+precon->coarseOffsets[rank]] =
 	  ellipticLocalInnerProduct(mesh, Nblock, precon->o_B[n], o_r, precon->o_tmp2, precon->tmp2);
 
       xxtSolve(zcoarse, precon->xxt2, rcoarse);
 
       for(iint n=0;n<precon->coarseNp;++n){
-	ellipticScaledAdd(mesh, zcoarse[n+rank*precon->coarseNp], precon->o_B[n], 1.f, o_z);
+	ellipticScaledAdd(mesh, zcoarse[n+precon->coarseOffsets[rank]], precon->o_B[n], 1.f, o_z);
       }
-      
+      */
       free(rcoarse);
       free(zcoarse);
     }
@@ -314,10 +315,25 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       }
 
       if(strstr(options,"ALMOND")){
-	// should eliminate these copies
-	precon->o_r1.copyTo(precon->r1); 
-	almondSolve(precon->z1, precon->almond, precon->r1);
-	precon->o_z1.copyFrom(precon->z1);
+        if(strstr(options, "UBERGRID")) {
+
+          int size, rank;
+          MPI_Comm_size(MPI_COMM_WORLD, &size);
+          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+          // should eliminate these copies
+          precon->o_r1.copyTo(precon->r1); 
+          almondSolve(precon->z1, precon->almond, precon->r1,
+                      xxtSolve,precon->xxt2,
+                      precon->coarseTotal,
+                      precon->coarseOffsets[rank]);
+          precon->o_z1.copyFrom(precon->z1);
+        } else {
+          // should eliminate these copies
+          precon->o_r1.copyTo(precon->r1); 
+          almondSolve(precon->z1, precon->almond, precon->r1,NULL,NULL,0,0);
+          precon->o_z1.copyFrom(precon->z1);
+        }
       }
 
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
@@ -375,8 +391,8 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
-    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
-    //    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,ALMOND,UBERGRID");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
+    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,ALMOND,UBERGRID");
   
   // set up mesh stuff
   mesh2D *meshSetupQuad2D(char *, iint);
@@ -520,7 +536,7 @@ int main(int argc, char **argv){
 
   occa::tic("PCG");
   
-  do{
+  //do{
 
     diagnostic(Ntotal, o_p, "o_p");
     
@@ -549,7 +565,7 @@ int main(int argc, char **argv){
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
     
-    if(rdotr1 < tol*tol) break;
+    //if(rdotr1 < tol*tol) break;
 
     if(strstr(options,"PCG")){
 
@@ -590,7 +606,7 @@ int main(int argc, char **argv){
 
     ++Niter;
     
-  }while(rdotr0>(tol*tol));
+  //}while(rdotr0>(tol*tol));
 
   occa::toc("PCG");
   

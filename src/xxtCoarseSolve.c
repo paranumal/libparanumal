@@ -100,7 +100,7 @@ void * xxtSetup(uint  numLocalRows,
   return (void *) crsA;
 }
 
-int xxtSolve(void* x,
+void xxtSolve(void* x,
              void* A,
              void* rhs) {
 
@@ -132,11 +132,9 @@ int xxtSolve(void* x,
       xFloat[n] = (float) crsA->x[n];
     }
   }
-
-  return 0;
 }
 
-int xxtFree(void* A) {
+void xxtFree(void* A) {
   crs_t *crsA = (crs_t *) A;
 
   crs_free(crsA->A);
@@ -150,6 +148,4 @@ int xxtFree(void* A) {
   if (!strcmp(crsA->iintType,"int")) { 
     free(crsA->rowIds);
   }
-
-  return 0;
 }
