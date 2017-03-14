@@ -536,7 +536,7 @@ int main(int argc, char **argv){
 
   occa::tic("PCG");
   
-  //do{
+  do{
 
     diagnostic(Ntotal, o_p, "o_p");
     
@@ -565,7 +565,7 @@ int main(int argc, char **argv){
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
     
-    //if(rdotr1 < tol*tol) break;
+    if(rdotr1 < tol*tol) break;
 
     if(strstr(options,"PCG")){
 
@@ -606,7 +606,7 @@ int main(int argc, char **argv){
 
     ++Niter;
     
-  //}while(rdotr0>(tol*tol));
+  }while(rdotr0>(tol*tol));
 
   occa::toc("PCG");
   
