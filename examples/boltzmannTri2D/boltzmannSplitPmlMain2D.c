@@ -31,6 +31,7 @@ int main(int argc, char **argv){
   printf("occa run: \n");
 
   void boltzmannSplitPmlRun2D(mesh2D *mesh);
+  
   boltzmannSplitPmlRun2D(mesh);
 
   // close down MPI
