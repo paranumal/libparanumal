@@ -158,6 +158,8 @@ typedef struct {
   dfloat rka[5], rkb[5], rkc[6];
   // MRAB,SAAB coefficients
   dfloat mrab[3], saab[3], saabexp; // exp(-tauInv*dt)
+  // SARK extra coefficients for Boltzmann Solver
+  dfloat sarka[5], sarkb[5], sarke[5]; // exponential update terms, better to hold
 
   //LS Imex
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];

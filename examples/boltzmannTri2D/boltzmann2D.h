@@ -28,6 +28,10 @@ void boltzmannSplitPmlMrabStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 void boltzmannSplitPmlSaabStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer);
 
+// execute one Boltzmann time step using LSERK4
+void boltzmannSplitPmlSarkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer);
+
 
 // output run statistics for Boltzmann simulation
 void boltzmannReport2D(mesh2D *mesh, iint tstep);
