@@ -14,8 +14,8 @@ CC	= mpic++
 LD	= mpic++
 
 
-TIME_METHOD  = SAAB
-CUBATURE_USE = 1
+TIME_METHOD  = SARK
+CUBATURE_USE = 0
 
 
 #LSERK TIME DISCRETIZATION
@@ -23,8 +23,7 @@ flags += -DLSERK=1
 flags += -DSAAB=2
 flags += -DLSIMEX=3
 flags += -DMRAB=4
-flags += -DSAERK=5
-flags += -DSALSERK=6
+flags += -DSARK=5
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
@@ -42,15 +41,9 @@ ifeq ($(TIME_METHOD), SAAB)
  flags += -DTIME_DISC=SAAB
 endif
 
-ifeq ($(TIME_METHOD), SAERK)
- flags += -DTIME_DISC=SAERK
+ifeq ($(TIME_METHOD), SARK)
+ flags += -DTIME_DISC=SARK
 endif
-
-ifeq ($(TIME_METHOD), SALSERK)
- flags += -DTIME_DISC=SALSERK
-endif
-
-
 
 ifeq ($(CUBATURE_USE), 1)
 flags += -DCUBATURE_ENABLED=1
@@ -90,6 +83,7 @@ boltzmannSplitPmlLserkStep2D.o \
 boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
+boltzmannSplitPmlSarkStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 ../../src/meshParallelReaderTri2D.o \

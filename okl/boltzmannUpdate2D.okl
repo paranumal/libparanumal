@@ -88,6 +88,59 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
   }
 }
 
+kernel void boltzmannSARKUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat rka,
+            const dfloat erka,
+            const dfloat rkb,
+            const dfloat erkb,
+            const dfloat4 * restrict rhsq,
+                  dfloat4 * restrict resq,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 2*(n + element*p_Np);
+
+      dfloat4 resqa = resq[base+0];
+      dfloat4 resqb = resq[base+1];
+
+      dfloat4 rhsqa = rhsq[base+0];
+      dfloat4 rhsqb = rhsq[base+1];
+
+      dfloat4 qa = q[base+0];
+      dfloat4 qb = q[base+1];
+      //
+      resqa.x = rka*resqa.x + dt*rhsqa.x; 
+      resqa.y = rka*resqa.y + dt*rhsqa.y; 
+      resqa.z = rka*resqa.z + dt*rhsqa.z; 
+      //
+      resqa.w = erka*resqa.w + dt*rhsqa.w; 
+      resqb.x = erka*resqb.x + dt*rhsqb.x; 
+      resqb.y = erka*resqb.y + dt*rhsqb.y; 
+      //
+      qa.x  += rkb*resqa.x;
+      qa.y  += rkb*resqa.y;
+      qa.z  += rkb*resqa.z;
+      //
+      qa.w  = expdt*qa.w  + erkb*resqa.w;
+      qb.x  = expdt*qb.x  + erkb*resqb.x;
+      qb.y  = expdt*qb.y  + erkb*resqb.y;
+      //
+      resq[base+0] = resqa;
+      resq[base+1] = resqb;
+      
+      q[base+0] = qa;
+      q[base+1] = qb;
+
+    }
+  }
+}
+
 
 
 kernel void boltzmannSAABUpdate2D(const iint Nelements,

@@ -634,7 +634,7 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 }
 
 
-kernel void boltzmannSAABVolume2D(const iint Nelements,
+kernel void boltzmannSAVolume2D(const iint Nelements,
 				    const iint * restrict elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
@@ -769,7 +769,7 @@ kernel void boltzmannSAABVolume2D(const iint Nelements,
 }
 
 
-kernel void boltzmannSAABSplitPmlVolume2D(const iint Nelements,
+kernel void boltzmannSASplitPmlVolume2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
 				      const dfloat * restrict vgeo,
@@ -976,7 +976,7 @@ kernel void boltzmannSAABSplitPmlVolume2D(const iint Nelements,
 
 
 
-kernel void boltzmannSAABSplitPmlVolumeCub2D(const iint Nelements,
+kernel void boltzmannSASplitPmlVolumeCub2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      dfloat ramp,
 				      const dfloat * restrict vgeo,

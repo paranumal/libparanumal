@@ -234,7 +234,7 @@ kernel void boltzmannSplitPmlRelaxationCub2D(const iint Nelements,
 
 
 
-kernel void boltzmannSAABRelaxationCub2D(const iint Nelements,
+kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
@@ -341,7 +341,7 @@ kernel void boltzmannSAABRelaxationCub2D(const iint Nelements,
 
 
 
-kernel void boltzmannSAABSplitPmlRelaxationCub2D(const iint Nelements,
+kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat ramp,
 					     const dfloat * restrict cubInterpT,
