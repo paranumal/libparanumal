@@ -6,6 +6,9 @@ void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 
   *u = 0;
   *v = 0;
-  *p = exp(-30*(x*x+y*y));
+  dfloat x0 = x - 0.;
+  dfloat y0 = y - 0.2;
+
+  *p = exp(-30*(x0*x0+y0*y0));
 
 }

@@ -389,6 +389,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
   mesh->NMax = N;
   mesh->NpMax = mesh->Np[N];
   mesh->NfpMax = mesh->Nfp[N];
+  mesh->cubNpMax = mesh->cubNp[N];
 }
 
 

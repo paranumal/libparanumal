@@ -174,14 +174,13 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-  fgets(buf, BUFSIZ, fp); // read comment  
-
   
   mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->cubNp*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->cubProject+n);
   }
+  fgets(buf, BUFSIZ, fp); // read comment  
 
   //-------------Berstein Bezier DG stuff added by NC--------------------//
   mesh->VB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -189,6 +188,8 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->Np*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->VB+n);
   }
+
+
   fgets(buf, BUFSIZ, fp); 
   
   mesh->invVB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));

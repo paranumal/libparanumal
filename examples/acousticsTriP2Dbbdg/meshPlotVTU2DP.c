@@ -31,12 +31,24 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
   
   // compute plot node coordinates on the fly
   for(iint e=0;e<mesh->Nelements;++e){
+    iint id = e*mesh->Nverts;
+
+    dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+    dfloat xe2 = mesh->EX[id+1];
+    dfloat xe3 = mesh->EX[id+2];
+
+    dfloat ye1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+    dfloat ye2 = mesh->EY[id+1];
+    dfloat ye3 = mesh->EY[id+2];
+
     for(iint n=0;n<mesh->plotNp[NMax];++n){
-      dfloat plotxn = 0, plotyn = 0;
-      for(iint m=0;m<mesh->NpMax;++m){
-      	plotxn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->x[m+e*mesh->NpMax];
-      	plotyn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*mesh->y[m+e*mesh->NpMax];
-      }
+      /* (r,s) coordinates of plot nodes*/
+      dfloat rn = mesh->plotR[NMax][n]; 
+      dfloat sn = mesh->plotS[NMax][n];
+
+      /* physical coordinate of plot node */
+      dfloat plotxn = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      dfloat plotyn = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
 
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotxn,plotyn,0.);

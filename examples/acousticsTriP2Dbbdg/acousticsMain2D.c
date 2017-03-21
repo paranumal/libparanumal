@@ -2,31 +2,31 @@
 
 int main(int argc, char **argv){
 
-    // start up MPI
-    MPI_Init(&argc, &argv);
+  // start up MPI
+  MPI_Init(&argc, &argv);
 
-    if(argc!=3){
-        // to run cavity test case with degree N elements
-        printf("usage: ./main meshes/cavityH005.msh N\n");
-        exit(-1);
-    }
+  if(argc!=3){
+      // to run cavity test case with degree N elements
+      printf("usage: ./main meshes/cavityH005.msh N\n");
+      exit(-1);
+  }
 
-    // int specify polynomial degree 
-    int N = atoi(argv[2]);
+  // int specify polynomial degree 
+  int N = atoi(argv[2]);
 
-    // set up mesh stuff
-    mesh2D *mesh = meshSetupTriP2D(argv[1], N);
+  // set up mesh stuff
+  mesh2D *mesh = meshSetupTriP2D(argv[1], N);
 
-    // set up acoustics stuff
-    acousticsSetup2D(mesh);
-    
-    // run
-    //acousticsRun2Dbbdg(mesh);
-    acousticsOccaRun2Dbbdg(mesh);
+  // set up acoustics stuff
+  acousticsSetup2D(mesh);
+  
+  // run
+  //acousticsRun2Dbbdg(mesh);
+  acousticsOccaRun2Dbbdg(mesh);
 
-    // close down MPI
-    MPI_Finalize();
+  // close down MPI
+  MPI_Finalize();
 
-    exit(0);
-    return 0;
+  exit(0);
+  return 0;
 }

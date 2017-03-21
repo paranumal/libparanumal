@@ -7,6 +7,7 @@
 #include "mesh2D.h"
 
 #define USE_BERN 1
+#define WADG 1
 
 void acousticsSetup2D(mesh2D *mesh);
 
@@ -21,6 +22,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh);
 void acousticsVolume2D(mesh2D *mesh);
 void acousticsSurface2D(mesh2D *mesh, dfloat t);
 void acousticsUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
+void acousticsUpdate2D_wadg(mesh2D *mesh, dfloat rka, dfloat rkb);	
 
 void acousticsVolume2Dbbdg(mesh2D *mesh);
 void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t);
