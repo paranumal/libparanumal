@@ -48,7 +48,11 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       acousticsSurface3Dbbdg(mesh, time);
 
       // update solution using LSERK4
-      acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #if WADG
+        acousticsUpdate3D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else       
+        acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     }
     
     // estimate maximum error
@@ -192,15 +196,33 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                   mesh->o_rhsq);
       }
       
-      // update solution using Runge-Kutta
-      mesh->updateKernel(mesh->Nelements*mesh->NpMax*mesh->Nfields,
-       mesh->dt,
-       mesh->rka[rk],
-       mesh->rkb[rk],
-       mesh->o_rhsq,
-       mesh->o_resq,
-       mesh->o_q);
-      
+      for (iint p=1;p<=mesh->NMax;p++) {
+        // update solution using Runge-Kutta
+        if (mesh->NelOrder[p]) {
+          #if WADG
+            mesh->updateKernel[p](mesh->NelOrder[p],
+                  mesh->o_NelList[p],
+                  mesh->dt,
+                  mesh->rka[rk],
+                  mesh->rkb[rk],
+                  mesh->o_cubInterpT[p],
+                  mesh->o_cubProjectT[p],
+                  mesh->o_c2,
+                  mesh->o_rhsq,
+                  mesh->o_resq,
+                  mesh->o_q);     
+          #else
+            mesh->updateKernel[p](mesh->NelOrder[p],
+                  mesh->o_NelList[p],
+                  mesh->dt,
+                  mesh->rka[rk],
+                  mesh->rkb[rk],
+                  mesh->o_rhsq,
+                  mesh->o_resq,
+                  mesh->o_q);     
+          #endif
+        }
+      }     
     }
     
     // estimate maximum error

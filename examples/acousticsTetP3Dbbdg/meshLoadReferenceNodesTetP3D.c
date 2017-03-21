@@ -179,6 +179,7 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read number of cubature points
     sscanf(buf, iintFormat, mesh->cubNp+nn);
+    printf("cubNp[%d] = %d \n", nn, mesh->cubNp[nn]);
       
     mesh->cubr[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
     mesh->cubs[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
@@ -216,7 +217,6 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
       fgets(buf,BUFSIZ,fp); // rest of line
     }
 
-
      // read cubature weak 's' differentiation matrix
     mesh->cubDtW[nn] = (dfloat*) calloc(mesh->cubNp[nn]*mesh->Np[nn], sizeof(dfloat));
     fgets(buf, BUFSIZ, fp); // read comment
@@ -226,14 +226,13 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
       }
       fgets(buf,BUFSIZ,fp); // rest of line
     }
-    fgets(buf, BUFSIZ, fp); // read comment  
-
     
     mesh->cubProject[nn] = (dfloat*) calloc(mesh->cubNp[nn]*mesh->Np[nn], sizeof(dfloat));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->cubNp[nn]*mesh->Np[nn];++n){
       fscanf(fp, dfloatFormat, mesh->cubProject[nn]+n);
     }
+    fgets(buf, BUFSIZ, fp); 
 
     //-------------Berstein Bezier DG stuff added by NC--------------------//
     mesh->VB[nn] = (dfloat*) calloc(mesh->Np[nn]*mesh->Np[nn], sizeof(dfloat));
@@ -408,4 +407,5 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
   mesh->NMax = N;
   mesh->NpMax = mesh->Np[N];
   mesh->NfpMax = mesh->Nfp[N];  
+  mesh->cubNpMax = mesh->cubNp[N];  
 }

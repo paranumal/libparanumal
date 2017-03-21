@@ -28,18 +28,27 @@ void acousticsRun3D(mesh3D *mesh){
       acousticsSurface3D(mesh, time);
 
       // update solution using LSERK4
-      acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #if WADG
+        acousticsUpdate3D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else
+        acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     }
     
     // estimate maximum error
-    if((tstep%mesh->errorStep)==0)
+    if((tstep%mesh->errorStep)==0) {
       acousticsError3D(mesh, mesh->dt*(tstep+1));
+
+      // output field files
+      iint fld = 3;
+      meshPlotVTU3D(mesh, "foo", fld);
+    }
   }
 
   // output field files
   iint fld = 3;
   meshPlotVTU3D(mesh, "foo", fld);
-
+  
   free(sendBuffer);
 }
 
@@ -71,7 +80,11 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       acousticsSurface3Dbbdg(mesh, time);
 
       // update solution using LSERK4
-      acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #if WADG
+        acousticsUpdate3D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else
+        acousticsUpdate3D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     }
     
     // estimate maximum error
@@ -205,14 +218,26 @@ void acousticsOccaRun3D(mesh3D *mesh){
 			  mesh->o_rhsq);
       
       // update solution using Runge-Kutta
-      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-			 mesh->dt,
-			 mesh->rka[rk],
-			 mesh->rkb[rk],
-			 mesh->o_rhsq,
-			 mesh->o_resq,
-			 mesh->o_q);
-      
+      #if WADG
+        mesh->updateKernel(mesh->Nelements,
+         mesh->dt,
+         mesh->rka[rk],
+         mesh->rkb[rk],
+         mesh->o_cubInterpT,
+         mesh->o_cubProjectT,
+         mesh->o_c2,
+         mesh->o_rhsq,
+         mesh->o_resq,
+         mesh->o_q);
+      #else
+        mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+  			 mesh->dt,
+  			 mesh->rka[rk],
+  			 mesh->rkb[rk],
+  			 mesh->o_rhsq,
+  			 mesh->o_resq,
+  			 mesh->o_q);
+      #endif
     }
     
     // estimate maximum error
@@ -306,13 +331,26 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
         mesh->o_rhsq);
       
       // update solution using Runge-Kutta
-      mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
-       mesh->dt,
-       mesh->rka[rk],
-       mesh->rkb[rk],
-       mesh->o_rhsq,
-       mesh->o_resq,
-       mesh->o_q);
+      #if WADG
+        mesh->updateKernel(mesh->Nelements,
+         mesh->dt,
+         mesh->rka[rk],
+         mesh->rkb[rk],
+         mesh->o_cubInterpT,
+         mesh->o_cubProjectT,
+         mesh->o_c2,
+         mesh->o_rhsq,
+         mesh->o_resq,
+         mesh->o_q);
+      #else
+        mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+         mesh->dt,
+         mesh->rka[rk],
+         mesh->rkb[rk],
+         mesh->o_rhsq,
+         mesh->o_resq,
+         mesh->o_q);
+      #endif
       
     }
     
