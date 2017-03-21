@@ -1,0 +1,1001 @@
+
+kernel void acousticsUpdate2D_o1(const iint Nelements,
+            const iint * restrict Elements,
+			      const dfloat dt,	
+			      const dfloat rka,
+			      const dfloat rkb,
+			      const dfloat * restrict rhsq,
+			      dfloat * restrict resq,
+			      dfloat * restrict q){
+				  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<3;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o2(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<6;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o3(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<10;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o4(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<15;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o5(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<21;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o6(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<28;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o7(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<36;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o8(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<45;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_o9(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<55;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_10(const iint Nelements,
+            const iint * restrict Elements,
+            const dfloat dt,  
+            const dfloat rka,
+            const dfloat rkb,
+            const dfloat * restrict rhsq,
+            dfloat * restrict resq,
+            dfloat * restrict q){
+          
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<66;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
+        dfloat resqn = resq[id+fld];
+        resqn = rka*resqn + dt*rhsq[id+fld];
+        resq[id+fld] = resqn;
+        q[id+fld] += rkb*resqn;
+      }
+    }
+  }
+}
+
+
+kernel void acousticsUpdate2D_wadg_o1(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp1];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp1; ++n; inner0){  
+      if (n < 3){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp1;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<3;++i){
+        val += cubInterp[n + i*p_cubNp1] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp1;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp1;++n;inner0){
+      if (n < 3){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp1;++i){
+          rhsp += cubProject[n + i*3] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o2(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp2];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp2; ++n; inner0){  
+      if (n < 6){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp2;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<6;++i){
+        val += cubInterp[n + i*p_cubNp2] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp2;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp2;++n;inner0){
+      if (n < 6){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp2;++i){
+          rhsp += cubProject[n + i*6] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o3(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp3];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp3; ++n; inner0){  
+      if (n < 10){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp3;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<10;++i){
+        val += cubInterp[n + i*p_cubNp3] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp3;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp3;++n;inner0){
+      if (n < 10){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp3;++i){
+          rhsp += cubProject[n + i*10] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o4(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp4];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp4; ++n; inner0){  
+      if (n < 15){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp4;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<15;++i){
+        val += cubInterp[n + i*p_cubNp4] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp4;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp4;++n;inner0){
+      if (n < 15){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp4;++i){
+          rhsp += cubProject[n + i*15] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o5(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp5];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp5; ++n; inner0){  
+      if (n < 21){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp5;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<21;++i){
+        val += cubInterp[n + i*p_cubNp5] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp5;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp5;++n;inner0){
+      if (n < 21){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp5;++i){
+          rhsp += cubProject[n + i*21] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o6(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp6];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp6; ++n; inner0){  
+      if (n < 28){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp6;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<28;++i){
+        val += cubInterp[n + i*p_cubNp6] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp6;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp6;++n;inner0){
+      if (n < 28){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp6;++i){
+          rhsp += cubProject[n + i*28] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o7(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp7];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp7; ++n; inner0){  
+      if (n < 36){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp7;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<36;++i){
+        val += cubInterp[n + i*p_cubNp7] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp7;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp7;++n;inner0){
+      if (n < 36){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp7;++i){
+          rhsp += cubProject[n + i*36] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o8(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp8];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp8; ++n; inner0){  
+      if (n < 45){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp8;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<45;++i){
+        val += cubInterp[n + i*p_cubNp8] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp8;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp8;++n;inner0){
+      if (n < 45){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp8;++i){
+          rhsp += cubProject[n + i*45] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_o9(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp9];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp9; ++n; inner0){  
+      if (n < 45){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp9;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<45;++i){
+        val += cubInterp[n + i*p_cubNp9] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp9;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp9;++n;inner0){
+      if (n < 45){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp9;++i){
+          rhsp += cubProject[n + i*45] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}
+
+kernel void acousticsUpdate2D_wadg_10(const iint Nelements,
+           const iint * restrict Elements,
+           const dfloat dt, 
+           const dfloat rka,
+           const dfloat rkb,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const dfloat * restrict rhsq,
+           dfloat * restrict resq,
+           dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_p[p_cubNp10];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_cubNp10; ++n; inner0){  
+      if (n < 55){
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        s_p[n] = rhsq[id + 2]; // extract pressure rhs
+      }
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_cubNp10;++n;inner0){
+      // Prefetch value of c2
+      const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
+      
+      dfloat val = 0.f;
+      for (int i=0;i<55;++i){
+        val += cubInterp[n + i*p_cubNp10] * s_p[i];
+      }
+
+      // Multiply result by wavespeed c2 at cubature node
+      r_p = val * c2n;
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_cubNp10;++n;inner0){
+      s_p[n] = r_p;
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_cubNp10;++n;inner0){
+      if (n < 55){
+        // Extract velocity rhs
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[id + 0];
+        rhsqn[1] = rhsq[id + 1];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp10;++i){
+          rhsp += cubProject[n + i*55] * s_p[i];
+        }
+        //rhsqn[2] = rhsq[id + 2];
+        rhsqn[2] = rhsp;
+
+        // Increment solutions
+        for (int fld = 0; fld < p_Nfields; ++fld){ 
+          dfloat resqn = resq[id + fld];
+          resqn = rka*resqn + dt*rhsqn[fld];
+          resq[id + fld] = resqn;
+          q[id + fld] += rkb*resqn;
+        }
+      }      
+    }
+  }
+}

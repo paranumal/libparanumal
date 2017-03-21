@@ -305,7 +305,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 #endif
   // =============== end Bernstein-Bezier section [added by JC] ============  
 
-
+  
   
   //-------------------------------------
   // NBN: 2 streams for async MPI updates

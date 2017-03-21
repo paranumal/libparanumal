@@ -27,7 +27,7 @@ void acousticsSetup3D(mesh3D *mesh){
       dfloat z = mesh->z[n + mesh->NpMax*e];
       
       iint cnt = e*mesh->NpMax*mesh->Nfields + n*mesh->Nfields;
-      acousticsCavitySolution3D(x, y, z, time,
+      acousticsGaussianPulse3D(x, y, z, time,
 				mesh->q+cnt,
 				mesh->q+cnt+1,
 				mesh->q+cnt+2,
@@ -104,7 +104,7 @@ void acousticsSetup3D(mesh3D *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = .1;
+  mesh->finalTime = .5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -122,9 +122,9 @@ void acousticsSetup3D(mesh3D *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
 
   occa::kernelInfo kernelInfo;
 
@@ -146,6 +146,12 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->o_BBLower     = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
   mesh->o_BBRaiseids  = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
   mesh->o_BBRaiseVals = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+
+  mesh->o_cubInterpT = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+  mesh->o_cubProjectT = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+  mesh->o_cubDrWT = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+  mesh->o_cubDsWT = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+  mesh->o_cubDtWT = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
 
   iint NMax = mesh->NMax;
 
@@ -210,6 +216,61 @@ void acousticsSetup3D(mesh3D *mesh){
       }
     }
 
+    //Change cubature Interp and Project matrices
+    for (iint n=0;n<mesh->cubNp[nn];n++) {
+      dfloat r = mesh->cubr[nn][n];
+      dfloat s = mesh->cubs[nn][n];
+      dfloat t = mesh->cubt[nn][n];
+
+      dfloat l0 = -0.5*(1.+r+s+t); dfloat l1 = 0.5*(1.+r); dfloat l2 = 0.5*(1.+s); dfloat l3 = 0.5*(1.+t);
+      
+      iint cnt = 0;
+      for (iint i=0;i<=nn;i++){
+        for (iint j=0;j<=nn-i;j++){
+          for (iint k=0;k<=nn-i-j;k++){
+            mesh->cubInterp[nn][n*mesh->Np[nn]+cnt] = ((dfloat) factorial(nn)/(factorial(i)*factorial(j)
+                                            *factorial(k)*factorial(nn-i-j-k)))
+                                            *pow(l0,nn-i-j-k)*pow(l1,k)*pow(l2,j)*pow(l3,i);
+            cnt++;
+          }
+        }
+      }
+    }
+
+    dfloat S[mesh->Np[nn]*mesh->cubNp[nn]];
+    for (iint n=0;n<mesh->Np[nn];n++) {
+      for (iint m =0;m<mesh->cubNp[nn];m++) {
+        S[n*mesh->cubNp[nn] + m] = mesh->cubProject[nn][n*mesh->cubNp[nn] + m];
+      }
+    }
+    for (iint n=0;n<mesh->Np[nn];n++) {
+      for (iint m =0;m<mesh->cubNp[nn];m++) {
+        mesh->cubProject[nn][n*mesh->cubNp[nn] + m] = 0.;
+        for (iint i =0;i<mesh->Np[nn];i++)
+          mesh->cubProject[nn][n*mesh->cubNp[nn]+m] 
+            += mesh->invVB[nn][n*mesh->Np[nn] + i]*S[i*mesh->cubNp[nn]+m];
+      }
+    }
+
+    // build volume cubature matrix transposes
+    iint cubNpBlocked = mesh->Np[nn]*((mesh->cubNp[nn]+mesh->Np[nn]-1)/mesh->Np[nn]);
+    dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np[nn], sizeof(dfloat));
+    dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np[nn], sizeof(dfloat));
+    dfloat *cubDtWT = (dfloat*) calloc(cubNpBlocked*mesh->Np[nn], sizeof(dfloat));
+    dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp[nn]*mesh->Np[nn], sizeof(dfloat));
+    dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp[nn]*mesh->Np[nn], sizeof(dfloat));
+    for(iint n=0;n<mesh->Np[nn];++n){
+      for(iint m=0;m<mesh->cubNp[nn];++m){
+        cubDrWT[n+m*mesh->Np[nn]] = mesh->cubDrW[nn][n*mesh->cubNp[nn]+m];
+        cubDsWT[n+m*mesh->Np[nn]] = mesh->cubDsW[nn][n*mesh->cubNp[nn]+m];
+        cubDtWT[n+m*mesh->Np[nn]] = mesh->cubDtW[nn][n*mesh->cubNp[nn]+m];
+
+        cubProjectT[n+m*mesh->Np[nn]] = mesh->cubProject[nn][n*mesh->cubNp[nn]+m];
+        cubInterpT[m+n*mesh->cubNp[nn]] = mesh->cubInterp[nn][m*mesh->Np[nn]+n];
+        //      printf("%g @ ", cubInterpT[m+n*mesh->cubNp]);
+      }
+    }
+
     mesh->o_NelList[nn] = mesh->device.malloc(mesh->NelOrder[nn]*sizeof(iint), mesh->NelList[nn]);
 
     mesh->o_D0ids[nn] = mesh->device.malloc(mesh->Np[nn]*4*sizeof(iint),D0ids);
@@ -227,10 +288,68 @@ void acousticsSetup3D(mesh3D *mesh){
     mesh->o_BBLower[nn]     = mesh->device.malloc(mesh->Nfp[nn]*NfpPlusOne*sizeof(dfloat),mesh->BBLower[nn]);
     mesh->o_BBRaiseids[nn]  = mesh->device.malloc(mesh->Nfp[nn]*3*sizeof(iint),mesh->BBRaiseids[nn]);
     mesh->o_BBRaiseVals[nn] = mesh->device.malloc(mesh->Nfp[nn]*3*sizeof(dfloat),mesh->BBRaiseVals[nn]);
+
+    mesh->o_cubInterpT[nn]  = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubInterpT);
+    mesh->o_cubProjectT[nn] = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubProjectT);
+    mesh->o_cubDrWT[nn] = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubDrWT);
+    mesh->o_cubDsWT[nn] = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubDsWT);
+    mesh->o_cubDtWT[nn] = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubDtWT);
+
     
     free(D0ids); free(D1ids); free(D2ids); free(D3ids); free(Dvals);
     free(L0ids); free(L0vals); free(ELids); free(ELvals);
   }
+
+  #if WADG
+    // set heterogeneous c^2 for WADG
+    mesh->c2 = (dfloat*) calloc(mesh->Nelements*mesh->cubNpMax,sizeof(dfloat));
+
+    for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+      
+      iint id = e*mesh->Nverts+0;
+      
+      dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+      dfloat xe2 = mesh->EX[id+1];
+      dfloat xe3 = mesh->EX[id+2];
+      dfloat xe4 = mesh->EX[id+3];
+      
+      dfloat ye1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+      dfloat ye2 = mesh->EY[id+1];
+      dfloat ye3 = mesh->EY[id+2];
+      dfloat ye4 = mesh->EY[id+3];
+
+      dfloat ze1 = mesh->EZ[id+0]; /* y-coordinates of vertices */
+      dfloat ze2 = mesh->EZ[id+1];
+      dfloat ze3 = mesh->EZ[id+2];
+      dfloat ze4 = mesh->EZ[id+3];
+      
+      iint N = mesh->N[e];
+
+      for(iint n=0;n<mesh->cubNp[N];++n){ /* for each node */
+        
+        // cubature node coordinates
+        dfloat rn = mesh->cubr[N][n]; 
+        dfloat sn = mesh->cubs[N][n];
+        dfloat tn = mesh->cubt[N][n];
+
+        /* physical coordinate of interpolation node */
+        dfloat x = -0.5*(rn+sn+tn+1.)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3 + 0.5*(1+tn)*xe4 ;
+        dfloat y = -0.5*(rn+sn+tn+1.)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4 ;
+        dfloat z = -0.5*(rn+sn+tn+1.)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4 ;
+        
+        // smoothly varying (sinusoidal) wavespeed
+        //printf("M_PI = %f\n",M_PI);
+        if (z<0.f) {
+          mesh->c2[n + mesh->cubNpMax*e] = 0.2;//1.0 + 0.5*sin(M_PI*y);
+        } else {
+          mesh->c2[n + mesh->cubNpMax*e] = 1.0;
+        }
+      }
+    }
+
+    mesh->o_c2 = mesh->device.malloc(mesh->Nelements*mesh->cubNpMax*sizeof(dfloat),
+         mesh->c2);
+  #endif
 
   mesh->o_N = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint), mesh->N);  
 
@@ -312,6 +431,7 @@ void acousticsSetup3D(mesh3D *mesh){
   kernelInfo.addDefine("p_Nq", mesh->NMax+1);
   kernelInfo.addDefine("p_NpMax", mesh->NpMax);
   kernelInfo.addDefine("p_NfpMax", mesh->NfpMax);
+  kernelInfo.addDefine("p_cubNpMax",mesh->cubNpMax);
   kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
   kernelInfo.addDefine("p_NfacesNfp", mesh->NfpMax*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
@@ -356,10 +476,12 @@ void acousticsSetup3D(mesh3D *mesh){
   char p_maxNodesName[BUFSIZ];
   char p_NblockVName[BUFSIZ];
   char p_NblockSName[BUFSIZ];
+  char p_cubNpName[BUFSIZ];
   for (iint p=1;p<=mesh->NMax;p++) {
     sprintf(p_maxNodesName, "p_maxNodes_o%d", p);
     sprintf(p_NblockVName, "p_NblockV_o%d", p);
     sprintf(p_NblockSName, "p_NblockS_o%d", p);
+    sprintf(p_cubNpName, "p_cubNp%d", p);
 
     int maxNodes = mymax(mesh->Np[p], (mesh->Nfp[p]*mesh->Nfaces));
     kernelInfo.addDefine(p_maxNodesName, maxNodes);
@@ -369,11 +491,14 @@ void acousticsSetup3D(mesh3D *mesh){
 
     int NblockS = 512/maxNodes; // works for CUDA
     kernelInfo.addDefine(p_NblockSName, NblockS);
+
+    kernelInfo.addDefine(p_cubNpName, mesh->cubNp[p]);
   }
   for (iint p=mesh->NMax+1;p<=8;p++) {
     sprintf(p_maxNodesName, "p_maxNodes_o%d", p);
     sprintf(p_NblockVName, "p_NblockV_o%d", p);
     sprintf(p_NblockSName, "p_NblockS_o%d", p);
+    sprintf(p_cubNpName, "p_cubNp%d", p);
 
     int maxNodes = mymax(mesh->Np[mesh->NMax], (mesh->Nfp[mesh->NMax]*mesh->Nfaces));
     kernelInfo.addDefine(p_maxNodesName, maxNodes);
@@ -383,6 +508,8 @@ void acousticsSetup3D(mesh3D *mesh){
 
     int NblockS = 512/maxNodes; // works for CUDA
     kernelInfo.addDefine(p_NblockSName, NblockS);
+
+    kernelInfo.addDefine(p_cubNpName, mesh->cubNpMax);
   }
   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
@@ -413,13 +540,21 @@ void acousticsSetup3D(mesh3D *mesh){
 
   mesh->volumeKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->surfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->updateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   
   char volumekernelName[BUFSIZ];
   char surfacekernelName[BUFSIZ];
+  char updatekernelName[BUFSIZ];
 
   for (iint p =1;p<=mesh->NMax;p++){
     sprintf(volumekernelName, "acousticsVolume3Dbbdg_o%d", p);
     sprintf(surfacekernelName, "acousticsSurface3Dbbdg_o%d", p);
+
+    #if WADG
+      sprintf(updatekernelName, "acousticsUpdate3D_wadg_o%d", p);
+    #else
+      sprintf(updatekernelName, "acousticsUpdate3D_o%d", p);
+    #endif
 
     mesh->volumeKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolumeP3D.okl",
@@ -430,16 +565,15 @@ void acousticsSetup3D(mesh3D *mesh){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurfaceP3D.okl",
                  surfacekernelName,
                  kernelInfo);
-  }
 
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate3D.okl",
-				       "acousticsUpdate3D",
-				       kernelInfo);
+    mesh->updateKernel[p] =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdateP3D.okl",
+               updatekernelName,
+               kernelInfo);
+  }
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
-
 }

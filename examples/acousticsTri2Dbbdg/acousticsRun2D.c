@@ -41,7 +41,11 @@ void acousticsRun2D(mesh2D *mesh){
       acousticsSurface2D(mesh, t);
       
       // update solution using Euler Forward
-      acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #if WADG
+        acousticsUpdate2D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else       
+        acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     }
     
     // estimate maximum error
@@ -100,7 +104,11 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       acousticsSurface2Dbbdg(mesh, t);
       
       // update solution using Euler Forward
-      acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #if WADG
+        acousticsUpdate2D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else       
+        acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     } 
     
     // estimate maximum error
@@ -224,15 +232,28 @@ void acousticsOccaRun2D(mesh2D *mesh){
                   mesh->o_y,
                   mesh->o_q,
                   mesh->o_rhsq);
-    
+
         // update solution using Runge-Kutta
-        mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+        #if WADG
+          mesh->updateKernel(mesh->Nelements,
+                mesh->dt,
+                mesh->rka[rk],
+                mesh->rkb[rk],
+                mesh->o_cubInterpT,
+                mesh->o_cubProjectT,
+                mesh->o_c2,
+                mesh->o_rhsq,
+                mesh->o_resq,
+                mesh->o_q);     
+        #else
+          mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
                 mesh->dt,
                 mesh->rka[rk],
                 mesh->rkb[rk],
                 mesh->o_rhsq,
                 mesh->o_resq,
                 mesh->o_q);     
+        #endif
     }
 
     // estimate maximum error
@@ -324,13 +345,26 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                   mesh->o_rhsq);
     
         // update solution using Runge-Kutta
-        mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
+        #if WADG
+          mesh->updateKernel(mesh->Nelements,
+                mesh->dt,
+                mesh->rka[rk],
+                mesh->rkb[rk],
+                mesh->o_cubInterpT,
+                mesh->o_cubProjectT,
+                mesh->o_c2,
+                mesh->o_rhsq,
+                mesh->o_resq,
+                mesh->o_q);     
+        #else
+          mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
                 mesh->dt,
                 mesh->rka[rk],
                 mesh->rkb[rk],
                 mesh->o_rhsq,
                 mesh->o_resq,
                 mesh->o_q);     
+        #endif
     }
 
     // estimate maximum error

@@ -465,23 +465,19 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(uint Nnum,
-       int  *rowStarts,
-		   void* rowIds,
-		   uint  nnz, 
-		   void* Ai,
-		   void* Aj,
-		   void* Avals,
-       int    *sendSortId, 
-       int    *globalSortId, 
-       int    *compressId,
-       int    *sendCounts, 
-       int    *sendOffsets, 
-       int    *recvCounts, 
-       int    *recvOffsets,
-		   int   nullSpace,
-		   const char* iintType, 
-		   const char* dfloatType) ;
+void * almondSetup(int  Nnum,
+       int numLocalRows,
+       uint  nnz, 
+       void* Ai,
+       void* Aj,
+       void* Avals,
+       int*  sortId,
+       int*  compressId,
+       void* gsh,
+       void*  overlapDegreeInv,
+       int   nullSpace,
+       const char* iintType, 
+       const char* dfloatType) ;
 
 int almondSolve(void* x,
 		void* A,

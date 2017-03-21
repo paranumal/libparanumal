@@ -44,8 +44,12 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // compute surface contribution to DG acoustics RHS
       acousticsSurface2Dbbdg(mesh, t);
       
-      // update solution using Euler Forward
-      acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+     // update solution using Euler Forward
+      #if WADG
+        acousticsUpdate2D_wadg(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #else       
+        acousticsUpdate2D(mesh, mesh->rka[rk], mesh->rkb[rk]);
+      #endif
     }
     
     // estimate maximum error
@@ -110,87 +114,105 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
     for(iint rk=0;rk<mesh->Nrk;++rk){
-        // intermediate stage time
-        dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
+      // intermediate stage time
+      dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
-        if(mesh->totalHaloPairs>0){
-        // extract halo on DEVICE
-        iint Nentries = mesh->NpMax*mesh->Nfields;
+      if(mesh->totalHaloPairs>0){
+      // extract halo on DEVICE
+      iint Nentries = mesh->NpMax*mesh->Nfields;
 
-        mesh->haloExtractKernel(mesh->totalHaloPairs,
-                    Nentries,
-                    mesh->o_haloElementList,
-                    mesh->o_q,
-                    mesh->o_haloBuffer);
+      mesh->haloExtractKernel(mesh->totalHaloPairs,
+                  Nentries,
+                  mesh->o_haloElementList,
+                  mesh->o_q,
+                  mesh->o_haloBuffer);
 
-        // copy extracted halo to HOST 
-        mesh->o_haloBuffer.copyTo(sendBuffer);      
+      // copy extracted halo to HOST 
+      mesh->o_haloBuffer.copyTo(sendBuffer);      
 
-        // start halo exchange
-        meshHaloExchangeStart(mesh,
-                    mesh->NpMax*mesh->Nfields*sizeof(dfloat),
-                    sendBuffer,
-                    recvBuffer);
-        }
-    
-        for (iint p=1;p<=mesh->NMax;p++) {
-          // compute volume contribution to DG acoustics RHS
-          if (mesh->NelOrder[p])
-            mesh->volumeKernel[p](mesh->NelOrder[p],
-                mesh->o_NelList[p],
-                mesh->o_vgeo,
-                mesh->o_D1ids[p],
-                mesh->o_D2ids[p],
-                mesh->o_D3ids[p],
-                mesh->o_Dvals[p],
-                mesh->o_q,
-                mesh->o_rhsq);
-        }
+      // start halo exchange
+      meshHaloExchangeStart(mesh,
+                  mesh->NpMax*mesh->Nfields*sizeof(dfloat),
+                  sendBuffer,
+                  recvBuffer);
+      }
+  
+      for (iint p=1;p<=mesh->NMax;p++) {
+        // compute volume contribution to DG acoustics RHS
+        if (mesh->NelOrder[p])
+          mesh->volumeKernel[p](mesh->NelOrder[p],
+              mesh->o_NelList[p],
+              mesh->o_vgeo,
+              mesh->o_D1ids[p],
+              mesh->o_D2ids[p],
+              mesh->o_D3ids[p],
+              mesh->o_Dvals[p],
+              mesh->o_q,
+              mesh->o_rhsq);
+      }
 
-        if(mesh->totalHaloPairs>0){
-        // wait for halo data to arrive
-        meshHaloExchangeFinish(mesh);
+      if(mesh->totalHaloPairs>0){
+      // wait for halo data to arrive
+      meshHaloExchangeFinish(mesh);
 
-        // copy halo data to DEVICE
-        size_t offset = mesh->NpMax*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
-        }
-    
-        for (iint p=1;p<=mesh->NMax;p++) {
-          // compute surface contribution to DG acoustics RHS
-          if (mesh->NelOrder[p])
-            mesh->surfaceKernel[p](mesh->NelOrder[p],
-                    mesh->o_NelList[p],
-                    mesh->o_N,
-                    mesh->o_sgeo,
-                    mesh->o_L0vals[p],
-                    mesh->o_ELids[p],
-                    mesh->o_ELvals[p],
-                    mesh->o_BBLower[p],
-                    mesh->o_BBRaiseids[p],
-                    mesh->o_BBRaiseVals[p],
-                    mesh->o_vmapM,
-                    mesh->o_vmapP,
-                    mesh->o_EToE,
-                    mesh->o_EToF,
-                    mesh->o_EToB,
-                    t,
-                    mesh->o_x,
-                    mesh->o_y,
-                    mesh->o_q,
-                    mesh->o_rhsq);
-        }
+      // copy halo data to DEVICE
+      size_t offset = mesh->NpMax*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+      mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
+      }
+  
+      for (iint p=1;p<=mesh->NMax;p++) {
+        // compute surface contribution to DG acoustics RHS
+        if (mesh->NelOrder[p])
+          mesh->surfaceKernel[p](mesh->NelOrder[p],
+                  mesh->o_NelList[p],
+                  mesh->o_N,
+                  mesh->o_sgeo,
+                  mesh->o_L0vals[p],
+                  mesh->o_ELids[p],
+                  mesh->o_ELvals[p],
+                  mesh->o_BBLower[p],
+                  mesh->o_BBRaiseids[p],
+                  mesh->o_BBRaiseVals[p],
+                  mesh->o_vmapM,
+                  mesh->o_vmapP,
+                  mesh->o_EToE,
+                  mesh->o_EToF,
+                  mesh->o_EToB,
+                  t,
+                  mesh->o_x,
+                  mesh->o_y,
+                  mesh->o_q,
+                  mesh->o_rhsq);
+      }
 
+      for (iint p=1;p<=mesh->NMax;p++) {
         // update solution using Runge-Kutta
-        mesh->updateKernel(mesh->Nelements*mesh->NpMax*mesh->Nfields,
-                mesh->dt,
-                mesh->rka[rk],
-                mesh->rkb[rk],
-                mesh->o_rhsq,
-                mesh->o_resq,
-                mesh->o_q);     
+        if (mesh->NelOrder[p]) {
+          #if WADG
+            mesh->updateKernel[p](mesh->NelOrder[p],
+                  mesh->o_NelList[p],
+                  mesh->dt,
+                  mesh->rka[rk],
+                  mesh->rkb[rk],
+                  mesh->o_cubInterpT[p],
+                  mesh->o_cubProjectT[p],
+                  mesh->o_c2,
+                  mesh->o_rhsq,
+                  mesh->o_resq,
+                  mesh->o_q);     
+          #else
+            mesh->updateKernel[p](mesh->NelOrder[p],
+                  mesh->o_NelList[p],
+                  mesh->dt,
+                  mesh->rka[rk],
+                  mesh->rkb[rk],
+                  mesh->o_rhsq,
+                  mesh->o_resq,
+                  mesh->o_q);     
+          #endif
+        }
+      }
     }
 
     // estimate maximum error
