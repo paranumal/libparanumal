@@ -38,7 +38,8 @@ acousticsSetup3D.o \
 acousticsSurface3D.o \
 acousticsUpdate3D.o \
 acousticsVolume3D.o \
-acousticsCavitySolution3D.o
+acousticsCavitySolution3D.o \
+acousticsGaussianPulse3D.o
 
 
 # library objects

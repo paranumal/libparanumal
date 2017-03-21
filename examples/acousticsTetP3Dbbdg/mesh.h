@@ -120,7 +120,7 @@ typedef struct {
   dfloat Lambda2; // square of penalty paramater used in constructing q^*
 
   // cubature
-  iint *cubNp;
+  iint *cubNp, cubNpMax;
   dfloat **cubr, **cubs, **cubt;    // coordinates of local nodes
   dfloat **cubx, **cuby, **cubz;    // coordinates of physical nodes
   dfloat **cubInterp; // interpolate from W&B to cubature nodes
@@ -220,8 +220,8 @@ typedef struct {
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
-  occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
-  occa::memory o_cubInterpT, o_cubProjectT;
+  occa::memory *o_cubDrWT, *o_cubDsWT, *o_cubDtWT;
+  occa::memory *o_cubInterpT, *o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
 
@@ -283,7 +283,7 @@ typedef struct {
 
   occa::kernel *volumeKernel;
   occa::kernel *surfaceKernel;
-  occa::kernel updateKernel;
+  occa::kernel *updateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
   
