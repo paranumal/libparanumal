@@ -1,0 +1,82 @@
+
+cd ~/Desktop/holmes;
+
+cd  examples/boltzmannTri2D; 
+
+make clean;
+
+make TIME_METHOD=LSERK CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+for i in {1..100}; do
+    echo item: $i
+    ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 $i
+done
+
+
+
+cd  examples/boltzmannTri2D;
+
+make clean;
+
+make TIME_METHOD=SAAB CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+for i in {1..100}; do
+    echo item: $i
+    ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 $i
+done
+
+
+
+
+cd  examples/boltzmannTri2D;
+
+make clean;
+
+make TIME_METHOD=LSIMEX CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+for i in {1..100}; do
+    echo item: $i
+    ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 $i
+done
+
+
+cd  examples/boltzmannTri2D;
+
+make clean;
+
+make TIME_METHOD=MRAB CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+for i in {1..100}; do
+    echo item: $i
+    ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 $i
+done
+
+
+
+
+cd  examples/boltzmannTri2D;
+
+make clean;
+
+make TIME_METHOD=SARK CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+for i in {1..100}; do
+    echo item: $i
+    ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 $i
+done
+
+
+
+
+
+

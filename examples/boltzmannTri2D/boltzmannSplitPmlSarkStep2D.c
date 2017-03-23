@@ -182,10 +182,13 @@ void boltzmannSplitPmlSarkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->sarke[rk],
 			 mesh->rka[rk],
 			 mesh->sarka[rk],
+			 mesh->sarkra[rk],
 			 mesh->rkb[rk],
 			 mesh->sarkb[rk],
+			 mesh->sarkrb[rk],
 			 mesh->o_rhsq,
 			 mesh->o_resq,
+			 mesh->o_resqex,
 			 mesh->o_q);
     
     mesh->device.finish();
