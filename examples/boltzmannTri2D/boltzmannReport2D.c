@@ -19,12 +19,15 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep){
   // do error stuff on host
   boltzmannError2D(mesh, t);
   
+  
+  
+  #if 0
   // compute vorticity
   boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
-  
   // output field files
   iint fld = 1;
   char fname[BUFSIZ];
-  sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
+  sprintf(fname, "fooT_%d", tstep/mesh->errorStep);
   meshPlotVTU2D(mesh, fname, fld);
+  #endif
 }

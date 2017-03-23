@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 10000/mesh->sqrtRT; 
+   dfloat Re = 1000/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -313,41 +313,43 @@ dfloat cfl = 0.5;
   dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
   //
-  dfloat dtex = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-  dfloat dtim = cfl*4./(mesh->tauInv*magVelocity);
+  dfloat dtex = hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+  dfloat dtim = 4./(mesh->tauInv*magVelocity);
 
   // AK: Set time step size
 #if TIME_DISC==LSERK
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
-      dfloat dt = mymin(dtex,dtim);
+      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
 #elif TIME_DISC==SARK
       printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
-      dfloat dt = mymin(dtex,dtim);
-       dt        =  0.8*dtex; 
+      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+       // dt        =  0.8*dtex; 
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
 #elif TIME_DISC==LSIMEX
       printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-      dfloat dt   = mymax(dtex,dtim); // 
-
+      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
 #elif TIME_DISC==MRAB
       printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
       // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
-      dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
+      dfloat dt = mesh->dtfactor*cfl*1./8. * mymin(dtex,dtim);
+       // dt        =  0.8*dtex; 
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
 #elif TIME_DISC==SAAB
      printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-     dfloat dt   = 1.0/3.0* mymin(dtex,dtim); 
+    dfloat dt = mesh->dtfactor*cfl*1./3. * mymin(dtex,dtim);
+       // dt        =  0.8*dtex; 
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,1.0/3.0*dtex,1.0/3.0*dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 #endif
 
 
@@ -362,14 +364,14 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 10;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
+  mesh->finalTime = 60.;
+  mesh->NtimeSteps = mesh->finalTime/mesh->dt +1;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
   mesh->errorStep = 5000;
 
-  printf("dt = %g\n", mesh->dt);
+  printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -379,9 +381,11 @@ dfloat cfl = 0.5;
 
   // use rank to choose DEVICE
   // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
-  //    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  // sprintf(deviceConfig, "mode = Serial");	 
+ sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+ // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+
+ // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(deviceConfig, "mode = Serial");	 
 
 
 
@@ -419,6 +423,9 @@ dfloat cfl = 0.5;
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
 
   #elif TIME_DISC==SARK
+  // Extra Storage for exponential update
+   mesh->o_resqex =
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
   // pml variables
   mesh->o_pmlqx =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
@@ -457,20 +464,21 @@ dfloat cfl = 0.5;
    dfloat la3 = mesh->rka[2] ;
    dfloat la4 = mesh->rka[3] ;
    dfloat la5 = mesh->rka[4] ;
+   //
+   dfloat lc1 = mesh->rkc[0] ;  // = 0.0
+   dfloat lc2 = mesh->rkc[1] ;
+   dfloat lc3 = mesh->rkc[2] ;
+   dfloat lc4 = mesh->rkc[3] ;
+   dfloat lc5 = mesh->rkc[4] ;
+   dfloat lc6 = mesh->rkc[5] ; // = 1.0
 
-   dfloat c1 = 0.0; 
-   dfloat c2 = (exp(coef*h*lb1) - 1.0)/(coef*h);  
-   dfloat c3 = (exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.0)/(coef*h) ; 
-   dfloat c4 = (exp(coef*h*(lb1 + lb2 + lb3 + la2*lb2 + la3*lb3 + la2*la3*lb3)) - 1)/(coef*h);
-   dfloat c5 = (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.0)/(coef*h);
-   dfloat c6 = (exp(coef*h) - 1.0)/(coef*h);
-
+   
    // Fill the required  exp(-coef*dt*(lsrkc(i)-lsrkc(i-1)))
-   mesh->sarke[0] = exp(coef*h*(c2-c1));
-   mesh->sarke[1] = exp(coef*h*(c3-c2));
-   mesh->sarke[2] = exp(coef*h*(c4-c3));
-   mesh->sarke[3] = exp(coef*h*(c5-c4));
-   mesh->sarke[4] = exp(coef*h*(c6-c5));
+   mesh->sarke[0] = exp(coef*h*(lc2 - lc1));
+   mesh->sarke[1] = exp(coef*h*(lc3 - lc2));
+   mesh->sarke[2] = exp(coef*h*(lc4 - lc3));
+   mesh->sarke[3] = exp(coef*h*(lc5 - lc4));
+   mesh->sarke[4] = exp(coef*h*(lc6 - lc5));
 
    // Fill the required  low storage A and B coefficients
    mesh->sarka[0] = 0.0;
@@ -512,17 +520,20 @@ dfloat cfl = 0.5;
 
    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
 
-     // for(int i=0; i<5;i++){
+   // Coefficients for exponential residual update
+   mesh->sarkra[0] = 0.0; 
+   mesh->sarkra[1] = 1.0; 
+   mesh->sarkra[2] = 1.0; 
+   mesh->sarkra[3] = 1.0; 
+   mesh->sarkra[4] = 1.0; 
+   // Coefficients for exponential residual update
+   mesh->sarkrb[0] = 0.0; 
+   mesh->sarkrb[1] = mesh->sarkb[0]; 
+   mesh->sarkrb[2] = mesh->sarkb[1];  
+   mesh->sarkrb[3] = mesh->sarkb[2];  
+   mesh->sarkrb[4] = mesh->sarkb[3];  
 
-     // printf("\n SARK exp = %.5f  and A = %.5f B= %.5e", mesh->sarke[i], mesh->sarka[i], mesh->sarkb[i]);
-
-     // }
-
-
-
-
-
-
+    
   #elif TIME_DISC==LSIMEX
    mesh->o_qY =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);

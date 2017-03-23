@@ -42,9 +42,15 @@ void boltzmannError2D(mesh2D *mesh, dfloat time){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank==0)
+  if(rank==0){
     printf("%g %g %g %g (time,min(density),max(density),max(error)\n",
      time, globalMinQ1, globalMaxQ1, globalMaxErr);
+    mesh->maxErrorBoltzmann = globalMaxErr; 
+  }
+
+
+  if(isnan(globalMaxErr))
+    exit(EXIT_FAILURE);
 
 #else
 
