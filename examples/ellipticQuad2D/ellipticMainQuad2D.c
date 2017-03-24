@@ -337,7 +337,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
         } else {
           // should eliminate these copies
           precon->o_r1.copyTo(precon->r1); 
-          almondSolve(precon->z1, precon->almond, precon->r1,NULL,NULL,0,0);
+          almondSolve(precon->z1, precon->parAlmond, precon->r1,NULL,NULL,0,0);
           precon->o_z1.copyFrom(precon->z1);
         }
       }
@@ -399,8 +399,8 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
-    //    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,ALMOND,UBERGRID");
-    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
+    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,GLOBALALMOND");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
   
   
   // set up mesh stuff

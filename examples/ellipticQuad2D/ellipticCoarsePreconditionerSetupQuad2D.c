@@ -246,6 +246,39 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     recvVals[n] = recvNonZeros[n].val;
   }
 
+  //collect global assembled matrix
+  iint globalnnz[size];
+  iint globalnnzOffset[size+1];
+  MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
+                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
+  globalnnzOffset[0] = 0;
+  for (iint n=0;n<size;n++)
+    globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
+
+  iint globalnnzTotal = globalnnzOffset[size];
+
+  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
+  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
+    globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
+  }
+  nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
+
+  MPI_Allgatherv(recvNonZeros, recvNtotal*sizeof(nonZero_t), MPI_CHAR, 
+                globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+  
+
+  iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
+
+  for (iint n=0;n<globalnnzTotal;n++) {
+    globalRows[n] = globalNonZero[n].row;
+    globalCols[n] = globalNonZero[n].col;
+    globalVals[n] = globalNonZero[n].val;
+  }
 
 #if 0
   for(iint r=0;r<size;++r){
@@ -301,6 +334,28 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 				 0,
 				 iintString,
 				 dfloatString); // 0 if no null space
+    
+  }
+
+  if(strstr(options, "GLOBALALMOND")){
+    
+    precon->parAlmond = almondGlobalSetup(Nnum, 
+         globalStarts, 
+         globalNumbering,
+         globalnnzTotal,      
+         globalRows,        
+         globalCols,        
+         globalVals,
+         sendSortId, 
+         globalSortId, 
+         compressId,
+         sendCounts, 
+         sendOffsets, 
+         recvCounts, 
+         recvOffsets,    
+         0,             // 0 if no null space
+         iintString,
+         dfloatString); 
     
   }
   

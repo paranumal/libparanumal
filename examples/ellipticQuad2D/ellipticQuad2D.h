@@ -43,7 +43,7 @@ typedef struct {
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
-  
+  void *parAlmond;
   
 } precon_t;
 
