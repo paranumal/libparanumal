@@ -16,9 +16,15 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep){
     printf("t: %g ramp: %g drampdt: %g\n", t, ramp, drampdt);
   }
   
+  
+
+  #if 0
   // do error stuff on host
   boltzmannError2D(mesh, t);
-  
+
+  #else
+  boltzmannCouetteError2D(mesh, t);
+  #endif
   
   
   #if 0

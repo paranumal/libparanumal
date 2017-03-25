@@ -16,7 +16,7 @@ LD	= mpic++
 
 #TIME_METHOD  = SARK
 #CUBATURE_USE = 0
-
+# TEST = 0
 
 #LSERK TIME DISCRETIZATION
 flags += -DLSERK=1
@@ -24,6 +24,22 @@ flags += -DSAAB=2
 flags += -DLSIMEX=3
 flags += -DMRAB=4
 flags += -DSARK=5
+
+
+ifeq ($(TEST), 1)
+ flags += -DTEST_MODE=1
+else
+
+ flags += -DTEST_MODE=0
+
+ TIME_METHOD  = LSERK
+
+ CUBATURE_USE = 0
+endif
+
+
+
+
 
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
@@ -76,6 +92,7 @@ OBJS    = \
 boltzmannSplitPmlMain2D.o \
 boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
+boltzmannCouetteError2D.o \
 boltzmannPeriodic2D.o\
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \

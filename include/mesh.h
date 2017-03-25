@@ -161,7 +161,7 @@ typedef struct {
   // SARK extra coefficients for Boltzmann Solver
   dfloat sarka[5], sarkb[5], sarke[5], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
   
-  iint dtfactor ;  //Deletelater for script run
+  dfloat dtfactor ;  //Deletelater for script run
   dfloat maxErrorBoltzmann; 
 
   //LS Imex

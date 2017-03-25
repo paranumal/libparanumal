@@ -261,51 +261,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     }
   }
 
-// for(iint e=0;e<mesh->Nelements;++e)
-// {  
 
-//     for(iint f=0;f<mesh->Nfaces;++f)
-//     {
-//        for(iint n=0;n<mesh->Nfp;++n)
-//        {
-//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
-//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
-
-//       if(e==8)
-//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
-//     }
-//   }
-// }
-
-
-  
-
-  // dfloat xper = 1.0; 
-  // dfloat yper = 0.0;
-
-  // boltzmannPeriodic2D(mesh,xper,yper);
-
-
-// for(iint e=0;e<mesh->Nelements;++e)
-// {  
-
-//     for(iint f=0;f<mesh->Nfaces;++f)
-//     {
-//        for(iint n=0;n<mesh->Nfp;++n)
-//        {
-//         iint  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
-//         iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
-
-//       if(e==8)
-//         printf("%d\t %d \n",mesh->vmapM[id],mesh->vmapP[id]);
-//     }
-//   }
-// }
-
-  // depends on the stability region size (was .4)
-
-  // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
-  // too small ???
   
 dfloat cfl = 0.5; 
 
@@ -364,12 +320,12 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 60.;
+  mesh->finalTime = 30.;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt +1;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 5000;
+  mesh->errorStep = 1000;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
