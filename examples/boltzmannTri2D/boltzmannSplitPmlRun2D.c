@@ -38,6 +38,8 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
       boltzmannReport2D(mesh, tstep);
     }
   }
+  
+  boltzmannReport2D(mesh, mesh->NtimeSteps);
 
   occa::printTimer();
 
