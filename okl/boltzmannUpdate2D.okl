@@ -94,10 +94,13 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
             const dfloat expdt, 
             const dfloat rka,
             const dfloat erka,
+            const dfloat erkresa,
             const dfloat rkb,
             const dfloat erkb,
+            const dfloat erkresb,
             const dfloat4 * restrict rhsq,
                   dfloat4 * restrict resq,
+                  dfloat4 * restrict resqex,
                   dfloat4 * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -109,12 +112,25 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
       dfloat4 resqa = resq[base+0];
       dfloat4 resqb = resq[base+1];
 
+      dfloat4 resqexa = resqex[base+0];
+      dfloat4 resqexb = resqex[base+1];
+
       dfloat4 rhsqa = rhsq[base+0];
       dfloat4 rhsqb = rhsq[base+1];
 
       dfloat4 qa = q[base+0];
       dfloat4 qb = q[base+1];
+      
+      // Update Exponential residual using old residual info
+      resqexa.x = 0.0; 
+      resqexa.y = 0.0; 
+      resqexa.z = 0.0; 
       //
+      resqexa.w = erkresa*resqexa.w + erkresb*resqa.w; 
+      resqexb.x = erkresa*resqexb.x + erkresb*resqb.x; 
+      resqexb.y = erkresa*resqexb.y + erkresb*resqb.y; 
+ 
+      // Update actual residual 
       resqa.x = rka*resqa.x + dt*rhsqa.x; 
       resqa.y = rka*resqa.y + dt*rhsqa.y; 
       resqa.z = rka*resqa.z + dt*rhsqa.z; 
@@ -122,14 +138,15 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
       resqa.w = erka*resqa.w + dt*rhsqa.w; 
       resqb.x = erka*resqb.x + dt*rhsqb.x; 
       resqb.y = erka*resqb.y + dt*rhsqb.y; 
+      
       //
       qa.x  += rkb*resqa.x;
       qa.y  += rkb*resqa.y;
       qa.z  += rkb*resqa.z;
       //
-      qa.w  = expdt*qa.w  + erkb*resqa.w;
-      qb.x  = expdt*qb.x  + erkb*resqb.x;
-      qb.y  = expdt*qb.y  + erkb*resqb.y;
+      qa.w  = expdt*(qa.w - resqexa.w) + erkb*resqa.w + resqexa.w;
+      qb.x  = expdt*(qb.x - resqexb.x) + erkb*resqb.x + resqexb.x;
+      qb.y  = expdt*(qb.y - resqexb.y) + erkb*resqb.y + resqexb.y;
       //
       resq[base+0] = resqa;
       resq[base+1] = resqb;
