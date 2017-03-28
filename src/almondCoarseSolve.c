@@ -73,11 +73,8 @@ void * almondSetup(uint  Nnum,
 
   almond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
   int globalOffset = rowStarts[rank];
-  printf("rank %d, numLocalRows %d, offset %d, \n", rank, almond->numLocalRows, globalOffset);
 
-
-  //std::vector<int>    vAj(nnz);
-  //std::vector<amgFloat> vAvals(nnz);
+;
   std::vector<int>    vRowStarts(almond->numLocalRows+1);
 
   // assumes presorted
@@ -93,7 +90,6 @@ void * almondSetup(uint  Nnum,
   }
 
   vRowStarts[cnt2] = cnt;
-  printf("cnt2=%d, numLocalRows=%d\n", cnt2, almond->numLocalRows);
 
   std::vector<int>    vAj(cnt);
   std::vector<amgFloat> vAvals(cnt);
@@ -149,11 +145,11 @@ void * almondSetup(uint  Nnum,
   
   almond->M.setup(*(almond->A), almond->nullA, NULL);
   for (iint r=0;r<size;r++) {
-    MPI_Barrier(MPI_COMM_WORLD);  
     if (r==rank) {
       printf("----------Rank %d ------------------------\n", rank);
       almond->M.report();
     }
+    fflush(stdout);
     MPI_Barrier(MPI_COMM_WORLD);  
   }
   almond->M.ktype = almond::PCG;
@@ -196,7 +192,6 @@ void * almondGlobalSetup(uint  Nnum,
 
   almond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
   int globalOffset = rowStarts[rank];
-  printf("rank %d, numLocalRows %d, offset %d, \n", rank, almond->numLocalRows, globalOffset);
 
   int numGlobalRows = rowStarts[size];
 
@@ -220,18 +215,17 @@ void * almondGlobalSetup(uint  Nnum,
   
   almond->M.setup(*(almond->A), almond->nullA, rowStarts);
   for (iint r=0;r<size;r++) {
-    MPI_Barrier(MPI_COMM_WORLD);  
     if (r==rank) {
       printf("----------Rank %d ------------------------\n", rank);
       almond->M.report();
     }
+    fflush(stdout);
     MPI_Barrier(MPI_COMM_WORLD);  
   }
   almond->M.ktype = almond::PCG;
 
 
   almond->Nnum = Nnum;
-  //almond->numLocalRows = numLocalRows;
   almond->recvNnum = compressId[almond->numLocalRows];
 
   almond->sendSortId = (int*) calloc(Nnum,sizeof(int));
@@ -284,8 +278,13 @@ int almondSolve(void* x,
 
   almond_t *almond = (almond_t*) A;
 
+  iint rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size );
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank );
+
   for (iint n=0;n<almond->Nnum;n++)
     almond->rhsUnassembled[n] = ((dfloat*) rhs)[n];
+
   
   //sort by owner
   for (iint n=0;n<almond->Nnum;n++) 
@@ -307,7 +306,6 @@ int almondSolve(void* x,
     for (iint id=almond->compressId[n];id<almond->compressId[n+1];id++) 
       almond->rhs[n] += almond->rhsSort[id];
   }
-
 
   if(1){
     almond->M.solve(almond->rhs, almond->x,coarseSolve,coarseA,coarseTotal,coarseOffset);
@@ -346,7 +344,7 @@ int almondSolve(void* x,
 
 
   for(iint i=0;i<almond->Nnum;++i) ((dfloat *) x)[i] = almond->xUnassembled[i];
-  
+
   return 0;
 }
 

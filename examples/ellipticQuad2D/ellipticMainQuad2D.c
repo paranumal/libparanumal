@@ -306,21 +306,27 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       
       
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      precon->coarsenKernel(mesh->Nelements+mesh->totalHaloPairs, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
 
       if(strstr(options,"AMG2013")){
-	precon->o_r1.copyTo(precon->r1); 
-	amg2013Solve(precon->z1, precon->amg, precon->r1);
-	precon->o_z1.copyFrom(precon->z1);
+      	precon->o_r1.copyTo(precon->r1); 
+      	amg2013Solve(precon->z1, precon->amg, precon->r1);
+      	precon->o_z1.copyFrom(precon->z1);
       }
 
       if(strstr(options,"XXT")){
-	precon->o_r1.copyTo(precon->r1); 
-	xxtSolve(precon->z1, precon->xxt,precon->r1);
-	precon->o_z1.copyFrom(precon->z1);
+      	precon->o_r1.copyTo(precon->r1); 
+      	xxtSolve(precon->z1, precon->xxt,precon->r1);
+      	precon->o_z1.copyFrom(precon->z1);
       }
 
-      if(strstr(options,"ALMOND")){
+      if(strstr(options,"GLOBALALMOND")){
+        precon->o_r1.copyTo(precon->r1);
+        almondSolve(precon->z1, precon->parAlmond, precon->r1,NULL,NULL,0,0);
+        precon->o_z1.copyFrom(precon->z1);
+      }      
+
+      if(strstr(options,"LOCALALMOND")){
         if(strstr(options, "UBERGRID")) {
 
           int size, rank;
@@ -337,6 +343,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
         } else {
           // should eliminate these copies
           precon->o_r1.copyTo(precon->r1); 
+
           almondSolve(precon->z1, precon->parAlmond, precon->r1,NULL,NULL,0,0);
           precon->o_z1.copyFrom(precon->z1);
         }
@@ -544,6 +551,7 @@ int main(int argc, char **argv){
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
   occa::tic("PCG");
+  
   
   do{
 
