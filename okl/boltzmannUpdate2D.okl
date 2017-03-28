@@ -150,6 +150,9 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
       //
       resq[base+0] = resqa;
       resq[base+1] = resqb;
+
+      resqex[base+0] = resqexa;
+      resqex[base+1] = resqexb;
       
       q[base+0] = qa;
       q[base+1] = qb;
