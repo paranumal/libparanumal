@@ -80,7 +80,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
    mesh->RT  = 9.0;
    mesh->sqrtRT = sqrt(mesh->RT);  
 
-   dfloat Re = 1000/mesh->sqrtRT; 
+   dfloat Re = 100/mesh->sqrtRT; 
    mesh->tauInv = mesh->sqrtRT * Re / Ma;
    dfloat nu = mesh->RT/mesh->tauInv; 
 
@@ -318,10 +318,12 @@ dfloat cfl = 0.5;
   
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+ 
 
+   mesh->dt = 1e-4;
   //
-  mesh->finalTime = 30.;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt +1;
+  mesh->finalTime = 5.;
+  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
@@ -436,45 +438,110 @@ dfloat cfl = 0.5;
    mesh->sarke[3] = exp(coef*h*(lc5 - lc4));
    mesh->sarke[4] = exp(coef*h*(lc6 - lc5));
 
+
+   #if 0
+
    // Fill the required  low storage A and B coefficients
    mesh->sarka[0] = 0.0;
-   mesh->sarka[1] = -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*
-                     (exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))
-                     /(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
+   mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)
+                     *(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))
+                      /(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
 
-   mesh->sarka[2] = ( coef*h*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*
-                      ((lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)) + (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)*
-                      (exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))
-                    *(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.));
+
+   mesh->sarka[2] = (coef*h*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+                    /(coef*h*(lb1 + lb2 + la2*lb2)) + (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)
+                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))
+                     *(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.));
+
+
 
 
 
    mesh->sarka[3] = (coef*h*((lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                    /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))
-                    *(lb3 + la4*lb4)*(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
-                    /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
-                    *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))
-                    /(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.));
+                     /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) 
+                      + la3*(lb3 + la4*lb4)))*(lb3 + la4*lb4)*(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
+                       /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
+                        *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))
+                        /(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.));
 
-   mesh->sarka[4] = -(coef*h*((exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h) 
-                    + (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.0))
-                    /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))))
-                    /(lb5*(exp(coef*h) - 1.0));
+
+
+   mesh->sarka[4] = -(coef*h*((exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h) + (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 
+                    + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))))
+                     /(lb5*(exp(coef*h) - 1.));
+
+
+
+
+   #endif
+
+
+   #if 1
+    // Fill the required  low storage A and B coefficients
+   mesh->sarka[0] = 0.0;
+   mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+                      /(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))/(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
+
+
+
+   mesh->sarka[2] = (lb2*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.)
+                    *((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)) 
+                      - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)
+                     *((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2));
+
+
+
+
+
+
+   mesh->sarka[3] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))
+                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 
+                    (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+                      *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
+                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))/(lb4*
+                      (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+                        /(coef*h*(lb1 + lb2 + la2*lb2)) - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                        /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+
+
+
+   mesh->sarka[4] = -(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h)*(lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5))))*(exp(-coef*h) - 1.))
+                    /(coef*h) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))))
+                   /(lb5*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                    /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+                      *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))*(exp(coef*h) - 1.)
+                    *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+
+
+#endif
+
+
+
 
 
    //
-   mesh->sarkb[0] = (exp(coef*h*lb1) - 1)/(coef*h);
+   mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
 
    mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
 
    mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
-                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                    *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
 
+
    mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
-                    /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+                     /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+
+
 
    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
+
+
+
+
+
 
    // Coefficients for exponential residual update
    mesh->sarkra[0] = 0.0; 
@@ -488,6 +555,11 @@ dfloat cfl = 0.5;
    mesh->sarkrb[2] = mesh->sarkb[1];  
    mesh->sarkrb[3] = mesh->sarkb[2];  
    mesh->sarkrb[4] = mesh->sarkb[3];  
+
+
+
+
+
 
     
   #elif TIME_DISC==LSIMEX
