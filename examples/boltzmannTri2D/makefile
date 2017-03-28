@@ -109,26 +109,24 @@ boltzmannReport2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshPhysicalNodesTri2D.o \
 ../../src/meshSetupTri2D.o \
+../../src/meshConnectFaceNodes2D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
-../../src/meshConnectFaceNodes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
-../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshReader2D.o \
-../../src/meshOccaSetup2D.o \
+../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o \
-../../src/hash.o
+../../src/parallelSort.o
 
 boltzmannSplitPmlMain2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannSplitPmlMain2D $(OBJS) $(paths) $(LIBS) 
