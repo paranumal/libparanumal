@@ -34,7 +34,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+  iint Nnum = mesh->Nverts*(mesh->Nelements);
   
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
@@ -53,6 +53,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
 
+  /*
   if(mesh->totalHaloPairs){
     // send buffer for outgoing halo
     iint *sendBuffer = (iint*) calloc(mesh->totalHaloPairs*mesh->Nverts, sizeof(iint));
@@ -63,7 +64,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 		     sendBuffer,
 		     globalNumbering+mesh->Nelements*mesh->Nverts);
   }
-
+  */
   
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
@@ -143,7 +144,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   iint cnt = 0;
 
   printf("Building coarse matrix system\n");
-  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
 	dfloat Snm = 0;
@@ -311,7 +312,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     
   }
 
-  if(strstr(options, "ALMOND")){
+  if(strstr(options, "LOCALALMOND")){
 
     // TW: need to set up local numbering here (replace globalNumbering with localNumbering)
 
@@ -379,10 +380,11 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   }
 
-  precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-  precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-  precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-  precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
+  iint NnumWHalo = Nnum + mesh->Nverts*mesh->totalHaloPairs;
+  precon->o_r1 = mesh->device.malloc(NnumWHalo*sizeof(dfloat));
+  precon->o_z1 = mesh->device.malloc(NnumWHalo*sizeof(dfloat));
+  precon->r1 = (dfloat*) malloc(NnumWHalo*sizeof(dfloat));
+  precon->z1 = (dfloat*) malloc(NnumWHalo*sizeof(dfloat));
   
 
   free(AsendCounts);
@@ -404,7 +406,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
 
     /* populate b here */
-    if(strstr(options,"ALMOND")) {
+    if(strstr(options,"LOCALALMOND")) {
       //if using ALMOND for patch solve, build the ubercoarse from ALMOND
       dfloat *coarseB;
 
@@ -516,7 +518,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
         }
       }
     }
-#if 1
+#if 0
     // TW: FOR TESTING CAN USE MPI_Allgather TO COLLECT ALL CHUNKS ON ALL PROCESSES - THEN USE dgesv
     
     char fname[BUFSIZ];
