@@ -26,7 +26,7 @@ flags += -DMRAB=4
 flags += -DSARK=5
 flags += -DSARK33=6
 flags += -DSARK54=7
-flags += -DRK33=8
+flags += -DLSERK3=8
 
 
 ifeq ($(TEST), 1)
@@ -35,7 +35,7 @@ else
 
  flags += -DTEST_MODE=0
 
- TIME_METHOD  = SARK33
+ TIME_METHOD  = SARK54
 
  CUBATURE_USE = 0
 endif
@@ -72,8 +72,8 @@ ifeq ($(TIME_METHOD), SARK54)
  flags += -DTIME_DISC=SARK54
 endif
 
-ifeq ($(TIME_METHOD), RK33)
- flags += -DTIME_DISC=RK33
+ifeq ($(TIME_METHOD), LSERK3)
+ flags += -DTIME_DISC=LSERK3
 endif
 
 
@@ -121,6 +121,8 @@ boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannSplitPmlSarkStep2D.o \
 boltzmannSplitPmlSark33Step2D.o \
+boltzmannSplitPmlSark54Step2D.o \
+boltzmannSplitPmlLserk3Step2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 ../../src/meshParallelReaderTri2D.o \

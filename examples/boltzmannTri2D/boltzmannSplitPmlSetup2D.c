@@ -273,7 +273,7 @@ dfloat cfl = 0.5;
   dfloat dtim = 4./(mesh->tauInv*magVelocity);
 
   // AK: Set time step size
-#if TIME_DISC==LSERK
+#if TIME_DISC==LSERK || TIME_DISC==LSERK3
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
 
@@ -357,7 +357,7 @@ dfloat cfl = 0.5;
 
 
 
-  #if TIME_DISC==LSERK 
+  #if TIME_DISC==LSERK || TIME_DISC==LSERK3 
   // pml variables
   mesh->o_pmlqx =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
@@ -379,6 +379,26 @@ dfloat cfl = 0.5;
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
   mesh->o_respmlNT =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+
+
+
+
+
+    #if TIME_DISC==LSERK3
+    //
+     mesh->lserk3a[0] = 0.;
+     mesh->lserk3a[1] = -5./9.;
+     mesh->lserk3a[2] = -153./128.;
+    //
+     mesh->lserk3b[0] = 1./3.;
+     mesh->lserk3b[1] = 15./16.;
+     mesh->lserk3b[2] = 8./15.;
+    //
+     mesh->lserk3c[0] = 0.;
+     mesh->lserk3c[1] = 1./3.;
+     mesh->lserk3c[2] = 3./4.;
+     mesh->lserk3c[3] = 1.;
+    #endif
 
 //   #elif TIME_DISC==SARK
 //   // Extra Storage for exponential update
@@ -638,22 +658,115 @@ dfloat cfl = 0.5;
      mesh->rk3c[2] = c3; 
 
 
-     printf("A: %.8e  %.8e  %.8e \n ", mesh->sarka[1][0], mesh->sarka[2][0], mesh->sarka[2][1] );
-     printf("a: %.8e  %.8e  %.8e \n", mesh->rk3a[1][0], mesh->rk3a[2][0], mesh->rk3a[2][1] );
+     // printf("A: %.8e  %.8e  %.8e \n ", mesh->sarka[1][0], mesh->sarka[2][0], mesh->sarka[2][1] );
+     // printf("a: %.8e  %.8e  %.8e \n", mesh->rk3a[1][0], mesh->rk3a[2][0], mesh->rk3a[2][1] );
 
-     printf("B: %.8e  %.8e  %.8e \n", mesh->sarkb[0], mesh->sarkb[1], mesh->sarkb[2] );
-     printf("b: %.8e  %.8e  %.8e \n ", mesh->rk3b[0], mesh->rk3b[1], mesh->rk3b[2] );
+     // printf("B: %.8e  %.8e  %.8e \n", mesh->sarkb[0], mesh->sarkb[1], mesh->sarkb[2] );
+     // printf("b: %.8e  %.8e  %.8e \n ", mesh->rk3b[0], mesh->rk3b[1], mesh->rk3b[2] );
 
     #endif
 
 
-      // #if TIME_DISC==SARK54
-      // mesh->o_rhsq4 =
-      //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-      // mesh->o_rhsq5 =
-      //    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  
-      // #endif
+      #if TIME_DISC==SARK54
+      mesh->o_rhsq4 =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      mesh->o_rhsq5 =
+         mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      
+
+
+     dfloat lb1 = mesh->rkb[0] ; 
+     dfloat lb2 = mesh->rkb[1] ;
+     dfloat lb3 = mesh->rkb[2] ;
+     dfloat lb4 = mesh->rkb[3] ;
+     dfloat lb5 = mesh->rkb[4] ;
+     //
+     dfloat la1 = mesh->rka[0] ; 
+     dfloat la2 = mesh->rka[1] ;
+     dfloat la3 = mesh->rka[2] ;
+     dfloat la4 = mesh->rka[3] ;
+     dfloat la5 = mesh->rka[4] ;
+     //
+     dfloat lc1 = mesh->rkc[0] ;  // = 0.0
+     dfloat lc2 = mesh->rkc[1] ;
+     dfloat lc3 = mesh->rkc[2] ;
+     dfloat lc4 = mesh->rkc[3] ;
+     dfloat lc5 = mesh->rkc[4] ;
+     dfloat lc6 = mesh->rkc[5] ; // = 1.0
+
+
+
+     mesh->rk4a[1][0] =  lb1; // a21
+     //
+     mesh->rk4a[2][0] = lb1 + la2*lb2; // a31
+     mesh->rk4a[2][1] = lb2; // a32
+     //
+     mesh->rk4a[3][0] = lb1 + la2*(lb2 + la3*lb3); // a31
+     mesh->rk4a[3][1] = lb2 + la3*lb3; //
+     mesh->rk4a[3][2] = lb3; 
+     //
+     mesh->rk4a[4][0] = lb1 + la2*(lb2 + la3*(lb3 + la4*lb4));// a31
+     mesh->rk4a[4][1] = lb2 + la3*(lb3 + la4*lb4); //
+     mesh->rk4a[4][2] = lb3 + la4*lb4; 
+     mesh->rk4a[4][3] = lb4; 
+   
+     mesh->rk4b[0] = lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5)));
+     mesh->rk4b[1] = lb2 + la3*(lb3 + la4*(lb4 + la5*lb5));
+     mesh->rk4b[2] = lb3 + la4*(lb4 + la5*lb5);
+     mesh->rk4b[3] = lb4 + la5*lb5;
+     mesh->rk4b[4] = lb5;
+
+     mesh->sarka[1][0] = (exp(coef*h*lb1) - 1)/(coef*h);// a21
+     //
+     mesh->sarka[2][0] = -(exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)
+                         *(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
+     mesh->sarka[2][1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
+ // a32
+     //
+     mesh->sarka[3][0] = -(exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))
+                          *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+
+     mesh->sarka[3][1] = -(exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)
+                         *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                          /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+ //
+     mesh->sarka[3][2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
+                           *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+                           /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+ 
+    
+     //
+     mesh->sarka[4][0] = -(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+                         *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
+                          /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)));
+;// a31
+     mesh->sarka[4][1] = -(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))
+                          *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.)
+                         *(lb2 + la3*(lb3 + la4*lb4)))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)));
+ //
+     mesh->sarka[4][2] = -(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb3 + la4*lb4)
+                          *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
+                          /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)));
+
+     mesh->sarka[4][3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
+                          /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+ 
+
+     //
+     mesh->sarkb[0] = -(exp(coef*h)*(lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5))))*(exp(-coef*h) - 1.))/(coef*h);
+     mesh->sarkb[1] = -(exp(coef*h)*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5)))*(exp(-coef*h) - 1.))/(coef*h);
+     mesh->sarkb[2] = -(exp(coef*h)*(lb3 + la4*(lb4 + la5*lb5))*(exp(-coef*h) - 1.))/(coef*h);
+     mesh->sarkb[3] = -(exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h);
+     mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
+
+     //
+     mesh->sarke[0] = exp(coef*h*lc1); 
+     mesh->sarke[1] = exp(coef*h*lc2); 
+     mesh->sarke[2] = exp(coef*h*lc3);
+     mesh->sarke[3] = exp(coef*h*lc4);
+     mesh->sarke[4] = exp(coef*h*lc5);
+     mesh->sarke[5] = exp(coef*h*lc6);
+      #endif
 
 
    
@@ -941,7 +1054,7 @@ dfloat cfl = 0.5;
 
 
 
- #if TIME_DISC==LSERK
+ #if TIME_DISC==LSERK || TIME_DISC==LSERK3
     #if CUBATURE_ENABLED
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
@@ -1173,6 +1286,25 @@ dfloat cfl = 0.5;
                  kernelInfo); 
 
     #endif
+
+
+     #if TIME_DISC==SARK54
+
+      //SARK STAGE UPDATE
+    printf("compiling SARK54 non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK54Update2D",
+                 kernelInfo); 
+
+
+   printf("compiling SARK54 non-pml  stage update kernel\n");
+    mesh->updateStageKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK54StageUpdate2D",
+                 kernelInfo); 
+
+    #endif  
 
   //     //SAAB FIRST ORDER UPDATE
   // printf("Compiling SAAB pml 1st order update kernel\n");
