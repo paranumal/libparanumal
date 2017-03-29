@@ -24,6 +24,9 @@ flags += -DSAAB=2
 flags += -DLSIMEX=3
 flags += -DMRAB=4
 flags += -DSARK=5
+flags += -DSARK33=6
+flags += -DSARK54=7
+flags += -DLSERK3=8
 
 
 ifeq ($(TEST), 1)
@@ -32,7 +35,7 @@ else
 
  flags += -DTEST_MODE=0
 
- TIME_METHOD  = LSERK
+ TIME_METHOD  = SARK54
 
  CUBATURE_USE = 0
 endif
@@ -40,7 +43,7 @@ endif
 
 
 
-
+#ALL TIME STEPPING METHODS
 ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
 endif
@@ -60,6 +63,22 @@ endif
 ifeq ($(TIME_METHOD), SARK)
  flags += -DTIME_DISC=SARK
 endif
+
+ifeq ($(TIME_METHOD), SARK33)
+ flags += -DTIME_DISC=SARK33
+endif
+
+ifeq ($(TIME_METHOD), SARK54)
+ flags += -DTIME_DISC=SARK54
+endif
+
+ifeq ($(TIME_METHOD), LSERK3)
+ flags += -DTIME_DISC=LSERK3
+endif
+
+
+
+
 
 ifeq ($(CUBATURE_USE), 1)
 flags += -DCUBATURE_ENABLED=1
@@ -101,6 +120,9 @@ boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannSplitPmlSarkStep2D.o \
+boltzmannSplitPmlSark33Step2D.o \
+boltzmannSplitPmlSark54Step2D.o \
+boltzmannSplitPmlLserk3Step2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 ../../src/meshParallelReaderTri2D.o \

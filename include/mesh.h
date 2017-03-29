@@ -161,10 +161,9 @@ typedef struct {
   dfloat rka[5], rkb[5], rkc[6];
   // MRAB,SAAB coefficients
   dfloat mrab[3], saab[3], saabexp; // exp(-tauInv*dt)
-  // SARK extra coefficients for Boltzmann Solver
-  dfloat sarka[5], sarkb[5], sarke[5], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
   
-  dfloat dtfactor ;  //Deletelater for script run
+  
+  dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann; 
 
   //LS Imex
@@ -365,6 +364,22 @@ typedef struct {
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
+  
+
+  // Experimental Time Steppings for Boltzmann 
+  #if 1
+  occa::kernel updateStageKernel;
+  //occa::kernel updateStageKernel33;
+  //
+  occa::memory o_rhsq1, o_rhsq4, o_rhsq5;
+  occa::memory o_qold;
+  // SARK extra coefficients for Boltzmann Solver
+  dfloat sarka[5][5], sarkb[5], sarke[6], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
+  dfloat rk3a[3][3], rk3b[3], rk3c[3];
+  dfloat rk4a[5][5], rk4b[5];
+  dfloat lserk3a[3], lserk3b[3], lserk3c[4];
+
+  #endif
   
 
   
