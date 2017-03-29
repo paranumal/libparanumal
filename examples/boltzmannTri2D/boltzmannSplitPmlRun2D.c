@@ -33,6 +33,11 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
       boltzmannSplitPmlSarkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
     #endif
 
+    // Perform semi-analytic integration for pml damping term
+    #if TIME_DISC==SARK33
+      boltzmannSplitPmlSark33Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif  
+
     // output statistics if this is an output step
     if((tstep%mesh->errorStep)==0){
       boltzmannReport2D(mesh, tstep);
