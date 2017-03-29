@@ -272,9 +272,138 @@ kernel void boltzmannSARK33Update2D(const iint Nelements,
 
 
 
+kernel void boltzmannSARK54StageUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat rka,
+            const dfloat erka,
+            const dfloat rkb,
+            const dfloat erkb,
+            const dfloat rkc,
+            const dfloat erkc,
+            const dfloat rkd,
+            const dfloat erkd,
+            const dfloat4 * restrict rhsq1,
+            const dfloat4 * restrict rhsq2,
+            const dfloat4 * restrict rhsq3,
+            const dfloat4 * restrict rhsq4,
+            const dfloat4 * restrict qold,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 2*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[base+0];
+      dfloat4 rhsq1b = rhsq1[base+1];
+
+      dfloat4 rhsq2a = rhsq2[base+0];
+      dfloat4 rhsq2b = rhsq2[base+1];
+
+      dfloat4 rhsq3a = rhsq3[base+0];
+      dfloat4 rhsq3b = rhsq3[base+1];
+
+      dfloat4 rhsq4a = rhsq4[base+0];
+      dfloat4 rhsq4b = rhsq4[base+1];
+
+      
+      dfloat4 qa = q[base+0];
+      dfloat4 qb = q[base+1];
+
+      dfloat4 qoa = qold[base+0];
+      dfloat4 qob = qold[base+1];
+      
+      //
+      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x );
+      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y ); 
+      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z ); 
+      
+      //
+      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w); // +erkc*rhsq3a.w );
+      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x); //+erkc*rhsq3b.x );
+      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y);//+erkc*rhsq3b.y );
+      
+      q[base+0] = qa;
+      q[base+1] = qb;
+
+    }
+  }
+}
 
 
 
+kernel void boltzmannSARK54Update2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat rka,
+            const dfloat erka,
+            const dfloat rkb,
+            const dfloat erkb,
+            const dfloat rkc,
+            const dfloat erkc,
+            const dfloat rkd,
+            const dfloat erkd,
+            const dfloat rke,
+            const dfloat erke,
+            const dfloat4 * restrict rhsq1,
+            const dfloat4 * restrict rhsq2,
+            const dfloat4 * restrict rhsq3,
+            const dfloat4 * restrict rhsq4,
+            const dfloat4 * restrict rhsq5,
+                  dfloat4 * restrict qold,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 2*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[base+0];
+      dfloat4 rhsq1b = rhsq1[base+1];
+
+      dfloat4 rhsq2a = rhsq2[base+0];
+      dfloat4 rhsq2b = rhsq2[base+1];
+
+      dfloat4 rhsq3a = rhsq3[base+0];
+      dfloat4 rhsq3b = rhsq3[base+1];
+
+      dfloat4 rhsq4a = rhsq4[base+0];
+      dfloat4 rhsq4b = rhsq4[base+1];
+
+      dfloat4 rhsq5a = rhsq5[base+0];
+      dfloat4 rhsq5b = rhsq5[base+1];
+
+      
+      dfloat4 qa = q[base+0];
+      dfloat4 qb = q[base+1];
+
+      dfloat4 qoa = qold[base+0];
+      dfloat4 qob = qold[base+1];
+      
+      //
+      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x + rke*rhsq5a.x );
+      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y + rke*rhsq5a.y ); 
+      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z + rke*rhsq5a.z ); 
+      
+      //
+      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w+ erke*rhsq5a.w); 
+      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x+ erke*rhsq5b.x); 
+      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y+ erke*rhsq5b.y);
+      
+      q[base+0] = qa;
+      q[base+1] = qb;
+
+       qold[base+0] = qa;
+      qold[base+1] = qb;
+
+    }
+  }
+}
 
 
 
