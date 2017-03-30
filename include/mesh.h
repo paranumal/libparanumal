@@ -520,5 +520,10 @@ int almondSolve(void* x,
 
 void almondProlongateCoarseProblem(void* almond, int *coarseNp, int *coarseOffsets, void **B);
 
+void almondGlobalCoarseSetup(void *ALMOND, int *coarseNp, int *coarseOffsets, int **globalNumbering,
+                    int *nnz, int **rows, int **cols, void **vals);
+
+
+
 #endif
 

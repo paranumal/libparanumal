@@ -379,8 +379,6 @@ void almondProlongateCoarseProblem(void *ALMOND, int *coarseNp, int *coarseOffse
   for (int n=0; n<numLevels;n++)
     b[n].resize(almond->M.levels[n]->A.nrows());
 
-
-
   for (int k=0;k<localCoarseNp;k++) {
     //fill coarsest vector
     for (int n=0;n<localCoarseNp;n++) b[numLevels-1][n] = 0.0;
@@ -416,3 +414,48 @@ void almondProlongateCoarseProblem(void *ALMOND, int *coarseNp, int *coarseOffse
       ((amgFloat *)*B)[n+k*almond->Nnum] = almond->xUnassembled[n];
   }
 }
+
+void almondGlobalCoarseSetup(void *ALMOND, int *coarseNp, int *coarseOffsets, int **globalNumbering,
+                    int *nnz, int **rows, int **cols, void **vals) {
+
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  
+  almond_t *almond = (almond_t*) ALMOND;
+
+  int numLevels = almond->M.levels.size();
+
+  int Np = almond->M.levels[numLevels-1]->A.nrows();
+
+  MPI_Allgather(&Np, 1, MPI_INT, coarseNp, 1, MPI_INT, MPI_COMM_WORLD);
+
+  coarseOffsets[0] = 0;
+  for (int r=0;r<size;r++)
+    coarseOffsets[r+1] = coarseOffsets[r] + coarseNp[r];
+
+  *globalNumbering = (int *) calloc(coarseOffsets[size],sizeof(int));
+  for (int n=0;n<coarseOffsets[size];n++)
+    (*globalNumbering)[n] = n;
+
+  *nnz = almond->M.levels[numLevels-1]->A.nnz();
+  amgFloat *dvals;
+  if (*nnz) {
+    *rows = (int *) calloc(*nnz,sizeof(int));
+    *cols = (int *) calloc(*nnz,sizeof(int));
+    dvals = (amgFloat *) calloc(*nnz,sizeof(amgFloat));
+  }
+
+  for (int n=0;n<Np;n++) {
+    for (int m=almond->M.levels[numLevels-1]->A.rowStarts[n];
+             m<almond->M.levels[numLevels-1]->A.rowStarts[n+1];m++) {
+      (*rows)[m] = n + coarseOffsets[rank];
+      int col = almond->M.levels[numLevels-1]->A.cols[m];
+      (*cols)[m] = almond->M.levels[numLevels-1]->A.colMap[col];
+      dvals[m] = almond->M.levels[numLevels-1]->A.coefs[m];
+    }
+  }
+
+  *vals = dvals;
+}
+
