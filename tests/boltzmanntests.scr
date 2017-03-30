@@ -1,16 +1,5 @@
 
-cd ~/Desktop/holmes;
-
-cd  examples/boltzmannTri2D; 
-
-make clean;
-
-make TEST=1 TIME_METHOD=SARK CUBATURE_USE=0 -j; 
-
-cd ../../;
-
-./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
-./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+cd ..;
 
 
 
@@ -22,12 +11,55 @@ make TEST=1 TIME_METHOD=LSERK CUBATURE_USE=0 -j;
 
 cd ../../;
 
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
 ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
 ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
 
 
 
+cd  examples/boltzmannTri2D; 
 
+make clean;
+
+make TEST=1 TIME_METHOD=SARK54 CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+cd  examples/boltzmannTri2D; 
+make clean;
+
+make TEST=1 TIME_METHOD=LSERK3 CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+cd  examples/boltzmannTri2D; 
+make clean;
+
+make TEST=1 TIME_METHOD=SARK33 CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
 
 
 

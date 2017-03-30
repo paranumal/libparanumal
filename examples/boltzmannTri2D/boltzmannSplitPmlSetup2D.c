@@ -273,13 +273,13 @@ dfloat cfl = 0.5;
   dfloat dtim = 4./(mesh->tauInv*magVelocity);
 
   // AK: Set time step size
-#if TIME_DISC==LSERK
+#if TIME_DISC==LSERK || TIME_DISC==LSERK3
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
-#elif TIME_DISC==SARK
+#elif TIME_DISC==SARK || TIME_DISC==SARK33 || TIME_DISC==SARK54
       printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
        // dt        =  0.8*dtex; 
@@ -322,7 +322,7 @@ dfloat cfl = 0.5;
 
    mesh->dt = 1e-4;
   //
-  mesh->finalTime = 5.;
+  mesh->finalTime = 10.;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -357,7 +357,7 @@ dfloat cfl = 0.5;
 
 
 
-  #if TIME_DISC==LSERK 
+  #if TIME_DISC==LSERK || TIME_DISC==LSERK3 
   // pml variables
   mesh->o_pmlqx =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
@@ -380,184 +380,470 @@ dfloat cfl = 0.5;
   mesh->o_respmlNT =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
 
-  #elif TIME_DISC==SARK
-  // Extra Storage for exponential update
-   mesh->o_resqex =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_respmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_respmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
 
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_respmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+
+
+    #if TIME_DISC==LSERK3
+    //
+     mesh->lserk3a[0] = 0.;
+     mesh->lserk3a[1] = -5./9.;
+     mesh->lserk3a[2] = -153./128.;
+    //
+     mesh->lserk3b[0] = 1./3.;
+     mesh->lserk3b[1] = 15./16.;
+     mesh->lserk3b[2] = 8./15.;
+    //
+     mesh->lserk3c[0] = 0.;
+     mesh->lserk3c[1] = 1./3.;
+     mesh->lserk3c[2] = 3./4.;
+     mesh->lserk3c[3] = 1.;
+    #endif
+
+//   #elif TIME_DISC==SARK
+//   // Extra Storage for exponential update
+//    mesh->o_resqex =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+//   // pml variables
+//   mesh->o_pmlqx =    
+//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+//   mesh->o_rhspmlqx =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+//   mesh->o_respmlqx =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+//   mesh->o_pmlqy =    
+//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+//   mesh->o_rhspmlqy =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+//   mesh->o_respmlqy =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+
+//   mesh->o_pmlNT =    
+//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+//   mesh->o_rhspmlNT =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+//   mesh->o_respmlNT =
+//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
    
 
+
+//    dfloat coef = -mesh->tauInv;
+//    dfloat  h   = mesh->dt; 
+
+//    dfloat lb1 = mesh->rkb[0] ; 
+//    dfloat lb2 = mesh->rkb[1] ;
+//    dfloat lb3 = mesh->rkb[2] ;
+//    dfloat lb4 = mesh->rkb[3] ;
+//    dfloat lb5 = mesh->rkb[4] ;
+//    //
+//    dfloat la1 = mesh->rka[0] ; 
+//    dfloat la2 = mesh->rka[1] ;
+//    dfloat la3 = mesh->rka[2] ;
+//    dfloat la4 = mesh->rka[3] ;
+//    dfloat la5 = mesh->rka[4] ;
+//    //
+//    dfloat lc1 = mesh->rkc[0] ;  // = 0.0
+//    dfloat lc2 = mesh->rkc[1] ;
+//    dfloat lc3 = mesh->rkc[2] ;
+//    dfloat lc4 = mesh->rkc[3] ;
+//    dfloat lc5 = mesh->rkc[4] ;
+//    dfloat lc6 = mesh->rkc[5] ; // = 1.0
+
+   
+//    // Fill the required  exp(-coef*dt*(lsrkc(i)-lsrkc(i-1)))
+//    mesh->sarke[0] = exp(coef*h*(lc2 - lc1));
+//    mesh->sarke[1] = exp(coef*h*(lc3 - lc2));
+//    mesh->sarke[2] = exp(coef*h*(lc4 - lc3));
+//    mesh->sarke[3] = exp(coef*h*(lc5 - lc4));
+//    mesh->sarke[4] = exp(coef*h*(lc6 - lc5));
+
+
+//    #if 1
+
+//    // Fill the required  low storage A and B coefficients
+//    mesh->sarka[0] = 0.0;
+//    mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)
+//                      *(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))
+//                       /(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
+
+
+//    mesh->sarka[2] = (coef*h*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+//                     /(coef*h*(lb1 + lb2 + la2*lb2)) + (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)
+//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))
+//                      *(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.));
+
+
+
+
+
+//    mesh->sarka[3] = (coef*h*((lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) 
+//                       + la3*(lb3 + la4*lb4)))*(lb3 + la4*lb4)*(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
+//                        /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
+//                         *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))
+//                         /(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.));
+
+
+
+//    mesh->sarka[4] = -(coef*h*((exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h) + (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 
+//                     + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))))
+//                      /(lb5*(exp(coef*h) - 1.));
+
+//    //
+//    mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
+
+//    mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
+
+//    mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
+//                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+
+
+//    mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
+//                      /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+
+
+
+//    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
+
+
+//    // Coefficients for exponential residual update
+//    mesh->sarkra[0] = 0.0; 
+//    mesh->sarkra[1] = 1.0; 
+//    mesh->sarkra[2] = 1.0; 
+//    mesh->sarkra[3] = 1.0; 
+//    mesh->sarkra[4] = 1.0; 
+//    // Coefficients for exponential residual update
+//    mesh->sarkrb[0] = 0.0; 
+//    mesh->sarkrb[1] = mesh->sarkb[0]; 
+//    mesh->sarkrb[2] = mesh->sarkb[1];  
+//    mesh->sarkrb[3] = mesh->sarkb[2];  
+//    mesh->sarkrb[4] = mesh->sarkb[3];  
+
+
+//    #endif
+
+
+//    #if 0
+//     // Fill the required  low storage A and B coefficients
+//    mesh->sarka[0] = 0.0;
+//    mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+//                       /(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))/(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
+
+
+
+//    mesh->sarka[2] = (lb2*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.)
+//                     *((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)) 
+//                       - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                       /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)
+//                      *((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2));
+
+
+
+
+
+
+//    mesh->sarka[3] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))
+//                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 
+//                     (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
+//                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))/(lb4*
+//                       (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
+//                         /(coef*h*(lb1 + lb2 + la2*lb2)) - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                         /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+
+
+
+//    mesh->sarka[4] = -(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h)*(lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5))))*(exp(-coef*h) - 1.))
+//                     /(coef*h) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+//                        *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))))
+//                    /(lb5*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                     /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
+//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))*(exp(coef*h) - 1.)
+//                     *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+
+
+// //
+//    mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
+
+//    mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
+
+//    mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
+//                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
+//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
+
+
+//    mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
+//                      /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
+
+
+
+//    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
+
+//    // Coefficients for exponential residual update
+//    mesh->sarkra[0] = 0.0; 
+//    mesh->sarkra[1] = 1.0; 
+//    mesh->sarkra[2] = 1.0; 
+//    mesh->sarkra[3] = 1.0; 
+//    mesh->sarkra[4] = 1.0; 
+//    // Coefficients for exponential residual update
+//    mesh->sarkrb[0] = 0.0; 
+//    mesh->sarkrb[1] = mesh->sarkb[0]; 
+//    mesh->sarkrb[2] = mesh->sarkb[1];  
+//    mesh->sarkrb[3] = mesh->sarkb[2];  
+//    mesh->sarkrb[4] = mesh->sarkb[3];  
+
+// #endif
+  #elif TIME_DISC==SARK33 || TIME_DISC==SARK54
+  mesh->o_qold =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+  mesh->o_rhsq1 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+  mesh->o_rhsq2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+  mesh->o_rhsq3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+      for(int i=0; i<5; i++){
+        for(int j=0; j<5; j++){
+          mesh->sarka[i][j] = 0.0;
+        }
+        mesh->sarkb[i] = 0.0;
+        mesh->sarke[i] = 0.0;
+      
+      }
 
    dfloat coef = -mesh->tauInv;
    dfloat  h   = mesh->dt; 
 
-   dfloat lb1 = mesh->rkb[0] ; 
-   dfloat lb2 = mesh->rkb[1] ;
-   dfloat lb3 = mesh->rkb[2] ;
-   dfloat lb4 = mesh->rkb[3] ;
-   dfloat lb5 = mesh->rkb[4] ;
-   //
-   dfloat la1 = mesh->rka[0] ; 
-   dfloat la2 = mesh->rka[1] ;
-   dfloat la3 = mesh->rka[2] ;
-   dfloat la4 = mesh->rka[3] ;
-   dfloat la5 = mesh->rka[4] ;
-   //
-   dfloat lc1 = mesh->rkc[0] ;  // = 0.0
-   dfloat lc2 = mesh->rkc[1] ;
-   dfloat lc3 = mesh->rkc[2] ;
-   dfloat lc4 = mesh->rkc[3] ;
-   dfloat lc5 = mesh->rkc[4] ;
-   dfloat lc6 = mesh->rkc[5] ; // = 1.0
+    #if TIME_DISC==SARK33
+     //
+     dfloat a21 = 1./3.;
+     dfloat a31 = -3./16. ;
+     dfloat a32 = 15./16.;
+     //
+     dfloat b1 = 1./6.; 
+     dfloat b2 = 3./10.; 
+     dfloat b3 = 8./15.; 
+     //
+     dfloat c1 = 0.;
+     dfloat c2 = 1./3.;
+     dfloat c3 = 3./4.; 
+
+     //  
+     mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+     mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h);// a31
+     mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+     //
+     mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                        /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                        /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+ //b1
+     mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                        /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                        /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+//b2
+     mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                        /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+ //b3
+     //
+     mesh->sarke[0] = exp(coef*h*c2); 
+     mesh->sarke[1] = exp(coef*h*c3); 
+     mesh->sarke[2] = exp(coef*h*1.0);
+     
+     mesh->rk3a[0][0] = 0.; 
+     mesh->rk3a[1][0] = a21; 
+     mesh->rk3a[2][0] = a31;
+     mesh->rk3a[2][1] = a32; 
+
+     mesh->rk3b[0] = b1; 
+     mesh->rk3b[1] = b2; 
+     mesh->rk3b[2] = b3; 
+
+     mesh->rk3c[0] = c1; 
+     mesh->rk3c[1] = c2; 
+     mesh->rk3c[2] = c3; 
+
+
+     // printf("A: %.8e  %.8e  %.8e \n ", mesh->sarka[1][0], mesh->sarka[2][0], mesh->sarka[2][1] );
+     // printf("a: %.8e  %.8e  %.8e \n", mesh->rk3a[1][0], mesh->rk3a[2][0], mesh->rk3a[2][1] );
+
+     // printf("B: %.8e  %.8e  %.8e \n", mesh->sarkb[0], mesh->sarkb[1], mesh->sarkb[2] );
+     // printf("b: %.8e  %.8e  %.8e \n ", mesh->rk3b[0], mesh->rk3b[1], mesh->rk3b[2] );
+
+    #endif
+
+
+      #if TIME_DISC==SARK54
+      mesh->o_rhsq4 =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      mesh->o_rhsq5 =
+         mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      
+
+
+     dfloat lb1 = mesh->rkb[0] ; 
+     dfloat lb2 = mesh->rkb[1] ;
+     dfloat lb3 = mesh->rkb[2] ;
+     dfloat lb4 = mesh->rkb[3] ;
+     dfloat lb5 = mesh->rkb[4] ;
+     //
+     dfloat la1 = mesh->rka[0] ; 
+     dfloat la2 = mesh->rka[1] ;
+     dfloat la3 = mesh->rka[2] ;
+     dfloat la4 = mesh->rka[3] ;
+     dfloat la5 = mesh->rka[4] ;
+     //
+     dfloat lc1 = mesh->rkc[0] ;  // = 0.0
+     dfloat lc2 = mesh->rkc[1] ;
+     dfloat lc3 = mesh->rkc[2] ;
+     dfloat lc4 = mesh->rkc[3] ;
+     dfloat lc5 = mesh->rkc[4] ;
+     dfloat lc6 = mesh->rkc[5] ; // = 1.0
+
+
+
+     mesh->rk4a[1][0] =  lb1; // a21
+     //
+     mesh->rk4a[2][0] = lb1 + la2*lb2; // a31
+     mesh->rk4a[2][1] = lb2; // a32
+     //
+     mesh->rk4a[3][0] = lb1 + la2*(lb2 + la3*lb3); // a31
+     mesh->rk4a[3][1] = lb2 + la3*lb3; //
+     mesh->rk4a[3][2] = lb3; 
+     //
+     mesh->rk4a[4][0] = lb1 + la2*(lb2 + la3*(lb3 + la4*lb4));// a31
+     mesh->rk4a[4][1] = lb2 + la3*(lb3 + la4*lb4); //
+     mesh->rk4a[4][2] = lb3 + la4*lb4; 
+     mesh->rk4a[4][3] = lb4; 
+   
+     // mesh->rk4b[0] = lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5)));
+     // mesh->rk4b[1] = lb2 + la3*(lb3 + la4*(lb4 + la5*lb5));
+     // mesh->rk4b[2] = lb3 + la4*(lb4 + la5*lb5);
+     // mesh->rk4b[3] = lb4 + la5*lb5;
+     // mesh->rk4b[4] = lb5;
+
+    mesh->rk4b[0]  =  -(15.*lc2 + 15.*lc3 + 15.*lc4 + 15.*lc5 - 20.*lc2*lc3 - 20.*lc2*lc4 - 20.*lc2*lc5 - 20.*lc3*lc4 - 20.*lc3*lc5 - 20.*lc4*lc5 + 30.*lc2*lc3*lc4 + 30.*lc2*lc3*lc5 + 30.*lc2*lc4*lc5 + 30.*lc3*lc4*lc5 - 60.*lc2*lc3*lc4*lc5 - 12.)/(60.*(lc1 - lc2)*(lc1 - lc3)*(lc1 - lc4)*(lc1 - lc5));
+    mesh->rk4b[1]  =   (15.*lc1 + 15.*lc3 + 15.*lc4 + 15.*lc5 - 20.*lc1*lc3 - 20.*lc1*lc4 - 20.*lc1*lc5 - 20.*lc3*lc4 - 20.*lc3*lc5 - 20.*lc4*lc5 + 30.*lc1*lc3*lc4 + 30.*lc1*lc3*lc5 + 30.*lc1*lc4*lc5 + 30.*lc3*lc4*lc5 - 60.*lc1*lc3*lc4*lc5 - 12.)/(60.*(lc1 - lc2)*(lc2 - lc3)*(lc2 - lc4)*(lc2 - lc5));
+    mesh->rk4b[2]  =  -(15.*lc1 + 15.*lc2 + 15.*lc4 + 15.*lc5 - 20.*lc1*lc2 - 20.*lc1*lc4 - 20.*lc1*lc5 - 20.*lc2*lc4 - 20.*lc2*lc5 - 20.*lc4*lc5 + 30.*lc1*lc2*lc4 + 30.*lc1*lc2*lc5 + 30.*lc1*lc4*lc5 + 30.*lc2*lc4*lc5 - 60.*lc1*lc2*lc4*lc5 - 12.)/(60.*(lc1 - lc3)*(lc2 - lc3)*(lc3 - lc4)*(lc3 - lc5));
+    mesh->rk4b[3]  =   (15.*lc1 + 15.*lc2 + 15.*lc3 + 15.*lc5 - 20.*lc1*lc2 - 20.*lc1*lc3 - 20.*lc2*lc3 - 20.*lc1*lc5 - 20.*lc2*lc5 - 20.*lc3*lc5 + 30.*lc1*lc2*lc3 + 30.*lc1*lc2*lc5 + 30.*lc1*lc3*lc5 + 30.*lc2*lc3*lc5 - 60.*lc1*lc2*lc3*lc5 - 12.)/(60.*(lc1 - lc4)*(lc2 - lc4)*(lc3 - lc4)*(lc4 - lc5));
+    mesh->rk4b[4]  =  -(15.*lc1 + 15.*lc2 + 15.*lc3 + 15.*lc4 - 20.*lc1*lc2 - 20.*lc1*lc3 - 20.*lc1*lc4 - 20.*lc2*lc3 - 20.*lc2*lc4 - 20.*lc3*lc4 + 30.*lc1*lc2*lc3 + 30.*lc1*lc2*lc4 + 30.*lc1*lc3*lc4 + 30.*lc2*lc3*lc4 - 60.*lc1*lc2*lc3*lc4 - 12.)/(60.*(lc1 - lc5)*(lc2 - lc5)*(lc3 - lc5)*(lc4 - lc5));
+ 
+
+     mesh->sarka[1][0] = (lb1*(exp(coef*h*lc2) - 1.))/(coef*h*lc2); 
+     //
+     mesh->sarka[2][0] = -(exp(coef*h*lc3)*(lb1 + la2*lb2)*(exp(-coef*h*lc3) - 1.))/(coef*h*lc3);
+
+
+     mesh->sarka[2][1] = (lb2*(exp(coef*h*lc3) - 1.))/(coef*h*lc3);
+ // a32
+     //
+     mesh->sarka[3][0] = ((exp(coef*h*lc4) - 1.)*(lb1 + la2*lb2 + la2*la3*lb3))/(coef*h*lc4);
+
+
+     mesh->sarka[3][1] = -(exp(coef*h*lc4)*(lb2 + la3*lb3)*(exp(-coef*h*lc4) - 1.))/(coef*h*lc4);
+
+ //
+     mesh->sarka[3][2] = (lb3*(exp(coef*h*lc4) - 1))/(coef*h*lc4);
+
+ 
+    
+     //
+     mesh->sarka[4][0] = ((exp(coef*h*lc5) - 1.)*(lb1 + la2*lb2 + la2*la3*lb3 + la2*la3*la4*lb4))/(coef*h*lc5);
+
+;// a31
+     mesh->sarka[4][1] = ((exp(coef*h*lc5) - 1.)*(lb2 + la3*lb3 + la3*la4*lb4))/(coef*h*lc5);
+
+ //
+     mesh->sarka[4][2] = -(exp(coef*h*lc5)*(lb3 + la4*lb4)*(exp(-coef*h*lc5) - 1.))/(coef*h*lc5);
+
+
+     mesh->sarka[4][3] = (lb4*(exp(coef*h*lc5) - 1.))/(coef*h*lc5);
+
+     //
+     mesh->sarkb[0] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) 
+                       + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 
+                       + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 
+                       + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc2 
+                       + 6*coef*h*lc3 + 6*coef*h*lc4 + 6*coef*h*lc5 - 6*coef*h*lc2*exp(coef*h) 
+                       - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) 
+                       - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,2)*pow(h,2)*lc3*lc4 
+                       - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc4*lc5 
+                       - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 
+                       - pow(coef,4)*pow(h,4)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc3*lc4 
+                       - pow(coef,4)*pow(h,4)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 + pow(coef,3)*pow(h,3)*lc2*lc3*lc4 + pow(coef,3)*pow(h,3)*lc2*lc3*lc5 
+                       + pow(coef,3)*pow(h,3)*lc2*lc4*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc4 + pow(coef,3)*pow(h,3)*lc3*lc4*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc5 + pow(coef,4)*pow(h,4)*lc2*lc4*lc5 
+                       + pow(coef,4)*pow(h,4)*lc3*lc4*lc5 + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) 
+                       + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) 
+                       - pow(coef,4)*pow(h,4)*lc2*lc3*lc4*lc5 - pow(coef,3)*pow(h,3)*lc2*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc4*lc5*exp(coef*h) 
+                       - pow(coef,3)*pow(h,3)*lc3*lc4*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc2*lc3*lc4*lc5*exp(coef*h) - 24)
+                       /(pow(coef,5)*pow(h,5)*(lc1 - lc2)*(lc1 - lc3)*(lc1 - lc4)*(lc1 - lc5));
+
+     mesh->sarkb[1] = -(24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc3 
+                      + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 
+                      + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc3 + 6*coef*h*lc4 + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) 
+                      - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 
+                      - 2*pow(coef,2)*pow(h,2)*lc3*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc4*lc5 - 2*pow(coef,3)*pow(h,3)*lc3*lc4 
+                      - pow(coef,4)*pow(h,4)*lc1*lc4 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 + pow(coef,3)*pow(h,3)*lc1*lc3*lc4 
+                      + pow(coef,3)*pow(h,3)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc3*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc3*lc4*lc5 
+                      + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) 
+                      + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc3*lc4*lc5 - pow(coef,3)*pow(h,3)*lc1*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc4*lc5*exp(coef*h) 
+                      - pow(coef,3)*pow(h,3)*lc3*lc4*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc3*lc4*lc5*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc2)*(lc2 - lc3)*(lc2 - lc4)*(lc2 - lc5));
+
+     mesh->sarkb[2] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 
+                      + 6*pow(coef,2)*pow(h,2)*lc5 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc4 
+                      + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc4 
+                      - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 
+                      - 2*pow(coef,2)*pow(h,2)*lc4*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 
+                      + pow(coef,3)*pow(h,3)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc5 + pow(coef,3)*pow(h,3)*lc2*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc4*lc5 
+                      + pow(coef,4)*pow(h,4)*lc2*lc4*lc5 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) 
+                      + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc2*lc4*lc5 - pow(coef,3)*pow(h,3)*lc1*lc2*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc4*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc4*lc5*exp(coef*h) 
+                      + pow(coef,4)*pow(h,4)*lc1*lc2*lc4*lc5*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc3)*(lc2 - lc3)*(lc3 - lc4)*(lc3 - lc5));
+
+     mesh->sarkb[3] = -(24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 3*pow(coef,3)*pow(h,3)*lc1 + 3*pow(coef,3)*pow(h,3)*lc2 + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + pow(coef,4)*pow(h,4)*lc2 
+                      + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc3 + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 
+                      - 2*pow(coef,2)*pow(h,2)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc1*lc3 
+                      - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc3*lc5 + pow(coef,3)*pow(h,3)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc2*lc3*lc5 
+                      + pow(coef,4)*pow(h,4)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc3*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc5 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) 
+                      + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc5 - pow(coef,3)*pow(h,3)*lc1*lc2*lc3*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc5*exp(coef*h) - 24)
+                       /(pow(coef,5)*pow(h,5)*(lc1 - lc4)*(lc2 - lc4)*(lc3 - lc4)*(lc4 - lc5));
+
+     mesh->sarkb[4] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 
+                      + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc4 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc3 + 6*coef*h*lc4 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc3 
+                      - 2*pow(coef,2)*pow(h,2)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc3*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 - pow(coef,4)*pow(h,4)*lc1*lc3 
+                      - 2*pow(coef,3)*pow(h,3)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc2*lc4 - pow(coef,4)*pow(h,4)*lc3*lc4 + pow(coef,3)*pow(h,3)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc2*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc2*lc4 
+                      + pow(coef,4)*pow(h,4)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc2*lc3*lc4 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) 
+                      - pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc4 - pow(coef,3)*pow(h,3)*lc1*lc2*lc3*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc4*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc4*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc5)*(lc2 - lc5)*(lc3 - lc5)*(lc4 - lc5));
+
+     
+
+
+
+
+
+
+
+
+
+
+
+
+     // mesh->sarkb[3] = -(exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h);
+     // mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
+
+     //
+     mesh->sarke[0] = exp(coef*h*lc1); 
+     mesh->sarke[1] = exp(coef*h*lc2); 
+     mesh->sarke[2] = exp(coef*h*lc3);
+     mesh->sarke[3] = exp(coef*h*lc4);
+     mesh->sarke[4] = exp(coef*h*lc5);
+     mesh->sarke[5] = exp(coef*h*lc6);
+      #endif
+
 
    
-   // Fill the required  exp(-coef*dt*(lsrkc(i)-lsrkc(i-1)))
-   mesh->sarke[0] = exp(coef*h*(lc2 - lc1));
-   mesh->sarke[1] = exp(coef*h*(lc3 - lc2));
-   mesh->sarke[2] = exp(coef*h*(lc4 - lc3));
-   mesh->sarke[3] = exp(coef*h*(lc5 - lc4));
-   mesh->sarke[4] = exp(coef*h*(lc6 - lc5));
-
-
-   #if 0
-
-   // Fill the required  low storage A and B coefficients
-   mesh->sarka[0] = 0.0;
-   mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)
-                     *(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))
-                      /(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
-
-
-   mesh->sarka[2] = (coef*h*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-                    /(coef*h*(lb1 + lb2 + la2*lb2)) + (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)
-                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))
-                     *(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.));
-
-
-
-
-
-   mesh->sarka[3] = (coef*h*((lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                     /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) 
-                      + la3*(lb3 + la4*lb4)))*(lb3 + la4*lb4)*(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
-                       /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
-                        *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))
-                        /(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.));
-
-
-
-   mesh->sarka[4] = -(coef*h*((exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h) + (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 
-                    + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))))
-                     /(lb5*(exp(coef*h) - 1.));
-
-
-
-
-   #endif
-
-
-   #if 1
-    // Fill the required  low storage A and B coefficients
-   mesh->sarka[0] = 0.0;
-   mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-                      /(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))/(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
-
-
-
-   mesh->sarka[2] = (lb2*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.)
-                    *((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)) 
-                      - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)
-                     *((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2));
-
-
-
-
-
-
-   mesh->sarka[3] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))
-                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 
-                    (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-                      *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
-                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))/(lb4*
-                      (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-                        /(coef*h*(lb1 + lb2 + la2*lb2)) - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                        /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
-
-
-
-   mesh->sarka[4] = -(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h)*(lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5))))*(exp(-coef*h) - 1.))
-                    /(coef*h) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))))
-                   /(lb5*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                    /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-                      *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))*(exp(coef*h) - 1.)
-                    *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
-
-
-#endif
-
-
-
-
-
-   //
-   mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
-
-   mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
-
-   mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
-                    *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-                     /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
-
-
-   mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
-                     /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
-
-
-
-   mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
-
-
-
-
-
-
-   // Coefficients for exponential residual update
-   mesh->sarkra[0] = 0.0; 
-   mesh->sarkra[1] = 1.0; 
-   mesh->sarkra[2] = 1.0; 
-   mesh->sarkra[3] = 1.0; 
-   mesh->sarkra[4] = 1.0; 
-   // Coefficients for exponential residual update
-   mesh->sarkrb[0] = 0.0; 
-   mesh->sarkrb[1] = mesh->sarkb[0]; 
-   mesh->sarkrb[2] = mesh->sarkb[1];  
-   mesh->sarkrb[3] = mesh->sarkb[2];  
-   mesh->sarkrb[4] = mesh->sarkb[3];  
-
-
-
+   
 
 
 
@@ -841,7 +1127,7 @@ dfloat cfl = 0.5;
 
 
 
- #if TIME_DISC==LSERK
+ #if TIME_DISC==LSERK || TIME_DISC==LSERK3
     #if CUBATURE_ENABLED
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
@@ -980,7 +1266,7 @@ dfloat cfl = 0.5;
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
-#elif TIME_DISC==SAAB
+#elif TIME_DISC==SAAB || TIME_DISC==SARK || TIME_DISC==SARK33 || TIME_DISC==SARK54
 
    #if CUBATURE_ENABLED
       printf("Compiling SAAB volume kernel with cubature integration\n");
@@ -1036,30 +1322,62 @@ dfloat cfl = 0.5;
                kernelInfo);
 
 
-
-  //  //SAAB FIRST ORDER UPDATE
-  // printf("compiling non-pml 1st order update kernel\n");
-  // mesh->updateFirstOrderKernel =
-  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-  //              "boltzmannSAABUpdateFirst2D",
-  //              kernelInfo);
-
-  //   //SAAB SECOND ORDER UPDATE
-  // printf("compiling non-pml 2nd order update kernel\n");
-  // mesh->updateSecondOrderKernel =
-  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-  //              "boltzmannSAABUpdateSecond2D",
-  //              kernelInfo);
-
-
+     #if TIME_DISC==SAAB
      //SAAB STAGE UPDATE
-  printf("compiling non-pml  update kernel\n");
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSAABUpdate2D",
-               kernelInfo); 
+    printf("compiling non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSAABUpdate2D",
+                 kernelInfo); 
+    #endif
+
+    #if TIME_DISC==SARK
+     //SARK STAGE UPDATE
+    printf("compiling SARK non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARKUpdate2D",
+                 kernelInfo); 
+
+    #endif
 
 
+    #if TIME_DISC==SARK33
+
+      //SARK STAGE UPDATE
+    printf("compiling SARK33 non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK33Update2D",
+                 kernelInfo); 
+
+
+   printf("compiling SARK33 non-pml  stage update kernel\n");
+    mesh->updateStageKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK33StageUpdate2D",
+                 kernelInfo); 
+
+    #endif
+
+
+     #if TIME_DISC==SARK54
+
+      //SARK STAGE UPDATE
+    printf("compiling SARK54 non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK54Update2D",
+                 kernelInfo); 
+
+
+   printf("compiling SARK54 non-pml  stage update kernel\n");
+    mesh->updateStageKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannSARK54StageUpdate2D",
+                 kernelInfo); 
+
+    #endif  
 
   //     //SAAB FIRST ORDER UPDATE
   // printf("Compiling SAAB pml 1st order update kernel\n");
@@ -1081,6 +1399,16 @@ dfloat cfl = 0.5;
   //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
   //              "boltzmannSAABSplitPmlUpdate2D",
   //              kernelInfo); 
+
+
+
+
+
+
+ mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);   
 
 #elif TIME_DISC==SARK
 
