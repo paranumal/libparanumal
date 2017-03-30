@@ -404,120 +404,146 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
     iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
 
+    iint nnz2;
+    iint *globalNumbering2;
+    iint *rowsA2;
+    iint *colsA2;
+    dfloat *valsA2;  
 
     /* populate b here */
-    if(strstr(options,"LOCALALMOND")) {
-      //if using ALMOND for patch solve, build the ubercoarse from ALMOND
-      dfloat *coarseB;
+    if (strstr(options,"GLOBALALMOND")) {
 
-      almondProlongateCoarseProblem(precon->almond, coarseNp, coarseOffsets, (void**) &coarseB);
+      almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
+                              &nnz2,&rowsA2,&colsA2,(void **) &valsA2);
 
+      precon->coarseNp = coarseNp[rank];
+      precon->coarseTotal = coarseOffsets[size];
       coarseTotal = coarseOffsets[size];
-      localCoarseNp = coarseNp[rank];
+      precon->coarseOffsets = coarseOffsets;
 
-      precon->B = (dfloat*) calloc(localCoarseNp*Ntotal, sizeof(dfloat));
+    } else {
+      if(strstr(options,"LOCALALMOND")) {
+        //if using ALMOND for patch solve, build the ubercoarse from ALMOND
+        dfloat *coarseB;
 
-      for (iint m=0;m<localCoarseNp;m++) {
-        for (iint n=0;n<coarseNtotal;n++)
-          precon->z1[n] = coarseB[n+m*coarseNtotal];
+        almondProlongateCoarseProblem(precon->almond, coarseNp, coarseOffsets, (void**) &coarseB);
 
-        precon->o_z1.copyFrom(precon->z1);  
+        coarseTotal = coarseOffsets[size];
+        localCoarseNp = coarseNp[rank];
 
-        precon->prolongateKernel(mesh->Nelements+mesh->totalHaloPairs, precon->o_V1, precon->o_z1, precon->o_ztmp);
+        precon->B = (dfloat*) calloc(localCoarseNp*Ntotal, sizeof(dfloat));
 
-        precon->o_ztmp.copyTo(precon->B + m*Ntotal);
-      }
+        for (iint m=0;m<localCoarseNp;m++) {
+          for (iint n=0;n<coarseNtotal;n++)
+            precon->z1[n] = coarseB[n+m*coarseNtotal];
 
-    } else { //build the uber problem from global monomials
-      iint coarseN = 1; //mesh->N;
-      localCoarseNp = (coarseN+1)*(coarseN+1);
+          precon->o_z1.copyFrom(precon->z1);  
 
-      coarseTotal = size*localCoarseNp;
+          precon->prolongateKernel(mesh->Nelements+mesh->totalHaloPairs, precon->o_V1, precon->o_z1, precon->o_ztmp);
 
-      precon->B = (dfloat*) calloc(localCoarseNp*Ntotal, sizeof(dfloat));
-
-      cnt = 0;    
-      for(iint j=0;j<coarseN+1;++j) {
-        for(iint i=0;i<coarseN+1;++i) {
-          for(iint m=0;m<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++m)
-            precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
-          cnt++;
+          precon->o_ztmp.copyTo(precon->B + m*Ntotal);
         }
-      }
 
-      for (iint n=0;n<size+1;n++) coarseOffsets[n] = n*localCoarseNp;
+      } else { //build the uber problem from global monomials
+        iint coarseN = 1; //mesh->N;
+        localCoarseNp = (coarseN+1)*(coarseN+1);
 
-    } 
+        coarseTotal = size*localCoarseNp;
 
-    
-    // hack
-    iint *globalNumbering2 = (iint*) calloc(coarseTotal,sizeof(iint));
-    for(iint n=0;n<coarseTotal;++n){
-      globalNumbering2[n] = n;
-    }
+        precon->B = (dfloat*) calloc(localCoarseNp*Ntotal, sizeof(dfloat));
 
-    precon->coarseNp = localCoarseNp;
-    precon->coarseTotal = coarseTotal;
-    precon->coarseOffsets = coarseOffsets;
+        cnt = 0;    
+        for(iint j=0;j<coarseN+1;++j) {
+          for(iint i=0;i<coarseN+1;++i) {
+            for(iint m=0;m<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++m)
+              precon->B[cnt*Ntotal+m] = pow(mesh->x[m],i)*pow(mesh->y[m],j); // need to rescale and shift
+            cnt++;
+          }
+        }
 
-    precon->o_B  = (occa::memory*) calloc(localCoarseNp, sizeof(occa::memory));
-    for(iint n=0;n<localCoarseNp;++n)
-      precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
+        for (iint n=0;n<size+1;n++) coarseOffsets[n] = n*localCoarseNp;
 
-    precon->o_tmp2 = mesh->device.malloc(Ntotal*sizeof(dfloat)); // sloppy
-    precon->tmp2 = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  
-    // storage for A*b operation
-    dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-    dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+      } 
 
-    occa::memory o_b = mesh->device.malloc(Ntotal*sizeof(dfloat));
-    occa::memory o_gradb = mesh->device.malloc(4*Ntotal*sizeof(dfloat));
-    occa::memory o_Ab = mesh->device.malloc(Ntotal*sizeof(dfloat));
-
-    dfloat *Ab = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-    dfloat cutoff = (sizeof(dfloat)==4) ? 1e-6:1e-15;
-
-    // maximum fixed size localCoarseNp x localCoarseNp from every rank
-    iint *rowsA2 = (iint*) calloc(localCoarseNp*coarseTotal, sizeof(iint));
-    iint *colsA2 = (iint*) calloc(localCoarseNp*coarseTotal, sizeof(iint));
-    dfloat *valsA2 = (dfloat*) calloc(localCoarseNp*coarseTotal, sizeof(dfloat));  
-
-
-    iint nnz2 = 0;
-    for (iint n=0;n<coarseTotal;n++) {
-      iint id = n - coarseOffsets[rank];
-      if (id>-1&&id<localCoarseNp) {
-        o_b.copyFrom(precon->B+id*Ntotal);
-      } else {
-        o_b.copyFrom(zero);
-      }     
       
-      // need to provide ogs for A*b 
-      ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
-          
-      o_Ab.copyTo(Ab);
-          
-      // project onto coarse basis
-      for(iint m=0;m<localCoarseNp;++m){
-        dfloat val = 0;
-        for(iint i=0;i<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++i){
-          val  += precon->B[m*Ntotal+i]*Ab[i];
-        }
+      // hack
+      iint *globalNumbering2 = (iint*) calloc(coarseTotal,sizeof(iint));
+      for(iint n=0;n<coarseTotal;++n){
+        globalNumbering2[n] = n;
+      }
 
-        // only store entries larger than machine precision (dodgy)
-        if(fabs(val)>cutoff){
-          // now by symmetry
-          iint col = n;
-          iint row = coarseOffsets[rank] + m; 
-          // save this non-zero
-          rowsA2[nnz2] = row;
-          colsA2[nnz2] = col;
-          valsA2[nnz2] = val;
-          ++nnz2;
+      precon->coarseNp = localCoarseNp;
+      precon->coarseTotal = coarseTotal;
+      precon->coarseOffsets = coarseOffsets;
+
+      precon->o_B  = (occa::memory*) calloc(localCoarseNp, sizeof(occa::memory));
+      for(iint n=0;n<localCoarseNp;++n)
+        precon->o_B[n] = mesh->device.malloc(Ntotal*sizeof(dfloat), precon->B+n*Ntotal);
+
+      precon->o_tmp2 = mesh->device.malloc(Ntotal*sizeof(dfloat)); // sloppy
+      precon->tmp2 = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+    
+      // storage for A*b operation
+      dfloat *sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+      dfloat *recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+
+      occa::memory o_b = mesh->device.malloc(Ntotal*sizeof(dfloat));
+      occa::memory o_gradb = mesh->device.malloc(4*Ntotal*sizeof(dfloat));
+      occa::memory o_Ab = mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+      dfloat *Ab = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+      dfloat cutoff = (sizeof(dfloat)==4) ? 1e-6:1e-15;
+
+      // maximum fixed size localCoarseNp x localCoarseNp from every rank
+      rowsA2 = (iint*) calloc(localCoarseNp*coarseTotal, sizeof(iint));
+      colsA2 = (iint*) calloc(localCoarseNp*coarseTotal, sizeof(iint));
+      valsA2 = (dfloat*) calloc(localCoarseNp*coarseTotal, sizeof(dfloat));  
+
+
+      nnz2 = 0;
+      for (iint n=0;n<coarseTotal;n++) {
+        iint id = n - coarseOffsets[rank];
+        if (id>-1&&id<localCoarseNp) {
+          o_b.copyFrom(precon->B+id*Ntotal);
+        } else {
+          o_b.copyFrom(zero);
+        }     
+        
+        // need to provide ogs for A*b 
+        ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
+            
+        o_Ab.copyTo(Ab);
+            
+        // project onto coarse basis
+        for(iint m=0;m<localCoarseNp;++m){
+          dfloat val = 0;
+          for(iint i=0;i<mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);++i){
+            val  += precon->B[m*Ntotal+i]*Ab[i];
+          }
+
+          // only store entries larger than machine precision (dodgy)
+          if(fabs(val)>cutoff){
+            // now by symmetry
+            iint col = n;
+            iint row = coarseOffsets[rank] + m; 
+            // save this non-zero
+            rowsA2[nnz2] = row;
+            colsA2[nnz2] = col;
+            valsA2[nnz2] = val;
+            ++nnz2;
+          }
         }
       }
+
+      free(sendBuffer);
+      free(recvBuffer);
+      free(Ab);
+    
+      o_b.free();
+      o_gradb.free();
+      o_Ab.free();
     }
+
 #if 0
     // TW: FOR TESTING CAN USE MPI_Allgather TO COLLECT ALL CHUNKS ON ALL PROCESSES - THEN USE dgesv
     
@@ -551,14 +577,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
     // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
     printf("Done UberCoarse setup\n");
-    
-    free(sendBuffer);
-    free(recvBuffer);
-    free(Ab);
-  
-    o_b.free();
-    o_gradb.free();
-    o_Ab.free();
   }
 
 }
