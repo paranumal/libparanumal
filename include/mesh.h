@@ -366,12 +366,14 @@ typedef struct {
   // Experimental Time Steppings for Boltzmann 
   #if 1
   occa::kernel updateStageKernel;
+  occa::kernel pmlUpdateStageKernel;
   //occa::kernel updateStageKernel33;
   //
-  occa::memory o_rhsq1, o_rhsq4, o_rhsq5;
-  occa::memory o_qold;
+  occa::memory o_rhsq4, o_rhsq5;
+  occa::memory o_qold , o_pmlqxold, o_pmlqyold,o_pmlNTold;
   // SARK extra coefficients for Boltzmann Solver
   dfloat sarka[5][5], sarkb[5], sarke[6], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
+  dfloat sarkpmla[5][5], sarkpmlb[5], sarkpmle[6]; 
   dfloat rk3a[3][3], rk3b[3], rk3c[3];
   dfloat rk4a[5][5], rk4b[5];
   dfloat lserk3a[3], lserk3b[3], lserk3c[4];
