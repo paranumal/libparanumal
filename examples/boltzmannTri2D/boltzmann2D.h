@@ -18,6 +18,9 @@ void boltzmannRampFunction2D(dfloat t, dfloat *ramp, dfloat *drampdt);
 // execute one Boltzmann time step using LSERK4
 void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer);
+// execute one Boltzmann time step using LSERK4
+void boltzmannSplitPmlV2LserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer);
 
 // execute one Boltzmann time step using LSERK4
 void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
@@ -36,7 +39,7 @@ void boltzmannSplitPmlSarkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer);
 
 // execute one Boltzmann time step using LSERK4
-void boltzmannSplitPmlSark33Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer);
 
 // execute one Boltzmann time step using LSERK4

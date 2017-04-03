@@ -42,63 +42,48 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   
   // set temperature, gas constant, wave speeds
 
-#if 0
-  // // Define problem parameters
-  dfloat Ma = 0.1;
+   
 
-  dfloat Lc = 0.5;
-  dfloat Uc = 1.0; 
-  mesh->RT  = Uc*Uc/(Ma*Ma); 
-  mesh->sqrtRT = sqrt(mesh->RT);   
+#if PML_ENABLED
+    printf("Starting initial conditions\n");
+    dfloat Ma = 0.1;
+    mesh->RT  = 9.0;
+    mesh->sqrtRT = sqrt(mesh->RT);  
 
+    dfloat Re = 1000/mesh->sqrtRT; 
+    mesh->tauInv = mesh->sqrtRT * Re / Ma;
+    dfloat nu = mesh->RT/mesh->tauInv; 
+    // Uniform Flow Condition
+    dfloat rho = 1, u = 1., v = 0.; 
+    dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    //
+    //
+    mesh->finalTime = 20.;
 
-  dfloat nu = 0.01; 
-  mesh->tauInv = mesh->RT/nu;
+ #else
+    dfloat Ma = 0.1;
+    mesh->RT  = 9.0;
+    mesh->sqrtRT = sqrt(mesh->RT);  
 
-  
+    dfloat Re = 100/mesh->sqrtRT; 
+    mesh->tauInv = mesh->sqrtRT * Re / Ma;
+    dfloat nu = mesh->RT/mesh->tauInv; 
+    // Create Periodic Boundaries
+    printf("Creating periodic connections if exist \n");
+    dfloat xper = 1.0;   dfloat yper = 0.0;
+    boltzmannPeriodic2D(mesh,xper,yper);
 
-  printf("starting initial conditions\n");
-  dfloat rho = 1, u = Uc, v = 0; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
-  dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
-  
-  
-  dfloat Re = Uc*Lc/nu ; 
+    printf("starting initial conditions\n"); //Zero Flow Conditions
+    dfloat rho = 1, u = 0., v = 0.; 
+    dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
+     //
+    mesh->finalTime = 10.;
 
-  printf("Ma = %.4e - Re = %.4e\n",Ma,Re);
-  printf("Tauinv = %.4f - nu = %.4e\n", mesh->tauInv,nu);
-
-#endif
-    
-
-
-  
-
-  
-
-#if 1
-   dfloat Ma = 0.1;
-   mesh->RT  = 9.0;
-   mesh->sqrtRT = sqrt(mesh->RT);  
-
-   dfloat Re = 100/mesh->sqrtRT; 
-   mesh->tauInv = mesh->sqrtRT * Re / Ma;
-   dfloat nu = mesh->RT/mesh->tauInv; 
-
- 
-  
-  
-  printf("starting initial conditions\n");
-   dfloat rho = 1, u = 0., v = 0.; //u = 1.f/sqrt(2.f), v = 1.f/sqrt(2.f); 
-  dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
-  //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
-  
  #endif 
 
   
-
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
-
 
 
 
@@ -154,20 +139,14 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       mesh->pmlqy[id+3*mesh->Np] = 0.f*q4bar;
       mesh->pmlqy[id+4*mesh->Np] = 0.f*q5bar;
       mesh->pmlqy[id+5*mesh->Np] = 0.f*q6bar;
+
     }
   }
 
 //
-  printf("Creating periodic connections if exisits\n");
-  dfloat xper = 1.0; 
-  dfloat yper = 0.0;
-  boltzmannPeriodic2D(mesh,xper,yper);
+  
 
   printf("starting parameters\n");
-
-
-
-
   
   // set penalty parameter
   //  mesh->Lambda2 = 0.5/(sqrt(3.)*mesh->sqrtRT);
@@ -273,17 +252,15 @@ dfloat cfl = 0.5;
   dfloat dtim = 4./(mesh->tauInv*magVelocity);
 
   // AK: Set time step size
-#if TIME_DISC==LSERK || TIME_DISC==LSERK3
+#if TIME_DISC==LSERK
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
 
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
-#elif TIME_DISC==SARK || TIME_DISC==SARK33 || TIME_DISC==SARK54
+#elif TIME_DISC==SARK3 
       printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-       // dt        =  0.8*dtex; 
-
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
 #elif TIME_DISC==LSIMEX
@@ -292,20 +269,28 @@ dfloat cfl = 0.5;
       
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-#elif TIME_DISC==MRAB
-      printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-      // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
-      dfloat dt = mesh->dtfactor*cfl*1./8. * mymin(dtex,dtim);
-       // dt        =  0.8*dtex; 
-
+#elif TIME_DISC==LSERK_PMLV2
+      printf("Time discretization method: LSERK PML V2  with CFL: %.2f \n",cfl);
+      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-#elif TIME_DISC==SAAB
-     printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-    dfloat dt = mesh->dtfactor*cfl*1./3. * mymin(dtex,dtim);
-       // dt        =  0.8*dtex; 
 
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
+// #elif TIME_DISC==MRAB
+//       printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+//       // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
+//       dfloat dt = mesh->dtfactor*cfl*1./8. * mymin(dtex,dtim);
+//        // dt        =  0.8*dtex; 
+
+//       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+
+// #elif TIME_DISC==SAAB
+//      printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
+//     dfloat dt = mesh->dtfactor*cfl*1./3. * mymin(dtex,dtim);
+//        // dt        =  0.8*dtex; 
+
+//       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 #endif
 
 
@@ -320,9 +305,8 @@ dfloat cfl = 0.5;
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
  
 
-   mesh->dt = 1e-4;
-  //
-  mesh->finalTime = 10.;
+   //mesh->dt = 1e-4;
+  
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -346,10 +330,6 @@ dfloat cfl = 0.5;
   //sprintf(deviceConfig, "mode = Serial");	 
 
 
-
-
-
-
   occa::kernelInfo kernelInfo;
 
   meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);
@@ -357,615 +337,271 @@ dfloat cfl = 0.5;
 
 
 
-  #if TIME_DISC==LSERK || TIME_DISC==LSERK3 
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_respmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+  #if TIME_DISC==LSERK 
+    mesh->o_pmlqx =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+    mesh->o_rhspmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+    mesh->o_respmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_respmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+    mesh->o_pmlqy =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    mesh->o_rhspmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+    mesh->o_respmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
 
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_respmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    mesh->o_pmlNT =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+    mesh->o_rhspmlNT =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    mesh->o_respmlNT =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
 
+  #elif TIME_DISC==LSERK_PMLV2 
+    mesh->o_pmlqx =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+    mesh->o_rhspmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+    mesh->o_respmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
+    mesh->o_pmlqy =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    mesh->o_rhspmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+    mesh->o_respmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);   
 
+  #elif TIME_DISC==SARK3
+    mesh->o_qold =
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
+    // mesh->o_rhsq =
+    //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);    
+    mesh->o_rhsq2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    mesh->o_rhsq3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    
+     // pml variables
+    mesh->o_pmlqx =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+     // pml variables
+    mesh->o_pmlqxold =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
 
-    #if TIME_DISC==LSERK3
-    //
-     mesh->lserk3a[0] = 0.;
-     mesh->lserk3a[1] = -5./9.;
-     mesh->lserk3a[2] = -153./128.;
-    //
-     mesh->lserk3b[0] = 1./3.;
-     mesh->lserk3b[1] = 15./16.;
-     mesh->lserk3b[2] = 8./15.;
-    //
-     mesh->lserk3c[0] = 0.;
-     mesh->lserk3c[1] = 1./3.;
-     mesh->lserk3c[2] = 3./4.;
-     mesh->lserk3c[3] = 1.;
-    #endif
-
-//   #elif TIME_DISC==SARK
-//   // Extra Storage for exponential update
-//    mesh->o_resqex =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-//   // pml variables
-//   mesh->o_pmlqx =    
-//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-//   mesh->o_rhspmlqx =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-//   mesh->o_respmlqx =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-//   mesh->o_pmlqy =    
-//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-//   mesh->o_rhspmlqy =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-//   mesh->o_respmlqy =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-//   mesh->o_pmlNT =    
-//     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-//   mesh->o_rhspmlNT =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-//   mesh->o_respmlNT =
-//     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    mesh->o_rhspmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
    
+    mesh->o_rhspmlqx2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+    
+    mesh->o_rhspmlqx3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
+   // pml variables
+      // pml variables
+    mesh->o_pmlqy =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+     // pml variables
+    mesh->o_pmlqyold =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
 
-//    dfloat coef = -mesh->tauInv;
-//    dfloat  h   = mesh->dt; 
-
-//    dfloat lb1 = mesh->rkb[0] ; 
-//    dfloat lb2 = mesh->rkb[1] ;
-//    dfloat lb3 = mesh->rkb[2] ;
-//    dfloat lb4 = mesh->rkb[3] ;
-//    dfloat lb5 = mesh->rkb[4] ;
-//    //
-//    dfloat la1 = mesh->rka[0] ; 
-//    dfloat la2 = mesh->rka[1] ;
-//    dfloat la3 = mesh->rka[2] ;
-//    dfloat la4 = mesh->rka[3] ;
-//    dfloat la5 = mesh->rka[4] ;
-//    //
-//    dfloat lc1 = mesh->rkc[0] ;  // = 0.0
-//    dfloat lc2 = mesh->rkc[1] ;
-//    dfloat lc3 = mesh->rkc[2] ;
-//    dfloat lc4 = mesh->rkc[3] ;
-//    dfloat lc5 = mesh->rkc[4] ;
-//    dfloat lc6 = mesh->rkc[5] ; // = 1.0
-
+    mesh->o_rhspmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
    
-//    // Fill the required  exp(-coef*dt*(lsrkc(i)-lsrkc(i-1)))
-//    mesh->sarke[0] = exp(coef*h*(lc2 - lc1));
-//    mesh->sarke[1] = exp(coef*h*(lc3 - lc2));
-//    mesh->sarke[2] = exp(coef*h*(lc4 - lc3));
-//    mesh->sarke[3] = exp(coef*h*(lc5 - lc4));
-//    mesh->sarke[4] = exp(coef*h*(lc6 - lc5));
+    mesh->o_rhspmlqy2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+    
+    mesh->o_rhspmlqy3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+      // pml variables
+    mesh->o_pmlNT =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+     // pml variables
+    mesh->o_pmlNTold =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+
+    mesh->o_rhspmlNT =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+   
+    mesh->o_rhspmlNT2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+    
+    mesh->o_rhspmlNT3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
 
-//    #if 1
-
-//    // Fill the required  low storage A and B coefficients
-//    mesh->sarka[0] = 0.0;
-//    mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)
-//                      *(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))
-//                       /(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
-
-
-//    mesh->sarka[2] = (coef*h*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-//                     /(coef*h*(lb1 + lb2 + la2*lb2)) + (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb2 + la3*lb3)
-//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))
-//                      *(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.));
-
-
-
-
-
-//    mesh->sarka[3] = (coef*h*((lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) 
-//                       + la3*(lb3 + la4*lb4)))*(lb3 + la4*lb4)*(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))
-//                        /(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
-//                         *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))
-//                         /(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.));
-
-
-
-//    mesh->sarka[4] = -(coef*h*((exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h) + (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 
-//                     + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))))
-//                      /(lb5*(exp(coef*h) - 1.));
-
-//    //
-//    mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
-
-//    mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
-
-//    mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
-//                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
-
-
-//    mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
-//                      /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
-
-
-
-//    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
-
-
-//    // Coefficients for exponential residual update
-//    mesh->sarkra[0] = 0.0; 
-//    mesh->sarkra[1] = 1.0; 
-//    mesh->sarkra[2] = 1.0; 
-//    mesh->sarkra[3] = 1.0; 
-//    mesh->sarkra[4] = 1.0; 
-//    // Coefficients for exponential residual update
-//    mesh->sarkrb[0] = 0.0; 
-//    mesh->sarkrb[1] = mesh->sarkb[0]; 
-//    mesh->sarkrb[2] = mesh->sarkb[1];  
-//    mesh->sarkrb[3] = mesh->sarkb[2];  
-//    mesh->sarkrb[4] = mesh->sarkb[3];  
-
-
-//    #endif
-
-
-//    #if 0
-//     // Fill the required  low storage A and B coefficients
-//    mesh->sarka[0] = 0.0;
-//    mesh->sarka[1] =  -(coef*h*((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-//                       /(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2))/(lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.));
-
-
-
-//    mesh->sarka[2] = (lb2*exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.)
-//                     *((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)) 
-//                       - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                       /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))/(lb3*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)
-//                      *((exp(coef*h*lb1) - 1.)/(coef*h) + (exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2)))*(lb1 + lb2 + la2*lb2));
-
-
-
-
-
-
-//    mesh->sarka[3] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))
-//                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 
-//                     (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))
-//                      *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.)*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4))/(lb4*
-//                       (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h*(lb1 + lb2 + la2*lb2))*(lb1 + la2*lb2)*(exp(-coef*h*(lb1 + lb2 + la2*lb2)) - 1.))
-//                         /(coef*h*(lb1 + lb2 + la2*lb2)) - (exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                         /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))))*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
-
-
-
-//    mesh->sarka[4] = -(lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.)*((exp(coef*h)*(lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5))))*(exp(-coef*h) - 1.))
-//                     /(coef*h) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-//                        *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))))
-//                    /(lb5*((exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))*(lb1 + la2*(lb2 + la3*lb3))*(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                     /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - (exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4)))*(lb1 + la2*(lb2 + la3*(lb3 + la4*lb4)))
-//                       *(exp(-coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))) - 1.))/(coef*h*(lb1 + lb2 + lb3 + lb4 + la4*lb4 + la2*(lb2 + la3*(lb3 + la4*lb4)) + la3*(lb3 + la4*lb4))))*(exp(coef*h) - 1.)
-//                     *(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
-
-
-// //
-//    mesh->sarkb[0] = (exp(coef*h*lb1) - 1.)/(coef*h);
-
-//    mesh->sarkb[1] = (lb2*(exp(coef*h*(lb1 + lb2 + la2*lb2)) - 1.))/(coef*h*(lb1 + lb2 + la2*lb2));
-
-//    mesh->sarkb[2] = -(lb3*exp(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)))
-//                     *(exp(-coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3))) - 1.))
-//                      /(coef*h*(lb1 + lb2 + lb3 + la3*lb3 + la2*(lb2 + la3*lb3)));
-
-
-//    mesh->sarkb[3] = (lb4*(exp(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4)) - 1.))
-//                      /(coef*h*(lb1 + lb2 + lb3 + lb4 + la2*lb2 + la3*lb3 + la4*lb4 + la2*la3*lb3 + la3*la4*lb4 + la2*la3*la4*lb4));
-
-
-
-//    mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
-
-//    // Coefficients for exponential residual update
-//    mesh->sarkra[0] = 0.0; 
-//    mesh->sarkra[1] = 1.0; 
-//    mesh->sarkra[2] = 1.0; 
-//    mesh->sarkra[3] = 1.0; 
-//    mesh->sarkra[4] = 1.0; 
-//    // Coefficients for exponential residual update
-//    mesh->sarkrb[0] = 0.0; 
-//    mesh->sarkrb[1] = mesh->sarkb[0]; 
-//    mesh->sarkrb[2] = mesh->sarkb[1];  
-//    mesh->sarkrb[3] = mesh->sarkb[2];  
-//    mesh->sarkrb[4] = mesh->sarkb[3];  
-
-// #endif
-  #elif TIME_DISC==SARK33 || TIME_DISC==SARK54
-  mesh->o_qold =
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-  mesh->o_rhsq1 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  mesh->o_rhsq2 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  mesh->o_rhsq3 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-
+      //
       for(int i=0; i<5; i++){
         for(int j=0; j<5; j++){
           mesh->sarka[i][j] = 0.0;
+          mesh->sarkpmla[i][j] = 0.0 ; 
         }
         mesh->sarkb[i] = 0.0;
         mesh->sarke[i] = 0.0;
-      
+        mesh->sarkpmlb[i] = 0.0;
+        mesh->sarkpmle[i] = 0.0;     
       }
 
-   dfloat coef = -mesh->tauInv;
-   dfloat  h   = mesh->dt; 
+     dfloat coef = -mesh->tauInv;
+     dfloat  h   = mesh->dt; 
+     // Base Runge-Kutta Method
+     dfloat a21 = 1./3.;   dfloat a31 = -3./16. ;    dfloat a32 = 15./16.;
+     dfloat b1 = 1./6.;    dfloat b2 = 3./10.;       dfloat b3 = 8./15.; 
+     dfloat c1 = 0.;       dfloat c2 = 1./3.;        dfloat c3 = 3./4.; 
+      // Base Method
+     mesh->rk3a[0][0] = 0.;  mesh->rk3a[1][0] = a21;  mesh->rk3a[2][0] = a31;   mesh->rk3a[2][1] = a32; 
+     mesh->rk3b[0] = b1;     mesh->rk3b[1] = b2;      mesh->rk3b[2] = b3; 
+     mesh->rk3c[0] = c1;     mesh->rk3c[1] = c2;      mesh->rk3c[2] = c3; 
 
-    #if TIME_DISC==SARK33
-     //
-     dfloat a21 = 1./3.;
-     dfloat a31 = -3./16. ;
-     dfloat a32 = 15./16.;
-     //
-     dfloat b1 = 1./6.; 
-     dfloat b2 = 3./10.; 
-     dfloat b3 = 8./15.; 
-     //
-     dfloat c1 = 0.;
-     dfloat c2 = 1./3.;
-     dfloat c3 = 3./4.; 
-
-     //  
+     //  Exponential Coefficients
      mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-     mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h);// a31
+     mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
      mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
-     //
+
+     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
      mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
                         /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
                         /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
- //b1
      mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
                         /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
                         /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-//b2
      mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
                         /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
- //b3
      //
      mesh->sarke[0] = exp(coef*h*c2); 
      mesh->sarke[1] = exp(coef*h*c3); 
      mesh->sarke[2] = exp(coef*h*1.0);
-     
-     mesh->rk3a[0][0] = 0.; 
-     mesh->rk3a[1][0] = a21; 
-     mesh->rk3a[2][0] = a31;
-     mesh->rk3a[2][1] = a32; 
+     // PML Region Coefficients
+     coef = 0.5*coef; 
+      //  Exponential Coefficients
+     mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+     mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
+     mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
 
-     mesh->rk3b[0] = b1; 
-     mesh->rk3b[1] = b2; 
-     mesh->rk3b[2] = b3; 
-
-     mesh->rk3c[0] = c1; 
-     mesh->rk3c[1] = c2; 
-     mesh->rk3c[2] = c3; 
-
-
-     // printf("A: %.8e  %.8e  %.8e \n ", mesh->sarka[1][0], mesh->sarka[2][0], mesh->sarka[2][1] );
-     // printf("a: %.8e  %.8e  %.8e \n", mesh->rk3a[1][0], mesh->rk3a[2][0], mesh->rk3a[2][1] );
-
-     // printf("B: %.8e  %.8e  %.8e \n", mesh->sarkb[0], mesh->sarkb[1], mesh->sarkb[2] );
-     // printf("b: %.8e  %.8e  %.8e \n ", mesh->rk3b[0], mesh->rk3b[1], mesh->rk3b[2] );
-
-    #endif
-
-
-      #if TIME_DISC==SARK54
-      mesh->o_rhsq4 =
-          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-      mesh->o_rhsq5 =
-         mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-      
-
-
-     dfloat lb1 = mesh->rkb[0] ; 
-     dfloat lb2 = mesh->rkb[1] ;
-     dfloat lb3 = mesh->rkb[2] ;
-     dfloat lb4 = mesh->rkb[3] ;
-     dfloat lb5 = mesh->rkb[4] ;
+     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+     mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                        /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                        /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+     mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                        /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                        /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+     mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                        /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
      //
-     dfloat la1 = mesh->rka[0] ; 
-     dfloat la2 = mesh->rka[1] ;
-     dfloat la3 = mesh->rka[2] ;
-     dfloat la4 = mesh->rka[3] ;
-     dfloat la5 = mesh->rka[4] ;
-     //
-     dfloat lc1 = mesh->rkc[0] ;  // = 0.0
-     dfloat lc2 = mesh->rkc[1] ;
-     dfloat lc3 = mesh->rkc[2] ;
-     dfloat lc4 = mesh->rkc[3] ;
-     dfloat lc5 = mesh->rkc[4] ;
-     dfloat lc6 = mesh->rkc[5] ; // = 1.0
-
-
-
-     mesh->rk4a[1][0] =  lb1; // a21
-     //
-     mesh->rk4a[2][0] = lb1 + la2*lb2; // a31
-     mesh->rk4a[2][1] = lb2; // a32
-     //
-     mesh->rk4a[3][0] = lb1 + la2*(lb2 + la3*lb3); // a31
-     mesh->rk4a[3][1] = lb2 + la3*lb3; //
-     mesh->rk4a[3][2] = lb3; 
-     //
-     mesh->rk4a[4][0] = lb1 + la2*(lb2 + la3*(lb3 + la4*lb4));// a31
-     mesh->rk4a[4][1] = lb2 + la3*(lb3 + la4*lb4); //
-     mesh->rk4a[4][2] = lb3 + la4*lb4; 
-     mesh->rk4a[4][3] = lb4; 
-   
-     // mesh->rk4b[0] = lb1 + la2*(lb2 + la3*(lb3 + la4*(lb4 + la5*lb5)));
-     // mesh->rk4b[1] = lb2 + la3*(lb3 + la4*(lb4 + la5*lb5));
-     // mesh->rk4b[2] = lb3 + la4*(lb4 + la5*lb5);
-     // mesh->rk4b[3] = lb4 + la5*lb5;
-     // mesh->rk4b[4] = lb5;
-
-    mesh->rk4b[0]  =  -(15.*lc2 + 15.*lc3 + 15.*lc4 + 15.*lc5 - 20.*lc2*lc3 - 20.*lc2*lc4 - 20.*lc2*lc5 - 20.*lc3*lc4 - 20.*lc3*lc5 - 20.*lc4*lc5 + 30.*lc2*lc3*lc4 + 30.*lc2*lc3*lc5 + 30.*lc2*lc4*lc5 + 30.*lc3*lc4*lc5 - 60.*lc2*lc3*lc4*lc5 - 12.)/(60.*(lc1 - lc2)*(lc1 - lc3)*(lc1 - lc4)*(lc1 - lc5));
-    mesh->rk4b[1]  =   (15.*lc1 + 15.*lc3 + 15.*lc4 + 15.*lc5 - 20.*lc1*lc3 - 20.*lc1*lc4 - 20.*lc1*lc5 - 20.*lc3*lc4 - 20.*lc3*lc5 - 20.*lc4*lc5 + 30.*lc1*lc3*lc4 + 30.*lc1*lc3*lc5 + 30.*lc1*lc4*lc5 + 30.*lc3*lc4*lc5 - 60.*lc1*lc3*lc4*lc5 - 12.)/(60.*(lc1 - lc2)*(lc2 - lc3)*(lc2 - lc4)*(lc2 - lc5));
-    mesh->rk4b[2]  =  -(15.*lc1 + 15.*lc2 + 15.*lc4 + 15.*lc5 - 20.*lc1*lc2 - 20.*lc1*lc4 - 20.*lc1*lc5 - 20.*lc2*lc4 - 20.*lc2*lc5 - 20.*lc4*lc5 + 30.*lc1*lc2*lc4 + 30.*lc1*lc2*lc5 + 30.*lc1*lc4*lc5 + 30.*lc2*lc4*lc5 - 60.*lc1*lc2*lc4*lc5 - 12.)/(60.*(lc1 - lc3)*(lc2 - lc3)*(lc3 - lc4)*(lc3 - lc5));
-    mesh->rk4b[3]  =   (15.*lc1 + 15.*lc2 + 15.*lc3 + 15.*lc5 - 20.*lc1*lc2 - 20.*lc1*lc3 - 20.*lc2*lc3 - 20.*lc1*lc5 - 20.*lc2*lc5 - 20.*lc3*lc5 + 30.*lc1*lc2*lc3 + 30.*lc1*lc2*lc5 + 30.*lc1*lc3*lc5 + 30.*lc2*lc3*lc5 - 60.*lc1*lc2*lc3*lc5 - 12.)/(60.*(lc1 - lc4)*(lc2 - lc4)*(lc3 - lc4)*(lc4 - lc5));
-    mesh->rk4b[4]  =  -(15.*lc1 + 15.*lc2 + 15.*lc3 + 15.*lc4 - 20.*lc1*lc2 - 20.*lc1*lc3 - 20.*lc1*lc4 - 20.*lc2*lc3 - 20.*lc2*lc4 - 20.*lc3*lc4 + 30.*lc1*lc2*lc3 + 30.*lc1*lc2*lc4 + 30.*lc1*lc3*lc4 + 30.*lc2*lc3*lc4 - 60.*lc1*lc2*lc3*lc4 - 12.)/(60.*(lc1 - lc5)*(lc2 - lc5)*(lc3 - lc5)*(lc4 - lc5));
- 
-
-     mesh->sarka[1][0] = (lb1*(exp(coef*h*lc2) - 1.))/(coef*h*lc2); 
-     //
-     mesh->sarka[2][0] = -(exp(coef*h*lc3)*(lb1 + la2*lb2)*(exp(-coef*h*lc3) - 1.))/(coef*h*lc3);
-
-
-     mesh->sarka[2][1] = (lb2*(exp(coef*h*lc3) - 1.))/(coef*h*lc3);
- // a32
-     //
-     mesh->sarka[3][0] = ((exp(coef*h*lc4) - 1.)*(lb1 + la2*lb2 + la2*la3*lb3))/(coef*h*lc4);
-
-
-     mesh->sarka[3][1] = -(exp(coef*h*lc4)*(lb2 + la3*lb3)*(exp(-coef*h*lc4) - 1.))/(coef*h*lc4);
-
- //
-     mesh->sarka[3][2] = (lb3*(exp(coef*h*lc4) - 1))/(coef*h*lc4);
-
- 
-    
-     //
-     mesh->sarka[4][0] = ((exp(coef*h*lc5) - 1.)*(lb1 + la2*lb2 + la2*la3*lb3 + la2*la3*la4*lb4))/(coef*h*lc5);
-
-;// a31
-     mesh->sarka[4][1] = ((exp(coef*h*lc5) - 1.)*(lb2 + la3*lb3 + la3*la4*lb4))/(coef*h*lc5);
-
- //
-     mesh->sarka[4][2] = -(exp(coef*h*lc5)*(lb3 + la4*lb4)*(exp(-coef*h*lc5) - 1.))/(coef*h*lc5);
-
-
-     mesh->sarka[4][3] = (lb4*(exp(coef*h*lc5) - 1.))/(coef*h*lc5);
-
-     //
-     mesh->sarkb[0] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) 
-                       + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 
-                       + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 
-                       + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc2 
-                       + 6*coef*h*lc3 + 6*coef*h*lc4 + 6*coef*h*lc5 - 6*coef*h*lc2*exp(coef*h) 
-                       - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) 
-                       - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,2)*pow(h,2)*lc3*lc4 
-                       - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc4*lc5 
-                       - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 
-                       - pow(coef,4)*pow(h,4)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc3*lc4 
-                       - pow(coef,4)*pow(h,4)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 + pow(coef,3)*pow(h,3)*lc2*lc3*lc4 + pow(coef,3)*pow(h,3)*lc2*lc3*lc5 
-                       + pow(coef,3)*pow(h,3)*lc2*lc4*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc4 + pow(coef,3)*pow(h,3)*lc3*lc4*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc5 + pow(coef,4)*pow(h,4)*lc2*lc4*lc5 
-                       + pow(coef,4)*pow(h,4)*lc3*lc4*lc5 + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) 
-                       + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) 
-                       - pow(coef,4)*pow(h,4)*lc2*lc3*lc4*lc5 - pow(coef,3)*pow(h,3)*lc2*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc4*lc5*exp(coef*h) 
-                       - pow(coef,3)*pow(h,3)*lc3*lc4*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc2*lc3*lc4*lc5*exp(coef*h) - 24)
-                       /(pow(coef,5)*pow(h,5)*(lc1 - lc2)*(lc1 - lc3)*(lc1 - lc4)*(lc1 - lc5));
-
-     mesh->sarkb[1] = -(24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc3 
-                      + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 
-                      + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc3 + 6*coef*h*lc4 + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) 
-                      - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 
-                      - 2*pow(coef,2)*pow(h,2)*lc3*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc4*lc5 - 2*pow(coef,3)*pow(h,3)*lc3*lc4 
-                      - pow(coef,4)*pow(h,4)*lc1*lc4 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 + pow(coef,3)*pow(h,3)*lc1*lc3*lc4 
-                      + pow(coef,3)*pow(h,3)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc3*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc3*lc4*lc5 
-                      + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) 
-                      + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc3*lc4*lc5 - pow(coef,3)*pow(h,3)*lc1*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc4*lc5*exp(coef*h) 
-                      - pow(coef,3)*pow(h,3)*lc3*lc4*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc3*lc4*lc5*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc2)*(lc2 - lc3)*(lc2 - lc4)*(lc2 - lc5));
-
-     mesh->sarkb[2] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 
-                      + 6*pow(coef,2)*pow(h,2)*lc5 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc4 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc4 
-                      + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc4 
-                      - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 
-                      - 2*pow(coef,2)*pow(h,2)*lc4*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc4*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc4*lc5 
-                      + pow(coef,3)*pow(h,3)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc5 + pow(coef,3)*pow(h,3)*lc2*lc4*lc5 + pow(coef,4)*pow(h,4)*lc1*lc4*lc5 
-                      + pow(coef,4)*pow(h,4)*lc2*lc4*lc5 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) 
-                      + 2*pow(coef,2)*pow(h,2)*lc4*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc2*lc4*lc5 - pow(coef,3)*pow(h,3)*lc1*lc2*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc4*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc4*lc5*exp(coef*h) 
-                      + pow(coef,4)*pow(h,4)*lc1*lc2*lc4*lc5*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc3)*(lc2 - lc3)*(lc3 - lc4)*(lc3 - lc5));
-
-     mesh->sarkb[3] = -(24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 3*pow(coef,3)*pow(h,3)*lc1 + 3*pow(coef,3)*pow(h,3)*lc2 + 6*pow(coef,2)*pow(h,2)*lc5 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + pow(coef,4)*pow(h,4)*lc2 
-                      + 3*pow(coef,3)*pow(h,3)*lc5 + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc5 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc3 + 6*coef*h*lc5 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc5*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 
-                      - 2*pow(coef,2)*pow(h,2)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc2*lc5 - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc3*lc5 - 2*pow(coef,3)*pow(h,3)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc1*lc3 
-                      - 2*pow(coef,3)*pow(h,3)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc3*lc5 - pow(coef,4)*pow(h,4)*lc1*lc5 - pow(coef,4)*pow(h,4)*lc2*lc5 - pow(coef,4)*pow(h,4)*lc3*lc5 + pow(coef,3)*pow(h,3)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc3*lc5 + pow(coef,3)*pow(h,3)*lc2*lc3*lc5 
-                      + pow(coef,4)*pow(h,4)*lc1*lc2*lc5 + pow(coef,4)*pow(h,4)*lc1*lc3*lc5 + pow(coef,4)*pow(h,4)*lc2*lc3*lc5 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc5*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc5*exp(coef*h) 
-                      + 2*pow(coef,2)*pow(h,2)*lc3*lc5*exp(coef*h) - pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc5 - pow(coef,3)*pow(h,3)*lc1*lc2*lc3*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc5*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc5*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc5*exp(coef*h) - 24)
-                       /(pow(coef,5)*pow(h,5)*(lc1 - lc4)*(lc2 - lc4)*(lc3 - lc4)*(lc4 - lc5));
-
-     mesh->sarkb[4] = (24*exp(coef*h) - 24*coef*h - 12*pow(coef,2)*pow(h,2) - 4*pow(coef,3)*pow(h,3) - pow(coef,4)*pow(h,4) + 6*pow(coef,2)*pow(h,2)*lc1 + 6*pow(coef,2)*pow(h,2)*lc2 + 6*pow(coef,2)*pow(h,2)*lc3 + 3*pow(coef,3)*pow(h,3)*lc1 + 6*pow(coef,2)*pow(h,2)*lc4 + 3*pow(coef,3)*pow(h,3)*lc2 + 3*pow(coef,3)*pow(h,3)*lc3 + pow(coef,4)*pow(h,4)*lc1 + 3*pow(coef,3)*pow(h,3)*lc4 + pow(coef,4)*pow(h,4)*lc2 
-                      + pow(coef,4)*pow(h,4)*lc3 + pow(coef,4)*pow(h,4)*lc4 + 6*coef*h*lc1 + 6*coef*h*lc2 + 6*coef*h*lc3 + 6*coef*h*lc4 - 6*coef*h*lc1*exp(coef*h) - 6*coef*h*lc2*exp(coef*h) - 6*coef*h*lc3*exp(coef*h) - 6*coef*h*lc4*exp(coef*h) - 2*pow(coef,2)*pow(h,2)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc1*lc3 
-                      - 2*pow(coef,2)*pow(h,2)*lc1*lc4 - 2*pow(coef,2)*pow(h,2)*lc2*lc3 - 2*pow(coef,3)*pow(h,3)*lc1*lc2 - 2*pow(coef,2)*pow(h,2)*lc2*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc3 - 2*pow(coef,2)*pow(h,2)*lc3*lc4 - 2*pow(coef,3)*pow(h,3)*lc1*lc4 - 2*pow(coef,3)*pow(h,3)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc1*lc2 - 2*pow(coef,3)*pow(h,3)*lc2*lc4 - pow(coef,4)*pow(h,4)*lc1*lc3 
-                      - 2*pow(coef,3)*pow(h,3)*lc3*lc4 - pow(coef,4)*pow(h,4)*lc1*lc4 - pow(coef,4)*pow(h,4)*lc2*lc3 - pow(coef,4)*pow(h,4)*lc2*lc4 - pow(coef,4)*pow(h,4)*lc3*lc4 + pow(coef,3)*pow(h,3)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc1*lc2*lc4 + pow(coef,3)*pow(h,3)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc2*lc3 + pow(coef,3)*pow(h,3)*lc2*lc3*lc4 + pow(coef,4)*pow(h,4)*lc1*lc2*lc4 
-                      + pow(coef,4)*pow(h,4)*lc1*lc3*lc4 + pow(coef,4)*pow(h,4)*lc2*lc3*lc4 + 2*pow(coef,2)*pow(h,2)*lc1*lc2*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc1*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc3*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc2*lc4*exp(coef*h) + 2*pow(coef,2)*pow(h,2)*lc3*lc4*exp(coef*h) 
-                      - pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc4 - pow(coef,3)*pow(h,3)*lc1*lc2*lc3*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc2*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc1*lc3*lc4*exp(coef*h) - pow(coef,3)*pow(h,3)*lc2*lc3*lc4*exp(coef*h) + pow(coef,4)*pow(h,4)*lc1*lc2*lc3*lc4*exp(coef*h) - 24)/(pow(coef,5)*pow(h,5)*(lc1 - lc5)*(lc2 - lc5)*(lc3 - lc5)*(lc4 - lc5));
-
-     
-
-
-
-
-
-
-
-
-
-
-
-
-     // mesh->sarkb[3] = -(exp(coef*h)*(lb4 + la5*lb5)*(exp(-coef*h) - 1.))/(coef*h);
-     // mesh->sarkb[4] = (lb5*(exp(coef*h) - 1.))/(coef*h);
-
-     //
-     mesh->sarke[0] = exp(coef*h*lc1); 
-     mesh->sarke[1] = exp(coef*h*lc2); 
-     mesh->sarke[2] = exp(coef*h*lc3);
-     mesh->sarke[3] = exp(coef*h*lc4);
-     mesh->sarke[4] = exp(coef*h*lc5);
-     mesh->sarke[5] = exp(coef*h*lc6);
-      #endif
-
-
-   
-   
-
+     mesh->sarkpmle[0] = exp(coef*h*c2); 
+     mesh->sarkpmle[1] = exp(coef*h*c3); 
+     mesh->sarkpmle[2] = exp(coef*h*1.0);
 
 
     
   #elif TIME_DISC==LSIMEX
-   mesh->o_qY =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-// pml variables
-  mesh->o_qZ =    
-     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-// 
-  mesh->o_qS =
-        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-
-// pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_qSx =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_qYx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_qZx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-
-
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_qSy =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_qYy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_qZy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-
-
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_qSnt =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_qYnt =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_qZnt =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    mesh->o_qY =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+     // pml variables
+   mesh->o_qZ =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+     // 
+   mesh->o_qS =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
     
- #elif TIME_DISC==MRAB
- // Extra Storage for History, 
-   mesh->o_rhsq2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-   mesh->o_rhsq3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+      #if PML_ENABLED
+        // pml variables
+          mesh->o_pmlqx =    
+            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+          mesh->o_qSx =
+              mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+          mesh->o_qYx =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+          mesh->o_qZx =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
 
-  
-  mesh->mrab[0] = 23.*dt/12. ;
-  mesh->mrab[1] = -4.*dt/3. ;
-  mesh->mrab[2] =  5.*dt/12. ;
-  
+
+          mesh->o_pmlqy =    
+            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+          mesh->o_qSy =
+              mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+          mesh->o_qYy =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+          mesh->o_qZy =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+
+
+
+          mesh->o_pmlNT =    
+            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+         
+          mesh->o_qZnt =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+          
+      #endif
+
   
   #elif TIME_DISC==SAAB
-// Extra Storage for History, 
    mesh->o_rhsq2 =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
+   
    mesh->o_rhsq3 =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
-
-  // pml variables
-  mesh->o_pmlqx =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  mesh->o_rhspmlqx =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  mesh->o_rhspmlqx3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
   
-  
-  mesh->o_pmlqy =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  mesh->o_rhspmlqy =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  mesh->o_rhspmlqy3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
- 
+    mesh->o_pmlqx =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+    mesh->o_rhspmlqx =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+    mesh->o_rhspmlqx2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+    mesh->o_rhspmlqx3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
 
-  mesh->o_pmlNT =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-  mesh->o_rhspmlNT =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT2 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-  mesh->o_rhspmlNT3 =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    mesh->o_pmlqy =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    mesh->o_rhspmlqy =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+    mesh->o_rhspmlqy2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+    mesh->o_rhspmlqy3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
 
 
-
-
-  // Classical Adams Bashforth Coefficients
-  mesh->mrab[0] = 23.*dt/12. ;
-  mesh->mrab[1] = -4.*dt/3. ;
-  mesh->mrab[2] =  5.*dt/12. ;
-  
-  // SAAB NONPML Coefficients, expanded to fix very small tauInv case
-  dfloat cc = -mesh->tauInv;
-  dfloat dtc = mesh->dt; 
-  mesh->saab[0] = (pow(cc,3)*pow(dtc,4))/18. + (19.*pow(cc,2)*pow(dtc,3))/80. + (19.*cc*pow(dtc,2))/24. + (23.*dtc)/12.;
-  mesh->saab[1] = -( (7.*pow(cc,3)*pow(dtc,4))/360. + (pow(cc,2)*pow(dtc,3))/10. + (5.*cc*pow(dtc,2))/12.  + (4.*dtc)/3. );
-  mesh->saab[2] = (pow(cc,3)*pow(dtc,4))/180. + (7.*pow(cc,2)*pow(dtc,3))/240. + (cc*pow(dtc,2))/8. + (5.*dtc)/12.;
- //Define exp(tauInv*dt) 
-  mesh->saabexp = exp(-mesh->tauInv*dt);
+    mesh->o_pmlNT =    
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+    mesh->o_rhspmlNT =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    mesh->o_rhspmlNT2 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    mesh->o_rhspmlNT3 =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
 
 
 
+      // Classical Adams Bashforth Coefficients
+      mesh->mrab[0] = 23.*dt/12. ;
+      mesh->mrab[1] = -4.*dt/3. ;
+      mesh->mrab[2] =  5.*dt/12. ;
 
-//   dfloat expdt = exp(-mesh->tauInv*dt);
-//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
-//   kernelInfo.addDefine("p_expdt",  (float)expdt);
-//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
+      // SAAB NONPML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -mesh->tauInv;
+      dfloat dtc = mesh->dt; 
+      //
+      mesh->saab[0] = (exp(cc*dtc) - (5*cc*dtc)/2 - 3*pow(cc,2)*pow(dtc,2 )+ pow(cc,2)*pow(dtc,2)*exp(cc*dtc) + (3*cc*dtc*exp(cc*dtc))/2 - 1)/(pow(cc,3)*pow(dtc,2));
+      mesh->saab[1] = (4*cc*dtc - 2*exp(cc*dtc) + 3*pow(cc,2)*pow(dtc,2 )- 2*cc*dtc*exp(cc*dtc) + 2)/(pow(cc,3)*pow(dtc,2));
+      mesh->saab[2] = -((3*cc*dtc)/2 - exp(cc*dtc) + pow(cc,2)*pow(dtc,2 )- (cc*dtc*exp(cc*dtc))/2 + 1)/(pow(cc,3)*pow(dtc,2));
+
+      // mesh->saab[0] = (pow(cc,3)*pow(dtc,4))/18. + (19.*pow(cc,2)*pow(dtc,3))/80. + (19.*cc*pow(dtc,2))/24. + (23.*dtc)/12.;
+      // mesh->saab[1] = -( (7.*pow(cc,3)*pow(dtc,4))/360. + (pow(cc,2)*pow(dtc,3))/10. + (5.*cc*pow(dtc,2))/12.  + (4.*dtc)/3. );
+      // mesh->saab[2] = (pow(cc,3)*pow(dtc,4))/180. + (7.*pow(cc,2)*pow(dtc,3))/240. + (cc*pow(dtc,2))/8. + (5.*dtc)/12.;
+
+
+
+      //Define exp(tauInv*dt) 
+      mesh->saabexp = exp(-mesh->tauInv*dt);
 
   #endif  
   
@@ -979,89 +615,8 @@ dfloat cfl = 0.5;
   mesh->o_sigmay =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
 
-
-
-
-//  // All Functions Related to Adams-Bashforth
-// #if TIME_DISC
-    
-  
-
-
-
-
-
-         
-//   // Clasical AB coefficients
-//   dfloat ab1 = 23./12.*dt;
-//   dfloat ab2 = -4./3. *dt;
-//   dfloat ab3 = 5./12. *dt;
-//   kernelInfo.addDefine("p_ab1",  ab1 );
-//   kernelInfo.addDefine("p_ab2",  ab2  );
-//   kernelInfo.addDefine("p_ab3",  ab3 );
-//   //
-//   // Modefied AB Coefficients
-//   dfloat saab1 =  -(2.*exp(-mesh->dt*mesh->tauInv)  + 5.*mesh->dt*mesh->tauInv 
-//                   - 6.*pow(mesh->dt*mesh->tauInv,2) + 2.*pow(mesh->dt*mesh->tauInv,2)*exp(-mesh->dt*mesh->tauInv) 
-//                   - 3.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) - 2.)
-//                    /(2.*pow(mesh->dt,2)*pow(mesh->tauInv,3));
-
-
-//   dfloat saab2 = -(3.*pow(mesh->dt*mesh->tauInv,2) - 4.*mesh->dt*mesh->tauInv - 2.*exp(-mesh->dt*mesh->tauInv) 
-//                  + 2.*mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-//                   /(pow(mesh->dt,2)*pow(mesh->tauInv,3));
-
-//   dfloat saab3 = (2.*pow(mesh->dt*mesh->tauInv,2) - 3.*mesh->dt*mesh->tauInv 
-//                 - 2.*exp(-mesh->dt*mesh->tauInv) + mesh->dt*mesh->tauInv*exp(-mesh->dt*mesh->tauInv) + 2.)
-//                  /(2*pow(mesh->dt,2)*pow(mesh->tauInv,3));
-
-//   // printf("\n%.5e  %.5e  %.5e\n", saab1,saab2,saab3 ); 
-
-
-//   kernelInfo.addDefine("p_saab1",  (float)saab1 );
-//   kernelInfo.addDefine("p_saab2",  (float)saab2 );
-//   kernelInfo.addDefine("p_saab3",  (float)saab3 );
-
-  
-//   // Define coefficients for PML Region
-//   dfloat itau = 0.5*mesh->tauInv; 
-// // Modefied AB Coefficients
-//   dfloat psaab1 =  -(2.*exp(-mesh->dt*itau)  + 5.*mesh->dt*itau  - 6.*pow(mesh->dt*itau,2) 
-//                      + 2.*pow(mesh->dt*itau,2)*exp(-mesh->dt*itau) 
-//                      - 3.*mesh->dt*itau*exp(-mesh->dt*itau) - 2.)
-//                       /(2.*pow(mesh->dt,2)*pow(itau,3));
-
-
-//   dfloat psaab2 = -(3.*pow(mesh->dt*itau,2) - 4.*mesh->dt*itau - 2.*exp(-mesh->dt*itau) 
-//                  + 2.*mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-//                   /(pow(mesh->dt,2)*pow(itau,3));
-
-//   dfloat psaab3 = (2.*pow(mesh->dt*itau,2) - 3.*mesh->dt*itau 
-//                 - 2.*exp(-mesh->dt*itau) + mesh->dt*itau*exp(-mesh->dt*itau) + 2.)
-//                  /(2*pow(mesh->dt,2)*pow(itau,3));
-
-//   // printf("%.5e  %.5e  %.5e\n", psaab1,psaab2,psaab3 ); 
-
-
-//   kernelInfo.addDefine("p_pmlsaab1",  (float) psaab1 );
-//   kernelInfo.addDefine("p_pmlsaab2",  (float) psaab2 );
-//   kernelInfo.addDefine("p_pmlsaab3",  (float) psaab3 );
-
-
-//   //Define exp(tauInv*dt) 
-//   dfloat expdt = exp(-mesh->tauInv*dt);
-//   dfloat pmlexpdt = exp(-0.5*mesh->tauInv*dt);
-//   kernelInfo.addDefine("p_expdt",  (float)expdt);
-//   kernelInfo.addDefine("p_pmlexpdt",  (float)pmlexpdt);
-
-// #endif
-    
-
-
-
-
   mesh->nonPmlNelements = nonPmlNelements;
-  mesh->pmlNelements = pmlNelements;
+  mesh->pmlNelements    = pmlNelements;
 
   if(mesh->nonPmlNelements)
     mesh->o_nonPmlElementIds = 
@@ -1106,19 +661,19 @@ dfloat cfl = 0.5;
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
 
-  #if TIME_DISC==LSIMEX
+  #if TIME_DISC==LSIMEX // Required Info Local Reduction
   int G = pow(2, ceil( log(mesh->Np * NblockV / 32) /log(2) )) ;
   int S = 32; 
 
   kernelInfo.addDefine("p_G", G);
   kernelInfo.addDefine("p_S", S);
 
-  int imex_iter_max = 50 ;  
+  int imex_iter_max = 100 ;  
   dfloat imex_tol   = 1e-7;  
   dfloat nodetol     = 1e-12; 
-  kernelInfo.addDefine("p_LSIMEX_MAXITER", imex_iter_max);
-  kernelInfo.addDefine("p_LSIMEX_TOL", imex_tol);
-  kernelInfo.addDefine("p_NODETOL", nodetol);
+  kernelInfo.addDefine("p_LSIMEX_MAXITER", (int) imex_iter_max);
+  kernelInfo.addDefine("p_LSIMEX_TOL", (float) imex_tol);
+  kernelInfo.addDefine("p_NODETOL", (float) nodetol);
   #endif
  
 
@@ -1127,7 +682,7 @@ dfloat cfl = 0.5;
 
 
 
- #if TIME_DISC==LSERK || TIME_DISC==LSERK3
+ #if TIME_DISC==LSERK
     #if CUBATURE_ENABLED
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
@@ -1167,39 +722,37 @@ dfloat cfl = 0.5;
     #endif
 
 
-  printf("Compiling surface kernel\n");
-  mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSurface2D",
-               kernelInfo);
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+                 "boltzmannSurface2D",
+                 kernelInfo);
 
-  printf("Compiling pml surface kernel\n");
-  mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSplitPmlSurface2D",
-               kernelInfo);
-
-  printf("Compiling update kernel\n");
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannLSERKUpdate2D",
-               kernelInfo);
-  
-  printf("Compiling pml update kernel\n");
-  mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannLSERKSplitPmlUpdate2D",
-               kernelInfo);
-  
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+                 "boltzmannSplitPmlSurface2D",
+                 kernelInfo);
+ 
+    printf("Compiling update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannLSERKUpdate2D",
+                 kernelInfo);
+    
+    printf("Compiling pml update kernel\n");
+    mesh->pmlUpdateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannLSERKSplitPmlUpdate2D",
+                 kernelInfo);
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
 
 
-
-#elif TIME_DISC==MRAB // NOT CHECKED PML KERNELS !!!!!!!!!
- #if CUBATURE_ENABLED
+#elif TIME_DISC==LSERK_PMLV2
+    #if CUBATURE_ENABLED
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
@@ -1224,70 +777,70 @@ dfloat cfl = 0.5;
                "boltzmannSplitPmlRelaxationCub2D",
                kernelInfo);   
     #else
-      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      printf("Compiling volume kernel with nodal collocation for nonlinear term\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
                  "boltzmannVolume2D",
                  kernelInfo);
 
-      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+      printf("Compiling pmlV2 volume kernel with nodal collocation for nonlinear term\n");
       mesh->pmlVolumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSplitPmlVolume2D",
+               "boltzmannSplitPmlV2Volume2D",
                kernelInfo); 
     #endif
 
 
-  printf("Compiling surface kernel\n");
-  mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSurface2D",
-               kernelInfo);
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+                 "boltzmannSurface2D",
+                 kernelInfo);
 
-  printf("Compiling pml surface kernel\n");
-  mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSplitPmlSurface2D",
-               kernelInfo);
-
- printf("Compiling update kernel\n");
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannMRABUpdate2D",
-               kernelInfo);
-  
-  printf("Compiling pml update kernel\n");
-  mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannLSERKSplitPmlUpdate2D",
-               kernelInfo);
-  
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+                 "boltzmannSplitPmlSurface2D",
+                 kernelInfo);
+ 
+    printf("Compiling update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannLSERKUpdate2D",
+                 kernelInfo);
+    
+    printf("Compiling pmlV2 update kernel\n");
+    mesh->pmlUpdateKernel =
+      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+                 "boltzmannLSERKSplitPmlV2Update2D",
+                 kernelInfo);
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
-               kernelInfo);
-#elif TIME_DISC==SAAB || TIME_DISC==SARK || TIME_DISC==SARK33 || TIME_DISC==SARK54
+               kernelInfo);    
+
+#elif TIME_DISC==SARK3 
 
    #if CUBATURE_ENABLED
-      printf("Compiling SAAB volume kernel with cubature integration\n");
+      printf("Compiling SA volume kernel with cubature integration\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
                    "boltzmannVolumeCub2D",
                    kernelInfo);
 
-      printf("Compiling SAAB pml volume kernel with cubature integration\n");
+      printf("Compiling SA pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
                "boltzmannSASplitPmlVolumeCub2D",
                kernelInfo);
 
-       printf("Compiling SAAB relaxation kernel with cubature integration\n");
+       printf("Compiling SA relaxation kernel with cubature integration\n");
        mesh->relaxationKernel =
        mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
                "boltzmannSARelaxationCub2D",
                kernelInfo); 
 
-      printf("Compiling SAAB pml relaxation kernel with cubature integration\n");
+      printf("Compiling SA pml relaxation kernel with cubature integration\n");
        mesh->pmlRelaxationKernel =
        mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
                "boltzmannSASplitPmlRelaxationCub2D",
@@ -1295,7 +848,7 @@ dfloat cfl = 0.5;
 
 
     #else
-      printf("Compiling SAAB volume kernel\n");
+      printf("Compiling SA volume kernel\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
                  "boltzmannSAVolume2D",
@@ -1322,165 +875,38 @@ dfloat cfl = 0.5;
                kernelInfo);
 
 
-     #if TIME_DISC==SAAB
-     //SAAB STAGE UPDATE
-    printf("compiling non-pml  update kernel\n");
-    mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSAABUpdate2D",
-                 kernelInfo); 
-    #endif
-
-    #if TIME_DISC==SARK
-     //SARK STAGE UPDATE
+    //SARK STAGE UPDATE
     printf("compiling SARK non-pml  update kernel\n");
     mesh->updateKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSARKUpdate2D",
-                 kernelInfo); 
-
-    #endif
-
-
-    #if TIME_DISC==SARK33
-
-      //SARK STAGE UPDATE
-    printf("compiling SARK33 non-pml  update kernel\n");
-    mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSARK33Update2D",
+                 "boltzmannSARK3Update2D",
                  kernelInfo); 
 
 
-   printf("compiling SARK33 non-pml  stage update kernel\n");
+   printf("compiling SARK non-pml  stage update kernel\n");
     mesh->updateStageKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSARK33StageUpdate2D",
+                 "boltzmannSARK3StageUpdate2D",
                  kernelInfo); 
 
-    #endif
-
-
-     #if TIME_DISC==SARK54
-
-      //SARK STAGE UPDATE
-    printf("compiling SARK54 non-pml  update kernel\n");
-    mesh->updateKernel =
+     //SARK STAGE UPDATE
+    printf("compiling SARK non-pml  update kernel\n");
+    mesh->pmlUpdateKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSARK54Update2D",
+                 "boltzmannSARK3SplitPmlUpdate2D",
                  kernelInfo); 
 
 
-   printf("compiling SARK54 non-pml  stage update kernel\n");
-    mesh->updateStageKernel =
+   printf("compiling SARK non-pml  stage update kernel\n");
+    mesh->pmlUpdateStageKernel =
       mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannSARK54StageUpdate2D",
+                 "boltzmannSARK3SplitPmlStageUpdate2D",
                  kernelInfo); 
-
-    #endif  
-
-  //     //SAAB FIRST ORDER UPDATE
-  // printf("Compiling SAAB pml 1st order update kernel\n");
-  // mesh->pmlUpdateFirstOrderKernel =
-  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-  //              "boltzmannSAABSplitPmlUpdateFirst2D",
-  //              kernelInfo);
-
-  //   //SAAB SECOND ORDER UPDATE
-  // printf("Compiling SAAB pml 2nd order update kernel\n");
-  // mesh->pmlUpdateSecondOrderKernel hi    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-  //              "boltzmannSAABSplitPmlUpdateSecond2D",
-  //              kernelInfo);
-
-
-  //    //SAAB STAGE UPDATE
-  // printf("Compiling SAAB non-pml update kernel\n");
-  // mesh->pmlUpdateKernel =
-  //   mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-  //              "boltzmannSAABSplitPmlUpdate2D",
-  //              kernelInfo); 
-
-
-
-
-
 
  mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);   
-
-#elif TIME_DISC==SARK
-
-   #if CUBATURE_ENABLED
-      printf("Compiling SARK volume kernel with cubature integration\n");
-      mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-                   "boltzmannVolumeCub2D",
-                   kernelInfo);
-
-      printf("Compiling SARK pml volume kernel with cubature integration\n");
-      mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSASplitPmlVolumeCub2D",
-               kernelInfo);
-
-       printf("Compiling SARK relaxation kernel with cubature integration\n");
-       mesh->relaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
-               "boltzmannSARelaxationCub2D",
-               kernelInfo); 
-
-      printf("Compiling SARK pml relaxation kernel with cubature integration\n");
-       mesh->pmlRelaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
-               "boltzmannSASplitPmlRelaxationCub2D",
-               kernelInfo); 
-
-
-    #else
-      printf("Compiling SARK volume kernel\n");
-      mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-                 "boltzmannSAVolume2D",
-                 kernelInfo);
-
-      printf("Compiling SARK pml volume kernel\n");
-      mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSASplitPmlVolume2D",
-               kernelInfo); 
-    #endif
-
-
-  printf("Compiling SARK surface kernel\n");
-  mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSurface2D",
-               kernelInfo);
-
-  printf("Compiling SARK pml surface kernel\n");
-  mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-               "boltzmannSplitPmlSurface2D",
-               kernelInfo);
-
-
-
-  //SARK STAGE UPDATE
-  printf("compiling SARK non-pml  update kernel\n");
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-               "boltzmannSARKUpdate2D",
-               kernelInfo); 
-
-
-
-
- mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
-               "meshHaloExtract2D",
-               kernelInfo);
 
 
  #elif TIME_DISC==LSIMEX

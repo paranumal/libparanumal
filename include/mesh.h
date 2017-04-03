@@ -166,7 +166,7 @@ typedef struct {
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann; 
 
-  //LS Imex
+  //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
   iint Nimex;
   // ploting info for generating field vtu
@@ -267,7 +267,7 @@ typedef struct {
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
-  occa::memory o_qYnt, o_qZnt, o_qSnt;
+  occa::memory o_qZnt;
 
   
   occa::memory o_pmlElementList;
@@ -369,12 +369,14 @@ typedef struct {
   // Experimental Time Steppings for Boltzmann 
   #if 1
   occa::kernel updateStageKernel;
+  occa::kernel pmlUpdateStageKernel;
   //occa::kernel updateStageKernel33;
   //
-  occa::memory o_rhsq1, o_rhsq4, o_rhsq5;
-  occa::memory o_qold;
+  occa::memory o_rhsq4, o_rhsq5;
+  occa::memory o_qold , o_pmlqxold, o_pmlqyold,o_pmlNTold;
   // SARK extra coefficients for Boltzmann Solver
   dfloat sarka[5][5], sarkb[5], sarke[6], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
+  dfloat sarkpmla[5][5], sarkpmlb[5], sarkpmle[6]; 
   dfloat rk3a[3][3], rk3b[3], rk3c[3];
   dfloat rk4a[5][5], rk4b[5];
   dfloat lserk3a[3], lserk3b[3], lserk3c[4];
