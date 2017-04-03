@@ -16,6 +16,11 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
     #if TIME_DISC==LSERK
       boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
     #endif
+    
+
+     #if TIME_DISC==LSERK_PMLV2
+      boltzmannSplitPmlV2LserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif
 
     #if TIME_DISC==LSIMEX
       boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
