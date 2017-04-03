@@ -24,7 +24,6 @@ PML=1
 flags += -DLSERK=1
 flags += -DSARK3=2
 flags += -DLSIMEX=3
-flags += -DLSERK_PMLV2=4
 
 
 
@@ -42,8 +41,8 @@ ifeq ($(TEST), 1)
   @echo "Usage: make TIME_METHOD=METHOD(LSERK,SAAB,SARK,LSIMEX) CUBATURE_USE=0/1"
 else
  flags += -DTEST_MODE=0
- TIME_METHOD  = LSERK_PMLV2
- CUBATURE_USE = 0
+ TIME_METHOD  = LSERK
+ CUBATURE_USE = 1
 endif
 
 ifeq ($(PML), 1)
@@ -67,11 +66,6 @@ endif
 ifeq ($(TIME_METHOD), LSIMEX)
  flags += -DTIME_DISC=LSIMEX
 endif
-
-ifeq ($(TIME_METHOD), LSERK_PMLV2)
- flags += -DTIME_DISC=LSERK_PMLV2
-endif
-
 
 # ifeq ($(TIME_METHOD), MRAB)
 #  flags += -DTIME_DISC=MRAB

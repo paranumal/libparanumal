@@ -31,9 +31,6 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep){
   char fname[BUFSIZ];
   sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
   meshPlotVTU2D(mesh, fname, fld);
-
-
-
   #else
   boltzmannCouetteError2D(mesh, t);
   #endif

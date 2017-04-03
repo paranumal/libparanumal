@@ -352,27 +352,27 @@ dfloat cfl = 0.5;
     mesh->o_respmlqy =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
 
-    mesh->o_pmlNT =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-    mesh->o_rhspmlNT =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-    mesh->o_respmlNT =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
+    // mesh->o_pmlNT =    
+    //   mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+    // mesh->o_rhspmlNT =
+    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    // mesh->o_respmlNT =
+    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
 
-  #elif TIME_DISC==LSERK_PMLV2 
-    mesh->o_pmlqx =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-    mesh->o_rhspmlqx =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-    mesh->o_respmlqx =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+  // #elif TIME_DISC==LSERK_PMLV2 
+  //   mesh->o_pmlqx =    
+  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  //   mesh->o_rhspmlqx =
+  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  //   mesh->o_respmlqx =
+  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-    mesh->o_pmlqy =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-    mesh->o_rhspmlqy =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-    mesh->o_respmlqy =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);   
+  //   mesh->o_pmlqy =    
+  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  //   mesh->o_rhspmlqy =
+  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  //   mesh->o_respmlqy =
+  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);   
 
   #elif TIME_DISC==SARK3
     mesh->o_qold =
@@ -749,75 +749,6 @@ dfloat cfl = 0.5;
     mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
-
-
-#elif TIME_DISC==LSERK_PMLV2
-    #if CUBATURE_ENABLED
-      printf("Compiling LSERK volume kernel with cubature integration\n");
-      mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-                   "boltzmannVolumeCub2D",
-                   kernelInfo);
-      
-      printf("Compiling LSERK pml volume kernel with cubature integration\n");
-      mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSplitPmlVolumeCub2D",
-               kernelInfo);
-      
-       printf("Compiling LSERK relaxation kernel with cubature integration\n");
-       mesh->relaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
-               "boltzmannRelaxationCub2D",
-               kernelInfo); 
-
-      printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
-       mesh->pmlRelaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
-               "boltzmannSplitPmlRelaxationCub2D",
-               kernelInfo);   
-    #else
-      printf("Compiling volume kernel with nodal collocation for nonlinear term\n");
-      mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-                 "boltzmannVolume2D",
-                 kernelInfo);
-
-      printf("Compiling pmlV2 volume kernel with nodal collocation for nonlinear term\n");
-      mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
-               "boltzmannSplitPmlV2Volume2D",
-               kernelInfo); 
-    #endif
-
-
-    printf("Compiling surface kernel\n");
-    mesh->surfaceKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-                 "boltzmannSurface2D",
-                 kernelInfo);
-
-    printf("Compiling pml surface kernel\n");
-    mesh->pmlSurfaceKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
-                 "boltzmannSplitPmlSurface2D",
-                 kernelInfo);
- 
-    printf("Compiling update kernel\n");
-    mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannLSERKUpdate2D",
-                 kernelInfo);
-    
-    printf("Compiling pmlV2 update kernel\n");
-    mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
-                 "boltzmannLSERKSplitPmlV2Update2D",
-                 kernelInfo);
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
-               "meshHaloExtract2D",
-               kernelInfo);    
 
 #elif TIME_DISC==SARK3 
 
