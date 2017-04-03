@@ -14,30 +14,42 @@ CC	= mpic++
 LD	= mpic++
 
 
+TEST=0
+PML=1
 #TIME_METHOD  = SARK
 #CUBATURE_USE = 0
 # TEST = 0
 
 #LSERK TIME DISCRETIZATION
 flags += -DLSERK=1
-flags += -DSAAB=2
+flags += -DSARK3=2
 flags += -DLSIMEX=3
-flags += -DMRAB=4
-flags += -DSARK=5
-flags += -DSARK33=6
-flags += -DSARK54=7
-flags += -DLSERK3=8
+flags += -DLSERK_PMLV2=4
+
+
+
+# flags += -DSAAB=2
+# flags += -DLSIMEX=3
+# flags += -DMRAB=4
+# flags += -DSARK=5
+#
+# flags += -DSARK54=7
+# flags += -DLSERK3=8
 
 
 ifeq ($(TEST), 1)
  flags += -DTEST_MODE=1
+  @echo "Usage: make TIME_METHOD=METHOD(LSERK,SAAB,SARK,LSIMEX) CUBATURE_USE=0/1"
 else
-
  flags += -DTEST_MODE=0
-
- TIME_METHOD  = SARK54
-
+ TIME_METHOD  = LSERK_PMLV2
  CUBATURE_USE = 0
+endif
+
+ifeq ($(PML), 1)
+ flags += -DPML_ENABLED=1
+else
+ flags += -DPML_ENABLED=0
 endif
 
 
@@ -48,33 +60,40 @@ ifeq ($(TIME_METHOD), LSERK)
  flags += -DTIME_DISC=LSERK
 endif
 
+ifeq ($(TIME_METHOD), SARK3)
+ flags += -DTIME_DISC=SARK3
+endif
+
 ifeq ($(TIME_METHOD), LSIMEX)
  flags += -DTIME_DISC=LSIMEX
 endif
 
-ifeq ($(TIME_METHOD), MRAB)
- flags += -DTIME_DISC=MRAB
+ifeq ($(TIME_METHOD), LSERK_PMLV2)
+ flags += -DTIME_DISC=LSERK_PMLV2
 endif
 
-ifeq ($(TIME_METHOD), SAAB)
- flags += -DTIME_DISC=SAAB
-endif
 
-ifeq ($(TIME_METHOD), SARK)
- flags += -DTIME_DISC=SARK
-endif
+# ifeq ($(TIME_METHOD), MRAB)
+#  flags += -DTIME_DISC=MRAB
+# endif
 
-ifeq ($(TIME_METHOD), SARK33)
- flags += -DTIME_DISC=SARK33
-endif
+# ifeq ($(TIME_METHOD), SAAB)
+#  flags += -DTIME_DISC=SAAB
+# endif
 
-ifeq ($(TIME_METHOD), SARK54)
- flags += -DTIME_DISC=SARK54
-endif
+# ifeq ($(TIME_METHOD), SARK)
+#  flags += -DTIME_DISC=SARK
+# endif
 
-ifeq ($(TIME_METHOD), LSERK3)
- flags += -DTIME_DISC=LSERK3
-endif
+
+
+# ifeq ($(TIME_METHOD), SARK54)
+#  flags += -DTIME_DISC=SARK54
+# endif
+
+# ifeq ($(TIME_METHOD), LSERK3)
+#  flags += -DTIME_DISC=LSERK3
+# endif
 
 
 
@@ -116,12 +135,12 @@ boltzmannPeriodic2D.o\
 boltzmannSplitPmlRun2D.o \
 boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
+boltzmannSplitPmlV2LserkStep2D.o \
 boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaabStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannSplitPmlSarkStep2D.o \
-boltzmannSplitPmlSark33Step2D.o \
-boltzmannSplitPmlSark54Step2D.o \
+boltzmannSplitPmlSark3Step2D.o \
 boltzmannSplitPmlLserk3Step2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \

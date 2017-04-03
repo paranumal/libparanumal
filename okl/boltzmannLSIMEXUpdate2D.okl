@@ -470,8 +470,9 @@ kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const iint Nelements,
             const dfloat  * restrict pmlZnt,
                   dfloat  * restrict pmlYx,
                   dfloat  * restrict pmlYy,
-                  dfloat  * restrict pmlYnt){
-  // Low storage Runge Kutta time step update
+                  dfloat  * restrict pmlYnt
+                   ){
+  Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
       const iint element = elementIds[e];

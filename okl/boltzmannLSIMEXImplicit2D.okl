@@ -228,19 +228,17 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolume2D(const iint Nelements,
       qZx[id1]  = 0.;
       qZx[id2]  = 0.;
       qZx[id3]  = 0.;
-      qZx[id4]  = 0.5*N4;
-      qZx[id5]  = 0.5*N5;
-      qZx[id6]  = 0.5*N6; 
-      //
+      qZx[id4]  = 0.5f*N4;
+      qZx[id5]  = 0.5f*N5;
+      qZx[id6]  = 0.5f*N6; 
        
    // PML UPDATES
       qZy[id1]  = 0.;
       qZy[id2]  = 0.;
       qZy[id3]  = 0.;
-      qZy[id4]  = 0.5*N4;
-      qZy[id5]  = 0.5*N5;
-      qZy[id6]  = 0.5*N6; 
-      //
+      qZy[id4]  = 0.5f*N4;
+      qZy[id5]  = 0.5f*N5;
+      qZy[id6]  = 0.5f*N6; 
        
    // PML UPDATES
       qZnt[id1] = 0.;
@@ -249,6 +247,24 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolume2D(const iint Nelements,
       qZnt[id4] = N4;
       qZnt[id5] = N5;
       qZnt[id6] = N6; 
+      //
+
+      // 
+      dfloat4 temp;
+      temp.x =  0.;
+      temp.y =  0.;
+      temp.z =  0.;
+      temp.w =  N4;
+
+      qZ[2*(n + element*p_Np)] = temp;
+
+      temp.x =  N5;
+      temp.y =  N6;
+      temp.z =  0.0;
+      temp.w =  0.0;
+
+      qZ[2*(n + element*p_Np) +1] = temp;
+
 
     }
   }
