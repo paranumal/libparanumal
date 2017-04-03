@@ -649,12 +649,12 @@ dfloat cfl = 0.5;
   kernelInfo.addDefine("p_G", G);
   kernelInfo.addDefine("p_S", S);
 
-  int imex_iter_max = 50 ;  
+  int imex_iter_max = 100 ;  
   dfloat imex_tol   = 1e-7;  
   dfloat nodetol     = 1e-12; 
-  kernelInfo.addDefine("p_LSIMEX_MAXITER", imex_iter_max);
-  kernelInfo.addDefine("p_LSIMEX_TOL", imex_tol);
-  kernelInfo.addDefine("p_NODETOL", nodetol);
+  kernelInfo.addDefine("p_LSIMEX_MAXITER", (int) imex_iter_max);
+  kernelInfo.addDefine("p_LSIMEX_TOL", (float) imex_tol);
+  kernelInfo.addDefine("p_NODETOL", (float) nodetol);
   #endif
  
 
