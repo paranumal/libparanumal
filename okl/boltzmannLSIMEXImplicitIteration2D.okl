@@ -61,14 +61,15 @@ kernel void boltzmannLSIMEXImplicitIteration2D(const iint Nelements,
      if(akk>0) // No need to itearte if akk=0
      {
      dfloat err = 0.0;  
-     dfloat coeff  = akk * dt * p_tauInv;
+     dfloat cc  = akk * dt * p_tauInv;
+     dfloat icc    = 1.0/cc; 
 
       for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
       {
          //
-         N4 = -coeff*( qim4 -            ( qim2*qim3/qim1 ) );
-         N5 = -coeff*( qim5 - p_invsqrt2*( qim2*qim2/qim1 ) );
-         N6 = -coeff*( qim6 - p_invsqrt2*( qim3*qim3/qim1 ) );
+         N4 = -cc*( qim4 -            ( qim2*qim3/qim1 ) );
+         N5 = -cc*( qim5 - p_invsqrt2*( qim2*qim2/qim1 ) );
+         N6 = -cc*( qim6 - p_invsqrt2*( qim3*qim3/qim1 ) );
 
          //
         dfloat z1 =  qex1 - qim1 ;
@@ -78,13 +79,11 @@ kernel void boltzmannLSIMEXImplicitIteration2D(const iint Nelements,
         dfloat z5 =  qex5 - qim5 +  N5 ;
         dfloat z6 =  qex6 - qim6 +  N6 ;
         
-        //
+        //hold old values
         dfloat qim4o = qim4;
         dfloat qim5o = qim5;
         dfloat qim6o = qim6;
-        //
-        dfloat cc     = coeff;
-        dfloat icc    = 1.0/cc; 
+        
 
         //
          //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
@@ -144,10 +143,10 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
                     const dfloat * restrict cubProjectT,
                     const dfloat * restrict qYx,
                     const dfloat * restrict qYy,
-                    const dfloat * restrict qYnt,
+                   // const dfloat * restrict qYnt,
                           dfloat * restrict qZx,
                           dfloat * restrict qZy,
-                          dfloat * restrict qZnt,
+                    //      dfloat * restrict qZnt,
                           dfloat4 *restrict qZ ){
   for(iint e=0;e<Nelements;++e;outer0)
   {
@@ -177,13 +176,15 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
       dfloat qye4 = qYy[id4];
       dfloat qye5 = qYy[id5];
       dfloat qye6 = qYy[id6]; 
-      //
+      
+      #if 0
       dfloat nte1 = qYnt[id1];
       dfloat nte2 = qYnt[id2];
       dfloat nte3 = qYnt[id3];
       dfloat nte4 = qYnt[id4];
       dfloat nte5 = qYnt[id5];
       dfloat nte6 = qYnt[id6]; 
+      #endif
    
       // Initialize
       dfloat qxi1 = qxe1;
@@ -200,12 +201,14 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
       dfloat qyi5 = qye5;
       dfloat qyi6 = qye6; 
       //
+      #if 0
       dfloat nti1 = nte1;
       dfloat nti2 = nte2;
       dfloat nti3 = nte3;
       dfloat nti4 = nte4;
       dfloat nti5 = nte5;
       dfloat nti6 = nte6; 
+      #endif
       //
       dfloat q1 =  p_q1bar                 + qxi1 + qyi1;
       dfloat q2 =  ramp*p_q2bar            + qxi2 + qyi2;
@@ -217,63 +220,67 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
     //
      if(akk>0)
      {
-     dfloat err = 0.0;  
-     dfloat cc  = akk * dt * p_tauInv;
-     dfloat N4=0.,N5=0.,N6=0.;  
+        dfloat err = 0.0;  
+        dfloat coeff  = akk * dt * p_tauInv;
+        dfloat icc    = 1.0/coeff; 
+
+        dfloat cch    = 0.5*coeff; 
+        dfloat icch   = 1.0/cch; 
+
+
+        dfloat N4=0.,N5=0.,N6=0.;  
 
       for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
       {
 
-         //
-        N4 = -cc*( q4 -            ( q2*q3/q1 ) );
-        N5 = -cc*( q5 - p_invsqrt2*( q2*q2/q1 ) );
-        N6 = -cc*( q6 - p_invsqrt2*( q3*q3/q1 ) );
+          //
+          N4 = -coeff*( q4 -            ( q2*q3/q1 ) );
+          N5 = -coeff*( q5 - p_invsqrt2*( q2*q2/q1 ) );
+          N6 = -coeff*( q6 - p_invsqrt2*( q3*q3/q1 ) );
 
-         //
-        dfloat zx1 =  qxe1 - qxi1 ;
-        dfloat zx2 =  qxe2 - qxi2 ;
-        dfloat zx3 =  qxe3 - qxi3 ;
-        dfloat zx4 =  qxe4 - qxi4 +  0.5*N4 ;
-        dfloat zx5 =  qxe5 - qxi5 +  0.5*N5 ;
-        dfloat zx6 =  qxe6 - qxi6 +  0.5*N6 ;
-        //
-        dfloat zy1 =  qye1 - qyi1 ;
-        dfloat zy2 =  qye2 - qyi2 ;
-        dfloat zy3 =  qye3 - qyi3 ;
-        dfloat zy4 =  qye4 - qyi4 +  0.5*N4 ;
-        dfloat zy5 =  qye5 - qyi5 +  0.5*N5 ;
-        dfloat zy6 =  qye6 - qyi6 +  0.5*N6 ;
-        //
-        dfloat znt1 =  nte1 - nti1 ;
-        dfloat znt2 =  nte2 - nti2 ;
-        dfloat znt3 =  nte3 - nti3 ;
-        dfloat znt4 =  nte4 - nti4 +  N4 ;
-        dfloat znt5 =  nte5 - nti5 +  N5 ;
-        dfloat znt6 =  nte6 - nti6 +  N6 ;
+          //
+          dfloat zx1 =  qxe1 - qxi1 ;
+          dfloat zx2 =  qxe2 - qxi2 ;
+          dfloat zx3 =  qxe3 - qxi3 ;
+          dfloat zx4 =  qxe4 - qxi4 +  0.5*N4 ;
+          dfloat zx5 =  qxe5 - qxi5 +  0.5*N5 ;
+          dfloat zx6 =  qxe6 - qxi6 +  0.5*N6 ;
+          //
+          dfloat zy1 =  qye1 - qyi1 ;
+          dfloat zy2 =  qye2 - qyi2 ;
+          dfloat zy3 =  qye3 - qyi3 ;
+          dfloat zy4 =  qye4 - qyi4 +  0.5*N4 ;
+          dfloat zy5 =  qye5 - qyi5 +  0.5*N5 ;
+          dfloat zy6 =  qye6 - qyi6 +  0.5*N6 ;
+          #if 0
+          //
+          dfloat znt1 =  nte1 - nti1 ;
+          dfloat znt2 =  nte2 - nti2 ;
+          dfloat znt3 =  nte3 - nti3 ;
+          dfloat znt4 =  nte4 - nti4 +  N4 ;
+          dfloat znt5 =  nte5 - nti5 +  N5 ;
+          dfloat znt6 =  nte6 - nti6 +  N6 ;
+           #endif
+
+          //
+          dfloat qxi4o = qxi4;
+          dfloat qxi5o = qxi5;
+          dfloat qxi6o = qxi6;
+          //
+          dfloat qyi4o = qyi4;
+          dfloat qyi5o = qyi5;
+          dfloat qyi6o = qyi6;
+          
+          #if 0
+          dfloat nti4o = nti4;
+          dfloat nti5o = nti5;
+          dfloat nti6o = nti6;
+          #endif
 
 
-        //
-        dfloat qxi4o = qxi4;
-        dfloat qxi5o = qxi5;
-        dfloat qxi6o = qxi6;
-        //
-        dfloat qyi4o = qyi4;
-        dfloat qyi5o = qyi5;
-        dfloat qyi6o = qyi6;
-        //
-        dfloat nti4o = nti4;
-        dfloat nti5o = nti5;
-        dfloat nti6o = nti6;
-
-
-        //
         
-        dfloat icc    = 1.0/cc; 
-        dfloat cch    = 0.5*cc; 
-        dfloat icch   = 1./cch; 
-
-        //
          //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
+
         qxi4  +=        zx4/(cch+1.0)  
                       + zx2*q3/(q1*(1.0+icch)) 
                       + zx3*q2/(q1*(1.0+icch))
@@ -300,20 +307,23 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
         qyi6 +=         zy6/(cch+1.0)
                      +  p_sqrt2* ( zy3*q3/(q1*(1.0+icch)))
                      -  p_sqrt2* ( zy1*(q3*q3)/(2.0*(q1*q1)*(1.0+icch)));   
+        
 
+         #if 0
          //  
-        nti4  +=        znt4/(cc+1.0)  
+        nti4  +=        znt4/(coeff+1.0)  
                       + znt2*q3/(q1*(1.0+icc)) 
                       + znt3*q2/(q1*(1.0+icc))
                       - znt1*q2*q3/(q1*q1*(1.0+icc)); 
 
-        nti5  +=         znt5/(cc+1.)
+        nti5  +=         znt5/(coeff+1.)
                       +  p_sqrt2 * ( znt2*q2/(q1*(1.0 + icc)))
                       -  p_sqrt2 * ( znt1*(q2*q2)/(2.0 *(q1*q1)*(1.0+icc)));
 
-        nti6 +=         znt6/(cc+1.0)
+        nti6 +=         znt6/(coeff+1.0)
                      +  p_sqrt2* ( znt3*q3/(q1*(1.0+icc)))
                      -  p_sqrt2* ( znt1*(q3*q3)/(2.0*(q1*q1)*(1.0+icc)));  
+         #endif
 
 
          q4 =  ramp*ramp*p_q4bar       + qxi4 + qyi4;
@@ -329,16 +339,25 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
          dfloat ey5 = fabs(qyi5-qyi5o);
          dfloat ey6 = fabs(qyi6-qyi6o);
 
+         #if 0
+
          dfloat ent4 = fabs(nti4-nti4o);
          dfloat ent5 = fabs(nti5-nti5o);
          dfloat ent6 = fabs(nti6-nti6o);
-
-
          dfloat ex  = GET_MAX3(ex4,ex5,ex6);  
          dfloat ey  = GET_MAX3(ey4,ey5,ey6);   
          dfloat ent = GET_MAX3(ent4,ent5,ent6);   
 
          err =  GET_MAX3(ex,ey,ent);   
+
+         #endif
+         
+         dfloat ex  = GET_MAX3(ex4,ex5,ex6);  
+         dfloat ey  = GET_MAX3(ey4,ey5,ey6);   
+          
+
+         err =  GET_MAX2(ex,ey);   
+         
 
          if(err<p_LSIMEX_TOL) break;
 
@@ -360,7 +379,8 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
       qZy[id4] = qyi4;
       qZy[id5] = qyi5;
       qZy[id6] = qyi6; 
-      //
+      
+      #if 0
        // PML UPDATES
       qZnt[id1] = nti1;
       qZnt[id2] = nti2;
@@ -368,6 +388,8 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
       qZnt[id4] = nti4;
       qZnt[id5] = nti5;
       qZnt[id6] = nti6; 
+
+      #endif
       // 
       dfloat4 temp;
 

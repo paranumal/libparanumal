@@ -23,7 +23,7 @@ PML=1
 #LSERK TIME DISCRETIZATION
 flags += -DLSERK=1
 flags += -DSARK3=2
-
+flags += -DLSIMEX=3
 
 
 
@@ -41,7 +41,7 @@ ifeq ($(TEST), 1)
   @echo "Usage: make TIME_METHOD=METHOD(LSERK,SAAB,SARK,LSIMEX) CUBATURE_USE=0/1"
 else
  flags += -DTEST_MODE=0
- TIME_METHOD  = SARK3
+ TIME_METHOD  = LSIMEX
  CUBATURE_USE = 0
 endif
 
@@ -64,9 +64,9 @@ ifeq ($(TIME_METHOD), SARK3)
 endif
 
 
-# ifeq ($(TIME_METHOD), LSIMEX)
-#  flags += -DTIME_DISC=LSIMEX
-# endif
+ifeq ($(TIME_METHOD), LSIMEX)
+ flags += -DTIME_DISC=LSIMEX
+endif
 
 # ifeq ($(TIME_METHOD), MRAB)
 #  flags += -DTIME_DISC=MRAB
