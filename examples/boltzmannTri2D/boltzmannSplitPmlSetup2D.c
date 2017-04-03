@@ -263,11 +263,11 @@ dfloat cfl = 0.5;
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-// #elif TIME_DISC==LSIMEX
-//       printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-//       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+#elif TIME_DISC==LSIMEX
+      printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
+      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
       
-//       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
 // #elif TIME_DISC==MRAB
 //       printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
@@ -458,7 +458,7 @@ dfloat cfl = 0.5;
      mesh->sarke[1] = exp(coef*h*c3); 
      mesh->sarke[2] = exp(coef*h*1.0);
      // PML Region Coefficients
-     coef = 2.*coef; 
+     coef = 0.5*coef; 
       //  Exponential Coefficients
      mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
      mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
@@ -517,10 +517,7 @@ dfloat cfl = 0.5;
 
           mesh->o_pmlNT =    
             mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-          mesh->o_qSnt =
-              mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-          mesh->o_qYnt =
-            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+         
           mesh->o_qZnt =
             mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
           

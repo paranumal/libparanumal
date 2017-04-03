@@ -323,9 +323,9 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat NT1 = NTold1 + dt*( rka*rhsNT11 + rkb*rhsNT21);
       dfloat NT2 = NTold2 + dt*( rka*rhsNT12 + rkb*rhsNT22);
       dfloat NT3 = NTold3 + dt*( rka*rhsNT13 + rkb*rhsNT23);
-      dfloat NT4 = expdt*NTold4 + dt*( rka*rhsNT14 + rkb*rhsNT24);
-      dfloat NT5 = expdt*NTold5 + dt*( rka*rhsNT15 + rkb*rhsNT25);
-      dfloat NT6 = expdt*NTold6 + dt*( rka*rhsNT16 + rkb*rhsNT26);
+      dfloat NT4 = NTold4 + dt*( rka*rhsNT14 + rkb*rhsNT24);
+      dfloat NT5 = NTold5 + dt*( rka*rhsNT15 + rkb*rhsNT25);
+      dfloat NT6 = NTold6 + dt*( rka*rhsNT16 + rkb*rhsNT26);
 
       
       
@@ -565,12 +565,12 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26 + erkc*rhsqy36);
      
       //
-      dfloat NT1 = NTold1       + dt*(  rka*rhsNT11 +  rkb*rhsNT21 +  rkc*rhsNT31);
-      dfloat NT2 = NTold2       + dt*(  rka*rhsNT12 +  rkb*rhsNT22 +  rkc*rhsNT32);
-      dfloat NT3 = NTold3       + dt*(  rka*rhsNT13 +  rkb*rhsNT23 +  rkc*rhsNT33);
-      dfloat NT4 = expdt*NTold4 + dt*( erka*rhsNT14 + erkb*rhsNT24 + erkc*rhsNT34);
-      dfloat NT5 = expdt*NTold5 + dt*( erka*rhsNT15 + erkb*rhsNT25 + erkc*rhsNT35);
-      dfloat NT6 = expdt*NTold6 + dt*( erka*rhsNT16 + erkb*rhsNT26 + erkc*rhsNT36);
+      dfloat NT1 = NTold1 + dt*(  rka*rhsNT11 +  rkb*rhsNT21 +  rkc*rhsNT31);
+      dfloat NT2 = NTold2 + dt*(  rka*rhsNT12 +  rkb*rhsNT22 +  rkc*rhsNT32);
+      dfloat NT3 = NTold3 + dt*(  rka*rhsNT13 +  rkb*rhsNT23 +  rkc*rhsNT33);
+      dfloat NT4 = NTold4 + dt*(  rka*rhsNT14 +  rkb*rhsNT24 + rkc*rhsNT34);
+      dfloat NT5 = NTold5 + dt*(  rka*rhsNT15 +  rkb*rhsNT25 + rkc*rhsNT35);
+      dfloat NT6 = NTold6 + dt*(  rka*rhsNT16 +  rkb*rhsNT26 + rkc*rhsNT36);
 
       
       
@@ -1297,14 +1297,10 @@ kernel void boltzmannLSIMEXSplitPmlResidualUpdate2D(const iint Nelements,
             const dfloat c_ex, 
             const dfloat  * restrict pmlqx,
             const dfloat  * restrict pmlqy,
-            const dfloat  * restrict pmlnt,
             const dfloat  * restrict pmlZx,
             const dfloat  * restrict pmlZy,
-            const dfloat  * restrict pmlZnt,
                   dfloat  * restrict pmlYx,
-                  dfloat  * restrict pmlYy,
-                  dfloat  * restrict pmlYnt,
-                  dfloat4 * restrict qY){
+                  dfloat  * restrict pmlYy){
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
@@ -1333,13 +1329,7 @@ kernel void boltzmannLSIMEXSplitPmlResidualUpdate2D(const iint Nelements,
       dfloat qy4 = pmlqy[id4];
       dfloat qy5 = pmlqy[id5];
       dfloat qy6 = pmlqy[id6]; 
-      //
-      dfloat nt1 = pmlnt[id1];
-      dfloat nt2 = pmlnt[id2];
-      dfloat nt3 = pmlnt[id3];
-      dfloat nt4 = pmlnt[id4];
-      dfloat nt5 = pmlnt[id5];
-      dfloat nt6 = pmlnt[id6]; 
+      
 
       // PML UPDATES
       dfloat qxi1 = pmlZx[id1];
@@ -1355,14 +1345,7 @@ kernel void boltzmannLSIMEXSplitPmlResidualUpdate2D(const iint Nelements,
       dfloat qyi4 = pmlZy[id4];
       dfloat qyi5 = pmlZy[id5];
       dfloat qyi6 = pmlZy[id6]; 
-      //
-      dfloat nti1 = pmlZnt[id1];
-      dfloat nti2 = pmlZnt[id2];
-      dfloat nti3 = pmlZnt[id3];
-      dfloat nti4 = pmlZnt[id4];
-      dfloat nti5 = pmlZnt[id5];
-      dfloat nti6 = pmlZnt[id6]; 
-
+     
       // PML UPDATES
       dfloat qxe1 = pmlYx[id1];
       dfloat qxe2 = pmlYx[id2];
@@ -1377,70 +1360,22 @@ kernel void boltzmannLSIMEXSplitPmlResidualUpdate2D(const iint Nelements,
       dfloat qye4 = pmlYy[id4];
       dfloat qye5 = pmlYy[id5];
       dfloat qye6 = pmlYy[id6]; 
-      //
-      dfloat nte1 = pmlYnt[id1];
-      dfloat nte2 = pmlYnt[id2];
-      dfloat nte3 = pmlYnt[id3];
-      dfloat nte4 = pmlYnt[id4];
-      dfloat nte5 = pmlYnt[id5];
-      dfloat nte6 = pmlYnt[id6]; 
-      //
+     
       // PML UPDATES
-      dfloat qxy1 = qx1 + c_ex*dt*qxe1 + c_im*dt*qxi1;
-      dfloat qxy2 = qx2 + c_ex*dt*qxe2 + c_im*dt*qxi2;
-      dfloat qxy3 = qx3 + c_ex*dt*qxe3 + c_im*dt*qxi3;
-      dfloat qxy4 = qx4 + c_ex*dt*qxe4 + c_im*dt*qxi4;
-      dfloat qxy5 = qx5 + c_ex*dt*qxe5 + c_im*dt*qxi5;
-      dfloat qxy6 = qx6 + c_ex*dt*qxe6 + c_im*dt*qxi6; 
+      pmlYx[id1] = qx1 + c_ex*dt*qxe1 + c_im*dt*qxi1;
+      pmlYx[id2] = qx2 + c_ex*dt*qxe2 + c_im*dt*qxi2;
+      pmlYx[id3] = qx3 + c_ex*dt*qxe3 + c_im*dt*qxi3;
+      pmlYx[id4] = qx4 + c_ex*dt*qxe4 + c_im*dt*qxi4;
+      pmlYx[id5] = qx5 + c_ex*dt*qxe5 + c_im*dt*qxi5;
+      pmlYx[id6] = qx6 + c_ex*dt*qxe6 + c_im*dt*qxi6; 
       //
-      dfloat qyy1 = qy1 + c_ex*dt*qye1 + c_im*dt*qyi1;
-      dfloat qyy2 = qy2 + c_ex*dt*qye2 + c_im*dt*qyi2;
-      dfloat qyy3 = qy3 + c_ex*dt*qye3 + c_im*dt*qyi3;
-      dfloat qyy4 = qy4 + c_ex*dt*qye4 + c_im*dt*qyi4;
-      dfloat qyy5 = qy5 + c_ex*dt*qye5 + c_im*dt*qyi5;
-      dfloat qyy6 = qy6 + c_ex*dt*qye6 + c_im*dt*qyi6; 
-
-      
-      // PML UPDATES
-      pmlYx[id1] = qxy1;
-      pmlYx[id2] = qxy2;
-      pmlYx[id3] = qxy3;
-      pmlYx[id4] = qxy4;
-      pmlYx[id5] = qxy5;
-      pmlYx[id6] = qxy6; 
-      //
-      pmlYy[id1] = qyy1;
-      pmlYy[id2] = qyy2;
-      pmlYy[id3] = qyy3;
-      pmlYy[id4] = qyy4;
-      pmlYy[id5] = qyy5;
-      pmlYy[id6] = qyy6; 
-
-      pmlYnt[id1] = nt1 + c_ex*dt*nte1 + c_im*dt*nti1;
-      pmlYnt[id2] = nt2 + c_ex*dt*nte2 + c_im*dt*nti2;
-      pmlYnt[id3] = nt3 + c_ex*dt*nte3 + c_im*dt*nti3;
-      pmlYnt[id4] = nt4 + c_ex*dt*nte4 + c_im*dt*nti4;
-      pmlYnt[id5] = nt5 + c_ex*dt*nte5 + c_im*dt*nti5;
-      pmlYnt[id6] = nt6 + c_ex*dt*nte6 + c_im*dt*nti6; 
-      //
-    
-      dfloat4 temp; 
-
-      temp.x =  p_q1bar                 + qxy1 + qyy1;
-      temp.y =  ramp*p_q2bar            + qxy2 + qyy2;
-      temp.z =  ramp*p_q3bar            + qxy3 + qyy3;
-      temp.w =  ramp*ramp*p_q4bar       + qxy4 + qyy4;
-
-      qY[2*(n + element*p_Np)] = temp;
-
-      temp.x =  ramp*ramp*p_q5bar       + qxy5 + qyy5;
-      temp.y =  ramp*ramp*p_q6bar       + qxy6 + qyy6;
-      temp.z =  0.0;
-      temp.w =  0.0;
-      
-      qY[2*(n + element*p_Np)+1] = temp;
-
-
+      pmlYy[id1] = qy1 + c_ex*dt*qye1 + c_im*dt*qyi1;
+      pmlYy[id2] = qy2 + c_ex*dt*qye2 + c_im*dt*qyi2;
+      pmlYy[id3] = qy3 + c_ex*dt*qye3 + c_im*dt*qyi3;
+      pmlYy[id4] = qy4 + c_ex*dt*qye4 + c_im*dt*qyi4;
+      pmlYy[id5] = qy5 + c_ex*dt*qye5 + c_im*dt*qyi5;
+      pmlYy[id6] = qy6 + c_ex*dt*qye6 + c_im*dt*qyi6; 
+     
     }
   }
 }
@@ -1454,17 +1389,14 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
             const dfloat ramp,
             const dfloat akk,
             const dfloat  * restrict qZx,
-            const dfloat  * restrict qZy,
-            const dfloat  * restrict qZnt,     
+            const dfloat  * restrict qZy,  
             const dfloat  * restrict qYx,
             const dfloat  * restrict qYy,
-            const dfloat  * restrict qYnt,
                   dfloat  * restrict pmlqx,
-                  dfloat  * restrict pmlqy,
-                  dfloat  * restrict pmlNT,     
+                  dfloat  * restrict pmlqy,   
                   dfloat  * restrict qSx,
                   dfloat  * restrict qSy,
-                  dfloat  * restrict qSnt,
+                  dfloat4 * restrict qS,
                   dfloat4 * restrict q ){
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
@@ -1495,14 +1427,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       dfloat qy4 = pmlqy[id4];
       dfloat qy5 = pmlqy[id5];
       dfloat qy6 = pmlqy[id6]; 
-      //
-      dfloat nt1 = pmlNT[id1];
-      dfloat nt2 = pmlNT[id2];
-      dfloat nt3 = pmlNT[id3];
-      dfloat nt4 = pmlNT[id4];
-      dfloat nt5 = pmlNT[id5];
-      dfloat nt6 = pmlNT[id6]; 
-
+     
       // PML UPDATES
       dfloat qxi1 = qZx[id1];
       dfloat qxi2 = qZx[id2];
@@ -1517,14 +1442,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       dfloat qyi4 = qZy[id4];
       dfloat qyi5 = qZy[id5];
       dfloat qyi6 = qZy[id6]; 
-      //
-      dfloat nti1 = qZnt[id1];
-      dfloat nti2 = qZnt[id2];
-      dfloat nti3 = qZnt[id3];
-      dfloat nti4 = qZnt[id4];
-      dfloat nti5 = qZnt[id5];
-      dfloat nti6 = qZnt[id6]; 
-
+      
       // PML UPDATES
       dfloat qxe1 = qYx[id1];
       dfloat qxe2 = qYx[id2];
@@ -1539,14 +1457,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       dfloat qye4 = qYy[id4];
       dfloat qye5 = qYy[id5];
       dfloat qye6 = qYy[id6]; 
-      //
-      dfloat nte1 = qYnt[id1];
-      dfloat nte2 = qYnt[id2];
-      dfloat nte3 = qYnt[id3];
-      dfloat nte4 = qYnt[id4];
-      dfloat nte5 = qYnt[id5];
-      dfloat nte6 = qYnt[id6]; 
-
+      
       // PML UPDATES
       qSx[id1] = qx1;
       qSx[id2] = qx2;
@@ -1561,15 +1472,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       qSy[id4] = qy4;
       qSy[id5] = qy5;
       qSy[id6] = qy6; 
-
-      qSnt[id1] = nt1;
-      qSnt[id2] = nt2;
-      qSnt[id3] = nt3;
-      qSnt[id4] = nt4;
-      qSnt[id5] = nt5;
-      qSnt[id6] = nt6; 
-      //
-
+      
       // PML UPDATES
       qx1 = qxe1 + akk*dt*qxi1;
       qx2 = qxe2 + akk*dt*qxi2;
@@ -1584,16 +1487,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       qy4 = qye4 + akk*dt*qyi4;
       qy5 = qye5 + akk*dt*qyi5;
       qy6 = qye6 + akk*dt*qyi6;
-
-        // PML UPDATES
-      nt1 = nte1 + akk*dt*nti1;
-      nt2 = nte2 + akk*dt*nti2;
-      nt3 = nte3 + akk*dt*nti3;
-      nt4 = nte4 + akk*dt*nti4;
-      nt5 = nte5 + akk*dt*nti5;
-      nt6 = nte6 + akk*dt*nti6;  
-
-      
+     
       // PML UPDATES
       pmlqx[id1] = qx1;
       pmlqx[id2] = qx2;
@@ -1608,14 +1502,13 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       pmlqy[id4] = qy4;
       pmlqy[id5] = qy5;
       pmlqy[id6] = qy6; 
+         
+      dfloat4 qsa = q[2*(n + element*p_Np)];
+      dfloat4 qsb = q[2*(n + element*p_Np) + 1];
+      //
+      qS[2*(n + element*p_Np)]   = qsa;
+      qS[2*(n + element*p_Np)+1] = qsb;
 
-      // PML UPDATES
-      pmlNT[id1] = nt1;
-      pmlNT[id2] = nt2;
-      pmlNT[id3] = nt3;
-      pmlNT[id4] = nt4;
-      pmlNT[id5] = nt5;
-      pmlNT[id6] = nt6; 
 
       dfloat4 temp;
 
@@ -1651,10 +1544,8 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
             const dfloat  * restrict qZnt,     
             const dfloat  * restrict qYx,
             const dfloat  * restrict qYy,
-            const dfloat  * restrict qYnt,
             const dfloat  * restrict qSx,
-                  dfloat  * restrict qSy,
-                  dfloat  * restrict qSnt,     
+                  dfloat  * restrict qSy,    
                   dfloat  * restrict pmlqx,
                   dfloat  * restrict pmlqy,
                   dfloat  * restrict pmlNT,
@@ -1711,13 +1602,7 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       dfloat qye4 = qYy[id4];
       dfloat qye5 = qYy[id5];
       dfloat qye6 = qYy[id6]; 
-      //
-      dfloat nte1 = qYnt[id1];
-      dfloat nte2 = qYnt[id2];
-      dfloat nte3 = qYnt[id3];
-      dfloat nte4 = qYnt[id4];
-      dfloat nte5 = qYnt[id5];
-      dfloat nte6 = qYnt[id6]; 
+     
 
       // PML UPDATES
       dfloat qsx1 = qSx[id1];
@@ -1733,15 +1618,7 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       dfloat qsy4 = qSy[id4];
       dfloat qsy5 = qSy[id5];
       dfloat qsy6 = qSy[id6];  
-
-      // PML UPDATES
-      dfloat nts1 = qSnt[id1];
-      dfloat nts2 = qSnt[id2];
-      dfloat nts3 = qSnt[id3];
-      dfloat nts4 = qSnt[id4];
-      dfloat nts5 = qSnt[id5];
-      dfloat nts6 = qSnt[id6]; 
-      //
+      
 
       // PML UPDATES
       dfloat qx1 =qsx1 + akk*dt*( qxe1 + qxi1);
@@ -1772,16 +1649,15 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       pmlqy[id4] =qy4;
       pmlqy[id5] =qy5;
       pmlqy[id6] =qy6; 
-     //
+     
        // PML UPDATES
-      pmlNT[id1] =nts1 + akk*dt*( nte1 + nti1);
-      pmlNT[id2] =nts2 + akk*dt*( nte2 + nti2);
-      pmlNT[id3] =nts3 + akk*dt*( nte3 + nti3);
-      pmlNT[id4] =nts4 + akk*dt*( nte4 + nti4);
-      pmlNT[id5] =nts5 + akk*dt*( nte5 + nti5);
-      pmlNT[id6] =nts6 + akk*dt*( nte6 + nti6); 
-      
-      //
+      pmlNT[id1] +=akk*dt*(nti1);
+      pmlNT[id2] +=akk*dt*(nti2);
+      pmlNT[id3] +=akk*dt*(nti3);
+      pmlNT[id4] +=akk*dt*(nti4);
+      pmlNT[id5] +=akk*dt*(nti5);
+      pmlNT[id6] +=akk*dt*(nti6); 
+
       dfloat4 temp;
 
       temp.x =  p_q1bar                 + qx1 + qy1;

@@ -163,7 +163,7 @@ typedef struct {
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann; 
 
-  //LS Imex
+  //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
   iint Nimex;
   // ploting info for generating field vtu
@@ -264,7 +264,7 @@ typedef struct {
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
-  occa::memory o_qYnt, o_qZnt, o_qSnt;
+  occa::memory o_qZnt;
 
   
   occa::memory o_pmlElementList;

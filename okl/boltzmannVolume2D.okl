@@ -627,6 +627,7 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 	  rhspmlqy[base+3*p_Np] = rhspmlqy4;
 	  rhspmlqy[base+4*p_Np] = rhspmlqy5;
 	  rhspmlqy[base+5*p_Np] = rhspmlqy6;
+
 	}
       }
     }
