@@ -691,17 +691,11 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
     exclusive dfloat qye1 =0.0, qye2 = 0.0, qye3=0.0 ;
     exclusive dfloat qye4 =0.0, qye5 = 0.0, qye6=0.0 ;  
     //
-    // exclusive dfloat nte1 =0.0, nte2 = 0.0, nte3=0.0 ;
-    // exclusive dfloat nte4 =0.0, nte5 = 0.0, nte6=0.0 ;   
-    //
     exclusive dfloat qx1 =0.0, qx2 = 0.0, qx3=0.0 ;
     exclusive dfloat qx4 =0.0, qx5 = 0.0, qx6=0.0 ;  
 
     exclusive dfloat qy1 =0.0, qy2 = 0.0, qy3=0.0 ;
     exclusive dfloat qy4 =0.0, qy5 = 0.0, qy6=0.0 ;  
-    // //
-    // exclusive dfloat nt1 =0.0, nt2 = 0.0, nt3=0.0 ;
-    // exclusive dfloat nt4 =0.0, nt5 = 0.0, nt6=0.0 ; 
     //
     exclusive dfloat q1 =0.0, q2 = 0.0, q3=0.0 ;
     exclusive dfloat q4 =0.0, q5 = 0.0, q6=0.0 ;   
@@ -859,20 +853,23 @@ if(akk>0)
                 N5 += Pnc*s_cubN5[es][i];
                 N6 += Pnc*s_cubN6[es][i];
               }
+
+              dfloat alpha = 0.5f;
+              dfloat beta  = 0.5f;
                  //
               dfloat zx1 =  qxe1 - qx1 ;
               dfloat zx2 =  qxe2 - qx2 ;
               dfloat zx3 =  qxe3 - qx3 ;
-              dfloat zx4 =  qxe4 - qx4 +  0.5*N4 ;
-              dfloat zx5 =  qxe5 - qx5 +  0.5*N5 ;
-              dfloat zx6 =  qxe6 - qx6 +  0.5*N6 ;
+              dfloat zx4 =  qxe4 - qx4 +  alpha*N4 ;
+              dfloat zx5 =  qxe5 - qx5 +  alpha*N5 ;
+              dfloat zx6 =  qxe6 - qx6 +  alpha*N6 ;
               //
               dfloat zy1 =  qye1 - qy1 ;
               dfloat zy2 =  qye2 - qy2 ;
               dfloat zy3 =  qye3 - qy3 ;
-              dfloat zy4 =  qye4 - qy4 +  0.5*N4 ;
-              dfloat zy5 =  qye5 - qy5 +  0.5*N5 ;
-              dfloat zy6 =  qye6 - qy6 +  0.5*N6 ;
+              dfloat zy4 =  qye4 - qy4 +  beta*N4 ;
+              dfloat zy5 =  qye5 - qy5 +  beta*N5 ;
+              dfloat zy6 =  qye6 - qy6 +  beta*N6 ;
               //
               dfloat qx4o = qx4;
               dfloat qx5o = qx5;
@@ -928,9 +925,6 @@ if(akk>0)
                dfloat ey4 = fabs(qy4-qy4o);
                dfloat ey5 = fabs(qy5-qy5o);
                dfloat ey6 = fabs(qy6-qy6o);
-
-               
-
 
                dfloat ex  = GET_MAX3(ex4,ex5,ex6);  
                dfloat ey  = GET_MAX3(ey4,ey5,ey6);   
@@ -997,7 +991,8 @@ if(akk>0)
 
 
    if (err<p_LSIMEX_TOL){ 
-    printf("%g",err); break;}
+   // printf("%g",err); 
+    break;}
 
 
   }

@@ -249,7 +249,7 @@ typedef struct {
   
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
-  occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT;
+  occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
   
   // Boltzmann SARK extra storage for exponential update
   occa::memory o_resqex; 
@@ -259,7 +259,7 @@ typedef struct {
   occa::memory o_rhsq2,     o_rhsq3;
   occa::memory o_rhspmlqx2, o_rhspmlqx3;
   occa::memory o_rhspmlqy2, o_rhspmlqy3;
-  occa::memory o_rhspmlNT2, o_rhspmlNT3;
+  occa::memory o_rhspmlNT2, o_rhspmlNT3; // deprecated
   // LS Imex vars
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
