@@ -268,29 +268,6 @@ dfloat cfl = 0.5;
       dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
       
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-#elif TIME_DISC==LSERK_PMLV2
-      printf("Time discretization method: LSERK PML V2  with CFL: %.2f \n",cfl);
-      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-      
-      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-
-
-// #elif TIME_DISC==MRAB
-//       printf("Time discretization method: MRAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-//       // Stability region of MRAB is approximated as 1/3 of Runge-Kutta ?
-//       dfloat dt = mesh->dtfactor*cfl*1./8. * mymin(dtex,dtim);
-//        // dt        =  0.8*dtex; 
-
-//       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-
-// #elif TIME_DISC==SAAB
-//      printf("Time discretization method: SAAB order 3  with CFL: (1/3)*%.2f \n",cfl);
-//     dfloat dt = mesh->dtfactor*cfl*1./3. * mymin(dtex,dtim);
-//        // dt        =  0.8*dtex; 
-
-//       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 #endif
 
 
@@ -350,29 +327,7 @@ dfloat cfl = 0.5;
     mesh->o_rhspmlqy =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
     mesh->o_respmlqy =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-    // mesh->o_pmlNT =    
-    //   mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-    // mesh->o_rhspmlNT =
-    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-    // mesh->o_respmlNT =
-    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-
-  // #elif TIME_DISC==LSERK_PMLV2 
-  //   mesh->o_pmlqx =    
-  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  //   mesh->o_rhspmlqx =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  //   mesh->o_respmlqx =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-  //   mesh->o_pmlqy =    
-  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  //   mesh->o_rhspmlqy =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  //   mesh->o_respmlqy =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);   
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);  
 
   #elif TIME_DISC==SARK3
     mesh->o_qold =
@@ -418,24 +373,7 @@ dfloat cfl = 0.5;
     mesh->o_rhspmlqy3 =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-      // pml variables
-    mesh->o_pmlNT =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-     // pml variables
-    mesh->o_pmlNTold =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-
-    mesh->o_rhspmlNT =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-   
-    mesh->o_rhspmlNT2 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-    
-    mesh->o_rhspmlNT3 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
-
-
-      //
+        //
       for(int i=0; i<5; i++){
         for(int j=0; j<5; j++){
           mesh->sarka[i][j] = 0.0;
@@ -476,6 +414,7 @@ dfloat cfl = 0.5;
      mesh->sarke[0] = exp(coef*h*c2); 
      mesh->sarke[1] = exp(coef*h*c3); 
      mesh->sarke[2] = exp(coef*h*1.0);
+     
      // PML Region Coefficients
      coef = 0.5*coef; 
       //  Exponential Coefficients
@@ -531,15 +470,6 @@ dfloat cfl = 0.5;
             mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
           mesh->o_qZy =
             mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-
-
-
-          mesh->o_pmlNT =    
-            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-         
-          mesh->o_qZnt =
-            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlNT);
-          
       #endif
 
   
@@ -569,14 +499,14 @@ dfloat cfl = 0.5;
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
 
 
-    mesh->o_pmlNT =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
-    mesh->o_rhspmlNT =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-    mesh->o_rhspmlNT2 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
-    mesh->o_rhspmlNT3 =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    // mesh->o_pmlNT =    
+    //   mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlNT);
+    // mesh->o_rhspmlNT =
+    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    // mesh->o_rhspmlNT2 =
+    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
+    // mesh->o_rhspmlNT3 =
+    //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlNT);
 
 
 
@@ -873,10 +803,20 @@ dfloat cfl = 0.5;
 
     #if CUBATURE_ENABLED
        printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
+
+       #if 1
          mesh->NRIterationKernel = 
          mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
                  "boltzmannLSIMEXImplicitIterationCub2D",
                  kernelInfo); 
+       #else
+        mesh->NRIterationKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
+                 "boltzmannLSIMEXImplicitIteration2D",
+                 kernelInfo); 
+      #endif
+
+
 
          printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
          mesh->pmlNRIterationKernel = 

@@ -88,78 +88,7 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
   }
 }
 
-kernel void boltzmannSARKUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat dt, 
-            const dfloat expdt, 
-            const dfloat rka,
-            const dfloat erka,
-            const dfloat erkresa,
-            const dfloat rkb,
-            const dfloat erkb,
-            const dfloat erkresb,
-            const dfloat4 * restrict rhsq,
-                  dfloat4 * restrict resq,
-                  dfloat4 * restrict resqex,
-                  dfloat4 * restrict q){
-  
-  // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint element = elementIds[e];
-      const iint base = 2*(n + element*p_Np);
 
-      dfloat4 resqa = resq[base+0];
-      dfloat4 resqb = resq[base+1];
-
-      dfloat4 resqexa = resqex[base+0];
-      dfloat4 resqexb = resqex[base+1];
-
-      dfloat4 rhsqa = rhsq[base+0];
-      dfloat4 rhsqb = rhsq[base+1];
-
-      dfloat4 qa = q[base+0];
-      dfloat4 qb = q[base+1];
-      
-      // Update Exponential residual using old residual info
-      resqexa.x = 0.0; 
-      resqexa.y = 0.0; 
-      resqexa.z = 0.0; 
-      //
-      resqexa.w = erkresa*resqexa.w + erkresb*resqa.w; 
-      resqexb.x = erkresa*resqexb.x + erkresb*resqb.x; 
-      resqexb.y = erkresa*resqexb.y + erkresb*resqb.y; 
- 
-      // Update actual residual 
-      resqa.x = rka*resqa.x + dt*rhsqa.x; 
-      resqa.y = rka*resqa.y + dt*rhsqa.y; 
-      resqa.z = rka*resqa.z + dt*rhsqa.z; 
-      //
-      resqa.w = erka*resqa.w + dt*rhsqa.w; 
-      resqb.x = erka*resqb.x + dt*rhsqb.x; 
-      resqb.y = erka*resqb.y + dt*rhsqb.y; 
-      
-      //
-      qa.x  += rkb*resqa.x;
-      qa.y  += rkb*resqa.y;
-      qa.z  += rkb*resqa.z;
-      //
-      qa.w  = expdt*(qa.w - resqexa.w) + erkb*resqa.w + resqexa.w;
-      qb.x  = expdt*(qb.x - resqexb.x) + erkb*resqb.x + resqexb.x;
-      qb.y  = expdt*(qb.y - resqexb.y) + erkb*resqb.y + resqexb.y;
-      //
-      resq[base+0] = resqa;
-      resq[base+1] = resqb;
-
-      resqex[base+0] = resqexa;
-      resqex[base+1] = resqexb;
-      
-      q[base+0] = qa;
-      q[base+1] = qb;
-
-    }
-  }
-}
 
 kernel void boltzmannSARK3StageUpdate2D(const iint Nelements,
             const iint * restrict elementIds,
@@ -221,17 +150,13 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
               const dfloat erkb,
               const dfloat ramp, 
               const dfloat * restrict rhsqx1,
-              const dfloat * restrict rhsqy1,
-              const dfloat * restrict rhsNT1,  
+              const dfloat * restrict rhsqy1, 
               const dfloat * restrict rhsqx2,
               const dfloat * restrict rhsqy2,
-              const dfloat * restrict rhsNT2, 
               const dfloat * restrict qxold,
               const dfloat * restrict qyold,
-              const dfloat * restrict NTold,
                     dfloat * restrict qx,
                     dfloat * restrict qy,
-                    dfloat * restrict NT,
                     dfloat4 * restrict q){
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
@@ -253,13 +178,6 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat rhsqy14 = rhsqy1[base+3*p_Np];
       dfloat rhsqy15 = rhsqy1[base+4*p_Np];
       dfloat rhsqy16 = rhsqy1[base+5*p_Np];
-
-      dfloat rhsNT11 = rhsNT1[base+0*p_Np];
-      dfloat rhsNT12 = rhsNT1[base+1*p_Np];
-      dfloat rhsNT13 = rhsNT1[base+2*p_Np];
-      dfloat rhsNT14 = rhsNT1[base+3*p_Np];
-      dfloat rhsNT15 = rhsNT1[base+4*p_Np];
-      dfloat rhsNT16 = rhsNT1[base+5*p_Np];
       
       //
       dfloat rhsqx21 = rhsqx2[base+0*p_Np];
@@ -276,13 +194,6 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat rhsqy25 = rhsqy2[base+4*p_Np];
       dfloat rhsqy26 = rhsqy2[base+5*p_Np];
 
-      dfloat rhsNT21 = rhsNT2[base+0*p_Np];
-      dfloat rhsNT22 = rhsNT2[base+1*p_Np];
-      dfloat rhsNT23 = rhsNT2[base+2*p_Np];
-      dfloat rhsNT24 = rhsNT2[base+3*p_Np];
-      dfloat rhsNT25 = rhsNT2[base+4*p_Np];
-      dfloat rhsNT26 = rhsNT2[base+5*p_Np];
-      
       
       //
       dfloat qxold1 = qxold[base+0*p_Np];
@@ -299,12 +210,6 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat qyold5 = qyold[base+4*p_Np];
       dfloat qyold6 = qyold[base+5*p_Np];
 
-      dfloat NTold1 = NTold[base+0*p_Np];
-      dfloat NTold2 = NTold[base+1*p_Np];
-      dfloat NTold3 = NTold[base+2*p_Np];
-      dfloat NTold4 = NTold[base+3*p_Np];
-      dfloat NTold5 = NTold[base+4*p_Np];
-      dfloat NTold6 = NTold[base+5*p_Np];
       //
       dfloat qx1 =       qxold1 + dt*(  rka*rhsqx11 +  rkb*rhsqx21);
       dfloat qx2 =       qxold2 + dt*(  rka*rhsqx12 +  rkb*rhsqx22);
@@ -319,15 +224,7 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24);
       dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25);
       dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26);
-      // 
-      dfloat NT1 = NTold1 + dt*( rka*rhsNT11 + rkb*rhsNT21);
-      dfloat NT2 = NTold2 + dt*( rka*rhsNT12 + rkb*rhsNT22);
-      dfloat NT3 = NTold3 + dt*( rka*rhsNT13 + rkb*rhsNT23);
-      dfloat NT4 = NTold4 + dt*( rka*rhsNT14 + rkb*rhsNT24);
-      dfloat NT5 = NTold5 + dt*( rka*rhsNT15 + rkb*rhsNT25);
-      dfloat NT6 = NTold6 + dt*( rka*rhsNT16 + rkb*rhsNT26);
-
-      
+           
       
       dfloat4 qa, qb;
       qa.x = p_q1bar + qx1 + qy1;
@@ -341,8 +238,7 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       q[2*(n+element*p_Np)] = qa;
       q[2*(n+element*p_Np)+1] = qb;
       
-       //
-
+     //
       qx[base+0*p_Np] = qx1;
       qx[base+1*p_Np] = qx2;
       qx[base+2*p_Np] = qx3;
@@ -356,14 +252,6 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       qy[base+3*p_Np] = qy4;
       qy[base+4*p_Np] = qy5;
       qy[base+5*p_Np] = qy6;
-
-      NT[base+0*p_Np] = NT1;
-      NT[base+1*p_Np] = NT2;
-      NT[base+2*p_Np] = NT3;
-      NT[base+3*p_Np] = NT4;
-      NT[base+4*p_Np] = NT5;
-      NT[base+5*p_Np] = NT6;
-      //
 
     }
   }
@@ -440,20 +328,15 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
               const dfloat erkc,
               const dfloat ramp, 
               const dfloat * restrict rhsqx1,
-              const dfloat * restrict rhsqy1,
-              const dfloat * restrict rhsNT1,  
+              const dfloat * restrict rhsqy1,  
               const dfloat * restrict rhsqx2,
               const dfloat * restrict rhsqy2,
-              const dfloat * restrict rhsNT2, 
               const dfloat * restrict rhsqx3,
               const dfloat * restrict rhsqy3,
-              const dfloat * restrict rhsNT3, 
                     dfloat * restrict qxold,
                     dfloat * restrict qyold,
-                    dfloat * restrict NTold,
                     dfloat * restrict qx,
                     dfloat * restrict qy,
-                    dfloat * restrict NT,
                     dfloat4 * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -478,12 +361,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat rhsqy15 = rhsqy1[base+4*p_Np];
       dfloat rhsqy16 = rhsqy1[base+5*p_Np];
 
-      dfloat rhsNT11 = rhsNT1[base+0*p_Np];
-      dfloat rhsNT12 = rhsNT1[base+1*p_Np];
-      dfloat rhsNT13 = rhsNT1[base+2*p_Np];
-      dfloat rhsNT14 = rhsNT1[base+3*p_Np];
-      dfloat rhsNT15 = rhsNT1[base+4*p_Np];
-      dfloat rhsNT16 = rhsNT1[base+5*p_Np];
       //
       dfloat rhsqx21 = rhsqx2[base+0*p_Np];
       dfloat rhsqx22 = rhsqx2[base+1*p_Np];
@@ -499,13 +376,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat rhsqy25 = rhsqy2[base+4*p_Np];
       dfloat rhsqy26 = rhsqy2[base+5*p_Np];
 
-      dfloat rhsNT21 = rhsNT2[base+0*p_Np];
-      dfloat rhsNT22 = rhsNT2[base+1*p_Np];
-      dfloat rhsNT23 = rhsNT2[base+2*p_Np];
-      dfloat rhsNT24 = rhsNT2[base+3*p_Np];
-      dfloat rhsNT25 = rhsNT2[base+4*p_Np];
-      dfloat rhsNT26 = rhsNT2[base+5*p_Np];
-      //
       //
       dfloat rhsqx31 = rhsqx3[base+0*p_Np];
       dfloat rhsqx32 = rhsqx3[base+1*p_Np];
@@ -521,12 +391,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat rhsqy35 = rhsqy3[base+4*p_Np];
       dfloat rhsqy36 = rhsqy3[base+5*p_Np];
 
-      dfloat rhsNT31 = rhsNT3[base+0*p_Np];
-      dfloat rhsNT32 = rhsNT3[base+1*p_Np];
-      dfloat rhsNT33 = rhsNT3[base+2*p_Np];
-      dfloat rhsNT34 = rhsNT3[base+3*p_Np];
-      dfloat rhsNT35 = rhsNT3[base+4*p_Np];
-      dfloat rhsNT36 = rhsNT3[base+5*p_Np];
       
       //
       dfloat qxold1 = qxold[base+0*p_Np];
@@ -543,12 +407,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat qyold5 = qyold[base+4*p_Np];
       dfloat qyold6 = qyold[base+5*p_Np];
 
-      dfloat NTold1 = NTold[base+0*p_Np];
-      dfloat NTold2 = NTold[base+1*p_Np];
-      dfloat NTold3 = NTold[base+2*p_Np];
-      dfloat NTold4 = NTold[base+3*p_Np];
-      dfloat NTold5 = NTold[base+4*p_Np];
-      dfloat NTold6 = NTold[base+5*p_Np];
       //
       dfloat qx1 = qxold1       + dt*(  rka*rhsqx11 +  rkb*rhsqx21 +  rkc*rhsqx31);
       dfloat qx2 = qxold2       + dt*(  rka*rhsqx12 +  rkb*rhsqx22 +  rkc*rhsqx32);
@@ -564,16 +422,7 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25 + erkc*rhsqy35);
       dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26 + erkc*rhsqy36);
      
-      //
-      dfloat NT1 = NTold1 + dt*(  rka*rhsNT11 +  rkb*rhsNT21 +  rkc*rhsNT31);
-      dfloat NT2 = NTold2 + dt*(  rka*rhsNT12 +  rkb*rhsNT22 +  rkc*rhsNT32);
-      dfloat NT3 = NTold3 + dt*(  rka*rhsNT13 +  rkb*rhsNT23 +  rkc*rhsNT33);
-      dfloat NT4 = NTold4 + dt*(  rka*rhsNT14 +  rkb*rhsNT24 + rkc*rhsNT34);
-      dfloat NT5 = NTold5 + dt*(  rka*rhsNT15 +  rkb*rhsNT25 + rkc*rhsNT35);
-      dfloat NT6 = NTold6 + dt*(  rka*rhsNT16 +  rkb*rhsNT26 + rkc*rhsNT36);
-
-      
-      
+            
       dfloat4 qa, qb;
       qa.x = p_q1bar + qx1 + qy1;
       qa.y = ramp*p_q2bar + qx2 + qy2;
@@ -601,12 +450,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       qy[base+4*p_Np] = qy5;
       qy[base+5*p_Np] = qy6;
 
-      NT[base+0*p_Np] = NT1;
-      NT[base+1*p_Np] = NT2;
-      NT[base+2*p_Np] = NT3;
-      NT[base+3*p_Np] = NT4;
-      NT[base+4*p_Np] = NT5;
-      NT[base+5*p_Np] = NT6;
       //
       qxold[base+0*p_Np] = qx1;
       qxold[base+1*p_Np] = qx2;
@@ -622,12 +465,6 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       qyold[base+4*p_Np] = qy5;
       qyold[base+5*p_Np] = qy6;
 
-      NTold[base+0*p_Np] = NT1;
-      NTold[base+1*p_Np] = NT2;
-      NTold[base+2*p_Np] = NT3;
-      NTold[base+3*p_Np] = NT4;
-      NTold[base+4*p_Np] = NT5;
-      NTold[base+5*p_Np] = NT6;
       //
 
     }
@@ -831,6 +668,366 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
 }
 
 
+// kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
+//               const iint * restrict elementIds, 
+//               const dfloat dt,  
+//               const dfloat expdt, 
+//               const dfloat rka,
+//               const dfloat erka,
+//               const dfloat rkb,
+//               const dfloat erkb,
+//               const dfloat rkc,
+//               const dfloat erkc,
+//               const dfloat ramp, 
+//               const dfloat * restrict rhsqx1,
+//               const dfloat * restrict rhsqy1,
+//               const dfloat * restrict rhsNT1,  
+//               const dfloat * restrict rhsqx2,
+//               const dfloat * restrict rhsqy2,
+//               const dfloat * restrict rhsNT2, 
+//               const dfloat * restrict rhsqx3,
+//               const dfloat * restrict rhsqy3,
+//               const dfloat * restrict rhsNT3, 
+//                     dfloat * restrict qxold,
+//                     dfloat * restrict qyold,
+//                     dfloat * restrict NTold,
+//                     dfloat * restrict qx,
+//                     dfloat * restrict qy,
+//                     dfloat * restrict NT,
+//                     dfloat4 * restrict q){
+  
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+
+//       const iint element = elementIds[e];
+//       const iint base = n + element*p_Nfields*p_Np;
+
+
+//       dfloat rhsqx11 = rhsqx1[base+0*p_Np];
+//       dfloat rhsqx12 = rhsqx1[base+1*p_Np];
+//       dfloat rhsqx13 = rhsqx1[base+2*p_Np];
+//       dfloat rhsqx14 = rhsqx1[base+3*p_Np];
+//       dfloat rhsqx15 = rhsqx1[base+4*p_Np];
+//       dfloat rhsqx16 = rhsqx1[base+5*p_Np];
+
+//       dfloat rhsqy11 = rhsqy1[base+0*p_Np];
+//       dfloat rhsqy12 = rhsqy1[base+1*p_Np];
+//       dfloat rhsqy13 = rhsqy1[base+2*p_Np];
+//       dfloat rhsqy14 = rhsqy1[base+3*p_Np];
+//       dfloat rhsqy15 = rhsqy1[base+4*p_Np];
+//       dfloat rhsqy16 = rhsqy1[base+5*p_Np];
+
+//       dfloat rhsNT11 = rhsNT1[base+0*p_Np];
+//       dfloat rhsNT12 = rhsNT1[base+1*p_Np];
+//       dfloat rhsNT13 = rhsNT1[base+2*p_Np];
+//       dfloat rhsNT14 = rhsNT1[base+3*p_Np];
+//       dfloat rhsNT15 = rhsNT1[base+4*p_Np];
+//       dfloat rhsNT16 = rhsNT1[base+5*p_Np];
+//       //
+//       dfloat rhsqx21 = rhsqx2[base+0*p_Np];
+//       dfloat rhsqx22 = rhsqx2[base+1*p_Np];
+//       dfloat rhsqx23 = rhsqx2[base+2*p_Np];
+//       dfloat rhsqx24 = rhsqx2[base+3*p_Np];
+//       dfloat rhsqx25 = rhsqx2[base+4*p_Np];
+//       dfloat rhsqx26 = rhsqx2[base+5*p_Np];
+
+//       dfloat rhsqy21 = rhsqy2[base+0*p_Np];
+//       dfloat rhsqy22 = rhsqy2[base+1*p_Np];
+//       dfloat rhsqy23 = rhsqy2[base+2*p_Np];
+//       dfloat rhsqy24 = rhsqy2[base+3*p_Np];
+//       dfloat rhsqy25 = rhsqy2[base+4*p_Np];
+//       dfloat rhsqy26 = rhsqy2[base+5*p_Np];
+
+//       dfloat rhsNT21 = rhsNT2[base+0*p_Np];
+//       dfloat rhsNT22 = rhsNT2[base+1*p_Np];
+//       dfloat rhsNT23 = rhsNT2[base+2*p_Np];
+//       dfloat rhsNT24 = rhsNT2[base+3*p_Np];
+//       dfloat rhsNT25 = rhsNT2[base+4*p_Np];
+//       dfloat rhsNT26 = rhsNT2[base+5*p_Np];
+//       //
+//       //
+//       dfloat rhsqx31 = rhsqx3[base+0*p_Np];
+//       dfloat rhsqx32 = rhsqx3[base+1*p_Np];
+//       dfloat rhsqx33 = rhsqx3[base+2*p_Np];
+//       dfloat rhsqx34 = rhsqx3[base+3*p_Np];
+//       dfloat rhsqx35 = rhsqx3[base+4*p_Np];
+//       dfloat rhsqx36 = rhsqx3[base+5*p_Np];
+
+//       dfloat rhsqy31 = rhsqy3[base+0*p_Np];
+//       dfloat rhsqy32 = rhsqy3[base+1*p_Np];
+//       dfloat rhsqy33 = rhsqy3[base+2*p_Np];
+//       dfloat rhsqy34 = rhsqy3[base+3*p_Np];
+//       dfloat rhsqy35 = rhsqy3[base+4*p_Np];
+//       dfloat rhsqy36 = rhsqy3[base+5*p_Np];
+
+//       dfloat rhsNT31 = rhsNT3[base+0*p_Np];
+//       dfloat rhsNT32 = rhsNT3[base+1*p_Np];
+//       dfloat rhsNT33 = rhsNT3[base+2*p_Np];
+//       dfloat rhsNT34 = rhsNT3[base+3*p_Np];
+//       dfloat rhsNT35 = rhsNT3[base+4*p_Np];
+//       dfloat rhsNT36 = rhsNT3[base+5*p_Np];
+      
+//       //
+//       dfloat qxold1 = qxold[base+0*p_Np];
+//       dfloat qxold2 = qxold[base+1*p_Np];
+//       dfloat qxold3 = qxold[base+2*p_Np];
+//       dfloat qxold4 = qxold[base+3*p_Np];
+//       dfloat qxold5 = qxold[base+4*p_Np];
+//       dfloat qxold6 = qxold[base+5*p_Np];
+
+//       dfloat qyold1 = qyold[base+0*p_Np];
+//       dfloat qyold2 = qyold[base+1*p_Np];
+//       dfloat qyold3 = qyold[base+2*p_Np];
+//       dfloat qyold4 = qyold[base+3*p_Np];
+//       dfloat qyold5 = qyold[base+4*p_Np];
+//       dfloat qyold6 = qyold[base+5*p_Np];
+
+//       dfloat NTold1 = NTold[base+0*p_Np];
+//       dfloat NTold2 = NTold[base+1*p_Np];
+//       dfloat NTold3 = NTold[base+2*p_Np];
+//       dfloat NTold4 = NTold[base+3*p_Np];
+//       dfloat NTold5 = NTold[base+4*p_Np];
+//       dfloat NTold6 = NTold[base+5*p_Np];
+//       //
+//       dfloat qx1 = qxold1       + dt*(  rka*rhsqx11 +  rkb*rhsqx21 +  rkc*rhsqx31);
+//       dfloat qx2 = qxold2       + dt*(  rka*rhsqx12 +  rkb*rhsqx22 +  rkc*rhsqx32);
+//       dfloat qx3 = qxold3       + dt*(  rka*rhsqx13 +  rkb*rhsqx23 +  rkc*rhsqx33);
+//       dfloat qx4 = expdt*qxold4 + dt*( erka*rhsqx14 + erkb*rhsqx24 + erkc*rhsqx34);
+//       dfloat qx5 = expdt*qxold5 + dt*( erka*rhsqx15 + erkb*rhsqx25 + erkc*rhsqx35);
+//       dfloat qx6 = expdt*qxold6 + dt*( erka*rhsqx16 + erkb*rhsqx26 + erkc*rhsqx36);
+//       //
+//       dfloat qy1 = qyold1       + dt*(  rka*rhsqy11 +  rkb*rhsqy21 +  rkc*rhsqy31);
+//       dfloat qy2 = qyold2       + dt*(  rka*rhsqy12 +  rkb*rhsqy22 +  rkc*rhsqy32);
+//       dfloat qy3 = qyold3       + dt*(  rka*rhsqy13 +  rkb*rhsqy23 +  rkc*rhsqy33);
+//       dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24 + erkc*rhsqy34);
+//       dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25 + erkc*rhsqy35);
+//       dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26 + erkc*rhsqy36);
+     
+//       //
+//       dfloat NT1 = NTold1 + dt*(  rka*rhsNT11 +  rkb*rhsNT21 +  rkc*rhsNT31);
+//       dfloat NT2 = NTold2 + dt*(  rka*rhsNT12 +  rkb*rhsNT22 +  rkc*rhsNT32);
+//       dfloat NT3 = NTold3 + dt*(  rka*rhsNT13 +  rkb*rhsNT23 +  rkc*rhsNT33);
+//       dfloat NT4 = NTold4 + dt*(  rka*rhsNT14 +  rkb*rhsNT24 + rkc*rhsNT34);
+//       dfloat NT5 = NTold5 + dt*(  rka*rhsNT15 +  rkb*rhsNT25 + rkc*rhsNT35);
+//       dfloat NT6 = NTold6 + dt*(  rka*rhsNT16 +  rkb*rhsNT26 + rkc*rhsNT36);
+
+      
+      
+//       dfloat4 qa, qb;
+//       qa.x = p_q1bar + qx1 + qy1;
+//       qa.y = ramp*p_q2bar + qx2 + qy2;
+//       qa.z = ramp*p_q3bar + qx3 + qy3;
+//       qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+//       qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+//       qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+
+//       q[2*(n+element*p_Np)] = qa;
+//       q[2*(n+element*p_Np)+1] = qb;
+
+
+//       qx[base+0*p_Np] = qx1;
+//       qx[base+1*p_Np] = qx2;
+//       qx[base+2*p_Np] = qx3;
+//       qx[base+3*p_Np] = qx4;
+//       qx[base+4*p_Np] = qx5;
+//       qx[base+5*p_Np] = qx6;
+
+//       qy[base+0*p_Np] = qy1;
+//       qy[base+1*p_Np] = qy2;
+//       qy[base+2*p_Np] = qy3;
+//       qy[base+3*p_Np] = qy4;
+//       qy[base+4*p_Np] = qy5;
+//       qy[base+5*p_Np] = qy6;
+
+//       NT[base+0*p_Np] = NT1;
+//       NT[base+1*p_Np] = NT2;
+//       NT[base+2*p_Np] = NT3;
+//       NT[base+3*p_Np] = NT4;
+//       NT[base+4*p_Np] = NT5;
+//       NT[base+5*p_Np] = NT6;
+//       //
+//       qxold[base+0*p_Np] = qx1;
+//       qxold[base+1*p_Np] = qx2;
+//       qxold[base+2*p_Np] = qx3;
+//       qxold[base+3*p_Np] = qx4;
+//       qxold[base+4*p_Np] = qx5;
+//       qxold[base+5*p_Np] = qx6;
+
+//       qyold[base+0*p_Np] = qy1;
+//       qyold[base+1*p_Np] = qy2;
+//       qyold[base+2*p_Np] = qy3;
+//       qyold[base+3*p_Np] = qy4;
+//       qyold[base+4*p_Np] = qy5;
+//       qyold[base+5*p_Np] = qy6;
+
+//       NTold[base+0*p_Np] = NT1;
+//       NTold[base+1*p_Np] = NT2;
+//       NTold[base+2*p_Np] = NT3;
+//       NTold[base+3*p_Np] = NT4;
+//       NTold[base+4*p_Np] = NT5;
+//       NTold[base+5*p_Np] = NT6;
+//       //
+
+//     }
+//   }
+// }
+
+
+// kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
+//               const iint * restrict elementIds, 
+//               const dfloat dt,  
+//               const dfloat expdt, 
+//               const dfloat rka,
+//               const dfloat erka,
+//               const dfloat rkb,
+//               const dfloat erkb,
+//               const dfloat ramp, 
+//               const dfloat * restrict rhsqx1,
+//               const dfloat * restrict rhsqy1, 
+//               const dfloat * restrict rhsqx2,
+//               const dfloat * restrict rhsqy2,
+//               const dfloat * restrict qxold,
+//               const dfloat * restrict qyold,
+//                     dfloat * restrict qx,
+//                     dfloat * restrict qy,
+//                     dfloat4 * restrict q){
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+
+//       const iint element = elementIds[e];
+//       const iint base = n + element*p_Nfields*p_Np;
+
+
+//       dfloat rhsqx11 = rhsqx1[base+0*p_Np];
+//       dfloat rhsqx12 = rhsqx1[base+1*p_Np];
+//       dfloat rhsqx13 = rhsqx1[base+2*p_Np];
+//       dfloat rhsqx14 = rhsqx1[base+3*p_Np];
+//       dfloat rhsqx15 = rhsqx1[base+4*p_Np];
+//       dfloat rhsqx16 = rhsqx1[base+5*p_Np];
+
+//       dfloat rhsqy11 = rhsqy1[base+0*p_Np];
+//       dfloat rhsqy12 = rhsqy1[base+1*p_Np];
+//       dfloat rhsqy13 = rhsqy1[base+2*p_Np];
+//       dfloat rhsqy14 = rhsqy1[base+3*p_Np];
+//       dfloat rhsqy15 = rhsqy1[base+4*p_Np];
+//       dfloat rhsqy16 = rhsqy1[base+5*p_Np];
+
+//       dfloat rhsNT11 = rhsNT1[base+0*p_Np];
+//       dfloat rhsNT12 = rhsNT1[base+1*p_Np];
+//       dfloat rhsNT13 = rhsNT1[base+2*p_Np];
+//       dfloat rhsNT14 = rhsNT1[base+3*p_Np];
+//       dfloat rhsNT15 = rhsNT1[base+4*p_Np];
+//       dfloat rhsNT16 = rhsNT1[base+5*p_Np];
+      
+//       //
+//       dfloat rhsqx21 = rhsqx2[base+0*p_Np];
+//       dfloat rhsqx22 = rhsqx2[base+1*p_Np];
+//       dfloat rhsqx23 = rhsqx2[base+2*p_Np];
+//       dfloat rhsqx24 = rhsqx2[base+3*p_Np];
+//       dfloat rhsqx25 = rhsqx2[base+4*p_Np];
+//       dfloat rhsqx26 = rhsqx2[base+5*p_Np];
+
+//       dfloat rhsqy21 = rhsqy2[base+0*p_Np];
+//       dfloat rhsqy22 = rhsqy2[base+1*p_Np];
+//       dfloat rhsqy23 = rhsqy2[base+2*p_Np];
+//       dfloat rhsqy24 = rhsqy2[base+3*p_Np];
+//       dfloat rhsqy25 = rhsqy2[base+4*p_Np];
+//       dfloat rhsqy26 = rhsqy2[base+5*p_Np];
+
+//       dfloat rhsNT21 = rhsNT2[base+0*p_Np];
+//       dfloat rhsNT22 = rhsNT2[base+1*p_Np];
+//       dfloat rhsNT23 = rhsNT2[base+2*p_Np];
+//       dfloat rhsNT24 = rhsNT2[base+3*p_Np];
+//       dfloat rhsNT25 = rhsNT2[base+4*p_Np];
+//       dfloat rhsNT26 = rhsNT2[base+5*p_Np];
+      
+      
+//       //
+//       dfloat qxold1 = qxold[base+0*p_Np];
+//       dfloat qxold2 = qxold[base+1*p_Np];
+//       dfloat qxold3 = qxold[base+2*p_Np];
+//       dfloat qxold4 = qxold[base+3*p_Np];
+//       dfloat qxold5 = qxold[base+4*p_Np];
+//       dfloat qxold6 = qxold[base+5*p_Np];
+
+//       dfloat qyold1 = qyold[base+0*p_Np];
+//       dfloat qyold2 = qyold[base+1*p_Np];
+//       dfloat qyold3 = qyold[base+2*p_Np];
+//       dfloat qyold4 = qyold[base+3*p_Np];
+//       dfloat qyold5 = qyold[base+4*p_Np];
+//       dfloat qyold6 = qyold[base+5*p_Np];
+
+//       dfloat NTold1 = NTold[base+0*p_Np];
+//       dfloat NTold2 = NTold[base+1*p_Np];
+//       dfloat NTold3 = NTold[base+2*p_Np];
+//       dfloat NTold4 = NTold[base+3*p_Np];
+//       dfloat NTold5 = NTold[base+4*p_Np];
+//       dfloat NTold6 = NTold[base+5*p_Np];
+//       //
+//       dfloat qx1 =       qxold1 + dt*(  rka*rhsqx11 +  rkb*rhsqx21);
+//       dfloat qx2 =       qxold2 + dt*(  rka*rhsqx12 +  rkb*rhsqx22);
+//       dfloat qx3 =       qxold3 + dt*(  rka*rhsqx13 +  rkb*rhsqx23);
+//       dfloat qx4 = expdt*qxold4 + dt*( erka*rhsqx14 + erkb*rhsqx24);
+//       dfloat qx5 = expdt*qxold5 + dt*( erka*rhsqx15 + erkb*rhsqx25);
+//       dfloat qx6 = expdt*qxold6 + dt*( erka*rhsqx16 + erkb*rhsqx26);
+//       //
+//       dfloat qy1 =       qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
+//       dfloat qy2 =       qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
+//       dfloat qy3 =       qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
+//       dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24);
+//       dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25);
+//       dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26);
+//       // 
+//       dfloat NT1 = NTold1 + dt*( rka*rhsNT11 + rkb*rhsNT21);
+//       dfloat NT2 = NTold2 + dt*( rka*rhsNT12 + rkb*rhsNT22);
+//       dfloat NT3 = NTold3 + dt*( rka*rhsNT13 + rkb*rhsNT23);
+//       dfloat NT4 = NTold4 + dt*( rka*rhsNT14 + rkb*rhsNT24);
+//       dfloat NT5 = NTold5 + dt*( rka*rhsNT15 + rkb*rhsNT25);
+//       dfloat NT6 = NTold6 + dt*( rka*rhsNT16 + rkb*rhsNT26);
+
+      
+      
+//       dfloat4 qa, qb;
+//       qa.x = p_q1bar + qx1 + qy1;
+//       qa.y = ramp*p_q2bar + qx2 + qy2;
+//       qa.z = ramp*p_q3bar + qx3 + qy3;
+//       qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+//       qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+//       qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+
+//       q[2*(n+element*p_Np)] = qa;
+//       q[2*(n+element*p_Np)+1] = qb;
+      
+//        //
+
+//       qx[base+0*p_Np] = qx1;
+//       qx[base+1*p_Np] = qx2;
+//       qx[base+2*p_Np] = qx3;
+//       qx[base+3*p_Np] = qx4;
+//       qx[base+4*p_Np] = qx5;
+//       qx[base+5*p_Np] = qx6;
+
+//       qy[base+0*p_Np] = qy1;
+//       qy[base+1*p_Np] = qy2;
+//       qy[base+2*p_Np] = qy3;
+//       qy[base+3*p_Np] = qy4;
+//       qy[base+4*p_Np] = qy5;
+//       qy[base+5*p_Np] = qy6;
+
+//       NT[base+0*p_Np] = NT1;
+//       NT[base+1*p_Np] = NT2;
+//       NT[base+2*p_Np] = NT3;
+//       NT[base+3*p_Np] = NT4;
+//       NT[base+4*p_Np] = NT5;
+//       NT[base+5*p_Np] = NT6;
+//       //
+
+//     }
+//   }
+// }
 
 
 
@@ -986,7 +1183,78 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
 //   }
 // }
 
+// kernel void boltzmannSARKUpdate2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat dt, 
+//             const dfloat expdt, 
+//             const dfloat rka,
+//             const dfloat erka,
+//             const dfloat erkresa,
+//             const dfloat rkb,
+//             const dfloat erkb,
+//             const dfloat erkresb,
+//             const dfloat4 * restrict rhsq,
+//                   dfloat4 * restrict resq,
+//                   dfloat4 * restrict resqex,
+//                   dfloat4 * restrict q){
+  
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+//       const iint element = elementIds[e];
+//       const iint base = 2*(n + element*p_Np);
 
+//       dfloat4 resqa = resq[base+0];
+//       dfloat4 resqb = resq[base+1];
+
+//       dfloat4 resqexa = resqex[base+0];
+//       dfloat4 resqexb = resqex[base+1];
+
+//       dfloat4 rhsqa = rhsq[base+0];
+//       dfloat4 rhsqb = rhsq[base+1];
+
+//       dfloat4 qa = q[base+0];
+//       dfloat4 qb = q[base+1];
+      
+//       // Update Exponential residual using old residual info
+//       resqexa.x = 0.0; 
+//       resqexa.y = 0.0; 
+//       resqexa.z = 0.0; 
+//       //
+//       resqexa.w = erkresa*resqexa.w + erkresb*resqa.w; 
+//       resqexb.x = erkresa*resqexb.x + erkresb*resqb.x; 
+//       resqexb.y = erkresa*resqexb.y + erkresb*resqb.y; 
+ 
+//       // Update actual residual 
+//       resqa.x = rka*resqa.x + dt*rhsqa.x; 
+//       resqa.y = rka*resqa.y + dt*rhsqa.y; 
+//       resqa.z = rka*resqa.z + dt*rhsqa.z; 
+//       //
+//       resqa.w = erka*resqa.w + dt*rhsqa.w; 
+//       resqb.x = erka*resqb.x + dt*rhsqb.x; 
+//       resqb.y = erka*resqb.y + dt*rhsqb.y; 
+      
+//       //
+//       qa.x  += rkb*resqa.x;
+//       qa.y  += rkb*resqa.y;
+//       qa.z  += rkb*resqa.z;
+//       //
+//       qa.w  = expdt*(qa.w - resqexa.w) + erkb*resqa.w + resqexa.w;
+//       qb.x  = expdt*(qb.x - resqexb.x) + erkb*resqb.x + resqexb.x;
+//       qb.y  = expdt*(qb.y - resqexb.y) + erkb*resqb.y + resqexb.y;
+//       //
+//       resq[base+0] = resqa;
+//       resq[base+1] = resqb;
+
+//       resqex[base+0] = resqexa;
+//       resqex[base+1] = resqexb;
+      
+//       q[base+0] = qa;
+//       q[base+1] = qb;
+
+//     }
+//   }
+// }
 
 
 
@@ -1366,8 +1634,6 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
       const iint id4 = base + 3*p_Np;
       const iint id5 = base + 4*p_Np;
       const iint id6 = base + 5*p_Np;
-
-
       // PML UPDATES
       dfloat qx1 = pmlqx[id1];
       dfloat qx2 = pmlqx[id2];
@@ -1495,15 +1761,13 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
             const dfloat akk,
             const dfloat ramp,
             const dfloat  * restrict qZx,
-            const dfloat  * restrict qZy,
-            const dfloat  * restrict qZnt,     
+            const dfloat  * restrict qZy,   
             const dfloat  * restrict qYx,
             const dfloat  * restrict qYy,
             const dfloat  * restrict qSx,
                   dfloat  * restrict qSy,    
                   dfloat  * restrict pmlqx,
                   dfloat  * restrict pmlqy,
-                  dfloat  * restrict pmlNT,
                   dfloat4 * restrict q ){
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
@@ -1535,13 +1799,7 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       dfloat qyi4 = qZy[id4];
       dfloat qyi5 = qZy[id5];
       dfloat qyi6 = qZy[id6]; 
-      //
-      dfloat nti1 = qZnt[id1];
-      dfloat nti2 = qZnt[id2];
-      dfloat nti3 = qZnt[id3];
-      dfloat nti4 = qZnt[id4];
-      dfloat nti5 = qZnt[id5];
-      dfloat nti6 = qZnt[id6]; 
+      
 
       // PML UPDATES
       dfloat qxe1 = qYx[id1];
@@ -1605,14 +1863,7 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       pmlqy[id5] =qy5;
       pmlqy[id6] =qy6; 
      
-       // PML UPDATES
-      pmlNT[id1] +=akk*dt*(nti1);
-      pmlNT[id2] +=akk*dt*(nti2);
-      pmlNT[id3] +=akk*dt*(nti3);
-      pmlNT[id4] +=akk*dt*(nti4);
-      pmlNT[id5] +=akk*dt*(nti5);
-      pmlNT[id6] +=akk*dt*(nti6); 
-
+      
       dfloat4 temp;
 
       temp.x =  p_q1bar                 + qx1 + qy1;

@@ -190,7 +190,6 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolume2D(const iint Nelements,
                     const dfloat * restrict cubProjectT,
                           dfloat * restrict qZx,
                           dfloat * restrict qZy,
-                          dfloat * restrict qZnt,
                           dfloat4 * restrict qZ){
   for(iint e=0;e<Nelements;++e;outer0)
   {
@@ -225,7 +224,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolume2D(const iint Nelements,
 
 
    // PML UPDATES
-      qZx[id1]  = 0.;
+      qZx[id1]  = 0.; // Required becouse of low storage
       qZx[id2]  = 0.;
       qZx[id3]  = 0.;
       qZx[id4]  = 0.5f*N4;
@@ -240,15 +239,6 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolume2D(const iint Nelements,
       qZy[id5]  = 0.5f*N5;
       qZy[id6]  = 0.5f*N6; 
        
-   // PML UPDATES
-      qZnt[id1] = 0.;
-      qZnt[id2] = 0.;
-      qZnt[id3] = 0.;
-      qZnt[id4] = N4;
-      qZnt[id5] = N5;
-      qZnt[id6] = N6; 
-      //
-
       // 
       dfloat4 temp;
       temp.x =  0.;
@@ -278,7 +268,6 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolumeCub2D(const iint Nelements,
                     const dfloat * restrict cubProjectT,
                           dfloat * restrict qZx,
                           dfloat * restrict qZy,
-                          dfloat * restrict qZnt,
                           dfloat4 * restrict qZ){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
@@ -371,28 +360,26 @@ kernel void boltzmannLSIMEXSplitPmlImplicitVolumeCub2D(const iint Nelements,
       	      N6 += Pnc*s_cubN6[es][i];
       	    }
 
+
+      dfloat alpha = 0.5f; 
+      dfloat beta  = 0.5f;       
+
 	    // split relaxation
       qZx[base+0*p_Np]  = 0.;
       qZx[base+1*p_Np]  = 0.;
       qZx[base+2*p_Np]  = 0.;
-	    qZx[base+3*p_Np]  = 0.5f*N4;
-	    qZx[base+4*p_Np]  = 0.5f*N5;
-	    qZx[base+5*p_Np]  = 0.5f*N6;
+	    qZx[base+3*p_Np]  = alpha*N4;
+	    qZx[base+4*p_Np]  = alpha*N5;
+	    qZx[base+5*p_Np]  = alpha*N6;
 
 
 	    qZy[base+0*p_Np]  = 0.;
       qZy[base+1*p_Np]  = 0.;
       qZy[base+2*p_Np]  = 0.;
-	    qZy[base+3*p_Np]  = 0.5f*N4;
-	    qZy[base+4*p_Np]  = 0.5f*N5;
-	    qZy[base+5*p_Np]  = 0.5f*N6;
-	    
-      qZnt[base+0*p_Np] = 0.;
-      qZnt[base+0*p_Np] = 0.;
-      qZnt[base+0*p_Np] = 0.;
-	    qZnt[base+3*p_Np] = N4;
-	    qZnt[base+4*p_Np] = N5;
-	    qZnt[base+5*p_Np] = N6;
+	    qZy[base+3*p_Np]  = beta*N4;
+	    qZy[base+4*p_Np]  = beta*N5;
+	    qZy[base+5*p_Np]  = beta*N6;
+	   
 	       }
 	     }
       }
