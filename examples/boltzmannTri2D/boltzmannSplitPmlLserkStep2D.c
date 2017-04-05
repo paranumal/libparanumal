@@ -53,10 +53,8 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
-			    mesh->o_pmlNT,
 			    mesh->o_rhspmlqx,
-			    mesh->o_rhspmlqy,
-			    mesh->o_rhspmlNT);
+			    mesh->o_rhspmlqy);
     }
 
     // compute volume contribution to DG boltzmann RHS added d/dt (ramp(qbar)) to RHS
@@ -79,6 +77,9 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       
 
 	#if CUBATURE_ENABLED
+	// VOLUME KERNELS
+    mesh->device.finish();
+    occa::tic("relaxationKernel");
 	    // compute relaxation terms using cubature integration
 	    if(mesh->pmlNelements){
 	      mesh->pmlRelaxationKernel(mesh->pmlNelements,
@@ -87,8 +88,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
 				     mesh->o_rhspmlqx,
-				     mesh->o_rhspmlqy,
-				     mesh->o_rhspmlNT);
+				     mesh->o_rhspmlqy);
 	    }
 	  
 	    // compute relaxation terms using cubature
@@ -100,6 +100,10 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				     mesh->o_q,
 				     mesh->o_rhsq);   
 	    }
+
+	  // VOLUME KERNELS
+    mesh->device.finish();
+    occa::toc("relaxationKernel");
 	#endif
 
 
@@ -173,13 +177,13 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    rampUpdate,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
-			    mesh->o_rhspmlNT,
+			   // mesh->o_rhspmlNT,
 			    mesh->o_respmlqx,
 			    mesh->o_respmlqy,
-			    mesh->o_respmlNT,
+			   // mesh->o_respmlNT,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
-			    mesh->o_pmlNT,
+			  //  mesh->o_pmlNT,
 			    mesh->o_q);
     
     if(mesh->nonPmlNelements)
