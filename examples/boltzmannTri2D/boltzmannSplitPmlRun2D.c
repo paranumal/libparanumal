@@ -17,18 +17,17 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
       boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
     #endif
     
-
-     #if TIME_DISC==LSERK_PMLV2
-      boltzmannSplitPmlV2LserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif
+    #if TIME_DISC==SARK3
+      boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    #endif 
 
     #if TIME_DISC==LSIMEX
       boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
     #endif  
       
-    #if TIME_DISC==MRAB
-      boltzmannSplitPmlMrabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif
+    // #if TIME_DISC==MRAB
+    //   boltzmannSplitPmlMrabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    // #endif
    // Perform semi-analytic integration for pml damping term
     #if TIME_DISC==SAAB
       boltzmannSplitPmlSaabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
@@ -39,19 +38,17 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
     // #endif
 
     // Perform semi-analytic integration for pml damping term
-    #if TIME_DISC==SARK3
-      boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif 
+    
 
-     // Perform semi-analytic integration for pml damping term
-    #if TIME_DISC==SARK54
-      boltzmannSplitPmlSark54Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif  
+    //  // Perform semi-analytic integration for pml damping term
+    // #if TIME_DISC==SARK54
+    //   boltzmannSplitPmlSark54Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    // #endif  
 
-    // Perform semi-analytic integration for pml damping term
-    #if TIME_DISC==LSERK3
-      boltzmannSplitPmlLserk3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif   
+    // // Perform semi-analytic integration for pml damping term
+    // #if TIME_DISC==LSERK3
+    //   boltzmannSplitPmlLserk3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
+    // #endif   
 
     // output statistics if this is an output step
     if((tstep%mesh->errorStep)==0){

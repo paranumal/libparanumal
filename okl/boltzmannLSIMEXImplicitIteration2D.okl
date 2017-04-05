@@ -341,30 +341,25 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIteration2D(const iint Nelements,
 
 
 
-
-
-
 kernel void boltzmannLSIMEXImplicitIterationCub2D(const iint Nelements,
-					     const iint * restrict elementIds,
-					     const dfloat dt,	
-				         const dfloat akk,
-					     const dfloat * restrict cubInterpT,
-					     const dfloat * restrict cubProjectT,
-					     const dfloat4 * restrict qe,
-					           dfloat4 * restrict q){ 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+               const iint * restrict elementIds,
+               const dfloat dt, 
+               const dfloat akk,
+               const dfloat * restrict cubInterpT,
+               const dfloat * restrict cubProjectT,
+               const dfloat4 * restrict qe,
+                     dfloat4 * restrict q){ 
+ for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // shared memory for q at nodes
              shared dfloat s_q[p_NblockV][6][p_Np];
-             shared dfloat s_E[p_NblockV*p_Np];
+             shared dfloat s_qE[p_NblockV][6][p_Np];
+             //
+             shared dfloat s_cubq[p_NblockV][6][p_cubNp];
+             shared dfloat s_E[p_NblockV*p_cubNp];
+             //
     volatile shared dfloat s_err[p_G][p_S];
     volatile shared dfloat s_b[p_G];
-
-
-    // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_cubNp];
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
     exclusive iint   element;
     exclusive dfloat err =0.; 
@@ -379,72 +374,39 @@ kernel void boltzmannLSIMEXImplicitIterationCub2D(const iint Nelements,
     // prefetch q to shared
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
-	
-      	iint e = eo+es; // element in block
-      	if(e<Nelements)
+  
+        iint e = eo+es; // element in block
+        if(e<Nelements)
         {
-      	  element = elementIds[e];
-      	  if(n<p_Np)
+          element = elementIds[e];
+          if(n<p_Np)
           {
-      	    const iint id = element*p_Np+n;
-      	    dfloat4 qea  = qe[2*id];
-      	    dfloat4 qeb  = qe[2*id+1];
-      	    //
-      	    dfloat4  qa  = q[2*id]  ;
-      	    dfloat4  qb  = q[2*id+1];
+            const iint id = element*p_Np+n;
+            dfloat4 qea  = qe[2*id];
+            dfloat4 qeb  = qe[2*id+1];
+            //load 
 
-            // hold explicit part at register, constant in iterations    
-      	    qe1  = qea.x;
-      	    qe2  = qea.y;
-      	    qe3  = qea.z;
-      	    qe4  = qea.w;   
-      	    qe5  = qeb.x;
-      	    qe6  = qeb.y;	 
-            // Initialize solution
-            q1  = qe1;
-      	    q2  = qe2;
-      	    q3  = qe3;
-      	    q4  = qe4; 
-      	    q5  = qe5;
-      	    q6  = qe6;	       	    
-	         }
-	       }
+            s_qE[es][0][n] = qea.x;
+            s_qE[es][1][n] = qea.y;
+            s_qE[es][2][n] = qea.z;
+            s_qE[es][3][n] = qea.w;   
+            s_qE[es][4][n] = qeb.x;
+            s_qE[es][5][n] = qeb.y;
+            //
+            s_q[es][0][n] = qea.x;
+            s_q[es][1][n] = qea.y;
+            s_q[es][2][n] = qea.z;
+            s_q[es][3][n] = qea.w;   
+            s_q[es][4][n] = qeb.x;
+            s_q[es][5][n] = qeb.y;  
+           }
+         }
       }
     }
     
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-
-if(akk>0)
- {
-  for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
-  { 
-       
-
-       // prefetch solution to shared memory
-      for(iint es=0;es<p_NblockV;++es;inner1)
-      {
-        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
-        {        
-          iint e = eo+es; // element in block
-          if(e<Nelements)
-          {
-            if(n<p_Np)
-            {           
-              s_q[es][0][n] = q1;
-              s_q[es][1][n] = q2;
-              s_q[es][2][n] = q3;
-              s_q[es][3][n] = q4;   
-              s_q[es][4][n] = q5;
-              s_q[es][5][n] = q6;
-            }
-          }
-        }
-      }
-
- // make sure all node data is loaded into shared
-    barrier(localMemFence);
 
   // interpolate q to cubature
       for(iint es=0;es<p_NblockV;++es;inner1)
@@ -456,36 +418,41 @@ if(akk>0)
             {
               if(n<p_cubNp)
               {
-                dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
-                dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
-                
+                                
                 occaUnroll(p_Np)
                 for(iint m=0;m<p_Np;++m)
                 {
                   const dfloat Icn  = cubInterpT[m*p_cubNp+n];
-                  cubq1 += Icn*s_q[es][0][m];
-                  cubq2 += Icn*s_q[es][1][m];
-                  cubq3 += Icn*s_q[es][2][m];
-                  cubq4 += Icn*s_q[es][3][m];
-                  cubq5 += Icn*s_q[es][4][m];
-                  cubq6 += Icn*s_q[es][5][m];
+                  q1 += Icn*s_q[es][0][m];
+                  q2 += Icn*s_q[es][1][m];
+                  q3 += Icn*s_q[es][2][m];
+                  q4 += Icn*s_q[es][3][m];
+                  q5 += Icn*s_q[es][4][m];
+                  q6 += Icn*s_q[es][5][m];
+                  //
+                  qe1 += Icn*s_qE[es][0][m];
+                  qe2 += Icn*s_qE[es][1][m];
+                  qe3 += Icn*s_qE[es][2][m];
+                  qe4 += Icn*s_qE[es][3][m];
+                  qe5 += Icn*s_qE[es][4][m];
+                  qe6 += Icn*s_qE[es][5][m];
                 }
                 
-                dfloat coeff  = akk * dt * p_tauInv;
-                dfloat icubq1 = 1.0 / cubq1;
-                // BGK relaxation approximation to the Boltzmann collision operator
-                s_cubN4[es][n] = -coeff * (cubq4-(           cubq2*cubq3*icubq1));
-                s_cubN5[es][n] = -coeff * (cubq5-(p_invsqrt2*cubq2*cubq2*icubq1));
-                s_cubN6[es][n] = -coeff * (cubq6-(p_invsqrt2*cubq3*cubq3*icubq1));
               }
           }
         }
       }
 
-    // make sure all cubature node data is loaded into shared
+ // make sure all node data is loaded into shared
     barrier(localMemFence);
-    
-    // partial projection to nodes from cubature-sub-group
+
+if(akk>0)
+ {
+  for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
+  { 
+
+
+      // partial projection to nodes from cubature-sub-group
       for(iint es=0;es<p_NblockV;++es;inner1)
       {
         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
@@ -493,19 +460,17 @@ if(akk>0)
           iint e = eo+es; // element in block
           if(e<Nelements)
           {
-            if(n<p_Np)
+            if(n<p_cubNp)
             {                 
-              // use temporaries for part sums for N4,N5,N6 because of exclusives
-              dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
+              
+              dfloat cc  = akk * dt * p_tauInv;
+              dfloat icc    = 1.0/cc; 
+              dfloat iq1 = 1.0 / q1;
+              // BGK relaxation approximation to the Boltzmann collision operator
+              dfloat N4 = -cc * (q4-(           q2*q3*iq1));
+              dfloat N5 = -cc * (q5-(p_invsqrt2*q2*q2*iq1));
+              dfloat N6 = -cc * (q6-(p_invsqrt2*q3*q3*iq1));
 
-              occaUnroll(p_cubNp)
-              for(iint i=0;i<p_cubNp;++i)
-              {
-                const dfloat Pnc  = cubProjectT[i*p_Np+n];
-                N4 += Pnc*s_cubN4[es][i];
-                N5 += Pnc*s_cubN5[es][i];
-                N6 += Pnc*s_cubN6[es][i];
-              }
                //
               dfloat z1 =  qe1 - q1 ;
               dfloat z2 =  qe2 - q2 ;
@@ -519,9 +484,6 @@ if(akk>0)
               dfloat q5o = q5;
               dfloat q6o = q6;
               //
-              dfloat cc     = akk * dt * p_tauInv;
-              dfloat icc    = 1.0/cc; 
-
                    //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
               q4 +=           z4/(cc+1.0)  
                             + z2*q3/(q1*(1.0+icc)) 
@@ -544,23 +506,26 @@ if(akk>0)
               // Compute maximum of error
                err = GET_MAX3(err4,err5,err6);
               // Hold error in shared for local reduction
-               s_E[es*p_Np + n] = err; 
+               s_E[es*p_cubNp + n] = err; 
             }
           }
         }
       }
-
-
-    // make sure error vector is loaded into shared
-    barrier(localMemFence);
      
+
+
+
+    // make sure all cubature node data is loaded into shared
+    barrier(localMemFence);
+    
+    
      // Reduction->Step 1 // All parallel
       for(int g=0;g<p_G;++g;inner1)
       {
         for(int s=0;s<p_S;++s;inner0)
         {
             const iint n = g*p_S + s;
-            s_err[g][s] = n>p_NblockV*p_Np  ? 0.0 : s_E[n];
+            s_err[g][s] = n>p_NblockV*p_cubNp  ? 0.0 : s_E[n];
 
             if(s<16) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 16]);
             if(s< 8) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 8]);
@@ -609,49 +574,83 @@ if(akk>0)
   }
 }
 
+
     // make sure all cubature node data is loaded into shared
     barrier(localMemFence);
 
-
-
-    // If converged update solution
-    for(iint es=0;es<p_NblockV;++es;inner1)
-    {
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0)
-      {    
-        iint e = eo+es; // element in block
-        if(e<Nelements)
-        {
-          element = elementIds[e];
-          if(n<p_Np)
-          {
-            const iint id0     = 2*(element*p_Np + n);
-            const iint id1     = id0 + 1;
-
-             // do not update q1 ,q2 ,q3 
-            q[id0].x =  q1 ;
-            q[id0].y =  q2 ;
-            q[id0].z =  q3 ;  
-            q[id0].w =  q4 ;
-            //
-            q[id1].x =  q5 ;
-            q[id1].y =  q6 ; 
-            q[id1].z =  0.0 ;
-            q[id1].w =  0.0 ; 
-
-
-           }
-         }
+   
+   // interpolate q to cubature
+      for(iint es=0;es<p_NblockV;++es;inner1)
+      {
+        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+        {     
+            iint e = eo+es; // element in block
+            if(e<Nelements)
+            {
+              if(n<p_cubNp)
+              {
+                // BGK relaxation approximation to the Boltzmann collision operator
+                s_cubq[es][0][n] = q1;
+                s_cubq[es][1][n] = q2;
+                s_cubq[es][2][n] = q3;
+                s_cubq[es][3][n] = q4;
+                s_cubq[es][4][n] = q5;
+                s_cubq[es][5][n] = q6;
+              }
+          }
+        }
       }
-    }
 
+      // make sure all cubature node data is loaded into shared
+    barrier(localMemFence);
+    
+    // partial projection to nodes from cubature-sub-group
+      for(iint es=0;es<p_NblockV;++es;inner1)
+      {
+        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+        {     
+          iint e = eo+es; // element in block
+          if(e<Nelements)
+          {
+            if(n<p_Np)
+            {                 
+              // use temporaries for part sums for N4,N5,N6 because of exclusives
+              q1 = 0.; q2 = 0.; q3 = 0.; q4 = 0.; q5 = 0.; q6 = 0.; 
 
+              occaUnroll(p_cubNp)
+              for(iint i=0;i<p_cubNp;++i)
+              {
+                const dfloat Pnc  = cubProjectT[i*p_Np+n];
+                q1 += Pnc*s_cubq[es][0][i];
+                q2 += Pnc*s_cubq[es][1][i];
+                q3 += Pnc*s_cubq[es][2][i];
+                q4 += Pnc*s_cubq[es][3][i];
+                q5 += Pnc*s_cubq[es][4][i];
+                q6 += Pnc*s_cubq[es][5][i];
+                
+              }
+               //
+              
+                const iint id0     = 2*(element*p_Np + n);
+                const iint id1     = id0 + 1;
 
-  }
+                // do not update q1 ,q2 ,q3 
+                q[id0].x =  q1 ;
+                q[id0].y =  q2 ;
+                q[id0].z =  q3 ;  
+                q[id0].w =  q4 ;
+                //
+                q[id1].x =  q5 ;
+                q[id1].y =  q6 ; 
+                q[id1].z =  0.0 ;
+                q[id1].w =  0.0 ; 
+
+            }
+          }
+        }
+      }
 }
-
-
-
+}
 
 
 kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
@@ -663,24 +662,26 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
                     const dfloat * restrict cubProjectT,
                     const dfloat * restrict qYx,
                     const dfloat * restrict qYy,
-                   // const dfloat * restrict qYnt,
                           dfloat * restrict qZx,
                           dfloat * restrict qZy,
-                   //       dfloat * restrict qZnt,
                           dfloat4 *restrict qZ ){
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // shared memory for q at nodes
+             shared dfloat s_qxE[p_NblockV][6][p_Np];            
+             shared dfloat s_qyE[p_NblockV][6][p_Np];
              shared dfloat s_q[p_NblockV][6][p_Np];
-             shared dfloat s_E[p_NblockV*p_Np];
+             
+             //
+             shared dfloat s_cubqx[p_NblockV][6][p_cubNp];
+             shared dfloat s_cubqy[p_NblockV][6][p_cubNp];
+             shared dfloat s_cubq[p_NblockV][6][p_cubNp];
+
+             //
+             shared dfloat s_E[p_NblockV*p_cubNp];
+             //
     volatile shared dfloat s_err[p_G][p_S];
     volatile shared dfloat s_b[p_G];
-
-
-    // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_cubNp];
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
     exclusive iint   element;
     exclusive dfloat err =0.; 
@@ -691,17 +692,11 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
     exclusive dfloat qye1 =0.0, qye2 = 0.0, qye3=0.0 ;
     exclusive dfloat qye4 =0.0, qye5 = 0.0, qye6=0.0 ;  
     //
-    // exclusive dfloat nte1 =0.0, nte2 = 0.0, nte3=0.0 ;
-    // exclusive dfloat nte4 =0.0, nte5 = 0.0, nte6=0.0 ;   
-    //
     exclusive dfloat qx1 =0.0, qx2 = 0.0, qx3=0.0 ;
     exclusive dfloat qx4 =0.0, qx5 = 0.0, qx6=0.0 ;  
 
     exclusive dfloat qy1 =0.0, qy2 = 0.0, qy3=0.0 ;
     exclusive dfloat qy4 =0.0, qy5 = 0.0, qy6=0.0 ;  
-    // //
-    // exclusive dfloat nt1 =0.0, nt2 = 0.0, nt3=0.0 ;
-    // exclusive dfloat nt4 =0.0, nt5 = 0.0, nt6=0.0 ; 
     //
     exclusive dfloat q1 =0.0, q2 = 0.0, q3=0.0 ;
     exclusive dfloat q4 =0.0, q5 = 0.0, q6=0.0 ;   
@@ -717,53 +712,38 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
           element = elementIds[e];
           if(n<p_Np)
           {
-             //
-            const iint base = n + element*p_Nfields*p_Np;
-            const iint id1 = base + 0*p_Np;
-            const iint id2 = base + 1*p_Np;
-            const iint id3 = base + 2*p_Np;
-            const iint id4 = base + 3*p_Np;
-            const iint id5 = base + 4*p_Np;
-            const iint id6 = base + 5*p_Np;
-            
-                  // PML UPDATES
-            qxe1 = qYx[id1];
-            qxe2 = qYx[id2];
-            qxe3 = qYx[id3];
-            qxe4 = qYx[id4];
-            qxe5 = qYx[id5];
-            qxe6 = qYx[id6]; 
-            //
-            qye1 = qYy[id1];
-            qye2 = qYy[id2];
-            qye3 = qYy[id3];
-            qye4 = qYy[id4];
-            qye5 = qYy[id5];
-            qye6 = qYy[id6]; 
-                     
-            // Initialize
-            qx1 = qxe1;
-            qx2 = qxe2;
-            qx3 = qxe3;
-            qx4 = qxe4;
-            qx5 = qxe5;
-            qx6 = qxe6; 
-            //
-            qy1 = qye1;
-            qy2 = qye2;
-            qy3 = qye3;
-            qy4 = qye4;
-            qy5 = qye5;
-            qy6 = qye6; 
-            //
-           q1 =  p_q1bar                 + qx1 + qy1;
-           q2 =  ramp*p_q2bar            + qx2 + qy2;
-           q3 =  ramp*p_q3bar            + qx3 + qy3;
-           q4 =  ramp*ramp*p_q4bar       + qx4 + qy4;
-           q5 =  ramp*ramp*p_q5bar       + qx5 + qy5;
-           q6 =  ramp*ramp*p_q6bar       + qx6 + qy6;
+              //
+              const iint base = n + element*p_Nfields*p_Np;
+              const iint id1 = base + 0*p_Np;
+              const iint id2 = base + 1*p_Np;
+              const iint id3 = base + 2*p_Np;
+              const iint id4 = base + 3*p_Np;
+              const iint id5 = base + 4*p_Np;
+              const iint id6 = base + 5*p_Np;
 
-           }
+              // PML UPDATES
+              s_qxE[es][0][n] = qYx[id1];
+              s_qxE[es][1][n] = qYx[id2];
+              s_qxE[es][2][n] = qYx[id3];
+              s_qxE[es][3][n] = qYx[id4];
+              s_qxE[es][4][n] = qYx[id5];
+              s_qxE[es][5][n] = qYx[id6]; 
+              //
+              s_qyE[es][0][n] = qYy[id1];
+              s_qyE[es][1][n] = qYy[id2];
+              s_qyE[es][2][n] = qYy[id3];
+              s_qyE[es][3][n] = qYy[id4];
+              s_qyE[es][4][n] = qYy[id5];
+              s_qyE[es][5][n] = qYy[id6]; 
+              //
+              s_q[es][0][n] =  p_q1bar            + s_qxE[es][0][n] + s_qyE[es][0][n];
+              s_q[es][1][n] =  ramp*p_q2bar       + s_qxE[es][1][n] + s_qyE[es][1][n];
+              s_q[es][2][n] =  ramp*p_q3bar       + s_qxE[es][2][n] + s_qyE[es][2][n];
+              s_q[es][3][n] =  ramp*ramp*p_q4bar  + s_qxE[es][3][n] + s_qyE[es][3][n];
+              s_q[es][4][n] =  ramp*ramp*p_q5bar  + s_qxE[es][4][n] + s_qyE[es][4][n];
+              s_q[es][5][n] =  ramp*ramp*p_q6bar  + s_qxE[es][5][n] + s_qyE[es][5][n];
+
+            }
          }
       }
     }
@@ -772,34 +752,7 @@ kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
     barrier(localMemFence);
 
 
-if(akk>0)
- {
-  for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++){ 
-       // prefetch q to shared
-      for(iint es=0;es<p_NblockV;++es;inner1)
-      {
-        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
-        {        
-          iint e = eo+es; // element in block
-          if(e<Nelements)
-          {
-            if(n<p_Np)
-            {           
-              s_q[es][0][n] = q1;
-              s_q[es][1][n] = q2;
-              s_q[es][2][n] = q3;
-              s_q[es][3][n] = q4;   
-              s_q[es][4][n] = q5;
-              s_q[es][5][n] = q6;
-            }
-          }
-        }
-      }
-
- // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-  // interpolate q to cubature
+    // interpolate q to cubature
       for(iint es=0;es<p_NblockV;++es;inner1)
       {
         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
@@ -809,35 +762,61 @@ if(akk>0)
             {
               if(n<p_cubNp)
               {
-                dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
-                dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
-                
+                                
                 occaUnroll(p_Np)
                 for(iint m=0;m<p_Np;++m)
                 {
                   const dfloat Icn  = cubInterpT[m*p_cubNp+n];
-                  cubq1 += Icn*s_q[es][0][m];
-                  cubq2 += Icn*s_q[es][1][m];
-                  cubq3 += Icn*s_q[es][2][m];
-                  cubq4 += Icn*s_q[es][3][m];
-                  cubq5 += Icn*s_q[es][4][m];
-                  cubq6 += Icn*s_q[es][5][m];
+                  qxe1 += Icn*s_qxE[es][0][m];
+                  qxe2 += Icn*s_qxE[es][1][m];
+                  qxe3 += Icn*s_qxE[es][2][m];
+                  qxe4 += Icn*s_qxE[es][3][m];
+                  qxe5 += Icn*s_qxE[es][4][m];
+                  qxe6 += Icn*s_qxE[es][5][m];
+                  //
+                  qye1 += Icn*s_qyE[es][0][m];
+                  qye2 += Icn*s_qyE[es][1][m];
+                  qye3 += Icn*s_qyE[es][2][m];
+                  qye4 += Icn*s_qyE[es][3][m];
+                  qye5 += Icn*s_qyE[es][4][m];
+                  qye6 += Icn*s_qyE[es][5][m];
+                  //
+                  q1   += Icn*s_q[es][0][m];
+                  q2   += Icn*s_q[es][1][m];
+                  q3   += Icn*s_q[es][2][m];
+                  q4   += Icn*s_q[es][3][m];
+                  q5   += Icn*s_q[es][4][m];
+                  q6   += Icn*s_q[es][5][m];
                 }
-                
-                dfloat coeff  = akk * dt * p_tauInv;
-                dfloat icubq1 = 1.0 / cubq1;
-                // BGK relaxation approximation to the Boltzmann collision operator
-                s_cubN4[es][n] = -coeff * (cubq4-(           cubq2*cubq3*icubq1));
-                s_cubN5[es][n] = -coeff * (cubq5-(p_invsqrt2*cubq2*cubq2*icubq1));
-                s_cubN6[es][n] = -coeff * (cubq6-(p_invsqrt2*cubq3*cubq3*icubq1));
+
+                qx1 = qxe1;
+                qx2 = qxe2;
+                qx3 = qxe3;
+                qx4 = qxe4;
+                qx5 = qxe5;
+                qx6 = qxe6;
+                //
+                qy1 = qye1;
+                qy2 = qye2;
+                qy3 = qye3;
+                qy4 = qye4;
+                qy5 = qye5;
+                qy6 = qye6;
+ 
               }
           }
         }
       }
 
-    // make sure all cubature node data is loaded into shared
+ // make sure all node data is loaded into shared
     barrier(localMemFence);
-    
+
+
+if(akk>0)
+ {
+  for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
+  { 
+          
     // partial projection to nodes from cubature-sub-group
       for(iint es=0;es<p_NblockV;++es;inner1)
       {
@@ -846,33 +825,36 @@ if(akk>0)
           iint e = eo+es; // element in block
           if(e<Nelements)
           {
-            if(n<p_Np)
+            if(n<p_cubNp)
             {                 
-              // use temporaries for part sums for N4,N5,N6 because of exclusives
-              dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
-
-              occaUnroll(p_cubNp)
-              for(iint i=0;i<p_cubNp;++i)
-              {
-                const dfloat Pnc  = cubProjectT[i*p_Np+n];
-                N4 += Pnc*s_cubN4[es][i];
-                N5 += Pnc*s_cubN5[es][i];
-                N6 += Pnc*s_cubN6[es][i];
-              }
-                 //
+                              
+              dfloat cc     = akk * dt * p_tauInv;
+              dfloat icc    = 1.0/cc; 
+              dfloat cch    = 0.5*cc; 
+              dfloat icch   = 1./cch;  
+              dfloat iq1    = 1.0 / q1;
+              
+              // BGK relaxation approximation to the Boltzmann collision operator
+              dfloat N4 = -cc*(q4-(           q2*q3*iq1));
+              dfloat N5 = -cc*(q5-(p_invsqrt2*q2*q2*iq1));
+              dfloat N6 = -cc*(q6-(p_invsqrt2*q3*q3*iq1));
+              //
+              dfloat alpha = 0.5f;
+              dfloat beta  = 0.5f;
+              //
               dfloat zx1 =  qxe1 - qx1 ;
               dfloat zx2 =  qxe2 - qx2 ;
               dfloat zx3 =  qxe3 - qx3 ;
-              dfloat zx4 =  qxe4 - qx4 +  0.5*N4 ;
-              dfloat zx5 =  qxe5 - qx5 +  0.5*N5 ;
-              dfloat zx6 =  qxe6 - qx6 +  0.5*N6 ;
+              dfloat zx4 =  qxe4 - qx4 +  alpha*N4 ;
+              dfloat zx5 =  qxe5 - qx5 +  alpha*N5 ;
+              dfloat zx6 =  qxe6 - qx6 +  alpha*N6 ;
               //
               dfloat zy1 =  qye1 - qy1 ;
               dfloat zy2 =  qye2 - qy2 ;
               dfloat zy3 =  qye3 - qy3 ;
-              dfloat zy4 =  qye4 - qy4 +  0.5*N4 ;
-              dfloat zy5 =  qye5 - qy5 +  0.5*N5 ;
-              dfloat zy6 =  qye6 - qy6 +  0.5*N6 ;
+              dfloat zy4 =  qye4 - qy4 +  beta*N4 ;
+              dfloat zy5 =  qye5 - qy5 +  beta*N5 ;
+              dfloat zy6 =  qye6 - qy6 +  beta*N6 ;
               //
               dfloat qx4o = qx4;
               dfloat qx5o = qx5;
@@ -882,10 +864,7 @@ if(akk>0)
               dfloat qy5o = qy5;
               dfloat qy6o = qy6;
               //
-              dfloat cc     = akk * dt * p_tauInv;
-              dfloat icc    = 1.0/cc; 
-              dfloat cch    = 0.5*cc; 
-              dfloat icch   = 1./cch;  
+              
 
                      //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
               qx4  +=        zx4/(cch+1.0)  
@@ -929,31 +908,29 @@ if(akk>0)
                dfloat ey5 = fabs(qy5-qy5o);
                dfloat ey6 = fabs(qy6-qy6o);
 
-               
-
-
                dfloat ex  = GET_MAX3(ex4,ex5,ex6);  
                dfloat ey  = GET_MAX3(ey4,ey5,ey6);   
-               //dfloat ent = GET_MAX3(ent4,ent5,ent6);   
 
                err =  GET_MAX2(ex,ey);   
-
-               s_E[es*p_Np + n] = err; 
+              // Hold error in shared for local reduction
+               s_E[es*p_cubNp + n] = err; 
             }
           }
         }
       }
 
 
-    // make sure all cubature node data is loaded into shared
+   // make sure all cubature node data is loaded into shared
     barrier(localMemFence);
-
+    
+    
+     // Reduction->Step 1 // All parallel
       for(int g=0;g<p_G;++g;inner1)
       {
         for(int s=0;s<p_S;++s;inner0)
         {
             const iint n = g*p_S + s;
-            s_err[g][s] = n>p_NblockV*p_Np  ? 0.0 : s_E[n];
+            s_err[g][s] = n>p_NblockV*p_cubNp  ? 0.0 : s_E[n];
 
             if(s<16) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 16]);
             if(s< 8) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 8]);
@@ -964,12 +941,12 @@ if(akk>0)
       }
     
     barrier(localMemFence);
-
+   // Reduction->step 2 // Squential now
      for(int g=0;g<p_G;++g;inner1)
      {
         for(int s=0;s<p_S;++s;inner0)
         {
-          if(g==0)
+          if(g==0) // Squential
           {
             if(p_G>8){
             if(s<8)  s_b[s] = GET_MAX2(s_b[s],s_b[s + 8]);}
@@ -983,10 +960,10 @@ if(akk>0)
       }
      
 
-   // make sure all cubature node data is loaded into shared
+   // 
     barrier(localMemFence);
     
-    // partial projection to nodes from cubature-sub-group
+    // This is for making all threads in the same group exit  at the same time
     for(iint es=0;es<p_NblockV;++es;inner1)
     {
       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
@@ -995,31 +972,104 @@ if(akk>0)
          }
        }
 
-
-   if (err<p_LSIMEX_TOL){ 
-    printf("%g",err); break;}
+   // This is for making all threads in the same group exit  at the same time
+   if (err<p_LSIMEX_TOL) break;
 
 
   }
 }
 
+
+
+
+
     // make sure all cubature node data is loaded into shared
     barrier(localMemFence);
 
 
+   // interpolate q to cubature
+      for(iint es=0;es<p_NblockV;++es;inner1)
+      {
+        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+        {     
+            iint e = eo+es; // element in block
+            if(e<Nelements)
+            {
+              if(n<p_cubNp)
+              {
+                // 
+                s_cubqx[es][0][n] = qx1;
+                s_cubqx[es][1][n] = qx2;
+                s_cubqx[es][2][n] = qx3;
+                s_cubqx[es][3][n] = qx4;
+                s_cubqx[es][4][n] = qx5;
+                s_cubqx[es][5][n] = qx6;
+                //
+                // 
+                s_cubqy[es][0][n] = qy1;
+                s_cubqy[es][1][n] = qy2;
+                s_cubqy[es][2][n] = qy3;
+                s_cubqy[es][3][n] = qy4;
+                s_cubqy[es][4][n] = qy5;
+                s_cubqy[es][5][n] = qy6;
+                //
+                // 
+                s_cubq[es][0][n] = q1;
+                s_cubq[es][1][n] = q2;
+                s_cubq[es][2][n] = q3;
+                s_cubq[es][3][n] = q4;
+                s_cubq[es][4][n] = q5;
+                s_cubq[es][5][n] = q6;
+              }
+          }
+        }
+      }
 
-    // prefetch q to shared
-    for(iint es=0;es<p_NblockV;++es;inner1)
-    {
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0)
-      {    
-        iint e = eo+es; // element in block
-        if(e<Nelements)
-        {
-          element = elementIds[e];
-          if(n<p_Np)
+      // make sure all cubature node data is loaded into shared
+    barrier(localMemFence);
+    
+    // partial projection to nodes from cubature-sub-group
+      for(iint es=0;es<p_NblockV;++es;inner1)
+      {
+        for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+        {     
+          iint e = eo+es; // element in block
+          if(e<Nelements)
           {
-            //
+            if(n<p_Np)
+            {                 
+              // use temporaries for part sums for N4,N5,N6 because of exclusives
+              q1  = 0.; q2  = 0.; q3  = 0.; q4  = 0.;  q5  = 0.; q6  = 0.; 
+              qx1 = 0.; qx2 = 0.; qx3 = 0.; qx4 = 0.; qx5 = 0.; qx6 = 0.; 
+              qy1 = 0.; qy2 = 0.; qy3 = 0.; qy4 = 0.; qy5 = 0.; qy6 = 0.; 
+
+              occaUnroll(p_cubNp)
+              for(iint i=0;i<p_cubNp;++i)
+              {
+                const dfloat Pnc  = cubProjectT[i*p_Np+n];
+                q1 += Pnc*s_cubq[es][0][i];
+                q2 += Pnc*s_cubq[es][1][i];
+                q3 += Pnc*s_cubq[es][2][i];
+                q4 += Pnc*s_cubq[es][3][i];
+                q5 += Pnc*s_cubq[es][4][i];
+                q6 += Pnc*s_cubq[es][5][i];
+                //
+                qx1 += Pnc*s_cubqx[es][0][i];
+                qx2 += Pnc*s_cubqx[es][1][i];
+                qx3 += Pnc*s_cubqx[es][2][i];
+                qx4 += Pnc*s_cubqx[es][3][i];
+                qx5 += Pnc*s_cubqx[es][4][i];
+                qx6 += Pnc*s_cubqx[es][5][i];
+                //
+                qy1 += Pnc*s_cubqy[es][0][i];
+                qy2 += Pnc*s_cubqy[es][1][i];
+                qy3 += Pnc*s_cubqy[es][2][i];
+                qy4 += Pnc*s_cubqy[es][3][i];
+                qy5 += Pnc*s_cubqy[es][4][i];
+                qy6 += Pnc*s_cubqy[es][5][i];
+                
+              }
+               //
             const iint base = n + element*p_Nfields*p_Np;
             const iint id1 = base + 0*p_Np;
             const iint id2 = base + 1*p_Np;
@@ -1059,15 +1109,736 @@ if(akk>0)
             temp.w =  0.0;
 
             qZ[2*(n + element*p_Np) +1] = temp; 
-           }
-         }
+
+            }
+          }
+        }
       }
-    }
-
-
 
   }
 }
 
 
+
+
+
+
+
+
+// kernel void boltzmannLSIMEXSplitPmlImplicitIterationCub2D(const iint Nelements,
+//                     const iint * restrict elementIds,
+//                     const dfloat dt,  
+//                     const dfloat ramp,
+//                     const dfloat akk,
+//                     const dfloat * restrict cubInterpT,
+//                     const dfloat * restrict cubProjectT,
+//                     const dfloat * restrict qYx,
+//                     const dfloat * restrict qYy,
+//                    // const dfloat * restrict qYnt,
+//                           dfloat * restrict qZx,
+//                           dfloat * restrict qZy,
+//                    //       dfloat * restrict qZnt,
+//                           dfloat4 *restrict qZ ){
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     // shared memory for q at nodes
+//              shared dfloat s_q[p_NblockV][6][p_Np];
+//              shared dfloat s_E[p_NblockV*p_Np];
+//     volatile shared dfloat s_err[p_G][p_S];
+//     volatile shared dfloat s_b[p_G];
+
+
+//     // sub-group of p_Np cubature node interpolants of N4,N5,N6
+//     shared dfloat s_cubN4[p_NblockV][p_cubNp];
+//     shared dfloat s_cubN5[p_NblockV][p_cubNp];
+//     shared dfloat s_cubN6[p_NblockV][p_cubNp];
+
+//     exclusive iint   element;
+//     exclusive dfloat err =0.; 
+//     //
+//     exclusive dfloat qxe1 =0.0, qxe2 = 0.0, qxe3=0.0 ;
+//     exclusive dfloat qxe4 =0.0, qxe5 = 0.0, qxe6=0.0 ; 
+//     //
+//     exclusive dfloat qye1 =0.0, qye2 = 0.0, qye3=0.0 ;
+//     exclusive dfloat qye4 =0.0, qye5 = 0.0, qye6=0.0 ;  
+//     //
+//     exclusive dfloat qx1 =0.0, qx2 = 0.0, qx3=0.0 ;
+//     exclusive dfloat qx4 =0.0, qx5 = 0.0, qx6=0.0 ;  
+
+//     exclusive dfloat qy1 =0.0, qy2 = 0.0, qy3=0.0 ;
+//     exclusive dfloat qy4 =0.0, qy5 = 0.0, qy6=0.0 ;  
+//     //
+//     exclusive dfloat q1 =0.0, q2 = 0.0, q3=0.0 ;
+//     exclusive dfloat q4 =0.0, q5 = 0.0, q6=0.0 ;   
+
+
+//     // prefetch q to shared
+//     for(iint es=0;es<p_NblockV;++es;inner1){
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+  
+//         iint e = eo+es; // element in block
+//         if(e<Nelements)
+//         {
+//           element = elementIds[e];
+//           if(n<p_Np)
+//           {
+//               //
+//               const iint base = n + element*p_Nfields*p_Np;
+//               const iint id1 = base + 0*p_Np;
+//               const iint id2 = base + 1*p_Np;
+//               const iint id3 = base + 2*p_Np;
+//               const iint id4 = base + 3*p_Np;
+//               const iint id5 = base + 4*p_Np;
+//               const iint id6 = base + 5*p_Np;
+
+//               // PML UPDATES
+//               qxe1 = qYx[id1];
+//               qxe2 = qYx[id2];
+//               qxe3 = qYx[id3];
+//               qxe4 = qYx[id4];
+//               qxe5 = qYx[id5];
+//               qxe6 = qYx[id6]; 
+//               //
+//               qye1 = qYy[id1];
+//               qye2 = qYy[id2];
+//               qye3 = qYy[id3];
+//               qye4 = qYy[id4];
+//               qye5 = qYy[id5];
+//               qye6 = qYy[id6]; 
+
+//               // Initialize
+//               qx1 = qxe1;
+//               qx2 = qxe2;
+//               qx3 = qxe3;
+//               qx4 = qxe4;
+//               qx5 = qxe5;
+//               qx6 = qxe6; 
+//               //
+//               qy1 = qye1;
+//               qy2 = qye2;
+//               qy3 = qye3;
+//               qy4 = qye4;
+//               qy5 = qye5;
+//               qy6 = qye6; 
+//               //
+//               q1 =  p_q1bar                 + qx1 + qy1;
+//               q2 =  ramp*p_q2bar            + qx2 + qy2;
+//               q3 =  ramp*p_q3bar            + qx3 + qy3;
+//               q4 =  ramp*ramp*p_q4bar       + qx4 + qy4;
+//               q5 =  ramp*ramp*p_q5bar       + qx5 + qy5;
+//               q6 =  ramp*ramp*p_q6bar       + qx6 + qy6;
+
+//             }
+//          }
+//       }
+//     }
+    
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+
+// if(akk>0)
+//  {
+//   for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++){ 
+//        // prefetch q to shared
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {        
+//           iint e = eo+es; // element in block
+//           if(e<Nelements)
+//           {
+//             if(n<p_Np)
+//             {           
+//               s_q[es][0][n] = q1;
+//               s_q[es][1][n] = q2;
+//               s_q[es][2][n] = q3;
+//               s_q[es][3][n] = q4;   
+//               s_q[es][4][n] = q5;
+//               s_q[es][5][n] = q6;
+//             }
+//           }
+//         }
+//       }
+
+//  // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//   // interpolate q to cubature
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {     
+//             iint e = eo+es; // element in block
+//             if(e<Nelements)
+//             {
+//               if(n<p_cubNp)
+//               {
+//                 dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
+//                 dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
+                
+//                 occaUnroll(p_Np)
+//                 for(iint m=0;m<p_Np;++m)
+//                 {
+//                   const dfloat Icn  = cubInterpT[m*p_cubNp+n];
+//                   cubq1 += Icn*s_q[es][0][m];
+//                   cubq2 += Icn*s_q[es][1][m];
+//                   cubq3 += Icn*s_q[es][2][m];
+//                   cubq4 += Icn*s_q[es][3][m];
+//                   cubq5 += Icn*s_q[es][4][m];
+//                   cubq6 += Icn*s_q[es][5][m];
+//                 }
+                
+//                 dfloat coeff  = akk * dt * p_tauInv;
+//                 dfloat icubq1 = 1.0 / cubq1;
+//                 // BGK relaxation approximation to the Boltzmann collision operator
+//                 s_cubN4[es][n] = -coeff * (cubq4-(           cubq2*cubq3*icubq1));
+//                 s_cubN5[es][n] = -coeff * (cubq5-(p_invsqrt2*cubq2*cubq2*icubq1));
+//                 s_cubN6[es][n] = -coeff * (cubq6-(p_invsqrt2*cubq3*cubq3*icubq1));
+//               }
+//           }
+//         }
+//       }
+
+//     // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+    
+//     // partial projection to nodes from cubature-sub-group
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {     
+//           iint e = eo+es; // element in block
+//           if(e<Nelements)
+//           {
+//             if(n<p_Np)
+//             {                 
+//               // use temporaries for part sums for N4,N5,N6 because of exclusives
+//               dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
+
+//               occaUnroll(p_cubNp)
+//               for(iint i=0;i<p_cubNp;++i)
+//               {
+//                 const dfloat Pnc  = cubProjectT[i*p_Np+n];
+//                 N4 += Pnc*s_cubN4[es][i];
+//                 N5 += Pnc*s_cubN5[es][i];
+//                 N6 += Pnc*s_cubN6[es][i];
+//               }
+
+//               dfloat alpha = 0.5f;
+//               dfloat beta  = 0.5f;
+//                  //
+//               dfloat zx1 =  qxe1 - qx1 ;
+//               dfloat zx2 =  qxe2 - qx2 ;
+//               dfloat zx3 =  qxe3 - qx3 ;
+//               dfloat zx4 =  qxe4 - qx4 +  alpha*N4 ;
+//               dfloat zx5 =  qxe5 - qx5 +  alpha*N5 ;
+//               dfloat zx6 =  qxe6 - qx6 +  alpha*N6 ;
+//               //
+//               dfloat zy1 =  qye1 - qy1 ;
+//               dfloat zy2 =  qye2 - qy2 ;
+//               dfloat zy3 =  qye3 - qy3 ;
+//               dfloat zy4 =  qye4 - qy4 +  beta*N4 ;
+//               dfloat zy5 =  qye5 - qy5 +  beta*N5 ;
+//               dfloat zy6 =  qye6 - qy6 +  beta*N6 ;
+//               //
+//               dfloat qx4o = qx4;
+//               dfloat qx5o = qx5;
+//               dfloat qx6o = qx6;
+//               //
+//               dfloat qy4o = qy4;
+//               dfloat qy5o = qy5;
+//               dfloat qy6o = qy6;
+//               //
+//               dfloat cc     = akk * dt * p_tauInv;
+//               dfloat icc    = 1.0/cc; 
+//               dfloat cch    = 0.5*cc; 
+//               dfloat icch   = 1./cch;  
+
+//                      //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
+//               qx4  +=        zx4/(cch+1.0)  
+//                             + zx2*q3/(q1*(1.0+icch)) 
+//                             + zx3*q2/(q1*(1.0+icch))
+//                             - zx1*q2*q3/(q1*q1*(1.0+icch)); 
+
+//               qx5  +=         zx5/(cch+1.)
+//                             +  p_sqrt2 * ( zx2*q2/(q1*(1.0 + icch)))
+//                             -  p_sqrt2 * ( zx1*(q2*q2)/(2.0 *(q1*q1)*(1.0+icch)));
+
+//               qx6 +=         zx6/(cch+1.0)
+//                            +  p_sqrt2* ( zx3*q3/(q1*(1.0+icch)))
+//                            -  p_sqrt2* ( zx1*(q3*q3)/(2.0*(q1*q1)*(1.0+icch)));
+
+//               //  
+//               qy4  +=        zy4/(cch+1.0)  
+//                             + zy2*q3/(q1*(1.0+icch)) 
+//                             + zy3*q2/(q1*(1.0+icch))
+//                             - zy1*q2*q3/(q1*q1*(1.0+icch)); 
+
+//               qy5  +=         zy5/(cch+1.)
+//                             +  p_sqrt2 * ( zy2*q2/(q1*(1.0 + icch)))
+//                             -  p_sqrt2 * ( zy1*(q2*q2)/(2.0 *(q1*q1)*(1.0+icch)));
+
+//               qy6 +=         zy6/(cch+1.0)
+//                            +  p_sqrt2* ( zy3*q3/(q1*(1.0+icch)))
+//                            -  p_sqrt2* ( zy1*(q3*q3)/(2.0*(q1*q1)*(1.0+icch)));   
+
+
+//                q4 =  ramp*ramp*p_q4bar       + qx4 + qy4;
+//                q5 =  ramp*ramp*p_q5bar       + qx5 + qy5;
+//                q6 =  ramp*ramp*p_q6bar       + qx6 + qy6;                                     
+
+//               // Compute errors for q4 q5 a6
+//                dfloat ex4 = fabs(qx4-qx4o);
+//                dfloat ex5 = fabs(qx5-qx5o);
+//                dfloat ex6 = fabs(qx6-qx6o);
+//                //
+//                dfloat ey4 = fabs(qy4-qy4o);
+//                dfloat ey5 = fabs(qy5-qy5o);
+//                dfloat ey6 = fabs(qy6-qy6o);
+
+//                dfloat ex  = GET_MAX3(ex4,ex5,ex6);  
+//                dfloat ey  = GET_MAX3(ey4,ey5,ey6);   
+//                //dfloat ent = GET_MAX3(ent4,ent5,ent6);   
+
+//                err =  GET_MAX2(ex,ey);   
+
+//                s_E[es*p_Np + n] = err; 
+//             }
+//           }
+//         }
+//       }
+
+
+//     // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+
+//       for(int g=0;g<p_G;++g;inner1)
+//       {
+//         for(int s=0;s<p_S;++s;inner0)
+//         {
+//             const iint n = g*p_S + s;
+//             s_err[g][s] = n>p_NblockV*p_Np  ? 0.0 : s_E[n];
+
+//             if(s<16) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 16]);
+//             if(s< 8) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 8]);
+//             if(s< 4) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 4]);
+//             if(s< 2) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 2]);
+//             if(s==0) s_b[g]      = GET_MAX2(s_err[g][s],s_err[g][s + 1]);
+//         }
+//       }
+    
+//     barrier(localMemFence);
+
+//      for(int g=0;g<p_G;++g;inner1)
+//      {
+//         for(int s=0;s<p_S;++s;inner0)
+//         {
+//           if(g==0)
+//           {
+//             if(p_G>8){
+//             if(s<8)  s_b[s] = GET_MAX2(s_b[s],s_b[s + 8]);}
+//             if(p_G>4){
+//             if(s< 4) s_b[s] = GET_MAX2(s_b[s],s_b[s + 4]);}
+//             if(p_G>2){
+//             if(s< 2) s_b[s] = GET_MAX2(s_b[s],s_b[s + 2]);}
+//             if(s==0) s_b[s] = GET_MAX2(s_b[s],s_b[s + 1]);
+//           }
+//         }
+//       }
+     
+
+//    // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+    
+//     // partial projection to nodes from cubature-sub-group
+//     for(iint es=0;es<p_NblockV;++es;inner1)
+//     {
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//       {     
+//              err = s_b[0];
+//          }
+//        }
+
+
+//    if (err<p_LSIMEX_TOL){ 
+//    // printf("%g",err); 
+//     break;}
+
+
+//   }
+// }
+
+//     // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+
+
+
+//     // prefetch q to shared
+//     for(iint es=0;es<p_NblockV;++es;inner1)
+//     {
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//       {    
+//         iint e = eo+es; // element in block
+//         if(e<Nelements)
+//         {
+//           element = elementIds[e];
+//           if(n<p_Np)
+//           {
+//             //
+//             const iint base = n + element*p_Nfields*p_Np;
+//             const iint id1 = base + 0*p_Np;
+//             const iint id2 = base + 1*p_Np;
+//             const iint id3 = base + 2*p_Np;
+//             const iint id4 = base + 3*p_Np;
+//             const iint id5 = base + 4*p_Np;
+//             const iint id6 = base + 5*p_Np;
+
+//                   // PML UPDATES
+//             qZx[id1] = qx1;
+//             qZx[id2] = qx2;
+//             qZx[id3] = qx3;
+//             qZx[id4] = qx4;
+//             qZx[id5] = qx5;
+//             qZx[id6] = qx6; 
+//             //
+//              // PML UPDATES
+//             qZy[id1] = qy1;
+//             qZy[id2] = qy2;
+//             qZy[id3] = qy3;
+//             qZy[id4] = qy4;
+//             qZy[id5] = qy5;
+//             qZy[id6] = qy6; 
+//             //
+//             dfloat4 temp;
+
+//             temp.x =  q1;
+//             temp.y =  q2;
+//             temp.z =  q3;
+//             temp.w =  q4;
+
+//             qZ[2*(n + element*p_Np)] = temp;
+
+//             temp.x =  q5;
+//             temp.y =  q6;
+//             temp.z =  0.0;
+//             temp.w =  0.0;
+
+//             qZ[2*(n + element*p_Np) +1] = temp; 
+//            }
+//          }
+//       }
+//     }
+
+
+
+//   }
+// }
+
+
+// kernel void boltzmannLSIMEXImplicitIterationCub2D(const iint Nelements,
+//                const iint * restrict elementIds,
+//                const dfloat dt, 
+//                  const dfloat akk,
+//                const dfloat * restrict cubInterpT,
+//                const dfloat * restrict cubProjectT,
+//                const dfloat4 * restrict qe,
+//                      dfloat4 * restrict q){ 
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     // shared memory for q at nodes
+//              shared dfloat s_q[p_NblockV][6][p_Np];
+//              shared dfloat s_E[p_NblockV*p_Np];
+//     volatile shared dfloat s_err[p_G][p_S];
+//     volatile shared dfloat s_b[p_G];
+
+
+//     // sub-group of p_Np cubature node interpolants of N4,N5,N6
+//     shared dfloat s_cubN4[p_NblockV][p_cubNp];
+//     shared dfloat s_cubN5[p_NblockV][p_cubNp];
+//     shared dfloat s_cubN6[p_NblockV][p_cubNp];
+
+//     exclusive iint   element;
+//     exclusive dfloat err =0.; 
+//     //
+//     exclusive dfloat qe1 =0.0, qe2 = 0.0, qe3=0.0 ;
+//     exclusive dfloat qe4 =0.0, qe5 = 0.0, qe6=0.0 ;  
+//     //
+//     exclusive dfloat q1 =0.0, q2 = 0.0, q3=0.0 ;
+//     exclusive dfloat q4 =0.0, q5 = 0.0, q6=0.0 ;  
+
+
+//     // prefetch q to shared
+//     for(iint es=0;es<p_NblockV;++es;inner1){
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+  
+//         iint e = eo+es; // element in block
+//         if(e<Nelements)
+//         {
+//           element = elementIds[e];
+//           if(n<p_Np)
+//           {
+//             const iint id = element*p_Np+n;
+//             dfloat4 qea  = qe[2*id];
+//             dfloat4 qeb  = qe[2*id+1];
+//             //
+//             dfloat4  qa  = q[2*id]  ;
+//             dfloat4  qb  = q[2*id+1];
+
+//             // hold explicit part at register, constant in iterations    
+//             qe1  = qea.x;
+//             qe2  = qea.y;
+//             qe3  = qea.z;
+//             qe4  = qea.w;   
+//             qe5  = qeb.x;
+//             qe6  = qeb.y;  
+//             // Initialize solution
+//             q1  = qe1;
+//             q2  = qe2;
+//             q3  = qe3;
+//             q4  = qe4; 
+//             q5  = qe5;
+//             q6  = qe6;              
+//            }
+//          }
+//       }
+//     }
+    
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+
+// if(akk>0)
+//  {
+//   for(iint iter=0; iter<p_LSIMEX_MAXITER; iter++)
+//   { 
+       
+
+//        // prefetch solution to shared memory
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {        
+//           iint e = eo+es; // element in block
+//           if(e<Nelements)
+//           {
+//             if(n<p_Np)
+//             {           
+//               s_q[es][0][n] = q1;
+//               s_q[es][1][n] = q2;
+//               s_q[es][2][n] = q3;
+//               s_q[es][3][n] = q4;   
+//               s_q[es][4][n] = q5;
+//               s_q[es][5][n] = q6;
+//             }
+//           }
+//         }
+//       }
+
+//  // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//   // interpolate q to cubature
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {     
+//             iint e = eo+es; // element in block
+//             if(e<Nelements)
+//             {
+//               if(n<p_cubNp)
+//               {
+//                 dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
+//                 dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
+                
+//                 occaUnroll(p_Np)
+//                 for(iint m=0;m<p_Np;++m)
+//                 {
+//                   const dfloat Icn  = cubInterpT[m*p_cubNp+n];
+//                   cubq1 += Icn*s_q[es][0][m];
+//                   cubq2 += Icn*s_q[es][1][m];
+//                   cubq3 += Icn*s_q[es][2][m];
+//                   cubq4 += Icn*s_q[es][3][m];
+//                   cubq5 += Icn*s_q[es][4][m];
+//                   cubq6 += Icn*s_q[es][5][m];
+//                 }
+                
+//                 dfloat coeff  = akk * dt * p_tauInv;
+//                 dfloat icubq1 = 1.0 / cubq1;
+//                 // BGK relaxation approximation to the Boltzmann collision operator
+//                 s_cubN4[es][n] = -coeff * (cubq4-(           cubq2*cubq3*icubq1));
+//                 s_cubN5[es][n] = -coeff * (cubq5-(p_invsqrt2*cubq2*cubq2*icubq1));
+//                 s_cubN6[es][n] = -coeff * (cubq6-(p_invsqrt2*cubq3*cubq3*icubq1));
+//               }
+//           }
+//         }
+//       }
+
+//     // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+    
+//     // partial projection to nodes from cubature-sub-group
+//       for(iint es=0;es<p_NblockV;++es;inner1)
+//       {
+//         for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//         {     
+//           iint e = eo+es; // element in block
+//           if(e<Nelements)
+//           {
+//             if(n<p_Np)
+//             {                 
+//               // use temporaries for part sums for N4,N5,N6 because of exclusives
+//               dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
+
+//               occaUnroll(p_cubNp)
+//               for(iint i=0;i<p_cubNp;++i)
+//               {
+//                 const dfloat Pnc  = cubProjectT[i*p_Np+n];
+//                 N4 += Pnc*s_cubN4[es][i];
+//                 N5 += Pnc*s_cubN5[es][i];
+//                 N6 += Pnc*s_cubN6[es][i];
+//               }
+//                //
+//               dfloat z1 =  qe1 - q1 ;
+//               dfloat z2 =  qe2 - q2 ;
+//               dfloat z3 =  qe3 - q3 ;
+//               dfloat z4 =  qe4 - q4 +  N4 ;
+//               dfloat z5 =  qe5 - q5 +  N5 ;
+//               dfloat z6 =  qe6 - q6 +  N6 ;
+              
+//               // Store solution for error check
+//               dfloat q4o = q4;
+//               dfloat q5o = q5;
+//               dfloat q6o = q6;
+//               //
+//               dfloat cc     = akk * dt * p_tauInv;
+//               dfloat icc    = 1.0/cc; 
+
+//                    //Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
+//               q4 +=           z4/(cc+1.0)  
+//                             + z2*q3/(q1*(1.0+icc)) 
+//                             + z3*q2/(q1*(1.0+icc))
+//                             - z1*q2*q3/(q1*q1*(1.0+icc)); 
+
+//               q5 +=            z5/(cc+1)
+//                             +  p_sqrt2 * ( z2*q2/(q1*(1.0 + icc)))
+//                             -  p_sqrt2 * ( z1*(q2*q2)/(2.0 *(q1*q1)*(1.0+icc)));
+
+//               q6 +=           z6/(cc+1.0)
+//                            +  p_sqrt2* ( z3*q3/(q1*(1.0+icc)))
+//                            -  p_sqrt2* ( z1*(q3*q3)/(2.0*(q1*q1)*(1.0+icc)));
+
+
+//               // Compute errors 
+//                dfloat err4 = fabs(q4-q4o);
+//                dfloat err5 = fabs(q5-q5o);
+//                dfloat err6 = fabs(q6-q6o);
+//               // Compute maximum of error
+//                err = GET_MAX3(err4,err5,err6);
+//               // Hold error in shared for local reduction
+//                s_E[es*p_Np + n] = err; 
+//             }
+//           }
+//         }
+//       }
+
+
+//     // make sure error vector is loaded into shared
+//     barrier(localMemFence);
+     
+//      // Reduction->Step 1 // All parallel
+//       for(int g=0;g<p_G;++g;inner1)
+//       {
+//         for(int s=0;s<p_S;++s;inner0)
+//         {
+//             const iint n = g*p_S + s;
+//             s_err[g][s] = n>p_NblockV*p_Np  ? 0.0 : s_E[n];
+
+//             if(s<16) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 16]);
+//             if(s< 8) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 8]);
+//             if(s< 4) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 4]);
+//             if(s< 2) s_err[g][s] = GET_MAX2(s_err[g][s],s_err[g][s + 2]);
+//             if(s==0) s_b[g]      = GET_MAX2(s_err[g][s],s_err[g][s + 1]);
+//         }
+//       }
+    
+//     barrier(localMemFence);
+//    // Reduction->step 2 // Squential now
+//      for(int g=0;g<p_G;++g;inner1)
+//      {
+//         for(int s=0;s<p_S;++s;inner0)
+//         {
+//           if(g==0) // Squential
+//           {
+//             if(p_G>8){
+//             if(s<8)  s_b[s] = GET_MAX2(s_b[s],s_b[s + 8]);}
+//             if(p_G>4){
+//             if(s< 4) s_b[s] = GET_MAX2(s_b[s],s_b[s + 4]);}
+//             if(p_G>2){
+//             if(s< 2) s_b[s] = GET_MAX2(s_b[s],s_b[s + 2]);}
+//             if(s==0) s_b[s] = GET_MAX2(s_b[s],s_b[s + 1]);
+//           }
+//         }
+//       }
+     
+
+//    // 
+//     barrier(localMemFence);
+    
+//     // This is for making all threads in the same group exit  at the same time
+//     for(iint es=0;es<p_NblockV;++es;inner1)
+//     {
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//       {     
+//              err = s_b[0];
+//          }
+//        }
+
+//    // This is for making all threads in the same group exit  at the same time
+//    if (err<p_LSIMEX_TOL) break;
+
+
+//   }
+// }
+
+//     // make sure all cubature node data is loaded into shared
+//     barrier(localMemFence);
+
+
+
+//     // If converged update solution
+//     for(iint es=0;es<p_NblockV;++es;inner1)
+//     {
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0)
+//       {    
+//         iint e = eo+es; // element in block
+//         if(e<Nelements)
+//         {
+//           element = elementIds[e];
+//           if(n<p_Np)
+//           {
+//             const iint id0     = 2*(element*p_Np + n);
+//             const iint id1     = id0 + 1;
+
+//              // do not update q1 ,q2 ,q3 
+//             q[id0].x =  q1 ;
+//             q[id0].y =  q2 ;
+//             q[id0].z =  q3 ;  
+//             q[id0].w =  q4 ;
+//             //
+//             q[id1].x =  q5 ;
+//             q[id1].y =  q6 ; 
+//             q[id1].z =  0.0 ;
+//             q[id1].w =  0.0 ; 
+
+
+//            }
+//          }
+//       }
+//     }
+
+
+
+//   }
+// }
 

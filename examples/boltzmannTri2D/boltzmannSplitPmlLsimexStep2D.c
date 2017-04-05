@@ -81,7 +81,6 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_cubProjectT,
 			    mesh->o_qZx,
 			    mesh->o_qZy,
-			    mesh->o_qZnt,
 			    mesh->o_qZ);
      // No surface term for implicit part
       mesh->pmlImplicitUpdateKernel(mesh->pmlNelements,
@@ -176,10 +175,8 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
-			    mesh->o_pmlNT,
 			    mesh->o_qYx,
-			    mesh->o_qYy,
-			    mesh->o_qZnt); // Not for use! just to  use the same kernel, extra storage!!!!
+			    mesh->o_qYy); 
     }
     
    // compute volume contribution to DG boltzmann RHS
@@ -270,14 +267,12 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    ramp,
 			    mesh->o_qZx,
 			    mesh->o_qZy,
-			    mesh->o_qZnt,
 			    mesh->o_qYx,
 			    mesh->o_qYy,
 			    mesh->o_qSx,
 			    mesh->o_qSy,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
-			    mesh->o_pmlNT,
 			    mesh->o_q);
   }
     
