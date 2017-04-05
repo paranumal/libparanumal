@@ -445,7 +445,8 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 	    dfloat qy4 = pmlqy[base+3*p_Np];
 	    dfloat qy5 = pmlqy[base+4*p_Np];
 	    dfloat qy6 = pmlqy[base+5*p_Np];
-	    //
+	    
+	    // May change!!!!
 	    dfloat alpha = 0.5f;
 	    dfloat beta  = 0.5f;
 

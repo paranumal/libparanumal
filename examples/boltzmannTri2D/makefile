@@ -15,7 +15,7 @@ LD	= mpic++
 
 
 TEST=0
-PML=1
+PML= 1
 #TIME_METHOD  = SARK
 #CUBATURE_USE = 0
 # TEST = 0
