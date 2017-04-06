@@ -329,31 +329,17 @@ typedef struct {
   occa::kernel pmlRelaxationKernel;
   
   // Boltzmann SAAB low order updates
-  occa::kernel updateFirstOrderKernel;
-  occa::kernel updateSecondOrderKernel;
-  occa::kernel pmlUpdateFirstOrderKernel;
-  occa::kernel pmlUpdateSecondOrderKernel;
+  // occa::kernel updateFirstOrderKernel;
+  // occa::kernel updateSecondOrderKernel;
+  // occa::kernel pmlUpdateFirstOrderKernel;
+  // occa::kernel pmlUpdateSecondOrderKernel;
   
   // //Boltzmann Imex Kernels
-   occa::kernel implicitVolumeKernel;
-   occa::kernel pmlImplicitVolumeKernel;
-   
-   occa::kernel implicitUpdateKernel;
-   occa::kernel pmlImplicitUpdateKernel;
-
-
-  // occa::kernel ImexExNonPmlVolumeKernel;
-  // occa::kernel ImexImSplitPmlVolumeKernel;
-  // occa::kernel ImexExSplitPmlVolumeKernel;
-  // //
-  // occa::kernel explicitSurfaceKernel; 
-  // occa::kernel pmlExplicitSurfaceKernel;
-
- 
-
-  // //
-  occa::kernel NRIterationKernel;
-  occa::kernel pmlNRIterationKernel;
+     
+  occa::kernel implicitUpdateKernel;
+  occa::kernel pmlImplicitUpdateKernel;
+  occa::kernel implicitSolveKernel;
+  occa::kernel pmlImplicitSolveKernel;
   //
   occa::kernel residualUpdateKernel;
   occa::kernel pmlResidualUpdateKernel;
