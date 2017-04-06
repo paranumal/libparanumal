@@ -687,37 +687,37 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
     #if CUBATURE_ENABLED
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                    "boltzmannVolumeCub2D",
                    kernelInfo);
       
       printf("Compiling LSERK pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSplitPmlVolumeCub2D",
                kernelInfo);
       
        printf("Compiling LSERK relaxation kernel with cubature integration\n");
        mesh->relaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
                "boltzmannRelaxationCub2D",
                kernelInfo); 
 
       printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
        mesh->pmlRelaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
                "boltzmannSplitPmlRelaxationCub2D",
                kernelInfo);   
     #else
       printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
       mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                  "boltzmannVolume2D",
                  kernelInfo);
 
       printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
       mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSplitPmlVolume2D",
                kernelInfo); 
     #endif
@@ -725,29 +725,29 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
 
     printf("Compiling surface kernel\n");
     mesh->surfaceKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                  "boltzmannSurface2D",
                  kernelInfo);
 
     printf("Compiling pml surface kernel\n");
     mesh->pmlSurfaceKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                  "boltzmannSplitPmlSurface2D",
                  kernelInfo);
  
     printf("Compiling update kernel\n");
     mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannLSERKUpdate2D",
                  kernelInfo);
     
     printf("Compiling pml update kernel\n");
     mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannLSERKSplitPmlUpdate2D",
                  kernelInfo);
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
 
@@ -756,25 +756,25 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
    #if CUBATURE_ENABLED
       printf("Compiling SA volume kernel with cubature integration\n");
       mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                    "boltzmannVolumeCub2D",
                    kernelInfo);
 
       printf("Compiling SA pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSASplitPmlVolumeCub2D",
                kernelInfo);
 
        printf("Compiling SA relaxation kernel with cubature integration\n");
        mesh->relaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
                "boltzmannSARelaxationCub2D",
                kernelInfo); 
 
       printf("Compiling SA pml relaxation kernel with cubature integration\n");
        mesh->pmlRelaxationKernel =
-       mesh->device.buildKernelFromSource("okl/boltzmannRelaxation2D.okl",
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
                "boltzmannSASplitPmlRelaxationCub2D",
                kernelInfo); 
 
@@ -782,13 +782,13 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
     #else
       printf("Compiling SA volume kernel\n");
       mesh->volumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                  "boltzmannSAVolume2D",
                  kernelInfo);
 
       printf("Compiling SAAB pml volume kernel\n");
       mesh->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSASplitPmlVolume2D",
                kernelInfo); 
     #endif
@@ -796,13 +796,13 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
 
   printf("Compiling surface kernel\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSurface2D",
                kernelInfo);
 
   printf("Compiling pml surface kernel\n");
   mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSplitPmlSurface2D",
                kernelInfo);
 
@@ -810,33 +810,33 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
     //SARK STAGE UPDATE
     printf("compiling SARK non-pml  update kernel\n");
     mesh->updateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3Update2D",
                  kernelInfo); 
 
 
    printf("compiling SARK non-pml  stage update kernel\n");
     mesh->updateStageKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3StageUpdate2D",
                  kernelInfo); 
 
      //SARK STAGE UPDATE
     printf("compiling SARK non-pml  update kernel\n");
     mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3SplitPmlUpdate2D",
                  kernelInfo); 
 
 
    printf("compiling SARK non-pml  stage update kernel\n");
     mesh->pmlUpdateStageKernel =
-      mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3SplitPmlStageUpdate2D",
                  kernelInfo); 
 
  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);   
 
@@ -846,26 +846,26 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
  // RESIDUAL UPDATE KERNELS
   printf("Compiling LSIMEX non-pml residual update kernel\n");
   mesh->residualUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXResidualUpdate2D",
                kernelInfo);
 
   printf("Compiling pml residual update kernel\n");
   mesh->pmlResidualUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlResidualUpdate2D",
                kernelInfo);
 
   
   printf("Compiling LSIMEX non-pml implicit update kernel\n");
   mesh->implicitUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXImplicitUpdate2D",
                kernelInfo);
 
   printf("Compiling LSIMEX pml implicit update kernel\n");
   mesh->pmlImplicitUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlImplicitUpdate2D",
                kernelInfo);
      
@@ -876,24 +876,24 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
        printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
 
          mesh->implicitSolveKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXImplicitSolveCub2D",
                  kernelInfo); 
       
          printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
          mesh->pmlImplicitSolveKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
                  kernelInfo); 
     #else
         mesh->implicitSolveKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXImplicitSolve2D",
                  kernelInfo); 
       
          printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
          mesh->pmlImplicitSolveKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXSplitPmlImplicitSolve2D",
                  kernelInfo); 
     #endif
@@ -901,45 +901,45 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
 
     printf("Compiling LSIMEX volume kernel no stiff term!\n");
     mesh->volumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                  "boltzmannVolumeCub2D",
                  kernelInfo);
       
     printf("Compiling LSIMEX pml volume kernel with cubature integration\n");
     mesh->pmlVolumeKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannVolume2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
              "boltzmannSplitPmlVolumeCub2D",
              kernelInfo);
 
     printf("Compiling surface kernel\n");
     mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSurface2D",
                kernelInfo);
 
     printf("Compiling pml surface kernel\n");
     mesh->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannSurface2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSplitPmlSurface2D",
                kernelInfo);
 
 
    printf("Compiling LSIMEX non-pml update kernel\n");
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXUpdate2D",
                kernelInfo);
 
   printf("Compiling LSIMEX pml update kernel\n");
   mesh->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource("okl/boltzmannUpdate2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlUpdate2D",
                kernelInfo);
 
 
 
 mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource("okl/meshHaloExtract2D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
 
