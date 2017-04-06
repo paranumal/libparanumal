@@ -51,17 +51,12 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::toc("residualUpdateKernel");
     
 
-
-
-
-
-
     //Implicit Solve Satge
      mesh->device.finish();
     occa::tic("pmlImplicitSolve");
     // Compute Implicit Part of Boltzmann, node based no communication
     if(mesh->pmlNelements){
-      mesh->pmlNRIterationKernel(mesh->pmlNelements,
+      mesh->pmlImplicitSolveKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
 			    ramp,
@@ -70,15 +65,6 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 		        mesh->o_cubProjectT,
 			    mesh->o_qYx,
 			    mesh->o_qYy,
-			    mesh->o_qZx,
-			    mesh->o_qZy,
-			    mesh->o_qZ);
-
-      mesh->pmlImplicitVolumeKernel(mesh->pmlNelements,
-			    mesh->o_pmlElementIds,
-			    ramp,
-			    mesh->o_cubInterpT,
-			    mesh->o_cubProjectT,
 			    mesh->o_qZx,
 			    mesh->o_qZy,
 			    mesh->o_qZ);
@@ -109,7 +95,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("implicitSolve");
     if(mesh->nonPmlNelements)
     {
-      mesh->NRIterationKernel(mesh->nonPmlNelements,
+      mesh->implicitSolveKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
 			 mesh->LsimexAd[k],
@@ -117,12 +103,6 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 		     mesh->o_cubProjectT,
 		     mesh->o_qY,
 		     mesh->o_qZ);
-
-      mesh->implicitVolumeKernel(mesh->nonPmlNelements,
-			 mesh->o_nonPmlElementIds,
-			 mesh->o_cubInterpT,
-			 mesh->o_cubProjectT,
-			 mesh->o_qZ);	
       //No surface term for implicit part
       mesh->implicitUpdateKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,

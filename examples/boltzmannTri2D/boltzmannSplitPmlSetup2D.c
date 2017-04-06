@@ -875,55 +875,27 @@ printf("\n NblockV = %d  Ncub = %d  Np = %d \n", NblockV, mesh->cubNp,mesh->Np);
     #if CUBATURE_ENABLED
        printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
 
-       mesh->NRIterationKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
-                 "boltzmannLSIMEXImplicitIterationCub2D",
+         mesh->implicitSolveKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+                 "boltzmannLSIMEXImplicitSolveCub2D",
                  kernelInfo); 
       
          printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
-         mesh->pmlNRIterationKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
-                 "boltzmannLSIMEXSplitPmlImplicitIterationCub2D",
+         mesh->pmlImplicitSolveKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
                  kernelInfo); 
-
-
-        printf("Compiling LSIMEX non-pml implicit volume kernel\n");
-         mesh->implicitVolumeKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
-                 "boltzmannLSIMEXImplicitVolumeCub2D",
-                 kernelInfo); 
-
-        printf("Compiling LSIMEX pml implicit volume kernel\n");
-         mesh->pmlImplicitVolumeKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
-                 "boltzmannLSIMEXSplitPmlImplicitVolumeCub2D",
-                 kernelInfo);
-
     #else
-        printf("Compiling LSIMEX non-pml Implicit Iteration  kernel\n");
-         mesh->NRIterationKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
-                 "boltzmannLSIMEXImplicitIteration2D",
+        mesh->implicitSolveKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+                 "boltzmannLSIMEXImplicitSolve2D",
                  kernelInfo); 
-
+      
          printf("Compiling LSIMEX pml Implicit Iteration  kernel\n");
-         mesh->pmlNRIterationKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitIteration2D.okl",
-                 "boltzmannLSIMEXSplitPmlImplicitIteration2D",
+         mesh->pmlImplicitSolveKernel = 
+         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicitSolve2D.okl",
+                 "boltzmannLSIMEXSplitPmlImplicitSolve2D",
                  kernelInfo); 
-
-
-        printf("Compiling LSIMEX non-pml implicit volume kernel\n");
-         mesh->implicitVolumeKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
-                 "boltzmannLSIMEXImplicitVolume2D",
-                 kernelInfo); 
-
-        printf("Compiling LSIMEX pml implicit volume kernel\n");
-         mesh->pmlImplicitVolumeKernel = 
-         mesh->device.buildKernelFromSource("okl/boltzmannLSIMEXImplicit2D.okl",
-                 "boltzmannLSIMEXSplitPmlImplicitVolume2D",
-                 kernelInfo);
     #endif
 
 
