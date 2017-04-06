@@ -42,7 +42,7 @@ ifeq ($(TEST), 1)
 else
  flags += -DTEST_MODE=0
  TIME_METHOD  = LSIMEX
- CUBATURE_USE = 1
+ CUBATURE_USE = 0
 endif
 
 ifeq ($(PML), 1)
