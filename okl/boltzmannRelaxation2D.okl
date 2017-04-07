@@ -96,10 +96,15 @@ kernel void boltzmannRelaxationCub2D(const iint Nelements,
 	      N6 += Pnc*s_cubN6[es][i];
 	    }
 	    
-	    dfloat4 rhsqa = 0. , rhsqb=0.; 
+	    dfloat4 rhsqa,rhsqb;
+	    rhsqa.x = 0;
+	    rhsqa.y = 0;
+	    rhsqa.z = 0;
 	    rhsqa.w = N4;
 	    rhsqb.x = N5;
-	    rhsqb.y = N6;  
+	    rhsqb.y = N6;
+	    rhsqb.z = 0;
+	    rhsqb.w = 0;
 	
 	    rhsq[2*id]   += rhsqa; 
 	    rhsq[2*id+1] += rhsqb; 
@@ -320,11 +325,16 @@ kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 	      N5 += Pnc*s_cubN5[es][i];
 	      N6 += Pnc*s_cubN6[es][i];
 	    }
-	    
-	    dfloat4 rhsqa = 0. , rhsqb=0.; 
+
+	    dfloat4 rhsqa,rhsqb;
+	    rhsqa.x = 0;
+	    rhsqa.y = 0;
+	    rhsqa.z = 0;
 	    rhsqa.w = N4;
 	    rhsqb.x = N5;
-	    rhsqb.y = N6;  
+	    rhsqb.y = N6;
+	    rhsqb.z = 0;
+	    rhsqb.w = 0;
 	
 	    rhsq[2*id]   += rhsqa; 
 	    rhsq[2*id+1] += rhsqb; 
