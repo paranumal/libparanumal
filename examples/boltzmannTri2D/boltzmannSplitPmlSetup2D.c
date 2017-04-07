@@ -459,6 +459,11 @@ dfloat cfl = 0.5;
        mesh->sarkb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
        mesh->sarkb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
        mesh->sarkb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4. - coef*h))/ (pow(coef*h,3)) ;
+       //
+         //
+       mesh->sarke[0] = exp(coef*h*c2); 
+       mesh->sarke[1] = exp(coef*h*c3); 
+       mesh->sarke[2] = exp(coef*h*1.0);
 
        //
        // PML Region Coefficients
@@ -472,8 +477,12 @@ dfloat cfl = 0.5;
        mesh->sarkpmlb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
        mesh->sarkpmlb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
        mesh->sarkpmlb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4.- coef*h))/ (pow(coef*h,3)) ;
-
-
+       //
+       //
+       mesh->sarkpmle[0] = exp(coef*h*c2); 
+       mesh->sarkpmle[1] = exp(coef*h*c3); 
+       mesh->sarkpmle[2] = exp(coef*h*1.0);
+   
 
 
         #endif
@@ -549,7 +558,12 @@ dfloat cfl = 0.5;
        mesh->sarkb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
        mesh->sarkb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
 
-       //
+         //
+       mesh->sarke[0] = exp(coef*h*c2); 
+       mesh->sarke[1] = exp(coef*h*c3); 
+       mesh->sarke[2] = exp(coef*h*1.0);
+       
+
        // PML Region Coefficients
        coef = 0.5*coef; 
           //  Exponential Coefficients
@@ -562,7 +576,11 @@ dfloat cfl = 0.5;
        mesh->sarkpmlb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
        mesh->sarkpmlb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
        mesh->sarkpmlb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
-
+       //
+       //
+       mesh->sarkpmle[0] = exp(coef*h*c2); 
+       mesh->sarkpmle[1] = exp(coef*h*c3); 
+       mesh->sarkpmle[2] = exp(coef*h*1.0);
 
 
 
@@ -574,14 +592,8 @@ dfloat cfl = 0.5;
      }
      
      
-        //
-     mesh->sarke[0] = exp(coef*h*c2); 
-     mesh->sarke[1] = exp(coef*h*c3); 
-     mesh->sarke[2] = exp(coef*h*1.0);
-     //
-     mesh->sarkpmle[0] = exp(coef*h*c2); 
-     mesh->sarkpmle[1] = exp(coef*h*c3); 
-     mesh->sarkpmle[2] = exp(coef*h*1.0);
+      
+     
 
 
     
