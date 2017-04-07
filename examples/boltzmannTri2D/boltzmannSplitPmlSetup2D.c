@@ -77,7 +77,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     dfloat rho = 1, u = 0., v = 0.; 
     dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
      //
-    mesh->finalTime = 10.;
+    mesh->finalTime = 40.;
 
  #endif 
 
@@ -385,11 +385,24 @@ dfloat cfl = 0.5;
 
      dfloat coef = -mesh->tauInv;
      dfloat  h   = mesh->dt; 
+
+
+
+      #if 0 // First version of SARK
      // Base Runge-Kutta Method
      dfloat a21 = 1./3.;   dfloat a31 = -3./16. ;    dfloat a32 = 15./16.;
      dfloat b1 = 1./6.;    dfloat b2 = 3./10.;       dfloat b3 = 8./15.; 
      dfloat c1 = 0.;       dfloat c2 = 1./3.;        dfloat c3 = 3./4.; 
-      // Base Method
+      
+     #else // Second Version
+      // Base Runge-Kutta Method
+     dfloat a21 = 1.f/2.f;   dfloat a31 = -1.f ;    dfloat a32 = 2.f;
+     dfloat b1 = 1.f/6.f;    dfloat b2 = 2./3.;       dfloat b3 = 1./6.; 
+     dfloat c1 = 0.f;       dfloat c2 = 1./2.;        dfloat c3 = 1.; 
+    
+     #endif
+
+       // Base Method
      mesh->rk3a[0][0] = 0.;  mesh->rk3a[1][0] = a21;  mesh->rk3a[2][0] = a31;   mesh->rk3a[2][1] = a32; 
      mesh->rk3b[0] = b1;     mesh->rk3b[1] = b2;      mesh->rk3b[2] = b3; 
      mesh->rk3c[0] = c1;     mesh->rk3c[1] = c2;      mesh->rk3c[2] = c3; 
@@ -399,43 +412,78 @@ dfloat cfl = 0.5;
 
      if(fabs(coef*h)>1e-2){
 
-     //  Exponential Coefficients
-     mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-     mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
-     mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
 
-     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-     mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
-                        /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
-                        /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
-     mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
-                        /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
-                        /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-     mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
-                        /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
 
-     //
-     // PML Region Coefficients
-     coef = 0.5*coef; 
-      //  Exponential Coefficients
-     mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-     mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
-     mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+        #if 0
 
-     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-     mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
-                        /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
-                        /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
-     mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
-                        /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
-                        /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-     mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
-                        /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+       //  Exponential Coefficients
+       mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+       mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
+       mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                          /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                          /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+       mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                          /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                          /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+       mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                          /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+
+       //
+       // PML Region Coefficients
+       coef = 0.5*coef; 
+        //  Exponential Coefficients
+       mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+       mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
+       mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                          /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                          /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+       mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                          /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                          /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+       mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                          /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+        #else
+
+          //  Exponential Coefficients
+       mesh->sarka[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
+       mesh->sarka[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
+       mesh->sarka[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
+       mesh->sarkb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
+       mesh->sarkb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4. - coef*h))/ (pow(coef*h,3)) ;
+
+       //
+       // PML Region Coefficients
+       coef = 0.5*coef; 
+          //  Exponential Coefficients
+       mesh->sarkpmla[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
+       mesh->sarkpmla[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
+       mesh->sarkpmla[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkpmlb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
+       mesh->sarkpmlb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
+       mesh->sarkpmlb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4.- coef*h))/ (pow(coef*h,3)) ;
+
+
+
+
+        #endif
    
 
    }else{
 
     printf("Computing SARK coefficients  with 3th order Taylor series expansion\n");
+
+    #if 0
 
      //  fifth Order Taylor Series Expansion
      mesh->sarka[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
@@ -488,6 +536,38 @@ dfloat cfl = 0.5;
                         + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
                         + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
                         - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
+
+        #else
+        
+          //  Exponential Coefficients
+       mesh->sarka[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
+       mesh->sarka[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+       mesh->sarka[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
+       mesh->sarkb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
+       mesh->sarkb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
+
+       //
+       // PML Region Coefficients
+       coef = 0.5*coef; 
+          //  Exponential Coefficients
+           //  Exponential Coefficients
+       mesh->sarkpmla[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
+       mesh->sarkpmla[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+       mesh->sarkpmla[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+
+       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+       mesh->sarkpmlb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
+       mesh->sarkpmlb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
+       mesh->sarkpmlb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
+
+
+
+
+
+        #endif                
 
 
 
