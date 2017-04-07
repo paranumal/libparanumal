@@ -15,7 +15,7 @@ LD	= mpic++
 
 
 TEST=0
-PML= 1
+PML= 0
 #TIME_METHOD  = SARK
 #CUBATURE_USE = 0
 # TEST = 0
@@ -41,7 +41,7 @@ ifeq ($(TEST), 1)
   @echo "Usage: make TIME_METHOD=METHOD(LSERK,SAAB,SARK,LSIMEX) CUBATURE_USE=0/1"
 else
  flags += -DTEST_MODE=0
- TIME_METHOD  = LSERK
+ TIME_METHOD  = SARK3
  CUBATURE_USE =0
 endif
 
