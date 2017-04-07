@@ -41,8 +41,8 @@ ifeq ($(TEST), 1)
   @echo "Usage: make TIME_METHOD=METHOD(LSERK,SAAB,SARK,LSIMEX) CUBATURE_USE=0/1"
 else
  flags += -DTEST_MODE=0
- TIME_METHOD  = LSIMEX
- CUBATURE_USE = 1
+ TIME_METHOD  = LSERK
+ CUBATURE_USE =0
 endif
 
 ifeq ($(PML), 1)
