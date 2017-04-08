@@ -115,9 +115,6 @@ kernel void boltzmannSARK3StageUpdate2D(const iint Nelements,
       dfloat4 rhsq2a = rhsq2[base+0];
       dfloat4 rhsq2b = rhsq2[base+1];
 
-      // // Noneed to use it !
-      // dfloat4 qa = q[base+0];
-      // dfloat4 qb = q[base+1];
 
       dfloat4 qoa = qold[base+0];
       dfloat4 qob = qold[base+1];
