@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannSplitPmlRun2D(mesh2D *mesh){
+void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
 
   // Allocate MPI send buffer
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
@@ -8,55 +8,50 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   occa::initTimer(mesh->device);
-  
-  // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    // perform a 5-stage LSERK4 time step
-    #if TIME_DISC==LSERK
-      boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif
-    
-    #if TIME_DISC==SARK3
-      boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif 
 
-    #if TIME_DISC==LSIMEX
-      boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif  
-      
-    // #if TIME_DISC==MRAB
-    //   boltzmannSplitPmlMrabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    // #endif
-   // Perform semi-analytic integration for pml damping term
-    #if TIME_DISC==SAAB
-      boltzmannSplitPmlSaabStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    #endif
-    // // Perform semi-analytic integration for pml damping term
-    // #if TIME_DISC==SARK
-    //   boltzmannSplitPmlSarkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    // #endif
+   if(strstr(options, "LSERK")){
 
-    // Perform semi-analytic integration for pml damping term
-    
+    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    //  // Perform semi-analytic integration for pml damping term
-    // #if TIME_DISC==SARK54
-    //   boltzmannSplitPmlSark54Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    // #endif  
+      boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
 
-    // // Perform semi-analytic integration for pml damping term
-    // #if TIME_DISC==LSERK3
-    //   boltzmannSplitPmlLserk3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);
-    // #endif   
-
-    // output statistics if this is an output step
-    if((tstep%mesh->errorStep)==0){
-      boltzmannReport2D(mesh, tstep);
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep,options);
+      }
     }
   }
+
+
+  if(strstr(options, "LSIMEX")){
+
+    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+      boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep,options);
+      }
+    }
+  }
+
+
+  if(strstr(options, "SARK3")){
+
+    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+      boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep,options);
+      }
+    }
+  }
+
   
-  boltzmannReport2D(mesh, mesh->NtimeSteps);
+ 
+  
+  boltzmannReport2D(mesh, mesh->NtimeSteps,options);
 
   occa::printTimer();
 

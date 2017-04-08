@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer){
+				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
   for(iint k=0;k<mesh->Nimex;++k)
@@ -93,8 +93,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     // compute volume contribution to DG boltzmann RHS
     mesh->device.finish();
     occa::tic("implicitSolve");
-    if(mesh->nonPmlNelements)
-    {
+    if(mesh->nonPmlNelements){
       mesh->implicitSolveKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,

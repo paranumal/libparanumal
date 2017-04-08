@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer){
+				  dfloat * sendBuffer, dfloat *recvBuffer,char * options){
 
 
     // STAGE1
@@ -71,7 +71,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::toc("volumeKernel");
 
 
-   #if CUBATURE_ENABLED
+   if(strstr(options, "CUBATURE")){ 
 	// VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
@@ -102,7 +102,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 	  // VOLUME KERNELS
     mesh->device.finish();
     occa::toc("relaxationKernel");
-	#endif
+	}
 
 
 
@@ -269,7 +269,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::toc("volumeKernel");
 
 
-    #if CUBATURE_ENABLED
+    if(strstr(options, "CUBATURE")){ 
     // VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
@@ -298,7 +298,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::toc("relaxationKernel");
     
-#endif
+    }
 
     // complete halo exchange
     if(mesh->totalHaloPairs>0){
@@ -357,8 +357,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
 			    mesh->sarkpmle[1],
-			    mesh->rk3a[2][0], //a21
-			    mesh->sarkpmla[2][0], //a21
+			    mesh->rk3a[2][0], //a31
+			    mesh->sarkpmla[2][0], //a31
 			    mesh->rk3a[2][1], 
 			    mesh->sarkpmla[2][1], 
 			    ramp,
@@ -374,7 +374,6 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
   }
     
     if(mesh->nonPmlNelements){
-    	const dfloat zer = 0.0; 
       mesh->updateStageKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -459,7 +458,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::toc("volumeKernel");
 
 
-    #if CUBATURE_ENABLED
+    if(strstr(options, "CUBATURE")){ 
     // VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
@@ -488,7 +487,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::toc("relaxationKernel");
     
-    #endif
+    }
 
     // complete halo exchange
     if(mesh->totalHaloPairs>0){
