@@ -65,7 +65,7 @@ else{
     mesh->RT  = 9.0;
     mesh->sqrtRT = sqrt(mesh->RT);  
 
-    Re = 1000/mesh->sqrtRT; 
+    Re = 100/mesh->sqrtRT; 
     mesh->tauInv = mesh->sqrtRT * Re / Ma;
     nu = mesh->RT/mesh->tauInv; 
     // Create Periodic Boundaries
@@ -79,7 +79,7 @@ else{
     mesh->finalTime = 40.;
 
  }
- 
+
   
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
@@ -250,23 +250,28 @@ else{
 if(strstr(options, "LSERK")){
       printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
       dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-
-      //printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
 }
 if(strstr(options, "SARK3")){ 
       printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
-      //dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-      dt = cfl*dtex;
-     // printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = cfl*dtex;
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
+}
+if(strstr(options, "SAAB3")){ 
+      printf("Time discretization method: Low Storage SAAB  with CFL: %.2f \n",cfl);
+      dt = 0.33* mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = 0.333*cfl*dtex; 
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 }
 if(strstr(options, "LSIMEX")){ 
       printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-      //dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-      dt = cfl*dtex;
+      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = cfl*dtex;
       
-      //printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 }
 
 
@@ -602,6 +607,76 @@ if(strstr(options, "LSIMEX")){
        }
          
   }
+else if(strstr(options, "SAAB3")){ 
+      mesh->o_rhsq2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      mesh->o_rhsq3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+      mesh->o_pmlqx =    
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_rhspmlqx =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+      mesh->o_rhspmlqx2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+      mesh->o_rhspmlqx3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
+
+      mesh->o_pmlqy =    
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_rhspmlqy =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+      mesh->o_rhspmlqy2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+      mesh->o_rhspmlqy3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
+
+
+      // Classical Adams Bashforth Coefficients
+      mesh->mrab[0] = 23.*dt/12. ;
+      mesh->mrab[1] = -4.*dt/3. ;
+      mesh->mrab[2] =  5.*dt/12. ;
+
+      // SAAB NONPML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -mesh->tauInv;
+      dfloat h  = mesh->dt; 
+      //
+      if(fabs(cc*h)>1e-2){
+      mesh->saab[0] = (exp(cc*h) - (5.*cc*h)/2. - 3.*pow(cc,2)*pow(h,2 )+ pow(cc,2)*pow(h,2)*exp(cc*h) + (3.*cc*h*exp(cc*h))/2. - 1.)/(pow(cc,3)*pow(h,2));
+      mesh->saab[1] = (4.*cc*h - 2.*exp(cc*h) + 3.*pow(cc,2)*pow(h,2 )- 2.*cc*h*exp(cc*h) + 2.)/(pow(cc,3)*pow(h,2));
+      mesh->saab[2] = -((3.*cc*h)/2. - exp(cc*h) + pow(cc,2)*pow(h,2 )- (cc*h*exp(cc*h))/2. + 1.)/(pow(cc,3)*pow(h,2));
+      //Define exp(tauInv*dt) 
+      mesh->saabexp = exp(cc*h);
+
+      // SAAB PML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -0.5*mesh->tauInv;
+      //
+      mesh->saabpml[0] = (exp(cc*h) - (5.*cc*h)/2. - 3.*pow(cc,2)*pow(h,2 )+ pow(cc,2)*pow(h,2)*exp(cc*h) + (3.*cc*h*exp(cc*h))/2. - 1.)/(pow(cc,3)*pow(h,2));
+      mesh->saabpml[1] = (4.*cc*h - 2.*exp(cc*h) + 3.*pow(cc,2)*pow(h,2 )- 2.*cc*h*exp(cc*h) + 2.)/(pow(cc,3)*pow(h,2));
+      mesh->saabpml[2] = -((3.*cc*h)/2. - exp(cc*h) + pow(cc,2)*pow(h,2 )- (cc*h*exp(cc*h))/2. + 1.)/(pow(cc,3)*pow(h,2));
+      //Define exp(tauInv*dt) 
+      mesh->saabpmlexp = exp(cc*h);
+      }
+      else{
+
+      mesh->saab[0] = (pow(cc,3)*pow(h,4))/18. + (19.*pow(cc,2)*pow(h,3))/80. + (19.*cc*pow(h,2))/24. + (23.*h)/12.;
+      mesh->saab[1] = -(4.*h)/3. - (5.*cc*pow(h,2))/12. - (pow(cc,2)*pow(h,3))/10. - (7.*pow(cc,3)*pow(h,4))/360.;
+      mesh->saab[2] = (pow(cc,3)*pow(h,4))/180. + (7.*pow(cc,2)*pow(h,3))/240. + (cc*pow(h,2))/8. + (5.*h)/12.;
+      //Define exp(tauInv*h) 
+      mesh->saabexp = exp(cc*h);
+
+      // SAAB PML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -0.5*mesh->tauInv;
+      //
+      mesh->saabpml[0] = (pow(cc,3)*pow(h,4))/18. + (19.*pow(cc,2)*pow(h,3))/80. + (19.*cc*pow(h,2))/24. + (23.*h)/12.;
+      mesh->saabpml[1] = -(4.*h)/3. - (5.*cc*pow(h,2))/12. - (pow(cc,2)*pow(h,3))/10. - (7.*pow(cc,3)*pow(h,4))/360.;
+      mesh->saabpml[2] = (pow(cc,3)*pow(h,4))/180. + (7.*pow(cc,2)*pow(h,3))/240. + (cc*pow(h,2))/8. + (5.*h)/12.;
+      //Define exp(tauInv*dt) 
+      mesh->saabpmlexp = exp(cc*h);
+      }         
+  }
+
+
     else if(strstr(options, "LSIMEX")){ 
     mesh->o_qY =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
@@ -613,28 +688,26 @@ if(strstr(options, "LSIMEX")){
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
 
 
-    if(strstr(options, "PML")){ 
-      // pml variables
-      mesh->o_pmlqx =    
-        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_qSx =
+      if(strstr(options, "PML")){ 
+        // pml variables
+        mesh->o_pmlqx =    
+          mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+        mesh->o_qSx =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+        mesh->o_qYx =
           mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-      mesh->o_qYx =
-        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-      mesh->o_qZx =
-        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+        mesh->o_qZx =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-
-
-      mesh->o_pmlqy =    
-        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_qSy =
-          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-      mesh->o_qYy =
-        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-      mesh->o_qZy =
-        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-    }
+        mesh->o_pmlqy =    
+          mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+        mesh->o_qSy =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+        mesh->o_qYy =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+        mesh->o_qZy =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+      }
   } 
   
   
@@ -961,6 +1034,86 @@ if(strstr(options, "LSIMEX")){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
+
+  }
+
+
+  else if(strstr(options, "SAAB3")){ 
+
+    if(strstr(options, "CUBATURE")){ 
+      printf("Compiling SA volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                   "boltzmannVolumeCub2D",
+                   kernelInfo);
+
+      printf("Compiling SA pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+               "boltzmannSASplitPmlVolumeCub2D",
+               kernelInfo);
+
+       printf("Compiling SA relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+               "boltzmannSARelaxationCub2D",
+               kernelInfo); 
+
+      printf("Compiling SA pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+               "boltzmannSASplitPmlRelaxationCub2D",
+               kernelInfo); 
+
+
+    }
+    else if(strstr(options, "COLLOCATION")){ 
+      printf("Compiling SA volume kernel\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannSAVolume2D",
+                 kernelInfo);
+
+      printf("Compiling SAAB pml volume kernel\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+               "boltzmannSASplitPmlVolume2D",
+               kernelInfo); 
+    }
+
+
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
+
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+
+    //SARK STAGE UPDATE
+    printf("compiling SAAB3 non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+                 "boltzmannSAABUpdate2D",
+                 kernelInfo); 
+
+     //SARK STAGE UPDATE
+    printf("compiling SAAB3 non-pml  update kernel\n");
+    mesh->pmlUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+                 "boltzmannSAAB3SplitPmlUpdate2D",
+                 kernelInfo); 
+
+    mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);   
+
 
   }
 
