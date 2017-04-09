@@ -115,9 +115,6 @@ kernel void boltzmannSARK3StageUpdate2D(const iint Nelements,
       dfloat4 rhsq2a = rhsq2[base+0];
       dfloat4 rhsq2b = rhsq2[base+1];
 
-      // // Noneed to use it !
-      // dfloat4 qa = q[base+0];
-      // dfloat4 qb = q[base+1];
 
       dfloat4 qoa = qold[base+0];
       dfloat4 qob = qold[base+1];
@@ -472,138 +469,7 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
 }
 
 
-kernel void boltzmannSARK54StageUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat dt, 
-            const dfloat expdt, 
-            const dfloat rka,
-            const dfloat erka,
-            const dfloat rkb,
-            const dfloat erkb,
-            const dfloat rkc,
-            const dfloat erkc,
-            const dfloat rkd,
-            const dfloat erkd,
-            const dfloat4 * restrict rhsq1,
-            const dfloat4 * restrict rhsq2,
-            const dfloat4 * restrict rhsq3,
-            const dfloat4 * restrict rhsq4,
-            const dfloat4 * restrict qold,
-                  dfloat4 * restrict q){
-  
-  // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint element = elementIds[e];
-      const iint base = 2*(n + element*p_Np);
 
-      dfloat4 rhsq1a = rhsq1[base+0];
-      dfloat4 rhsq1b = rhsq1[base+1];
-
-      dfloat4 rhsq2a = rhsq2[base+0];
-      dfloat4 rhsq2b = rhsq2[base+1];
-
-      dfloat4 rhsq3a = rhsq3[base+0];
-      dfloat4 rhsq3b = rhsq3[base+1];
-
-      dfloat4 rhsq4a = rhsq4[base+0];
-      dfloat4 rhsq4b = rhsq4[base+1];
-
-      
-      dfloat4 qa = q[base+0];
-      dfloat4 qb = q[base+1];
-
-      dfloat4 qoa = qold[base+0];
-      dfloat4 qob = qold[base+1];
-      
-      //
-      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x );
-      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y ); 
-      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z ); 
-      
-      //
-      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w); // +erkc*rhsq3a.w );
-      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x); //+erkc*rhsq3b.x );
-      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y);//+erkc*rhsq3b.y );
-      
-      q[base+0] = qa;
-      q[base+1] = qb;
-
-    }
-  }
-}
-
-
-
-kernel void boltzmannSARK54Update2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat dt, 
-            const dfloat expdt, 
-            const dfloat rka,
-            const dfloat erka,
-            const dfloat rkb,
-            const dfloat erkb,
-            const dfloat rkc,
-            const dfloat erkc,
-            const dfloat rkd,
-            const dfloat erkd,
-            const dfloat rke,
-            const dfloat erke,
-            const dfloat4 * restrict rhsq1,
-            const dfloat4 * restrict rhsq2,
-            const dfloat4 * restrict rhsq3,
-            const dfloat4 * restrict rhsq4,
-            const dfloat4 * restrict rhsq5,
-                  dfloat4 * restrict qold,
-                  dfloat4 * restrict q){
-  
-  // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint element = elementIds[e];
-      const iint base = 2*(n + element*p_Np);
-
-      dfloat4 rhsq1a = rhsq1[base+0];
-      dfloat4 rhsq1b = rhsq1[base+1];
-
-      dfloat4 rhsq2a = rhsq2[base+0];
-      dfloat4 rhsq2b = rhsq2[base+1];
-
-      dfloat4 rhsq3a = rhsq3[base+0];
-      dfloat4 rhsq3b = rhsq3[base+1];
-
-      dfloat4 rhsq4a = rhsq4[base+0];
-      dfloat4 rhsq4b = rhsq4[base+1];
-
-      dfloat4 rhsq5a = rhsq5[base+0];
-      dfloat4 rhsq5b = rhsq5[base+1];
-
-      
-      dfloat4 qa = q[base+0];
-      dfloat4 qb = q[base+1];
-
-      dfloat4 qoa = qold[base+0];
-      dfloat4 qob = qold[base+1];
-      
-      //
-      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x + rke*rhsq5a.x );
-      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y + rke*rhsq5a.y ); 
-      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z + rke*rhsq5a.z ); 
-      
-      //
-      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w+ erke*rhsq5a.w); 
-      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x+ erke*rhsq5b.x); 
-      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y+ erke*rhsq5b.y);
-      
-      q[base+0] = qa;
-      q[base+1] = qb;
-
-       qold[base+0] = qa;
-      qold[base+1] = qb;
-
-    }
-  }
-}
 
 
 
@@ -666,6 +532,201 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
     }
   }
 }
+
+
+
+
+kernel void boltzmannSAAB3SplitPmlUpdate2D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat ramp, 
+              const dfloat ab1,
+              const dfloat ab2,
+              const dfloat ab3,
+              const dfloat saab1,
+              const dfloat saab2,
+              const dfloat saab3,
+              const dfloat * restrict rhsqx1,
+              const dfloat * restrict rhsqy1,  
+                    dfloat * restrict rhsqx2,
+                    dfloat * restrict rhsqy2,
+                    dfloat * restrict rhsqx3,
+                    dfloat * restrict rhsqy3,
+                    dfloat * restrict qx,
+                    dfloat * restrict qy,
+                    dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint element = elementIds[e];
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
+
+
+      dfloat rhsqx11 = rhsqx1[id1];
+      dfloat rhsqx12 = rhsqx1[id2];
+      dfloat rhsqx13 = rhsqx1[id3];
+      dfloat rhsqx14 = rhsqx1[id4];
+      dfloat rhsqx15 = rhsqx1[id5];
+      dfloat rhsqx16 = rhsqx1[id6];
+
+      dfloat rhsqy11 = rhsqy1[id1];
+      dfloat rhsqy12 = rhsqy1[id2];
+      dfloat rhsqy13 = rhsqy1[id3];
+      dfloat rhsqy14 = rhsqy1[id4];
+      dfloat rhsqy15 = rhsqy1[id5];
+      dfloat rhsqy16 = rhsqy1[id6];
+
+      //
+      dfloat rhsqx21 = rhsqx2[id1];
+      dfloat rhsqx22 = rhsqx2[id2];
+      dfloat rhsqx23 = rhsqx2[id3];
+      dfloat rhsqx24 = rhsqx2[id4];
+      dfloat rhsqx25 = rhsqx2[id5];
+      dfloat rhsqx26 = rhsqx2[id6];
+
+      dfloat rhsqy21 = rhsqy2[id1];
+      dfloat rhsqy22 = rhsqy2[id2];
+      dfloat rhsqy23 = rhsqy2[id3];
+      dfloat rhsqy24 = rhsqy2[id4];
+      dfloat rhsqy25 = rhsqy2[id5];
+      dfloat rhsqy26 = rhsqy2[id6];
+
+      //
+      dfloat rhsqx31 = rhsqx3[id1];
+      dfloat rhsqx32 = rhsqx3[id2];
+      dfloat rhsqx33 = rhsqx3[id3];
+      dfloat rhsqx34 = rhsqx3[id4];
+      dfloat rhsqx35 = rhsqx3[id5];
+      dfloat rhsqx36 = rhsqx3[id6];
+
+      dfloat rhsqy31 = rhsqy3[id1];
+      dfloat rhsqy32 = rhsqy3[id2];
+      dfloat rhsqy33 = rhsqy3[id3];
+      dfloat rhsqy34 = rhsqy3[id4];
+      dfloat rhsqy35 = rhsqy3[id5];
+      dfloat rhsqy36 = rhsqy3[id6];
+
+      //
+      dfloat qx1 = qx[id1];
+      dfloat qx2 = qx[id2];
+      dfloat qx3 = qx[id3];
+      dfloat qx4 = qx[id4];
+      dfloat qx5 = qx[id5];
+      dfloat qx6 = qx[id6];
+
+      dfloat qy1 = qy[id1];
+      dfloat qy2 = qy[id2];
+      dfloat qy3 = qy[id3];
+      dfloat qy4 = qy[id4];
+      dfloat qy5 = qy[id5];
+      dfloat qy6 = qy[id6];
+
+      //
+      qx1  = qx1      +   ab1*rhsqx11  +  ab2*rhsqx21  +  ab3*rhsqx31;
+      qx2  = qx2      +   ab1*rhsqx12  +  ab2*rhsqx22  +  ab3*rhsqx32;
+      qx3  = qx3      +   ab1*rhsqx13  +  ab2*rhsqx23  +  ab3*rhsqx33;
+      qx4  = expdt*qx4 + saab1*rhsqx14 + saab2*rhsqx24 + saab3*rhsqx34;
+      qx5  = expdt*qx5 + saab1*rhsqx15 + saab2*rhsqx25 + saab3*rhsqx35;
+      qx6  = expdt*qx6 + saab1*rhsqx16 + saab2*rhsqx26 + saab3*rhsqx36;
+      //
+      qy1  = qy1 +        ab1*rhsqy11  +  ab2*rhsqy21  +   ab3*rhsqy31;
+      qy2  = qy2 +        ab1*rhsqy12  +  ab2*rhsqy22  +   ab3*rhsqy32;
+      qy3  = qy3 +        ab1*rhsqy13  +  ab2*rhsqy23  +   ab3*rhsqy33;
+      qy4  = expdt*qy4 + saab1*rhsqy14 + saab2*rhsqy24 + saab3*rhsqy34;
+      qy5  = expdt*qy5 + saab1*rhsqy15 + saab2*rhsqy25 + saab3*rhsqy35;
+      qy6  = expdt*qy6 + saab1*rhsqy16 + saab2*rhsqy26 + saab3*rhsqy36;
+     
+            
+      dfloat4 qa, qb;
+      qa.x = p_q1bar + qx1 + qy1;
+      qa.y = ramp*p_q2bar + qx2 + qy2;
+      qa.z = ramp*p_q3bar + qx3 + qy3;
+      qa.w = ramp*ramp*p_q4bar + qx4 + qy4;
+      
+      qb.x = ramp*ramp*p_q5bar + qx5 + qy5;
+      qb.y = ramp*ramp*p_q6bar + qx6 + qy6;
+
+      q[2*(n+element*p_Np)] = qa;
+      q[2*(n+element*p_Np)+1] = qb;
+
+
+      qx[id1] = qx1;
+      qx[id2] = qx2;
+      qx[id3] = qx3;
+      qx[id4] = qx4;
+      qx[id5] = qx5;
+      qx[id6] = qx6;
+
+      qy[id1] = qy1;
+      qy[id2] = qy2;
+      qy[id3] = qy3;
+      qy[id4] = qy4;
+      qy[id5] = qy5;
+      qy[id6] = qy6;
+      //
+      rhsqx2[id1] = rhsqx11;
+      rhsqx2[id2] = rhsqx12;
+      rhsqx2[id3] = rhsqx13;
+      rhsqx2[id4] = rhsqx14;
+      rhsqx2[id5] = rhsqx15;
+      rhsqx2[id6] = rhsqx16;
+      //
+      rhsqx3[id1] = rhsqx21;
+      rhsqx3[id2] = rhsqx22;
+      rhsqx3[id3] = rhsqx23;
+      rhsqx3[id4] = rhsqx24;
+      rhsqx3[id5] = rhsqx25;
+      rhsqx3[id6] = rhsqx26;
+      //
+      //
+      rhsqy2[id1] = rhsqy11;
+      rhsqy2[id2] = rhsqy12;
+      rhsqy2[id3] = rhsqy13;
+      rhsqy2[id4] = rhsqy14;
+      rhsqy2[id5] = rhsqy15;
+      rhsqy2[id6] = rhsqy16;
+      //
+      rhsqy3[id1] = rhsqy21;
+      rhsqy3[id2] = rhsqy22;
+      rhsqy3[id3] = rhsqy23;
+      rhsqy3[id4] = rhsqy24;
+      rhsqy3[id5] = rhsqy25;
+      rhsqy3[id6] = rhsqy26;
+
+
+
+
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
@@ -1031,157 +1092,7 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
 
 
 
-// // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannSAABUpdateFirst2D(const iint Nelements,
-//             const iint * restrict elementIds,
-//             const dfloat dt,  
-//             const dfloat4 * restrict rhsq,
-//                   dfloat4 * restrict rhsq2,
-//                   dfloat4 * restrict rhsq3,
-//                   dfloat4 * restrict q){
-//   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
 
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
-
-//       dfloat4 rhsqa = rhsq[id0];
-//       dfloat4 rhsqb = rhsq[id1];
-
-//       dfloat4 qa  = q[id0];
-//       dfloat4 qb  = q[id1];
-
-//       dfloat c1 = -(p_expdt - 1.)/p_tauInv;
-      
-//       //
-//       qa.x += dt*rhsqa.x;
-//       qa.y += dt*rhsqa.y;
-//       qa.z += dt*rhsqa.z;
-//       qa.w  = p_expdt*qa.w + c1*rhsqa.w; 
-
-//       qb.x  = p_expdt*qb.x + c1*rhsqb.x;
-//       qb.y  = p_expdt*qb.y + c1*rhsqb.y;
-
-            
-//       q[id0] = qa;
-//       q[id1] = qb;
-//       //
-//       rhsq2[id0] = rhsqa;
-//       rhsq2[id1] = rhsqb;
-//       //
-//       rhsq3[id0] = rhsqa;
-//       rhsq3[id1] = rhsqb;
-
-//     }
-//   }
-// }
-
-
-// // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannSAABUpdateSecond2D(const iint Nelements,
-//             const iint * restrict elementIds,
-//             const dfloat dt,  
-//             const dfloat4 * restrict rhsq,
-//                   dfloat4 * restrict rhsq2,
-//                   dfloat4 * restrict rhsq3,
-//                   dfloat4 * restrict q){
-//   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
-
-//       dfloat4 rhsq1a = rhsq[id0];
-//       dfloat4 rhsq1b = rhsq[id1];
-//       //
-//       dfloat4 rhsq2a = rhsq2[id0];
-//       dfloat4 rhsq2b = rhsq2[id1];
-//       //
-//       dfloat4 qa  = q[id0];
-//       dfloat4 qb  = q[id1];
-      
-//       //Computes only once
-//       dfloat c1 = (p_expdt + 2.*dt*p_tauInv - dt*p_tauInv*p_expdt - 1.)/(dt*p_tauInv*p_tauInv);
-//       dfloat c2 = -(p_expdt + dt*p_tauInv - 1.)/(dt*p_tauInv*p_tauInv);
-
-// //
-//       qa.x += 1.5*dt*rhsq1a.x - 0.5*dt*rhsq2a.x;
-//       qa.y += 1.5*dt*rhsq1a.y - 0.5*dt*rhsq2a.y;
-//       qa.z += 1.5*dt*rhsq1a.z - 0.5*dt*rhsq2a.z;
-//       qa.w = p_expdt*qa.w + c1*rhsq1a.w - c2*rhsq2a.w; 
-
-//       qb.x = p_expdt*qb.x + c1*rhsq1b.x - c2*rhsq2b.x; 
-//       qb.y = p_expdt*qb.y + c1*rhsq1b.y - c2*rhsq2b.y;
-
-            
-//       q[id0] = qa;
-//       q[id1] = qb;
-//       //
-//       rhsq2[id0] = rhsq1a;
-//       rhsq2[id1] = rhsq1b;
-//       //
-//       rhsq3[id0] = rhsq2a;
-//       rhsq3[id1] = rhsq2b;
-
-//     }
-//   }
-// }
-
-
-// // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannSAABUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
-//             const dfloat dt,  
-//             const dfloat4 * restrict rhsq,
-//                   dfloat4 * restrict rhsq2,
-//                   dfloat4 * restrict rhsq3,
-//                   dfloat4 * restrict q){
-//   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
-
-//       dfloat4 rhsq1a = rhsq[id0];
-//       dfloat4 rhsq1b = rhsq[id1];
-//       //
-//       dfloat4 rhsq2a = rhsq2[id0];
-//       dfloat4 rhsq2b = rhsq2[id1];
-//       //
-//       dfloat4 rhsq3a = rhsq3[id0];
-//       dfloat4 rhsq3b = rhsq3[id1];
-//       //
-//       dfloat4 qa  = q[id0];
-//       dfloat4 qb  = q[id1];
-      
-// //
-//       qa.x += p_ab1*rhsq1a.x + p_ab2*rhsq2a.x + p_ab3*rhsq3a.x;
-//       qa.y += p_ab1*rhsq1a.y + p_ab2*rhsq2a.y + p_ab3*rhsq3a.y;
-//       qa.z += p_ab1*rhsq1a.z + p_ab2*rhsq2a.z + p_ab3*rhsq3a.z;
-//       qa.w  = p_expdt*qa.w + p_saab1*rhsq1a.w + p_saab2*rhsq2a.w + p_saab3*rhsq3a.w;
-
-//       qb.x = p_expdt*qb.x + p_saab1*rhsq1b.x + p_saab2*rhsq2b.x + p_saab3*rhsq3b.x; 
-//       qb.y = p_expdt*qb.y + p_saab1*rhsq1b.y + p_saab2*rhsq2b.y + p_saab3*rhsq3b.y; 
-
-            
-//       q[id0] = qa;
-//       q[id1] = qb;
-//       //
-//       rhsq2[id0] = rhsq1a;
-//       rhsq2[id1] = rhsq1b;
-//       //
-//       rhsq3[id0] = rhsq2a;
-//       rhsq3[id1] = rhsq2b;
-
-//     }
-//   }
-// }
 
 // kernel void boltzmannSARKUpdate2D(const iint Nelements,
 //             const iint * restrict elementIds,
@@ -1625,7 +1536,6 @@ kernel void boltzmannLSIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
       const iint element = elementIds[e];
-
       //
       const iint base = n + element*p_Nfields*p_Np;
       const iint id1 = base + 0*p_Np;
@@ -1782,8 +1692,6 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       const iint id4 = base + 3*p_Np;
       const iint id5 = base + 4*p_Np;
       const iint id6 = base + 5*p_Np;
-
-
      
       // PML UPDATES
       dfloat qxi1 = qZx[id1];
@@ -1799,9 +1707,7 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       dfloat qyi4 = qZy[id4];
       dfloat qyi5 = qZy[id5];
       dfloat qyi6 = qZy[id6]; 
-      
-
-      // PML UPDATES
+      // 
       dfloat qxe1 = qYx[id1];
       dfloat qxe2 = qYx[id2];
       dfloat qxe3 = qYx[id3];
@@ -1815,47 +1721,46 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
       dfloat qye4 = qYy[id4];
       dfloat qye5 = qYy[id5];
       dfloat qye6 = qYy[id6]; 
-     
-
-      // PML UPDATES
+      
+      // 
       dfloat qsx1 = qSx[id1];
       dfloat qsx2 = qSx[id2];
       dfloat qsx3 = qSx[id3];
       dfloat qsx4 = qSx[id4];
       dfloat qsx5 = qSx[id5];
       dfloat qsx6 = qSx[id6]; 
-      // PML UPDATES
+      // 
       dfloat qsy1 = qSy[id1];
       dfloat qsy2 = qSy[id2];
       dfloat qsy3 = qSy[id3];
       dfloat qsy4 = qSy[id4];
       dfloat qsy5 = qSy[id5];
       dfloat qsy6 = qSy[id6];  
-      
 
-      // PML UPDATES
+      // 
       dfloat qx1 =qsx1 + akk*dt*( qxe1 + qxi1);
       dfloat qx2 =qsx2 + akk*dt*( qxe2 + qxi2);
       dfloat qx3 =qsx3 + akk*dt*( qxe3 + qxi3);
       dfloat qx4 =qsx4 + akk*dt*( qxe4 + qxi4);
       dfloat qx5 =qsx5 + akk*dt*( qxe5 + qxi5);
       dfloat qx6 =qsx6 + akk*dt*( qxe6 + qxi6); 
-       // PML UPDATES
+       // 
       dfloat qy1 =qsy1 + akk*dt*( qye1 + qyi1);
       dfloat qy2 =qsy2 + akk*dt*( qye2 + qyi2);
       dfloat qy3 =qsy3 + akk*dt*( qye3 + qyi3);
       dfloat qy4 =qsy4 + akk*dt*( qye4 + qyi4);
       dfloat qy5 =qsy5 + akk*dt*( qye5 + qyi5);
       dfloat qy6 =qsy6 + akk*dt*( qye6 + qyi6); 
+      //
 
-       // PML UPDATES
+     // 
       pmlqx[id1] =qx1;
       pmlqx[id2] =qx2;
       pmlqx[id3] =qx3;
       pmlqx[id4] =qx4;
       pmlqx[id5] =qx5;
       pmlqx[id6] =qx6; 
-       // PML UPDATES
+      // 
       pmlqy[id1] =qy1;
       pmlqy[id2] =qy2;
       pmlqy[id3] =qy3;
@@ -1883,6 +1788,11 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
     }
   }
 }
+
+
+
+
+
 
 // kernel void boltzmannLSERKSplitPmlUpdate2D(const iint Nelements,
 //               const iint * restrict elementIds, 
@@ -2071,4 +1981,140 @@ kernel void boltzmannLSIMEXSplitPmlUpdate2D(const iint Nelements,
 //       NT[base+5*p_Np] = NT6;
 //     }
 //   }
-}
+//}
+
+
+
+
+// kernel void boltzmannSARK54StageUpdate2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat dt, 
+//             const dfloat expdt, 
+//             const dfloat rka,
+//             const dfloat erka,
+//             const dfloat rkb,
+//             const dfloat erkb,
+//             const dfloat rkc,
+//             const dfloat erkc,
+//             const dfloat rkd,
+//             const dfloat erkd,
+//             const dfloat4 * restrict rhsq1,
+//             const dfloat4 * restrict rhsq2,
+//             const dfloat4 * restrict rhsq3,
+//             const dfloat4 * restrict rhsq4,
+//             const dfloat4 * restrict qold,
+//                   dfloat4 * restrict q){
+  
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+//       const iint element = elementIds[e];
+//       const iint base = 2*(n + element*p_Np);
+
+//       dfloat4 rhsq1a = rhsq1[base+0];
+//       dfloat4 rhsq1b = rhsq1[base+1];
+
+//       dfloat4 rhsq2a = rhsq2[base+0];
+//       dfloat4 rhsq2b = rhsq2[base+1];
+
+//       dfloat4 rhsq3a = rhsq3[base+0];
+//       dfloat4 rhsq3b = rhsq3[base+1];
+
+//       dfloat4 rhsq4a = rhsq4[base+0];
+//       dfloat4 rhsq4b = rhsq4[base+1];
+
+      
+//       dfloat4 qa = q[base+0];
+//       dfloat4 qb = q[base+1];
+
+//       dfloat4 qoa = qold[base+0];
+//       dfloat4 qob = qold[base+1];
+      
+//       //
+//       qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x );
+//       qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y ); 
+//       qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z ); 
+      
+//       //
+//       qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w); // +erkc*rhsq3a.w );
+//       qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x); //+erkc*rhsq3b.x );
+//       qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y);//+erkc*rhsq3b.y );
+      
+//       q[base+0] = qa;
+//       q[base+1] = qb;
+
+//     }
+//   }
+// }
+
+
+
+// kernel void boltzmannSARK54Update2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat dt, 
+//             const dfloat expdt, 
+//             const dfloat rka,
+//             const dfloat erka,
+//             const dfloat rkb,
+//             const dfloat erkb,
+//             const dfloat rkc,
+//             const dfloat erkc,
+//             const dfloat rkd,
+//             const dfloat erkd,
+//             const dfloat rke,
+//             const dfloat erke,
+//             const dfloat4 * restrict rhsq1,
+//             const dfloat4 * restrict rhsq2,
+//             const dfloat4 * restrict rhsq3,
+//             const dfloat4 * restrict rhsq4,
+//             const dfloat4 * restrict rhsq5,
+//                   dfloat4 * restrict qold,
+//                   dfloat4 * restrict q){
+  
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+//       const iint element = elementIds[e];
+//       const iint base = 2*(n + element*p_Np);
+
+//       dfloat4 rhsq1a = rhsq1[base+0];
+//       dfloat4 rhsq1b = rhsq1[base+1];
+
+//       dfloat4 rhsq2a = rhsq2[base+0];
+//       dfloat4 rhsq2b = rhsq2[base+1];
+
+//       dfloat4 rhsq3a = rhsq3[base+0];
+//       dfloat4 rhsq3b = rhsq3[base+1];
+
+//       dfloat4 rhsq4a = rhsq4[base+0];
+//       dfloat4 rhsq4b = rhsq4[base+1];
+
+//       dfloat4 rhsq5a = rhsq5[base+0];
+//       dfloat4 rhsq5b = rhsq5[base+1];
+
+      
+//       dfloat4 qa = q[base+0];
+//       dfloat4 qb = q[base+1];
+
+//       dfloat4 qoa = qold[base+0];
+//       dfloat4 qob = qold[base+1];
+      
+//       //
+//       qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x + rkd*rhsq4a.x + rke*rhsq5a.x );
+//       qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y + rkd*rhsq4a.y + rke*rhsq5a.y ); 
+//       qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z + rkd*rhsq4a.z + rke*rhsq5a.z ); 
+      
+//       //
+//       qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w + erkc*rhsq3a.w + erkd*rhsq4a.w+ erke*rhsq5a.w); 
+//       qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x + erkc*rhsq3b.x + erkd*rhsq4b.x+ erke*rhsq5b.x); 
+//       qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y + erkc*rhsq3b.y + erkd*rhsq4b.y+ erke*rhsq5b.y);
+      
+//       q[base+0] = qa;
+//       q[base+1] = qb;
+
+//        qold[base+0] = qa;
+//       qold[base+1] = qb;
+
+//     }
+//   }
+// }
