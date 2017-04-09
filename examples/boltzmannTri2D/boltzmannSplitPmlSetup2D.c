@@ -4,7 +4,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-void boltzmannSplitPmlSetup2D(mesh2D *mesh){
+void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
   mesh->Nfields = 8;
   
@@ -40,46 +40,45 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
   mesh->sigmax= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   mesh->sigmay= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
-  // set temperature, gas constant, wave speeds
-
-   
-
-#if PML_ENABLED
-    printf("Starting initial conditions\n");
-    dfloat Ma = 0.1;
+  // SET SOLVER OPTIONS 
+  // Initial Conditions, Flow Properties
+  dfloat Ma = 0.f , Re= 0.f, rho = 1.f, u = 0.f, v = 0.f, nu = 0.f; 
+  dfloat sigma11 = 0.f , sigma12 = 0.f, sigma22 = 0.f;  
+if(strstr(options, "PML")){
+    printf("Starting initial conditions for PML\n");
+    Ma = 0.1;
     mesh->RT  = 9.0;
     mesh->sqrtRT = sqrt(mesh->RT);  
 
-    dfloat Re = 1000/mesh->sqrtRT; 
+    Re = 1000/mesh->sqrtRT; 
     mesh->tauInv = mesh->sqrtRT * Re / Ma;
-    dfloat nu = mesh->RT/mesh->tauInv; 
+    nu = mesh->RT/mesh->tauInv; 
     // Uniform Flow Condition
-    dfloat rho = 1, u = 1., v = 0.; 
-    dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
-    //
+    rho = 1., u = 1., v = 0.; 
+    sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
     mesh->finalTime = 20.;
-
- #else
-    dfloat Ma = 0.1;
+}
+else{
+  printf("Starting initial conditions for NONPML\n");
+    Ma = 0.1;
     mesh->RT  = 9.0;
     mesh->sqrtRT = sqrt(mesh->RT);  
 
-    dfloat Re = 100/mesh->sqrtRT; 
+    Re = 100/mesh->sqrtRT; 
     mesh->tauInv = mesh->sqrtRT * Re / Ma;
-    dfloat nu = mesh->RT/mesh->tauInv; 
+    nu = mesh->RT/mesh->tauInv; 
     // Create Periodic Boundaries
     printf("Creating periodic connections if exist \n");
     dfloat xper = 1.0;   dfloat yper = 0.0;
     boltzmannPeriodic2D(mesh,xper,yper);
 
     printf("starting initial conditions\n"); //Zero Flow Conditions
-    dfloat rho = 1, u = 0., v = 0.; 
-    dfloat sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
      //
     mesh->finalTime = 40.;
 
- #endif 
+ }
 
   
   dfloat ramp, drampdt;
@@ -102,20 +101,20 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-#if 0
-      boltzmannCavitySolution2D(x, y, t,
-				mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
-#endif
+      #if 0
+            boltzmannCavitySolution2D(x, y, t,
+      				mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      #endif
 
-#if 0
-      boltzmannGaussianPulse2D(x, y, t,
-			       mesh->q+cnt,
-			       mesh->q+cnt+1,
-			       mesh->q+cnt+2,
-			       mesh->q+cnt+3,
-			       mesh->q+cnt+4,
-			       mesh->q+cnt+5);
-#endif
+      #if 0
+            boltzmannGaussianPulse2D(x, y, t,
+      			       mesh->q+cnt,
+      			       mesh->q+cnt+1,
+      			       mesh->q+cnt+2,
+      			       mesh->q+cnt+3,
+      			       mesh->q+cnt+4,
+      			       mesh->q+cnt+5);
+      #endif
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
       mesh->q[cnt+1] = ramp*q2bar;
       mesh->q[cnt+2] = ramp*q3bar;
@@ -171,48 +170,48 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
     cy /= mesh->Nverts;
     
     // add element outside [xmin,xmax]x[ymin,ymax] to pml
-#if 0
-    if(cx<xmin || cx>xmax)
-      mesh->sigmax[e] = xsigma;
-    if(cy<ymin || cy>ymax)
-      mesh->sigmay[e] = ysigma;
-#endif
+    #if 0
+        if(cx<xmin || cx>xmax)
+          mesh->sigmax[e] = xsigma;
+        if(cy<ymin || cy>ymax)
+          mesh->sigmay[e] = ysigma;
+    #endif
 
     iint isPml = 0;
     
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat x = mesh->x[n + e*mesh->Np];
-      dfloat y = mesh->y[n + e*mesh->Np];
+  for(iint n=0;n<mesh->Np;++n){
+    dfloat x = mesh->x[n + e*mesh->Np];
+    dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
 
-      if(cx>xmax){
-	//  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
-	isPml = 1;
-      }
-      if(cx<xmin){
-	//  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
-	isPml = 1;
-      }
-      if(cy>ymax){
-	//	  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
-	  isPml = 1;
-      }
-      if(cy<ymin){
-	//  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
-	isPml = 1;
-      }
+    if(cx>xmax){
+      //  mesh->sigmax[mesh->Np*e + n] = xsigma;
+      mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+      isPml = 1;
     }
-    
-    if(isPml)
-      pmlElementIds[pmlNelements++] = e;
-    else
-      nonPmlElementIds[nonPmlNelements++] = e;
-    
+    if(cx<xmin){
+    //  mesh->sigmax[mesh->Np*e + n] = xsigma;
+      mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+      isPml = 1;
+    }
+    if(cy>ymax){
+    //	  mesh->sigmay[mesh->Np*e + n] = ysigma;
+      mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+      isPml = 1;
+    }
+    if(cy<ymin){
+    //  mesh->sigmay[mesh->Np*e + n] = ysigma;
+      mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+      isPml = 1;
+    }
   }
+    
+  if(isPml)
+    pmlElementIds[pmlNelements++] = e;
+  else
+    nonPmlElementIds[nonPmlNelements++] = e;
+    
+}
 
 
 
@@ -228,11 +227,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
-
-      // A = 0.5*h*L
-      // => J*2 = 0.5*h*sJ*2
-      // => h = 2*J/sJ
-      
+     
       dfloat hest = 2./(sJ*invJ);
 
       hmin = mymin(hmin, hest);
@@ -242,33 +237,42 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh){
 
 
   
-dfloat cfl = 0.5; 
-
-//
+  dfloat cfl = 0.5; 
   dfloat magVelocity = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity = mymax(magVelocity,1.0); // Correction for initial zero velocity
   //
   dfloat dtex = hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
   dfloat dtim = 4./(mesh->tauInv*magVelocity);
 
-  // AK: Set time step size
-#if TIME_DISC==LSERK
-      printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
-      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+  dfloat dt = 0.f;
 
+  // AK: Set time step size
+if(strstr(options, "LSERK")){
+      printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
+      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
-#elif TIME_DISC==SARK3 
+}
+if(strstr(options, "SARK3")){ 
       printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
-      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = cfl*dtex;
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
-#elif TIME_DISC==LSIMEX
+}
+if(strstr(options, "SAAB3")){ 
+      printf("Time discretization method: Low Storage SAAB  with CFL: %.2f \n",cfl);
+      dt = 0.33* mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = 0.333*cfl*dtex; 
+      printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
+}
+if(strstr(options, "LSIMEX")){ 
       printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-      dfloat dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+      //dt = cfl*dtex;
       
       printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
-#endif
+}
 
 
 
@@ -312,7 +316,7 @@ dfloat cfl = 0.5;
 
 
 
-  #if TIME_DISC==LSERK 
+  if(strstr(options, "LSERK")){ 
     mesh->o_pmlqx =    
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
     mesh->o_rhspmlqx =
@@ -327,7 +331,8 @@ dfloat cfl = 0.5;
     mesh->o_respmlqy =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);  
 
-  #elif TIME_DISC==SARK3
+  }
+  else if(strstr(options, "SARK3")){ 
     mesh->o_qold =
         mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
@@ -371,7 +376,7 @@ dfloat cfl = 0.5;
     mesh->o_rhspmlqy3 =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-        //
+      //
       for(int i=0; i<5; i++){
         for(int j=0; j<5; j++){
           mesh->sarka[i][j] = 0.0;
@@ -383,12 +388,12 @@ dfloat cfl = 0.5;
         mesh->sarkpmle[i] = 0.0;     
       }
 
-     dfloat coef = -mesh->tauInv;
-     dfloat  h   = mesh->dt; 
+      dfloat coef = -mesh->tauInv;
+      dfloat  h   = mesh->dt; 
 
 
 
-      #if 0 // First version of SARK
+      #if 1 // First version of SARK
      // Base Runge-Kutta Method
      dfloat a21 = 1./3.;   dfloat a31 = -3./16. ;    dfloat a32 = 15./16.;
      dfloat b1 = 1./6.;    dfloat b2 = 3./10.;       dfloat b3 = 8./15.; 
@@ -410,251 +415,300 @@ dfloat cfl = 0.5;
 
      printf("Coef*dt = %.8e", coef*dt);
 
-     if(fabs(coef*h)>1e-2){
+         if(fabs(coef*h)>1e-2){
+            #if 1  // First Version
+
+           //  Exponential Coefficients
+           mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+           mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
+           mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+
+           // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+           mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                              /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                              /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+           mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                              /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                              /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+           mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                              /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+           //
+              //
+           mesh->sarke[0] = exp(coef*h*c2); 
+           mesh->sarke[1] = exp(coef*h*c3); 
+           mesh->sarke[2] = exp(coef*h*1.0);
+
+           // PML Region Coefficients
+           coef = 0.5*coef; 
+            //  Exponential Coefficients
+           mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
+           mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
+           mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+
+           // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+           mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
+                              /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
+                              /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
+           mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
+                              /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
+                              /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
+           mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
+                              /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
+
+             //
+           mesh->sarkpmle[0] = exp(coef*h*c2); 
+           mesh->sarkpmle[1] = exp(coef*h*c3); 
+           mesh->sarkpmle[2] = exp(coef*h*1.0);
 
 
 
-        #if 0
+            #else //Second formulation 
 
-       //  Exponential Coefficients
-       mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-       mesh->sarka[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
-       mesh->sarka[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+              //  Exponential Coefficients
+           mesh->sarka[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
+           mesh->sarka[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
+           mesh->sarka[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
 
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
-                          /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
-                          /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
-       mesh->sarkb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
-                          /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
-                          /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-       mesh->sarkb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
-                          /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
-       //
-          //
-       mesh->sarke[0] = exp(coef*h*c2); 
-       mesh->sarke[1] = exp(coef*h*c3); 
-       mesh->sarke[2] = exp(coef*h*1.0);
+           // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+           mesh->sarkb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
+           mesh->sarkb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
+           mesh->sarkb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4. - coef*h))/ (pow(coef*h,3)) ;
+           //
+             //
+           mesh->sarke[0] = exp(coef*h*c2); 
+           mesh->sarke[1] = exp(coef*h*c3); 
+           mesh->sarke[2] = exp(coef*h*1.0);
 
-       //
-       // PML Region Coefficients
-       coef = 0.5*coef; 
-        //  Exponential Coefficients
-       mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-       mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
-       mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
+           //
+           // PML Region Coefficients
+           coef = 0.5*coef; 
+              //  Exponential Coefficients
+           mesh->sarkpmla[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
+           mesh->sarkpmla[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
+           mesh->sarkpmla[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
 
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
-                          /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
-                          /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
-       mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
-                          /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
-                          /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-       mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
-                          /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
-
-         //
-       mesh->sarkpmle[0] = exp(coef*h*c2); 
-       mesh->sarkpmle[1] = exp(coef*h*c3); 
-       mesh->sarkpmle[2] = exp(coef*h*1.0);
-
-
-
-        #else
-
-          //  Exponential Coefficients
-       mesh->sarka[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
-       mesh->sarka[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
-       mesh->sarka[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
-
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
-       mesh->sarkb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
-       mesh->sarkb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4. - coef*h))/ (pow(coef*h,3)) ;
-       //
-         //
-       mesh->sarke[0] = exp(coef*h*c2); 
-       mesh->sarke[1] = exp(coef*h*c3); 
-       mesh->sarke[2] = exp(coef*h*1.0);
-
-       //
-       // PML Region Coefficients
-       coef = 0.5*coef; 
-          //  Exponential Coefficients
-       mesh->sarkpmla[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
-       mesh->sarkpmla[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
-       mesh->sarkpmla[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
-
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkpmlb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
-       mesh->sarkpmlb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
-       mesh->sarkpmlb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4.- coef*h))/ (pow(coef*h,3)) ;
-       //
-       //
-       mesh->sarkpmle[0] = exp(coef*h*c2); 
-       mesh->sarkpmle[1] = exp(coef*h*c3); 
-       mesh->sarkpmle[2] = exp(coef*h*1.0);
-   
-
-
-        #endif
-   
-
-   }else{
-
-    printf("Computing SARK coefficients  with 3th order Taylor series expansion\n");
-
-    #if 0
-
-     //  fifth Order Taylor Series Expansion
-     mesh->sarka[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
-     mesh->sarka[2][0] = (a31*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a31
-     mesh->sarka[2][1] = (a32*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a32 
-
-     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-     mesh->sarkb[0] =   -(2520.*c2 + 2520.*c3 - 5040.*c2*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) 
-                        - 2.*pow(coef,4)*pow(h,4) + 210.*c2*pow(coef,2)*pow(h,2) + 210.*c3*pow(coef,2)*pow(h,2) + 42.*c2*pow(coef,3)*pow(h,3) + 42.*c3*pow(coef,3)*pow(h,3) 
-                        + 7.*c2*pow(coef,4)*pow(h,4) + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c2*coef*h + 840.*c3*coef*h - 840.*c2*c3*pow(coef,2)*pow(h,2) 
-                        - 210.*c2*c3*pow(coef,3)*pow(h,3) - 42.*c2*c3*pow(coef,4)*pow(h,4) - 2520.*c2*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c1 - c3));
-
-     mesh->sarkb[1] =  (2520.*c1 + 2520.*c3 - 5040.*c1*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2*pow(coef,4)*pow(h,4) 
-                      + 210*c1*pow(coef,2)*pow(h,2) + 42*c1*pow(coef,3)*pow(h,3) + 210*c3*pow(coef,2)*pow(h,2) + 7.*c1*pow(coef,4)*pow(h,4) + 42.*c3*pow(coef,3)*pow(h,3) 
-                      + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c3*coef*h - 840.*c1*c3*pow(coef,2)*pow(h,2) - 210.*c1*c3*pow(coef,3)*pow(h,3) 
-                      - 42.*c1*c3*pow(coef,4)*pow(h,4) - 2520.*c1*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c2 - c3));
-
-     mesh->sarkb[2] =   -(2520.*c1 + 2520.*c2 - 5040.*c1*c2 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2.*pow(coef,4)*pow(h,4) 
-                        + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
-                        + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
-                        - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
-
-       mesh->sarke[0] = exp(coef*h*c2); 
-       mesh->sarke[1] = exp(coef*h*c3); 
-       mesh->sarke[2] = exp(coef*h*1.0);
-
-     // PML Region Coefficients
-     coef = 0.5*coef; 
-      //  fifth Order Taylor Series Expansion
-     mesh->sarkpmla[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
-     mesh->sarkpmla[2][0] = (a31*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a31
-     mesh->sarkpmla[2][1] = (a32*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-                          + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a32 
-
-     // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-     mesh->sarkpmlb[0] =   -(2520.*c2 + 2520.*c3 - 5040.*c2*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) 
-                        - 2.*pow(coef,4)*pow(h,4) + 210.*c2*pow(coef,2)*pow(h,2) + 210.*c3*pow(coef,2)*pow(h,2) + 42.*c2*pow(coef,3)*pow(h,3) + 42.*c3*pow(coef,3)*pow(h,3) 
-                        + 7.*c2*pow(coef,4)*pow(h,4) + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c2*coef*h + 840.*c3*coef*h - 840.*c2*c3*pow(coef,2)*pow(h,2) 
-                        - 210.*c2*c3*pow(coef,3)*pow(h,3) - 42.*c2*c3*pow(coef,4)*pow(h,4) - 2520.*c2*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c1 - c3));
-
-     mesh->sarkpmlb[1] =  (2520.*c1 + 2520.*c3 - 5040.*c1*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2*pow(coef,4)*pow(h,4) 
-                      + 210*c1*pow(coef,2)*pow(h,2) + 42*c1*pow(coef,3)*pow(h,3) + 210*c3*pow(coef,2)*pow(h,2) + 7.*c1*pow(coef,4)*pow(h,4) + 42.*c3*pow(coef,3)*pow(h,3) 
-                      + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c3*coef*h - 840.*c1*c3*pow(coef,2)*pow(h,2) - 210.*c1*c3*pow(coef,3)*pow(h,3) 
-                      - 42.*c1*c3*pow(coef,4)*pow(h,4) - 2520.*c1*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c2 - c3));
-
-     mesh->sarkpmlb[2] =   -(2520.*c1 + 2520.*c2 - 5040.*c1*c2 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2.*pow(coef,4)*pow(h,4) 
-                        + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
-                        + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
-                        - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
-       //
-       //
-       mesh->sarkpmle[0] = exp(coef*h*c2); 
-       mesh->sarkpmle[1] = exp(coef*h*c3); 
-       mesh->sarkpmle[2] = exp(coef*h*1.0);                 
-
-        #else
-        
-          //  Exponential Coefficients
-       mesh->sarka[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
-       mesh->sarka[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-       mesh->sarka[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
-       mesh->sarkb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
-       mesh->sarkb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
-
-         //
-       mesh->sarke[0] = exp(coef*h*c2); 
-       mesh->sarke[1] = exp(coef*h*c3); 
-       mesh->sarke[2] = exp(coef*h*1.0);
+           // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+           mesh->sarkpmlb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
+           mesh->sarkpmlb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
+           mesh->sarkpmlb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4.- coef*h))/ (pow(coef*h,3)) ;
+           //
+           //
+           mesh->sarkpmle[0] = exp(coef*h*c2); 
+           mesh->sarkpmle[1] = exp(coef*h*c3); 
+           mesh->sarkpmle[2] = exp(coef*h*1.0);
        
 
-       // PML Region Coefficients
-       coef = 0.5*coef; 
-          //  Exponential Coefficients
-           //  Exponential Coefficients
-       mesh->sarkpmla[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
-       mesh->sarkpmla[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-       mesh->sarkpmla[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
 
-       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-       mesh->sarkpmlb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
-       mesh->sarkpmlb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
-       mesh->sarkpmlb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
-       //
-       //
-       mesh->sarkpmle[0] = exp(coef*h*c2); 
-       mesh->sarkpmle[1] = exp(coef*h*c3); 
-       mesh->sarkpmle[2] = exp(coef*h*1.0);
+            #endif
+       
+
+       }
+       else{
+
+        printf("Computing SARK coefficients  with 3th order Taylor series expansion\n");
+
+            #if 1 // First formulation
+
+            //  fifth Order Taylor Series Expansion
+            mesh->sarka[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
+            mesh->sarka[2][0] = (a31*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a31
+            mesh->sarka[2][1] = (a32*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a32 
+
+            // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+            mesh->sarkb[0] =   -(2520.*c2 + 2520.*c3 - 5040.*c2*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) 
+                          - 2.*pow(coef,4)*pow(h,4) + 210.*c2*pow(coef,2)*pow(h,2) + 210.*c3*pow(coef,2)*pow(h,2) + 42.*c2*pow(coef,3)*pow(h,3) + 42.*c3*pow(coef,3)*pow(h,3) 
+                          + 7.*c2*pow(coef,4)*pow(h,4) + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c2*coef*h + 840.*c3*coef*h - 840.*c2*c3*pow(coef,2)*pow(h,2) 
+                          - 210.*c2*c3*pow(coef,3)*pow(h,3) - 42.*c2*c3*pow(coef,4)*pow(h,4) - 2520.*c2*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c1 - c3));
+
+            mesh->sarkb[1] =  (2520.*c1 + 2520.*c3 - 5040.*c1*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2*pow(coef,4)*pow(h,4) 
+                        + 210*c1*pow(coef,2)*pow(h,2) + 42*c1*pow(coef,3)*pow(h,3) + 210*c3*pow(coef,2)*pow(h,2) + 7.*c1*pow(coef,4)*pow(h,4) + 42.*c3*pow(coef,3)*pow(h,3) 
+                        + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c3*coef*h - 840.*c1*c3*pow(coef,2)*pow(h,2) - 210.*c1*c3*pow(coef,3)*pow(h,3) 
+                        - 42.*c1*c3*pow(coef,4)*pow(h,4) - 2520.*c1*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c2 - c3));
+
+            mesh->sarkb[2] =   -(2520.*c1 + 2520.*c2 - 5040.*c1*c2 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2.*pow(coef,4)*pow(h,4) 
+                          + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
+                          + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
+                          - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
+
+            mesh->sarke[0] = exp(coef*h*c2); 
+            mesh->sarke[1] = exp(coef*h*c3); 
+            mesh->sarke[2] = exp(coef*h*1.0);
+
+            // PML Region Coefficients
+            coef = 0.5*coef; 
+            //  fifth Order Taylor Series Expansion
+            mesh->sarkpmla[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
+            mesh->sarkpmla[2][0] = (a31*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a31
+            mesh->sarkpmla[2][1] = (a32*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
+                            + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a32 
+
+            // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
+            mesh->sarkpmlb[0] =   -(2520.*c2 + 2520.*c3 - 5040.*c2*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) 
+                          - 2.*pow(coef,4)*pow(h,4) + 210.*c2*pow(coef,2)*pow(h,2) + 210.*c3*pow(coef,2)*pow(h,2) + 42.*c2*pow(coef,3)*pow(h,3) + 42.*c3*pow(coef,3)*pow(h,3) 
+                          + 7.*c2*pow(coef,4)*pow(h,4) + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c2*coef*h + 840.*c3*coef*h - 840.*c2*c3*pow(coef,2)*pow(h,2) 
+                          - 210.*c2*c3*pow(coef,3)*pow(h,3) - 42.*c2*c3*pow(coef,4)*pow(h,4) - 2520.*c2*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c1 - c3));
+
+            mesh->sarkpmlb[1] =  (2520.*c1 + 2520.*c3 - 5040.*c1*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2*pow(coef,4)*pow(h,4) 
+                        + 210*c1*pow(coef,2)*pow(h,2) + 42*c1*pow(coef,3)*pow(h,3) + 210*c3*pow(coef,2)*pow(h,2) + 7.*c1*pow(coef,4)*pow(h,4) + 42.*c3*pow(coef,3)*pow(h,3) 
+                        + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c3*coef*h - 840.*c1*c3*pow(coef,2)*pow(h,2) - 210.*c1*c3*pow(coef,3)*pow(h,3) 
+                        - 42.*c1*c3*pow(coef,4)*pow(h,4) - 2520.*c1*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c2 - c3));
+
+            mesh->sarkpmlb[2] =   -(2520.*c1 + 2520.*c2 - 5040.*c1*c2 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2.*pow(coef,4)*pow(h,4) 
+                          + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
+                          + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
+                          - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
+            //
+            //
+            mesh->sarkpmle[0] = exp(coef*h*c2); 
+            mesh->sarkpmle[1] = exp(coef*h*c3); 
+            mesh->sarkpmle[2] = exp(coef*h*1.0);                 
+
+            #else  // Second Formulation
+
+            //  Exponential Coefficients
+            mesh->sarka[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
+            mesh->sarka[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+            mesh->sarka[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+
+            mesh->sarkb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
+            mesh->sarkb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
+            mesh->sarkb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
+
+            //
+            mesh->sarke[0] = exp(coef*h*c2); 
+            mesh->sarke[1] = exp(coef*h*c3); 
+            mesh->sarke[2] = exp(coef*h*1.0);
+
+
+            // PML Region Coefficients
+            coef = 0.5*coef; 
+            //  Exponential Coefficients
+            mesh->sarkpmla[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
+            mesh->sarkpmla[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+            mesh->sarkpmla[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
+
+            mesh->sarkpmlb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
+            mesh->sarkpmlb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
+            mesh->sarkpmlb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
+            //
+            //
+            mesh->sarkpmle[0] = exp(coef*h*c2); 
+            mesh->sarkpmle[1] = exp(coef*h*c3); 
+            mesh->sarkpmle[2] = exp(coef*h*1.0);
+            #endif                
 
 
 
+       }
+         
+  }
+else if(strstr(options, "SAAB3")){ 
+      mesh->o_rhsq2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+      mesh->o_rhsq3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
 
-        #endif                
+      mesh->o_pmlqx =    
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_rhspmlqx =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+      mesh->o_rhspmlqx2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+      mesh->o_rhspmlqx3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
+
+      mesh->o_pmlqy =    
+        mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_rhspmlqy =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+      mesh->o_rhspmlqy2 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+      mesh->o_rhspmlqy3 =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
 
 
+      // Classical Adams Bashforth Coefficients
+      mesh->mrab[0] = 23.*dt/12. ;
+      mesh->mrab[1] = -4.*dt/3. ;
+      mesh->mrab[2] =  5.*dt/12. ;
 
-     }
-     
-     
-      
-     
+      // SAAB NONPML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -mesh->tauInv;
+      dfloat h  = mesh->dt; 
+      //
+      if(fabs(cc*h)>1e-2){
+      mesh->saab[0] = (exp(cc*h) - (5.*cc*h)/2. - 3.*pow(cc,2)*pow(h,2 )+ pow(cc,2)*pow(h,2)*exp(cc*h) + (3.*cc*h*exp(cc*h))/2. - 1.)/(pow(cc,3)*pow(h,2));
+      mesh->saab[1] = (4.*cc*h - 2.*exp(cc*h) + 3.*pow(cc,2)*pow(h,2 )- 2.*cc*h*exp(cc*h) + 2.)/(pow(cc,3)*pow(h,2));
+      mesh->saab[2] = -((3.*cc*h)/2. - exp(cc*h) + pow(cc,2)*pow(h,2 )- (cc*h*exp(cc*h))/2. + 1.)/(pow(cc,3)*pow(h,2));
+      //Define exp(tauInv*dt) 
+      mesh->saabexp = exp(cc*h);
+
+      // SAAB PML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -0.5*mesh->tauInv;
+      //
+      mesh->saabpml[0] = (exp(cc*h) - (5.*cc*h)/2. - 3.*pow(cc,2)*pow(h,2 )+ pow(cc,2)*pow(h,2)*exp(cc*h) + (3.*cc*h*exp(cc*h))/2. - 1.)/(pow(cc,3)*pow(h,2));
+      mesh->saabpml[1] = (4.*cc*h - 2.*exp(cc*h) + 3.*pow(cc,2)*pow(h,2 )- 2.*cc*h*exp(cc*h) + 2.)/(pow(cc,3)*pow(h,2));
+      mesh->saabpml[2] = -((3.*cc*h)/2. - exp(cc*h) + pow(cc,2)*pow(h,2 )- (cc*h*exp(cc*h))/2. + 1.)/(pow(cc,3)*pow(h,2));
+      //Define exp(tauInv*dt) 
+      mesh->saabpmlexp = exp(cc*h);
+      }
+      else{
+
+      mesh->saab[0] = (pow(cc,3)*pow(h,4))/18. + (19.*pow(cc,2)*pow(h,3))/80. + (19.*cc*pow(h,2))/24. + (23.*h)/12.;
+      mesh->saab[1] = -(4.*h)/3. - (5.*cc*pow(h,2))/12. - (pow(cc,2)*pow(h,3))/10. - (7.*pow(cc,3)*pow(h,4))/360.;
+      mesh->saab[2] = (pow(cc,3)*pow(h,4))/180. + (7.*pow(cc,2)*pow(h,3))/240. + (cc*pow(h,2))/8. + (5.*h)/12.;
+      //Define exp(tauInv*h) 
+      mesh->saabexp = exp(cc*h);
+
+      // SAAB PML Coefficients, expanded to fix very small tauInv case
+      dfloat cc = -0.5*mesh->tauInv;
+      //
+      mesh->saabpml[0] = (pow(cc,3)*pow(h,4))/18. + (19.*pow(cc,2)*pow(h,3))/80. + (19.*cc*pow(h,2))/24. + (23.*h)/12.;
+      mesh->saabpml[1] = -(4.*h)/3. - (5.*cc*pow(h,2))/12. - (pow(cc,2)*pow(h,3))/10. - (7.*pow(cc,3)*pow(h,4))/360.;
+      mesh->saabpml[2] = (pow(cc,3)*pow(h,4))/180. + (7.*pow(cc,2)*pow(h,3))/240. + (cc*pow(h,2))/8. + (5.*h)/12.;
+      //Define exp(tauInv*dt) 
+      mesh->saabpmlexp = exp(cc*h);
+      }         
+  }
 
 
-    
-  #elif TIME_DISC==LSIMEX
+    else if(strstr(options, "LSIMEX")){ 
     mesh->o_qY =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-     // pml variables
-   mesh->o_qZ =    
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-     // 
-   mesh->o_qS =
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    // pml variables
+    mesh->o_qZ =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    // 
+    mesh->o_qS =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
 
-      #if PML_ENABLED
+
+      if(strstr(options, "PML")){ 
         // pml variables
-          mesh->o_pmlqx =    
-            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-          mesh->o_qSx =
-              mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-          mesh->o_qYx =
+        mesh->o_pmlqx =    
+          mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+        mesh->o_qSx =
             mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-          mesh->o_qZx =
-            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+        mesh->o_qYx =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+        mesh->o_qZx =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
 
-
-
-          mesh->o_pmlqy =    
-            mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-          mesh->o_qSy =
-              mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-          mesh->o_qYy =
-            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-          mesh->o_qZy =
-            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
-      #endif
-
-  
- 
-
-  #endif  
+        mesh->o_pmlqy =    
+          mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+        mesh->o_qSy =
+            mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+        mesh->o_qYy =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+        mesh->o_qZy =
+          mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+      }
+  } 
   
   
 
@@ -717,21 +771,21 @@ dfloat cfl = 0.5;
   kernelInfo.addDefine("p_alpha0", (float).01f);
 
   
+  if(strstr(options, "LSERK")){ 
 
- #if TIME_DISC==LSERK
-    #if CUBATURE_ENABLED
+    if(strstr(options, "CUBATURE")){ 
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                    "boltzmannVolumeCub2D",
                    kernelInfo);
-      
+
       printf("Compiling LSERK pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSplitPmlVolumeCub2D",
                kernelInfo);
-      
+
        printf("Compiling LSERK relaxation kernel with cubature integration\n");
        mesh->relaxationKernel =
        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
@@ -743,7 +797,9 @@ dfloat cfl = 0.5;
        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
                "boltzmannSplitPmlRelaxationCub2D",
                kernelInfo);   
-    #else
+    }
+
+    if(strstr(options, "COLLOCATION")){ 
       printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
@@ -755,40 +811,41 @@ dfloat cfl = 0.5;
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSplitPmlVolume2D",
                kernelInfo); 
-    #endif
+    }
 
 
     printf("Compiling surface kernel\n");
     mesh->surfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-                 "boltzmannSurface2D",
-                 kernelInfo);
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
 
     printf("Compiling pml surface kernel\n");
     mesh->pmlSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-                 "boltzmannSplitPmlSurface2D",
-                 kernelInfo);
- 
-    printf("Compiling update kernel\n");
-    mesh->updateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-                 "boltzmannLSERKUpdate2D",
-                 kernelInfo);
-    
-    printf("Compiling pml update kernel\n");
-    mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-                 "boltzmannLSERKSplitPmlUpdate2D",
-                 kernelInfo);
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-               "meshHaloExtract2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
                kernelInfo);
 
-#elif TIME_DISC==SARK3 
+    printf("Compiling update kernel\n");
+    mesh->updateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKUpdate2D",
+               kernelInfo);
 
-   #if CUBATURE_ENABLED
+    printf("Compiling pml update kernel\n");
+    mesh->pmlUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+               "boltzmannLSERKSplitPmlUpdate2D",
+               kernelInfo);
+    mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+             "meshHaloExtract2D",
+             kernelInfo);
+
+  }
+  else if(strstr(options, "SARK3")){ 
+
+    if(strstr(options, "CUBATURE")){ 
       printf("Compiling SA volume kernel with cubature integration\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
@@ -814,7 +871,8 @@ dfloat cfl = 0.5;
                kernelInfo); 
 
 
-    #else
+    }
+    else if(strstr(options, "COLLOCATION")){ 
       printf("Compiling SA volume kernel\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
@@ -826,17 +884,17 @@ dfloat cfl = 0.5;
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                "boltzmannSASplitPmlVolume2D",
                kernelInfo); 
-    #endif
+    }
 
 
-  printf("Compiling surface kernel\n");
-  mesh->surfaceKernel =
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSurface2D",
                kernelInfo);
 
-  printf("Compiling pml surface kernel\n");
-  mesh->pmlSurfaceKernel =
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
                "boltzmannSplitPmlSurface2D",
                kernelInfo);
@@ -850,7 +908,7 @@ dfloat cfl = 0.5;
                  kernelInfo); 
 
 
-   printf("compiling SARK non-pml  stage update kernel\n");
+    printf("compiling SARK non-pml  stage update kernel\n");
     mesh->updateStageKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3StageUpdate2D",
@@ -864,50 +922,48 @@ dfloat cfl = 0.5;
                  kernelInfo); 
 
 
-   printf("compiling SARK non-pml  stage update kernel\n");
+    printf("compiling SARK non-pml  stage update kernel\n");
     mesh->pmlUpdateStageKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                  "boltzmannSARK3SplitPmlStageUpdate2D",
                  kernelInfo); 
 
- mesh->haloExtractKernel =
+    mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);   
 
 
- #elif TIME_DISC==LSIMEX
+  }
+  else if(strstr(options, "LSIMEX")){ 
  
- // RESIDUAL UPDATE KERNELS
-  printf("Compiling LSIMEX non-pml residual update kernel\n");
-  mesh->residualUpdateKernel =
+    // RESIDUAL UPDATE KERNELS
+    printf("Compiling LSIMEX non-pml residual update kernel\n");
+    mesh->residualUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXResidualUpdate2D",
                kernelInfo);
 
-  printf("Compiling pml residual update kernel\n");
-  mesh->pmlResidualUpdateKernel =
+    printf("Compiling pml residual update kernel\n");
+    mesh->pmlResidualUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlResidualUpdate2D",
                kernelInfo);
 
-  
-  printf("Compiling LSIMEX non-pml implicit update kernel\n");
-  mesh->implicitUpdateKernel =
+
+    printf("Compiling LSIMEX non-pml implicit update kernel\n");
+    mesh->implicitUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXImplicitUpdate2D",
                kernelInfo);
 
-  printf("Compiling LSIMEX pml implicit update kernel\n");
-  mesh->pmlImplicitUpdateKernel =
+    printf("Compiling LSIMEX pml implicit update kernel\n");
+    mesh->pmlImplicitUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlImplicitUpdate2D",
                kernelInfo);
      
-    
-
-
-    #if CUBATURE_ENABLED
+    if(strstr(options, "CUBATURE")){ 
        printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
 
          mesh->implicitSolveKernel = 
@@ -920,7 +976,8 @@ dfloat cfl = 0.5;
          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
                  kernelInfo); 
-    #else
+    }
+    else if(strstr(options, "COLLOCATION")){ 
         mesh->implicitSolveKernel = 
          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXImplicitSolve2D",
@@ -931,7 +988,7 @@ dfloat cfl = 0.5;
          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
                  "boltzmannLSIMEXSplitPmlImplicitSolve2D",
                  kernelInfo); 
-    #endif
+    }
 
 
     printf("Compiling LSIMEX volume kernel no stiff term!\n");
@@ -959,26 +1016,106 @@ dfloat cfl = 0.5;
                kernelInfo);
 
 
-   printf("Compiling LSIMEX non-pml update kernel\n");
-  mesh->updateKernel =
+    printf("Compiling LSIMEX non-pml update kernel\n");
+    mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXUpdate2D",
                kernelInfo);
 
-  printf("Compiling LSIMEX pml update kernel\n");
-  mesh->pmlUpdateKernel =
+    printf("Compiling LSIMEX pml update kernel\n");
+    mesh->pmlUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
                "boltzmannLSIMEXSplitPmlUpdate2D",
                kernelInfo);
 
 
 
-mesh->haloExtractKernel =
+    mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
 
-#endif
+  }
+
+
+  else if(strstr(options, "SAAB3")){ 
+
+    if(strstr(options, "CUBATURE")){ 
+      printf("Compiling SA volume kernel with cubature integration\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                   "boltzmannVolumeCub2D",
+                   kernelInfo);
+
+      printf("Compiling SA pml volume kernel with cubature integration\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+               "boltzmannSASplitPmlVolumeCub2D",
+               kernelInfo);
+
+       printf("Compiling SA relaxation kernel with cubature integration\n");
+       mesh->relaxationKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+               "boltzmannSARelaxationCub2D",
+               kernelInfo); 
+
+      printf("Compiling SA pml relaxation kernel with cubature integration\n");
+       mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+               "boltzmannSASplitPmlRelaxationCub2D",
+               kernelInfo); 
+
+
+    }
+    else if(strstr(options, "COLLOCATION")){ 
+      printf("Compiling SA volume kernel\n");
+      mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannSAVolume2D",
+                 kernelInfo);
+
+      printf("Compiling SAAB pml volume kernel\n");
+      mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+               "boltzmannSASplitPmlVolume2D",
+               kernelInfo); 
+    }
+
+
+    printf("Compiling surface kernel\n");
+    mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSurface2D",
+               kernelInfo);
+
+    printf("Compiling pml surface kernel\n");
+    mesh->pmlSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+
+
+    //SARK STAGE UPDATE
+    printf("compiling SAAB3 non-pml  update kernel\n");
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+                 "boltzmannSAABUpdate2D",
+                 kernelInfo); 
+
+     //SARK STAGE UPDATE
+    printf("compiling SAAB3 non-pml  update kernel\n");
+    mesh->pmlUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+                 "boltzmannSAAB3SplitPmlUpdate2D",
+                 kernelInfo); 
+
+    mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);   
+
+
+  }
 
   
 }
