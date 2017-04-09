@@ -16,7 +16,7 @@ int main(int argc, char **argv){
   // relaxation = CUBATURE, COLLOCATION, 
   // time       = LSERK, LSIMEX, SARK3, SAAB3
   // bc         = PML, NONE
-  char *options =strdup("mode = SOLVER , relaxation = COLLOCATION , time = LSIMEX , bc = NONE");
+  char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SAAB3, bc = PML");
 
 
   if(strstr(options, "SOLVER")){
@@ -51,7 +51,7 @@ int main(int argc, char **argv){
    
 
   }
-  else{
+   else if(strstr(options, "TEST")){
      if(argc!=4){
       // To find stable time-step sizes, give dtfactor
       printf("usage: ./main meshes/cavityH005.msh N dtfactor\n");

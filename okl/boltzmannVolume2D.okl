@@ -535,8 +535,7 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 	  dfloat pmlqy4 = pmlqy[base+3*p_Np];
 	  dfloat pmlqy5 = pmlqy[base+4*p_Np];
 	  dfloat pmlqy6 = pmlqy[base+5*p_Np];
-
-  
+	    
 	  // compute 'r' and 's' derivatives of (q_m) at node n
 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
@@ -605,7 +604,7 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 	  rhspmlqy4 += -msigmaye*(pmlqy4);
 	  rhspmlqy5 += -msigmaye*(pmlqy5);
 	  rhspmlqy6 += -msigmaye*(pmlqy6);
-	  
+     	  
 	  rhspmlqx[base+0*p_Np] = rhspmlqx1;
 	  rhspmlqx[base+1*p_Np] = rhspmlqx2;
 	  rhspmlqx[base+2*p_Np] = rhspmlqx3;

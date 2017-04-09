@@ -160,7 +160,7 @@ typedef struct {
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
   // MRAB,SAAB coefficients
-  dfloat mrab[3], saab[3], saabexp; // exp(-tauInv*dt)
+  dfloat mrab[3], saab[3], saabexp, saabpml[3], saabpmlexp;
   
   
   dfloat dtfactor ;  //Delete later for script run

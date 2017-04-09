@@ -48,7 +48,17 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
     }
   }
 
-  
+   if(strstr(options, "SAAB3")){
+
+    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+      boltzmannSplitPmlSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep,options);
+      }
+    }
+  }
  
   
   boltzmannReport2D(mesh, mesh->NtimeSteps,options);
