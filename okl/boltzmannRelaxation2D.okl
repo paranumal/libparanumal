@@ -295,11 +295,15 @@ kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 	      cubq3 += Icn*s_q[es][2][m];
 	    }
 
-	    dfloat icubq1 = 1./cubq1; 	    
+//	    dfloat icubq1 = 1.f/cubq1;
+	    dfloat delta = 1e-2;
+	    dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
 	    // BGK relaxation approximation to the Boltzmann collision operator
+
 	    s_cubN4[es][n] = p_tauInv* cubq2*cubq3*icubq1;
 	    s_cubN5[es][n] = p_tauInv*p_invsqrt2*cubq2*cubq2*icubq1;
 	    s_cubN6[es][n] = p_tauInv*p_invsqrt2*cubq3*cubq3*icubq1;
+
 	  }
 	}
       }
@@ -416,11 +420,15 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 	      cubq2 += Icn*s_q[es][1][m];
 	      cubq3 += Icn*s_q[es][2][m];
 	      
-	    }    
+	    }
+
+	    dfloat delta = 1e-2;
+	    dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
+	    
 	    // BGK relaxation approximation to the Boltzmann collision operator
-	    s_cubN4[es][n] =  p_tauInv*cubq2*cubq3/cubq1;
-	    s_cubN5[es][n] =  p_tauInv*p_invsqrt2*cubq2*cubq2/cubq1;
-	    s_cubN6[es][n] =  p_tauInv*p_invsqrt2*cubq3*cubq3/cubq1;
+	    s_cubN4[es][n] =  p_tauInv*cubq2*cubq3*icubq1;
+	    s_cubN5[es][n] =  p_tauInv*p_invsqrt2*cubq2*cubq2*icubq1;
+	    s_cubN6[es][n] =  p_tauInv*p_invsqrt2*cubq3*cubq3*icubq1;
 
 	  }
 	}
@@ -573,7 +581,9 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
 	      }	     
 	      
 	      // BGK relaxation approximation to the Boltzmann collision operator
-	      dfloat icubq1 = 1.f/cubq1;     	       
+	      dfloat delta = 1e-2;
+	      dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
+
 	      s_cubN4[es][n] = -p_tauInv*(cubq4-           cubq2*cubq3*icubq1);
 	      s_cubN5[es][n] = -p_tauInv*(cubq5-p_invsqrt2*cubq2*cubq2*icubq1);
 	      s_cubN6[es][n] = -p_tauInv*(cubq6-p_invsqrt2*cubq3*cubq3*icubq1);
