@@ -631,9 +631,9 @@ kernel void boltzmannSAAB3SplitPmlUpdate2D(const iint Nelements,
       dfloat qy6 = qy[id6];
 
       //
-      qx1  = qx1      +   ab1*rhsqx11  +  ab2*rhsqx21  +  ab3*rhsqx31;
-      qx2  = qx2      +   ab1*rhsqx12  +  ab2*rhsqx22  +  ab3*rhsqx32;
-      qx3  = qx3      +   ab1*rhsqx13  +  ab2*rhsqx23  +  ab3*rhsqx33;
+      qx1  = qx1       +   ab1*rhsqx11  +  ab2*rhsqx21  +  ab3*rhsqx31;
+      qx2  = qx2       +   ab1*rhsqx12  +  ab2*rhsqx22  +  ab3*rhsqx32;
+      qx3  = qx3       +   ab1*rhsqx13  +  ab2*rhsqx23  +  ab3*rhsqx33;
       qx4  = expdt*qx4 + saab1*rhsqx14 + saab2*rhsqx24 + saab3*rhsqx34;
       qx5  = expdt*qx5 + saab1*rhsqx15 + saab2*rhsqx25 + saab3*rhsqx35;
       qx6  = expdt*qx6 + saab1*rhsqx16 + saab2*rhsqx26 + saab3*rhsqx36;
