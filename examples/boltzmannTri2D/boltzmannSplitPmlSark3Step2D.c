@@ -35,7 +35,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
+    if(mesh->pmlNelements){
+
        mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    ramp,
@@ -55,6 +56,7 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     // compute volume contribution to DG boltzmann RHS
     // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
