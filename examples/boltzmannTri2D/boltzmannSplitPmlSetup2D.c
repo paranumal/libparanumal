@@ -65,7 +65,7 @@ else{
     mesh->RT  = 9.0;
     mesh->sqrtRT = sqrt(mesh->RT);  
 
-    Re = 100/mesh->sqrtRT; 
+    Re = 1000/mesh->sqrtRT; 
     mesh->tauInv = mesh->sqrtRT * Re / Ma;
     nu = mesh->RT/mesh->tauInv; 
     // Create Periodic Boundaries
@@ -76,7 +76,7 @@ else{
     printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
      //
-    mesh->finalTime = 40.;
+    mesh->finalTime = 30.;
 
  }
 
@@ -184,6 +184,8 @@ else{
     dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
 
+if(strstr(options,"PML")){
+
     if(cx>xmax){
       //  mesh->sigmax[mesh->Np*e + n] = xsigma;
       mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
@@ -205,6 +207,7 @@ else{
       isPml = 1;
     }
   }
+}
     
   if(isPml)
     pmlElementIds[pmlNelements++] = e;
@@ -1123,50 +1126,3 @@ else if(strstr(options, "SAAB3")){
 
 
 
- // #elif TIME_DISC==SAAB
-  //  mesh->o_rhsq2 =
-  //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
-   
-  //  mesh->o_rhsq3 =
-  //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->q);
-  
-  //   mesh->o_pmlqx =    
-  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-  //   mesh->o_rhspmlqx =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  //   mesh->o_rhspmlqx2 =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
-  //   mesh->o_rhspmlqx3 =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);  
-
-  //   mesh->o_pmlqy =    
-  //     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-  //   mesh->o_rhspmlqy =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  //   mesh->o_rhspmlqy2 =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
-  //   mesh->o_rhspmlqy3 =
-  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);  
-
-
-  //     // Classical Adams Bashforth Coefficients
-  //     mesh->mrab[0] = 23.*dt/12. ;
-  //     mesh->mrab[1] = -4.*dt/3. ;
-  //     mesh->mrab[2] =  5.*dt/12. ;
-
-  //     // SAAB NONPML Coefficients, expanded to fix very small tauInv case
-  //     dfloat cc = -mesh->tauInv;
-  //     dfloat dtc = mesh->dt; 
-  //     //
-  //     mesh->saab[0] = (exp(cc*dtc) - (5*cc*dtc)/2 - 3*pow(cc,2)*pow(dtc,2 )+ pow(cc,2)*pow(dtc,2)*exp(cc*dtc) + (3*cc*dtc*exp(cc*dtc))/2 - 1)/(pow(cc,3)*pow(dtc,2));
-  //     mesh->saab[1] = (4*cc*dtc - 2*exp(cc*dtc) + 3*pow(cc,2)*pow(dtc,2 )- 2*cc*dtc*exp(cc*dtc) + 2)/(pow(cc,3)*pow(dtc,2));
-  //     mesh->saab[2] = -((3*cc*dtc)/2 - exp(cc*dtc) + pow(cc,2)*pow(dtc,2 )- (cc*dtc*exp(cc*dtc))/2 + 1)/(pow(cc,3)*pow(dtc,2));
-
-  //     // mesh->saab[0] = (pow(cc,3)*pow(dtc,4))/18. + (19.*pow(cc,2)*pow(dtc,3))/80. + (19.*cc*pow(dtc,2))/24. + (23.*dtc)/12.;
-  //     // mesh->saab[1] = -( (7.*pow(cc,3)*pow(dtc,4))/360. + (pow(cc,2)*pow(dtc,3))/10. + (5.*cc*pow(dtc,2))/12.  + (4.*dtc)/3. );
-  //     // mesh->saab[2] = (pow(cc,3)*pow(dtc,4))/180. + (7.*pow(cc,2)*pow(dtc,3))/240. + (cc*pow(dtc,2))/8. + (5.*dtc)/12.;
-
-
-
-  //     //Define exp(tauInv*dt) 
-  //     mesh->saabexp = exp(-mesh->tauInv*dt);
