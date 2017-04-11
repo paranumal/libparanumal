@@ -114,7 +114,8 @@ typedef struct {
   // field info for PDE solver
   iint Nfields;
   dfloat *q;    // solution data array
-  dfloat *rhsq; // right hand side data array
+  dfloat *fQ; //solution trace array
+  dfloat *rhsq, *rhsq2, *rhsq3; // right hand side data array
   dfloat *resq; // residual data array (for LSERK time-stepping)
   
   dfloat Lambda2; // square of penalty paramater used in constructing q^*
@@ -159,9 +160,14 @@ typedef struct {
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
+
   // MRAB,SAAB coefficients
-  dfloat mrab[3], saab[3], saabexp; // exp(-tauInv*dt)
-  
+  dfloat mrab[3], mrabb[3], saab[3], saabexp; // exp(-tauInv*dt)
+  iint MRABNlevels;
+  iint *MRABlevel;
+  iint *MRABNelements, *MRABNhaloElements;
+  iint **MRABelementIds, **MRABhaloIds;
+  iint *MRABshiftIndex;
   
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann; 
@@ -210,7 +216,7 @@ typedef struct {
   
   // occa stuff
   occa::device device;
-  occa::memory o_q, o_rhsq, o_resq;
+  occa::memory o_q, o_rhsq, o_resq, o_fQ;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
@@ -218,7 +224,7 @@ typedef struct {
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   
   occa::memory o_vgeo, o_sgeo;
-  occa::memory o_vmapM, o_vmapP;
+  occa::memory o_vmapM, o_vmapP, o_mapP;
   
   occa::memory o_EToB, o_x, o_y, o_z;
 
@@ -228,6 +234,10 @@ typedef struct {
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
+
+  //MRAB element lists
+  occa::memory *o_MRABelementIds;
+  occa::memory *o_MRABhaloIds;  
 
   // DG halo exchange info
   occa::memory o_haloElementList;
@@ -303,6 +313,7 @@ typedef struct {
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
+  occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
   

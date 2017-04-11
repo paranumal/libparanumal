@@ -6,26 +6,27 @@
 #include "mpi.h"
 #include "mesh2D.h"
 
+
+#define LSERK 1
+#define MRAB  2
+
 #define USE_BERN 1
 #define WADG 1
+#define MRAB_MAX_LEVELS 10
+#define TIME_DISC MRAB
 
 void acousticsSetup2D(mesh2D *mesh);
 
-void acousticsRun2D(mesh2D *mesh);
-
 void acousticsRun2Dbbdg(mesh2D *mesh);
-
-void acousticsOccaRun2D(mesh2D *mesh);
-
 void acousticsOccaRun2Dbbdg(mesh2D *mesh);
 
-void acousticsVolume2D(mesh2D *mesh);
-void acousticsSurface2D(mesh2D *mesh, dfloat t);
-void acousticsUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
-void acousticsUpdate2D_wadg(mesh2D *mesh, dfloat rka, dfloat rkb);	
+void acousticsMRABUpdate2D(mesh2D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);	
+void acousticsMRABUpdateTrace2D(mesh2D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);	
+void acousticsMRABUpdate2D_wadg(mesh2D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);	
+void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);	
 
-void acousticsVolume2Dbbdg(mesh2D *mesh);
-void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t);
+void acousticsVolume2Dbbdg(mesh2D *mesh, iint lev);
+void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t);
 
 void acousticsError2D(mesh2D *mesh, dfloat time);
 
