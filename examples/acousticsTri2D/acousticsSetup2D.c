@@ -11,10 +11,17 @@ void acousticsSetup2D(mesh2D *mesh){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
-  mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+
+  #if(TSTEP==LSERK)
+    mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+	 			sizeof(dfloat));
+    mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+	 			sizeof(dfloat));
+  #elif (TSTEP==MRAB)
+    mesh->rhsq  = (dfloat *) calloc(3*mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
+    mesh->rhsq2 = mesh->rhsq +   mesh->Nelements*mesh->Np*mesh->Nfields;
+    mesh->rhsq3 = mesh->rhsq + 2*mesh->Nelements*mesh->Np*mesh->Nfields;
+  #endif
 
   
   // fix this later (initial conditions)
@@ -90,7 +97,7 @@ void acousticsSetup2D(mesh2D *mesh){
 
   // generic occa device set up
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
-printf("\n TEST\n");
+
   // specialization
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);

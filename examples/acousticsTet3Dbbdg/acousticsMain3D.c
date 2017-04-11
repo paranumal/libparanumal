@@ -22,8 +22,8 @@ int main(int argc, char **argv){
 
   // run
   #if USE_BERN
-    //acousticsRun3Dbbdg(mesh);
-    acousticsOccaRun3Dbbdg(mesh);  
+    acousticsRun3Dbbdg(mesh);
+    //acousticsOccaRun3Dbbdg(mesh);  
   #else
     acousticsRun3D(mesh);
     //acousticsOccaRun3D(mesh);

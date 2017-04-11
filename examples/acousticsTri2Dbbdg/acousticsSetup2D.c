@@ -16,12 +16,11 @@ void acousticsSetup2D(mesh2D *mesh){
   mesh->Nfields = 4;
 
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+  mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
             sizeof(dfloat));
-  mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+  mesh->fQ = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
             sizeof(dfloat));
-  mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-            sizeof(dfloat));
+  mesh->rhsq  = (dfloat *) calloc(3*mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
 
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -137,67 +136,201 @@ void acousticsSetup2D(mesh2D *mesh){
   mesh->Lambda2 = 0.5;
 
   // set time step
-  dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
-      for(iint f=0;f<mesh->Nfaces;++f){
-          iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-          dfloat sJ   = mesh->sgeo[sid + SJID];
-          dfloat invJ = mesh->sgeo[sid + IJID];
-
-          // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-          // h = 0.5/(sJ/J)
-
-          dfloat hest = .5/(sJ*invJ);
-
-          hmin = mymin(hmin, hest);
-      }
-  }
-
+  mesh->finalTime = 0.5;
   dfloat cfl = .4; // depends on the stability region size
 
-  // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
+  dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
+  dfloat hmin = 1e9;
+  for(iint e=0;e<mesh->Nelements;++e){  
+    EtoDT[e] = 1e9;  
 
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+      dfloat sJ   = mesh->sgeo[sid + SJID];
+      dfloat invJ = mesh->sgeo[sid + IJID];
 
-  //
-  mesh->finalTime = 0.5;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+      // h = 0.5/(sJ/J)
+
+      dfloat hest = .5/(sJ*invJ);
+
+      // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
+      dfloat dtEst = cfl*hest/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
+
+      hmin = mymin(hmin,hest);
+      EtoDT[e] = mymin(EtoDT[e], dtEst);
+    }
+  }
+
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  //------------------------  MRAB setup-------------------------
+  //find global min and max dt
+  dfloat dtmin, dtmax;
+  dtmin = EtoDT[0];
+  dtmax = EtoDT[0];
+  for (iint e=1;e<mesh->Nelements;e++) {
+    dtmin = mymin(dtmin,EtoDT[e]);
+    dtmax = mymax(dtmax,EtoDT[e]);
+  }
+  dfloat dtGmin, dtGmax;
+  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
+  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
+
+
+  if (rank==0) {
+    printf("----------- MRAB Setup ------------------------------\n");
+    printf("dtmin = %g, dtmax = %g\n", dtGmin, dtGmax);
+  }
+
+  //number of levels
+  mesh->MRABNlevels = mymin(floor(log2(dtGmax/dtGmin))+1,MRAB_MAX_LEVELS);
+
+  //shift dtGmin so that we have an integer number of steps
+  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
+  dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
+
+  mesh->dt = dtGmin; 
+
+  //compute the level of each element
+  mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
+  iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+  for(iint lev=0; lev<mesh->MRABNlevels; lev++){             
+    dfloat dtlev = dtGmin*pow(2,lev);   
+    for(iint e=0;e<mesh->Nelements;++e){
+      if(EtoDT[e] >=dtlev) 
+        mesh->MRABlevel[e] = lev;
+    }
+  }
+
+  //enforce one level difference between neighbours
+  for (iint lev=0; lev < mesh->MRABNlevels; lev++){
+    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel);
+    for (iint e =0; e<mesh->Nelements;e++) {
+      if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
+        for (iint f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
+          iint eP = mesh->EToE[mesh->Nfaces*e+f];
+          if (eP > -1) 
+            if (mesh->MRABlevel[eP] == lev)
+              mesh->MRABlevel[e] = lev + 1;  //if one exists, lower the level of this element to lev-1
+        }
+      }
+    }
+  }
+
+  //construct element and halo lists
+  mesh->MRABelementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABhaloIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  
+  mesh->MRABNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  mesh->MRABNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+
+  for (iint e=0;e<mesh->Nelements;e++) {
+    mesh->MRABNelements[mesh->MRABlevel[e]]++;
+    for (iint f=0;f<mesh->Nfaces;f++) { 
+      iint eP = mesh->EToE[mesh->Nfaces*e+f];
+      if (eP > -1) {
+        if (mesh->MRABlevel[eP] == mesh->MRABlevel[e]-1) {//check for a level lev-1 neighbour
+          mesh->MRABNhaloElements[mesh->MRABlevel[e]]++;
+          break;
+        }
+      }
+    }
+  }
+
+  for (iint lev =0;lev<mesh->MRABNlevels;lev++){
+    mesh->MRABelementIds[lev] = (iint *) calloc(mesh->MRABNelements[lev],sizeof(iint));
+    mesh->MRABhaloIds[lev] = (iint *) calloc(mesh->MRABNhaloElements[lev],sizeof(iint));
+    iint cnt  =0;
+    iint cnt2 =0;
+    for (iint e=0;e<mesh->Nelements;e++){
+      if (mesh->MRABlevel[e] == lev) {
+        mesh->MRABelementIds[lev][cnt++] = e;
+      
+        for (iint f=0;f<mesh->Nfaces;f++) { 
+          iint eP = mesh->EToE[mesh->Nfaces*e+f];
+          if (eP > -1) {
+            if (mesh->MRABlevel[eP] == lev-1) {//check for a level lev-1 neighbour
+              mesh->MRABhaloIds[lev][cnt2++] = e;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  //offset index
+  mesh->MRABshiftIndex = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+
+  if (rank==0)
+    printf("| Rank | Level | Nelements | Level/Level Boundary Elements | \n");
+  for (iint lev =0; lev<mesh->MRABNlevels; lev++)
+    printf("|  %d,    %d,      %d,        %d |\n", rank, lev, mesh->MRABNelements[lev], mesh->MRABNhaloElements[lev]);
+  printf("--------------------------------------------------------\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  free(MRABsendBuffer);
+  //------------------------ done MRAB setup-------------------------
 
   // errorStep
   mesh->errorStep = 10;
 
-  printf("dt = %g\n", mesh->dt);
-
-  printf("hmin = %g\n", hmin);
-  printf("cfl = %g\n", cfl);
-  printf("dt = %g\n", dt);
-  printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
-
+  if (rank==0) {
+    printf("hmin = %g\n", hmin);
+    printf("cfl = %g\n", cfl);
+    printf("dt = %g\n", mesh->dt);
+    printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
+  }
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
   //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
 
   occa::kernelInfo kernelInfo;
 
   // generic occa device set up
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
+  //reallocate rhsq for MRAB
+  mesh->o_rhsq.free();
+  mesh->o_rhsq =
+    mesh->device.malloc(3*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+  if (mesh->totalHaloPairs) {
+    //reallocate halo buffer for trace exchange
+    mesh->o_haloBuffer.free();  
+    mesh->o_haloBuffer =
+        mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat));
+  }
+  
   mesh->o_c2 = mesh->device.malloc(mesh->Nelements*mesh->cubNp*sizeof(dfloat),
          mesh->c2);
+  mesh->o_fQ = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
+         mesh->fQ);
+  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+         mesh->mapP);
+
+  mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
+    mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+         mesh->MRABelementIds[lev]);
+    mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+         mesh->MRABelementIds[lev]);
+  }
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int maxCubNodes = mymax(maxNodes,mesh->cubNp);
+
   kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
 
   int NblockV = 512/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -207,37 +340,34 @@ void acousticsSetup2D(mesh2D *mesh){
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
-  #if USE_BERN
-    mesh->volumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolume2D.okl",
-                 "acousticsVolume2Dbbdg",
-                 kernelInfo);
 
-    mesh->surfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurface2D.okl",
-                 "acousticsSurface2Dbbdg",
-                 kernelInfo);
-  #else 
-    mesh->volumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgVolume2D.okl",
-                 "acousticsVolume2D",
-                 kernelInfo);
+  mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABVolume2D.okl",
+               "acousticsbbdgMRABVolume2D",
+               kernelInfo);
 
-    mesh->surfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgSurface2D.okl",
-                 "acousticsSurface2D",
-                 kernelInfo);
-  #endif
+  mesh->surfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABSurface2D.okl",
+               "acousticsbbdgMRABSurface2D",
+               kernelInfo);
   
   #if WADG
     mesh->updateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate2D.okl",
-               "acousticsUpdate2D_wadg",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
+               "acousticsMRABUpdate2D_wadg",
+               kernelInfo);
+      mesh->traceUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
+               "acousticsMRABTraceUpdate2D_wadg",
                kernelInfo);
   #else 
     mesh->updateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsUpdate2D.okl",
-               "acousticsUpdate2D",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
+               "acousticsMRABUpdate2D",
+               kernelInfo);
+    mesh->traceUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
+               "acousticsMRABTraceUpdate2D",
                kernelInfo);
   #endif
 

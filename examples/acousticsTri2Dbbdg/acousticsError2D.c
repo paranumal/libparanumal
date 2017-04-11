@@ -28,5 +28,4 @@ void acousticsError2D(mesh2D *mesh, dfloat time){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0)
     printf("%g, %g (time,maxError(pressure)\n", time, globalMaxErrorP);
-  
 }
