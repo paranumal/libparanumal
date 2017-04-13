@@ -37,12 +37,15 @@ typedef struct {
   amgFloat *xSort;
   amgFloat *rhsSort;
 
+  occa::memory o_rhs, o_x;
+
   char* iintType;
   char* dfloatType;
 
 } almond_t;
 
-void * almondSetup(uint  Nnum,
+void * almondSetup(mesh_t *mesh,
+       uint  Nnum,
 		   int* rowStarts, 
 		   void* rowIds,
 		   uint  nnz, 
@@ -74,7 +77,6 @@ void * almondSetup(uint  Nnum,
   almond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
   int globalOffset = rowStarts[rank];
 
-;
   std::vector<int>    vRowStarts(almond->numLocalRows+1);
 
   // assumes presorted
@@ -144,6 +146,7 @@ void * almondSetup(uint  Nnum,
   for (int i=0;i<almond->numLocalRows;i++)almond->nullA[i] = 1;
   
   almond->M.setup(*(almond->A), almond->nullA, NULL);
+  almond->M.sync_setup_on_device(mesh->device);
   for (iint r=0;r<size;r++) {
     if (r==rank) {
       printf("----------Rank %d ------------------------\n", rank);
@@ -157,11 +160,13 @@ void * almondSetup(uint  Nnum,
   almond->iintType = strdup(iintType);
   almond->dfloatType = strdup(dfloatType);
 
+
   return (void *) almond;
 }
 
 
-void * almondGlobalSetup(uint  Nnum,
+void * almondGlobalSetup(mesh_t *mesh, 
+       uint  Nnum,
        int* rowStarts, 
        void* rowIds,
        uint  nnz, 
@@ -214,6 +219,7 @@ void * almondGlobalSetup(uint  Nnum,
   for (int i=0;i<numGlobalRows;i++)almond->nullA[i] = 1;
   
   almond->M.setup(*(almond->A), almond->nullA, rowStarts);
+  almond->M.sync_setup_on_device(mesh->device);
   for (iint r=0;r<size;r++) {
     if (r==rank) {
       printf("----------Rank %d ------------------------\n", rank);
@@ -263,6 +269,9 @@ void * almondGlobalSetup(uint  Nnum,
   almond->iintType = strdup(iintType);
   almond->dfloatType = strdup(dfloatType);
 
+  almond->o_rhs = mesh->device.malloc(almond->numLocalRows*sizeof(dfloat), almond->rhs.data());
+  almond->o_x   = mesh->device.malloc(almond->numLocalRows*sizeof(dfloat), almond->x.data());
+
   return (void *) almond;
 }
 
@@ -307,8 +316,11 @@ int almondSolve(void* x,
       almond->rhs[n] += almond->rhsSort[id];
   }
 
+  almond->o_rhs.copyFrom(almond->rhs.data());
+
   if(1){
-    almond->M.solve(almond->rhs, almond->x,coarseSolve,coarseA,coarseTotal,coarseOffset);
+    //almond->M.solve(almond->rhs, almond->x,coarseSolve,coarseA,coarseTotal,coarseOffset);
+    almond->M.solve(almond->o_rhs, almond->o_x,coarseSolve,coarseA,coarseTotal,coarseOffset);
   }
   else{
     int maxIt = 40;
@@ -322,6 +334,8 @@ int almondSolve(void* x,
         coarseSolve,coarseA,
         coarseTotal,coarseOffset);
   }
+
+  almond->o_x.copyTo(almond->x.data());
 
   //scatter
   for(iint n=0;n<almond->numLocalRows;++n){

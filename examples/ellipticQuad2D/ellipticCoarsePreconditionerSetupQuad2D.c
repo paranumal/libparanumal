@@ -318,7 +318,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
     // TW: to here.
     
-    precon->almond = almondSetup(Nnum, 
+    precon->almond = almondSetup(mesh,
+         Nnum, 
 				 globalStarts, // TW: need to replace this
 				 globalNumbering,
 				 recvNtotal,      // TW: number of nonzeros
@@ -340,7 +341,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   if(strstr(options, "GLOBALALMOND")){
     
-    precon->parAlmond = almondGlobalSetup(Nnum, 
+    precon->parAlmond = almondGlobalSetup(mesh, 
+         Nnum, 
          globalStarts, 
          globalNumbering,
          globalnnzTotal,      

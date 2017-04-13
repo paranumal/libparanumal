@@ -488,7 +488,8 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(uint  Nnum,
+void * almondSetup(mesh_t *mesh,
+       uint  Nnum,
        int* rowStarts, 
        void* rowIds,
        uint  nnz, 
@@ -506,7 +507,8 @@ void * almondSetup(uint  Nnum,
        const char* iintType, 
        const char* dfloatType) ;
 
-void * almondGlobalSetup(uint  Nnum,
+void * almondGlobalSetup(mesh_t *mesh, 
+       uint  Nnum,
        int* rowStarts, 
        void* rowIds,
        uint  nnz, 
