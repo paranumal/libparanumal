@@ -10,11 +10,11 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+				       sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+				       sizeof(dfloat));
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+				       sizeof(dfloat));
 
   mesh->pmlqx    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				    sizeof(dfloat));
@@ -48,7 +48,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
     Ma = 0.1;     //Set Mach number
-    Re = 1000.;   // Set Reynolds number
+    Re = 5000.;   // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -73,7 +73,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     #if 1
     printf("Starting initial conditions for NONPML\n");
     Ma = 0.1;     //Set Mach number
-    Re = 1000.;   // Set Reynolds number
+    Re = 5000.;   // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -95,7 +95,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     mesh->finalTime = 200.;
 
     #else
-
     printf("Starting initial conditions for NONPML\n");
     Ma = 0.1;
     mesh->RT  = 9.0;
@@ -222,25 +221,25 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       if(strstr(options,"PML")){
 
 	if(cx>xmax){
-	  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  // mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+	  // mesh->sigmax[mesh->Np*e + n] = xsigma;
+	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
 	  isPml = 1;
 	}
 	if(cx<xmin){
-	   mesh->sigmax[mesh->Np*e + n] = xsigma;
-	   // mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+	   // mesh->sigmax[mesh->Np*e + n] = xsigma;
+	   mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
   
 	  isPml = 1;
 	}
 	if(cy>ymax){
-	  	 mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  // mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+	  	 // mesh->sigmay[mesh->Np*e + n] = ysigma;
+	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
    
 	  isPml = 1;
 	}
 	if(cy<ymin){
-	   mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  // mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+	   // mesh->sigmay[mesh->Np*e + n] = ysigma;
+	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
    
 	  isPml = 1;
 	}
@@ -378,9 +377,9 @@ for(iint e=0;e<mesh->Nelements;++e){
   }
   if(strstr(options, "SARK3")){ 
     printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
-    //    dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-   // dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
-    dt = cfl*dtex;
+     // dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+   dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
+   // dt = cfl*dtex;
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
   }
@@ -415,7 +414,7 @@ for(iint e=0;e<mesh->Nelements;++e){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 5;
+  mesh->errorStep = 1000;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
@@ -606,7 +605,7 @@ for(iint e=0;e<mesh->Nelements;++e){
 
       //
       // PML Region Coefficients
-      coef = 0.5*coef; 
+      coef = 1.0*coef; 
       //  Exponential Coefficients
       mesh->sarkpmla[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
       mesh->sarkpmla[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31

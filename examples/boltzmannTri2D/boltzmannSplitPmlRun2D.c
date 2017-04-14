@@ -10,57 +10,32 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
   occa::initTimer(mesh->device);
 
 
-   if(strstr(options, "LSERK")){
+   
 
     for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
+      if(strstr(options, "LSERK")){
       boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+      }
+
+      if(strstr(options, "LSIMEX")){
+       boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
+      
+      if(strstr(options, "SARK3")){
+       boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
+
+      if(strstr(options, "SAAB3")){
+
+       boltzmannSplitPmlSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
 
       if((tstep%mesh->errorStep)==0){
         boltzmannReport2D(mesh, tstep,options);
       }
     }
-  }
-
-
-  if(strstr(options, "LSIMEX")){
-
-    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
-      boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep,options);
-      }
-    }
-  }
-
-
-  if(strstr(options, "SARK3")){
-
-    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
-      boltzmannSplitPmlSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep,options);
-      }
-    }
-  }
-
-   if(strstr(options, "SAAB3")){
-
-    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
-      boltzmannSplitPmlSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep,options);
-      }
-    }
-  }
- 
   
+  // For Final Time
   boltzmannReport2D(mesh, mesh->NtimeSteps,options);
 
   occa::printTimer();

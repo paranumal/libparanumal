@@ -31,23 +31,41 @@ void boundaryConditions2D(const iint bc,
 			  dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
 			  dfloat * restrict q4B, dfloat * restrict q5B, dfloat * restrict q6B){
 #if PML_ENABLED
-
-  if(bc==1){ // Wall 
-    *q1B = q1M; 
+  if (1 == bc)       // Wall
+  {
+    *q1B =  q1M; 
     *q2B = -q2M;
     *q3B = -q3M;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
+    *q4B =  q4M;
+    *q5B =  q5M;
+    *q6B =  q6M;
   }
-
-    if(bc>1){ // wall for non-mean flow
+  else if (2==bc)   // NBN: testing slip
+  { 
+    *q1B =  q1M; 
+    *q2B =  q2M;    // Slip for u
+    *q3B = -q3M;    // v = 0
+    *q4B =  q4M;
+    *q5B =  q5M;
+    *q6B =  q6M;
+  }
+  else if (3==bc)   // NBN: testing inflow
+  { 
     *q1B = 2.f*p_q1bar - q1M; 
     *q2B = 2.f*ramp*p_q2bar - q2M; 
     *q3B = 2.f*ramp*p_q3bar - q3M; 
     *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+  }
+  else      // NBN: for outflow from PML buffer, do nothing
+  { 
+    *q1B = q1M; 
+    *q2B = q2M;   // u: do nothing
+    *q3B = q3M;   // v: do nothing
+    *q4B = q4M;
+    *q5B = q5M;
+    *q6B = q6M;
   }
 
 
