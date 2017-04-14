@@ -488,8 +488,8 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 
        
 	     // May change!!!!
-	    dfloat alpha = 0.5f;
-	    dfloat beta  = 0.5f;
+	    dfloat alpha = 1.0f;
+	    dfloat beta  = 0.0f;
 	    //dfloat tInv = invTau[base];
         dfloat tInv = p_tauInv;
    

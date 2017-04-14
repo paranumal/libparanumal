@@ -31,6 +31,9 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
 
+    ramp    =1.0 ;
+    drampdt = 0.0; 
+
     mesh->device.finish();
     occa::tic("volumeKernel");
     

@@ -214,14 +214,14 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       dfloat qx4 = expdt*qxold4 + dt*( erka*rhsqx14 + erkb*rhsqx24);
       dfloat qx5 = expdt*qxold5 + dt*( erka*rhsqx15 + erkb*rhsqx25);
       dfloat qx6 = expdt*qxold6 + dt*( erka*rhsqx16 + erkb*rhsqx26);
-      //
-      dfloat qy1 =       qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
-      dfloat qy2 =       qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
-      dfloat qy3 =       qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
-      dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24);
-      dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25);
-      dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26);
       // //
+      // dfloat qy1 =       qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
+      // dfloat qy2 =       qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
+      // dfloat qy3 =       qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
+      // dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24);
+      // dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25);
+      // dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26);
+      // // //
        
       // dfloat qx1 =       qxold1 + dt*(  rka*rhsqx11 +  rkb*rhsqx21);
       // dfloat qx2 =       qxold2 + dt*(  rka*rhsqx12 +  rkb*rhsqx22);
@@ -230,14 +230,14 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
       // dfloat qx5 =       qxold5 + dt*(  rka*rhsqx15 +  rkb*rhsqx25);
       // dfloat qx6 =       qxold6 + dt*(  rka*rhsqx16 +  rkb*rhsqx26);
       // //
-      // dfloat qy1 =       qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
-      // dfloat qy2 =       qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
-      // dfloat qy3 =       qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
-      // dfloat qy4 =       qyold4 + dt*(  rka*rhsqy14 +  rkb*rhsqy24);
-      // dfloat qy5 =       qyold5 + dt*(  rka*rhsqy15 +  rkb*rhsqy25);
-      // dfloat qy6 =       qyold6 + dt*(  rka*rhsqy16 +  rkb*rhsqy26);
+      dfloat qy1 =       qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
+      dfloat qy2 =       qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
+      dfloat qy3 =       qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
+      dfloat qy4 =       qyold4 + dt*(  rka*rhsqy14 +  rkb*rhsqy24);
+      dfloat qy5 =       qyold5 + dt*(  rka*rhsqy15 +  rkb*rhsqy25);
+      dfloat qy6 =       qyold6 + dt*(  rka*rhsqy16 +  rkb*rhsqy26);
       
-       //
+       
      
       
       dfloat4 qa, qb;
@@ -428,15 +428,15 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       dfloat qx4 = expdt*qxold4 + dt*( erka*rhsqx14 + erkb*rhsqx24 + erkc*rhsqx34);
       dfloat qx5 = expdt*qxold5 + dt*( erka*rhsqx15 + erkb*rhsqx25 + erkc*rhsqx35);
       dfloat qx6 = expdt*qxold6 + dt*( erka*rhsqx16 + erkb*rhsqx26 + erkc*rhsqx36);
-      //
-      dfloat qy1 = qyold1       + dt*(  rka*rhsqy11 +  rkb*rhsqy21 +  rkc*rhsqy31);
-      dfloat qy2 = qyold2       + dt*(  rka*rhsqy12 +  rkb*rhsqy22 +  rkc*rhsqy32);
-      dfloat qy3 = qyold3       + dt*(  rka*rhsqy13 +  rkb*rhsqy23 +  rkc*rhsqy33);
-      dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24 + erkc*rhsqy34);
-      dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25 + erkc*rhsqy35);
-      dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26 + erkc*rhsqy36);
-
       // //
+      // dfloat qy1 = qyold1       + dt*(  rka*rhsqy11 +  rkb*rhsqy21 +  rkc*rhsqy31);
+      // dfloat qy2 = qyold2       + dt*(  rka*rhsqy12 +  rkb*rhsqy22 +  rkc*rhsqy32);
+      // dfloat qy3 = qyold3       + dt*(  rka*rhsqy13 +  rkb*rhsqy23 +  rkc*rhsqy33);
+      // dfloat qy4 = expdt*qyold4 + dt*( erka*rhsqy14 + erkb*rhsqy24 + erkc*rhsqy34);
+      // dfloat qy5 = expdt*qyold5 + dt*( erka*rhsqy15 + erkb*rhsqy25 + erkc*rhsqy35);
+      // dfloat qy6 = expdt*qyold6 + dt*( erka*rhsqy16 + erkb*rhsqy26 + erkc*rhsqy36);
+
+      // // //
       // dfloat qx1 = qxold1       + dt*(  rka*rhsqx11 +  rkb*rhsqx21 +  rkc*rhsqx31);
       // dfloat qx2 = qxold2       + dt*(  rka*rhsqx12 +  rkb*rhsqx22 +  rkc*rhsqx32);
       // dfloat qx3 = qxold3       + dt*(  rka*rhsqx13 +  rkb*rhsqx23 +  rkc*rhsqx33);
@@ -444,12 +444,12 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
       // dfloat qx5 = qxold5 + dt*( rka*rhsqx15 + rkb*rhsqx25 + rkc*rhsqx35);
       // dfloat qx6 = qxold6 + dt*( rka*rhsqx16 + rkb*rhsqx26 + rkc*rhsqx36);
       // //
-      // dfloat qy1 = qyold1       + dt*(  rka*rhsqy11 +  rkb*rhsqy21 +  rkc*rhsqy31);
-      // dfloat qy2 = qyold2       + dt*(  rka*rhsqy12 +  rkb*rhsqy22 +  rkc*rhsqy32);
-      // dfloat qy3 = qyold3       + dt*(  rka*rhsqy13 +  rkb*rhsqy23 +  rkc*rhsqy33);
-      // dfloat qy4 = qyold4 + dt*( rka*rhsqy14 + rkb*rhsqy24 + rkc*rhsqy34);
-      // dfloat qy5 = qyold5 + dt*( rka*rhsqy15 + rkb*rhsqy25 + rkc*rhsqy35);
-      // dfloat qy6 = qyold6 + dt*( rka*rhsqy16 + rkb*rhsqy26 + rkc*rhsqy36);
+      dfloat qy1 = qyold1       + dt*(  rka*rhsqy11 +  rkb*rhsqy21 +  rkc*rhsqy31);
+      dfloat qy2 = qyold2       + dt*(  rka*rhsqy12 +  rkb*rhsqy22 +  rkc*rhsqy32);
+      dfloat qy3 = qyold3       + dt*(  rka*rhsqy13 +  rkb*rhsqy23 +  rkc*rhsqy33);
+      dfloat qy4 = qyold4 + dt*( rka*rhsqy14 + rkb*rhsqy24 + rkc*rhsqy34);
+      dfloat qy5 = qyold5 + dt*( rka*rhsqy15 + rkb*rhsqy25 + rkc*rhsqy35);
+      dfloat qy6 = qyold6 + dt*( rka*rhsqy16 + rkb*rhsqy26 + rkc*rhsqy36);
      
             
       dfloat4 qa, qb;
