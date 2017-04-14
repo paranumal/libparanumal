@@ -128,7 +128,8 @@ typedef struct {
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubDtW;    // 't' weak differentiation matrix
-
+  //
+  dfloat *cubFilterProject; // Filtered projection matrix from cubature nodes to W&B nodes
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
@@ -190,11 +191,15 @@ typedef struct {
   dfloat *pmlq;
   dfloat *pmlrhsq;
   dfloat *pmlresq;
+  //
+
 
   dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
+  
+  dfloat *invTau;
    
 
   dfloat *pmlqy;    // y-pml data array
@@ -225,7 +230,7 @@ typedef struct {
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
-  occa::memory o_cubInterpT, o_cubProjectT;
+  occa::memory o_cubInterpT, o_cubProjectT, o_cubFilterProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
 
@@ -358,7 +363,7 @@ typedef struct {
   occa::kernel pmlUpdateStageKernel;
   //occa::kernel updateStageKernel33;
   //
-  occa::memory o_rhsq4, o_rhsq5;
+  occa::memory o_rhsq4, o_rhsq5, o_invTau;
   occa::memory o_qold , o_pmlqxold, o_pmlqyold,o_pmlNTold;
   // SARK extra coefficients for Boltzmann Solver
   dfloat sarka[5][5], sarkb[5], sarke[6], sarkra[5], sarkrb[5]; // exponential update terms, better to hold

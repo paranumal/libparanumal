@@ -32,13 +32,14 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
   dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+  dfloat *cubFilterProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->cubNp;++m){
       cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
       cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
 
-
+      cubFilterProjectT[n+m*mesh->Np] = mesh->cubFilterProject[n*mesh->cubNp+m];
       cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
       cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
       //      printf("%g @ ", cubInterpT[m+n*mesh->cubNp]);
@@ -268,6 +269,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_cubProjectT =
     mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			cubProjectT);
+
+  mesh->o_cubFilterProjectT =
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+      cubFilterProjectT);
 
   mesh->o_cubDrWT =
     mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),

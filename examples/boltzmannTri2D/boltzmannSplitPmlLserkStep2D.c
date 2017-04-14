@@ -45,6 +45,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     if(mesh->pmlNelements){	
       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
+			    ramp,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
