@@ -37,35 +37,71 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   mesh->respmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				    sizeof(dfloat));
   
-  mesh->sigmax= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-  mesh->sigmay= (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+  mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+  mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+  mesh->invTau = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
   // SET SOLVER OPTIONS 
   // Initial Conditions, Flow Properties
-  dfloat Ma = 0.f , Re= 0.f, rho = 1.f, u = 0.f, v = 0.f, nu = 0.f; 
+  dfloat Ma = 0.f , Re= 0.f, rho = 1.f, u = 0.f, v = 0.f, nu = 0.f, Uref=1.f, Lref = 1.f; 
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma22 = 0.f;  
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    Ma = 0.1;
-    mesh->RT  = 9.0;
+    Ma = 0.1;     //Set Mach number
+    Re = 1000.;   // Set Reynolds number
+    //
+    Uref = 1.;   // Set Uref
+    Lref = 1.;   // set Lref
+    //
+    mesh->RT  = Uref*Uref/(Ma*Ma);
     mesh->sqrtRT = sqrt(mesh->RT);  
+    //
+    nu = Uref*Lref/Re; 
+    mesh->tauInv = mesh->RT/nu;
+    
+    // Create Periodic Boundaries
+    printf("Creating periodic connections if exist \n");
+    dfloat xper = 1.0;   dfloat yper = 0.0;
+    boltzmannPeriodic2D(mesh,xper,yper);
 
-    Re = 6000./mesh->sqrtRT; 
-    mesh->tauInv = mesh->sqrtRT * Re / Ma;
-    nu = mesh->RT/mesh->tauInv; 
-    // Uniform Flow Condition
-    rho = 1., u = 1., v = 0.; 
-    sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    //printf("starting initial conditions\n"); //Zero Flow Conditions
+    rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
     mesh->finalTime = 20.;
   }
   else{
+    #if 1
+    printf("Starting initial conditions for NONPML\n");
+    Ma = 0.1;     //Set Mach number
+    Re = 1000.;   // Set Reynolds number
+    //
+    Uref = 1.;   // Set Uref
+    Lref = 1.;   // set Lref
+    //
+    mesh->RT  = Uref*Uref/(Ma*Ma);
+    mesh->sqrtRT = sqrt(mesh->RT);  
+    //
+    nu = Uref*Lref/Re; 
+    mesh->tauInv = mesh->RT/nu;
+    
+    // Create Periodic Boundaries
+    printf("Creating periodic connections if exist \n");
+    dfloat xper = 1.0;   dfloat yper = 0.0;
+    boltzmannPeriodic2D(mesh,xper,yper);
+
+    //printf("starting initial conditions\n"); //Zero Flow Conditions
+    rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    //
+    mesh->finalTime = 200.;
+
+    #else
+
     printf("Starting initial conditions for NONPML\n");
     Ma = 0.1;
     mesh->RT  = 9.0;
     mesh->sqrtRT = sqrt(mesh->RT);  
 
-    Re = 6000./mesh->sqrtRT; 
+    Re = 1000./mesh->sqrtRT; 
     mesh->tauInv = mesh->sqrtRT * Re / Ma;
     nu = mesh->RT/mesh->tauInv; 
     // Create Periodic Boundaries
@@ -76,16 +112,14 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 30.;
+    mesh->finalTime = 200.;
+    #endif
 
   }
 
   
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
-
-
-
 
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
@@ -151,7 +185,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   //  mesh->Lambda2 = 0.5/(sqrt(3.)*mesh->sqrtRT);
   mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
-  // find elements with center inside PML zone
+  
+
   dfloat xmin = -4, xmax = 8, ymin = -4, ymax = 4;
   dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
@@ -187,23 +222,26 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       if(strstr(options,"PML")){
 
 	if(cx>xmax){
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+	  mesh->sigmax[mesh->Np*e + n] = xsigma;
+	  // mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
 	  isPml = 1;
 	}
 	if(cx<xmin){
-	  //  mesh->sigmax[mesh->Np*e + n] = xsigma;
-	  mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+	   mesh->sigmax[mesh->Np*e + n] = xsigma;
+	   // mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+  
 	  isPml = 1;
 	}
 	if(cy>ymax){
-	  //	  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+	  	 mesh->sigmay[mesh->Np*e + n] = ysigma;
+	  // mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+   
 	  isPml = 1;
 	}
 	if(cy<ymin){
-	  //  mesh->sigmay[mesh->Np*e + n] = ysigma;
-	  mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+	   mesh->sigmay[mesh->Np*e + n] = ysigma;
+	  // mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+   
 	  isPml = 1;
 	}
       }
@@ -215,6 +253,87 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       nonPmlElementIds[nonPmlNelements++] = e;
     
   }
+
+
+// find elements with center inside PML zone
+  dfloat shift = 0.0; 
+  dfloat xdmax =  9. + shift; 
+  dfloat xdmin = -5. - shift; 
+  dfloat ydmax =  5. + shift; 
+  dfloat ydmin = -5. - shift; 
+  //
+  dfloat xemax = xmax + shift; 
+  dfloat xemin = xmin - shift; 
+  dfloat yemax = ymax + shift; 
+  dfloat yemin = ymin - shift; 
+
+
+
+// Compute Tau Profile
+for(iint e=0;e<mesh->Nelements;++e){
+    dfloat cx = 0, cy = 0;
+    for(iint n=0;n<mesh->Nverts;++n){
+      cx += mesh->EX[e*mesh->Nverts+n];
+      cy += mesh->EY[e*mesh->Nverts+n];
+    }
+    cx /= mesh->Nverts;
+    cy /= mesh->Nverts;
+       
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat x = mesh->x[n + e*mesh->Np];
+      dfloat y = mesh->y[n + e*mesh->Np];
+      //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
+
+  if(strstr(options,"PML")){
+
+    mesh->invTau[mesh->Np*e + n] = mesh->tauInv; 
+    iint sk = 0; 
+      if(cx>xemax){
+          if(xdmax>cx){
+            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0  - pow(x-xemax,2)/pow(xdmax-xemax,2));
+          }
+           sk++;
+      }
+      if(cx<xemin){ 
+         if(cx>xdmin){ 
+            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0  - pow(x-xemin,2)/pow(xdmin-xemin,2));
+         }
+           sk++;
+      }
+
+      if(cy>yemax){
+         if(ydmax>cy){ 
+            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0 - pow(y-yemax,2)/pow(ydmax-yemax,2));
+         }
+           sk++;
+      }
+      if(cy<yemin){
+          if(ydmin<cy){ 
+             mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0 - pow(y-yemin,2)/pow(ydmin-yemin,2));
+         }
+           sk++;
+      }
+   
+      if(  sk>=1 ){
+       mesh->invTau[mesh->Np*e + n] = (mesh->invTau[mesh->Np*e + n] - mesh->tauInv)/sk;
+      }
+
+
+      if( (cx>xdmax) || (cx<xdmin) || (cy>ydmax) || (cy<ydmin) || (  mesh->invTau[mesh->Np*e + n] <0) ) {
+           mesh->invTau[mesh->Np*e + n] = 0.0;
+
+      }
+
+   
+   }
+  }
+}
+
+
+
+
+
+
 
 
 
@@ -253,15 +372,15 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "LSERK")){
     printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
     dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+    //dt = cfl*dtex;
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
  
   }
   if(strstr(options, "SARK3")){ 
     printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
-    //      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-    // ok to up to 4x 
-    dt = mesh->dtfactor*cfl*mymin(8.*dtim,dtex); // 2 from 4
-    //dt = cfl*dtex;
+    //    dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
+   // dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
+    dt = cfl*dtex;
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
   }
@@ -274,8 +393,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   }
   if(strstr(options, "LSIMEX")){ 
     printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-    //      dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-    dt = mesh->dtfactor*cfl*mymin(4.*dtim,dtex);
+    dt = mesh->dtfactor*cfl*mymin(15*dtim,dtex);
     //dt = cfl*dtex;
       
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
@@ -297,7 +415,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 5;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
@@ -308,8 +426,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  // sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
 
   // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
@@ -343,8 +461,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     mesh->o_qold =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
-    // mesh->o_rhsq =
-    //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);    
+    mesh->o_rhsq =
+        mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);    
     mesh->o_rhsq2 =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
     mesh->o_rhsq3 =
@@ -400,14 +518,14 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
 
 
-#if 1 // First version of SARK
+#if 0 // First version of SARK
     // Base Runge-Kutta Method
     dfloat a21 = 1./3.;   dfloat a31 = -3./16. ;    dfloat a32 = 15./16.;
     dfloat b1 = 1./6.;    dfloat b2 = 3./10.;       dfloat b3 = 8./15.; 
     dfloat c1 = 0.;       dfloat c2 = 1./3.;        dfloat c3 = 3./4.; 
       
 #else // Second Version
-      // Base Runge-Kutta Method
+    // Base Runge-Kutta Method
     dfloat a21 = 1.f/2.f;   dfloat a31 = -1.f ;    dfloat a32 = 2.f;
     dfloat b1 = 1.f/6.f;    dfloat b2 = 2./3.;       dfloat b3 = 1./6.; 
     dfloat c1 = 0.f;       dfloat c2 = 1./2.;        dfloat c3 = 1.; 
@@ -423,7 +541,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     printf("Coef*dt = %.8e", coef*dt);
 
     if(fabs(coef*h)>1e-2){
-#if 1  // First Version
+#if 0  // First Version
 
       //  Exponential Coefficients
       mesh->sarka[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
@@ -514,7 +632,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
       printf("Computing SARK coefficients  with 3th order Taylor series expansion\n");
 
-#if 1 // First formulation
+#if 0 // First formulation
 
       //  fifth Order Taylor Series Expansion
       mesh->sarka[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
@@ -727,6 +845,9 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   mesh->o_sigmay =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
 
+  mesh->o_invTau =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->invTau);
+
   mesh->nonPmlNelements = nonPmlNelements;
   mesh->pmlNelements    = pmlNelements;
 
@@ -861,8 +982,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
       printf("Compiling SA pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSASplitPmlVolumeCub2D",
+	   mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+					   "boltzmannSplitPmlVolumeCub2D",
 					   kernelInfo);
 
       printf("Compiling SA relaxation kernel with cubature integration\n");
@@ -942,6 +1063,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
 
   }
+
   else if(strstr(options, "LSIMEX")){ 
  
     // RESIDUAL UPDATE KERNELS
@@ -973,16 +1095,42 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     if(strstr(options, "CUBATURE")){ 
       printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
 
+       if(strstr(options, "SHIFT")){
       mesh->implicitSolveKernel = 
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-					   "boltzmannLSIMEXImplicitSolveCub2D",
+	    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+					   "boltzmannLSIMEXImplicitSolveCubShift2D",
 					   kernelInfo); 
-      
-      printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
+        printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
       mesh->pmlImplicitSolveKernel = 
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-					   "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
-					   kernelInfo); 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+             "boltzmannLSIMEXSplitPmlImplicitSolveCubShift2D",
+             kernelInfo); 
+       }
+
+      else if(strstr(options, "FILTER")){
+      mesh->implicitSolveKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+             "boltzmannLSIMEXImplicitSolveCubFilter2D",
+             kernelInfo); 
+       }
+       else{
+
+       mesh->implicitSolveKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+             "boltzmannLSIMEXImplicitSolveCub2D",
+             kernelInfo); 
+
+        printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
+      mesh->pmlImplicitSolveKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+             "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
+             kernelInfo); 
+
+
+       }
+
+      
+    
     }
     else if(strstr(options, "COLLOCATION")){ 
       mesh->implicitSolveKernel = 
@@ -1057,7 +1205,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       printf("Compiling SA pml volume kernel with cubature integration\n");
       mesh->pmlVolumeKernel =
 	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSASplitPmlVolumeCub2D",
+					   "boltzmannSplitPmlVolumeCub2D",
 					   kernelInfo);
 
       printf("Compiling SA relaxation kernel with cubature integration\n");

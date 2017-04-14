@@ -22,7 +22,6 @@ void boltzmannRampFunction2D(dfloat t, dfloat *ramp, dfloat *drampdt);
 
 
 
-
 // Time Discretizations one step
 void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
