@@ -1,4 +1,8 @@
 
+
+#define DENSITY_SHIFT 0
+
+
 kernel void boltzmannRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
@@ -65,8 +69,9 @@ kernel void boltzmannRelaxationCub2D(const iint Nelements,
 	      cubq5 += Icn*s_q[es][4][m];
 	      cubq6 += Icn*s_q[es][5][m];
 	    }
-	    #if 1
-	    dfloat delta = 1e-2;
+	    //
+	    #if DENSITY_SHIFT
+	    dfloat delta  = 1e-2;
 	    dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
 	    #else
         dfloat icubq1 = 1.f/cubq1;
@@ -194,8 +199,8 @@ kernel void boltzmannSplitPmlRelaxationCub2D(const iint Nelements,
 	      cubq6 += Icn*s_q[es][5][m];
 	    }
 	    
-	    #if 1
-	    dfloat delta = 1e-5;
+	    #if DENSITY_SHIFT
+	    dfloat delta  = 1e-2;
 	    dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
 	    #else
         dfloat icubq1 = 1.f/cubq1;
@@ -309,8 +314,8 @@ kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 	      cubq3 += Icn*s_q[es][2][m];
 	    }
 
-	   #if 1
-	    dfloat delta = 1e-2;
+	    #if DENSITY_SHIFT
+	    dfloat delta  = 1e-2;
 	    dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
 	    #else
         dfloat icubq1 = 1.f/cubq1;
@@ -375,7 +380,6 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 					     const dfloat ramp,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
-					     const dfloat * restrict invTau, 
 					     const dfloat4 * restrict q,
 					           dfloat * restrict pmlqx,
 					           dfloat * restrict pmlqy,
@@ -440,12 +444,12 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 	      
 	    }
 
-	    // #if 1
-	    // dfloat delta = 1e-2;
-	    // dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
-	    // #else
-        dfloat icubq1 = 1.f/cubq1;
-        // #endif
+	     #if DENSITY_SHIFT
+	     dfloat delta  = 1e-2;
+	     dfloat icubq1 = 1.f/occaSqrt(cubq1*cubq1+delta*delta);
+	     #else
+        dfloat icubq1  = 1.f/cubq1;
+         #endif
 	    
 	    // BGK relaxation approximation to the Boltzmann collision operator
 	    s_cubN4[es][n] =  cubq2*cubq3*icubq1;
@@ -501,60 +505,13 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 	    rhspmlqy[base+3*p_Np] += beta*(-tInv*(ramp*ramp*p_q4bar + qx4   - N4));
 	    rhspmlqy[base+4*p_Np] += beta*(-tInv*(ramp*ramp*p_q5bar + qx5   - N5));
 	    rhspmlqy[base+5*p_Np] += beta*(-tInv*(ramp*ramp*p_q6bar + qx6   - N6));
-     //    //
-
-
-
-	    
-	    // // May change!!!!
-	    // dfloat alpha = 0.f;
-	    // dfloat beta  = 0.f;
-
-	    // // split relaxation
-	    // rhspmlqx[base+3*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q4bar + qy4  - N4));
-	    // rhspmlqx[base+4*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q5bar + qy5  - N5));
-	    // rhspmlqx[base+5*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q6bar + qy6  - N6));
-	    
-	    // rhspmlqy[base+3*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q4bar + qx4   - N4));
-	    // rhspmlqy[base+4*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q5bar + qx5   - N5));
-	    // rhspmlqy[base+5*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q6bar + qx6   - N6));
-       
-
-     //    dfloat alpha = 0.5f*ramp;
-	    // dfloat beta  = 0.5f*ramp;
-	    // // split relaxation
-	    // rhspmlqx[base+3*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q4bar + qy4  - N4));
-	    // rhspmlqx[base+4*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q5bar + qy5  - N5));
-	    // rhspmlqx[base+5*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q6bar + qy6  - N6));
-	    
-	    // rhspmlqy[base+3*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q4bar + qx4   - N4));
-	    // rhspmlqy[base+4*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q5bar + qx5   - N5));
-	    // rhspmlqy[base+5*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q6bar + qx6   - N6));
-	   
+     
 	  }
 	}
       }
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // c1: working (reproduces c0)

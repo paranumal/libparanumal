@@ -1,4 +1,7 @@
 
+#define DENSITY_SHIFT 0
+
+
 kernel void boltzmannLSIMEXImplicitSolve2D(const iint Nelements,
 					       const iint * restrict elementIds,
 					       const dfloat dt,	
@@ -32,7 +35,8 @@ for(iint e=0;e<Nelements;++e;outer0){
 	dfloat qim4 = qex4;
 	dfloat qim5 = qex5;
 	dfloat qim6 = qex6; 
-    #if 1
+	//
+    #if DENSITY_SHIFT
 	    dfloat delta = 1e-2;
 	    dfloat iqex1 = 1.f/occaSqrt(qex1*qex1+delta*delta);
     #else
@@ -136,7 +140,8 @@ for(iint e=0;e<Nelements;++e;outer0){
 		dfloat qye4 = qYy[id4];
 		dfloat qye5 = qYy[id5];
 		dfloat qye6 = qYy[id6]; 
-        #if 1
+		//
+        #if DENSITY_SHIFT
 	    dfloat delta = 1e-2;
         dfloat iq1 = 1.f/occaSqrt(q1*q1+delta*delta);
         #else
@@ -151,7 +156,8 @@ for(iint e=0;e<Nelements;++e;outer0){
 	    dfloat N4=0.f, N5=0.f, N6=0.f;  
 
 		if(akk>0) { 
-			dfloat cc  = 0.5f*akk * dt * p_tauInv;
+			//dfloat cc  = 0.5f*akk * dt * p_tauInv;
+			dfloat cc  = 1.0f*akk * dt * p_tauInv;
 		    dfloat icc = 1.f/(cc+1.f); 
 			
 			// N(Qex)
@@ -162,15 +168,21 @@ for(iint e=0;e<Nelements;++e;outer0){
 			dfloat qxi4 =  qxe4 +  N4 ;
 			dfloat qxi5 =  qxe5 +  N5 ;
 			dfloat qxi6 =  qxe6 +  N6 ;
-			// 
-			dfloat qyi4 =  qye4 +  N4 ;
-			dfloat qyi5 =  qye5 +  N5 ;
-			dfloat qyi6 =  qye6 +  N6 ;
+			// // 
+			// dfloat qyi4 =  qye4 +  N4 ;
+			// dfloat qyi5 =  qye5 +  N5 ;
+			// dfloat qyi6 =  qye6 +  N6 ;
             
-            // Recombine
-	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qyi4;
-			q5 =  ramp*ramp*p_q5bar  + qxi5 + qyi5;
-			q6 =  ramp*ramp*p_q6bar  + qxi6 + qyi6;
+   //          // Recombine
+	  //       q4 =  ramp*ramp*p_q4bar  + qxi4 + qyi4;
+			// q5 =  ramp*ramp*p_q5bar  + qxi5 + qyi5;
+			// q6 =  ramp*ramp*p_q6bar  + qxi6 + qyi6;
+
+                     // Recombine
+	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qye4;
+			q5 =  ramp*ramp*p_q5bar  + qxi5 + qye5;
+			q6 =  ramp*ramp*p_q6bar  + qxi6 + qye6;
+
             
             // akk*dt*N(Qim)
 			N4 = -cc*( q4 + N4c );
@@ -183,13 +195,18 @@ for(iint e=0;e<Nelements;++e;outer0){
 			qxi5  += icc*(qxe5 - qxi5 + N5);   
 			qxi6  += icc*(qxe6 - qxi6 + N6); 
 			// 	    
-			qyi4  += icc*(qye4 - qyi4 + N4);    
-			qyi5  += icc*(qye5 - qyi5 + N5);  
-			qyi6  += icc*(qye6 - qyi6 + N6);    
+			// qyi4  += icc*(qye4 - qyi4 + N4);    
+			// qyi5  += icc*(qye5 - qyi5 + N5);  
+			// qyi6  += icc*(qye6 - qyi6 + N6);    
+			// //   			    
+			// q4 =  ramp*ramp*p_q4bar + qxi4 + qyi4;
+			// q5 =  ramp*ramp*p_q5bar + qxi5 + qyi5;
+			// q6 =  ramp*ramp*p_q6bar + qxi6 + qyi6;   
+
 			//   			    
-			q4 =  ramp*ramp*p_q4bar + qxi4 + qyi4;
-			q5 =  ramp*ramp*p_q5bar + qxi5 + qyi5;
-			q6 =  ramp*ramp*p_q6bar + qxi6 + qyi6;                                     
+			q4 =  ramp*ramp*p_q4bar + qxi4 + qye4;
+			q5 =  ramp*ramp*p_q5bar + qxi5 + qye5;
+			q6 =  ramp*ramp*p_q6bar + qxi6 + qye6;                                       
 	    
 		}  
 
@@ -197,22 +214,26 @@ for(iint e=0;e<Nelements;++e;outer0){
 	   N4 = -p_tauInv*( q4 + N4c );
 	   N5 = -p_tauInv*( q5 + N5c );
 	   N6 = -p_tauInv*( q6 + N6c );
+	   //
+
+	   dfloat alpha = 1.0f;
+	   dfloat beta  = 0.0f; 
 
 	  	// 
       qZx[id1]  = 0.f; // Required because of low storage
       qZx[id2]  = 0.f;
       qZx[id3]  = 0.f;
-      qZx[id4]  = 0.5f*N4;
-      qZx[id5]  = 0.5f*N5;
-      qZx[id6]  = 0.5f*N6; 
+      qZx[id4]  = alpha*N4;
+      qZx[id5]  = alpha*N5;
+      qZx[id6]  = alpha*N6; 
        
 	// 	
       qZy[id1]  = 0.f;
       qZy[id2]  = 0.f;
       qZy[id3]  = 0.f;
-      qZy[id4]  = 0.5f*N4;
-      qZy[id5]  = 0.5f*N5;
-      qZy[id6]  = 0.5f*N6; 
+      qZy[id4]  = beta*N4;
+      qZy[id5]  = beta*N5;
+      qZy[id6]  = beta*N6; 
      // 
       dfloat4 temp;
       temp.x =  0.f;
@@ -227,70 +248,7 @@ for(iint e=0;e<Nelements;++e;outer0){
       temp.z =  0.;
       temp.w =  0.;
 
-      qZ[2*(n + element*p_Np) +1] = temp;
-
-
-	//    //
-	//   const dfloat sigmaxe = sigmax[element*p_Np+n];
-	//   const dfloat sigmaye = sigmay[element*p_Np+n];
-
-	//   const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-	//   const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-
-
-	//    // pml relaxation back to mean flow
-	//   dfloat rhspmlqx1 = -msigmaxe*(qYx[id1]);
-	//   dfloat rhspmlqx2 = -msigmaxe*(qYx[id2]);
-	//   dfloat rhspmlqx3 = -msigmaxe*(qYx[id3]);
-	//   dfloat rhspmlqx4 = -msigmaxe*(qYx[id4]);
-	//   dfloat rhspmlqx5 = -msigmaxe*(qYx[id5]);
-	//   dfloat rhspmlqx6 = -msigmaxe*(qYx[id6]);
-
-	//   dfloat rhspmlqy1 = -msigmaye*(qYy[id1]);
-	//   dfloat rhspmlqy2 = -msigmaye*(qYy[id2]);
-	//   dfloat rhspmlqy3 = -msigmaye*(qYy[id3]);
-	//   dfloat rhspmlqy4 = -msigmaye*(qYy[id4]);
-	//   dfloat rhspmlqy5 = -msigmaye*(qYy[id5]);
-	//   dfloat rhspmlqy6 = -msigmaye*(qYy[id6]);
-
-
-	// // 
- //      qZx[id1]  = rhspmlqx1 + 0.; // Required because of low storage
- //      qZx[id2]  = rhspmlqx2 + 0.;
- //      qZx[id3]  = rhspmlqx3 + 0.;
- //      qZx[id4]  = rhspmlqx4 + 0.5f*N4;
- //      qZx[id5]  = rhspmlqx5 + 0.5f*N5;
- //      qZx[id6]  = rhspmlqx6 + 0.5f*N6; 
-       
-	// // 	
- //      qZy[id1]  = rhspmlqy1 + 0.;
- //      qZy[id2]  = rhspmlqy2 + 0.;
- //      qZy[id3]  = rhspmlqy3 + 0.;
- //      qZy[id4]  = rhspmlqy4 + 0.5f*N4;
- //      qZy[id5]  = rhspmlqy5 + 0.5f*N5;
- //      qZy[id6]  = rhspmlqy6 + 0.5f*N6; 
- //     // 
- //      dfloat4 temp;
- //      temp.x =  rhspmlqx1 + rhspmlqx1;
- //      temp.y =  rhspmlqx2 + rhspmlqy2;
- //      temp.z =  rhspmlqx3 + rhspmlqy3;
- //      temp.w =  rhspmlqx4 + rhspmlqy4 + N4;
-
- //      qZ[2*(n + element*p_Np)] = temp;
-
- //      temp.x =  rhspmlqx5 + rhspmlqy5 + N5;
- //      temp.y =  rhspmlqx6 + rhspmlqy6 + N6;
- //      temp.z =  0.;
- //      temp.w =  0.;
-
- //      qZ[2*(n + element*p_Np) +1] = temp;
-
-
-
-
-
-
-      
+      qZ[2*(n + element*p_Np) +1] = temp;      
     }
   }
 }
@@ -375,9 +333,15 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
 				qe5 += Icn*s_qE[es][4][m];
 				qe6 += Icn*s_qE[es][5][m];
 	      }
-
-    	 dfloat  iqe1 = 1.f/qe1;
-    
+        
+        //
+	    #if DENSITY_SHIFT
+	    dfloat delta = 1e-2;
+        dfloat iqe1 = 1.f/occaSqrt(qe1*qe1+delta*delta);
+        #else
+    	dfloat  iqe1 = 1.f/qe1;
+        #endif
+   
         // Hold the constant part of nonlinear function
          N4c = -(qe2*qe3*iqe1 );
 	     N5c = -p_invsqrt2*( qe2*qe2*iqe1 );
@@ -983,7 +947,8 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 	  if(e<Nelements){
 	    if(n<p_cubNp){
 	    	if(akk>0){
-			dfloat cc  = 0.5f*akk*dt*p_tauInv;
+			//dfloat cc  = 0.5f*akk*dt*p_tauInv;
+			dfloat cc  = 1.0f*akk*dt*p_tauInv;
 			dfloat icc   = 1.f/(cc + 1.f); 
 			
 			// N(Qex)
@@ -994,15 +959,21 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 			dfloat qxi4 =  qxe4 + N4 ;
 			dfloat qxi5 =  qxe5 + N5 ;
 			dfloat qxi6 =  qxe6 + N6 ;
-			// 
-			dfloat qyi4 =  qye4 + N4 ;
-			dfloat qyi5 =  qye5 + N5 ;
-			dfloat qyi6 =  qye6 + N6 ;
+			// // 
+			// dfloat qyi4 =  qye4 + N4 ;
+			// dfloat qyi5 =  qye5 + N5 ;
+			// dfloat qyi6 =  qye6 + N6 ;
             
-            // Recombine
-	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qyi4;
-			q5 =  ramp*ramp*p_q5bar  + qxi5 + qyi5;
-			q6 =  ramp*ramp*p_q6bar  + qxi6 + qyi6;
+   //          // Recombine
+	  //       q4 =  ramp*ramp*p_q4bar  + qxi4 + qyi4;
+			// q5 =  ramp*ramp*p_q5bar  + qxi5 + qyi5;
+			// q6 =  ramp*ramp*p_q6bar  + qxi6 + qyi6;
+
+
+			// Recombine
+	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qye4;
+			q5 =  ramp*ramp*p_q5bar  + qxi5 + qye5;
+			q6 =  ramp*ramp*p_q6bar  + qxi6 + qye6;
             
             // akk*dt*N(Qim)
 			N4 = -cc*( q4 + N4c );
@@ -1015,13 +986,18 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 			qxi5  += icc*(qxe5 - qxi5 + N5);   
 			qxi6  += icc*(qxe6 - qxi6 + N6); 
 			// 	    
-			qyi4  += icc*(qye4 - qyi4 + N4);    
-			qyi5  += icc*(qye5 - qyi5 + N5);  
-			qyi6  += icc*(qye6 - qyi6 + N6);    
+			// qyi4  += icc*(qye4 - qyi4 + N4);    
+			// qyi5  += icc*(qye5 - qyi5 + N5);  
+			// qyi6  += icc*(qye6 - qyi6 + N6);    
 			//   			    
-			q4 =  ramp*ramp*p_q4bar + qxi4 + qyi4;
-			q5 =  ramp*ramp*p_q5bar + qxi5 + qyi5;
-			q6 =  ramp*ramp*p_q6bar + qxi6 + qyi6;         
+			// q4 =  ramp*ramp*p_q4bar + qxi4 + qyi4;
+			// q5 =  ramp*ramp*p_q5bar + qxi5 + qyi5;
+			// q6 =  ramp*ramp*p_q6bar + qxi6 + qyi6;   
+
+			// Recombine
+	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qye4;
+			q5 =  ramp*ramp*p_q5bar  + qxi5 + qye5;
+			q6 =  ramp*ramp*p_q6bar  + qxi6 + qye6;      
 	      } 
 
 
@@ -1056,11 +1032,8 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 	      //
 	      const iint base = n + element*p_Nfields*p_Np;
 	      	      
-		dfloat alpha = 0.5f; 
-		dfloat beta  = 0.5f;  
-		//
-		// dfloat alpha = 0.5f*ramp; 
-		// dfloat beta  = 0.5f*ramp;         
+		dfloat alpha = 1.0f; 
+		dfloat beta  = 0.0f;      
 
 		// split relaxation
 		qZx[base+0*p_Np]  = 0.;
@@ -1322,8 +1295,8 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCubShift2D(const iint Nelements,
 	      //
 	      const iint base = n + element*p_Nfields*p_Np;
 	      	      
-		dfloat alpha = 0.5f; 
-		dfloat beta  = 0.5f;       
+		dfloat alpha = 1.0f; 
+		dfloat beta  = 0.0f;       
 
 		// split relaxation
 		qZx[base+0*p_Np]  = 0.;

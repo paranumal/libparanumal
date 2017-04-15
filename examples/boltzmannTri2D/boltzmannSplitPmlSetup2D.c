@@ -39,8 +39,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   
   mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-  mesh->invTau = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-  
+   
   // SET SOLVER OPTIONS 
   // Initial Conditions, Flow Properties
   dfloat Ma = 0.f , Re= 0.f, rho = 1.f, u = 0.f, v = 0.f, nu = 0.f, Uref=1.f, Lref = 1.f; 
@@ -70,7 +69,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     mesh->finalTime = 20.;
   }
   else{
-    #if 1
     printf("Starting initial conditions for NONPML\n");
     Ma = 0.1;     //Set Mach number
     Re = 5000.;   // Set Reynolds number
@@ -93,27 +91,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
     mesh->finalTime = 200.;
-
-    #else
-    printf("Starting initial conditions for NONPML\n");
-    Ma = 0.1;
-    mesh->RT  = 9.0;
-    mesh->sqrtRT = sqrt(mesh->RT);  
-
-    Re = 1000./mesh->sqrtRT; 
-    mesh->tauInv = mesh->sqrtRT * Re / Ma;
-    nu = mesh->RT/mesh->tauInv; 
-    // Create Periodic Boundaries
-    printf("Creating periodic connections if exist \n");
-    dfloat xper = 1.0;   dfloat yper = 0.0;
-    boltzmannPeriodic2D(mesh,xper,yper);
-
-    printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
-    //
-    mesh->finalTime = 200.;
-    #endif
-
   }
 
   
@@ -268,73 +245,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
 
 
-// Compute Tau Profile
-for(iint e=0;e<mesh->Nelements;++e){
-    dfloat cx = 0, cy = 0;
-    for(iint n=0;n<mesh->Nverts;++n){
-      cx += mesh->EX[e*mesh->Nverts+n];
-      cy += mesh->EY[e*mesh->Nverts+n];
-    }
-    cx /= mesh->Nverts;
-    cy /= mesh->Nverts;
-       
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat x = mesh->x[n + e*mesh->Np];
-      dfloat y = mesh->y[n + e*mesh->Np];
-      //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
-
-  if(strstr(options,"PML")){
-
-    mesh->invTau[mesh->Np*e + n] = mesh->tauInv; 
-    iint sk = 0; 
-      if(cx>xemax){
-          if(xdmax>cx){
-            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0  - pow(x-xemax,2)/pow(xdmax-xemax,2));
-          }
-           sk++;
-      }
-      if(cx<xemin){ 
-         if(cx>xdmin){ 
-            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0  - pow(x-xemin,2)/pow(xdmin-xemin,2));
-         }
-           sk++;
-      }
-
-      if(cy>yemax){
-         if(ydmax>cy){ 
-            mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0 - pow(y-yemax,2)/pow(ydmax-yemax,2));
-         }
-           sk++;
-      }
-      if(cy<yemin){
-          if(ydmin<cy){ 
-             mesh->invTau[mesh->Np*e + n] += mesh->tauInv*(1.0 - pow(y-yemin,2)/pow(ydmin-yemin,2));
-         }
-           sk++;
-      }
-   
-      if(  sk>=1 ){
-       mesh->invTau[mesh->Np*e + n] = (mesh->invTau[mesh->Np*e + n] - mesh->tauInv)/sk;
-      }
-
-
-      if( (cx>xdmax) || (cx<xdmin) || (cy>ydmax) || (cy<ydmin) || (  mesh->invTau[mesh->Np*e + n] <0) ) {
-           mesh->invTau[mesh->Np*e + n] = 0.0;
-
-      }
-
-   
-   }
-  }
-}
-
-
-
-
-
-
-
-
 
   printf("detected pml: %d pml %d non-pml %d total \n", pmlNelements, nonPmlNelements, mesh->Nelements);
 
@@ -378,8 +288,8 @@ for(iint e=0;e<mesh->Nelements;++e){
   if(strstr(options, "SARK3")){ 
     printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
      // dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
-   dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
-   // dt = cfl*dtex;
+   //dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
+     dt = cfl*dtex;
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
   }
@@ -392,8 +302,8 @@ for(iint e=0;e<mesh->Nelements;++e){
   }
   if(strstr(options, "LSIMEX")){ 
     printf("Time discretization method: Low Storage IMEX  with CFL: %.2f \n",cfl);
-    dt = mesh->dtfactor*cfl*mymin(15*dtim,dtex);
-    //dt = cfl*dtex;
+   // dt = mesh->dtfactor*cfl*mymin(15*dtim,dtex);
+    dt = cfl*dtex;
       
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
   }
@@ -563,7 +473,7 @@ for(iint e=0;e<mesh->Nelements;++e){
       mesh->sarke[2] = exp(coef*h*1.0);
 
       // PML Region Coefficients
-      coef = 0.5*coef; 
+      coef = 1.0*coef; 
       //  Exponential Coefficients
       mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
       mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
@@ -662,7 +572,7 @@ for(iint e=0;e<mesh->Nelements;++e){
       mesh->sarke[2] = exp(coef*h*1.0);
 
       // PML Region Coefficients
-      coef = 0.5*coef; 
+      coef = 1.0*coef; 
       //  fifth Order Taylor Series Expansion
       mesh->sarkpmla[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
 				      + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
@@ -710,7 +620,7 @@ for(iint e=0;e<mesh->Nelements;++e){
 
 
       // PML Region Coefficients
-      coef = 0.5*coef; 
+      coef = 1.0*coef; 
       //  Exponential Coefficients
       mesh->sarkpmla[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
       mesh->sarkpmla[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
@@ -843,9 +753,6 @@ for(iint e=0;e<mesh->Nelements;++e){
 
   mesh->o_sigmay =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
-
-  mesh->o_invTau =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->invTau);
 
   mesh->nonPmlNelements = nonPmlNelements;
   mesh->pmlNelements    = pmlNelements;
