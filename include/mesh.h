@@ -129,7 +129,7 @@ typedef struct {
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubDtW;    // 't' weak differentiation matrix
   //
-  dfloat *cubFilterProject; // Filtered projection matrix from cubature nodes to W&B nodes
+  
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
@@ -230,7 +230,7 @@ typedef struct {
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
-  occa::memory o_cubInterpT, o_cubProjectT, o_cubFilterProjectT;
+  occa::memory o_cubInterpT, o_cubProjectT; 
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
 

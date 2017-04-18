@@ -102,30 +102,6 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       mesh->device.finish();
       occa::tic("implicitSolve");
 
-        if(strstr(options, "SHIFT")){
-        	mesh->implicitSolveKernel(mesh->nonPmlNelements,
-				  mesh->o_nonPmlElementIds,
-				  mesh->dt,
-				  mesh->LsimexAd[k],
-				  mesh->o_cubInterpT,
-				  mesh->o_cubProjectT,
-				  mesh->o_qY,
-				  mesh->o_qZ); 
-       }
-
-
-        else if(strstr(options, "FILTER")){
-        	mesh->implicitSolveKernel(mesh->nonPmlNelements,
-				  mesh->o_nonPmlElementIds,
-				  mesh->dt,
-				  mesh->LsimexAd[k],
-				  mesh->o_cubInterpT,
-				  mesh->o_cubFilterProjectT,
-				  mesh->o_qY,
-				  mesh->o_qZ); 
-       }
-       else{
-
          mesh->implicitSolveKernel(mesh->nonPmlNelements,
 				  mesh->o_nonPmlElementIds,
 				  mesh->dt,
@@ -134,9 +110,7 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  mesh->o_cubProjectT,
 				  mesh->o_qY,
 				  mesh->o_qZ); 
-       }
-	
-
+       
 	//No surface term for implicit part
 	mesh->implicitUpdateKernel(mesh->nonPmlNelements,
 				   mesh->o_nonPmlElementIds,

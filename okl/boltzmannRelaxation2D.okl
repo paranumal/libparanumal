@@ -3,6 +3,8 @@
 #define DENSITY_SHIFT 0
 
 
+
+// Fully Explicit Scheme Uses Clasical half Half Splitting
 kernel void boltzmannRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
@@ -130,7 +132,7 @@ kernel void boltzmannRelaxationCub2D(const iint Nelements,
 }
 
 
-
+// Fully Explicit Scheme Uses Clasical half Half Splitting
 kernel void boltzmannSplitPmlRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
@@ -256,6 +258,7 @@ kernel void boltzmannSplitPmlRelaxationCub2D(const iint Nelements,
 
 
 
+
 kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
@@ -374,7 +377,7 @@ kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 
 
 
-
+// Semi Analytic  Scheme Collects all N(q) in qx
 kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 					     const iint * restrict elementIds,
 					     const dfloat ramp,
@@ -491,20 +494,18 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
 	    dfloat qy6 = pmlqy[base+5*p_Np];
 
        
-	     // May change!!!!
+	     // Collect all N(q) in Qx !!!!!!!!!!!
 	    dfloat alpha = 1.0f;
 	    dfloat beta  = 0.0f;
-	    //dfloat tInv = invTau[base];
-        dfloat tInv = p_tauInv;
-   
+	      
 	    // split relaxation
-	    rhspmlqx[base+3*p_Np] += alpha*(-tInv*(ramp*ramp*p_q4bar + qy4  - N4));
-	    rhspmlqx[base+4*p_Np] += alpha*(-tInv*(ramp*ramp*p_q5bar + qy5  - N5));
-	    rhspmlqx[base+5*p_Np] += alpha*(-tInv*(ramp*ramp*p_q6bar + qy6  - N6));
+	    rhspmlqx[base+3*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q4bar + qy4  - N4));
+	    rhspmlqx[base+4*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q5bar + qy5  - N5));
+	    rhspmlqx[base+5*p_Np] += alpha*(-p_tauInv*(ramp*ramp*p_q6bar + qy6  - N6));
 	    
-	    rhspmlqy[base+3*p_Np] += beta*(-tInv*(ramp*ramp*p_q4bar + qx4   - N4));
-	    rhspmlqy[base+4*p_Np] += beta*(-tInv*(ramp*ramp*p_q5bar + qx5   - N5));
-	    rhspmlqy[base+5*p_Np] += beta*(-tInv*(ramp*ramp*p_q6bar + qx6   - N6));
+	    rhspmlqy[base+3*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q4bar + qx4   - N4));
+	    rhspmlqy[base+4*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q5bar + qx5   - N5));
+	    rhspmlqy[base+5*p_Np] += beta*(-p_tauInv*(ramp*ramp*p_q6bar + qx6   - N6));
      
 	  }
 	}
@@ -513,6 +514,8 @@ kernel void boltzmannSASplitPmlRelaxationCub2D(const iint Nelements,
   }
 }
 
+
+// TODO: THESE OPTIMIZED KERNELS ARE OLD PML FORMULATION
 
 // c1: working (reproduces c0)
 kernel void boltzmannSplitPmlRelaxation2D_c1(const iint Nelements,
