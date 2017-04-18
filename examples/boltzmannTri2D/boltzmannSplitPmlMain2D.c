@@ -16,7 +16,7 @@ int main(int argc, char **argv){
   // relaxation = CUBATURE, COLLOCATION, 
   // time       = LSERK, LSIMEX, SARK3, SAAB3
   // bc         = PML, NONE
-   char *options =strdup("mode = SOLVER , relaxation = CUBATURE, stab = NO, time = SARK3, bc = PML");
+   char *options =strdup("mode = SOLVER , relaxation = CUBATURE, stab = NO, time = LSIMEX, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SARK3, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = LSERK, bc = PML");
 

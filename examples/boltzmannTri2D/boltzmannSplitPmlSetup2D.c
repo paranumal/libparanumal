@@ -1001,25 +1001,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     if(strstr(options, "CUBATURE")){ 
       printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
 
-       if(strstr(options, "SHIFT")){
-      mesh->implicitSolveKernel = 
-	    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-					   "boltzmannLSIMEXImplicitSolveCubShift2D",
-					   kernelInfo); 
-        printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
-      mesh->pmlImplicitSolveKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-             "boltzmannLSIMEXSplitPmlImplicitSolveCubShift2D",
-             kernelInfo); 
-       }
-
-      else if(strstr(options, "FILTER")){
-      mesh->implicitSolveKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-             "boltzmannLSIMEXImplicitSolveCubFilter2D",
-             kernelInfo); 
-       }
-       else{
+      
 
        mesh->implicitSolveKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
@@ -1031,11 +1013,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
              "boltzmannLSIMEXSplitPmlImplicitSolveCub2D",
              kernelInfo); 
-
-
-       }
-
-      
     
     }
     else if(strstr(options, "COLLOCATION")){ 

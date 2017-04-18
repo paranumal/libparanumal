@@ -181,18 +181,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
-  #if 1
-  // read cubature projection matrix
-  mesh->cubFilterProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->cubNp;++m){
-      fscanf(fp, dfloatFormat, mesh->cubFilterProject+n*mesh->cubNp+m);
-    }
-    fgets(buf,BUFSIZ,fp); // rest of line
-  }
-  #endif
-
+  
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
