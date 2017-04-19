@@ -275,6 +275,7 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
 kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
+				      const dfloat drampdt,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -462,6 +463,7 @@ kernel void boltzmannSplitPmlVolume2D(const iint Nelements,
 kernel void boltzmannUnsplitPmlVolume2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
+				      const dfloat drampdt,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -594,20 +596,21 @@ kernel void boltzmannUnsplitPmlVolume2D(const iint Nelements,
 	  dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
       
       // Rhs for qx    	  
-	  rhspmlqx[base+0*p_Np] = -pmlqx1 + Aqx1;
-	  rhspmlqx[base+1*p_Np] = -pmlqx2 + Aqx2;
-	  rhspmlqx[base+2*p_Np] = -pmlqx3 + Aqx3;
-	  rhspmlqx[base+3*p_Np] = -pmlqx4 + Aqx4;
-	  rhspmlqx[base+4*p_Np] = -pmlqx5 + Aqx5;
-	  rhspmlqx[base+5*p_Np] = -pmlqx6 + Aqx6;
+	  rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
+	  rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
+	  rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
+	  rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
+	  rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
+	  rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
 
 	  // Rhs for qy
-	  rhspmlqy[base+0*p_Np] = -pmlqy1 + Bqy1;
-	  rhspmlqy[base+1*p_Np] = -pmlqy2 + Bqy2;
-	  rhspmlqy[base+2*p_Np] = -pmlqy3 + Bqy3;
-	  rhspmlqy[base+3*p_Np] = -pmlqy4 + Bqy4;
-	  rhspmlqy[base+4*p_Np] = -pmlqy5 + Bqy5;
-	  rhspmlqy[base+5*p_Np] = -pmlqy6 + Bqy6;
+	  rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
+	  rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
+	  rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
+	  rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
+	  rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
+	  rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
+	 
 
 	  // BGK relaxation approximation to the Boltzmann collision operator
 	  dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
@@ -621,6 +624,13 @@ kernel void boltzmannUnsplitPmlVolume2D(const iint Nelements,
 	  dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
 	  dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
 	  dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
+	  //
+	  //Add mean flow forcing
+	  rhsq2 += drampdt*p_q2bar;
+	  rhsq3 += drampdt*p_q3bar;
+	  rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+	  rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+	  rhsq6 += 2.f*ramp*drampdt*p_q6bar;
 
 	  const int id = element*p_Np+n;	  
 	  dfloat4 tmp;
@@ -645,9 +655,11 @@ kernel void boltzmannUnsplitPmlVolume2D(const iint Nelements,
 }
 
 
+
 kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
+				      const dfloat drampdt,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -768,13 +780,13 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 	  dfloat rhspmlqx3 = -p_sqrtRT*(dq4dx);
 	  dfloat rhspmlqx4 = -p_sqrtRT*(dq3dx);
 	  dfloat rhspmlqx5 = -p_sqrtRT*p_sqrt2*dq2dx;			
-	  dfloat rhspmlqx6 = 0;
+	  dfloat rhspmlqx6 = 0.f;
 
 	  dfloat rhspmlqy1 = -p_sqrtRT*(dq3dy);
 	  dfloat rhspmlqy2 = -p_sqrtRT*(dq4dy);	
 	  dfloat rhspmlqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);	
 	  dfloat rhspmlqy4 = -p_sqrtRT*(dq2dy);		
-	  dfloat rhspmlqy5 = 0;
+	  dfloat rhspmlqy5 = 0.f;
 	  dfloat rhspmlqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
 
 	  // pml relaxation back to mean flow
@@ -817,6 +829,7 @@ kernel void boltzmannSplitPmlVolumeCub2D(const iint Nelements,
 kernel void boltzmannUnsplitPmlVolumeCub2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
+				      const dfloat drampdt,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax, 
 				      const dfloat * restrict sigmay,
@@ -947,29 +960,36 @@ kernel void boltzmannUnsplitPmlVolumeCub2D(const iint Nelements,
 	  dfloat Bqy5 = 0.f;
 	  dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
       
-      // Rhs for qx    	  
-	  rhspmlqx[base+0*p_Np] = -pmlqx1 + Aqx1;
-	  rhspmlqx[base+1*p_Np] = -pmlqx2 + Aqx2;
-	  rhspmlqx[base+2*p_Np] = -pmlqx3 + Aqx3;
-	  rhspmlqx[base+3*p_Np] = -pmlqx4 + Aqx4;
-	  rhspmlqx[base+4*p_Np] = -pmlqx5 + Aqx5;
-	  rhspmlqx[base+5*p_Np] = -pmlqx6 + Aqx6;
+      // Rhs for qx : -sigma_x*qx + Adq/dx     	  
+	  rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
+	  rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
+	  rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
+	  rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
+	  rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
+	  rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
 
-	  // Rhs for qy
-	  rhspmlqy[base+0*p_Np] = -pmlqy1 + Bqy1;
-	  rhspmlqy[base+1*p_Np] = -pmlqy2 + Bqy2;
-	  rhspmlqy[base+2*p_Np] = -pmlqy3 + Bqy3;
-	  rhspmlqy[base+3*p_Np] = -pmlqy4 + Bqy4;
-	  rhspmlqy[base+4*p_Np] = -pmlqy5 + Bqy5;
-	  rhspmlqy[base+5*p_Np] = -pmlqy6 + Bqy6;
+	  // Rhs for qy : -sigma_y*qy + Adq/dy  
+	  rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
+	  rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
+	  rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
+	  rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
+	  rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
+	  rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
 	 
-	  // Rhs for q
+	  // Rhs for q: A*dq/dx + B*dq/dy - sigma_x*qx  - sigma_y*qy + N(q)
 	  dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1;
 	  dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2;
 	  dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3;
 	  dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4;
 	  dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5;
 	  dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6;
+
+      // Add mean flow forcing to Rhsq: d q_bar/ dt
+	  rhsq2 += drampdt*p_q2bar;
+	  rhsq3 += drampdt*p_q3bar;
+	  rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+	  rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+	  rhsq6 += 2.f*ramp*drampdt*p_q6bar;
 
 	  const int id = element*p_Np+n;	  
 	  dfloat4 tmp;

@@ -71,7 +71,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   else{
     printf("Starting initial conditions for NONPML\n");
     Ma = 0.1;     //Set Mach number
-    Re = 5000.;   // Set Reynolds number
+    Re = 1000.;   // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -324,7 +324,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 5000;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
@@ -849,7 +849,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
                  "boltzmannSplitPmlVolumeCub2D",
                  kernelInfo);
-
 
           printf("Compiling LSERK Split pml relaxation kernel with cubature integration\n");
           mesh->pmlRelaxationKernel =

@@ -1444,13 +1444,14 @@ kernel void boltzmannLSERKUnsplitPmlUpdate2D(const iint Nelements,
        
       qa += rkb*resqa;
       qb += rkb*resqb;
-
+       
       // qa.x += p_q1bar;
       // qa.y += ramp*p_q2bar;
       // qa.z += ramp*p_q3bar;
       // qa.w += ramp*ramp*p_q4bar;
       // qb.x += ramp*ramp*p_q5bar;
       // qb.y += ramp*ramp*p_q6bar;
+     
       
       q[id+0] = qa;
       q[id+1] = qb;
