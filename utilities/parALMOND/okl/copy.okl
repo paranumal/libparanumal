@@ -1,0 +1,15 @@
+
+// y = beta*y + alpha*x
+kernel void copyKernel(const int outerDim0, const int innerDim0,
+			   const int   n,
+			     const datafloat *restrict x,
+			           datafloat *restrict y){
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    const int i = globalId0;
+
+    if(i<n)
+      y[i] = x[i];
+  }
+}

@@ -1,0 +1,14 @@
+// x = alpha*x
+kernel void scaleVectorKernel(const int outerDim0, const int innerDim0,
+				  const int   n,
+				  const datafloat   alpha,
+				    datafloat *restrict x){
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    const int i = globalId0;
+
+    if(i<n)
+      x[i] *= alpha;
+  }
+}
