@@ -54,6 +54,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy);
     }
@@ -88,6 +89,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
+				     mesh->o_rhsq,
 				     mesh->o_rhspmlqx,
 				     mesh->o_rhspmlqy);
 		}
@@ -138,6 +140,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq,
 			   mesh->o_rhspmlqx,
 			   mesh->o_rhspmlqy);
     }
@@ -165,7 +168,8 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
     dfloat rampUpdate, drampdtUpdate;
     boltzmannRampFunction2D(tupdate, &rampUpdate, &drampdtUpdate);
-    //rampUpdate = ramp; drampdtUpdate = drampdt;
+    //rampUpdate = 1.0f; drampdtUpdate = 0.0f;
+
 
     //UPDATE
     mesh->device.finish();
@@ -179,8 +183,10 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->rka[rk],
 			    mesh->rkb[rk],
 			    rampUpdate,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
+			    mesh->o_resq,
 			    mesh->o_respmlqx,
 			    mesh->o_respmlqy,
 			    mesh->o_pmlqx,

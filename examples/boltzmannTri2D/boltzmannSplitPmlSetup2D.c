@@ -195,7 +195,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
 
-      if(strstr(options,"PML")){
+  if(strstr(options,"PML")){
 
 	if(cx>xmax){
 	  // mesh->sigmax[mesh->Np*e + n] = xsigma;
@@ -350,7 +350,9 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
 
 
-  if(strstr(options, "LSERK")){ 
+  if(strstr(options, "LSERK")){
+
+   if(strstr(options, "PML")){ 
     mesh->o_pmlqx =    
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
     mesh->o_rhspmlqx =
@@ -363,7 +365,8 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     mesh->o_rhspmlqy =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
     mesh->o_respmlqy =
-      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);  
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+      }  
 
   }
   else if(strstr(options, "SARK3")){ 
@@ -376,7 +379,9 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
     mesh->o_rhsq3 =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-    
+
+       
+    if(strstr(options, "PML")){
     // pml variables
     mesh->o_pmlqx =    
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
@@ -409,6 +414,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     
     mesh->o_rhspmlqy3 =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+    }
 
     //
     for(int i=0; i<5; i++){
@@ -808,43 +814,81 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "LSERK")){ 
 
     if(strstr(options, "CUBATURE")){ 
+          
       printf("Compiling LSERK volume kernel with cubature integration\n");
       mesh->volumeKernel =
 	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
 					   "boltzmannVolumeCub2D",
 					   kernelInfo);
 
-      printf("Compiling LSERK pml volume kernel with cubature integration\n");
-      mesh->pmlVolumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSplitPmlVolumeCub2D",
-					   kernelInfo);
-
-      printf("Compiling LSERK relaxation kernel with cubature integration\n");
+   printf("Compiling LSERK relaxation kernel with cubature integration\n");
       mesh->relaxationKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-					   "boltzmannRelaxationCub2D",
-					   kernelInfo); 
+  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+             "boltzmannRelaxationCub2D",
+             kernelInfo); 
 
-      printf("Compiling LSERK pml relaxation kernel with cubature integration\n");
-      mesh->pmlRelaxationKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-					   "boltzmannSplitPmlRelaxationCub2D",
-					   kernelInfo);   
+        if(strstr(options,"UNSPLIT")){ // Unsplit PML
+
+          printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
+          mesh->pmlVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannUnsplitPmlVolumeCub2D",
+                 kernelInfo);
+        //
+        printf("Compiling LSERK Unsplit pml relaxation kernel with cubature integration\n");
+          mesh->pmlRelaxationKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+             "boltzmannUnsplitPmlRelaxationCub2D",
+             kernelInfo);  
+        }
+
+        else{ // Split PML
+
+          printf("Compiling LSERK Split pml volume kernel with cubature integration\n");
+          mesh->pmlVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannSplitPmlVolumeCub2D",
+                 kernelInfo);
+
+
+          printf("Compiling LSERK Split pml relaxation kernel with cubature integration\n");
+          mesh->pmlRelaxationKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+             "boltzmannSplitPmlRelaxationCub2D",
+             kernelInfo);  
+        }
+
+
+     
+
+     
     }
 
     if(strstr(options, "COLLOCATION")){ 
       printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
       mesh->volumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+	    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
 					   "boltzmannVolume2D",
 					   kernelInfo);
+          
+          if(strstr(options,"UNSPLIT")){ // Unsplit PML
+        
+            printf("Compiling Unsplit pml volume kernel with nodal collocation for nonlinear term\n");
+          mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannUnsplitPmlVolume2D",
+                 kernelInfo); 
+        }
 
-      printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
-      mesh->pmlVolumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSplitPmlVolume2D",
-					   kernelInfo); 
+        else{ // Split PM       
+            printf("Compiling Split pml volume kernel with nodal collocation for nonlinear term\n");
+          mesh->pmlVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+                 "boltzmannSplitPmlVolume2D",
+                 kernelInfo); 
+        }
+
+     
     }
 
 
@@ -854,11 +898,25 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 					 "boltzmannSurface2D",
 					 kernelInfo);
 
-    printf("Compiling pml surface kernel\n");
-    mesh->pmlSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-					 "boltzmannSplitPmlSurface2D",
-					 kernelInfo);
+
+         if(strstr(options,"UNSPLIT")){ // Unsplit PML
+            
+          printf("Compiling Unsplit  pml surface kernel\n");
+            mesh->pmlSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannUnsplitPmlSurface2D",
+               kernelInfo);
+            }
+
+            else{ // Split PM       
+                printf("Compiling Split pml surface kernel\n");
+            mesh->pmlSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+           }
+
+
 
     printf("Compiling update kernel\n");
     mesh->updateKernel =
@@ -866,11 +924,24 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 					 "boltzmannLSERKUpdate2D",
 					 kernelInfo);
 
-    printf("Compiling pml update kernel\n");
-    mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-					 "boltzmannLSERKSplitPmlUpdate2D",
-					 kernelInfo);
+
+         if(strstr(options,"UNSPLIT")){ // Unsplit PML
+            
+          printf("Compiling Unsplit pml update kernel\n");
+        mesh->pmlUpdateKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+           "boltzmannLSERKUnsplitPmlUpdate2D",
+           kernelInfo);
+            }
+
+            else{ // Split PM       
+              printf("Compiling Split pml update kernel\n");
+        mesh->pmlUpdateKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+           "boltzmannLSERKSplitPmlUpdate2D",
+           kernelInfo);
+           }
+
     mesh->haloExtractKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 					 "meshHaloExtract2D",
@@ -1000,8 +1071,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
      
     if(strstr(options, "CUBATURE")){ 
       printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
-
-      
 
        mesh->implicitSolveKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",

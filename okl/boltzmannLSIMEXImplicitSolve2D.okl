@@ -470,17 +470,21 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
     shared dfloat s_qyE[p_NblockV][6][p_Np];
       
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_cubNp];
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
+    shared dfloat s_cubN4x[p_NblockV][p_cubNp];
+    shared dfloat s_cubN4y[p_NblockV][p_cubNp];
+    shared dfloat s_cubN5x[p_NblockV][p_cubNp];
+    shared dfloat s_cubN5y[p_NblockV][p_cubNp];
+    shared dfloat s_cubN6x[p_NblockV][p_cubNp];
+    shared dfloat s_cubN6y[p_NblockV][p_cubNp];
     
     
     exclusive iint   element;
     
-    exclusive dfloat N4c  =0.f, N5c  = 0.f, N6c =0.f ;
-    exclusive dfloat qxe4 =0.f, qxe5 = 0.f, qxe6=0.f ; 
-    exclusive dfloat qye4 =0.f, qye5 = 0.f, qye6=0.f ;     
-    exclusive dfloat q4   =0.f, q5   = 0.f, q6  =0.f ;   
+    exclusive dfloat N4xc =0.f, N4yc =0.f, N4c=0.f,  N5c =0.f, N6c =0.f ;
+    exclusive dfloat qxe4 =0.f, qxe5 =0.f, qxe6=0.f ; 
+    exclusive dfloat qye4 =0.f, qye5 =0.f, qye6=0.f ;     
+    exclusive dfloat q4   =0.f, q5   =0.f, q6   =0.f;
+    exclusive dfloat q4x =0.f, q4y=0.f, q5x =0.f, q5y=0.f, q6x =0.f, q6y=0.f; 
     
     
     // prefetch q to shared
@@ -553,27 +557,40 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 		qy5 += Icn*s_qyE[es][4][m];
 		qy6 += Icn*s_qyE[es][5][m];
 	      }
+	    //
+        dfloat q1 =  p_q1bar      + qx1 + qy1;
+        dfloat q2 =  ramp*p_q2bar + qx2 + qy2;
+        dfloat q3 =  ramp*p_q3bar + qx3 + qy3;
+	    //
+	    // q4 =  ramp*ramp*p_q4bar  + qx4 + qy4;
+	    // q5 =  ramp*ramp*p_q5bar  + qx5;
+	    // q6 =  ramp*ramp*p_q6bar  + qy6;
+	    //
+	     // Split Q2 for splitting Q4
+	    dfloat q2x=  0.5f*ramp*p_q2bar  + qx2;  
+	    dfloat q2y=  0.5f*ramp*p_q2bar  + qy2;
+	    //
+	    q4x=  0.5f*ramp*ramp*p_q4bar  + qx4;   q4y=  0.5f*ramp*ramp*p_q4bar + qy4;
+        q5x=  0.5f*ramp*ramp*p_q5bar  + qx5;   q5y=  0.5f*ramp*ramp*p_q5bar + qy5;
+	    q6x=  0.5f*ramp*ramp*p_q6bar  + qx6;   q6y=  0.5f*ramp*ramp*p_q6bar + qy6;
 
-
-	      //
-        dfloat q1=  p_q1bar            + qx1 + qy1;
-	    dfloat q2=  ramp*p_q2bar       + qx2 + qy2;
-	    dfloat q3=  ramp*p_q3bar       + qx3 + qy3;
-	    // Hold this value, if akk=0.0 will be used
-	    q4=  ramp*ramp*p_q4bar  + qx4 + qy4;
-	    q5=  ramp*ramp*p_q5bar  + qx5 + qy5;
-	    q6=  ramp*ramp*p_q6bar  + qx6 + qy6;
+	    // q4x=  0.5f*ramp*ramp*p_q4bar  + qx4;   q4y=  0.5f*ramp*ramp*p_q4bar + qy4;
+     //    q5x=  0.5f*ramp*ramp*p_q5bar  + qx5;   q5y=  0.5f*ramp*ramp*p_q5bar + qy5;
+	    // q6x=  0.5f*ramp*ramp*p_q6bar  + qx6;   q6y=  0.5f*ramp*ramp*p_q6bar + qy6;
 
 	    #if DENSITY_SHIFT
 			dfloat delta  = 1e-2;
-			dfloat iq1 = 1.f/occaSqrt(q1*q1+delta*delta);
+			dfloat iq1    = 1.f/occaSqrt(q1*q1+delta*delta);
 	     #else
-        	dfloat iq1  = 1.f/q1;
+        	dfloat iq1    = 1.f/q1;
          #endif
-	    // Hold the constant part of nonlinear relaxation term
-		N4c = -(q2*q3*iq1 );
+        //
+        N4c = -(q2*q3*iq1 );
 	    N5c = -p_invsqrt2*( q2*q2*iq1 );
 		N6c = -p_invsqrt2*( q3*q3*iq1 );
+		// 
+		N4xc = -(q2x*q3*iq1 );
+        N4yc = -(q2y*q3*iq1 );
 
 	    qxe4 = qx4;
 	    qxe5 = qx5;
@@ -602,62 +619,74 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 	    	if(akk>0){
 			//OLD PML: half-half/ dfloat cc  = 0.5f*akk*dt*p_tauInv;
 			dfloat cc  = 1.0f*akk*dt*p_tauInv;
-			dfloat icc   = 1.f/(cc + 1.f); 
-			
+			dfloat icc = 1.f/(cc + 1.f); 			
 			// N(Qex)
-			dfloat N4 = -cc*( q4 + N4c );
-			dfloat N5 = -cc*( q5 + N5c );
-			dfloat N6 = -cc*( q6 + N6c );	    
+			dfloat N4x = -cc*( q4x + N4xc );
+			dfloat N4y = -cc*( q4y + N4yc );
+            //
+			dfloat N5x  = -cc*( q5x + N5c );
+			dfloat N5y  = -cc*( q5y + N5c );
+			//
+			dfloat N6x  = -cc*( q6x + N6c );
+			dfloat N6y  = -cc*( q6y + N6c );
 			// Z0 = Y + akk*dt*N(Qex)
-			dfloat qxi4 =  qxe4 + N4 ;
-			dfloat qxi5 =  qxe5 + N5 ;
-			dfloat qxi6 =  qxe6 + N6 ;
+			dfloat qxi4 =  qxe4 + N4x ;
+			dfloat qxi5 =  qxe5 + N5x ;
+			dfloat qxi6 =  qxe6 + N6x ;
 			// // 
-			// dfloat qyi4 =  qye4 + N4 ;
-			// dfloat qyi5 =  qye5 + N5 ;
-			// dfloat qyi6 =  qye6 + N6 ;
+			dfloat qyi4 =  qye4 + N4y ;
+			dfloat qyi5 =  qye5 + N5y ;
+			dfloat qyi6 =  qye6 + N6y ;
             
-   //          // Recombine
-	  //       q4 =  ramp*ramp*p_q4bar  + qxi4 + qyi4;
-			// q5 =  ramp*ramp*p_q5bar  + qxi5 + qyi5;
-			// q6 =  ramp*ramp*p_q6bar  + qxi6 + qyi6;
+            // Recombine
 
+	         
+		    q4x=  ramp*ramp*p_q4bar  + qxi4;   q4y=  qyi4;
+		    q5x=  ramp*ramp*p_q5bar  + qxi5;   q5y=  qyi5;
+		    q6x=  ramp*ramp*p_q6bar  + qxi6;   q6y=  qyi6;
+		    // //
+		    // q4x=  0.5f*ramp*ramp*p_q4bar  + qxi4;   q4y=  0.5f*ramp*ramp*p_q4bar  + qyi4;
+		    // q5x=  0.5f*ramp*ramp*p_q5bar  + qxi5;   q5y=  0.5f*ramp*ramp*p_q5bar  + qyi5;
+		    // q6x=  0.5f*ramp*ramp*p_q6bar  + qxi6;   q6y=  0.5f*ramp*ramp*p_q6bar  + qyi6;
+	
 
-			// Recombine
-	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qye4;
-			q5 =  ramp*ramp*p_q5bar  + qxi5 + qye5;
-			q6 =  ramp*ramp*p_q6bar  + qxi6 + qye6;
-            
-            // akk*dt*N(Qim)
-			N4 = -cc*( q4 + N4c );
-			N5 = -cc*( q5 + N5c );
-			N6 = -cc*( q6 + N6c );
-
-			//Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )
-			    
-			qxi4  += icc*(qxe4 - qxi4 + N4);    
-			qxi5  += icc*(qxe5 - qxi5 + N5);   
-			qxi6  += icc*(qxe6 - qxi6 + N6); 
+			// N(Qex)
+			N4x = -cc*( q4x + N4xc );
+			N4y = -cc*( q4y + N4yc );
+            //
+			N5x  = -cc*( q5x + N5c );
+			N5y  = -cc*( q5y + N5c );
+			//
+			N6x  = -cc*( q6x + N6c );
+			N6y  = -cc*( q6y + N6c );
+			//Update Qim = Qim + (I-akk*dt*del(N)/del(Qim) )^-1 * ( Qex-Qim + N(Qim) )    
+			qxi4  += icc*(qxe4 - qxi4 + N4x);    
+			qxi5  += icc*(qxe5 - qxi5 + N5x);   
+			qxi6  += icc*(qxe6 - qxi6 + N6x); 
 			// 	    
-			// qyi4  += icc*(qye4 - qyi4 + N4);    
-			// qyi5  += icc*(qye5 - qyi5 + N5);  
-			// qyi6  += icc*(qye6 - qyi6 + N6);    
-			//   			    
-			// q4 =  ramp*ramp*p_q4bar + qxi4 + qyi4;
-			// q5 =  ramp*ramp*p_q5bar + qxi5 + qyi5;
-			// q6 =  ramp*ramp*p_q6bar + qxi6 + qyi6;   
+			qyi4  += icc*(qye4 - qyi4 + N4y);    
+			qyi5  += icc*(qye5 - qyi5 + N5y);  
+			qyi6  += icc*(qye6 - qyi6 + N6y);    
+  			
+  			//
+		    q4x=  ramp*ramp*p_q4bar  + qxi4;   q4y=  qyi4;
+		    q5x=  ramp*ramp*p_q5bar  + qxi5;   q5y=  qyi5;
+		    q6x=  ramp*ramp*p_q6bar  + qxi6;   q6y=  qyi6;
 
-			// Recombine
-	        q4 =  ramp*ramp*p_q4bar  + qxi4 + qye4;
-			q5 =  ramp*ramp*p_q5bar  + qxi5 + qye5;
-			q6 =  ramp*ramp*p_q6bar  + qxi6 + qye6;      
+		    // q4x=  0.5f*ramp*ramp*p_q4bar  + qxi4;   q4y=  0.5f*ramp*ramp*p_q4bar  + qyi4;
+		    // q5x=  0.5f*ramp*ramp*p_q5bar  + qxi5;   q5y=  0.5f*ramp*ramp*p_q5bar  + qyi5;
+		    // q6x=  0.5f*ramp*ramp*p_q6bar  + qxi6;   q6y=  0.5f*ramp*ramp*p_q6bar  + qyi6;
+
 	      } 
 
 
         // BGK relaxation approximation to the Boltzmann collision operator
-  	    s_cubN4[es][n] = -p_tauInv*(q4 + N4c);
-  	    s_cubN5[es][n] = -p_tauInv*(q5 + N5c);
-  	    s_cubN6[es][n] = -p_tauInv*(q6 + N6c);                                  
+  	    s_cubN4x[es][n] = -p_tauInv*(q4x + N4xc);
+  	    s_cubN4y[es][n] = -p_tauInv*(q4y + N4yc);
+  	    s_cubN5x[es][n] = -p_tauInv*(q5x + N5c);
+  	    s_cubN5y[es][n] = -p_tauInv*(q5y + N5c);
+        s_cubN6x[es][n] = -p_tauInv*(q6x + N6c);   
+  	    s_cubN6y[es][n] = -p_tauInv*(q6y + N6c);                                  
 	    
 	    }
 	  }
@@ -674,12 +703,17 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 	  if(e<Nelements){
 	    if(n<p_Np){     	    
       	    // use temporaries for part sums for N4,N5,N6 because of exclusives
-      	    dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
+      	    dfloat N4x = 0.f, N4y = 0.f;
+      	    dfloat N5x = 0.f, N5y = 0.f;
+      	    dfloat N6x = 0.f, N6y = 0.f; 
       	    for(iint i=0;i<p_cubNp;++i){
       	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
-      	      N4 += Pnc*s_cubN4[es][i];
-      	      N5 += Pnc*s_cubN5[es][i];
-      	      N6 += Pnc*s_cubN6[es][i];
+      	      N4x += Pnc*s_cubN4x[es][i];
+      	      N4y += Pnc*s_cubN4y[es][i];
+      	      N5x += Pnc*s_cubN5x[es][i];
+      	      N5y += Pnc*s_cubN5y[es][i];
+      	      N6x += Pnc*s_cubN6x[es][i];
+      	      N6y += Pnc*s_cubN6y[es][i];
       	    }
 
 	      //
@@ -688,23 +722,23 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 
 	    // Collect N(q) in Qx  	      
 		dfloat alpha = 1.0f; 
-		dfloat beta  = 0.0f;      
+		dfloat beta  = 1.0f;      
 
 		// split relaxation
 		qZx[base+0*p_Np]  = 0.;
 		qZx[base+1*p_Np]  = 0.;
 		qZx[base+2*p_Np]  = 0.;
-		qZx[base+3*p_Np]  = alpha*N4;
-		qZx[base+4*p_Np]  = alpha*N5;
-		qZx[base+5*p_Np]  = alpha*N6;
+		qZx[base+3*p_Np]  = N4x;
+		qZx[base+4*p_Np]  = N5x;
+		qZx[base+5*p_Np]  = N6x;
 
 
 		qZy[base+0*p_Np]  = 0.;
 		qZy[base+1*p_Np]  = 0.;
 		qZy[base+2*p_Np]  = 0.;
-		qZy[base+3*p_Np]  = beta*N4;
-		qZy[base+4*p_Np]  = beta*N5;
-		qZy[base+5*p_Np]  = beta*N6;
+		qZy[base+3*p_Np]  = N4y;
+		qZy[base+4*p_Np]  = N5y;
+		qZy[base+5*p_Np]  = N6y;
 	    
 	     //
 		dfloat4 temp;
@@ -712,12 +746,12 @@ kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
 		temp.x =  0.f;
 		temp.y =  0.f;
 		temp.z =  0.f;
-		temp.w =  N4;
+		temp.w =  (N4x+N4y);
 
 		qZ[2*(n + element*p_Np)] = temp;
 
-		temp.x =  N5;
-		temp.y =  N6;
+		temp.x =  N5x+N5y;
+		temp.y =  N6x+N6y;
 		temp.z =  0.f;
 		temp.w =  0.f;
 
