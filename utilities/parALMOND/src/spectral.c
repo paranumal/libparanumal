@@ -33,12 +33,12 @@ static void eig(const int Nrows, double *A, double *WR,
   delete [] WORK;
 }
 
-dfloat rhoDinvA(csr *A, dfloat *invD, int l){
+dfloat rhoDinvA(csr *A, dfloat *invD){
 
   const iint m = A->Nrows;
   const iint n = A->Ncols;
 
-  int k = l;
+  int k = 10; 
 
   if(k > m)
     k = m;
@@ -51,17 +51,17 @@ dfloat rhoDinvA(csr *A, dfloat *invD, int l){
     H[i] = 0.;
 
   // allocate memory for basis
-  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *))
+  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
   dfloat *Vx = (dfloat *) calloc(n, sizeof(dfloat));
 
   for(int i=0; i<=k; i++)
     V[i] = (dfloat *) calloc(m, sizeof(dfloat));
 
   // generate a random vector for initial basis vector
-  randomize(Vx);
+  randomize(m, Vx);
 
-  dfloat norm_vo = norm(Vx);
-  scaleVector(Vx, 1./norm_vo);
+  dfloat norm_vo = norm(m, Vx);
+  scaleVector(m, Vx, 1./norm_vo);
 
   for (iint i=0;i<m;i++)
     V[0][i] = Vx[i];
@@ -74,23 +74,23 @@ dfloat rhoDinvA(csr *A, dfloat *invD, int l){
     // v[j+1] = invD*(A*v[j])
     axpy(A, 1.0, Vx, 0., V[j+1]);
 
-    dotStar(invD, V[j+1]);
+    dotStar(m, invD, V[j+1]);
 
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
     	// H(i,j) = v[i]'*A*v[j]
-    	dfloat hij = innerProd(*V[i], *V[j+1]);
+    	dfloat hij = innerProd(m, V[i], V[j+1]);
 
     	// v[j+1] = v[j+1] - hij*v[i]
-    	vectorAdd(-hij, V[i], 1.0, V[j+1]);
+    	vectorAdd(m,-hij, V[i], 1.0, V[j+1]);
 
     	H[i + j*k] = (double) hij;
     }
 
     if(j+1 < k){
-    	H[j+1+ j*k] = (double) norm(V[j+1]);
+    	H[j+1+ j*k] = (double) norm(m,V[j+1]);
 
-    	scaleVector(V[j+1], 1./H[j+1 + j*k]);
+    	scaleVector(m,V[j+1], 1./H[j+1 + j*k]);
     }
   }
 

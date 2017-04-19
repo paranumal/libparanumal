@@ -14,13 +14,13 @@ csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts);
 
 void setup_smoother(agmgLevel *level, SmoothType s);
 
-dfloat rhoDinvA(csr *A, dfloat *invD, int l);
+dfloat rhoDinvA(csr *A, dfloat *invD);
 
 void smooth(agmgLevel *level, dfloat *rhs, dfloat *x, bool x_is_zero);
 
 void smooth(almond_t *almond, agmgLevel *level, occa::memory o_rhs, occa::memory o_x, bool x_is_zero);
 
-csr * strong_graph(csr *A);
+csr * strong_graph(csr *A, dfloat threshold);
 
 bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i);
 
@@ -30,4 +30,4 @@ void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
 
 csr *galerkinProd(agmgLevel *level);
 
-void coarsen(agmgLevel *level, csr *coarseA, dfloat **nullCoarseA);
+void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA);

@@ -11,9 +11,9 @@ dcsr *newDCSR(almond_t *almond, csr *B){
 
   //copy to device
   if(B->nnz){
-    o_rowStarts = almond->device.malloc((A->Nrows+1)*sizeof(iint), B->rowStarts);
-    o_cols      = almond->device.malloc(A->nnz*sizeof(iint), B->cols);
-    o_coefs     = almond->device.malloc(A->nnz*sizeof(dfloat), B->coefs);
+    A->o_rowStarts = almond->device.malloc((A->Nrows+1)*sizeof(iint), B->rowStarts);
+    A->o_cols      = almond->device.malloc(A->nnz*sizeof(iint), B->cols);
+    A->o_coefs     = almond->device.malloc(A->nnz*sizeof(dfloat), B->coefs);
   }
 
   A->NsendTotal = B->NsendTotal;
@@ -39,6 +39,8 @@ dcsr *newDCSR(almond_t *almond, csr *B){
 
   A->haloSendRequests = B->haloSendRequests;
   A->haloRecvRequests = B->haloRecvRequests;
+
+  return A;
 }
 
 void dcsrHaloExchangeStart(dcsr *A, size_t Nbytes, void *sendBuffer, void *recvBuffer) {
@@ -78,12 +80,12 @@ void dcsrHaloExchangeFinish(dcsr *A) {
   // Wait for all sent messages to have left and received messages to have arrived
   if (A->NsendTotal) {
     MPI_Status *sendStatus = (MPI_Status*) calloc(A->NsendMessages, sizeof(MPI_Status));
-    MPI_Waitall(NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
+    MPI_Waitall(A->NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
     free(sendStatus);
   }
   if (A->NrecvTotal) {
     MPI_Status *recvStatus = (MPI_Status*) calloc(A->NrecvMessages, sizeof(MPI_Status));
-    MPI_Waitall(NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
+    MPI_Waitall(A->NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
     free(recvStatus);
   }
 }

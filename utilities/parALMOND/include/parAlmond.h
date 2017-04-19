@@ -32,8 +32,8 @@ typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
 
 #include "parAlmondStructs.h"
 
-typedef struct parAlmond {
-	agmgLevel *levels;
+typedef struct {
+	agmgLevel **levels;
 	int numLevels;
 
 	KrylovType ktype;
@@ -58,7 +58,8 @@ typedef struct parAlmond {
   occa::kernel vectorAddKernel2; 
   occa::kernel dotStarKernel; 
   occa::kernel simpleDotStarKernel;
-  occa::kernel haloExtract; 
+  occa::kernel haloExtract;
+  occa::kernel agg_interpolateKernel;
 
 } almond_t;
 
@@ -72,14 +73,12 @@ typedef struct parAlmond {
 
 
 
-
-
-void setup(csr *A, dfloat *nullA, iint *globalRowStarts);
+almond_t *setup(csr *A, dfloat *nullA, iint *globalRowStarts);
 void sync_setup_on_device(almond_t *almond, occa::device dev);
 void buildAlmondKernels(almond_t *almond);
 
-void solve(dfloat *rhs, dfloat* x, almond_t *almond);
-void solve(occa::memory o_rhs, occa::memory o_x, almond_t *almond);
+void solve(almond_t *almond, dfloat *rhs, dfloat* x);
+void solve(almond_t *almond, occa::memory o_rhs, occa::memory o_x);
 
 void kcycle(almond_t *almond, int k);
 void device_kcycle(almond_t *almond, int k);

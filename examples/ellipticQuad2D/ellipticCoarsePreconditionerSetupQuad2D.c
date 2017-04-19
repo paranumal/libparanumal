@@ -318,10 +318,9 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
     // TW: to here.
     
-    precon->almond = almondSetup(mesh,
+    precon->almond = almondSetup(mesh->device,
          Nnum, 
 				 globalStarts, // TW: need to replace this
-				 globalNumbering,
 				 recvNtotal,      // TW: number of nonzeros
 				 recvRows,        // TW: need to use local numbering
 				 recvCols,        // TW: need to use local numbering 
@@ -333,18 +332,15 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 				 sendOffsets, 
 				 recvCounts, 
 				 recvOffsets,    
-				 0,
-				 iintString,
-				 dfloatString); // 0 if no null space
+				 0); // 0 if no null space
     
   }
 
   if(strstr(options, "GLOBALALMOND")){
     
-    precon->parAlmond = almondGlobalSetup(mesh, 
+    precon->parAlmond = almondGlobalSetup(mesh->device, 
          Nnum, 
          globalStarts, 
-         globalNumbering,
          globalnnzTotal,      
          globalRows,        
          globalCols,        
@@ -356,10 +352,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
          sendOffsets, 
          recvCounts, 
          recvOffsets,    
-         0,             // 0 if no null space
-         iintString,
-         dfloatString); 
-    
+         0);             // 0 if no null space
   }
   
   if(strstr(options ,"AMG2013")){
@@ -416,7 +409,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     if (strstr(options,"GLOBALALMOND")) {
 
       almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
-                              &nnz2,&rowsA2,&colsA2,(void **) &valsA2);
+                              &nnz2,&rowsA2,&colsA2, &valsA2);
 
       precon->coarseNp = coarseNp[rank];
       precon->coarseTotal = coarseOffsets[size];
@@ -428,7 +421,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
         //if using ALMOND for patch solve, build the ubercoarse from ALMOND
         dfloat *coarseB;
 
-        almondProlongateCoarseProblem(precon->almond, coarseNp, coarseOffsets, (void**) &coarseB);
+        almondProlongateCoarseProblem(precon->almond, coarseNp, coarseOffsets, &coarseB);
 
         coarseTotal = coarseOffsets[size];
         localCoarseNp = coarseNp[rank];
@@ -576,6 +569,11 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 			    0,
 			    iintString,
 			    dfloatString);
+
+    if (strstr(options,"GLOBALALMOND")) 
+      almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
+                      precon->coarseTotal,
+                      precon->coarseOffsets[rank]);
 
     // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
     printf("Done UberCoarse setup\n");

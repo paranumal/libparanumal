@@ -30,6 +30,7 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
   }
 
   int numLevels = 1;
+  int lev =0;
 
   bool done = false;
   while(!done){
@@ -37,7 +38,7 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
     csr *coarseA = (csr *) calloc(1,sizeof(csr));
     dfloat *nullCoarseA;
 
-    coarsen(levels[lev], coarseA, &nullCoarseA); 
+    coarsen(levels[lev], &coarseA, &nullCoarseA); 
 
     const iint coarseDim = coarseA->Nrows;
 
@@ -66,7 +67,7 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
 
       for (iint r=0;r<size+1;r++)
         if (globalRowStarts)
-          level->globalRowStarts[r] = n*chunk + (r<remainder ? r : remainder);
+          levels[lev+1]->globalRowStarts[r] = r*chunk + (r<remainder ? r : remainder);
     }
 
     if(coarseA->Nrows <= coarseSize || dim < 2*coarseDim){
@@ -74,6 +75,7 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
       setup_smoother(levels[lev+1],JACOBI);
       break;
     }
+    lev++;
   }
 
   almond->ktype = PCG;
@@ -145,14 +147,16 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
   buildAlmondKernels(almond);
 
   for(int i=0; i<almond->numLevels; i++){
-    iint m = levels[i]->A->Nrows;
+    iint m = almond->levels[i]->A->Nrows;
     
     almond->levels[i]->deviceA = newHYB(almond, almond->levels[i]->A);
-    almond->levels[i]->dcsrP   = newDCSR(almond, almond->levels[i]->P);
-    almond->levels[i]->deviceR = newHYB(almond, almond->levels[i]->R);
+    if (i < almond->numLevels-1) {
+      almond->levels[i]->dcsrP   = newDCSR(almond, almond->levels[i]->P);
+      almond->levels[i]->deviceR = newHYB(almond, almond->levels[i]->R);
+    }
 
-    iint N = almond->levels[i]->A->Nrows;
-    iint M = almond->levels[i]->A->Ncols;
+    iint N = almond->levels[i]->A->Ncols;
+    iint M = almond->levels[i]->A->Nrows;
 
     almond->levels[i]->o_x   = almond->device.malloc(N*sizeof(dfloat), almond->levels[i]->x);
     almond->levels[i]->o_rhs = almond->device.malloc(M*sizeof(dfloat), almond->levels[i]->rhs);
@@ -167,13 +171,13 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
     }
   }
 
-  const iint num_blocks = (almond->levels[0]->A->Nrows+AGMGBDIM-1)/AGMGBDIM;
-  dfloat dummy[num_blocks];
-  almond->deviceRed = almond->device.malloc(num_blocks*sizeof(dfloat), dummy);
+  //const iint num_blocks = (almond->levels[0]->A->Nrows+AGMGBDIM-1)/AGMGBDIM;
+  //dfloat dummy[num_blocks];
+  //almond->deviceRed = almond->device.malloc(num_blocks*sizeof(dfloat), dummy);
 }
 
 
-void solve(dfloat *rhs, dfloat *x, almond_t *almond){
+void solve(almond_t *almond, dfloat *rhs, dfloat *x){
   //copy rhs and zero x
   for (iint n=0;n<almond->levels[0]->A->Nrows;n++) {
     almond->levels[0]->rhs[n] = rhs[n];
@@ -188,25 +192,30 @@ void solve(dfloat *rhs, dfloat *x, almond_t *almond){
     x[n] = almond->levels[0]->x[n];
 }
 
-void solve(occa::memory o_rhs, occa::memory o_x, almond_t *almond){
-  const iint N = levels[0]->deviceA->Nrows;
+void solve(almond_t *almond, occa::memory o_rhs, occa::memory o_x){
+  const iint N = almond->levels[0]->deviceA->Nrows;
 
   //copy rhs and zero x
-  copyVector(N, o_rhs, almond->levels[0]->o_rhs);
-  scaleVector(N, almond->levels[0]->o_x, 0.);
+  copyVector(almond, N, o_rhs, almond->levels[0]->o_rhs);
+  scaleVector(almond, N, almond->levels[0]->o_x, 0.);
 
   device_kcycle(almond, 0);
   //device_vcycle(almond, 0);
 
   //copy back
-  copyVector(N, almond->levels[0]->o_x, o_x);
+  copyVector(almond, N, almond->levels[0]->o_x, o_x);
 }
 
 void kcycle(almond_t *almond, int k){
 
+  iint m = almond->levels[k]->Nrows;
+  iint n = almond->levels[k]->Ncols;
+  iint mCoarse = almond->levels[k+1]->Nrows;
+  iint nCoarse = almond->levels[k+1]->Ncols;
+
   // if its not first level zero it out
   if(k>0)
-    scaleVector(almond->levels[k]->x, 0.0);
+    scaleVector(m, almond->levels[k]->x, 0.0);
 
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x, true);
 
@@ -217,17 +226,11 @@ void kcycle(almond_t *almond, int k){
   // restrict the residual to next level
   restrict(almond->levels[k], almond->levels[k]->res, almond->levels[k+1]->rhs);
 
-  iint m = almond->levels[k]->Nrows;
-  iint n = almond->levels[k]->Ncols;
-  iint mCoarse = almond->levels[k+1]->Nrows;
-  iint nCoarse = almond->levels[k+1]->Ncols;
-
-
-  dfloat *ckp1 = (dfloat) calloc(nCoarse,sizeof(dfloat)); 
-  dfloat *vkp1 = (dfloat) calloc(mCoarse,sizeof(dfloat)); 
-  dfloat *dkp1 = (dfloat) calloc(nCoarse,sizeof(dfloat)); 
-  dfloat *wkp1 = (dfloat) calloc(mCoarse,sizeof(dfloat)); 
-  dfloat *rkp1 = (dfloat) calloc(mCoarse,sizeof(dfloat));
+  dfloat *ckp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
+  dfloat *vkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat)); 
+  dfloat *dkp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
+  dfloat *wkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat)); 
+  dfloat *rkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat));
 
   if(k+1 < almond->numLevels - 1){
 
@@ -246,14 +249,14 @@ void kcycle(almond_t *almond, int k){
     dfloat rho1, alpha1, norm_rkp1, norm_rktilde_p;
     dfloat rho1Global, alpha1Global, norm_rkp1Global, norm_rktilde_pGlobal;
 
-    if(ktype == PCG){
+    if(almond->ktype == PCG){
       rho1   = innerProd(mCoarse, vkp1, ckp1);
       alpha1 = innerProd(mCoarse, rkp1, ckp1);
       MPI_Allreduce(&rho1,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
       MPI_Allreduce(&alpha1,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     }
 
-    if(ktype == GMRES){
+    if(almond->ktype == GMRES){
       rho1   = innerProd(mCoarse,vkp1, vkp1);
       alpha1 = innerProd(mCoarse,vkp1, rkp1);
       MPI_Allreduce(&rho1,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
@@ -284,7 +287,7 @@ void kcycle(almond_t *almond, int k){
     
       kcycle(almond, k+1);
 
-      dfloat *dkp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)), 
+      dfloat *dkp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
       dfloat *wkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat));
 
       for (iint i=0;i<mCoarse; i++)
@@ -296,7 +299,7 @@ void kcycle(almond_t *almond, int k){
       dfloat gamma, beta, alpha2;
       dfloat gammaGlobal, betaGlobal, alpha2Global;
 
-      if(ktype == PCG){
+      if(almond->ktype == PCG){
         gamma  = innerProd(mCoarse, vkp1, dkp1);
         beta   = innerProd(mCoarse, wkp1, dkp1);
         alpha2 = innerProd(mCoarse, rkp1, dkp1);
@@ -304,7 +307,7 @@ void kcycle(almond_t *almond, int k){
         MPI_Allreduce(&beta,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
         MPI_Allreduce(&alpha2,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
       }
-      if(ktype == GMRES){
+      if(almond->ktype == GMRES){
         gamma  = innerProd(mCoarse, wkp1, vkp1);
         beta   = innerProd(mCoarse, wkp1, wkp1);
         alpha2 = innerProd(mCoarse, wkp1, rkp1);
@@ -328,31 +331,29 @@ void kcycle(almond_t *almond, int k){
         }
       }
     }
-  } else{
-    scaleVector(almond->levels[k+1]->x, (T) 0.);
-    if (almond->(*coarseSolve) != NULL) {
+  } else {
+    scaleVector(mCoarse, almond->levels[k+1]->x, 0.);
+    if (almond->coarseSolve != NULL) {
       //use coarse sovler 
-      iint mCoarse = almond->levels[k+1]->A->Nrows;
-
       dfloat *xCoarse   = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
       dfloat *rhsCoarse = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
 
       for (iint n=0;n<mCoarse;n++) 
         rhsCoarse[n+almond->coarseOffset] = almond->levels[k+1]->rhs[n];
 
-      almond->coarseSolve((void *) xCoarse, ACoarse, (void *) rhsCoarse); 
+      almond->coarseSolve((void *) xCoarse, almond->ACoarse, (void *) rhsCoarse); 
 
       for (iint n=0;n<mCoarse;n++) 
         almond->levels[k+1]->x[n] = xCoarse[n+almond->coarseOffset];
     } else {
-      smooth(almond->levels[k+1], almond->levels[k+1]->rhs, almond->levels[k+1]->x);
+      smooth(almond->levels[k+1], almond->levels[k+1]->rhs, almond->levels[k+1]->x, true);
     }
   }
 
 
   interpolate(almond->levels[k], almond->levels[k+1]->x, almond->levels[k]->x);
 
-  smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x);
+  smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
 }
 
 
@@ -365,7 +366,7 @@ void device_kcycle(almond_t *almond, int k){
 
   // if its not first level zero it out
   if(k>0)
-    scaleVector(m, almond->levels[k]->o_x, 0.0);
+    scaleVector(almond, m, almond->levels[k]->o_x, 0.0);
 
   smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
 
@@ -397,14 +398,14 @@ void device_kcycle(almond_t *almond, int k){
       dfloat rho1Local, alpha1Local, norm_rkp1Local, norm_rktilde_pLocal;
       dfloat rho1Global, alpha1Global, norm_rkp1Global, norm_rktilde_pGlobal;
 
-      if(ktype == PCG){
+      if(almond->ktype == PCG){
         rho1Local   = innerProd(almond, mCoarse, almond->levels[k+1]->o_ckp1, almond->levels[k+1]->o_vkp1);
         alpha1Local = innerProd(almond, mCoarse, almond->levels[k+1]->o_ckp1, almond->levels[k+1]->o_rkp1);
         MPI_Allreduce(&rho1Local,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
         MPI_Allreduce(&alpha1Local,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
       }
 
-      if(ktype == GMRES){
+      if(almond->ktype == GMRES){
         rho1Local   = innerProd(almond, mCoarse, almond->levels[k+1]->o_vkp1, almond->levels[k+1]->o_vkp1);
         alpha1Local = innerProd(almond, mCoarse, almond->levels[k+1]->o_vkp1, almond->levels[k+1]->o_rkp1);
         MPI_Allreduce(&rho1Local,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
@@ -445,7 +446,7 @@ void device_kcycle(almond_t *almond, int k){
         dfloat gammaLocal, betaLocal, alpha2Local;
         dfloat gammaGlobal, betaGlobal, alpha2Global;
 
-        if(ktype == PCG){
+        if(almond->ktype == PCG){
           gammaLocal  = innerProd(almond, mCoarse, almond->levels[k+1]->o_dkp1, almond->levels[k+1]->o_vkp1);
           betaLocal   = innerProd(almond, mCoarse, almond->levels[k+1]->o_dkp1, almond->levels[k+1]->o_wkp1);
           alpha2Local = innerProd(almond, mCoarse, almond->levels[k+1]->o_dkp1, almond->levels[k+1]->o_rkp1);
@@ -453,7 +454,7 @@ void device_kcycle(almond_t *almond, int k){
           MPI_Allreduce(&betaLocal,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
           MPI_Allreduce(&alpha2Local,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
         }
-        if(ktype == GMRES){
+        if(almond->ktype == GMRES){
           gammaLocal  = innerProd(almond, mCoarse, almond->levels[k+1]->o_wkp1, almond->levels[k+1]->o_vkp1);
           betaLocal   = innerProd(almond, mCoarse, almond->levels[k+1]->o_wkp1, almond->levels[k+1]->o_wkp1);
           alpha2Local = innerProd(almond, mCoarse, almond->levels[k+1]->o_wkp1, almond->levels[k+1]->o_rkp1);
@@ -480,10 +481,8 @@ void device_kcycle(almond_t *almond, int k){
     }
   } else{
     scaleVector(almond, mCoarse, almond->levels[k+1]->o_x, 0.);
-    if (almond->(*coarseSolve) != NULL) {
+    if (almond->coarseSolve != NULL) {
       //use direct sovler passed as input
-      iint mCoarse = almond->levels[k+1]->A->Nrows;
-
       dfloat *xCoarse   = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
       dfloat *rhsCoarse = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
 
@@ -499,16 +498,19 @@ void device_kcycle(almond_t *almond, int k){
 
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x);
+  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
 }
 
 
 
 void vcycle(almond_t *almond, int k) {
 
+  const iint m = almond->levels[k]->Nrows;
+  const iint mCoarse = almond->levels[k+1]->Nrows;
+
   // if its not first level zero it out
   if(k>0)
-    scaleVector(almond->levels[k]->x,  0.0);
+    scaleVector(m, almond->levels[k]->x,  0.0);
 
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x, true);
 
@@ -519,14 +521,12 @@ void vcycle(almond_t *almond, int k) {
   // restrict the residual to next level
   restrict(almond->levels[k], almond->levels[k]->res, almond->levels[k+1]->rhs);
 
-  if(k+1 < almond->levels->numLevels - 1){
+  if(k+1 < almond->numLevels - 1){
     vcycle(almond,k+1);
   } else{
-    scaleVector(almond->levels[k+1]->x, 0.);
-    if (almond->(*coarseSolve) != NULL) {
+    scaleVector(mCoarse, almond->levels[k+1]->x, 0.);
+    if (almond->coarseSolve != NULL) {
       //use direct sovler passed as input
-      iint mCoarse = almond->levels[k+1]->A->Nrows;
-
       dfloat *xCoarse   = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
       dfloat *rhsCoarse = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
 
@@ -536,14 +536,14 @@ void vcycle(almond_t *almond, int k) {
       almond->coarseSolve((void *) xCoarse, almond->ACoarse, (void *) rhsCoarse); 
 
       for (iint n=0;n<mCoarse;n++) 
-        almond->levels[k+1]->x[n] = xCoarse[n+coarseOffset];
+        almond->levels[k+1]->x[n] = xCoarse[n+almond->coarseOffset];
     } else {
-      smooth(almond->levels[k+1], almond->levels[k+1]->rhs, almond->levels[k+1]->x);
+      smooth(almond->levels[k+1], almond->levels[k+1]->rhs, almond->levels[k+1]->x,true);
     }
   }
 
   interpolate(almond->levels[k], almond->levels[k+1]->x, almond->levels[k]->x);
-  smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x);
+  smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
 }
 
 
@@ -551,9 +551,8 @@ void device_vcycle(almond_t *almond, int k){
 
 #define GPU_CPU_SWITCH_SIZE 0 //TODO move this the the almond struct?
 
-  const iint m = almond->levels[k]->deviceA->Nrows;
-  const iint mCoarse = almond->levels[k+1]->deviceA->Nrows;
-
+  const iint m = almond->levels[k]->Nrows;
+  const iint mCoarse = almond->levels[k+1]->Nrows;
 
   // switch to cpu if the problem size is too small for gpu
   if(m < GPU_CPU_SWITCH_SIZE){
@@ -582,10 +581,8 @@ void device_vcycle(almond_t *almond, int k){
     device_vcycle(almond, k+1);
   }else{
     scaleVector(almond, mCoarse, almond->levels[k+1]->o_x, 0.);
-    if (almond->(*coarseSolve) != NULL) {
+    if (almond->coarseSolve != NULL) {
       //use direct sovler passed as input
-      int mCoarse = almond->levels[k+1]->A->Nrows;
-
       dfloat *xCoarse   = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
       dfloat *rhsCoarse = (dfloat*) calloc(almond->coarseTotal,sizeof(dfloat));
 
@@ -601,5 +598,5 @@ void device_vcycle(almond_t *almond, int k){
 
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x);
+  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x,false);
 }

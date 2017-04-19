@@ -1,0 +1,22 @@
+// Specialized interpolation operator for aggregation amg
+// Assumes that each row has exactly one non-zero, P_coefs at column index that is
+// stored in P_cols
+// y = y + P*x,  (Px is used to represent y in the kernel)
+
+kernel void agg_interpolate(const int outerDim0, 
+			    const int innerDim0,
+			    const int   n,
+			    const int *restrict P_cols,
+			    const datafloat *restrict P_coefs,
+			    const datafloat *restrict x,
+			    datafloat *restrict Px){
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    const int i = globalId0;
+
+    // 3 co-alesced access and 1 random access
+    if(i<n)
+      Px[i] += (P_coefs[i]*x[P_cols[i]]);
+  }
+}

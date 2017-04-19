@@ -20,7 +20,7 @@ void pcg(almond_t *almond,
   almond->ktype = PCG;
 
   // initial residual
-  dfloat localNB = norm(b);
+  dfloat localNB = norm(m,b);
   dfloat globalNB;
   MPI_Allreduce(&localNB,&globalNB,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -47,15 +47,15 @@ void pcg(almond_t *almond,
   iint flag = 1;
 
   dfloat *resvec = (dfloat *) calloc(m+1, sizeof(dfloat));
-  resvec[0] = nb;
+  resvec[0] = globalNB;
 
   for (iint i=1; i<=maxIt; i++){
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    solve(r, di, almond);
+    solve(almond, r, di);
 
     // rho = di'*r
-    rhoLocal = innerProd(di, r);
+    rhoLocal = innerProd(m, di, r);
     MPI_Allreduce(&rhoLocal,&rhoGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
     // TODO : try flexible conjugate gradient
@@ -64,25 +64,25 @@ void pcg(almond_t *almond,
       beta = rhoGlobal/rho_previous;
 
       // di = di + beta*di_previous
-      vectorAdd(beta, di_previous, 1.0, di);
+      vectorAdd(m, beta, di_previous, 1.0, di);
     }
 
     //   Adi = A*di;
     axpy(A, 1.0, di, 0.0, Adi);
-    diAdiLocal = innerProd(di, Adi);
+    diAdiLocal = innerProd(m, di, Adi);
     MPI_Allreduce(&diAdiLocal,&diAdiGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
     alpha =  rho/ diAdiGlobal;
 
     // update solution
     //    x = x + alpha * di;
-    vectorAdd(alpha, di, 1.0, x);
+    vectorAdd(m, alpha, di, 1.0, x);
 
     // update residue
     // r = r - alpha * Adi;
-    vectorAdd(-alpha, Adi, 1.0, r);
+    vectorAdd(m, -alpha, Adi, 1.0, r);
 
-    resvec[i] = norm(r);
+    resvec[i] = norm(m, r);
 
     di_previous = di;
     rho_previous = rhoGlobal;
@@ -100,7 +100,7 @@ void pcg(almond_t *almond,
   // r = b - A*x
   zeqaxpy(A, -1.0, x, 1.0, b, r);
 
-  dfloat relres = norm(r)/nb;
+  dfloat relres = norm(m, r)/globalNB;
 }
 
 //TODO need to link the MPI processes in this solve
@@ -117,7 +117,8 @@ void pcg(almond_t *almond,
   almond->ktype = PCG;
 
   // initial residual
-  dfloat nb = norm(m, o_b);
+  dfloat nb = innerProd(almond, m, o_b, o_b);
+  nb = sqrt(nb);
 
   occa::memory o_x0, o_r0, o_r, o_di, o_Adi, o_di_previous;
 
@@ -132,13 +133,13 @@ void pcg(almond_t *almond,
   o_di_previous = almond->device.malloc(m*sizeof(dfloat), dummy);
 
   // initial residue  r0 = b - A*x0;
-  zeqaxpy(A, -1.0, o_x0, 1.0, o_b, o_r0);
+  zeqaxpy(almond, A, -1.0, o_x0, 1.0, o_b, o_r0);
 
   //    r = r0;
-  copyVector(m, o_r0, o_r);
+  copyVector(almond, m, o_r0, o_r);
 
   //    x = x0;
-  copyVector(m, o_x0, o_x);
+  copyVector(almond, m, o_x0, o_x);
 
 
   dfloat rho, alpha, beta, rho_previous;
@@ -152,10 +153,10 @@ void pcg(almond_t *almond,
   for (iint i=1; i<=maxIt; i++){
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    solve(o_r, o_di, almond);
+    solve(almond, o_r, o_di);
 
     // rho = di'*r
-    rho = innerProd(m, o_di, o_r);
+    rho = innerProd(almond, m, o_di, o_r);
 
     // TODO : try flexible conjugate gradient
 
@@ -163,26 +164,27 @@ void pcg(almond_t *almond,
       beta = rho/rho_previous;
 
       // di = di + beta*di_previous
-      vectorAdd(m, beta, o_di_previous, 1.0, o_di);
+      vectorAdd(almond, m, beta, o_di_previous, 1.0, o_di);
     }
 
     //   Adi = A*di;
-    axpy(A, 1.0, o_di, 0.0, o_Adi);
+    axpy(almond, A, 1.0, o_di, 0.0, o_Adi);
 
-    alpha =  rho/ innerProd(m, o_di, o_Adi);
+    alpha =  rho/ innerProd(almond, m, o_di, o_Adi);
 
     // update solution
     //    x = x + alpha * di;
-    vectorAdd(m, alpha, o_di, 1.0, o_x);
+    vectorAdd(almond, m, alpha, o_di, 1.0, o_x);
 
     // update residue
     // r = r - alpha * Adi;
-    vectorAdd(m, -alpha, o_Adi, 1.0, o_r);
+    vectorAdd(almond, m, -alpha, o_Adi, 1.0, o_r);
 
-    resvec[i] = norm(m, o_r);
+    resvec[i] = innerProd(almond, m, o_r, o_r);
+    resvec[i] = sqrt(resvec[i]);
 
     //      di_previous = di;
-    copyVector(m, o_di, o_di_previous);
+    copyVector(almond, m, o_di, o_di_previous);
     rho_previous = rho;
 
     if(resvec[i] < tol*nb){
@@ -192,9 +194,9 @@ void pcg(almond_t *almond,
   }
 
   // r = b - A*x
-  zeqaxpy(A, -1.0, o_x, 1.0, o_b, o_r);
+  zeqaxpy(almond, A, -1.0, o_x, 1.0, o_b, o_r);
 
-  dfloat relres = norm(m, o_r)/nb;
+  dfloat relres = sqrt(innerProd(almond, m, o_r, o_r))/nb;
 }
 
 

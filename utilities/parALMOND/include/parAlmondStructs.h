@@ -47,11 +47,6 @@ typedef struct coo_t {
   int Ncols;
   int nnz;
 
-  // host memory
-  iint *rows;
-  iint *cols;
-  dfloat *coefs;
-
   // device memory
   occa::memory o_rows;
   occa::memory o_cols;
@@ -100,7 +95,7 @@ typedef struct hyb_t {
 typedef struct dcsr_t {
 
   iint Nrows;
-  iint Ncolumns;
+  iint Ncols;
   iint nnz;
 
   occa::memory o_rowStarts;

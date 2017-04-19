@@ -488,58 +488,53 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(mesh_t *mesh,
-       uint  Nnum,
-       int* rowStarts, 
-       void* rowIds,
-       uint  nnz, 
-       void* Ai,
-       void* Aj,
-       void* Avals,
-       int    *sendSortId, 
-       int    *globalSortId, 
-       int    *compressId,
-       int    *sendCounts, 
-       int    *sendOffsets, 
-       int    *recvCounts, 
-       int    *recvOffsets,
-       int   nullSpace,
-       const char* iintType, 
-       const char* dfloatType) ;
+void * almondSetup(occa::device device,
+       iint  Nnum,
+       iint* rowStarts, 
+       iint  nnz, 
+       iint* Ai,
+       iint* Aj,
+       dfloat* Avals,
+       iint    *sendSortId, 
+       iint    *globalSortId, 
+       iint    *compressId,
+       iint    *sendCounts, 
+       iint    *sendOffsets, 
+       iint    *recvCounts, 
+       iint    *recvOffsets,
+       iint   nullSpace);
 
-void * almondGlobalSetup(mesh_t *mesh, 
-       uint  Nnum,
-       int* rowStarts, 
-       void* rowIds,
-       uint  nnz, 
-       void* Ai,
-       void* Aj,
-       void* Avals,
-       int    *sendSortId, 
-       int    *globalSortId, 
-       int    *compressId,
-       int    *sendCounts, 
-       int    *sendOffsets, 
-       int    *recvCounts, 
-       int    *recvOffsets,
-       int   nullSpace,
-       const char* iintType, 
-       const char* dfloatType) ;
-
-int almondSolve(void* x,
-		void* A,
-		void* rhs,
-    void (*coarseSolve)(void *x, void *A, void *rhs),
-    void *coarseA,
-    int coarseTotal,
-    int coarseOffset) ;
-
-void almondProlongateCoarseProblem(void* almond, int *coarseNp, int *coarseOffsets, void **B);
-
-void almondGlobalCoarseSetup(void *ALMOND, int *coarseNp, int *coarseOffsets, int **globalNumbering,
-                    int *nnz, int **rows, int **cols, void **vals);
+void * almondGlobalSetup(occa::device device, 
+       iint  Nnum,
+       iint* rowStarts, 
+       iint  nnz, 
+       iint* Ai,
+       iint* Aj,
+       dfloat* Avals,
+       iint    *sendSortId, 
+       iint    *globalSortId, 
+       iint    *compressId,
+       iint    *sendCounts, 
+       iint    *sendOffsets, 
+       iint    *recvCounts, 
+       iint    *recvOffsets,
+       iint   nullSpace);
 
 
+iint almondSolve(dfloat* x,
+    void* A,
+    dfloat* rhs); 
+
+
+int almondFree(void* A);
+
+void almondProlongateCoarseProblem(void *ALMOND, iint *coarseNp, iint *coarseOffsets, dfloat **B);
+
+void almondGlobalCoarseSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
+                    iint *nnz, iint **rows, iint **cols, dfloat **vals);
+
+void almondSetCoarseSolve(void* ALMOND, void (*coarseSolve)(void*,void*,void*),
+                          void *ACoarse, iint coarseTotal,iint coarseOffset); 
 
 #endif
 
