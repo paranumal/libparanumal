@@ -1,0 +1,58 @@
+//#include<kernels/workgroup_reduce.hpp>
+kernel void partialInnerProd(const int outerDim0, const int innerDim0,
+				 const int   N,
+				   const datafloat *x,
+				   const datafloat *y,
+				         datafloat *red){
+
+  for(int outerId0=0;outerId0<outerDim0;++outerId0;outer0){
+
+    shared datafloat s_xy[bdim] aligned;
+
+    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
+
+      const int bx = outerId0;
+      const int tx = innerId0;      
+      const int gx = outerDim0*innerDim0;
+
+      // assume a 1 dimensional thread array
+      int n = tx + innerDim0*bx;
+
+      // is thread in range for the addition
+      datafloat d = 0.f;
+      while(n<N){
+	const datafloat xn = x[n];
+	const datafloat yn = y[n];
+	d += xn*yn;
+	n += gx;
+      }
+
+      // assume bx power of 2
+      s_xy[tx] = d;
+    }
+
+    // reduce s_x to one entry by addition
+    barrier(localMemFence);
+
+        workgroup_reduce(  s_xy);
+  
+	//    for(int it=innerDim0;it>=2;it/=2){
+
+	//      for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0)
+	//     	if(innerId0<it/2) s_xy[innerId0] += s_xy[innerId0+it/2];
+
+	//      barrier(localMemFence);
+	//    }     
+    
+    barrier(localMemFence);
+    
+    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
+
+      const int tx = innerId0;
+      const int bx = outerId0;
+
+      if(tx == 0)
+	red[bx] = s_xy[0];
+    }
+  }
+}

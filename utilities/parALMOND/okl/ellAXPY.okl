@@ -1,0 +1,294 @@
+kernel void ellAXPY(const int outerDim0, const int innerDim0,
+			const int   numRows,
+			const int   nnzPerRow,
+			const int   strideLength,
+			const datafloat   alpha,
+			const datafloat   beta,
+			  const int *restrict cols,
+			  const datafloat *restrict coefs,
+			  const datafloat *restrict x,
+			  datafloat *restrict y){
+
+  // y = alpha * A * x + beta * y
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    const int row = globalId0;
+
+    if(row < numRows){
+      datafloat result = (datafloat) 0.;
+      const datafloat betay = beta*y[row];
+
+      for(int c=0; c<nnzPerRow; c++){
+
+	// location in the memory
+	const int address = c*strideLength+row;
+
+	// access column index
+	const int col = cols[address];
+
+	//	if(col == -1) break;
+
+	const datafloat coeffn = (col > -1) ? coefs[address] : 0.;
+
+	const datafloat xn = (col > -1 ) ? x[col] : 0.;
+	//	const datafloat xn = x[row];
+
+	// dont access coefs[address] if col is -ve
+	//	if(col > -1) result += coefs[address]*x[col];
+
+	result += coeffn*xn;
+      }
+
+      y[row] = alpha*result + betay;//beta*y[row];
+    }
+  }
+}
+
+
+kernel void ellAXPYShared(const int outerDim0, const int innerDim0,
+			      const int   numRows,
+			      const int   nnzPerRow,
+			      const int   strideLength,
+			      const datafloat   alpha,
+			      const datafloat   beta,
+			        const int *restrict cols,
+			        const datafloat *restrict coefs,
+			        const datafloat *restrict x,
+			        datafloat *restrict y){
+
+  // y = alpha * A * x + beta * y
+  for(int outerId0=0;outerId0<outerDim0;++outerId0;outer0){
+
+    shared datafloat s_x[bdim];
+
+    const unsigned int bx = outerId0;
+
+    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
+      const int row = outerId0*innerDim0 + innerId0;
+
+      if(row < numRows)
+	s_x[innerId0] = x[row];
+    }
+
+    barrier(localMemFence);
+
+    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
+      const int row = outerId0*innerDim0 + innerId0;
+
+      if(row < numRows){
+	datafloat result = (datafloat) 0.;
+	const datafloat betay = beta*y[row];
+
+	for(int c=0; c<nnzPerRow; c++){
+
+	  // location in the memory
+	  const int address = c*strideLength+row;
+
+	  // access column index
+	  const int col = cols[address];
+
+	  //	if(col == -1) break;
+
+	  const datafloat coeffn = (col > -1) ? coefs[address] : 0.;
+
+	  // const datafloat xn = (col > -1 ) ? x[col] : 0.;
+	  //	const datafloat xn = x[row];
+
+	  datafloat xn = 0.;
+
+	  if(col > -1){
+	    // read from shared if its within bounds
+	    // otherwise read from global
+	    if(col >= bx*bdim && col < (bx+1)*bdim)
+	      xn = s_x[col-bx*bdim];
+	    else
+	      xn = x[col];
+	  }
+
+	  // dont access coefs[address] if col is -ve
+	  //	if(col > -1) result += coefs[address]*x[col];
+
+	  result += coeffn*xn;
+	}
+
+	y[row] = alpha*result + betay;//beta*y[row];
+      }
+    }
+  }
+}
+
+
+kernel void ellZeqAXPY(const int outerDim0, const int innerDim0,
+			   const int   numRows,
+			   const int   nnzPerRow,
+			   const int   strideLength,
+			   const datafloat   alpha,
+			   const datafloat   beta,
+			     const int *restrict cols,
+			     const datafloat *restrict coefs,
+			     const datafloat *restrict x,
+			     const datafloat *restrict y,
+			           datafloat *restrict z){
+
+  // z = alpha * A * x + beta * y
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    int row = globalId0;
+
+    if(row < numRows){
+      datafloat result = (datafloat) 0.;
+      for(int c=0; c<nnzPerRow; c++){
+
+	// location in the memory
+	const int address = c*strideLength+row;
+
+	// access column index
+	const int col = cols[address];
+
+	// dont access coefs[address] if col is -ve
+	if(col > -1) result += coefs[address]*x[col];
+
+      }
+      z[row] = alpha*result + beta*y[row];
+    }
+  }
+}
+
+
+// z = r - (A-D)*x
+kernel void ellJacobi1(const int outerDim0, const int innerDim0,
+			   const int   numRows,
+			   const int   nnzPerRow,
+			   const int   strideLength,
+			     const int *restrict cols,
+			     const datafloat *restrict coefs,
+			     const datafloat *restrict x,
+			     const datafloat *restrict r,
+			           datafloat *restrict z){
+
+  // z = r - (A-D)*x
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    int row = globalId0;
+
+    if(row < numRows){
+      datafloat result = r[row];
+
+      // skip the first stride since it corresponds to diag
+      for(int c=1; c<nnzPerRow; c++){
+
+	// location in the memory
+	const int address = c*strideLength+row;
+
+	// access column index
+	const int col = cols[address];
+
+	// dont access coefs[address] or x[col] if col is -ve
+	if(col > -1) result -= coefs[address]*x[col];
+
+      }
+
+      z[row] = result;
+      //      printf("z = %e, r = %e \n", z[row], r[row]);
+      //      assert(fabs(z[row] - r[row]) < 1e-5);
+    }
+  }
+}
+
+
+////////////////////////////////////////////////////////////////
+kernel void spmmv_ellAXPY(const int outerDim0, const int innerDim0,
+			      const int   numRows,
+			      const int   nnzPerRow,
+			      const int   strideLength,
+			      const datafloat   alpha,
+			      const datafloat   beta,
+			        const int *restrict cols,
+			        const datafloat *restrict coefs,
+			        const datafloat4 *restrict x,
+			        datafloat4 *restrict y){
+
+  // y = alpha * A * x + beta * y
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    int row = globalId0;
+
+    if(row < numRows){
+      //      datafloat result = (datafloat) 0.;
+      datafloat4 result;
+      result.x = result.y = result.z = result.w = (datafloat) 0.;
+      for(int c=0; c<nnzPerRow; c++){
+
+	// location in the memory
+	const int address = c*strideLength+row;
+
+	// access column index
+	const int col = cols[address];
+
+	// dont access coefs[address] if col is -ve
+	if(col > -1){
+	  result.x += coefs[address]*x[col].x;
+	  result.y += coefs[address]*x[col].y;
+	  result.z += coefs[address]*x[col].z;
+	  result.w += coefs[address]*x[col].w;
+	}
+      }
+      y[row].x = alpha*result.x + beta*y[row].x;
+      y[row].y = alpha*result.y + beta*y[row].y;
+      y[row].z = alpha*result.z + beta*y[row].z;
+      y[row].w = alpha*result.w + beta*y[row].w;
+    }
+  }
+}
+
+
+kernel void spmmv_ellZeqAXPY(const int outerDim0, const int innerDim0,
+				 const int   numRows,
+				 const int   nnzPerRow,
+				 const int   strideLength,
+				 const datafloat   alpha,
+				 const datafloat   beta,
+				   const int *restrict cols,
+				   const datafloat *restrict coefs,
+				   const datafloat4 *restrict x,
+				   const datafloat4 *restrict y,
+				         datafloat4 *restrict z){
+
+  // z = alpha * A * x + beta * y
+
+  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
+
+    int row = globalId0;
+
+    if(row < numRows){
+      datafloat4 result;
+      result.x = result.y = result.z = result.w = (datafloat) 0.;
+      for(int c=0; c<nnzPerRow; c++){
+
+	// location in the memory
+	const int address = c*strideLength+row;
+
+	// access column index
+	const int col = cols[address];
+
+	// dont access coefs[address] if col is -ve
+	if(col > -1){
+	  //	  result += coefs[address]*x[col];
+	  result.x += coefs[address]*x[col].x;
+	  result.y += coefs[address]*x[col].y;
+	  result.z += coefs[address]*x[col].z;
+	  result.w += coefs[address]*x[col].w;
+	}
+
+      }
+      //      z[row] = alpha*result + beta*y[row];
+      z[row].x = alpha*result.x + beta*y[row].x;
+      z[row].y = alpha*result.y + beta*y[row].y;
+      z[row].z = alpha*result.z + beta*y[row].z;
+      z[row].w = alpha*result.w + beta*y[row].w;
+    }
+  }
+}
