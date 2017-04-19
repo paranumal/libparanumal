@@ -321,48 +321,17 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       }
 
       if(strstr(options,"GLOBALALMOND")){
-        if(strstr(options, "UBERGRID")) {
-
-          int size, rank;
-          MPI_Comm_size(MPI_COMM_WORLD, &size);
-          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-          // should eliminate these copies
-          precon->o_r1.copyTo(precon->r1); 
-          almondSolve(precon->z1, precon->parAlmond, precon->r1,
-                      xxtSolve,precon->xxt2,
-                      precon->coarseTotal,
-                      precon->coarseOffsets[rank]);
-          precon->o_z1.copyFrom(precon->z1);
-        } else {
-          // should eliminate these copies
-          precon->o_r1.copyTo(precon->r1); 
-          almondSolve(precon->z1, precon->parAlmond, precon->r1,NULL,NULL,0,0);
-          precon->o_z1.copyFrom(precon->z1);
-        }
+        // should eliminate these copies
+        precon->o_r1.copyTo(precon->r1); 
+        almondSolve(precon->z1, precon->parAlmond, precon->r1);
+        precon->o_z1.copyFrom(precon->z1);
       }      
 
       if(strstr(options,"LOCALALMOND")){
-        if(strstr(options, "UBERGRID")) {
-
-          int size, rank;
-          MPI_Comm_size(MPI_COMM_WORLD, &size);
-          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-          // should eliminate these copies
-          precon->o_r1.copyTo(precon->r1); 
-          almondSolve(precon->z1, precon->almond, precon->r1,
-                      xxtSolve,precon->xxt2,
-                      precon->coarseTotal,
-                      precon->coarseOffsets[rank]);
-          precon->o_z1.copyFrom(precon->z1);
-        } else {
-          // should eliminate these copies
-          precon->o_r1.copyTo(precon->r1); 
-
-          almondSolve(precon->z1, precon->almond, precon->r1,NULL,NULL,0,0);
-          precon->o_z1.copyFrom(precon->z1);
-        }
+        // should eliminate these copies
+        precon->o_r1.copyTo(precon->r1); 
+        almondSolve(precon->z1, precon->almond, precon->r1);
+        precon->o_z1.copyFrom(precon->z1);
       }
 
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);

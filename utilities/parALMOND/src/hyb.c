@@ -14,11 +14,11 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
   for(iint i=0; i<A->Nrows; i++)
   	A->diagInv[i] = 1.0/csrA->coefs[csrA->rowStarts[i]];
 
-  dfloat *rowCounters = (dfloat*) calloc(Nrows, sizeof(dfloat));
+  iint *rowCounters = (iint*) calloc(A->Nrows, sizeof(iint));
 
   iint maxNnzPerRow = 0;
   iint minNnzPerRow = A->Ncols;
-  for(iint i=0; i<Nrows; i++) {
+  for(iint i=0; i<A->Nrows; i++) {
     iint rowNnz = csrA->rowStarts[i+1] - csrA->rowStarts[i];
     rowCounters[i] = rowNnz;
 
@@ -47,14 +47,18 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
     }
   }
 
+  A->E = (ell *) calloc(1, sizeof(ell));
+
   A->E->Nrows	= A->Nrows;
   A->E->Ncols	= A->Ncols;
   A->E->nnzPerRow	= nnzPerRow;
   A->E->strideLength = A->Nrows;
 
+  iint *Ecols;
+  dfloat *Ecoefs;
   if(nnzPerRow){
-    A->E->cols  = (iint *) calloc(A->Nrows*nnzPerRow, sizeof(iint));
-    A->E->coefs = (dfloat *) calloc(A->Nrows*nnzPerRow, sizeof(dfloat));
+    Ecols  = (iint *) calloc(A->Nrows*nnzPerRow, sizeof(iint));
+    Ecoefs = (dfloat *) calloc(A->Nrows*nnzPerRow, sizeof(dfloat));
   }
 
   iint nnzC = 0;
@@ -65,13 +69,21 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
 
   A->E->actualNNZ  = csrA->nnz - nnzC;
 
+  A->C = (coo *) calloc(1, sizeof(coo));
+
   A->C->Nrows	= A->Nrows;
   A->C->Ncols	= A->Ncols;
   A->C->nnz		= nnzC;
 
-  A->C->rows  = (iint *) calloc(nnzC, sizeof(iint));
-  A->C->cols  = (iint *) calloc(nnzC, sizeof(iint));
-  A->C->coefs = (dfloat *) calloc(nnzC, sizeof(dfloat));
+  iint *Crows;
+  iint *Ccols;
+  dfloat *Ccoefs;
+
+  if (nnzC) {
+    Crows  = (iint *) calloc(nnzC, sizeof(iint));
+    Ccols  = (iint *) calloc(nnzC, sizeof(iint));
+    Ccoefs = (dfloat *) calloc(nnzC, sizeof(dfloat));
+  }
 
   nnzC = 0;
   for(iint i=0; i<A->Nrows; i++){
@@ -83,16 +95,16 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
     iint maxNnz = (nnzPerRow >= rowNnz) ? rowNnz : nnzPerRow;
 
     for(iint c=0; c<maxNnz; c++){
-    	A->E->cols [i+c*E.strideLength()]	= csrA->cols[Jstart+c];
-    	A->E->coefs[i+c*E.strideLength()]	= csrA->coefs[Jstart+c];
+    	Ecols [i+c*A->E->strideLength]	= csrA->cols[Jstart+c];
+    	Ecoefs[i+c*A->E->strideLength]	= csrA->coefs[Jstart+c];
     }
 
     // store the remaining in coo format
     if(rowNnz > nnzPerRow){
     	for(iint c=nnzPerRow; c<rowNnz; c++){
-    	  A->C->rows[nnzC]	= i;
-    	  A->C->cols[nnzC]	= csrA->cols[Jstart+c];
-    	  A->C->coefs[nnzC]	= csrA->coefs[Jstart+c];
+    	  Crows[nnzC]	  = i;
+    	  Ccols[nnzC]	  = csrA->cols[Jstart+c];
+    	  Ccoefs[nnzC]	= csrA->coefs[Jstart+c];
     	  nnzC++;
     	}
     }
@@ -100,24 +112,29 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
 
   // copy the data to device memory
   if(A->Nrows)
-    o_diagInv = almond->device.malloc(A->Nrows*sizeof(dfloat), A->diagInv);
+    A->o_diagInv = almond->device.malloc(A->Nrows*sizeof(dfloat), A->diagInv);
 
   if(A->E->nnzPerRow){
-    A->E->o_cols  = almond->device.malloc(A->Nrows*nnzPerRow*sizeof(iint), A->E->cols);
-    A->E->o_coefs = almond->device.malloc(A->Nrows*nnzPerRow*sizeof(dfloat), A->E->coefs);
+    A->E->o_cols  = almond->device.malloc(A->Nrows*nnzPerRow*sizeof(iint), Ecols);
+    A->E->o_coefs = almond->device.malloc(A->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
+
+    free(Ecols); free(Ecoefs);
   }
   if(A->C->nnz){
-    A->C->o_rows  = almond->device.malloc(A->C->nnz*sizeof(iint), A->C->rows);
-    A->C->o_cols  = almond->device.malloc(A->C->nnz*sizeof(iint), A->C->cols);
-    A->C->o_coefs = almond->device.malloc(A->C->nnz*sizeof(dfloat), A->C->coefs);
+    A->C->o_rows  = almond->device.malloc(A->C->nnz*sizeof(iint), Crows);
+    A->C->o_cols  = almond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
+    A->C->o_coefs = almond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
 
-    const iint numBlocks = (A->C->nnz + almond->agmgBdim - 1)/almond->agmgBdim;
+    const iint numBlocks = (A->C->nnz + AGMGBDIM - 1)/AGMGBDIM;
 
     iint *dummyRows = (iint *) calloc(numBlocks, sizeof(iint));
     dfloat *dummyAx = (dfloat *) calloc(numBlocks, sizeof(dfloat));
 
-    A->C->temp_rows = almond->device.malloc(numBlocks*sizeof(iint), dummyRows);
-    A->C->temp_Ax   = almond->device.malloc(numBlocks*sizeof(dfloat), dummyAx);
+    A->C->o_temp_rows = almond->device.malloc(numBlocks*sizeof(iint), dummyRows);
+    A->C->o_temp_Ax   = almond->device.malloc(numBlocks*sizeof(dfloat), dummyAx);
+
+    free(Crows); free(Ccols); free(Ccoefs);
+    free(dummyAx); free(dummyRows);
   }
 
   A->NsendTotal = csrA->NsendTotal;
@@ -140,13 +157,15 @@ hyb * newHYB(almond_t *almond, csr *csrA) {
   A->haloRecvRequests = csrA->haloRecvRequests;
 
   if (A->NsendTotal) A->o_haloBuffer = almond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
+
+  return A;
 }
 
 
 void axpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
 
   if (A->NsendTotal) {
-    haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
@@ -178,7 +197,7 @@ void zeqaxpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x,
 	  dfloat beta,  occa::memory o_y, occa::memory o_z) {
 
   if (A->NsendTotal) {
-    haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
@@ -217,7 +236,7 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
 
 
   if (A->NsendTotal) {
-    haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
@@ -238,15 +257,15 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
 
 
   if(A->o_temp1.bytes()== 0){
-    dfloat *dummy = calloc(A->Nrows, sizeof(dfloat));
+    dfloat *dummy = (dfloat *) calloc(A->Nrows, sizeof(dfloat));
     A->o_temp1 = almond->device.malloc(A->Nrows*sizeof(dfloat), dummy);
   }
 
 
-  const iint numBlocks = (A->Nrows+almond->agmgBdim-1)/almond->agmgBdim;
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
   //occa::tic("ellJacobi1");
-  almond->ellJacobi1Kernel(numBlocks, almond->agmgBdim, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+  almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                   A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
 
   // temp1 += -C*x
@@ -272,7 +291,7 @@ void smoothDampedJacobi(almond_t *almond,
   }
 
   if (A->NsendTotal) {
-    haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
@@ -293,14 +312,14 @@ void smoothDampedJacobi(almond_t *almond,
 
 
   if(A->o_temp1.bytes()== 0){
-    dfloat *dummy = calloc(A->Nrows, sizeof(dfloat));
+    dfloat *dummy = (dfloat*) calloc(A->Nrows, sizeof(dfloat));
     A->o_temp1 = almond->device.malloc(A->Nrows*sizeof(dfloat), dummy);
   }
 
 
-  const iint numBlocks = (A->Nrows+almond->agmgBdim-1)/almond->agmgBdim;
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  ellJacobi1Kernel(numBlocks, almond->agmgBdim, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+  almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                     A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
 
   // temp1 += -C*x
@@ -350,12 +369,12 @@ void hybHaloExchangeFinish(hyb *A) {
   // Wait for all sent messages to have left and received messages to have arrived
   if (A->NsendTotal) {
     MPI_Status *sendStatus = (MPI_Status*) calloc(A->NsendMessages, sizeof(MPI_Status));
-    MPI_Waitall(NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
+    MPI_Waitall(A->NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
     free(sendStatus);
   }
   if (A->NrecvTotal) {
     MPI_Status *recvStatus = (MPI_Status*) calloc(A->NrecvMessages, sizeof(MPI_Status));
-    MPI_Waitall(NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
+    MPI_Waitall(A->NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
     free(recvStatus);
   }
 }

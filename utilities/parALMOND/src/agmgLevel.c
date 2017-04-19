@@ -15,7 +15,7 @@ void interpolate(agmgLevel *level, dfloat *x, dfloat *Px){
 
 void interpolate(almond_t *almond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
   if (level->dcsrP->NsendTotal) {
-    haloExtract(level->dcsrP->NsendTotal, 1, level->dcsrP->o_haloElementList, o_x, level->dcsrP->o_haloBuffer);
+    almond->haloExtract(level->dcsrP->NsendTotal, 1, level->dcsrP->o_haloElementList, o_x, level->dcsrP->o_haloBuffer);
     
     //copy from device
     level->dcsrP->o_haloBuffer.copyTo(level->dcsrP->sendBuffer);
@@ -29,7 +29,7 @@ void interpolate(almond_t *almond, agmgLevel *level, occa::memory o_x, occa::mem
     dcsrHaloExchangeFinish(level->dcsrP);
   }
 
-  if(dcsrP->NrecvTotal) {
+  if(level->dcsrP->NrecvTotal) {
     //copy back to device
     o_x.copyFrom(level->dcsrP->recvBuffer,level->dcsrP->NrecvTotal*sizeof(dfloat),
                   level->dcsrP->numLocalIds*sizeof(dfloat));
@@ -52,7 +52,7 @@ void allocate(agmgLevel *level){
     level->invD = (dfloat *) calloc(m, sizeof(dfloat));
 
     for(iint i=0; i<m; i++)
-    	invD[i] = 1./A->coefs[A->rowStarts[i]];
+    	level->invD[i] = 1./level->A->coefs[level->A->rowStarts[i]];
   }
 }
 
@@ -64,17 +64,17 @@ csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
 
   csr *localA = (csr *) calloc(1,sizeof(csr));
 
-  iint rowStart = A->globalRowStarts[rank];
-  iint rowEnd   = A->globalRowStarts[rank+1];
-  iint colStart = A->globalColStarts[rank];
-  iint colEnd   = A->globalColStarts[rank+1];
+  iint rowStart = globalRowStarts[rank];
+  iint rowEnd   = globalRowStarts[rank+1];
+  iint colStart = globalColStarts[rank];
+  iint colEnd   = globalColStarts[rank+1];
 
   localA->Nrows = rowEnd-rowStart;
   localA->numLocalIds = colEnd-colStart;
   localA->nnz   = A->rowStarts[rowEnd]-A->rowStarts[rowStart];
   localA->rowStarts = (iint *) calloc(rowEnd-rowStart+1,sizeof(iint));
   localA->cols      = (iint *) calloc(localA->nnz,sizeof(iint));
-  localA->coefs     = (iint *) calloc(localA->nnz,sizeof(iint));
+  localA->coefs     = (dfloat *) calloc(localA->nnz,sizeof(dfloat));
 
   //copy the slice of the global matrix
   for (iint n=0;n<localA->Nrows+1;n++)
@@ -131,7 +131,7 @@ csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
     }
   }
 
-  HaloSetup(localA, globalColStarts);
+  csrHaloSetup(localA, globalColStarts);
 
   return localA;
 }
@@ -167,7 +167,7 @@ void smooth(agmgLevel *level, dfloat *rhs, dfloat *x, bool x_is_zero){
   }
 
   if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(level->A, rhs, x, smoother_params[0], x_is_zero);
+    smoothDampedJacobi(level->A, rhs, x, level->smoother_params[0], x_is_zero);
     return;
   }
 }
@@ -181,12 +181,12 @@ void smooth(almond_t *almond, agmgLevel *level, occa::memory o_rhs, occa::memory
   }
 
   if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(almond, level->deviceA, o_rhs, o_x, smoother_params[0], x_is_zero);
+    smoothDampedJacobi(almond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
     return;
   }
 }
 
-csr * strong_graph(csr *A){
+csr * strong_graph(csr *A, dfloat threshold){
 
   const iint m = A->Nrows;
 
@@ -350,7 +350,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       jj++;
 
       for(;jj<Jend;jj++){
-        const iint col = C.cols[jj];
+        const iint col = C->cols[jj];
         if(customLess(smax, rmax, imax, Ts_hat[col], Tr_hat[col], Ti_hat[col])){
           smax = Ts_hat[col];
           rmax = Tr_hat[col];
@@ -377,7 +377,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   // enumerate the coarse nodes/aggregates
   for(iint i=0; i<m; i++){
     if(states[i] == 1)
-      FineToCoarse[i] = numAggregates++;
+      FineToCoarse[i] = level->numAggregates++;
   }
 
   // TODO: cumulative scan for MPI to get global enumeration of aggregations
@@ -445,6 +445,8 @@ void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   const iint m = level->A->Nrows;
   const iint n = level->numAggregates;
 
+  level->P = (csr *) calloc(1, sizeof(csr));
+
   level->P->Nrows = m;
   level->P->Ncols = n;
   level->P->nnz = m;
@@ -466,12 +468,12 @@ void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   *nullCoarseA = (dfloat *) calloc(n,sizeof(dfloat));
    
   for(iint i=0; i<m; i++)
-    (*nullCoarseA)[level->P->cols[i]] += level->P->coefs[i] * level->P.coefs[i];
+    (*nullCoarseA)[level->P->cols[i]] += level->P->coefs[i] * level->P->coefs[i];
 
   for(iint i=0; i<n; i++)
     (*nullCoarseA)[i] = sqrt((*nullCoarseA)[i]);
 
-  for(int i=0; i<m; i++){
+  for(iint i=0; i<m; i++){
     level->P->coefs[i] /= (*nullCoarseA)[FineToCoarse[i]];
   }
 
@@ -497,13 +499,14 @@ csr *galerkinProd(agmgLevel *level){
   if(numAgg == 0){
     for (iint i=0; i<level->P->nnz; i++) //find max column index
       numAgg = (numAgg<level->P->cols[i]) ? level->P->cols[i] : numAgg;
+    numAgg++;
   }
-  numAgg++;
+  
 
   csr *RAP = (csr*) calloc(1,sizeof(csr));
 
   RAP->Nrows = numAgg;
-  RAP->Ncolumns = numAgg;
+  RAP->Ncols = numAgg;
 
   RAP->rowStarts = (iint *) calloc(numAgg+1, sizeof(iint));
 
@@ -580,7 +583,7 @@ csr *galerkinProd(agmgLevel *level){
   return RAP;
 }
 
-void coarsen(agmgLevel *level, csr *coarseA, dfloat **nullCoarseA){
+void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA){
 
   const iint m = level->A->Nrows;
   const iint n = level->A->Ncols;
@@ -593,11 +596,11 @@ void coarsen(agmgLevel *level, csr *coarseA, dfloat **nullCoarseA){
   // establish the graph of strong connections
   level->threshold = 0.5;
   
-  csr *C = strong_graph(level->A);
+  csr *C = strong_graph(level->A, level->threshold);
 
   iint *FineToCoarse = form_aggregates(level, C);
 
   construct_interpolator(level, FineToCoarse, nullCoarseA);
 
-  csr *coarseA = galerkinProd(level);
+  *coarseA = galerkinProd(level);
 }

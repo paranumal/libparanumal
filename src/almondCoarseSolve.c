@@ -1,475 +1,428 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
+#include "parAlmond.h"
 
-#include <map>
-#include <vector>
-
-#include "occa.hpp"
-#include "almondHeaders.hpp"
-#include "mesh.h"
-#include "mpi.h"
-
-#pragma message("WARNING : HARD CODED TO FLOAT/INT\n")
-
-#define amgFloat double
 
 typedef struct {
-  almond::csr<amgFloat> *A;
-  almond::agmg<amgFloat> M;
-  std::vector<amgFloat>  rhs;
-  std::vector<amgFloat>  x;
-  std::vector<amgFloat>  nullA;
+  csr *A;
+  almond_t *almond;
+  dfloat *rhs;
+  dfloat *x;
+  dfloat *nullA;
 
-  uint numLocalRows;
-  uint Nnum;
-  uint recvNnum;
-  uint nnz;
+  iint numLocalRows;
+  iint Nnum;
+  iint recvNnum;
+  iint nnz;
 
-  int *sendSortId, *globalSortId, *compressId;
-  int *sendCounts, *sendOffsets,  *recvCounts, *recvOffsets;
+  iint *sendSortId, *globalSortId, *compressId;
+  iint *sendCounts, *sendOffsets,  *recvCounts, *recvOffsets;
 
-  amgFloat *xUnassembled;
-  amgFloat *rhsUnassembled;
+  dfloat *xUnassembled;
+  dfloat *rhsUnassembled;
 
-  amgFloat *xSort;
-  amgFloat *rhsSort;
+  dfloat *xSort;
+  dfloat *rhsSort;
 
   occa::memory o_rhs, o_x;
 
-  char* iintType;
-  char* dfloatType;
+} parAlmond_t;
 
-} almond_t;
+void * almondSetup(occa::device device,
+       iint  Nnum,
+		   iint* rowStarts, 
+		   iint  nnz, 
+		   iint* Ai,
+		   iint* Aj,
+		   dfloat* Avals,
+		   iint    *sendSortId, 
+		   iint    *globalSortId, 
+		   iint    *compressId,
+		   iint    *sendCounts, 
+		   iint    *sendOffsets, 
+		   iint    *recvCounts, 
+		   iint    *recvOffsets,
+		   iint   nullSpace) {
 
-void * almondSetup(mesh_t *mesh,
-       uint  Nnum,
-		   int* rowStarts, 
-		   void* rowIds,
-		   uint  nnz, 
-		   void* Ai,
-		   void* Aj,
-		   void* Avals,
-		   int    *sendSortId, 
-		   int    *globalSortId, 
-		   int    *compressId,
-		   int    *sendCounts, 
-		   int    *sendOffsets, 
-		   int    *recvCounts, 
-		   int    *recvOffsets,
-		   int   nullSpace,
-		   const char* iintType, 
-		   const char* dfloatType) {
+  parAlmond_t *parAlmond = (parAlmond_t*) calloc(1, sizeof(parAlmond_t));
 
-  int n;
-  almond_t *almond = (almond_t*) calloc(1, sizeof(almond_t));
-
-  int *iAi = (int*) Ai;
-  int *iAj = (int*) Aj;
-  dfloat *dAvals = (dfloat*) Avals;
-
-  int size, rank;
+  iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank );
 
-  almond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
-  int globalOffset = rowStarts[rank];
+  parAlmond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
+  iint globalOffset = rowStarts[rank];
 
-  std::vector<int>    vRowStarts(almond->numLocalRows+1);
+  iint *vRowStarts = (iint *) calloc(parAlmond->numLocalRows+1, sizeof(iint));
 
   // assumes presorted
-  int cnt = 0; //nnz counter
-  int cnt2 =0; //row start counter
-  for(n=0;n<nnz;++n){
-    if(  (iAi[n] >= (almond->numLocalRows + globalOffset)) || (iAi[n] < globalOffset))
-      printf("errant nonzero %d,%d,%g, rank %d \n", iAi[n], iAj[n], dAvals[n], rank);
+  iint cnt = 0; //nnz counter
+  iint cnt2 =0; //row start counter
+  for(iint n=0;n<nnz;++n){
+    if(  (Ai[n] >= (parAlmond->numLocalRows + globalOffset)) || (Ai[n] < globalOffset))
+      printf("errant nonzero %d,%d,%g, rank %d \n", Ai[n], Aj[n], Avals[n], rank);
 
-    if(cnt2==0 || (iAi[n]!=iAi[n-1])) vRowStarts[cnt2++] = cnt;
+    if(cnt2==0 || (Ai[n]!=Ai[n-1])) vRowStarts[cnt2++] = cnt;
       
-    if (iAj[n] >= globalOffset && iAj[n] < almond->numLocalRows + globalOffset) cnt++;
+    if (Aj[n] >= globalOffset && Aj[n] < parAlmond->numLocalRows + globalOffset) cnt++;
   }
 
   vRowStarts[cnt2] = cnt;
 
-  std::vector<int>    vAj(cnt);
-  std::vector<amgFloat> vAvals(cnt);
+  iint *vAj = (iint *) calloc(cnt, sizeof(iint));
+  dfloat *vAvals = (dfloat *) calloc(cnt, sizeof(dfloat));
 
   cnt = 0;
-  for(n=0;n<nnz;++n){
-    if (iAj[n] >= globalOffset && iAj[n] < almond->numLocalRows + globalOffset) {
-      vAj[cnt] = iAj[n]-globalOffset;
-      vAvals[cnt++] = dAvals[n];  
+  for(iint n=0;n<nnz;++n){
+    if (Aj[n] >= globalOffset && Aj[n] < parAlmond->numLocalRows + globalOffset) {
+      vAj[cnt] = Aj[n]-globalOffset;
+      vAvals[cnt++] = Avals[n];  
     }
   }
 
-  almond->Nnum = Nnum;
-  //almond->numLocalRows = numLocalRows;
-  almond->recvNnum = compressId[almond->numLocalRows];
+  parAlmond->Nnum = Nnum;
+  //parAlmond->numLocalRows = numLocalRows;
+  parAlmond->recvNnum = compressId[parAlmond->numLocalRows];
 
-  almond->sendSortId = (int*) calloc(Nnum,sizeof(int));
-  for (n=0;n<Nnum;n++)  almond->sendSortId[n] = sendSortId[n];
+  parAlmond->sendSortId = (iint*) calloc(Nnum,sizeof(iint));
+  for (iint n=0;n<Nnum;n++)  parAlmond->sendSortId[n] = sendSortId[n];
 
-  almond->sendCounts = (int*) calloc(size,sizeof(int));
-  almond->recvCounts = (int*) calloc(size,sizeof(int));
-  for (n=0;n<size;n++){
-    almond->sendCounts[n] = sendCounts[n]*sizeof(amgFloat);
-    almond->recvCounts[n] = recvCounts[n]*sizeof(amgFloat);
+  parAlmond->sendCounts = (iint*) calloc(size,sizeof(iint));
+  parAlmond->recvCounts = (iint*) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    parAlmond->sendCounts[n] = sendCounts[n]*sizeof(dfloat);
+    parAlmond->recvCounts[n] = recvCounts[n]*sizeof(dfloat);
   }
 
-  almond->sendOffsets = (int*) calloc(size+1,sizeof(int));
-  almond->recvOffsets = (int*) calloc(size+1,sizeof(int));
-  for (n=0;n<size+1;n++){
-    almond->sendOffsets[n] = sendOffsets[n]*sizeof(amgFloat);
-    almond->recvOffsets[n] = recvOffsets[n]*sizeof(amgFloat);
+  parAlmond->sendOffsets = (iint*) calloc(size+1,sizeof(iint));
+  parAlmond->recvOffsets = (iint*) calloc(size+1,sizeof(iint));
+  for (iint n=0;n<size+1;n++){
+    parAlmond->sendOffsets[n] = sendOffsets[n]*sizeof(dfloat);
+    parAlmond->recvOffsets[n] = recvOffsets[n]*sizeof(dfloat);
   }
 
-  almond->globalSortId = (int*) calloc(almond->recvNnum,sizeof(int));
-  for (n=0;n<almond->recvNnum;n++) almond->globalSortId[n] = globalSortId[n];
+  parAlmond->globalSortId = (iint*) calloc(parAlmond->recvNnum,sizeof(iint));
+  for (iint n=0;n<parAlmond->recvNnum;n++) parAlmond->globalSortId[n] = globalSortId[n];
 
-  almond->compressId  = (int*) calloc(almond->numLocalRows+1,sizeof(int));
-  for (n=0;n<almond->numLocalRows+1;n++) almond->compressId[n] = compressId[n];
+  parAlmond->compressId  = (iint*) calloc(parAlmond->numLocalRows+1,sizeof(iint));
+  for (iint n=0;n<parAlmond->numLocalRows+1;n++) parAlmond->compressId[n] = compressId[n];
 
-  int Nmax =  (Nnum >almond->recvNnum)? Nnum : almond->recvNnum;
-  almond->xUnassembled   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->rhsUnassembled = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->xSort   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->rhsSort = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
+  iint Nmax =  (Nnum >parAlmond->recvNnum)? Nnum : parAlmond->recvNnum;
+  parAlmond->xUnassembled   = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->rhsUnassembled = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->xSort   = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->rhsSort = (dfloat *) malloc(Nmax*sizeof(dfloat));
 
-  almond->rhs.resize(almond->numLocalRows);
-  almond->x.resize(almond->numLocalRows);
+  parAlmond->rhs = (dfloat *) calloc(parAlmond->numLocalRows, sizeof(dfloat));
+  parAlmond->x   = (dfloat *) calloc(parAlmond->numLocalRows, sizeof(dfloat));
 
-  almond->A = new almond::csr<amgFloat>(vRowStarts, vAj, vAvals);
+  parAlmond->A = newCSR(parAlmond->numLocalRows, parAlmond->numLocalRows, nnz, 
+                        vRowStarts, vAj, vAvals);
 
-  almond->nullA.resize(almond->numLocalRows);
-  for (int i=0;i<almond->numLocalRows;i++)almond->nullA[i] = 1;
+  parAlmond->nullA = (dfloat *) calloc(parAlmond->numLocalRows, sizeof(dfloat));
+  for (iint i=0;i<parAlmond->numLocalRows;i++) parAlmond->nullA[i] = 1;
   
-  almond->M.setup(*(almond->A), almond->nullA, NULL);
-  almond->M.sync_setup_on_device(mesh->device);
-  for (iint r=0;r<size;r++) {
-    if (r==rank) {
-      printf("----------Rank %d ------------------------\n", rank);
-      almond->M.report();
-    }
-    fflush(stdout);
-    MPI_Barrier(MPI_COMM_WORLD);  
-  }
-  almond->M.ktype = almond::PCG;
+  parAlmond->almond = setup(parAlmond->A, parAlmond->nullA, NULL);
+  sync_setup_on_device(parAlmond->almond, device);
+
+  parAlmond->almond->ktype = PCG;
   
-  almond->iintType = strdup(iintType);
-  almond->dfloatType = strdup(dfloatType);
-
-
-  return (void *) almond;
+  return (void *) parAlmond;
 }
 
 
-void * almondGlobalSetup(mesh_t *mesh, 
-       uint  Nnum,
-       int* rowStarts, 
-       void* rowIds,
-       uint  nnz, 
-       void* Ai,
-       void* Aj,
-       void* Avals,
-       int    *sendSortId, 
-       int    *globalSortId, 
-       int    *compressId,
-       int    *sendCounts, 
-       int    *sendOffsets, 
-       int    *recvCounts, 
-       int    *recvOffsets,
-       int   nullSpace,
-       const char* iintType, 
-       const char* dfloatType) {
+void * almondGlobalSetup(occa::device device, 
+       iint  Nnum,
+       iint* rowStarts, 
+       iint  nnz, 
+       iint* Ai,
+       iint* Aj,
+       dfloat* Avals,
+       iint    *sendSortId, 
+       iint    *globalSortId, 
+       iint    *compressId,
+       iint    *sendCounts, 
+       iint    *sendOffsets, 
+       iint    *recvCounts, 
+       iint    *recvOffsets,
+       iint   nullSpace) {
 
-  int n;
-  almond_t *almond = (almond_t*) calloc(1, sizeof(almond_t));
+  parAlmond_t *parAlmond = (parAlmond_t*) calloc(1, sizeof(parAlmond_t));
 
-  int *iAi = (int*) Ai;
-  int *iAj = (int*) Aj;
-  dfloat *dAvals = (dfloat*) Avals;
-
-  int size, rank;
+  iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank );
 
-  almond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
+  parAlmond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
   int globalOffset = rowStarts[rank];
 
   int numGlobalRows = rowStarts[size];
 
-  std::vector<int>    vRowStarts(numGlobalRows+1);  
-  std::vector<int>    vAj(nnz);
-  std::vector<amgFloat> vAvals(nnz);
+  iint *vRowStarts = (iint *) calloc(numGlobalRows+1, sizeof(iint));  
+  iint *vAj        = (iint *) calloc(nnz, sizeof(iint));
+  dfloat *vAvals   = (dfloat *) calloc(nnz, sizeof(dfloat));
 
   // assumes presorted
-  int cnt2 =0; //row start counter
-  for(n=0;n<nnz;++n) {
-    if(cnt2==0 || (iAi[n]!=iAi[n-1])) vRowStarts[cnt2++] = n;      
-    vAj[n] = iAj[n];
-    vAvals[n] = dAvals[n];
+  iint cnt2 =0; //row start counter
+  for(iint n=0;n<nnz;++n) {
+    if(cnt2==0 || (Ai[n]!=Ai[n-1])) vRowStarts[cnt2++] = n;      
+    vAj[n] = Aj[n];
+    vAvals[n] = Avals[n];
   }
   vRowStarts[cnt2] = nnz;
   
-  almond->A = new almond::csr<amgFloat>(vRowStarts, vAj, vAvals);
+  parAlmond->A = newCSR(numGlobalRows, numGlobalRows, nnz, 
+                        vRowStarts, vAj, vAvals);
 
-  almond->nullA.resize(numGlobalRows);
-  for (int i=0;i<numGlobalRows;i++)almond->nullA[i] = 1;
+  parAlmond->nullA = (dfloat *) calloc(numGlobalRows, sizeof(dfloat));
+  for (iint i=0;i<numGlobalRows;i++) parAlmond->nullA[i] = 1;
   
-  almond->M.setup(*(almond->A), almond->nullA, rowStarts);
-  almond->M.sync_setup_on_device(mesh->device);
-  for (iint r=0;r<size;r++) {
-    if (r==rank) {
-      printf("----------Rank %d ------------------------\n", rank);
-      almond->M.report();
-    }
-    fflush(stdout);
-    MPI_Barrier(MPI_COMM_WORLD);  
-  }
-  almond->M.ktype = almond::PCG;
-
-
-  almond->Nnum = Nnum;
-  almond->recvNnum = compressId[almond->numLocalRows];
-
-  almond->sendSortId = (int*) calloc(Nnum,sizeof(int));
-  for (n=0;n<Nnum;n++)  almond->sendSortId[n] = sendSortId[n];
-
-  almond->sendCounts = (int*) calloc(size,sizeof(int));
-  almond->recvCounts = (int*) calloc(size,sizeof(int));
-  for (n=0;n<size;n++){
-    almond->sendCounts[n] = sendCounts[n]*sizeof(amgFloat);
-    almond->recvCounts[n] = recvCounts[n]*sizeof(amgFloat);
-  }
-
-  almond->sendOffsets = (int*) calloc(size+1,sizeof(int));
-  almond->recvOffsets = (int*) calloc(size+1,sizeof(int));
-  for (n=0;n<size+1;n++){
-    almond->sendOffsets[n] = sendOffsets[n]*sizeof(amgFloat);
-    almond->recvOffsets[n] = recvOffsets[n]*sizeof(amgFloat);
-  }
-
-  almond->globalSortId = (int*) calloc(almond->recvNnum,sizeof(int));
-  for (n=0;n<almond->recvNnum;n++) almond->globalSortId[n] = globalSortId[n];
-
-  almond->compressId  = (int*) calloc(almond->numLocalRows+1,sizeof(int));
-  for (n=0;n<almond->numLocalRows+1;n++) almond->compressId[n] = compressId[n];
-
-  int Nmax =  (Nnum >almond->recvNnum)? Nnum : almond->recvNnum;
-  almond->xUnassembled   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->rhsUnassembled = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->xSort   = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-  almond->rhsSort = (amgFloat *) malloc(Nmax*sizeof(amgFloat));
-
-  almond->rhs.resize(almond->numLocalRows);
-  almond->x.resize(almond->numLocalRows);
+  parAlmond->almond = setup(parAlmond->A, parAlmond->nullA, rowStarts);
+  sync_setup_on_device(parAlmond->almond, device);
   
-  almond->iintType = strdup(iintType);
-  almond->dfloatType = strdup(dfloatType);
+  parAlmond->almond->ktype = PCG;
 
-  almond->o_rhs = mesh->device.malloc(almond->numLocalRows*sizeof(dfloat), almond->rhs.data());
-  almond->o_x   = mesh->device.malloc(almond->numLocalRows*sizeof(dfloat), almond->x.data());
+  parAlmond->Nnum = Nnum;
+  parAlmond->recvNnum = compressId[parAlmond->numLocalRows];
 
-  return (void *) almond;
+  parAlmond->sendSortId = (iint*) calloc(Nnum,sizeof(iint));
+  for (iint n=0;n<Nnum;n++)  parAlmond->sendSortId[n] = sendSortId[n];
+
+  parAlmond->sendCounts = (iint*) calloc(size,sizeof(iint));
+  parAlmond->recvCounts = (iint*) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    parAlmond->sendCounts[n] = sendCounts[n]*sizeof(dfloat);
+    parAlmond->recvCounts[n] = recvCounts[n]*sizeof(dfloat);
+  }
+
+  parAlmond->sendOffsets = (iint*) calloc(size+1,sizeof(iint));
+  parAlmond->recvOffsets = (iint*) calloc(size+1,sizeof(iint));
+  for (iint n=0;n<size+1;n++){
+    parAlmond->sendOffsets[n] = sendOffsets[n]*sizeof(dfloat);
+    parAlmond->recvOffsets[n] = recvOffsets[n]*sizeof(dfloat);
+  }
+
+  parAlmond->globalSortId = (iint*) calloc(parAlmond->recvNnum,sizeof(iint));
+  for (iint n=0;n<parAlmond->recvNnum;n++) parAlmond->globalSortId[n] = globalSortId[n];
+
+  parAlmond->compressId  = (iint*) calloc(parAlmond->numLocalRows+1,sizeof(iint));
+  for (iint n=0;n<parAlmond->numLocalRows+1;n++) parAlmond->compressId[n] = compressId[n];
+
+  iint Nmax =  (Nnum >parAlmond->recvNnum)? Nnum : parAlmond->recvNnum;
+  parAlmond->xUnassembled   = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->rhsUnassembled = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->xSort   = (dfloat *) malloc(Nmax*sizeof(dfloat));
+  parAlmond->rhsSort = (dfloat *) malloc(Nmax*sizeof(dfloat));
+
+  parAlmond->rhs = (dfloat *) calloc(parAlmond->numLocalRows, sizeof(dfloat));
+  parAlmond->x   = (dfloat *) calloc(parAlmond->numLocalRows, sizeof(dfloat));
+  
+  parAlmond->o_rhs = device.malloc(parAlmond->numLocalRows*sizeof(dfloat), parAlmond->rhs);
+  parAlmond->o_x   = device.malloc(parAlmond->numLocalRows*sizeof(dfloat), parAlmond->x);
+
+  return (void *) parAlmond;
 }
 
 
-int almondSolve(void* x,
+iint almondSolve(dfloat* x,
 		void* A,
-		void* rhs,
-    void (*coarseSolve)(void *x, void *A, void *rhs),
-    void *coarseA,
-    int coarseTotal,
-    int coarseOffset) {
+		dfloat* rhs) {
   
 
-  almond_t *almond = (almond_t*) A;
+  parAlmond_t *parAlmond = (parAlmond_t*) A;
 
   iint rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank );
 
-  for (iint n=0;n<almond->Nnum;n++)
-    almond->rhsUnassembled[n] = ((dfloat*) rhs)[n];
+  for (iint n=0;n<parAlmond->Nnum;n++)
+    parAlmond->rhsUnassembled[n] = rhs[n];
 
   
   //sort by owner
-  for (iint n=0;n<almond->Nnum;n++) 
-    almond->rhsSort[n] = almond->rhsUnassembled[almond->sendSortId[n]];
+  for (iint n=0;n<parAlmond->Nnum;n++) 
+    parAlmond->rhsSort[n] = parAlmond->rhsUnassembled[parAlmond->sendSortId[n]];
 
   //Scatter nodes to their owners
-  MPI_Alltoallv(almond->rhsSort, almond->sendCounts, almond->sendOffsets, MPI_CHAR,
-                almond->rhsUnassembled, almond->recvCounts, almond->recvOffsets, MPI_CHAR,
+  MPI_Alltoallv(parAlmond->rhsSort, parAlmond->sendCounts, parAlmond->sendOffsets, MPI_CHAR,
+                parAlmond->rhsUnassembled, parAlmond->recvCounts, parAlmond->recvOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
 
   //sort by globalid 
-  for (iint n=0;n<almond->recvNnum;n++) 
-    almond->rhsSort[n] = almond->rhsUnassembled[almond->globalSortId[n]];
+  for (iint n=0;n<parAlmond->recvNnum;n++) 
+    parAlmond->rhsSort[n] = parAlmond->rhsUnassembled[parAlmond->globalSortId[n]];
 
   //gather
-  for(iint n=0;n<almond->numLocalRows;++n){
-    almond->rhs[n] = 0.;
-    almond->x[n] = 0.;
-    for (iint id=almond->compressId[n];id<almond->compressId[n+1];id++) 
-      almond->rhs[n] += almond->rhsSort[id];
+  for(iint n=0;n<parAlmond->numLocalRows;++n){
+    parAlmond->rhs[n] = 0.;
+    parAlmond->x[n] = 0.;
+    for (iint id=parAlmond->compressId[n];id<parAlmond->compressId[n+1];id++) 
+      parAlmond->rhs[n] += parAlmond->rhsSort[id];
   }
 
-  almond->o_rhs.copyFrom(almond->rhs.data());
+  parAlmond->o_rhs.copyFrom(parAlmond->rhs);
 
   if(1){
-    //almond->M.solve(almond->rhs, almond->x,coarseSolve,coarseA,coarseTotal,coarseOffset);
-    almond->M.solve(almond->o_rhs, almond->o_x,coarseSolve,coarseA,coarseTotal,coarseOffset);
-  }
-  else{
-    int maxIt = 40;
-    amgFloat tol = 1e-2;
-    almond::pcg<amgFloat>(almond->A[0],
-			  almond->rhs,
-			  almond->x,
-			  almond->M,
+    //solve(parAlmond->almond, parAlmond->rhs, parAlmond->x);
+    solve(parAlmond->almond, parAlmond->o_rhs, parAlmond->o_x);
+  } else{
+    iint maxIt = 40;
+    dfloat tol = 1e-2;
+    pcg(parAlmond->almond,
+        parAlmond->A,
+			  parAlmond->rhs,
+			  parAlmond->x,
 			  maxIt,
-			  tol,
-        coarseSolve,coarseA,
-        coarseTotal,coarseOffset);
+			  tol);
   }
 
-  almond->o_x.copyTo(almond->x.data());
+  parAlmond->o_x.copyTo(parAlmond->x);
 
   //scatter
-  for(iint n=0;n<almond->numLocalRows;++n){
-    for (iint id = almond->compressId[n];id<almond->compressId[n+1];id++) 
-      almond->xSort[id] = almond->x[n]; 
+  for(iint n=0;n<parAlmond->numLocalRows;++n){
+    for (iint id = parAlmond->compressId[n];id<parAlmond->compressId[n+1];id++) 
+      parAlmond->xSort[id] = parAlmond->x[n]; 
   }
 
   //sort by original rank
-  for (iint n=0;n<almond->recvNnum;n++) 
-    almond->xUnassembled[almond->globalSortId[n]] = almond->xSort[n];
+  for (iint n=0;n<parAlmond->recvNnum;n++) 
+    parAlmond->xUnassembled[parAlmond->globalSortId[n]] = parAlmond->xSort[n];
 
   //Scatter nodes back to their original rank
-  MPI_Alltoallv(almond->xUnassembled, almond->recvCounts, almond->recvOffsets, MPI_CHAR,
-                almond->xSort, almond->sendCounts, almond->sendOffsets, MPI_CHAR,
+  MPI_Alltoallv(parAlmond->xUnassembled, parAlmond->recvCounts, parAlmond->recvOffsets, MPI_CHAR,
+                parAlmond->xSort, parAlmond->sendCounts, parAlmond->sendOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
 
   //sort back to original ordering
-  for (iint n=0;n<almond->Nnum;n++) 
-    almond->xUnassembled[almond->sendSortId[n]] = almond->xSort[n];
+  for (iint n=0;n<parAlmond->Nnum;n++) 
+    parAlmond->xUnassembled[parAlmond->sendSortId[n]] = parAlmond->xSort[n];
 
 
-  for(iint i=0;i<almond->Nnum;++i) ((dfloat *) x)[i] = almond->xUnassembled[i];
+  for(iint i=0;i<parAlmond->Nnum;++i) x[i] = parAlmond->xUnassembled[i];
 
   return 0;
 }
 
+//TODO code this
 int almondFree(void* A) {
   return 0;
 }
 
 
-void almondProlongateCoarseProblem(void *ALMOND, int *coarseNp, int *coarseOffsets, void **B) { 
+void almondProlongateCoarseProblem(void *ALMOND, iint *coarseNp, iint *coarseOffsets, dfloat **B) { 
 
-  almond_t *almond = (almond_t*) ALMOND;
+  parAlmond_t *parAlmond = (parAlmond_t*) ALMOND;
 
-  int rank, size;
+  iint rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank );
 
-  int numLevels = almond->M.levels.size();
+  iint numLevels = parAlmond->almond->numLevels;
   
   //number of coarse basis vectors
-  int localCoarseNp = almond->M.levels[numLevels-1]->A.nrows();
+  iint localCoarseNp = parAlmond->almond->levels[numLevels-1]->A->Nrows;
 
-  MPI_Allgather(&localCoarseNp, 1, MPI_INT, coarseNp, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&localCoarseNp, 1, MPI_IINT, coarseNp, 1, MPI_IINT, MPI_COMM_WORLD);
 
   for (iint n=0;n<size;n++) coarseOffsets[n+1] = coarseOffsets[n] + coarseNp[n];
 
-  int coarseTotal = coarseOffsets[size];
+  iint coarseTotal = coarseOffsets[size];
 
-  *B = (amgFloat *) calloc(localCoarseNp*almond->Nnum, sizeof(amgFloat));
+  *B = (dfloat *) calloc(localCoarseNp*parAlmond->Nnum, sizeof(dfloat));
 
   //allocate storage for prolanged basis vector at all levels
-  std::vector<amgFloat> *b = (std::vector<amgFloat> *) calloc(numLevels,sizeof(std::vector<amgFloat>));
-  for (int n=0; n<numLevels;n++)
-    b[n].resize(almond->M.levels[n]->A.nrows());
+  dfloat **b = (dfloat **) calloc(numLevels,sizeof(dfloat *));
+  for (iint n=0; n<numLevels;n++)
+    b[n] = (dfloat *) calloc(parAlmond->almond->levels[n]->Ncols, sizeof(dfloat));
 
-  for (int k=0;k<localCoarseNp;k++) {
+  for (iint k=0;k<localCoarseNp;k++) {
     //fill coarsest vector
-    for (int n=0;n<localCoarseNp;n++) b[numLevels-1][n] = 0.0;
+    for (iint n=0;n<localCoarseNp;n++) b[numLevels-1][n] = 0.0;
+    
     b[numLevels-1][k] = 1.0;
 
     //prolongate
-    for (int m=numLevels-1;m>0;m--) 
-      almond->M.levels[m-1]->interpolate(b[m], b[m-1]);
+    for (iint m=numLevels-1;m>0;m--) 
+      interpolate(parAlmond->almond->levels[m-1], b[m], b[m-1]);
     
     //scatter
-    for(int n=0;n<almond->numLocalRows;++n){
-      for (iint id = almond->compressId[n];id<almond->compressId[n+1];id++) 
-        almond->xSort[id] = b[0][n]; 
+    for(iint n=0;n<parAlmond->numLocalRows;++n){
+      for (iint id = parAlmond->compressId[n];id<parAlmond->compressId[n+1];id++) 
+        parAlmond->xSort[id] = b[0][n]; 
     }
 
     //sort by original rank
-    for (int n=0;n<almond->recvNnum;n++) 
-      almond->xUnassembled[almond->globalSortId[n]] = almond->xSort[n];
+    for (iint n=0;n<parAlmond->recvNnum;n++) 
+      parAlmond->xUnassembled[parAlmond->globalSortId[n]] = parAlmond->xSort[n];
 
     //Fake scatter nodes back to their original rank
-    int recvCount = almond->recvCounts[rank]/sizeof(amgFloat);
-    int recvOffset = almond->recvOffsets[rank]/sizeof(amgFloat);
-    int sendOffset = almond->sendOffsets[rank]/sizeof(amgFloat);
-    for (int n=0; n<almond->Nnum; n++) almond->xSort[n] = 0.;
-    for (int n=0; n<recvCount;n++) almond->xSort[n+sendOffset] = almond->xUnassembled[n+recvOffset];
+    iint recvCount = parAlmond->recvCounts[rank]/sizeof(dfloat);
+    iint recvOffset = parAlmond->recvOffsets[rank]/sizeof(dfloat);
+    iint sendOffset = parAlmond->sendOffsets[rank]/sizeof(dfloat);
+    for (iint n=0; n<parAlmond->Nnum; n++) parAlmond->xSort[n] = 0.;
+    for (iint n=0; n<recvCount;n++) parAlmond->xSort[n+sendOffset] = parAlmond->xUnassembled[n+recvOffset];
 
     //sort back to original ordering
-    for (int n=0;n<almond->Nnum;n++) 
-      almond->xUnassembled[almond->sendSortId[n]] = almond->xSort[n];
+    for (iint n=0;n<parAlmond->Nnum;n++) 
+      parAlmond->xUnassembled[parAlmond->sendSortId[n]] = parAlmond->xSort[n];
     
     //save
-    for (int n=0;n<almond->Nnum;n++) 
-      ((amgFloat *)*B)[n+k*almond->Nnum] = almond->xUnassembled[n];
+    for (iint n=0;n<parAlmond->Nnum;n++) 
+      (*B)[n+k*parAlmond->Nnum] = parAlmond->xUnassembled[n];
   }
+
+  for (iint n=0; n<numLevels;n++) 
+    free(b[n]);
 }
 
-void almondGlobalCoarseSetup(void *ALMOND, int *coarseNp, int *coarseOffsets, int **globalNumbering,
-                    int *nnz, int **rows, int **cols, void **vals) {
+void almondGlobalCoarseSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
+                    iint *nnz, iint **rows, iint **cols, dfloat **vals) {
 
-  int size, rank;
+  iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   
-  almond_t *almond = (almond_t*) ALMOND;
+  parAlmond_t *parAlmond = (parAlmond_t*) ALMOND;
 
-  int numLevels = almond->M.levels.size();
+  iint numLevels = parAlmond->almond->numLevels;
 
-  int Np = almond->M.levels[numLevels-1]->A.nrows();
+  iint Np = parAlmond->almond->levels[numLevels-1]->Nrows;
 
-  MPI_Allgather(&Np, 1, MPI_INT, coarseNp, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&Np, 1, MPI_IINT, coarseNp, 1, MPI_IINT, MPI_COMM_WORLD);
 
   coarseOffsets[0] = 0;
-  for (int r=0;r<size;r++)
+  for (iint r=0;r<size;r++)
     coarseOffsets[r+1] = coarseOffsets[r] + coarseNp[r];
 
-  *globalNumbering = (int *) calloc(coarseOffsets[size],sizeof(int));
-  for (int n=0;n<coarseOffsets[size];n++)
+  *globalNumbering = (iint *) calloc(coarseOffsets[size],sizeof(iint));
+  for (iint n=0;n<coarseOffsets[size];n++)
     (*globalNumbering)[n] = n;
 
-  *nnz = almond->M.levels[numLevels-1]->A.nnz();
-  amgFloat *dvals;
+  *nnz = parAlmond->almond->levels[numLevels-1]->A->nnz;
   if (*nnz) {
-    *rows = (int *) calloc(*nnz,sizeof(int));
-    *cols = (int *) calloc(*nnz,sizeof(int));
-    dvals = (amgFloat *) calloc(*nnz,sizeof(amgFloat));
+    *rows = (iint *) calloc(*nnz,sizeof(iint));
+    *cols = (iint *) calloc(*nnz,sizeof(iint));
+    *vals = (dfloat *) calloc(*nnz,sizeof(dfloat));
   }
 
-  for (int n=0;n<Np;n++) {
-    for (int m=almond->M.levels[numLevels-1]->A.rowStarts[n];
-             m<almond->M.levels[numLevels-1]->A.rowStarts[n+1];m++) {
+  for (iint n=0;n<Np;n++) {
+    for (iint m=parAlmond->almond->levels[numLevels-1]->A->rowStarts[n];
+             m<parAlmond->almond->levels[numLevels-1]->A->rowStarts[n+1];m++) {
       (*rows)[m] = n + coarseOffsets[rank];
-      int col = almond->M.levels[numLevels-1]->A.cols[m];
-      (*cols)[m] = almond->M.levels[numLevels-1]->A.colMap[col];
-      dvals[m] = almond->M.levels[numLevels-1]->A.coefs[m];
+      iint col = parAlmond->almond->levels[numLevels-1]->A->cols[m];
+      (*cols)[m] = parAlmond->almond->levels[numLevels-1]->A->colMap[col];
+      (*vals)[m] = parAlmond->almond->levels[numLevels-1]->A->coefs[m];
     }
   }
-
-  *vals = dvals;
 }
 
+void almondSetCoarseSolve(void* ALMOND, void (*coarseSolve)(void*,void*,void*),
+                          void *ACoarse, iint coarseTotal,iint coarseOffset) {
+
+  parAlmond_t *parAlmond = (parAlmond_t*) ALMOND;
+
+  //set coarse solver pointer
+  parAlmond->almond->coarseSolve = coarseSolve;
+  parAlmond->almond->ACoarse = ACoarse;
+  parAlmond->almond->coarseTotal = coarseTotal;
+  parAlmond->almond->coarseOffset = coarseOffset;
+}

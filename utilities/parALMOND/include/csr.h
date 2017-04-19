@@ -7,9 +7,9 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y);
 
 void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z);
 
-void smoothJacobi(csr *A, dfloat *r, dfloat *x, const bool x_is_zero);
+void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero);
 
-void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, const bool x_is_zero);
+void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_zero);
 
 csr * transpose(csr *A);
 

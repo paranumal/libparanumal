@@ -1,32 +1,32 @@
 #include "parAlmond.h"
 
 
-csr * newCSR(iint Nrows, iint Ncolumns, iint nnz,
-      iint *rowStarts, iint *cols, dfloat *vals){
+csr * newCSR(iint Nrows, iint Ncols, iint nnz,
+      iint *rowStarts, iint *cols, dfloat *coefs){
 
 
   csr *A = (csr *) calloc(1,sizeof(csr));
 
   A->Nrows = Nrows;
-  A->Ncolumns = Ncolumns;
-  A->nnz = nnz;
+  A->Ncols = Ncols;
+  A->nnz   = nnz;
 
   A->rowStarts = (iint *) calloc(A->Nrows+1,sizeof(iint));
   A->cols      = (iint *) calloc(A->nnz, sizeof(iint));
-  A->coefs     = (iint *) calloc(A->nnz, sizeof(dfloat));
+  A->coefs     = (dfloat *) calloc(A->nnz, sizeof(dfloat));
 
 
   for (iint i=0; i<Nrows; i++) {
-    start = rowStarts[i];
+    iint start = rowStarts[i];
     A->rowStarts[i] = start; 
     iint cnt = 1;
     for (iint j=rowStarts[i]; j<rowStarts[i+1]; j++) {
       if (cols[j] == i) { //diagonal entry
         A->cols[start] = cols[j];
-        A->vals[start] = vals[j];
+        A->coefs[start] = coefs[j];
       } else {
         A->cols[start+cnt] = cols[j];
-        A->vals[start+cnt] = vals[j];
+        A->coefs[start+cnt] = coefs[j];
         cnt++;
       }
     }
@@ -43,7 +43,7 @@ csr * newCSR(iint Nrows, iint Ncolumns, iint nnz,
 
 void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 
-  HaloExchange(sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
   // y[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   for(iint i=0; i<A->Nrows; i++){
@@ -59,13 +59,13 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 
 void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z) {
 
-  HaloExchange(sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   for(iint i=0; i<A->Nrows; i++){
     const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
 
-    dfloat result = (T) 0.0;
+    dfloat result = 0.0;
 
     for(iint jj=Jstart; jj<Jend; jj++)
       result += A->coefs[jj]*x[A->cols[jj]];
@@ -75,7 +75,7 @@ void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z)
 }
 
 
-void smoothJacobi(csr *A, dfloat *r, dfloat *x, const bool x_is_zero) {
+void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
   // x = inv(D)*(b-R*x)  where R = A-D
   if(x_is_zero){
@@ -86,9 +86,9 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, const bool x_is_zero) {
     return;
   }
 
-  HaloExchange(sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
-  dfloat y[Nrows];
+  dfloat y[A->Nrows];
 
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
@@ -111,7 +111,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, const bool x_is_zero) {
 }
 
 
-void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, const bool x_is_zero) {
+void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_zero) {
   
   if(x_is_zero){
     for(iint i=0; i<A->Nrows; i++){
@@ -121,10 +121,10 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, const bool x
     return;
   }
 
-  HaloExchange(sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
   // x = (1-alpha)*x + alpha*inv(D) * (b-R*x) where R = A-D
-  dfloat y[Nrows];
+  dfloat y[A->Nrows];
 
   const dfloat oneMalpha = 1. - alpha;
 
@@ -151,11 +151,11 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, const bool x
 
 csr * transpose(csr *A){
 
-  csr *A = (csr *) calloc(1,sizeof(csr));
+  csr *At = (csr *) calloc(1,sizeof(csr));
 
-  At->Nrows    = A->Ncolumns;
-  At->Ncolumns = A->Nrows;
-  At->nnz      = A->NNZ;
+  At->Nrows = A->Ncols;
+  At->Ncols = A->Nrows;
+  At->nnz   = A->nnz;
 
   At->rowStarts = (iint *) calloc(At->Nrows+1, sizeof(iint));
   At->cols      = (iint *) calloc(At->nnz, sizeof(iint));
@@ -175,20 +175,19 @@ csr * transpose(csr *A){
   for (iint i=0; i<At->Nrows+1; i++)
     counter[i] = At->rowStarts[i];
 
-  if(A->Nrows != A->Ncolumns){
+  if(A->Nrows != A->Ncols){
     for(iint i=0; i<A->Nrows; i++){
       const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
       
       for(iint jj=Jstart; jj<Jend; jj++){
         iint row = A->cols[jj];
-        At.cols[counter[row]] = i;
-        At.coefs[counter[row]] = A->coefs[jj];
+        At->cols[counter[row]] = i;
+        At->coefs[counter[row]] = A->coefs[jj];
 
         counter[row]++;
       }
     }
-  }
-  else{
+  } else{
     // fill in diagonals first
     for(iint i=0; i<A->Nrows; i++){
       At->cols[counter[i]] = i;
@@ -198,7 +197,7 @@ csr * transpose(csr *A){
     }
 
     // fill the remaining ones
-    for(iint i=0; i<Nrows; i++){
+    for(iint i=0; i<A->Nrows; i++){
       const iint Jstart = A->rowStarts[i]+1, Jend = A->rowStarts[i+1];
 
       for(iint jj=Jstart; jj<Jend; jj++){
@@ -368,7 +367,7 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   A->NrecvTotal = 0;
   A->NsendPairs = (iint*) calloc(size, sizeof(int));
   A->NrecvPairs = (iint*) calloc(size, sizeof(int));
-  for(iint n=A->numLocalIds;n<A->Ncolumns;++n){ //for just the halo
+  for(iint n=A->numLocalIds;n<A->Ncols;++n){ //for just the halo
     iint id = A->colMap[n]; // global index
     for (iint r=0;r<size;r++) { //find owner's rank
       if (globalColStarts[r]-1<id && id < globalColStarts[r+1]) {
@@ -417,11 +416,11 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   }
 
   // Wait for all sent messages to have left and received messages to have arrived
-  MPI_Status *sendStatus = (MPI_Status*) calloc(NsendMessages, sizeof(MPI_Status));
-  MPI_Status *recvStatus = (MPI_Status*) calloc(NrecvMessages, sizeof(MPI_Status));
+  MPI_Status *sendStatus = (MPI_Status*) calloc(A->NsendMessages, sizeof(MPI_Status));
+  MPI_Status *recvStatus = (MPI_Status*) calloc(A->NrecvMessages, sizeof(MPI_Status));
   
-  MPI_Waitall(NrecvMessages, (MPI_Request*)haloRecvRequests, recvStatus);
-  MPI_Waitall(NsendMessages, (MPI_Request*)haloSendRequests, sendStatus);
+  MPI_Waitall(A->NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
+  MPI_Waitall(A->NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
   
   free(recvStatus);
   free(sendStatus);
@@ -467,9 +466,9 @@ void csrHaloExchange(csr *A,
         ++recvMessage;
       }
     }
-    if (NsendTotal) {
-      if(NsendPairs[r]){
-        MPI_Isend(((char*)sendBuffer)+sendOffset, NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
+    if (A->NsendTotal) {
+      if(A->NsendPairs[r]){
+        MPI_Isend(((char*)sendBuffer)+sendOffset, A->NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
             MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r]*Nbytes;
         ++sendMessage;

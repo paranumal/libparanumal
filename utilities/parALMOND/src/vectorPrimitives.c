@@ -79,7 +79,7 @@ void scaleVector(almond_t *almond, iint N, occa::memory o_a, dfloat alpha){
 
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
-  scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
+  almond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
 }
 
 void dotStar(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
@@ -115,7 +115,7 @@ dfloat innerProd(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
     result += hostRed[i];
 
   free(hostRed);
-  dRed.free();
+  o_dRed.free();
 
   return result;
 }

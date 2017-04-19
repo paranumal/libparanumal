@@ -63,14 +63,14 @@ void gmres(almond_t *almond,
   almond->ktype = GMRES;
 
   // initial residual
-  dfloat nb = norm(b);
+  dfloat nb = norm(m, b);
 
   dfloat *r = (dfloat *) calloc(m,sizeof(dfloat));
 
   // M r = b - A*x0
-  solve(b, r, almond);
+  solve(almond, b, r);
 
-  dfloat nr = norm(r);
+  dfloat nr = norm(m, r);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
   s[0] = nr;
@@ -82,7 +82,7 @@ void gmres(almond_t *almond,
   }
 
   // V(:,0) = r/nr
-  vectorAdd( (1./nr), r,  0., V[0]);
+  vectorAdd(m, (1./nr), r,  0., V[0]);
 
   dfloat *H = (dfloat*) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat*) calloc(4*maxIt, sizeof(dfloat));
@@ -102,19 +102,19 @@ void gmres(almond_t *almond,
     axpy(A, 1.0, V[i], 0.0, Av);
 
     // M w = A vi
-    solve(Av, w, almond);
+    solve(almond, Av, w);
 
     for(iint k=0; k<=i; ++k){
-      dfloat hki = innerProd(w, V[k]);
+      dfloat hki = innerProd(m, w, V[k]);
 
       // w = w - hki*V[k]
-      vectorAdd(-hki, V[k], 1.0, w);
+      vectorAdd(m, -hki, V[k], 1.0, w);
 
       // H(k,i) = hki
       H[k + i*(maxIt+1)] = hki;
     }
 
-    H[i+1 + i*(maxIt+1)] = norm(w);
+    H[i+1 + i*(maxIt+1)] = norm(m,w);
 
 
     for(iint k=0; k<i; ++k){
@@ -148,10 +148,10 @@ void gmres(almond_t *almond,
     if(fabs(s[i+1]) < tol) break;
     
     if(i < maxIt-1){
-      dfloat nw = norm(w);
+      dfloat nw = norm(m,w);
 
       // V(:,i+1) = w/nw
-      vectorAdd(1./nw, w, 0.0, V[i+1]);
+      vectorAdd(m,1./nw, w, 0.0, V[i+1]);
     }
   }
 
@@ -178,7 +178,8 @@ void gmres(almond_t *almond,
   almond->ktype = GMRES;
 
   // initial residual
-  dfloat nb = norm(m, o_b);
+  dfloat nb = innerProd(almond, m, o_b, o_b);
+  nb = sqrt(nb);
 
   dfloat *dummy = (dfloat*) calloc(m, sizeof(dfloat));
 
@@ -187,9 +188,10 @@ void gmres(almond_t *almond,
   occa::memory  o_w = almond->device.malloc(sz, dummy);
 
   // M r = b - A*x0
-  solve(o_b, o_r, almond);
+  solve(almond, o_b, o_r);
 
-  dfloat nr = norm(m, o_r);
+  dfloat nr = innerProd(almond, m, o_r, o_r);
+  nr = sqrt(nr);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
   s[0] = nr;
@@ -201,7 +203,7 @@ void gmres(almond_t *almond,
   }
 
   // V(:,0) = r/nr
-  vectorAdd(m, (1./nr), o_r, 0., o_V[0]);
+  vectorAdd(almond, m, (1./nr), o_r, 0., o_V[0]);
 
   dfloat *H = (dfloat *) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat *) calloc(4*maxIt, sizeof(dfloat));
@@ -216,22 +218,23 @@ void gmres(almond_t *almond,
     end = i+1;
 
     // Av = A*V(:.i)
-    axpy(A, 1.0, o_V[i], 0.0, o_Av);
+    axpy(almond, A, 1.0, o_V[i], 0.0, o_Av);
 
     // M w = A vi
-    solve(o_Av, o_w, almond);
+    solve(almond, o_Av, o_w);
 
     for(iint k=0; k<=i; ++k){
-      dfloat hki = innerProd(m, o_w, o_V[k]);
+      dfloat hki = innerProd(almond, m, o_w, o_V[k]);
 
       // w = w - hki*V[k]
-      vectorAdd(m, -hki, o_V[k], 1.0, o_w);
+      vectorAdd(almond, m, -hki, o_V[k], 1.0, o_w);
 
       // H(k,i) = hki
       H[k + i*(maxIt+1)] = hki;
     }
 
-    dfloat nw = norm(m, o_w);
+    dfloat nw = innerProd(almond, m, o_w, o_w);
+    nw = sqrt(nw);
     H[i+1 + i*(maxIt+1)] = nw;
 
 
@@ -267,11 +270,11 @@ void gmres(almond_t *almond,
 
     if(i < maxIt-1){
       // V(:,i+1) = w/nw
-      vectorAdd<(m, 1./nw, o_w, 0.0, o_V[i+1]);
+      vectorAdd(almond, m, 1./nw, o_w, 0.0, o_V[i+1]);
     }
   }
 
-  gmresUpdate(m, o_x, o_V, H, s, end, maxIt);
+  gmresUpdate(almond, m, o_x, o_V, H, s, end, maxIt);
 
   if(end == maxIt)
     printf("gmres did not converge in given number of iterations \n");

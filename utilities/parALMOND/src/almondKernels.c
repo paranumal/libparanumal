@@ -64,4 +64,7 @@ void buildAlmondKernels(almond_t *almond){
 
   almond->haloExtract = almond->device.buildKernelFromSource(DPWD "/okl/haloExtract.okl",
       "haloExtract", defs);
+
+  almond->agg_interpolateKernel = almond->device.buildKernelFromSource(DPWD "/okl/agg_interpolate.okl",
+             "agg_interpolate", defs);
 }
