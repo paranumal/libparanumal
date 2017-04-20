@@ -49,5 +49,5 @@ $(objDir)/%.o:$(sDir)/%.c #$(wildcard $(subst $(sDir),$(iDir),$(<:.cpp=.hpp)))
 	$(CC) $(flags) -o $@ $(libs) -c $<
 
 clean:
-	rm -f main
+	rm -f libparALMOND.a
 	rm -f $(objDir)/*.o

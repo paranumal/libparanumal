@@ -30,7 +30,7 @@
 typedef enum {PCG=0,GMRES=1}KrylovType;
 typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
 
-#include "parAlmondStructs.h"
+#include "structs.h"
 
 typedef struct {
 	agmgLevel **levels;
@@ -64,13 +64,8 @@ typedef struct {
 } almond_t;
 
 #include "agmgLevel.h"
-#include "coo.h"
-#include "ell.h"
-#include "hyb.h"
-#include "dcsr.h"
-#include "csr.h"
+#include "agmgMatrices.h"
 #include "vectorPrimitives.h"
-
 
 
 almond_t *setup(csr *A, dfloat *nullA, iint *globalRowStarts);
