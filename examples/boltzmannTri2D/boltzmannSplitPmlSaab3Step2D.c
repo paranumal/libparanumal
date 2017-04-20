@@ -30,14 +30,17 @@ if(mesh->totalHaloPairs>0){
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
 
-    mesh->device.finish();
+
+mesh->device.finish();
     occa::tic("volumeKernel");
-    
-    // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
+
+// compute volume contribution to DG boltzmann RHS
+    if(mesh->pmlNelements){
+
        mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
-			    ramp,
+			    ramp, 
+			    drampdt,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
@@ -46,14 +49,14 @@ if(mesh->totalHaloPairs>0){
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy);
-    }
+    } 
 
-    
     // compute volume contribution to DG boltzmann RHS
-    // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -63,27 +66,31 @@ if(mesh->totalHaloPairs>0){
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq);
-    }
+	}
     
     
     mesh->device.finish();
     occa::toc("volumeKernel");
 
 
- if(strstr(options, "CUBATURE")){ 
-     // compute relaxation terms using cubature integration
+   if(strstr(options, "CUBATURE")){ 
+	// VOLUME KERNELS
+    mesh->device.finish();
+    occa::tic("relaxationKernel");
+	    
 	    if(mesh->pmlNelements){
-	      mesh->pmlRelaxationKernel(mesh->pmlNelements,
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
 				     mesh->o_pmlElementIds,
 				     ramp,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
 				     mesh->o_pmlqx,
-     			     mesh->o_pmlqy,
+				     mesh->o_pmlqy,
+				     mesh->o_rhsq,
 				     mesh->o_rhspmlqx,
 				     mesh->o_rhspmlqy);
-	    }
+		}
 	  
 	    // compute relaxation terms using cubature
 	    if(mesh->nonPmlNelements){
@@ -94,8 +101,12 @@ if(mesh->totalHaloPairs>0){
 				     mesh->o_q,
 				     mesh->o_rhsq);   
 	    }
-    
-   }
+
+	  // VOLUME KERNELS
+    mesh->device.finish();
+    occa::toc("relaxationKernel");
+	}
+
 
    // complete halo exchange
     if(mesh->totalHaloPairs>0){
@@ -107,9 +118,7 @@ if(mesh->totalHaloPairs>0){
       mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
     }
 
-
-
-     mesh->device.finish();
+    mesh->device.finish();
     occa::tic("surfaceKernel");
      
      if(mesh->pmlNelements){
@@ -125,12 +134,13 @@ if(mesh->totalHaloPairs>0){
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq,
 			   mesh->o_rhspmlqx,
 			   mesh->o_rhspmlqy);
 	}
     
     if(mesh->nonPmlNelements){
-      mesh->surfaceKernel(mesh->nonPmlNelements,
+       mesh->surfaceKernel(mesh->nonPmlNelements,
 			  mesh->o_nonPmlElementIds,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -163,18 +173,21 @@ if(mesh->totalHaloPairs>0){
   			mesh->pmlUpdateKernel(mesh->pmlNelements,
 		    mesh->o_pmlElementIds,
 		    mesh->dt,
-		    mesh->saabpmlexp,
+		    mesh->saabexp,
 		    ramp,
 		    mesh->mrab[0],
 		    mesh->mrab[1],
 			mesh->mrab[2],
-			mesh->saabpml[0],
-			mesh->saabpml[1],
-			mesh->saabpml[2],
+			mesh->saab[0],
+			mesh->saab[1],
+			mesh->saab[2],
+			mesh->o_rhsq,
 		    mesh->o_rhspmlqx,
 		    mesh->o_rhspmlqy,
+		    mesh->o_rhsq2,
 		    mesh->o_rhspmlqx2,
 		    mesh->o_rhspmlqy2,
+		    mesh->o_rhsq3,
 		    mesh->o_rhspmlqx3,
 		    mesh->o_rhspmlqy3,
 		    mesh->o_pmlqx,
@@ -230,10 +243,13 @@ if(mesh->totalHaloPairs>0){
 									saabc1,
 									saabc2,
 									saabc3,
+								    mesh->o_rhsq,
 								    mesh->o_rhspmlqx,
 								    mesh->o_rhspmlqy,
+								    mesh->o_rhsq2,
 								    mesh->o_rhspmlqx2,
 								    mesh->o_rhspmlqy2,
+								    mesh->o_rhsq3,
 								    mesh->o_rhspmlqx3,
 								    mesh->o_rhspmlqy3,
 								    mesh->o_pmlqx,
@@ -302,10 +318,13 @@ if (mesh->pmlNelements){
 									saabc1,
 									saabc2,
 									saabc3,
+								    mesh->o_rhsq,
 								    mesh->o_rhspmlqx,
 								    mesh->o_rhspmlqy,
+								    mesh->o_rhsq2,
 								    mesh->o_rhspmlqx2,
 								    mesh->o_rhspmlqy2,
+								    mesh->o_rhsq3,
 								    mesh->o_rhspmlqx3,
 								    mesh->o_rhspmlqy3,
 								    mesh->o_pmlqx,

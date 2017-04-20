@@ -15,8 +15,9 @@ int main(int argc, char **argv){
   // mode       = TEST, SOLVER // do not use test mode, for developing purposes
   // relaxation = CUBATURE, COLLOCATION, 
   // time       = LSERK, LSIMEX, SARK3, SAAB3
-  // bc         = PML, NONE
-   char *options =strdup("mode = SOLVER , relaxation = CUBATURE, stab = NO, time = SARK3, bc = SPLITPML");
+  // out        = VTU, TECPLOT, NO   // No tecplot yet! use VTU
+  // bc         = UNSPLITPML, SPLITPML, NONE
+   char *options =strdup("mode = SOLVER , relaxation = CUBATURE, stab = NO, time = LSIMEX, bc = UNSPLITPML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SARK3, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = LSERK, bc = PML");
 
@@ -41,9 +42,6 @@ int main(int argc, char **argv){
     void boltzmannSplitPmlSetup2D(mesh2D *mesh, char *options);
     void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options);
 
-
-    // run
-    //  boltzmannRun2D(mesh);
     printf("occa run: \n");
 
     mesh->dtfactor = dtfactor; 

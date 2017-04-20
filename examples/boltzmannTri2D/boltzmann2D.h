@@ -31,6 +31,10 @@ void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
 // Execute one Boltzmann time step using LSERK4
+void boltzmannUnsplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
+// Execute one Boltzmann time step using LSERK4
 void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
