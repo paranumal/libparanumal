@@ -147,16 +147,14 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
   buildAlmondKernels(almond);
 
   for(int i=0; i<almond->numLevels; i++){
-    iint m = almond->levels[i]->A->Nrows;
-    
     almond->levels[i]->deviceA = newHYB(almond, almond->levels[i]->A);
     if (i < almond->numLevels-1) {
       almond->levels[i]->dcsrP   = newDCSR(almond, almond->levels[i]->P);
       almond->levels[i]->deviceR = newHYB(almond, almond->levels[i]->R);
     }
 
-    iint N = almond->levels[i]->A->Ncols;
-    iint M = almond->levels[i]->A->Nrows;
+    iint N = almond->levels[i]->Ncols;
+    iint M = almond->levels[i]->Nrows;
 
     almond->levels[i]->o_x   = almond->device.malloc(N*sizeof(dfloat), almond->levels[i]->x);
     almond->levels[i]->o_rhs = almond->device.malloc(M*sizeof(dfloat), almond->levels[i]->rhs);
