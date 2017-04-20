@@ -510,7 +510,7 @@ csr *galerkinProd(agmgLevel *level){
 
   RAP->rowStarts = (iint *) calloc(numAgg+1, sizeof(iint));
 
-  dfloat dummyCoefs[level->A->nnz];
+  dfloat *dummyCoefs = (dfloat*) calloc(level->A->nnz,sizeof(dfloat));
   for (iint i=0; i<level->A->nnz;i++) //copy A coefs
     dummyCoefs[i] = level->A->coefs[i];
 
@@ -571,6 +571,7 @@ csr *galerkinProd(agmgLevel *level){
       count++;
     }
   }
+  free(dummyCoefs);
 
   // cumulative sum
   for(iint i=1; i<=numAgg; i++)
