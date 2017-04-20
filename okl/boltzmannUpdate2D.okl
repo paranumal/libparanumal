@@ -146,10 +146,13 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
               const dfloat rkb,
               const dfloat erkb,
               const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
               const dfloat * restrict rhsqx1,
-              const dfloat * restrict rhsqy1, 
+              const dfloat * restrict rhsqy1,
+              const dfloat4 * restrict rhsq2, 
               const dfloat * restrict rhsqx2,
               const dfloat * restrict rhsqy2,
+              const dfloat4 * restrict qold,
               const dfloat * restrict qxold,
               const dfloat * restrict qyold,
                     dfloat * restrict qx,
@@ -256,6 +259,143 @@ kernel void boltzmannSARK3SplitPmlStageUpdate2D(const iint Nelements,
 }
 
 
+kernel void boltzmannSARK3UnsplitPmlStageUpdate2D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat rka,
+              const dfloat erka,
+              const dfloat rkb,
+              const dfloat erkb,
+              const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
+              const dfloat * restrict rhsqx1,
+              const dfloat * restrict rhsqy1,
+              const dfloat4 * restrict rhsq2, 
+              const dfloat * restrict rhsqx2,
+              const dfloat * restrict rhsqy2,
+              const dfloat4 * restrict qold,
+              const dfloat * restrict qxold,
+              const dfloat * restrict qyold,
+                    dfloat * restrict qx,
+                    dfloat * restrict qy,
+                    dfloat4 * restrict q){
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint element = elementIds[e];
+      const iint base = n + element*p_Nfields*p_Np;
+
+
+      dfloat rhsqx11 = rhsqx1[base+0*p_Np];
+      dfloat rhsqx12 = rhsqx1[base+1*p_Np];
+      dfloat rhsqx13 = rhsqx1[base+2*p_Np];
+      dfloat rhsqx14 = rhsqx1[base+3*p_Np];
+      dfloat rhsqx15 = rhsqx1[base+4*p_Np];
+      dfloat rhsqx16 = rhsqx1[base+5*p_Np];
+
+      dfloat rhsqy11 = rhsqy1[base+0*p_Np];
+      dfloat rhsqy12 = rhsqy1[base+1*p_Np];
+      dfloat rhsqy13 = rhsqy1[base+2*p_Np];
+      dfloat rhsqy14 = rhsqy1[base+3*p_Np];
+      dfloat rhsqy15 = rhsqy1[base+4*p_Np];
+      dfloat rhsqy16 = rhsqy1[base+5*p_Np];
+      
+      //
+      dfloat rhsqx21 = rhsqx2[base+0*p_Np];
+      dfloat rhsqx22 = rhsqx2[base+1*p_Np];
+      dfloat rhsqx23 = rhsqx2[base+2*p_Np];
+      dfloat rhsqx24 = rhsqx2[base+3*p_Np];
+      dfloat rhsqx25 = rhsqx2[base+4*p_Np];
+      dfloat rhsqx26 = rhsqx2[base+5*p_Np];
+
+      dfloat rhsqy21 = rhsqy2[base+0*p_Np];
+      dfloat rhsqy22 = rhsqy2[base+1*p_Np];
+      dfloat rhsqy23 = rhsqy2[base+2*p_Np];
+      dfloat rhsqy24 = rhsqy2[base+3*p_Np];
+      dfloat rhsqy25 = rhsqy2[base+4*p_Np];
+      dfloat rhsqy26 = rhsqy2[base+5*p_Np];
+      //
+      dfloat qxold1 = qxold[base+0*p_Np];
+      dfloat qxold2 = qxold[base+1*p_Np];
+      dfloat qxold3 = qxold[base+2*p_Np];
+      dfloat qxold4 = qxold[base+3*p_Np];
+      dfloat qxold5 = qxold[base+4*p_Np];
+      dfloat qxold6 = qxold[base+5*p_Np];
+
+      dfloat qyold1 = qyold[base+0*p_Np];
+      dfloat qyold2 = qyold[base+1*p_Np];
+      dfloat qyold3 = qyold[base+2*p_Np];
+      dfloat qyold4 = qyold[base+3*p_Np];
+      dfloat qyold5 = qyold[base+4*p_Np];
+      dfloat qyold6 = qyold[base+5*p_Np];
+
+
+      //
+      dfloat qx1 = qxold1 + dt*( rka*rhsqx11 + rkb*rhsqx21);
+      dfloat qx2 = qxold2 + dt*( rka*rhsqx12 + rkb*rhsqx22);
+      dfloat qx3 = qxold3 + dt*( rka*rhsqx13 + rkb*rhsqx23);
+      dfloat qx4 = qxold4 + dt*( rka*rhsqx14 + rkb*rhsqx24);
+      dfloat qx5 = qxold5 + dt*( rka*rhsqx15 + rkb*rhsqx25);
+      dfloat qx6 = qxold6 + dt*( rka*rhsqx16 + rkb*rhsqx26);
+          
+      // 
+      dfloat qy1 = qyold1 + dt*(  rka*rhsqy11 +  rkb*rhsqy21);
+      dfloat qy2 = qyold2 + dt*(  rka*rhsqy12 +  rkb*rhsqy22);
+      dfloat qy3 = qyold3 + dt*(  rka*rhsqy13 +  rkb*rhsqy23);
+      dfloat qy4 = qyold4 + dt*(  rka*rhsqy14 +  rkb*rhsqy24);
+      dfloat qy5 = qyold5 + dt*(  rka*rhsqy15 +  rkb*rhsqy25);
+      dfloat qy6 = qyold6 + dt*(  rka*rhsqy16 +  rkb*rhsqy26);
+      
+      //
+      qx[base+0*p_Np] = qx1;
+      qx[base+1*p_Np] = qx2;
+      qx[base+2*p_Np] = qx3;
+      qx[base+3*p_Np] = qx4;
+      qx[base+4*p_Np] = qx5;
+      qx[base+5*p_Np] = qx6;
+
+      qy[base+0*p_Np] = qy1;
+      qy[base+1*p_Np] = qy2;
+      qy[base+2*p_Np] = qy3;
+      qy[base+3*p_Np] = qy4;
+      qy[base+4*p_Np] = qy5;
+      qy[base+5*p_Np] = qy6;
+
+      //
+      const iint id = 2*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[id+0];
+      dfloat4 rhsq1b = rhsq1[id+1];
+
+      dfloat4 rhsq2a = rhsq2[id+0];
+      dfloat4 rhsq2b = rhsq2[id+1];
+      //
+      dfloat4 qoa    = qold[id+0];
+      dfloat4 qob    = qold[id+1];
+
+ //
+      dfloat4 qa=0.f, qb=0.f;
+      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb* rhsq2a.x ); 
+      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb* rhsq2a.y ); 
+      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb* rhsq2a.z ); 
+      
+      //
+      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w); 
+      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x); 
+      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y);
+      
+      q[id+0] = qa;
+      q[id+1] = qb;
+      
+     
+    }
+  }
+}
+
+
+
+
 kernel void boltzmannSARK3Update2D(const iint Nelements,
             const iint * restrict elementIds,
             const dfloat dt, 
@@ -321,12 +461,16 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
               const dfloat rkc,
               const dfloat erkc,
               const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
               const dfloat * restrict rhsqx1,
-              const dfloat * restrict rhsqy1,  
+              const dfloat * restrict rhsqy1, 
+              const dfloat4 * restrict rhsq2,
               const dfloat * restrict rhsqx2,
               const dfloat * restrict rhsqy2,
+              const dfloat4 * restrict rhsq3,
               const dfloat * restrict rhsqx3,
               const dfloat * restrict rhsqy3,
+                    dfloat4 * restrict qold, 
                     dfloat * restrict qxold,
                     dfloat * restrict qyold,
                     dfloat * restrict qx,
@@ -481,6 +625,183 @@ kernel void boltzmannSARK3SplitPmlUpdate2D(const iint Nelements,
 
 
 
+kernel void boltzmannSARK3UnsplitPmlUpdate2D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat rka,
+              const dfloat erka,
+              const dfloat rkb,
+              const dfloat erkb,
+              const dfloat rkc,
+              const dfloat erkc,
+              const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
+              const dfloat * restrict rhsqx1,
+              const dfloat * restrict rhsqy1, 
+              const dfloat4 * restrict rhsq2,
+              const dfloat * restrict rhsqx2,
+              const dfloat * restrict rhsqy2,
+              const dfloat4 * restrict rhsq3,
+              const dfloat * restrict rhsqx3,
+              const dfloat * restrict rhsqy3,
+                    dfloat4 * restrict qold, 
+                    dfloat * restrict qxold,
+                    dfloat * restrict qyold,
+                    dfloat * restrict qx,
+                    dfloat * restrict qy,
+                    dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint element = elementIds[e];
+      const iint base = n + element*p_Nfields*p_Np;
+
+
+      dfloat rhsqx11 = rhsqx1[base+0*p_Np];
+      dfloat rhsqx12 = rhsqx1[base+1*p_Np];
+      dfloat rhsqx13 = rhsqx1[base+2*p_Np];
+      dfloat rhsqx14 = rhsqx1[base+3*p_Np];
+      dfloat rhsqx15 = rhsqx1[base+4*p_Np];
+      dfloat rhsqx16 = rhsqx1[base+5*p_Np];
+
+      dfloat rhsqy11 = rhsqy1[base+0*p_Np];
+      dfloat rhsqy12 = rhsqy1[base+1*p_Np];
+      dfloat rhsqy13 = rhsqy1[base+2*p_Np];
+      dfloat rhsqy14 = rhsqy1[base+3*p_Np];
+      dfloat rhsqy15 = rhsqy1[base+4*p_Np];
+      dfloat rhsqy16 = rhsqy1[base+5*p_Np];
+
+      //
+      dfloat rhsqx21 = rhsqx2[base+0*p_Np];
+      dfloat rhsqx22 = rhsqx2[base+1*p_Np];
+      dfloat rhsqx23 = rhsqx2[base+2*p_Np];
+      dfloat rhsqx24 = rhsqx2[base+3*p_Np];
+      dfloat rhsqx25 = rhsqx2[base+4*p_Np];
+      dfloat rhsqx26 = rhsqx2[base+5*p_Np];
+
+      dfloat rhsqy21 = rhsqy2[base+0*p_Np];
+      dfloat rhsqy22 = rhsqy2[base+1*p_Np];
+      dfloat rhsqy23 = rhsqy2[base+2*p_Np];
+      dfloat rhsqy24 = rhsqy2[base+3*p_Np];
+      dfloat rhsqy25 = rhsqy2[base+4*p_Np];
+      dfloat rhsqy26 = rhsqy2[base+5*p_Np];
+
+      //
+      dfloat rhsqx31 = rhsqx3[base+0*p_Np];
+      dfloat rhsqx32 = rhsqx3[base+1*p_Np];
+      dfloat rhsqx33 = rhsqx3[base+2*p_Np];
+      dfloat rhsqx34 = rhsqx3[base+3*p_Np];
+      dfloat rhsqx35 = rhsqx3[base+4*p_Np];
+      dfloat rhsqx36 = rhsqx3[base+5*p_Np];
+
+      dfloat rhsqy31 = rhsqy3[base+0*p_Np];
+      dfloat rhsqy32 = rhsqy3[base+1*p_Np];
+      dfloat rhsqy33 = rhsqy3[base+2*p_Np];
+      dfloat rhsqy34 = rhsqy3[base+3*p_Np];
+      dfloat rhsqy35 = rhsqy3[base+4*p_Np];
+      dfloat rhsqy36 = rhsqy3[base+5*p_Np];
+
+      
+      //
+      dfloat qxold1 = qxold[base+0*p_Np];
+      dfloat qxold2 = qxold[base+1*p_Np];
+      dfloat qxold3 = qxold[base+2*p_Np];
+      dfloat qxold4 = qxold[base+3*p_Np];
+      dfloat qxold5 = qxold[base+4*p_Np];
+      dfloat qxold6 = qxold[base+5*p_Np];
+
+      dfloat qyold1 = qyold[base+0*p_Np];
+      dfloat qyold2 = qyold[base+1*p_Np];
+      dfloat qyold3 = qyold[base+2*p_Np];
+      dfloat qyold4 = qyold[base+3*p_Np];
+      dfloat qyold5 = qyold[base+4*p_Np];
+      dfloat qyold6 = qyold[base+5*p_Np];
+
+      //
+      dfloat qx1 = qxold1 + dt*( rka*rhsqx11 + rkb*rhsqx21 + rkc*rhsqx31);
+      dfloat qx2 = qxold2 + dt*( rka*rhsqx12 + rkb*rhsqx22 + rkc*rhsqx32);
+      dfloat qx3 = qxold3 + dt*( rka*rhsqx13 + rkb*rhsqx23 + rkc*rhsqx33);
+      dfloat qx4 = qxold4 + dt*( rka*rhsqx14 + rkb*rhsqx24 + rkc*rhsqx34);
+      dfloat qx5 = qxold5 + dt*( rka*rhsqx15 + rkb*rhsqx25 + rkc*rhsqx35);
+      dfloat qx6 = qxold6 + dt*( rka*rhsqx16 + rkb*rhsqx26 + rkc*rhsqx36);
+      
+      // //
+      dfloat qy1 = qyold1 + dt*( rka*rhsqy11 + rkb*rhsqy21 + rkc*rhsqy31);
+      dfloat qy2 = qyold2 + dt*( rka*rhsqy12 + rkb*rhsqy22 + rkc*rhsqy32);
+      dfloat qy3 = qyold3 + dt*( rka*rhsqy13 + rkb*rhsqy23 + rkc*rhsqy33);
+      dfloat qy4 = qyold4 + dt*( rka*rhsqy14 + rkb*rhsqy24 + rkc*rhsqy34);
+      dfloat qy5 = qyold5 + dt*( rka*rhsqy15 + rkb*rhsqy25 + rkc*rhsqy35);
+      dfloat qy6 = qyold6 + dt*( rka*rhsqy16 + rkb*rhsqy26 + rkc*rhsqy36);
+      //
+      qx[base+0*p_Np] = qx1;
+      qx[base+1*p_Np] = qx2;
+      qx[base+2*p_Np] = qx3;
+      qx[base+3*p_Np] = qx4;
+      qx[base+4*p_Np] = qx5;
+      qx[base+5*p_Np] = qx6;
+
+      qy[base+0*p_Np] = qy1;
+      qy[base+1*p_Np] = qy2;
+      qy[base+2*p_Np] = qy3;
+      qy[base+3*p_Np] = qy4;
+      qy[base+4*p_Np] = qy5;
+      qy[base+5*p_Np] = qy6;
+      //
+      qxold[base+0*p_Np] = qx1;
+      qxold[base+1*p_Np] = qx2;
+      qxold[base+2*p_Np] = qx3;
+      qxold[base+3*p_Np] = qx4;
+      qxold[base+4*p_Np] = qx5;
+      qxold[base+5*p_Np] = qx6;
+
+      qyold[base+0*p_Np] = qy1;
+      qyold[base+1*p_Np] = qy2;
+      qyold[base+2*p_Np] = qy3;
+      qyold[base+3*p_Np] = qy4;
+      qyold[base+4*p_Np] = qy5;
+      qyold[base+5*p_Np] = qy6;
+      //
+
+      const iint id = 2*(n + element*p_Np);
+      //
+      dfloat4 rhsq1a = rhsq1[id+0];
+      dfloat4 rhsq1b = rhsq1[id+1];
+      //
+      dfloat4 rhsq2a = rhsq2[id+0];
+      dfloat4 rhsq2b = rhsq2[id+1];
+      //
+      dfloat4 rhsq3a = rhsq3[id+0];
+      dfloat4 rhsq3b = rhsq3[id+1];
+      //    
+      dfloat4 qoa = qold[id+0];
+      dfloat4 qob = qold[id+1];
+      
+      dfloat4 qa=0.f, qb=0.f; 
+      qa.x   = qoa.x + dt*( rka* rhsq1a.x + rkb* rhsq2a.x + rkc* rhsq3a.x );
+      qa.y   = qoa.y + dt*( rka* rhsq1a.y + rkb* rhsq2a.y + rkc* rhsq3a.y );
+      qa.z   = qoa.z + dt*( rka* rhsq1a.z + rkb* rhsq2a.z + rkc* rhsq3a.z );
+      //
+      qa.w  = expdt*qoa.w  + dt*( erka*rhsq1a.w + erkb*rhsq2a.w +erkc*rhsq3a.w );
+      qb.x  = expdt*qob.x  + dt*( erka*rhsq1b.x + erkb*rhsq2b.x +erkc*rhsq3b.x );
+      qb.y  = expdt*qob.y  + dt*( erka*rhsq1b.y + erkb*rhsq2b.y +erkc*rhsq3b.y );
+      
+      q[id+0] = qa;
+      q[id+1] = qb;
+      //
+      qold[id+0] = qa;
+      qold[id+1] = qb;
+
+
+      
+
+      //
+
+    }
+  }
+}
 
 
 
@@ -1444,15 +1765,7 @@ kernel void boltzmannLSERKUnsplitPmlUpdate2D(const iint Nelements,
        
       qa += rkb*resqa;
       qb += rkb*resqb;
-       
-      // qa.x += p_q1bar;
-      // qa.y += ramp*p_q2bar;
-      // qa.z += ramp*p_q3bar;
-      // qa.w += ramp*ramp*p_q4bar;
-      // qb.x += ramp*ramp*p_q5bar;
-      // qb.y += ramp*ramp*p_q6bar;
-     
-      
+      //
       q[id+0] = qa;
       q[id+1] = qb;
 
