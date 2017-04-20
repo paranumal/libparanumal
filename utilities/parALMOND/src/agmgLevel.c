@@ -14,31 +14,7 @@ void interpolate(agmgLevel *level, dfloat *x, dfloat *Px){
 }
 
 void interpolate(almond_t *almond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
-  if (level->dcsrP->NsendTotal) {
-    almond->haloExtract(level->dcsrP->NsendTotal, 1, level->dcsrP->o_haloElementList, o_x, level->dcsrP->o_haloBuffer);
-    
-    //copy from device
-    level->dcsrP->o_haloBuffer.copyTo(level->dcsrP->sendBuffer);
-  }
-
-  if (level->dcsrP->NsendTotal + level->dcsrP->NrecvTotal) {
-    // start halo exchange
-    dcsrHaloExchangeStart(level->dcsrP, sizeof(dfloat), level->dcsrP->sendBuffer, level->dcsrP->recvBuffer);
-
-    // immediately end the exchange TODO: make the exchange async using the A = E + C hybrid form
-    dcsrHaloExchangeFinish(level->dcsrP);
-  }
-
-  if(level->dcsrP->NrecvTotal) {
-    //copy back to device
-    o_x.copyFrom(level->dcsrP->recvBuffer,level->dcsrP->NrecvTotal*sizeof(dfloat),
-                  level->dcsrP->numLocalIds*sizeof(dfloat));
-  }
-
-  const iint n = level->dcsrP->Nrows;
-
-  almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, level->dcsrP->Nrows, 
-                level->dcsrP->o_cols, level->dcsrP->o_coefs, o_x, o_Px);
+  axpy(almond, level->dcsrP, 1.0, o_x, 1.0, o_Px);
 }
 
 void allocate(agmgLevel *level){
@@ -49,13 +25,8 @@ void allocate(agmgLevel *level){
     level->x    = (dfloat *) calloc(n, sizeof(dfloat));
     level->rhs  = (dfloat *) calloc(m, sizeof(dfloat));
     level->res  = (dfloat *) calloc(n, sizeof(dfloat));
-    level->invD = (dfloat *) calloc(m, sizeof(dfloat));
-
-    for(iint i=0; i<m; i++)
-    	level->invD[i] = 1./level->A->coefs[level->A->rowStarts[i]];
   }
 }
-
 
 csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
   iint rank,size;
@@ -148,10 +119,18 @@ void setup_smoother(agmgLevel *level, SmoothType s){
 
   if(s == DAMPED_JACOBI){
     // estimate rho(invD * A)
-    dfloat rho;
+    dfloat rho=0;
 
-    // on host
-    if(level->A->Nrows)	rho = rhoDinvA(level->A, level->invD);
+    dfloat *invD;
+    if(level->A->Nrows)	{
+      invD = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
+      for (iint i=0;i<level->A->Nrows;i++)
+        invD[i] = 1.0/level->A->coefs[level->A->rowStarts[i]];
+
+      rho = rhoDinvA(level->A, invD);
+
+      free(invD);
+    }
 
     level->smoother_params = (dfloat *) calloc(1,sizeof(dfloat));
 
@@ -159,6 +138,128 @@ void setup_smoother(agmgLevel *level, SmoothType s){
     return;
   }
 }
+
+extern "C"{
+  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
+  double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
+}
+
+
+static void eig(const int Nrows, double *A, double *WR,
+    double *WI){
+
+  int NB  = 256;
+  char JOBVL  = 'V';
+  char JOBVR  = 'V';
+  int     N = Nrows;
+  int   LDA = Nrows;
+  int  LWORK  = (NB+2)*N;
+
+  double *WORK  = new double[LWORK];
+  double *VL  = new double[Nrows*Nrows];
+  double *VR  = new double[Nrows*Nrows];
+
+  int INFO = -999;
+
+  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
+    VL, &LDA, VR, &LDA, WORK, &LWORK, &INFO);
+
+
+  assert(INFO == 0);
+
+  delete [] VL;
+  delete [] VR;
+  delete [] WORK;
+}
+
+dfloat rhoDinvA(csr *A, dfloat *invD){
+
+  const iint m = A->Nrows;
+  const iint n = A->Ncols;
+
+  int k = 10; 
+
+  if(k > m)
+    k = m;
+
+  // do an arnoldi
+
+  // allocate memory for Hessenberg matrix
+  double *H = new double [k*k];
+  for(int i=0; i<k*k; i++)
+    H[i] = 0.;
+
+  // allocate memory for basis
+  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
+  dfloat *Vx = (dfloat *) calloc(n, sizeof(dfloat));
+
+  for(int i=0; i<=k; i++)
+    V[i] = (dfloat *) calloc(m, sizeof(dfloat));
+
+  // generate a random vector for initial basis vector
+  randomize(m, Vx);
+
+  dfloat norm_vo = norm(m, Vx);
+  scaleVector(m, Vx, 1./norm_vo);
+
+  for (iint i=0;i<m;i++)
+    V[0][i] = Vx[i];
+
+  for(int j=0; j<k; j++){
+
+    for (iint i=0;i<m;i++)
+      Vx[i] = V[j][i];
+
+    // v[j+1] = invD*(A*v[j])
+    axpy(A, 1.0, Vx, 0., V[j+1]);
+
+    dotStar(m, invD, V[j+1]);
+
+    // modified Gram-Schmidth
+    for(int i=0; i<=j; i++){
+      // H(i,j) = v[i]'*A*v[j]
+      dfloat hij = innerProd(m, V[i], V[j+1]);
+
+      // v[j+1] = v[j+1] - hij*v[i]
+      vectorAdd(m,-hij, V[i], 1.0, V[j+1]);
+
+      H[i + j*k] = (double) hij;
+    }
+
+    if(j+1 < k){
+      H[j+1+ j*k] = (double) norm(m,V[j+1]);
+
+      scaleVector(m,V[j+1], 1./H[j+1 + j*k]);
+    }
+  }
+
+  double *WR = new double[k];
+  double *WI = new double[k];
+
+  eig(k, H, WR, WI);
+
+  double rho = 0.;
+
+  for(int i=0; i<k; i++){
+    double rho_i  = sqrt(WR[i]*WR[i] + WI[i]*WI[i]);
+
+    if(rho < rho_i) {
+      rho = rho_i;
+    }
+  }
+
+  delete [] H;
+  delete [] WR;
+  delete [] WI;
+
+  // free memory
+  for(int i=0; i<=k; i++){
+    free(V[i]);
+  }
+
+  return rho;
+}
+
 
 void smooth(agmgLevel *level, dfloat *rhs, dfloat *x, bool x_is_zero){
   if(level->stype == JACOBI){
@@ -517,7 +618,6 @@ csr *galerkinProd(agmgLevel *level){
   iint base = numAgg+1;
   struct key_value_pair1 *pair = (struct key_value_pair1 *) calloc(level->A->nnz,sizeof(struct key_value_pair1));
 
-  // TODO : put a pragma (?)
   for(iint i=0; i<level->A->Nrows; i++){
     for(iint jj=level->A->rowStarts[i]; jj<level->A->rowStarts[i+1]; jj++){
       iint j = level->A->cols[jj];
@@ -537,7 +637,6 @@ csr *galerkinProd(agmgLevel *level){
     }
   }
 
-  //TODO: better sorting ?
   std::stable_sort(pair, pair+level->A->nnz, compare_key1() );
 
   iint nnz = 1;
@@ -582,6 +681,71 @@ csr *galerkinProd(agmgLevel *level){
   RAP->NsendTotal =0;
 
   return RAP;
+}
+
+csr * transpose(csr *A){
+
+  csr *At = (csr *) calloc(1,sizeof(csr));
+
+  At->Nrows = A->Ncols;
+  At->Ncols = A->Nrows;
+  At->nnz   = A->nnz;
+
+  At->rowStarts = (iint *) calloc(At->Nrows+1, sizeof(iint));
+  At->cols      = (iint *) calloc(At->nnz, sizeof(iint));
+  At->coefs     = (dfloat *) calloc(At->nnz, sizeof(dfloat));
+
+  // count the no of nonzeros per row for transpose
+  for(iint i=0; i<A->nnz; i++){
+    iint row = A->cols[i];
+    At->rowStarts[row+1]++;
+  }
+
+  // cumulative sum for rows
+  for(iint i=1; i<=At->Nrows; i++)
+    At->rowStarts[i] += At->rowStarts[i-1];
+
+  iint counter[At->Nrows+1];
+  for (iint i=0; i<At->Nrows+1; i++)
+    counter[i] = At->rowStarts[i];
+
+  if(A->Nrows != A->Ncols){
+    for(iint i=0; i<A->Nrows; i++){
+      const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
+      
+      for(iint jj=Jstart; jj<Jend; jj++){
+        iint row = A->cols[jj];
+        At->cols[counter[row]] = i;
+        At->coefs[counter[row]] = A->coefs[jj];
+
+        counter[row]++;
+      }
+    }
+  } else{
+    // fill in diagonals first
+    for(iint i=0; i<A->Nrows; i++){
+      At->cols[counter[i]] = i;
+
+      At->coefs[counter[i]] = A->coefs[A->rowStarts[i]];
+      counter[i]++;
+    }
+
+    // fill the remaining ones
+    for(iint i=0; i<A->Nrows; i++){
+      const iint Jstart = A->rowStarts[i]+1, Jend = A->rowStarts[i+1];
+
+      for(iint jj=Jstart; jj<Jend; jj++){
+        iint row = A->cols[jj];
+
+        At->cols[counter[row]] = i;
+        At->coefs[counter[row]] = A->coefs[jj];
+
+        counter[row]++;
+      }
+    }
+  }
+
+  return At;
 }
 
 void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA){

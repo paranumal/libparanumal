@@ -179,14 +179,14 @@ kernel void ellJacobi1(const int outerDim0, const int innerDim0,
       // skip the first stride since it corresponds to diag
       for(int c=1; c<nnzPerRow; c++){
 
-	// location in the memory
-	const int address = c*strideLength+row;
+				// location in the memory
+				const int address = c*strideLength+row;
 
-	// access column index
-	const int col = cols[address];
+				// access column index
+				const int col = cols[address];
 
-	// dont access coefs[address] or x[col] if col is -ve
-	if(col > -1) result -= coefs[address]*x[col];
+				// dont access coefs[address] or x[col] if col is -ve
+				if(col > -1) result -= coefs[address]*x[col];
 
       }
 

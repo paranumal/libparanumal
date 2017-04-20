@@ -1,9 +1,9 @@
 
 typedef struct csr_t {
 
-  int Nrows;
-  int Ncols;
-  int nnz;
+  iint Nrows;
+  iint Ncols;
+  iint nnz;
 
   iint *rowStarts;
   iint *cols;
@@ -43,9 +43,9 @@ typedef struct ell_t {
 
 typedef struct coo_t {
 
-  int Nrows;
-  int Ncols;
-  int nnz;
+  iint Nrows;
+  iint Ncols;
+  iint nnz;
 
   // device memory
   occa::memory o_rows;
@@ -63,12 +63,11 @@ typedef struct hyb_t {
   iint Nrows;
   iint Ncols;
 
-  dfloat *diagInv;
   coo *C;
   ell *E;
 
   occa::memory o_diagInv;
-  occa::memory o_temp1, o_xnm1, o_xn, o_xnp1, o_r, o_rn, o_diagScale;
+  occa::memory o_temp1;
 
   // MPI halo exchange info
   iint  numLocalIds;
@@ -138,11 +137,9 @@ typedef struct agmgLevel_t {
   hyb  *deviceR;
 
   dfloat *nullA;
-  dfloat *invD;
 
   dfloat *rhs, *res, *x;
 
-  occa::memory o_nullA, o_invD;
   occa::memory o_rhs, o_res, o_x;
   occa::memory o_ckp1, o_dkp1, o_vkp1, o_wkp1, o_rkp1;
 

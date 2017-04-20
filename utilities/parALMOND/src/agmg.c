@@ -107,11 +107,6 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
       levels[n]->x    = (dfloat *) calloc(Nmax,sizeof(dfloat));
       levels[n]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
       levels[n]->res  = (dfloat *) calloc(Nmax,sizeof(dfloat));
-      levels[n]->invD = (dfloat *) calloc(M,sizeof(dfloat));
-
-      for(iint i=0; i<M; i++)
-        levels[n]->invD[i] = 1./levels[n]->A->coefs[levels[n]->A->rowStarts[i]];      
-
     }
     levels[numLevels-1]->A = distribute(levels[numLevels-1]->A,
                                   levels[numLevels-1]->globalRowStarts,
@@ -128,10 +123,6 @@ almond_t * setup(csr *A, dfloat *nullA, iint *globalRowStarts){
     levels[numLevels-1]->x    = (dfloat *) calloc(Nmax,sizeof(dfloat));
     levels[numLevels-1]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
     levels[numLevels-1]->res  = (dfloat *) calloc(Nmax,sizeof(dfloat));
-    levels[numLevels-1]->invD = (dfloat *) calloc(M,sizeof(dfloat));
-
-    for(iint i=0; i<M; i++)
-      levels[numLevels-1]->invD[i] = 1./levels[numLevels-1]->A->coefs[levels[numLevels-1]->A->rowStarts[i]];
   }
 
   almond->levels = levels;
@@ -168,10 +159,6 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
       almond->levels[i]->o_rkp1 = almond->device.malloc(M*sizeof(dfloat), almond->levels[i]->x);
     }
   }
-
-  //const iint num_blocks = (almond->levels[0]->A->Nrows+AGMGBDIM-1)/AGMGBDIM;
-  //dfloat dummy[num_blocks];
-  //almond->deviceRed = almond->device.malloc(num_blocks*sizeof(dfloat), dummy);
 }
 
 
