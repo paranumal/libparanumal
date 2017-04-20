@@ -33,15 +33,20 @@ kernel void spmv_coo_kernel1(const int outerDim0, const int innerDim0,
         Lrows[i] = rows[n];
         LAx[i] = alpha * coefs[n] * x[cols[n]];
 
-        if(i == bdim - 1) Lrows[i+1] = rows[n+1];
-      }
-      else{
+        if(i == bdim - 1) {
+          if (n+1 < num_nonzeros) {
+            Lrows[i+1] = rows[n+1];
+          } else {
+            Lrows[i+1] = -1;
+          }
+
+        }
+      } else{
         Lrows[i] = -1;
         LAx[i] = (datafloat) 0.0;
 
         if(i == bdim - 1) Lrows[i+1] = -1;
       }
-
     }
 
     barrier(localMemFence);
