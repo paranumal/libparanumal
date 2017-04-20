@@ -34,8 +34,7 @@ void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     // COMPUTE RAMP FUNCTION 
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
-    //ramp = 1.0;  drampdt = 0.0;
-    
+      
 
     // VOLUME KERNELS
     mesh->device.finish();

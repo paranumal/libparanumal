@@ -1158,6 +1158,7 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
 kernel void boltzmannSASplitPmlVolume2D(const iint Nelements,
 				      const iint * restrict elementIds,
 				      const dfloat ramp,
+				      const dfloat drampdt,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -1278,46 +1279,31 @@ kernel void boltzmannSASplitPmlVolume2D(const iint Nelements,
 	  dfloat rhspmlqx3 = -p_sqrtRT*(dq4dx);
 	  dfloat rhspmlqx4 = -p_sqrtRT*(dq3dx);
 	  dfloat rhspmlqx5 = -p_sqrtRT*p_sqrt2*dq2dx;			
-	  dfloat rhspmlqx6 = 0;
+	  dfloat rhspmlqx6 = 0.f;
 
 	  dfloat rhspmlqy1 = -p_sqrtRT*(dq3dy);
 	  dfloat rhspmlqy2 = -p_sqrtRT*(dq4dy);	
 	  dfloat rhspmlqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);	
 	  dfloat rhspmlqy4 = -p_sqrtRT*(dq2dy);		
-	  dfloat rhspmlqy5 = 0;
+	  dfloat rhspmlqy5 = 0.f;
 	  dfloat rhspmlqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
       
 
        dfloat nq4 = (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]) ;
        dfloat nq5 = (p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
        dfloat nq6 = (p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
-
-
-	  // BGK relaxation approximation to the Boltzmann collision operator
-	  // dfloat N4 = -p_tauInv*(s_q[es][3][n]-nq4);
-	  // dfloat N5 = -p_tauInv*(s_q[es][4][n]-nq5);
-	  // dfloat N6 = -p_tauInv*(s_q[es][5][n]-nq6);
+	  
 	  //
-	  // BGK relaxation approximation to the Boltzmann collision operator
-	  dfloat NX4 = -p_tauInv*(ramp*ramp*p_q4bar + pmlqy4-nq4);
-	  dfloat NX5 = -p_tauInv*(ramp*ramp*p_q5bar + pmlqy5-nq5);
-	  dfloat NX6 = -p_tauInv*(ramp*ramp*p_q6bar + pmlqy6-nq6);
-	  //
-	  // BGK relaxation approximation to the Boltzmann collision operator
-	  dfloat NY4 = -p_tauInv*(ramp*ramp*p_q4bar+ pmlqx4-nq4);
-	  dfloat NY5 = -p_tauInv*(ramp*ramp*p_q5bar+ pmlqx5-nq5);
-	  dfloat NY6 = -p_tauInv*(ramp*ramp*p_q6bar+ pmlqx6-nq6);
-	  //
-	  dfloat alpha = 0.5f; 
-	  dfloat beta  = 0.5f; 
+	  dfloat alpha = 1.0f; 
+	  dfloat beta  = 0.0f; 
 
-	  rhspmlqx4 += alpha*NX4; // split
-	  rhspmlqx5 += alpha*NX5;
-	  rhspmlqx6 += alpha*NX6;
+	  rhspmlqx4 += alpha*( -p_tauInv*(ramp*ramp*p_q4bar + pmlqy4-nq4)); // split
+	  rhspmlqx5 += alpha*( -p_tauInv*(ramp*ramp*p_q5bar + pmlqy5-nq5));
+	  rhspmlqx6 += alpha*( -p_tauInv*(ramp*ramp*p_q6bar + pmlqy6-nq6));
 
-	  rhspmlqy4 += beta*NY4; // split
-	  rhspmlqy5 += beta*NY5;
-	  rhspmlqy6 += beta*NY6;
+	  rhspmlqy4 += beta*(-p_tauInv*(ramp*ramp*p_q4bar+ pmlqx4-nq4)); // split
+	  rhspmlqy5 += beta*(-p_tauInv*(ramp*ramp*p_q5bar+ pmlqx5-nq5));
+	  rhspmlqy6 += beta*(-p_tauInv*(ramp*ramp*p_q6bar+ pmlqx6-nq6));
 
 	  // pml relaxation back to mean flow
 	  rhspmlqx1 += -msigmaxe*(pmlqx1);
