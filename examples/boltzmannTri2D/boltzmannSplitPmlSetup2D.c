@@ -289,7 +289,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     printf("Time discretization method: SARK with CFL: %.2f \n",cfl);
      // dt = mesh->dtfactor*cfl*mymin(dtex,dtim);
    //dt = mesh->dtfactor*cfl*mymin(dtim,dtex); // 2 from 4
-     dt = cfl*dtex;
+   dt = cfl*dtex;
     printf("dt = %.4e explicit-dt = %.4e , implicit-dt= %.4e  ratio= %.4e\n", dt,dtex,dtim, dtex/dtim);
 
   }
@@ -420,12 +420,12 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     for(int i=0; i<5; i++){
       for(int j=0; j<5; j++){
 	mesh->sarka[i][j] = 0.0;
-	mesh->sarkpmla[i][j] = 0.0 ; 
+	//mesh->sarkpmla[i][j] = 0.0 ; 
       }
       mesh->sarkb[i] = 0.0;
       mesh->sarke[i] = 0.0;
-      mesh->sarkpmlb[i] = 0.0;
-      mesh->sarkpmle[i] = 0.0;     
+      // mesh->sarkpmlb[i] = 0.0;
+      // mesh->sarkpmle[i] = 0.0;     
     }
 
     dfloat coef = -mesh->tauInv;
@@ -477,31 +477,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       mesh->sarke[0] = exp(coef*h*c2); 
       mesh->sarke[1] = exp(coef*h*c3); 
       mesh->sarke[2] = exp(coef*h*1.0);
-
-      // PML Region Coefficients
-      coef = 1.0*coef; 
-      //  Exponential Coefficients
-      mesh->sarkpmla[1][0] = -(a21*exp(c2*coef*h)*(exp(-c2*coef*h) - 1.))/(c2*coef*h); // a21
-      mesh->sarkpmla[2][0] = -(a31*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a31
-      mesh->sarkpmla[2][1] = -(a32*exp(c3*coef*h)*(exp(-c3*coef*h) - 1.))/(c3*coef*h); // a32 
-
-      // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-      mesh->sarkpmlb[0] =   (exp(coef*h)*((exp(-coef*h)*(c2 + c3 - c2*c3 + c2*c3*exp(coef*h) - 1.))
-					  /(coef*(c1 - c2)*(c1 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c2*exp(coef*h) - c3 - c2 + c3*exp(coef*h) + 2.))
-					  /(pow(coef,3.)*pow(h,2)*(c1 - c2)*(c1 - c3))))/h;
-      mesh->sarkpmlb[1] =  -(exp(coef*h)*((exp(-coef*h)*(c1 + c3 - c1*c3 + c1*c3*exp(coef*h) - 1.))
-					  /(coef*(c1 - c2)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c3 - c1 + c3*exp(coef*h) + 2.))
-					  /(pow(coef,3)*pow(h,2)*(c1 - c2)*(c2 - c3))))/h;
-      mesh->sarkpmlb[2] =   (exp(coef*h)*((exp(-coef*h)*(c1 + c2 - c1*c2 + c1*c2*exp(coef*h) - 1.))/(coef*(c1 - c3)*(c2 - c3)) + (exp(-coef*h)*(2.*exp(coef*h) - 2.) - coef*h*exp(-coef*h)*(c1*exp(coef*h) - c2 - c1 + c2*exp(coef*h) + 2.))
-					  /(pow(coef,3)*pow(h,2)*(c1 - c3)*(c2 - c3))))/h;
-
-      //
-      mesh->sarkpmle[0] = exp(coef*h*c2); 
-      mesh->sarkpmle[1] = exp(coef*h*c3); 
-      mesh->sarkpmle[2] = exp(coef*h*1.0);
-
-
-
 #else //Second formulation 
 
       //  Exponential Coefficients
@@ -518,27 +493,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       mesh->sarke[0] = exp(coef*h*c2); 
       mesh->sarke[1] = exp(coef*h*c3); 
       mesh->sarke[2] = exp(coef*h*1.0);
-
-      //
-      // PML Region Coefficients
-      coef = 1.0*coef; 
-      //  Exponential Coefficients
-      mesh->sarkpmla[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
-      mesh->sarkpmla[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
-      mesh->sarkpmla[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
-
-      // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-      mesh->sarkpmlb[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
-      mesh->sarkpmlb[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
-      mesh->sarkpmlb[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4.- coef*h))/ (pow(coef*h,3)) ;
-      //
-      //
-      mesh->sarkpmle[0] = exp(coef*h*c2); 
-      mesh->sarkpmle[1] = exp(coef*h*c3); 
-      mesh->sarkpmle[2] = exp(coef*h*1.0);
-       
-
-
 #endif
        
 
@@ -575,39 +529,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 
       mesh->sarke[0] = exp(coef*h*c2); 
       mesh->sarke[1] = exp(coef*h*c3); 
-      mesh->sarke[2] = exp(coef*h*1.0);
-
-      // PML Region Coefficients
-      coef = 1.0*coef; 
-      //  fifth Order Taylor Series Expansion
-      mesh->sarkpmla[1][0] = (a21*c2*(pow(c2,4)*pow(coef,4)*pow(h,4) + 5.*pow(c2,3)*pow(coef,3)*pow(h,3) 
-				      + 20.*pow(c2,2)*pow(coef,2)*pow(h,2) + 60.*c2*coef*h + 120.))/120. ;  // a21
-      mesh->sarkpmla[2][0] = (a31*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-				      + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a31
-      mesh->sarkpmla[2][1] = (a32*c3*(pow(c3,4)*pow(coef,4)*pow(h,4) + 5.*pow(c3,3)*pow(coef,3)*pow(h,3) 
-				      + 20.*pow(c3,2)*pow(coef,2)*pow(h,2) + 60.*c3*coef*h + 120.))/120. ; // a32 
-
-      // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-      mesh->sarkpmlb[0] =   -(2520.*c2 + 2520.*c3 - 5040.*c2*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) 
-			      - 2.*pow(coef,4)*pow(h,4) + 210.*c2*pow(coef,2)*pow(h,2) + 210.*c3*pow(coef,2)*pow(h,2) + 42.*c2*pow(coef,3)*pow(h,3) + 42.*c3*pow(coef,3)*pow(h,3) 
-			      + 7.*c2*pow(coef,4)*pow(h,4) + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c2*coef*h + 840.*c3*coef*h - 840.*c2*c3*pow(coef,2)*pow(h,2) 
-			      - 210.*c2*c3*pow(coef,3)*pow(h,3) - 42.*c2*c3*pow(coef,4)*pow(h,4) - 2520.*c2*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c1 - c3));
-
-      mesh->sarkpmlb[1] =  (2520.*c1 + 2520.*c3 - 5040.*c1*c3 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2*pow(coef,4)*pow(h,4) 
-			    + 210*c1*pow(coef,2)*pow(h,2) + 42*c1*pow(coef,3)*pow(h,3) + 210*c3*pow(coef,2)*pow(h,2) + 7.*c1*pow(coef,4)*pow(h,4) + 42.*c3*pow(coef,3)*pow(h,3) 
-			    + 7.*c3*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c3*coef*h - 840.*c1*c3*pow(coef,2)*pow(h,2) - 210.*c1*c3*pow(coef,3)*pow(h,3) 
-			    - 42.*c1*c3*pow(coef,4)*pow(h,4) - 2520.*c1*c3*coef*h - 1680.)/(5040.*(c1 - c2)*(c2 - c3));
-
-      mesh->sarkpmlb[2] =   -(2520.*c1 + 2520.*c2 - 5040.*c1*c2 - 420.*coef*h - 84.*pow(coef,2)*pow(h,2) - 14.*pow(coef,3)*pow(h,3) - 2.*pow(coef,4)*pow(h,4) 
-			      + 210.*c1*pow(coef,2)*pow(h,2) + 210.*c2*pow(coef,2)*pow(h,2) + 42.*c1*pow(coef,3)*pow(h,3) + 42.*c2*pow(coef,3)*pow(h,3) + 7.*c1*pow(coef,4)*pow(h,4) 
-			      + 7.*c2*pow(coef,4)*pow(h,4) + 840.*c1*coef*h + 840.*c2*coef*h - 840.*c1*c2*pow(coef,2)*pow(h,2) - 210.*c1*c2*pow(coef,3)*pow(h,3) 
-			      - 42.*c1*c2*pow(coef,4)*pow(h,4) - 2520.*c1*c2*coef*h - 1680.)/(5040.*(c1 - c3)*(c2 - c3));
-      //
-      //
-      mesh->sarkpmle[0] = exp(coef*h*c2); 
-      mesh->sarkpmle[1] = exp(coef*h*c3); 
-      mesh->sarkpmle[2] = exp(coef*h*1.0);                 
-
+      mesh->sarke[2] = exp(coef*h*1.0);           
 #else  // Second Formulation
 
       //  Exponential Coefficients
@@ -625,21 +547,6 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
       mesh->sarke[2] = exp(coef*h*1.0);
 
 
-      // PML Region Coefficients
-      coef = 1.0*coef; 
-      //  Exponential Coefficients
-      mesh->sarkpmla[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
-      mesh->sarkpmla[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-      mesh->sarkpmla[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-
-      mesh->sarkpmlb[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
-      mesh->sarkpmlb[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
-      mesh->sarkpmlb[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
-      //
-      //
-      mesh->sarkpmle[0] = exp(coef*h*c2); 
-      mesh->sarkpmle[1] = exp(coef*h*c3); 
-      mesh->sarkpmle[2] = exp(coef*h*1.0);
 #endif                
 
 
@@ -816,14 +723,14 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     if(strstr(options, "CUBATURE")){ 
           
       printf("Compiling LSERK volume kernel with cubature integration\n");
-      mesh->volumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannVolumeCub2D",
-					   kernelInfo);
+        mesh->volumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+        	   "boltzmannVolumeCub2D",
+        	   kernelInfo);
 
-   printf("Compiling LSERK relaxation kernel with cubature integration\n");
-      mesh->relaxationKernel =
-  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+      printf("Compiling LSERK relaxation kernel with cubature integration\n");
+        mesh->relaxationKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
              "boltzmannRelaxationCub2D",
              kernelInfo); 
 
@@ -855,12 +762,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
           mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
              "boltzmannSplitPmlRelaxationCub2D",
              kernelInfo);  
-        }
-
-
-     
-
-     
+        }     
     }
 
     if(strstr(options, "COLLOCATION")){ 
@@ -947,6 +849,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 					 kernelInfo);
 
   }
+  
   else if(strstr(options, "SARK3")){ 
 
     if(strstr(options, "CUBATURE")){ 
@@ -956,23 +859,40 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 					   "boltzmannVolumeCub2D",
 					   kernelInfo);
 
-      printf("Compiling SA pml volume kernel with cubature integration\n");
-      mesh->pmlVolumeKernel =
-	   mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSplitPmlVolumeCub2D",
-					   kernelInfo);
-
-      printf("Compiling SA relaxation kernel with cubature integration\n");
+  printf("Compiling SA relaxation kernel with cubature integration\n");
       mesh->relaxationKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-					   "boltzmannSARelaxationCub2D",
-					   kernelInfo); 
+   mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+             "boltzmannSARelaxationCub2D",
+             kernelInfo); 
 
-      printf("Compiling SA pml relaxation kernel with cubature integration\n");
-      mesh->pmlRelaxationKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-					   "boltzmannSASplitPmlRelaxationCub2D",
-					   kernelInfo); 
+
+
+       if(strstr(options,"UNSPLIT")){ 
+            printf("Compiling SA Unsplit pml volume kernel with cubature integration\n");
+        mesh->pmlVolumeKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+               "boltzmannUnsplitPmlVolumeCub2D",
+               kernelInfo);
+
+        printf("Compiling SA Unsplit pml relaxation kernel with cubature integration\n");
+        mesh->pmlRelaxationKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+               "boltzmannSAUnsplitPmlRelaxationCub2D",
+               kernelInfo); 
+       }
+        else{
+        printf("Compiling SA Split pml volume kernel with cubature integration\n");
+        mesh->pmlVolumeKernel =
+  	   mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+  					   "boltzmannSplitPmlVolumeCub2D",
+  					   kernelInfo);
+
+        printf("Compiling SA Split pml relaxation kernel with cubature integration\n");
+        mesh->pmlRelaxationKernel =
+  	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+  					   "boltzmannSASplitPmlRelaxationCub2D",
+  					   kernelInfo); 
+        }
 
 
     }
@@ -982,26 +902,48 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
 					   "boltzmannSAVolume2D",
 					   kernelInfo);
-
-      printf("Compiling SAAB pml volume kernel\n");
+      if(strstr(options,"UNSPLIT")){
+          printf("Compiling SA Unsplit pml volume kernel\n");
       mesh->pmlVolumeKernel =
-	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-					   "boltzmannSASplitPmlVolume2D",
-					   kernelInfo); 
+  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+             "boltzmannSAUnsplitPmlVolume2D",
+             kernelInfo); 
+      }
+      else {
+        printf("Compiling SA Split  pml volume kernel\n");
+      mesh->pmlVolumeKernel =
+  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+             "boltzmannSASplitPmlVolume2D",
+             kernelInfo); 
+      }
+
+    
     }
 
 
     printf("Compiling surface kernel\n");
     mesh->surfaceKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-					 "boltzmannSurface2D",
-					 kernelInfo);
+           "boltzmannSurface2D",
+           kernelInfo);
 
-    printf("Compiling pml surface kernel\n");
-    mesh->pmlSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-					 "boltzmannSplitPmlSurface2D",
-					 kernelInfo);
+
+         if(strstr(options,"UNSPLIT")){ // Unsplit PML
+            
+          printf("Compiling Unsplit  pml surface kernel\n");
+            mesh->pmlSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannUnsplitPmlSurface2D",
+               kernelInfo);
+            }
+
+            else{ // Split PM       
+                printf("Compiling Split pml surface kernel\n");
+            mesh->pmlSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+               "boltzmannSplitPmlSurface2D",
+               kernelInfo);
+           }
 
 
     //SARK STAGE UPDATE
@@ -1018,19 +960,34 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
 					 "boltzmannSARK3StageUpdate2D",
 					 kernelInfo); 
 
-    //SARK STAGE UPDATE
-    printf("compiling SARK non-pml  update kernel\n");
-    mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-					 "boltzmannSARK3SplitPmlUpdate2D",
-					 kernelInfo); 
 
+      if(strstr(options,"UNSPLIT")){ // Unsplit PML
+          //
+        printf("compiling SARK Unsplit pml  update kernel\n");
+        mesh->pmlUpdateKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+               "boltzmannSARK3UnsplitPmlUpdate2D",
+               kernelInfo); 
 
-    printf("compiling SARK non-pml  stage update kernel\n");
-    mesh->pmlUpdateStageKernel =
+        printf("compiling SARK Unsplit pml stage update kernel\n");
+          mesh->pmlUpdateStageKernel =
+            mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+              "boltzmannSARK3UnsplitPmlStageUpdate2D",
+                kernelInfo); 
+            }
+
+            else{ // Split PM SARK STAGE UPDATE
+        printf("compiling SARK Split pml  update kernel\n");
+        mesh->pmlUpdateKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+               "boltzmannSARK3SplitPmlUpdate2D",
+               kernelInfo); 
+           printf("compiling SARK Split pml stage update kernel\n");
+      mesh->pmlUpdateStageKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-					 "boltzmannSARK3SplitPmlStageUpdate2D",
-					 kernelInfo); 
+           "boltzmannSARK3SplitPmlStageUpdate2D",
+           kernelInfo); 
+           }
 
     mesh->haloExtractKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
