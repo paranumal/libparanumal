@@ -18,7 +18,14 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
       }
 
       if(strstr(options, "LSIMEX")){
-       boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+        
+        if(strstr(options, "UNSPLITPML")){
+          boltzmannUnsplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+        }
+        else{
+          boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+
+        }
       }
       
       if(strstr(options, "SARK3")){
