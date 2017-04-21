@@ -22,13 +22,16 @@ void boltzmannRampFunction2D(dfloat t, dfloat *ramp, dfloat *drampdt);
 
 
 
-
 // Time Discretizations one step
 void boltzmannSplitPmlLserkStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
 // Execute one Boltzmann time step using LSERK4
 void boltzmannSplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
+// Execute one Boltzmann time step using LSERK4
+void boltzmannUnsplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
 // Execute one Boltzmann time step using LSERK4

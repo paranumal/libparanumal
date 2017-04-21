@@ -42,6 +42,7 @@ boltzmannSplitPmlSetup2D.o \
 boltzmannSplitPmlLserkStep2D.o \
 boltzmannSplitPmlMrabStep2D.o \
 boltzmannSplitPmlSaab3Step2D.o \
+boltzmannUnsplitPmlLsimexStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
 boltzmannSplitPmlSarkStep2D.o \
 boltzmannSplitPmlSark3Step2D.o \

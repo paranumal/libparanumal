@@ -53,6 +53,7 @@ void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, iint fld){
 
       for(iint m=0;m<mesh->Np;++m){
         dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
+        //dfloat pm = mesh->invTau[m+e*mesh->Np];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 
