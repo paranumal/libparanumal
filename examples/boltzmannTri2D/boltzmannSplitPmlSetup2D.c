@@ -66,7 +66,7 @@ void boltzmannSplitPmlSetup2D(mesh2D *mesh, char * options){
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 20.;
+    mesh->finalTime = 0.2;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
