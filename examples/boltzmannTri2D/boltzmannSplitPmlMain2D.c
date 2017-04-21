@@ -17,7 +17,7 @@ int main(int argc, char **argv){
   // time       = LSERK, LSIMEX, SARK3, SAAB3
   // out        = VTU, TECPLOT, NO   // No tecplot yet! use VTU
   // bc         = UNSPLITPML, SPLITPML, NONE
-   char *options =strdup("mode = SOLVER , relaxation = COLLOCATION, stab = NO, time = LSIMEX, bc = UNSPLITPML");
+   char *options =strdup("mode = SOLVER , relaxation = COLLOCATION, stab = NO, time = SARK3, bc = UNSPLITPML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SARK3, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = LSERK, bc = PML");
 
