@@ -15,9 +15,10 @@ int main(int argc, char **argv){
   // mode       = TEST, SOLVER // do not use test mode, for developing purposes
   // relaxation = CUBATURE, COLLOCATION, 
   // time       = LSERK, LSIMEX, SARK3, SAAB3
-  // out        = VTU, TECPLOT, NO   // No tecplot yet! use VTU
+  // out        = REPORT, REPORT-VTU, NO  
   // bc         = UNSPLITPML, SPLITPML, NONE
-   char *options =strdup("mode = SOLVER , relaxation = CUBATURE, stab = NO, time = SARK3, bc = UNSPLITPML");
+  
+   char *options =strdup("mode = SOLVER , out = REPORT, relaxation = CUBATURE, stab = NO, time = SARK3, bc = UNSPLITPML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SARK3, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = LSERK, bc = PML");
 
