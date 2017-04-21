@@ -18,7 +18,7 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
       }
 
       if(strstr(options, "LSIMEX")){
-        
+
         if(strstr(options, "UNSPLITPML")){
           boltzmannUnsplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
         }
@@ -37,9 +37,11 @@ void boltzmannSplitPmlRun2D(mesh2D *mesh, char *options){
        boltzmannSplitPmlSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
       }
 
+     if(strstr(options, "REPORT")){
       if((tstep%mesh->errorStep)==0){
         boltzmannReport2D(mesh, tstep,options);
       }
+     }
     }
   
   // For Final Time
