@@ -17,13 +17,14 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  -I../../utilities/parALMOND/include
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github -lgs
+LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github -lgs\
+			-L../../utilities/parALMOND -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=  $(links) -llapack -lblas
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -35,7 +36,9 @@ LIBS	=  $(links)
 # list of objects to be compiled
 AOBJS    = \
 ellipticSetupHex3D.o \
-ellipticPreconditionerSetupHex3D.o
+ellipticPreconditionerSetupHex3D.o \
+ellipticCoarsePreconditionerSetupHex3D.o\
+../../src/almondCoarseSolve.o
 
 # library objects
 LOBJS = \
@@ -60,6 +63,7 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
@@ -68,7 +72,8 @@ LOBJS = \
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o
+../../src/gsParallelGatherScatterSetup.o\
+../../src/xxtCoarseSolve.o 
 
 ellipticMainHex3D:$(AOBJS) $(LOBJS) ellipticMainHex3D.o gslibInterface
 	$(LD)  $(LDFLAGS)  -o ellipticMainHex3D ellipticMainHex3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
@@ -76,6 +81,7 @@ ellipticMainHex3D:$(AOBJS) $(LOBJS) ellipticMainHex3D.o gslibInterface
 gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
+	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
 ellipticMainSplitPml3D:$(POBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 

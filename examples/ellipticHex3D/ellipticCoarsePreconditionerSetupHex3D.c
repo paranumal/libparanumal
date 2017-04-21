@@ -1,4 +1,4 @@
-#include "ellipticQuad2D.h"
+#include "ellipticHex3D.h"
 
 typedef struct{
 
@@ -26,7 +26,7 @@ int parallelCompareRowColumn(const void *a, const void *b){
 }
 
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs_t *ogs, dfloat lambda, const char *options){
+void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_t *ogs, dfloat lambda, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -52,19 +52,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
 
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
-
-  /*
-  if(mesh->totalHaloPairs){
-    // send buffer for outgoing halo
-    iint *sendBuffer = (iint*) calloc(mesh->totalHaloPairs*mesh->Nverts, sizeof(iint));
-    
-    meshHaloExchange(mesh,
-		     mesh->Nverts*sizeof(iint),
-		     globalNumbering,
-		     sendBuffer,
-		     globalNumbering+mesh->Nelements*mesh->Nverts);
-  }
-  */
   
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
@@ -98,35 +85,59 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+  dfloat *Vt1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
 
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint n = i+j*mesh->Nq;
-      /*
-	dfloat rn = mesh->r[n];
-	dfloat sn = mesh->s[n];
-      */
-      dfloat rn = mesh->gllz[i];
-      dfloat sn = mesh->gllz[j];
-      V1[0*mesh->Np+n] = 0.25*(1-rn)*(1-sn);
-      V1[1*mesh->Np+n] = 0.25*(1+rn)*(1-sn);
-      V1[2*mesh->Np+n] = 0.25*(1+rn)*(1+sn);
-      V1[3*mesh->Np+n] = 0.25*(1-rn)*(1+sn);
+  for(iint k=0;k<mesh->Nq;k++) {
+    for(iint j=0;j<mesh->Nq;++j){
+      for(iint i=0;i<mesh->Nq;++i){
+        iint n = i+j*mesh->Nq + k*mesh->Nq*mesh->Nq;
+        
+        dfloat rn = mesh->gllz[i];
+        dfloat sn = mesh->gllz[j];
+        dfloat tn = mesh->gllz[k];
+        V1[0*mesh->Np+n] = 0.125*(1-rn)*(1-sn)*(1-tn);
+        V1[1*mesh->Np+n] = 0.125*(1+rn)*(1-sn)*(1-tn);
+        V1[2*mesh->Np+n] = 0.125*(1+rn)*(1+sn)*(1-tn);
+        V1[3*mesh->Np+n] = 0.125*(1-rn)*(1+sn)*(1-tn);
+        V1[4*mesh->Np+n] = 0.125*(1-rn)*(1-sn)*(1+tn);
+        V1[5*mesh->Np+n] = 0.125*(1+rn)*(1-sn)*(1+tn);
+        V1[6*mesh->Np+n] = 0.125*(1+rn)*(1+sn)*(1+tn);
+        V1[7*mesh->Np+n] = 0.125*(1-rn)*(1+sn)*(1+tn);
 
-      Vr1[0*mesh->Np+n] = 0.25*(-1)*(1-sn);
-      Vr1[1*mesh->Np+n] = 0.25*(+1)*(1-sn);
-      Vr1[2*mesh->Np+n] = 0.25*(+1)*(1+sn);
-      Vr1[3*mesh->Np+n] = 0.25*(-1)*(1+sn);
-      
-      Vs1[0*mesh->Np+n] = 0.25*(1-rn)*(-1);
-      Vs1[1*mesh->Np+n] = 0.25*(1+rn)*(-1);
-      Vs1[2*mesh->Np+n] = 0.25*(1+rn)*(+1);
-      Vs1[3*mesh->Np+n] = 0.25*(1-rn)*(+1);
+
+        Vr1[0*mesh->Np+n] = 0.125*(-1)*(1-sn)*(1-tn);
+        Vr1[1*mesh->Np+n] = 0.125*(+1)*(1-sn)*(1-tn);
+        Vr1[2*mesh->Np+n] = 0.125*(+1)*(1+sn)*(1-tn);
+        Vr1[3*mesh->Np+n] = 0.125*(-1)*(1+sn)*(1-tn);
+        Vr1[4*mesh->Np+n] = 0.125*(-1)*(1-sn)*(1+tn);
+        Vr1[5*mesh->Np+n] = 0.125*(+1)*(1-sn)*(1+tn);
+        Vr1[6*mesh->Np+n] = 0.125*(+1)*(1+sn)*(1+tn);
+        Vr1[7*mesh->Np+n] = 0.125*(-1)*(1+sn)*(1+tn);
+        
+        Vs1[0*mesh->Np+n] = 0.125*(1-rn)*(-1)*(1-tn);
+        Vs1[1*mesh->Np+n] = 0.125*(1+rn)*(-1)*(1-tn);
+        Vs1[2*mesh->Np+n] = 0.125*(1+rn)*(+1)*(1-tn);
+        Vs1[3*mesh->Np+n] = 0.125*(1-rn)*(+1)*(1-tn);
+        Vs1[4*mesh->Np+n] = 0.125*(1-rn)*(-1)*(1+tn);
+        Vs1[5*mesh->Np+n] = 0.125*(1+rn)*(-1)*(1+tn);
+        Vs1[6*mesh->Np+n] = 0.125*(1+rn)*(+1)*(1+tn);
+        Vs1[7*mesh->Np+n] = 0.125*(1-rn)*(+1)*(1+tn);
+
+        Vt1[0*mesh->Np+n] = 0.125*(1-rn)*(1-sn)*(-1);
+        Vt1[1*mesh->Np+n] = 0.125*(1+rn)*(1-sn)*(-1);
+        Vt1[2*mesh->Np+n] = 0.125*(1+rn)*(1+sn)*(-1);
+        Vt1[3*mesh->Np+n] = 0.125*(1-rn)*(1+sn)*(-1);
+        Vt1[4*mesh->Np+n] = 0.125*(1-rn)*(1-sn)*(+1);
+        Vt1[5*mesh->Np+n] = 0.125*(1+rn)*(1-sn)*(+1);
+        Vt1[6*mesh->Np+n] = 0.125*(1+rn)*(1+sn)*(+1);
+        Vt1[7*mesh->Np+n] = 0.125*(1-rn)*(1+sn)*(+1);
+      }
     }
   }
   precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
   precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
   precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
+  precon->o_Vt1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vt1);
 
   // ------------------------------------------------------------------------------------
   // 3. Build non-zeros of stiffness matrix (unassembled)
@@ -147,50 +158,61 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
-	dfloat Snm = 0;
- 
-	// use GLL nodes for integration
-	// (since Jacobian is high order tensor-product polynomial)
-	for(iint j=0;j<mesh->Nq;++j){
-	  for(iint i=0;i<mesh->Nq;++i){
-	    iint id = i+j*mesh->Nq;
+      	dfloat Snm = 0;
+       
+      	// use GLL nodes for integration
+      	// (since Jacobian is high order tensor-product polynomial)
+        for(iint k=0;k<mesh->Nq;++k){
+        	for(iint j=0;j<mesh->Nq;++j){
+        	  for(iint i=0;i<mesh->Nq;++i){
+        	    iint id = i+j*mesh->Nq +k*mesh->Nq*mesh->Nq;
+              
+        	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
+        	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
+              dfloat Vt1ni = Vt1[n*mesh->Np+id];
+        	    dfloat V1ni  = V1[n*mesh->Np+id];
+              
+        	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
+        	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
+              dfloat Vt1mi = Vt1[m*mesh->Np+id];
+        	    dfloat V1mi  = V1[m*mesh->Np+id];
+
+        	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
+        	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
+              dfloat tx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + TXID*mesh->Np];
+        	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
+        	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
+              dfloat ty = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + TYID*mesh->Np];
+              dfloat rz = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RZID*mesh->Np];
+              dfloat sz = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SZID*mesh->Np];
+              dfloat tz = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + TZID*mesh->Np];
+        	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
+
+        	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni+tx*Vt1ni;
+        	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni+ty*Vt1ni;
+              dfloat Vz1ni = rz*Vr1ni+sz*Vs1ni+tz*Vt1ni;
+        	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi+tx*Vt1mi;
+        	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi+ty*Vt1mi;
+              dfloat Vz1mi = rz*Vr1mi+sz*Vs1mi+tz*Vt1mi;
+              
+        	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi+Vz1ni*Vz1mi)*JW;
+        	    Snm += (lambda*V1ni*V1mi)*JW;
+        	  }
+        	}
+        }
+
+      	valsA[cnt] = Snm;
+      	rowsA[cnt] = e*mesh->Nverts+n;
+      	colsA[cnt] = e*mesh->Nverts+m;
+
+      	// pack non-zero
+      	sendNonZeros[cnt].val = Snm;
+      	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+      	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+      	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+        
+      	++cnt;
       
-	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
-	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
-	    dfloat V1ni  = V1[n*mesh->Np+id];
-      
-	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
-	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
-	    dfloat V1mi  = V1[m*mesh->Np+id];
-
-	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
-	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
-	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
-	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
-	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
-
-	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
-	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
-	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
-	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
-      
-	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
-	    Snm += (lambda*V1ni*V1mi)*JW;
-	  }
-	}
-	//  Snm = (n==m) ? 1: 0;
-
-	valsA[cnt] = Snm;
-	rowsA[cnt] = e*mesh->Nverts+n;
-	colsA[cnt] = e*mesh->Nverts+m;
-
-	// pack non-zero
-	sendNonZeros[cnt].val = Snm;
-	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
-	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
-	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
-  
-	++cnt;
       }
     }
   }
@@ -281,23 +303,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     globalVals[n] = globalNonZero[n].val;
   }
 
-#if 0
-  for(iint r=0;r<size;++r){
-    if(r==rank){
-      for(iint n=0;n<recvNtotal;++n){
-	printf("rank %d non zero %d has row %d, col %d, val %g, own %d\n",
-	       rank, n,
-	       recvNonZeros[n].row,
-	       recvNonZeros[n].col,
-	       recvNonZeros[n].val,
-	       recvNonZeros[n].ownerRank);
-      }
-      fflush(stdout);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-#endif
-  
   if(strstr(options, "XXT")){
 
     precon->xxt = xxtSetup(Nnum,
@@ -313,10 +318,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   }
 
   if(strstr(options, "LOCALALMOND")){
-
-    // TW: need to set up local numbering here (replace globalNumbering with localNumbering)
-
-    // TW: to here.
     
     precon->almond = almondSetup(mesh->device,
          Nnum, 
@@ -485,7 +486,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
         }     
         
         // need to provide ogs for A*b 
-        ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
+        ellipticOperator3D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
             
         o_Ab.copyTo(Ab);
             
@@ -518,26 +519,6 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       o_gradb.free();
       o_Ab.free();
     }
-
-#if 0
-    // TW: FOR TESTING CAN USE MPI_Allgather TO COLLECT ALL CHUNKS ON ALL PROCESSES - THEN USE dgesv
-    
-    char fname[BUFSIZ];
-    sprintf(fname, "uberA%05d.dat", rank);
-    FILE *fp = fopen(fname, "w");
-
-    fprintf(fp, "%d  # number of local nodes\n", localCoarseNp);
-
-    for(iint n=0;n<coarseTotal;++n){
-      fprintf(fp,"%d\n", globalNumbering2[n]);
-    }
-
-    fprintf(fp, "%d  # number of non-zeros\n", nnz2);
-    for(iint n=0;n<nnz2;++n){
-      fprintf(fp, "%d %d %17.15g\n", rowsA2[n], colsA2[n], valsA2[n]);
-    }
-    fclose(fp);
-#endif
     
     // need to create numbering for really coarse grid on each process for xxt
     precon->xxt2 = xxtSetup(coarseTotal,
@@ -558,5 +539,4 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
     // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
     printf("Done UberCoarse setup\n");
   }
-
 }

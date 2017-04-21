@@ -90,8 +90,7 @@ void ellipticOperator2D(mesh2D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     // parallel gather scatter
     ellipticParallelGatherScatter2D(mesh, ogs, o_Aq, o_Aq, dfloatString, "add");
     
-  }
-  else{
+  } else{
 
     ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
     
@@ -212,12 +211,16 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
 
   if(strstr(options,"PROJECT")){
+    mesh->device.finish();
+    occa::tic("Project");
     ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString, "add");
     mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
+    mesh->device.finish();
+    occa::toc("Project");
   }
 
   if(strstr(options, "OAS")){
-
+    
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
@@ -225,6 +228,8 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
 
     // compute local precon on DEVICE
+     mesh->device.finish();
+    occa::tic("OASpreconKernel");
     if(strstr(options, "CONTINUOUS")) {
 
       precon->preconKernel(mesh->Nelements,
@@ -240,9 +245,6 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       
     }
     else{
-
-      mesh->device.finish();
-      occa::tic("preconKernel");
       
       precon->preconKernel(mesh->Nelements,
 			   mesh->o_vmapP,
@@ -253,13 +255,12 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 			   o_r,
 			   o_zP);
 
-      mesh->device.finish();
-      occa::toc("preconKernel");
-      
       // OAS => additive Schwarz => sum up patch solutions
       ellipticParallelGatherScatter2D(mesh, precon->ogsDg, o_zP, o_zP, type, "add");
-
     }
+    mesh->device.finish();
+    occa::toc("OASpreconKernel");
+    
 
     // extract block interiors on DEVICE
     mesh->device.finish();
@@ -270,6 +271,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     mesh->device.finish();
     occa::toc("restrictKernel");   
     
+    /*
     if(strstr(options, "UBERGRID")){
       int size, rank;
       MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -279,7 +281,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       dfloat *rcoarse = (dfloat*) calloc(precon->coarseTotal, sizeof(dfloat));
       dfloat *zcoarse = (dfloat*) calloc(precon->coarseTotal, sizeof(dfloat));
 
-      /*
+      
       for(iint n=0;n<precon->coarseNp;++n)
 	rcoarse[n+precon->coarseOffsets[rank]] =
 	  ellipticLocalInnerProduct(mesh, Nblock, precon->o_B[n], o_r, precon->o_tmp2, precon->tmp2);
@@ -289,10 +291,11 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       for(iint n=0;n<precon->coarseNp;++n){
 	ellipticScaledAdd(mesh, zcoarse[n+precon->coarseOffsets[rank]], precon->o_B[n], 1.f, o_z);
       }
-      */
+      
       free(rcoarse);
       free(zcoarse);
     }
+    */
     
     if(strstr(options, "COARSEGRID")){ // should split into two parts
 
@@ -304,15 +307,12 @@ void ellipticPreconditioner2D(mesh2D *mesh,
       
       ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
       
-      
+      mesh->device.finish();
+      occa::tic("coarsenKernel");
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
-
-      if(strstr(options,"AMG2013")){
-      	precon->o_r1.copyTo(precon->r1); 
-      	amg2013Solve(precon->z1, precon->amg, precon->r1);
-      	precon->o_z1.copyFrom(precon->z1);
-      }
+      mesh->device.finish();
+      occa::toc("coarsenKernel");
 
       if(strstr(options,"XXT")){
       	precon->o_r1.copyTo(precon->r1); 
@@ -322,49 +322,63 @@ void ellipticPreconditioner2D(mesh2D *mesh,
 
       if(strstr(options,"GLOBALALMOND")){
         // should eliminate these copies
+        mesh->device.finish();
+        occa::tic("parAlmond");
         precon->o_r1.copyTo(precon->r1); 
         almondSolve(precon->z1, precon->parAlmond, precon->r1);
         precon->o_z1.copyFrom(precon->z1);
+        mesh->device.finish();
+        occa::toc("parAlmond");
       }      
 
       if(strstr(options,"LOCALALMOND")){
         // should eliminate these copies
+        mesh->device.finish();
+        occa::tic("Almond");
         precon->o_r1.copyTo(precon->r1); 
         almondSolve(precon->z1, precon->almond, precon->r1);
         precon->o_z1.copyFrom(precon->z1);
+        mesh->device.finish();
+        occa::toc("Almond");
       }
 
+      mesh->device.finish();
+      occa::tic("prolongateKernel");
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+      mesh->device.finish();
+      occa::toc("prolongateKernel");
 
       // do we have to DG gatherscatter here 
       
       dfloat one = 1.;
       ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
 
+      mesh->device.finish();
       occa::toc("coarseGrid");
     }
 
     if(strstr(options,"PROJECT")){
+      mesh->device.finish();
+      occa::tic("Project");
       mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
       ellipticParallelGatherScatter2D(mesh, ogs, o_z, o_z, dfloatString, "add");
+      mesh->device.finish();
+      occa::toc("Project");
     }
     
   }
   else if(strstr(options, "JACOBI")){
 
-    occa::tic("dotDivideKernel");   
     mesh->device.finish();
-    
+    occa::tic("dotDivideKernel");   
     // Jacobi preconditioner
     iint Ntotal = mesh->Np*mesh->Nelements;
     mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
-
-    occa::toc("dotDivideKernel");   
     mesh->device.finish();
+    occa::toc("dotDivideKernel");   
   }
   else // turn off preconditioner
-    o_z.copyFrom(o_r);
-  
+    o_z.copyFrom(o_r); 
 }
 
 
@@ -416,7 +430,8 @@ int main(int argc, char **argv){
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
   
-
+  mesh->device.finish();
+  occa::tic("CoarseDegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -435,6 +450,9 @@ int main(int argc, char **argv){
       invDegree[n] = 1.;
   
   o_invDegree.copyFrom(invDegree);
+  mesh->device.finish();
+  occa::toc("CoarseDegreeVectorSetup");
+
   
   dfloat *p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -496,6 +514,9 @@ int main(int argc, char **argv){
   // copy initial guess for x to DEVICE
   o_x.copyFrom(x);
 
+  mesh->device.finish();
+  occa::tic("PCG");
+
   // compute A*x
   ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_x, o_gradx, o_Ax, options);
   
@@ -509,6 +530,8 @@ int main(int argc, char **argv){
   if(strstr(options, "CONTINUOUS"))
     ellipticParallelGatherScatter2D(mesh, ogs, o_r, o_r, dfloatString, "add");
   
+  mesh->device.finish();
+  occa::tic("Preconditioner");
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
@@ -522,6 +545,8 @@ int main(int argc, char **argv){
     // p = r
     o_p.copyFrom(o_r); // CG
   }
+  mesh->device.finish();
+  occa::toc("Preconditioner");
 
 
   // dot(r,r)
@@ -534,9 +559,6 @@ int main(int argc, char **argv){
 
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
-
-  occa::tic("PCG");
-  
   
   do{
 
@@ -569,6 +591,8 @@ int main(int argc, char **argv){
     
     if(rdotr1 < tol*tol) break;
 
+    mesh->device.finish();
+    occa::tic("Preconditioner");
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
@@ -580,11 +604,11 @@ int main(int argc, char **argv){
       
       // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
       if(strstr(options,"FLEXIBLE")){
-	dfloat zdotAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_z, o_Ap, o_tmp, tmp, options);
-	beta = -alpha*zdotAp/rdotz0;
+      	dfloat zdotAp = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_z, o_Ap, o_tmp, tmp, options);
+      	beta = -alpha*zdotAp/rdotz0;
       }
       else{
-	beta = rdotz1/rdotz0;
+	      beta = rdotz1/rdotz0;
       }
 
       // p = z + beta*p
@@ -599,6 +623,8 @@ int main(int argc, char **argv){
       // p = r + beta*p
       ellipticScaledAdd(mesh, 1.f, o_r, beta, o_p);
     }
+    mesh->device.finish();
+    occa::toc("Preconditioner");
 
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
@@ -610,6 +636,7 @@ int main(int argc, char **argv){
     
   }while(rdotr0>(tol*tol));
 
+  mesh->device.finish();
   occa::toc("PCG");
   
   occa::printTimer();
@@ -638,7 +665,7 @@ int main(int argc, char **argv){
     printf("globalMaxError = %g\n", globalMaxError);
   
   meshPlotVTU2D(mesh, "foo", 0);
-  
+
   // close down MPI
   MPI_Finalize();
 

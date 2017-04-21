@@ -198,6 +198,10 @@ void kcycle(almond_t *almond, int k){
   iint mCoarse = almond->levels[k+1]->Nrows;
   iint nCoarse = almond->levels[k+1]->Ncols;
 
+  char name[BUFSIZ];
+  sprintf(name, "host kcycle level %d", k);
+  occa::tic(name);
+
   // if its not first level zero it out
   if(k>0)
     scaleVector(m, almond->levels[k]->x, 0.0);
@@ -339,6 +343,8 @@ void kcycle(almond_t *almond, int k){
   interpolate(almond->levels[k], almond->levels[k+1]->x, almond->levels[k]->x);
 
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
+
+  occa::toc(name);
 }
 
 
@@ -348,6 +354,11 @@ void device_kcycle(almond_t *almond, int k){
   iint n = almond->levels[k]->Ncols;
   iint mCoarse = almond->levels[k+1]->Nrows;
   iint nCoarse = almond->levels[k+1]->Ncols;
+
+  char name[BUFSIZ];
+  sprintf(name, "device kcycle level %d", k);
+  almond->device.finish();
+  //occa::tic(name);
 
   // if its not first level zero it out
   if(k>0)
@@ -484,6 +495,9 @@ void device_kcycle(almond_t *almond, int k){
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
   smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
+
+  almond->device.finish();
+  //occa::toc(name);
 }
 
 
@@ -492,6 +506,10 @@ void vcycle(almond_t *almond, int k) {
 
   const iint m = almond->levels[k]->Nrows;
   const iint mCoarse = almond->levels[k+1]->Nrows;
+
+  char name[BUFSIZ];
+  sprintf(name, "host vcycle level %d", k);
+  occa::tic(name);
 
   // if its not first level zero it out
   if(k>0)
@@ -529,6 +547,8 @@ void vcycle(almond_t *almond, int k) {
 
   interpolate(almond->levels[k], almond->levels[k+1]->x, almond->levels[k]->x);
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
+
+  occa::toc(name);
 }
 
 
@@ -546,6 +566,11 @@ void device_vcycle(almond_t *almond, int k){
     almond->levels[k]->o_x.copyFrom(&(almond->levels[k]->x[0]), m*sizeof(dfloat));
     return;
   }
+
+  char name[BUFSIZ];
+  sprintf(name, "device vcycle level %d", k);
+  almond->device.finish();
+  occa::tic(name);
 
   // if its not first level zero it out
   if(k>0)
@@ -584,4 +609,7 @@ void device_vcycle(almond_t *almond, int k){
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
   smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x,false);
+
+  almond->device.finish();
+  occa::toc(name);
 }

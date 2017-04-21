@@ -109,7 +109,8 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "ellipticAxIpdgQuad2D",
 				       kernelInfo);  
 
-
+  mesh->device.finish();
+  occa::tic("GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   *ogs = meshParallelGatherScatterSetup(mesh,
 					mesh->Np*mesh->Nelements,
@@ -117,7 +118,11 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 					mesh->gatherLocalIds,
 					mesh->gatherBaseIds, 
 					mesh->gatherHaloFlags);
+  mesh->device.finish();
+  occa::toc("GatherScatterSetup");
 
+  mesh->device.finish();
+  occa::tic("PreconditionerSetup");
   *precon = ellipticPreconditionerSetupQuad2D(mesh, *ogs, lambda, options);
 
   
@@ -141,33 +146,37 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 
+  mesh->device.finish();
+  occa::toc("PreconditionerSetup");
 
-  // find maximum degree
-  {
-    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-      mesh->rhsq[n] = 1;
-    }
-    mesh->o_rhsq.copyFrom(mesh->rhsq);
-    
-    ellipticParallelGatherScatter2D(mesh, *ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString, "add");
 
-    mesh->o_rhsq.copyTo(mesh->rhsq);
-    
-    dfloat maxDegree = 0, minDegree = 1e9;
-    dfloat gatherMaxDegree = 0, gatherMinDegree = 1e9;
-    for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-      maxDegree = mymax(maxDegree, mesh->rhsq[n]);
-      minDegree = mymin(minDegree, mesh->rhsq[n]);
-    }
-
-    MPI_Allreduce(&maxDegree, &gatherMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&minDegree, &gatherMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-    if(rank==0){
-      printf("max degree = " dfloatFormat "\n", gatherMaxDegree);
-      printf("min degree = " dfloatFormat "\n", gatherMinDegree);
-    }
+  mesh->device.finish();
+  occa::tic("CoarsePreconditionerSetup");
+  // find maximum degree  
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+    mesh->rhsq[n] = 1;
   }
+  mesh->o_rhsq.copyFrom(mesh->rhsq);
+  
+  ellipticParallelGatherScatter2D(mesh, *ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString, "add");
+
+  mesh->o_rhsq.copyTo(mesh->rhsq);
+  
+  dfloat maxDegree = 0, minDegree = 1e9;
+  dfloat gatherMaxDegree = 0, gatherMinDegree = 1e9;
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+    maxDegree = mymax(maxDegree, mesh->rhsq[n]);
+    minDegree = mymin(minDegree, mesh->rhsq[n]);
+  }
+
+  MPI_Allreduce(&maxDegree, &gatherMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&minDegree, &gatherMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
+  if(rank==0){
+    printf("max degree = " dfloatFormat "\n", gatherMaxDegree);
+    printf("min degree = " dfloatFormat "\n", gatherMinDegree);
+  }
+
   
   // build weights for continuous SEM L2 project --->
   iint Ntotal = mesh->Nelements*mesh->Np;
@@ -197,4 +206,6 @@ void ellipticSetupQuad2D(mesh2D *mesh, ogs_t **ogs, precon_t **precon, dfloat la
   // do this here since we need A*x
   ellipticCoarsePreconditionerSetupQuad2D(mesh, *precon, *ogs, lambda, options);
 
+  mesh->device.finish();
+  occa::toc("CoarsePreconditionerSetup");
 }
