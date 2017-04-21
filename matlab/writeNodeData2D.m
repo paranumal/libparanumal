@@ -1,6 +1,6 @@
 
 function writeNodeData2D(inN)
-Globals2D;
+% Globals2D;
 N = inN;
 [r,s] = Nodes2D(N);
 [r,s] = xytors(r,s);
@@ -151,6 +151,14 @@ cV'*diag(cubw)*cV;
 cubDrT = V*transpose(cVr)*diag(cubw);
 cubDsT = V*transpose(cVs)*diag(cubw);
 cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+if 1
+  Ncut = 0;   scut = 2; 
+ filter = Filter2D(V,N,Ncut,scut);    
+ cubFilterProject  = filter*cubProject;  
+end
+
+
+
 
 fprintf(fid, '%% cubature r weak differentiation matrix\n');
 for n=1:Np
@@ -178,7 +186,15 @@ end
 cubProject
 testIdentity = cubProject*cInterp;
 
-
+if 1
+fprintf(fid, '%% cubature filter projection matrix\n');
+for n=1:Np
+    for m=1:Ncub
+        fprintf(fid, '%17.15E ', cubFilterProject(n,m));
+    end
+    fprintf(fid, '\n');
+end
+end
 %% surface cubature
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));
 %z = JacobiGL(0,0,N);

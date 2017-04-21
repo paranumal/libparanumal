@@ -30,14 +30,20 @@ if(mesh->totalHaloPairs>0){
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
 
-    mesh->device.finish();
+
+mesh->device.finish();
     occa::tic("volumeKernel");
-    
-    // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
+
+// compute volume contribution to DG boltzmann RHS
+    if(mesh->pmlNelements){
+
+    	mesh->device.finish();
+       occa::tic("PML_volumeKernel");
+
        mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
-			    ramp,
+			    ramp, 
+			    drampdt,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
@@ -46,14 +52,20 @@ if(mesh->totalHaloPairs>0){
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy);
-    }
 
-    
+      mesh->device.finish();
+      occa::toc("PML_volumeKernel");	
+    } 
+
     // compute volume contribution to DG boltzmann RHS
-    // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+
+    	mesh->device.finish();
+      occa::tic("NONPML_volumeKernel");
+
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -63,39 +75,64 @@ if(mesh->totalHaloPairs>0){
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq);
-    }
+
+       mesh->device.finish();
+      occa::toc("NONPML_volumeKernel");
+	}
     
     
     mesh->device.finish();
     occa::toc("volumeKernel");
 
 
- if(strstr(options, "CUBATURE")){ 
-     // compute relaxation terms using cubature integration
+   if(strstr(options, "CUBATURE")){ 
+	// VOLUME KERNELS
+    mesh->device.finish();
+    occa::tic("relaxationKernel");
+	    
 	    if(mesh->pmlNelements){
-	      mesh->pmlRelaxationKernel(mesh->pmlNelements,
+
+	    	mesh->device.finish();
+           occa::tic("PML_relaxationKernel");
+
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
 				     mesh->o_pmlElementIds,
 				     ramp,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
 				     mesh->o_pmlqx,
-     			     mesh->o_pmlqy,
+				     mesh->o_pmlqy,
+				     mesh->o_rhsq,
 				     mesh->o_rhspmlqx,
 				     mesh->o_rhspmlqy);
-	    }
+
+		  mesh->device.finish();
+           occa::toc("PML_relaxationKernel");
+		}
 	  
 	    // compute relaxation terms using cubature
 	    if(mesh->nonPmlNelements){
+
+	    	mesh->device.finish();
+           occa::tic("NONPML_relaxationKernel");
+
 	      mesh->relaxationKernel(mesh->nonPmlNelements,
 				     mesh->o_nonPmlElementIds,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
-				     mesh->o_rhsq);   
+				     mesh->o_rhsq);  
+
+		    mesh->device.finish();
+           occa::toc("NONPML_relaxationKernel");			      
 	    }
-    
-   }
+
+	  // VOLUME KERNELS
+    mesh->device.finish();
+    occa::toc("relaxationKernel");
+	}
+
 
    // complete halo exchange
     if(mesh->totalHaloPairs>0){
@@ -107,12 +144,13 @@ if(mesh->totalHaloPairs>0){
       mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
     }
 
-
-
-     mesh->device.finish();
+    mesh->device.finish();
     occa::tic("surfaceKernel");
      
      if(mesh->pmlNelements){
+     	 mesh->device.finish();
+    occa::tic("PML_surfaceKernel"); 
+
 	mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
 			   mesh->o_sgeo,
@@ -125,12 +163,20 @@ if(mesh->totalHaloPairs>0){
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq,
 			   mesh->o_rhspmlqx,
 			   mesh->o_rhspmlqy);
+
+    mesh->device.finish();
+    occa::toc("PML_surfaceKernel"); 
+
 	}
     
     if(mesh->nonPmlNelements){
-      mesh->surfaceKernel(mesh->nonPmlNelements,
+
+    	 mesh->device.finish();
+    occa::tic("NONPML_surfaceKernel"); 
+       mesh->surfaceKernel(mesh->nonPmlNelements,
 			  mesh->o_nonPmlElementIds,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -143,6 +189,10 @@ if(mesh->totalHaloPairs>0){
 			  ramp,
 			  mesh->o_q,
 			  mesh->o_rhsq);
+
+         mesh->device.finish();
+    occa::toc("NONPML_surfaceKernel"); 
+
     }
     
     mesh->device.finish();
@@ -159,30 +209,41 @@ if(mesh->totalHaloPairs>0){
 
  if(tstep>1){
 
- if (mesh->pmlNelements){   
+ if (mesh->pmlNelements){  
+
+      mesh->device.finish();
+      occa::tic("PML_updateKernel");  
   			mesh->pmlUpdateKernel(mesh->pmlNelements,
 		    mesh->o_pmlElementIds,
 		    mesh->dt,
-		    mesh->saabpmlexp,
+		    mesh->saabexp,
 		    ramp,
 		    mesh->mrab[0],
 		    mesh->mrab[1],
 			mesh->mrab[2],
-			mesh->saabpml[0],
-			mesh->saabpml[1],
-			mesh->saabpml[2],
+			mesh->saab[0],
+			mesh->saab[1],
+			mesh->saab[2],
+			mesh->o_rhsq,
 		    mesh->o_rhspmlqx,
 		    mesh->o_rhspmlqy,
+		    mesh->o_rhsq2,
 		    mesh->o_rhspmlqx2,
 		    mesh->o_rhspmlqy2,
+		    mesh->o_rhsq3,
 		    mesh->o_rhspmlqx3,
 		    mesh->o_rhspmlqy3,
 		    mesh->o_pmlqx,
 		    mesh->o_pmlqy,
 		    mesh->o_q);
+
+		    mesh->device.finish();
+      occa::toc("PML_updateKernel"); 
   		}
 
 	if(mesh->nonPmlNelements){	
+		 mesh->device.finish();
+      occa::tic("NONPML_updateKernel");   
 		     mesh->updateKernel(mesh->nonPmlNelements,
 				 mesh->o_nonPmlElementIds,
 				 mesh->dt,
@@ -197,6 +258,8 @@ if(mesh->totalHaloPairs>0){
 				 mesh->o_rhsq2,
 				 mesh->o_rhsq,
 				 mesh->o_q);
+		      mesh->device.finish();
+      occa::toc("NONPML_updateKernel");  
 		}
 
 
@@ -230,10 +293,13 @@ if(mesh->totalHaloPairs>0){
 									saabc1,
 									saabc2,
 									saabc3,
+								    mesh->o_rhsq,
 								    mesh->o_rhspmlqx,
 								    mesh->o_rhspmlqy,
+								    mesh->o_rhsq2,
 								    mesh->o_rhspmlqx2,
 								    mesh->o_rhspmlqy2,
+								    mesh->o_rhsq3,
 								    mesh->o_rhspmlqx3,
 								    mesh->o_rhspmlqy3,
 								    mesh->o_pmlqx,
@@ -302,10 +368,13 @@ if (mesh->pmlNelements){
 									saabc1,
 									saabc2,
 									saabc3,
+								    mesh->o_rhsq,
 								    mesh->o_rhspmlqx,
 								    mesh->o_rhspmlqy,
+								    mesh->o_rhsq2,
 								    mesh->o_rhspmlqx2,
 								    mesh->o_rhspmlqy2,
+								    mesh->o_rhsq3,
 								    mesh->o_rhspmlqx3,
 								    mesh->o_rhspmlqy3,
 								    mesh->o_pmlqx,
