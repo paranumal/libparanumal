@@ -195,7 +195,7 @@ void ellipticPreconditioner3D(mesh3D *mesh,
     ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
     
     mesh->device.finish();
-    occa::tic("preconKernel");
+    occa::tic("OASpreconKernel");
 
     if(strstr(options, "CONTINUOUS")) {
       // compute local precon on DEVICE
@@ -233,7 +233,8 @@ void ellipticPreconditioner3D(mesh3D *mesh,
       //      diagnostic(NtotalP, o_zP, "o_zP after GS");
 
     }
-    occa::toc("preconKernel");
+    mesh->device.finish();
+    occa::toc("OASpreconKernel");
 	  
     // extract block interiors on DEVICE
     mesh->device.finish();
@@ -244,6 +245,67 @@ void ellipticPreconditioner3D(mesh3D *mesh,
     
     mesh->device.finish();
     occa::toc("restrictKernel");   
+
+
+    if(strstr(options, "COARSEGRID")){ // should split into two parts
+
+      mesh->device.finish();
+      occa::tic("coarseGrid");
+
+      // halo exchange to make sure each vertex patch has available halo
+      ellipticStartHaloExchange3D(mesh, o_r, sendBuffer, recvBuffer);
+      
+      ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
+      
+      mesh->device.finish();
+      occa::tic("coarsenKernel");
+      // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
+      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      mesh->device.finish();
+      occa::toc("coarsenKernel");
+
+      if(strstr(options,"XXT")){
+        precon->o_r1.copyTo(precon->r1); 
+        xxtSolve(precon->z1, precon->xxt,precon->r1);
+        precon->o_z1.copyFrom(precon->z1);
+      }
+
+      if(strstr(options,"GLOBALALMOND")){
+        // should eliminate these copies
+        mesh->device.finish();
+        occa::tic("parAlmond");
+        precon->o_r1.copyTo(precon->r1); 
+        almondSolve(precon->z1, precon->parAlmond, precon->r1);
+        precon->o_z1.copyFrom(precon->z1);
+        mesh->device.finish();
+        occa::toc("parAlmond");
+      }      
+
+      if(strstr(options,"LOCALALMOND")){
+        // should eliminate these copies
+        mesh->device.finish();
+        occa::tic("Almond");
+        precon->o_r1.copyTo(precon->r1); 
+        almondSolve(precon->z1, precon->almond, precon->r1);
+        precon->o_z1.copyFrom(precon->z1);
+        mesh->device.finish();
+        occa::toc("Almond");
+      }
+
+      mesh->device.finish();
+      occa::tic("prolongateKernel");
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+      mesh->device.finish();
+      occa::toc("prolongateKernel");
+
+      // do we have to DG gatherscatter here 
+      
+      dfloat one = 1.;
+      ellipticScaledAdd(mesh, one, precon->o_ztmp, one, o_z);
+
+      mesh->device.finish();
+      occa::toc("coarseGrid");
+    }
   }
   else if(strstr(options, "JACOBI")){
 
@@ -284,9 +346,12 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
-  char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
   //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
-  
+  char *options =
+    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
+    strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
+
   // set up mesh stuff
   mesh3D *meshSetupHex3D(char *, iint);
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
@@ -299,7 +364,7 @@ int main(int argc, char **argv){
   dfloat lambda = 10;
   
   // set up
-  ellipticSetupHex3D(mesh, &ogs, &precon, lambda);
+  ellipticSetupHex3D(mesh, &ogs, &precon, lambda, options);
   
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
@@ -308,6 +373,8 @@ int main(int argc, char **argv){
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
  
+  mesh->device.finish();
+  occa::tic("CoarseDegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -335,7 +402,9 @@ int main(int argc, char **argv){
   
   o_invDegree.copyFrom(invDegree);
 #endif
-  
+  mesh->device.finish();
+  occa::toc("CoarseDegreeVectorSetup");
+
   dfloat *p   = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *r   = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *z   = (dfloat*) calloc(Nall, sizeof(dfloat));
@@ -397,6 +466,9 @@ int main(int argc, char **argv){
   // copy initial guess for x to DEVICE
   o_x.copyFrom(x);
 
+  mesh->device.finish();
+  occa::tic("PCG");
+
   // compute A*x
   ellipticOperator3D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_x, o_gradx, o_Ax, options);
   
@@ -410,6 +482,8 @@ int main(int argc, char **argv){
   if(strstr(options,"CONTINUOUS"))
     ellipticParallelGatherScatter3D(mesh, ogs, o_r, o_r, dfloatString, "add");
   
+  mesh->device.finish();
+  occa::tic("Preconditioner");
   if(strstr(options,"PCG")){
     // Precon^{-1} (b-A*x)
     ellipticPreconditioner3D(mesh, precon, sendBuffer, recvBuffer,
@@ -422,6 +496,8 @@ int main(int argc, char **argv){
     // p = r
     o_p.copyFrom(o_r); // CG
   }
+  mesh->device.finish();
+  occa::toc("Preconditioner");
 
   // dot(r,r)
   dfloat rdotr0 = ellipticWeightedInnerProduct(mesh, Nblock, o_invDegree, o_r, o_r, o_tmp, tmp, options);
@@ -459,6 +535,8 @@ int main(int argc, char **argv){
     
     if(rdotr1 < tol*tol) break;
 
+    mesh->device.finish();
+    occa::tic("Preconditioner");
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
@@ -482,6 +560,8 @@ int main(int argc, char **argv){
       // p = r + beta*p
       ellipticScaledAdd(mesh, 1.f, o_r, beta, o_p);
     }
+    mesh->device.finish();
+    occa::toc("Preconditioner");
 
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
@@ -492,6 +572,9 @@ int main(int argc, char **argv){
     ++Niter;
     
   }while(rdotr0>(tol*tol));
+
+  mesh->device.finish();
+  occa::toc("PCG");
 
   occa::printTimer();
   

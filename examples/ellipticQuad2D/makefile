@@ -10,18 +10,6 @@ include ${OCCA_DIR}/scripts/makefile
 # define variables
 HDRDIR  = ../../include
 
-AMGDIR = ../../../AMG2013
-
-AMGINCL  = -I$(AMGDIR) \
-		   -I$(AMGDIR)/utilities \
-		   -I$(AMGDIR)/parcsr_ls \
-		   -I$(AMGDIR)/parcsr_mv \
-		   -I$(AMGDIR)/krylov \
-		   -I$(AMGDIR)/seq_mv \
-		   -I$(AMGDIR)/sstruct_mv \
-		   -I$(AMGDIR)/struct_mv \
-		   -I$(AMGDIR)/IJ_mv \
-
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
@@ -29,11 +17,11 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) $(AMGINCL) -O3 -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."' -I../../utilities/parALMOND/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -O3 -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."' \
+			-I../../utilities/parALMOND/include
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../3rdParty/gslib.github -lgs \
-			-L../../3rdParty/amg2013 -lamg2013 \
 			-L../../utilities/parALMOND -lparALMOND
 
 # libraries to be linked in
@@ -88,19 +76,15 @@ LOBJS = \
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
 ../../src/gsParallelGatherScatterSetup.o\
-../../src/xxtCoarseSolve.o \
-../../src/amg2013CoarseSolve.o 
+../../src/xxtCoarseSolve.o 
 
-ellipticMainQuad2D:$(AOBJS) $(LOBJS) ellipticMainQuad2D.o gslibInterface amg2013Interface
+ellipticMainQuad2D:$(AOBJS) $(LOBJS) ellipticMainQuad2D.o gslibInterface
 	$(LD)  $(LDFLAGS)  -o ellipticMainQuad2D ellipticMainQuad2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
-
-amg2013Interface:
-	$(cc) $(CFLAGS) -c -o ../../src/amg2013CoarseSolve.o ../../src/amg2013CoarseSolve.c $(paths)
 
 ellipticMainSplitPml2D:$(POBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 

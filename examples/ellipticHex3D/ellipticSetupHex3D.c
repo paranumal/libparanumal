@@ -1,6 +1,6 @@
 #include "ellipticHex3D.h"
 
-void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda){
+void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lambda, const char *options){
 
   mesh->Nfields = 1;
   
@@ -87,7 +87,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
-
+  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
   
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
@@ -180,6 +180,16 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictHex3D.okl",
 				       "ellipticFooHex3D",
 				       kernelInfo);
+
+  (*precon)->coarsenKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+               "ellipticPreconCoarsen",
+               kernelInfo);
+
+  (*precon)->prolongateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+               "ellipticPreconProlongate",
+               kernelInfo);
   
   // find maximum degree
   {
@@ -231,5 +241,7 @@ void ellipticSetupHex3D(mesh3D *mesh, ogs_t **ogs, precon_t **precon, dfloat lam
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
   
+  // do this here since we need A*x
+  ellipticCoarsePreconditionerSetupHex3D(mesh, *precon, *ogs, lambda, options);
 
 }
