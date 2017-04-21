@@ -270,22 +270,23 @@ mesh->device.finish();
  }
  
  else if(tstep==0){
-
-	if (mesh->pmlNelements){
-	            dfloat abc1 = mesh->dt;
+ 	dfloat abc1 = mesh->dt;
 				dfloat abc2 = 0.0;
 				dfloat abc3 = 0.0;
 
-				dfloat cc = -0.5f*mesh->tauInv; 
+				dfloat cc = -mesh->tauInv; 
 				dfloat dtc = mesh->dt; 
-				dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/24. + (pow(cc,2)*pow(dtc,3))/6. 
+				dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/24 + (pow(cc,2)*pow(dtc,3))/6 
 				               + (cc*pow(dtc,2))/2. + dtc;
 				dfloat saabc2 = 0.0;
-				dfloat saabc3 = 0.0;      
+				dfloat saabc3 = 0.0; 
+
+	if (mesh->pmlNelements){
+	             
   			mesh->pmlUpdateKernel(mesh->pmlNelements,
 								    mesh->o_pmlElementIds,
 								    mesh->dt,
-								    mesh->saabpmlexp,
+								    mesh->saabexp,
 								    ramp,
 								    abc1,
 									abc2,
@@ -311,16 +312,7 @@ mesh->device.finish();
 
 
 		if(mesh->nonPmlNelements){
-				dfloat abc1 = mesh->dt;
-				dfloat abc2 = 0.0;
-				dfloat abc3 = 0.0;
-
-				dfloat cc = -mesh->tauInv; 
-				dfloat dtc = mesh->dt; 
-				dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/24 + (pow(cc,2)*pow(dtc,3))/6 
-				               + (cc*pow(dtc,2))/2. + dtc;
-				dfloat saabc2 = 0.0;
-				dfloat saabc3 = 0.0; 
+				
 
 				mesh->updateKernel(mesh->nonPmlNelements,
 				 mesh->o_nonPmlElementIds,
@@ -343,24 +335,26 @@ mesh->device.finish();
 
 else if(tstep==1){
 
+		dfloat abc1 = 3.0*mesh->dt/2.0;
+		dfloat abc2 = -1.0*mesh->dt/2.0;
+		dfloat abc3 = 0.0;
+
+		dfloat cc = -mesh->tauInv; 
+		dfloat dtc = mesh->dt; 
+		dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/20. + (5.*pow(cc,2)*pow(dtc,3))/24. 
+		           + (2.*cc*pow(dtc,2))/3. + 3.*dtc/2.;
+
+		dfloat saabc2 = -(pow(cc,3)*pow(dtc,4))/120. - (pow(cc,2)*pow(dtc,3))/24. 
+		           - (cc*pow(dtc,2))/6. - dtc/2.;
+		dfloat saabc3 = 0.0; 
+
 
 if (mesh->pmlNelements){
-	            dfloat abc1 = 3.0*mesh->dt/2.0;
-		        dfloat abc2 = -1.0*mesh->dt/2.0;
-		        dfloat abc3 = 0.0;
-		    	
-		    	dfloat cc = -0.5f*mesh->tauInv; 
-		    	dfloat dtc = mesh->dt; 
-		    	dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/20. + (5.*pow(cc,2)*pow(dtc,3))/24. 
-		    	               + (2.*cc*pow(dtc,2))/3. + 3.*dtc/2.;
-
-		    	dfloat saabc2 = -(pow(cc,3)*pow(dtc,4))/120. - (pow(cc,2)*pow(dtc,3))/24. 
-		    	               - (cc*pow(dtc,2))/6. - dtc/2.;
-		    	dfloat saabc3 = 0.0; 
+	            
   			mesh->pmlUpdateKernel(mesh->pmlNelements,
 								    mesh->o_pmlElementIds,
 								    mesh->dt,
-								    mesh->saabpmlexp,
+								    mesh->saabexp,
 								    ramp,
 								    abc1,
 									abc2,
@@ -385,18 +379,7 @@ if (mesh->pmlNelements){
 
 
    if(mesh->nonPmlNelements){
-				dfloat abc1 = 3.0*mesh->dt/2.0;
-		        dfloat abc2 = -1.0*mesh->dt/2.0;
-		        dfloat abc3 = 0.0;
-		    	
-		    	dfloat cc = -mesh->tauInv; 
-		    	dfloat dtc = mesh->dt; 
-		    	dfloat saabc1 = (pow(cc,3)*pow(dtc,4))/20. + (5.*pow(cc,2)*pow(dtc,3))/24. 
-		    	               + (2.*cc*pow(dtc,2))/3. + 3.*dtc/2.;
-
-		    	dfloat saabc2 = -(pow(cc,3)*pow(dtc,4))/120. - (pow(cc,2)*pow(dtc,3))/24. 
-		    	               - (cc*pow(dtc,2))/6. - dtc/2.;
-		    	dfloat saabc3 = 0.0; 
+			
 	     mesh->updateKernel(mesh->nonPmlNelements,
 							 mesh->o_nonPmlElementIds,
 							 mesh->dt,
