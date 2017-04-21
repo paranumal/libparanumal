@@ -37,9 +37,13 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     // compute volume contribution to DG boltzmann RHS
     if(mesh->pmlNelements){
 
+    	mesh->device.finish();
+       occa::tic("PML_volumeKernel");
+
        mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
-			    ramp,
+			    ramp, 
+			    drampdt,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
@@ -48,14 +52,17 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy);
-    }
+       mesh->device.finish();
+      occa::toc("PML_volumeKernel");
+    } 
 
-    
     // compute volume contribution to DG boltzmann RHS
-    // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+    		mesh->device.finish();
+      occa::tic("NONPML_volumeKernel");
 
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
@@ -66,7 +73,10 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq);
-    }
+
+      mesh->device.finish();
+      occa::toc("NONPML_volumeKernel");
+	}
     
     
     mesh->device.finish();
@@ -77,28 +87,39 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 	// VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
-	    // compute relaxation terms using cubature integration
+	    
 	    if(mesh->pmlNelements){
-	      mesh->pmlRelaxationKernel(mesh->pmlNelements,
+
+	    		mesh->device.finish();
+           occa::tic("PML_relaxationKernel");
+
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
 				     mesh->o_pmlElementIds,
 				     ramp,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
 				     mesh->o_pmlqx,
-     			     mesh->o_pmlqy,
+				     mesh->o_pmlqy,
+				     mesh->o_rhsq,
 				     mesh->o_rhspmlqx,
 				     mesh->o_rhspmlqy);
-	    }
+		   mesh->device.finish();
+           occa::toc("PML_relaxationKernel");
+		}
 	  
 	    // compute relaxation terms using cubature
 	    if(mesh->nonPmlNelements){
+	    	mesh->device.finish();
+           occa::tic("NONPML_relaxationKernel");
 	      mesh->relaxationKernel(mesh->nonPmlNelements,
 				     mesh->o_nonPmlElementIds,
 				     mesh->o_cubInterpT,
 				     mesh->o_cubProjectT,
 				     mesh->o_q,
 				     mesh->o_rhsq);   
+	      mesh->device.finish();
+           occa::toc("NONPML_relaxationKernel");
 	    }
 
 	  // VOLUME KERNELS
@@ -123,6 +144,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("surfaceKernel");
      
      if(mesh->pmlNelements){
+     	 mesh->device.finish();
+    occa::tic("PML_surfaceKernel"); 
 	mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
 			   mesh->o_sgeo,
@@ -135,12 +158,18 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq,
 			   mesh->o_rhspmlqx,
 			   mesh->o_rhspmlqy);
+	 mesh->device.finish();
+    occa::toc("PML_surfaceKernel"); 
 	}
     
     if(mesh->nonPmlNelements){
-      mesh->surfaceKernel(mesh->nonPmlNelements,
+
+    	 mesh->device.finish();
+    occa::tic("NONPML_surfaceKernel"); 
+       mesh->surfaceKernel(mesh->nonPmlNelements,
 			  mesh->o_nonPmlElementIds,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -153,6 +182,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			  ramp,
 			  mesh->o_q,
 			  mesh->o_rhsq);
+          mesh->device.finish();
+    occa::toc("NONPML_surfaceKernel"); 
     }
     
     mesh->device.finish();
@@ -164,27 +195,36 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     
    //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
     if (mesh->pmlNelements){   
+    	mesh->device.finish();
+      occa::tic("PML_updateKernel");  
       mesh->pmlUpdateStageKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
-			    mesh->sarkpmle[0],
+			    mesh->sarke[0],
 			    mesh->rk3a[1][0], //a21
-			    mesh->sarkpmla[1][0], //a21
+			    mesh->sarka[1][0], //a21
 			    mesh->rk3a[0][0], // 0.
-			    mesh->sarkpmla[0][0], // 0. 
+			    mesh->sarka[0][0], // 0. 
 			    ramp,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
+			    mesh->o_rhsq2,
 			    mesh->o_rhspmlqx2,
 			    mesh->o_rhspmlqy2,
+			    mesh->o_qold,
 			    mesh->o_pmlqxold,
 			    mesh->o_pmlqyold,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
 			    mesh->o_q);
+        mesh->device.finish();
+      occa::toc("PML_updateKernel"); 
     }
     
     if(mesh->nonPmlNelements){
+    	 mesh->device.finish();
+      occa::tic("NONPML_updateKernel");  
       mesh->updateStageKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -197,6 +237,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_rhsq2,
 			 mesh->o_qold,
 			 mesh->o_q);
+       mesh->device.finish();
+      occa::toc("NONPML_updateKernel");  
     }
     
     mesh->device.finish();
@@ -237,10 +279,15 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
-      mesh->pmlVolumeKernel(mesh->pmlNelements,
+    if(mesh->pmlNelements){
+
+    		mesh->device.finish();
+       occa::tic("PML_volumeKernel");
+
+       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
-			    ramp,
+			    ramp, 
+			    drampdt,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
@@ -249,12 +296,18 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
-     		    mesh->o_rhspmlqx2,
+			    mesh->o_rhsq2,
+			    mesh->o_rhspmlqx2,
 			    mesh->o_rhspmlqy2);
-    }    
+       	mesh->device.finish();
+       occa::toc("PML_volumeKernel");
+    } 
+
     // compute volume contribution to DG boltzmann RHS
-    // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+    	mesh->device.finish();
+      occa::tic("NONPML_volumeKernel");
+
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -264,43 +317,59 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq2);
-    }
+      mesh->device.finish();
+      occa::toc("NONPML_volumeKernel");
+	}
     
     
     mesh->device.finish();
     occa::toc("volumeKernel");
 
 
-    if(strstr(options, "CUBATURE")){ 
-    // VOLUME KERNELS
+   if(strstr(options, "CUBATURE")){ 
+	// VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
-    // compute relaxation terms using cubature
-    if(mesh->pmlNelements)
-      mesh->pmlRelaxationKernel(mesh->pmlNelements,
-			     mesh->o_pmlElementIds,
-			     ramp,
-			     mesh->o_cubInterpT,
-			     mesh->o_cubProjectT,
-			     mesh->o_q,
-			     mesh->o_pmlqx,
-			     mesh->o_pmlqy,
-			     mesh->o_rhspmlqx2,
-			     mesh->o_rhspmlqy2);
-  
-    // compute relaxation terms using cubature
-    if(mesh->nonPmlNelements)
-      mesh->relaxationKernel(mesh->nonPmlNelements,
-			     mesh->o_nonPmlElementIds,
-			     mesh->o_cubInterpT,
-			     mesh->o_cubProjectT,
-			     mesh->o_q,
-			     mesh->o_rhsq2);
-  // VOLUME KERNELS
+	    
+	    if(mesh->pmlNelements){
+
+	       mesh->device.finish();
+           occa::tic("PML_relaxationKernel");
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+				     mesh->o_pmlElementIds,
+				     ramp,
+				     mesh->o_cubInterpT,
+				     mesh->o_cubProjectT,
+				     mesh->o_q,
+				     mesh->o_pmlqx,
+				     mesh->o_pmlqy,
+				     mesh->o_rhsq2,
+				     mesh->o_rhspmlqx2,
+				     mesh->o_rhspmlqy2);
+		  	mesh->device.finish();
+           occa::toc("PML_relaxationKernel");
+		}
+	  
+	    // compute relaxation terms using cubature
+	    if(mesh->nonPmlNelements){
+	    	mesh->device.finish();
+           occa::tic("NONPML_relaxationKernel");
+	      mesh->relaxationKernel(mesh->nonPmlNelements,
+				     mesh->o_nonPmlElementIds,
+				     mesh->o_cubInterpT,
+				     mesh->o_cubProjectT,
+				     mesh->o_q,
+				     mesh->o_rhsq2); 
+		    mesh->device.finish();
+           occa::toc("NONPML_relaxationKernel");  
+	    }
+
+	  // VOLUME KERNELS
     mesh->device.finish();
     occa::toc("relaxationKernel");
-    
-    }
+	}
+
+
 
     // complete halo exchange
     if(mesh->totalHaloPairs>0){
@@ -316,7 +385,9 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("surfaceKernel");
      
      if(mesh->pmlNelements){
-    mesh->pmlSurfaceKernel(mesh->pmlNelements,
+     	 mesh->device.finish();
+    occa::tic("PML_surfaceKernel"); 
+	mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
 			   mesh->o_sgeo,
 			   mesh->o_LIFTT,
@@ -328,12 +399,18 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq2,
 			   mesh->o_rhspmlqx2,
 			   mesh->o_rhspmlqy2);
+	 mesh->device.finish();
+    occa::toc("PML_surfaceKernel"); 
 	}
     
-    if(mesh->nonPmlNelements)
-      mesh->surfaceKernel(mesh->nonPmlNelements,
+    if(mesh->nonPmlNelements){
+
+    	 mesh->device.finish();
+    occa::tic("NONPML_surfaceKernel"); 
+       mesh->surfaceKernel(mesh->nonPmlNelements,
 			  mesh->o_nonPmlElementIds,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -346,36 +423,49 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			  ramp,
 			  mesh->o_q,
 			  mesh->o_rhsq2);
-    
+
+    	 mesh->device.finish();
+    occa::toc("NONPML_surfaceKernel"); 
+    }
+
     mesh->device.finish();
     occa::toc("surfaceKernel");
 
-
-    mesh->device.finish();
+     mesh->device.finish();
     occa::tic("updateKernel");
     
-    if (mesh->pmlNelements){   
+   //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
+    if (mesh->pmlNelements){ 
+    mesh->device.finish();
+      occa::tic("PML_updateKernel");    
       mesh->pmlUpdateStageKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
-			    mesh->sarkpmle[1],
-			    mesh->rk3a[2][0], //a31
-			    mesh->sarkpmla[2][0], //a31
-			    mesh->rk3a[2][1], 
-			    mesh->sarkpmla[2][1], 
+			    mesh->sarke[1],
+				mesh->rk3a[2][0], // a31
+			    mesh->sarka[2][0], // a31
+			    mesh->rk3a[2][1], // a32
+			    mesh->sarka[2][1], // a32
 			    ramp,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
+			    mesh->o_rhsq2,
 			    mesh->o_rhspmlqx2,
 			    mesh->o_rhspmlqy2,
+			    mesh->o_qold,
 			    mesh->o_pmlqxold,
 			    mesh->o_pmlqyold,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
 			    mesh->o_q);
-  }
+      mesh->device.finish();
+      occa::toc("PML_updateKernel");  
+    }
     
     if(mesh->nonPmlNelements){
+    	 mesh->device.finish();
+      occa::tic("NONPML_updateKernel");   
       mesh->updateStageKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -383,16 +473,20 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->rk3a[2][0], // a31
 			 mesh->sarka[2][0], // a31
 			 mesh->rk3a[2][1], // a32
-			 mesh->sarka[2][1], // a32
+			 mesh->sarka[2][1], // a32 
 			 mesh->o_rhsq,
 			 mesh->o_rhsq2,
 			 mesh->o_qold,
 			 mesh->o_q);
+      mesh->device.finish();
+      occa::toc("NONPML_updateKernel");   
     }
     
     mesh->device.finish();
     occa::toc("updateKernel");      
-   
+
+
+    
 
 
     // Stage 3
@@ -425,10 +519,15 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("volumeKernel");
     
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
-      mesh->pmlVolumeKernel(mesh->pmlNelements,
+    if(mesh->pmlNelements){
+
+    	mesh->device.finish();
+       occa::tic("PML_volumeKernel");
+
+       mesh->pmlVolumeKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
-			    ramp,
+			    ramp, 
+			    drampdt,
 			    mesh->o_vgeo,
 			    mesh->o_sigmax,
 			    mesh->o_sigmay,
@@ -437,13 +536,18 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			    mesh->o_q,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
+			    mesh->o_rhsq3,
 			    mesh->o_rhspmlqx3,
 			    mesh->o_rhspmlqy3);
-    }
+        mesh->device.finish();
+      occa::toc("PML_volumeKernel");
+    } 
 
     // compute volume contribution to DG boltzmann RHS
-    // added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
+    	mesh->device.finish();
+      occa::tic("NONPML_volumeKernel");
+
       mesh->volumeKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 ramp, 
@@ -453,43 +557,58 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_DsT,
 			 mesh->o_q,
 			 mesh->o_rhsq3);
-    }
-    
+      mesh->device.finish();
+      occa::toc("NONPML_volumeKernel");
+	}
     
     mesh->device.finish();
     occa::toc("volumeKernel");
 
 
-    if(strstr(options, "CUBATURE")){ 
-    // VOLUME KERNELS
+
+
+     if(strstr(options, "CUBATURE")){ 
+	// VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
-    // compute relaxation terms using cubature
-    if(mesh->pmlNelements)
-      mesh->pmlRelaxationKernel(mesh->pmlNelements,
-			     mesh->o_pmlElementIds,
-			     ramp,
-			     mesh->o_cubInterpT,
-			     mesh->o_cubProjectT,
-			     mesh->o_q,
-			     mesh->o_pmlqx,
-			     mesh->o_pmlqy,
-			     mesh->o_rhspmlqx3,
-			     mesh->o_rhspmlqy3);
-  
-    // compute relaxation terms using cubature
-    if(mesh->nonPmlNelements)
-      mesh->relaxationKernel(mesh->nonPmlNelements,
-			     mesh->o_nonPmlElementIds,
-			     mesh->o_cubInterpT,
-			     mesh->o_cubProjectT,
-			     mesh->o_q,
-			     mesh->o_rhsq3);
-  // VOLUME KERNELS
+	    
+	    if(mesh->pmlNelements){
+	    		mesh->device.finish();
+           occa::tic("PML_relaxationKernel");
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+				     mesh->o_pmlElementIds,
+				     ramp,
+				     mesh->o_cubInterpT,
+				     mesh->o_cubProjectT,
+				     mesh->o_q,
+				     mesh->o_pmlqx,
+				     mesh->o_pmlqy,
+				     mesh->o_rhsq3,
+				     mesh->o_rhspmlqx3,
+				     mesh->o_rhspmlqy3);
+		  	mesh->device.finish();
+           occa::toc("PML_relaxationKernel");
+		}
+	  
+	    // compute relaxation terms using cubature
+	    if(mesh->nonPmlNelements){
+	    	mesh->device.finish();
+           occa::tic("NONPML_relaxationKernel");
+	      mesh->relaxationKernel(mesh->nonPmlNelements,
+				     mesh->o_nonPmlElementIds,
+				     mesh->o_cubInterpT,
+				     mesh->o_cubProjectT,
+				     mesh->o_q,
+				     mesh->o_rhsq3);  
+
+		   mesh->device.finish();
+           occa::toc("NONPML_relaxationKernel"); 
+	    }
+
+	  // VOLUME KERNELS
     mesh->device.finish();
     occa::toc("relaxationKernel");
-    
-    }
+	}
 
     // complete halo exchange
     if(mesh->totalHaloPairs>0){
@@ -505,7 +624,9 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("surfaceKernel");
      
      if(mesh->pmlNelements){
-    mesh->pmlSurfaceKernel(mesh->pmlNelements,
+     		 mesh->device.finish();
+    occa::tic("PML_surfaceKernel"); 
+	mesh->pmlSurfaceKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
 			   mesh->o_sgeo,
 			   mesh->o_LIFTT,
@@ -517,12 +638,17 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			   mesh->o_y,
 			   ramp,
 			   mesh->o_q,
+			   mesh->o_rhsq3,
 			   mesh->o_rhspmlqx3,
 			   mesh->o_rhspmlqy3);
-}
+		 mesh->device.finish();
+    occa::toc("PML_surfaceKernel"); 
+	}
     
-    if(mesh->nonPmlNelements)
-      mesh->surfaceKernel(mesh->nonPmlNelements,
+    if(mesh->nonPmlNelements){
+    	 mesh->device.finish();
+    occa::tic("NONPML_surfaceKernel"); 
+       mesh->surfaceKernel(mesh->nonPmlNelements,
 			  mesh->o_nonPmlElementIds,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -535,6 +661,9 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			  ramp,
 			  mesh->o_q,
 			  mesh->o_rhsq3);
+        mesh->device.finish();
+    occa::toc("NONPML_surfaceKernel"); 
+    }
     
     mesh->device.finish();
     occa::toc("surfaceKernel");
@@ -544,31 +673,42 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
     occa::tic("updateKernel");
     
     if (mesh->pmlNelements){   
+    	mesh->device.finish();
+      occa::tic("PML_updateKernel");  
       mesh->pmlUpdateKernel(mesh->pmlNelements,
 			    mesh->o_pmlElementIds,
 			    mesh->dt,
-			    mesh->sarkpmle[2],
-			    mesh->rk3b[0], // b1
-			    mesh->sarkpmlb[0], // b1
-			    mesh->rk3b[1], // b2
-			    mesh->sarkpmlb[1], //b2
-			    mesh->rk3b[2], // b3
-			    mesh->sarkpmlb[2], // b3
+			    mesh->sarke[2],
+			 	mesh->rk3b[0], // b1
+			 	mesh->sarkb[0], // b1
+			 	mesh->rk3b[1], // b2
+				mesh->sarkb[1], //b2
+				mesh->rk3b[2], // b3
+				mesh->sarkb[2], // b3
 			    ramp,
+			    mesh->o_rhsq,
 			    mesh->o_rhspmlqx,
 			    mesh->o_rhspmlqy,
+			    mesh->o_rhsq2,
 			    mesh->o_rhspmlqx2,
 			    mesh->o_rhspmlqy2,
+			    mesh->o_rhsq3,
 			    mesh->o_rhspmlqx3,
 			    mesh->o_rhspmlqy3,
+			    mesh->o_qold,
 			    mesh->o_pmlqxold,
 			    mesh->o_pmlqyold,
 			    mesh->o_pmlqx,
 			    mesh->o_pmlqy,
 			    mesh->o_q);
+      mesh->device.finish();
+      occa::toc("PML_updateKernel");  
   }
     
     if(mesh->nonPmlNelements){
+    	 mesh->device.finish();
+      occa::tic("NONPML_updateKernel");   
+
       mesh->updateKernel(mesh->nonPmlNelements,
 			 mesh->o_nonPmlElementIds,
 			 mesh->dt,
@@ -584,6 +724,8 @@ void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			 mesh->o_rhsq3,
 			 mesh->o_qold,
 			 mesh->o_q);
+       mesh->device.finish();
+      occa::toc("NONPML_updateKernel");   
     }
     
     mesh->device.finish();
