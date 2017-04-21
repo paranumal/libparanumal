@@ -1,4 +1,5 @@
-include ../system.mk
+FC = gfortran
+AR = ar
 
 INCLUDES = -I.
 
