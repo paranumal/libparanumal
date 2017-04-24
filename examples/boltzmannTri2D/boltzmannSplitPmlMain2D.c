@@ -18,7 +18,7 @@ int main(int argc, char **argv){
   // out        = REPORT, REPORT-VTU, NO  
   // bc         = UNSPLITPML, SPLITPML, NONE
   
-   char *options =strdup("mode = SOLVER , out = REPORT, relaxation = CUBATURE, stab = NO, time = SAAB3, bc = UNSPLITPML");
+   char *options =strdup("mode = SOLVER , out = REPORT-VTU, relaxation = CUBATURE, stab = NO, time = SAAB3, bc = UNSPLITPML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = SARK3, bc = PML");
   //char *options =strdup("mode = SOLVER , relaxation = CUBATURE , time = LSERK, bc = PML");
 
