@@ -58,7 +58,7 @@ csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
 
   //we now need to reorder the x vector for the halo, and shift the column indices
   if (localA->nnz) {
-    iint col[localA->nnz]; //list of global column ids for every nonzero
+    iint *col = (iint *) calloc(localA->nnz,sizeof(iint)); //list of global column ids for every nonzero
     for (iint n=0;n<localA->nnz;n++)
       col[n] = localA->cols[n]; //grab global ids
     
@@ -88,7 +88,9 @@ csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
     for (iint n=0; n<numcol;n++) 
       if ((col[n]<colStart) || (col[n]>colEnd-1)) 
         localA->colMap[cnt++] = col[n];
-      
+    
+    free(col);
+
     //shift the column indices to local indexing
     for (iint n=0;n<localA->nnz;n++) {
       iint gcol = localA->cols[n];
