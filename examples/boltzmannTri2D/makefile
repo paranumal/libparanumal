@@ -32,21 +32,20 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 OBJS    = \
-boltzmannSplitPmlMain2D.o \
+boltzmannMain2D.o \
 boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
 boltzmannCouetteError2D.o \
 boltzmannPeriodic2D.o\
-boltzmannSplitPmlRun2D.o \
-boltzmannSplitPmlSetup2D.o \
-boltzmannSplitPmlLserkStep2D.o \
-boltzmannSplitPmlMrabStep2D.o \
-boltzmannSplitPmlSaab3Step2D.o \
+boltzmannRun2D.o \
+boltzmannSetup2D.o \
+boltzmannLserkStep2D.o \
+boltzmannMrabStep2D.o \
+boltzmannSaab3Step2D.o \
 boltzmannUnsplitPmlLsimexStep2D.o \
 boltzmannSplitPmlLsimexStep2D.o \
-boltzmannSplitPmlSarkStep2D.o \
-boltzmannSplitPmlSark3Step2D.o \
-boltzmannSplitPmlLserk3Step2D.o \
+boltzmannSark3Step2D.o \
+boltzmannLserk3Step2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 ../../src/meshParallelReaderTri2D.o \
@@ -75,10 +74,10 @@ boltzmannReport2D.o \
 ../../src/parallelSort.o
 
 boltzmannSplitPmlMain2D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o boltzmannSplitPmlMain2D $(OBJS) $(paths) $(LIBS) 
+	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(OBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS) boltzmannSplitPmlMain2D
+	rm -r $(OBJS) boltzmannMain2D
  
 
