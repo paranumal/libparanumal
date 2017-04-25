@@ -277,7 +277,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   dfloat dt = 0.f;
 
-  // AK: Set time step size
+  // Set time step size
   if(strstr(options, "LSERK")){
     printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
     dt = mesh->dtfactor*cfl*mymin(dtex,dtim);

@@ -199,23 +199,26 @@ typedef struct {
   dfloat *pmlresq;
   //
 
+  dfloat *invTau;
 
   dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
-  
-  dfloat *invTau;
-   
 
   dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
+
+  dfloat *pmlqz;    // Z-pml data array
+  dfloat *rhspmlqz; // right hand side data array
+  dfloat *respmlqz; // residual data array (for LSERK time-stepping)
+  dfloat *sigmaz;
     
-  dfloat *pmlNT;    // time integrated relaxtion term
-  dfloat *rhspmlNT; //
-  dfloat *respmlNT; //
+  // dfloat *pmlNT;    // time integrated relaxtion term
+  // dfloat *rhspmlNT; //
+  // dfloat *respmlNT; //
 
   
   
@@ -258,7 +261,7 @@ typedef struct {
 
 
   // pml vars
-  occa::memory o_sigmax, o_sigmay;
+  occa::memory o_sigmax, o_sigmay, o_sigmaz;
 
   iint pmlNelements;
   iint nonPmlNelements;
@@ -267,6 +270,7 @@ typedef struct {
   
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
+  occa::memory o_pmlqz, o_rhspmlqz, o_respmlqz;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
   
   // Boltzmann SARK extra storage for exponential update
@@ -342,14 +346,7 @@ typedef struct {
 
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
-  occa::kernel pmlRelaxationKernel;
-  
-  // Boltzmann SAAB low order updates
-  // occa::kernel updateFirstOrderKernel;
-  // occa::kernel updateSecondOrderKernel;
-  // occa::kernel pmlUpdateFirstOrderKernel;
-  // occa::kernel pmlUpdateSecondOrderKernel;
-  
+  occa::kernel pmlRelaxationKernel; 
   // //Boltzmann Imex Kernels
      
   occa::kernel implicitUpdateKernel;
