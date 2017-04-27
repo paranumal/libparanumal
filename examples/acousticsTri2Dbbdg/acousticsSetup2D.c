@@ -13,6 +13,44 @@ iint factorial(iint n) {
 
 void acousticsSetup2D(mesh2D *mesh){
 
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // set time step
+  mesh->finalTime = 0.01;
+  dfloat cfl = .4; // depends on the stability region size
+
+  // set penalty parameter
+  mesh->Lambda2 = 0.5;
+
+  dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
+  dfloat hmin = 1e9;
+  for(iint e=0;e<mesh->Nelements;++e){  
+    EtoDT[e] = 1e9;  
+
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+      dfloat sJ   = mesh->sgeo[sid + SJID];
+      dfloat invJ = mesh->sgeo[sid + IJID];
+
+      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+      // h = 0.5/(sJ/J)
+
+      dfloat hest = .5/(sJ*invJ);
+
+      // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
+      dfloat dtEst = cfl*hest/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
+
+      hmin = mymin(hmin,hest);
+      EtoDT[e] = mymin(EtoDT[e], dtEst);
+    }
+  }
+
+  //use dt on each element to setup MRAB
+  meshMRABSetup2D(mesh,EtoDT);
+
+
   mesh->Nfields = 4;
 
   // compute samples of q at interpolation nodes
@@ -131,149 +169,6 @@ void acousticsSetup2D(mesh2D *mesh){
       }
     }
   #endif
-
-  // set penalty parameter
-  mesh->Lambda2 = 0.5;
-
-  // set time step
-  mesh->finalTime = 0.5;
-  dfloat cfl = .4; // depends on the stability region size
-
-  dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
-  dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
-    EtoDT[e] = 1e9;  
-
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
-
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-
-      dfloat hest = .5/(sJ*invJ);
-
-      // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
-      dfloat dtEst = cfl*hest/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
-
-      hmin = mymin(hmin,hest);
-      EtoDT[e] = mymin(EtoDT[e], dtEst);
-    }
-  }
-
-  iint rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  //------------------------  MRAB setup-------------------------
-  //find global min and max dt
-  dfloat dtmin, dtmax;
-  dtmin = EtoDT[0];
-  dtmax = EtoDT[0];
-  for (iint e=1;e<mesh->Nelements;e++) {
-    dtmin = mymin(dtmin,EtoDT[e]);
-    dtmax = mymax(dtmax,EtoDT[e]);
-  }
-  dfloat dtGmin, dtGmax;
-  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
-  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
-
-
-  if (rank==0) {
-    printf("----------- MRAB Setup ------------------------------\n");
-    printf("dtmin = %g, dtmax = %g\n", dtGmin, dtGmax);
-  }
-
-  //number of levels
-  mesh->MRABNlevels = mymin(floor(log2(dtGmax/dtGmin))+1,MRAB_MAX_LEVELS);
-
-  //shift dtGmin so that we have an integer number of steps
-  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
-  dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
-
-  mesh->dt = dtGmin; 
-
-  //compute the level of each element
-  mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
-  iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
-  for(iint lev=0; lev<mesh->MRABNlevels; lev++){             
-    dfloat dtlev = dtGmin*pow(2,lev);   
-    for(iint e=0;e<mesh->Nelements;++e){
-      if(EtoDT[e] >=dtlev) 
-        mesh->MRABlevel[e] = lev;
-    }
-  }
-
-  //enforce one level difference between neighbours
-  for (iint lev=0; lev < mesh->MRABNlevels; lev++){
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel);
-    for (iint e =0; e<mesh->Nelements;e++) {
-      if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
-        for (iint f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
-          iint eP = mesh->EToE[mesh->Nfaces*e+f];
-          if (eP > -1) 
-            if (mesh->MRABlevel[eP] == lev)
-              mesh->MRABlevel[e] = lev + 1;  //if one exists, lower the level of this element to lev-1
-        }
-      }
-    }
-  }
-
-  //construct element and halo lists
-  mesh->MRABelementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  mesh->MRABhaloIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  
-  mesh->MRABNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-
-  for (iint e=0;e<mesh->Nelements;e++) {
-    mesh->MRABNelements[mesh->MRABlevel[e]]++;
-    for (iint f=0;f<mesh->Nfaces;f++) { 
-      iint eP = mesh->EToE[mesh->Nfaces*e+f];
-      if (eP > -1) {
-        if (mesh->MRABlevel[eP] == mesh->MRABlevel[e]-1) {//check for a level lev-1 neighbour
-          mesh->MRABNhaloElements[mesh->MRABlevel[e]]++;
-          break;
-        }
-      }
-    }
-  }
-
-  for (iint lev =0;lev<mesh->MRABNlevels;lev++){
-    mesh->MRABelementIds[lev] = (iint *) calloc(mesh->MRABNelements[lev],sizeof(iint));
-    mesh->MRABhaloIds[lev] = (iint *) calloc(mesh->MRABNhaloElements[lev],sizeof(iint));
-    iint cnt  =0;
-    iint cnt2 =0;
-    for (iint e=0;e<mesh->Nelements;e++){
-      if (mesh->MRABlevel[e] == lev) {
-        mesh->MRABelementIds[lev][cnt++] = e;
-      
-        for (iint f=0;f<mesh->Nfaces;f++) { 
-          iint eP = mesh->EToE[mesh->Nfaces*e+f];
-          if (eP > -1) {
-            if (mesh->MRABlevel[eP] == lev-1) {//check for a level lev-1 neighbour
-              mesh->MRABhaloIds[lev][cnt2++] = e;
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  //offset index
-  mesh->MRABshiftIndex = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-
-  if (rank==0)
-    printf("| Rank | Level | Nelements | Level/Level Boundary Elements | \n");
-  for (iint lev =0; lev<mesh->MRABNlevels; lev++)
-    printf("|  %d,    %d,      %d,        %d |\n", rank, lev, mesh->MRABNelements[lev], mesh->MRABNhaloElements[lev]);
-  printf("--------------------------------------------------------\n");
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  free(MRABsendBuffer);
-  //------------------------ done MRAB setup-------------------------
 
   // errorStep
   mesh->errorStep = 10;

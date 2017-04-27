@@ -64,6 +64,10 @@ LOBJS = \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshReader2D.o \
+../../src/meshGeometricWeightedPartition2D.o \
+../../src/meshClusteredGeometricPartition2D.o \
+../../src/meshBuildMRABClusters.o \
+../../src/meshMRABSetup2D.o \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
