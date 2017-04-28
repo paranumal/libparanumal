@@ -23,7 +23,13 @@ int main(int argc, char **argv){
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
 
-
+  // set up
+  void partitionSetup2D(mesh2D *mesh);
+  partitionSetup2D(mesh);
+  
+  // plot mesh file
+  meshPlotVTU2D(mesh, "foo", 0);
+  
   // close down MPI
   MPI_Finalize();
 
