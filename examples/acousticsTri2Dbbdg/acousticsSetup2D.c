@@ -18,7 +18,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 0.01;
+  mesh->finalTime = 0.5;
   dfloat cfl = .4; // depends on the stability region size
 
   // set penalty parameter
@@ -48,7 +48,8 @@ void acousticsSetup2D(mesh2D *mesh){
   }
 
   //use dt on each element to setup MRAB
-  meshMRABSetup2D(mesh,EtoDT);
+  int maxLevels = 10;
+  meshMRABSetup2D(mesh,EtoDT,maxLevels);
 
 
   mesh->Nfields = 4;

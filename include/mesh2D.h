@@ -135,7 +135,7 @@ void acousticsCavitySolution2D(dfloat x, dfloat y, dfloat time,
 void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 			      dfloat *u, dfloat *v, dfloat *p);
 
-void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT); 
+void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,

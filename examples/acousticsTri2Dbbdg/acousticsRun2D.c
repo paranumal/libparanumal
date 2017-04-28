@@ -114,12 +114,9 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
         }
         for (iint n=0;n<mesh->Np;n++){
           for (iint m=0; m<mesh->Np; m++){
-            //mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
-            //mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
-            //mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
-            mesh->q[id+n*mesh->Nfields + 0] = mesh->MRABlevel[e];
-            mesh->q[id+n*mesh->Nfields + 1] = mesh->MRABlevel[e];
-            mesh->q[id+n*mesh->Nfields + 2] = mesh->MRABlevel[e];
+            mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
+            mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
+            mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
           }
         }
       }
