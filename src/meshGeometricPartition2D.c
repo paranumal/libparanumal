@@ -3,7 +3,59 @@
 #include "mpi.h"
 #include "mesh2D.h"
 
-#define bitRange 30
+/// THIS SECTION ------------------------------------------------------------------------------------>
+// taken from: http://and-what-happened.blogspot.com/2011/08/fast-2d-and-3d-hilbert-curves-and.html
+
+unsigned int Morton_2D_Encode_16bit( unsigned int index1, unsigned int index2 )
+{ // pack 2 16-bit indices into a 32-bit Morton code
+  index1 &= 0x0000ffff;
+  index2 &= 0x0000ffff;
+  index1 |= ( index1 << 8 );
+  index2 |= ( index2 << 8 );
+  index1 &= 0x00ff00ff;
+  index2 &= 0x00ff00ff;
+  index1 |= ( index1 << 4 );
+  index2 |= ( index2 << 4 );
+  index1 &= 0x0f0f0f0f;
+  index2 &= 0x0f0f0f0f;
+  index1 |= ( index1 << 2 );
+  index2 |= ( index2 << 2 );
+  index1 &= 0x33333333;
+  index2 &= 0x33333333;
+  index1 |= ( index1 << 1 );
+  index2 |= ( index2 << 1 );
+  index1 &= 0x55555555;
+  index2 &= 0x55555555;
+  return( index1 | ( index2 << 1 ) );
+}
+
+unsigned int MortonToHilbert2D( const unsigned int morton, const unsigned int bits )
+{
+  unsigned int hilbert = 0;
+  unsigned int remap = 0xb4;
+  unsigned int block = ( bits << 1 );
+  while( block )
+    {
+      block -= 2;
+      unsigned int mcode = ( ( morton >> block ) & 3 );
+      unsigned int hcode = ( ( remap >> ( mcode << 1 ) ) & 3 );
+      remap ^= ( 0x82000028 >> ( hcode << 3 ) );
+      hilbert = ( ( hilbert << 2 ) + hcode );
+    }
+  return( hilbert );
+}
+
+
+unsigned int hilbert2D(unsigned int index1, unsigned int index2){
+
+  unsigned int morton = Morton_2D_Encode_16bit(index1,index2);
+
+  return MortonToHilbert2D(morton, 16);
+}
+
+/// THIS SECTION TO HERE <--------------------------------------------------------------------------------
+
+#define bitRange 10
 
 // spread bits of i by introducing zeros between binary bits
 unsigned long long int bitSplitter(unsigned int i){
@@ -96,7 +148,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
     maxcy = mymax(maxcy, cy);
   }
 
-  dfloat delta = 1e-4;
+  dfloat delta = 1e-1;
   mincx -= delta;
   mincy -= delta;
   maxcx += delta;
@@ -110,7 +162,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
   // choose sub-range of Morton lattice coordinates to embed element centers in
-  unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
+  unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));
   
   // compute Morton index for each element
   for(iint e=0;e<mesh->Nelements;++e){
@@ -132,16 +184,18 @@ void meshGeometricPartition2D(mesh2D *mesh){
       elements[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
     }
 
-    unsigned long long int ix = (cx-gmincx)*Nboxes/(gmaxcx-gmincx);
-    unsigned long long int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
+    unsigned int ix = (cx-gmincx)*Nboxes/(gmaxcx-gmincx);
+    unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
 			
-    elements[e].index = mortonIndex2D(ix, iy);
+    //elements[e].index = mortonIndex2D(ix, iy);
+    elements[e].index = hilbert2D(ix, iy);
   }
 
   // pad element array with dummy elements
   for(iint e=mesh->Nelements;e<maxNelements;++e){
     elements[e].element = -1;
-    elements[e].index = mortonIndex2D(Nboxes+1, Nboxes+1);
+    elements[e].index = hilbert2D(Nboxes+1, Nboxes+1);
+    //    elements[e].index = mortonIndex2D(Nboxes+1, Nboxes+1);
   }
 
   // odd-even parallel sort of element capsules based on their Morton index
