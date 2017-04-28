@@ -31,7 +31,8 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 AOBJS    = \
-partitionMain2D.o
+partitionMain2D.o\
+partitionSetup2D.o
 
 # library objects
 LOBJS = \
@@ -60,8 +61,8 @@ LOBJS = \
 ../../../src/mysort.o \
 ../../../src/parallelSort.o
 
-parallelMain2D:$(AOBJS) $(LOBJS)
-	$(LD)  $(LDFLAGS)  -o parallelMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+partitionMain2D:$(AOBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o partitionMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 
 # what to do if user types "make clean"
