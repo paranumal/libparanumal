@@ -30,12 +30,12 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   mesh->respmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
             sizeof(dfloat));
 
-  mesh->pmlNT    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-            sizeof(dfloat));
-  mesh->rhspmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-            sizeof(dfloat));
-  mesh->respmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-            sizeof(dfloat));
+  // mesh->pmlNT    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+  //           sizeof(dfloat));
+  // mesh->rhspmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+  //           sizeof(dfloat));
+  // mesh->respmlNT = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+  //           sizeof(dfloat));
   
   mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
@@ -47,7 +47,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
     Ma = 0.1;     //Set Mach number
-    Re = 1000.;   // Set Reynolds number
+    Re = 100.;   // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -64,9 +64,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     boltzmannPeriodic2D(mesh,xper,yper);
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    // rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1., u = 0; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 20.0;
+    mesh->finalTime = 30.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -107,30 +108,27 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
+      
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
-
-#if 0
-      boltzmannCavitySolution2D(x, y, t,
-              mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
-#endif
-
-#if 0
-      boltzmannGaussianPulse2D(x, y, t,
-                   mesh->q+cnt,
-                   mesh->q+cnt+1,
-                   mesh->q+cnt+2,
-                   mesh->q+cnt+3,
-                   mesh->q+cnt+4,
-                   mesh->q+cnt+5);
-#endif
+#if 1 // PULSE PROBLEM
+      mesh->q[cnt+0] = q1bar; // uniform density, zero flow
+      mesh->q[cnt+1] = 1.0*exp(-(x*x + y*y)/0.05)/ mesh->sqrtRT;
+      mesh->q[cnt+2] = q3bar;
+      mesh->q[cnt+3] = q4bar;
+      mesh->q[cnt+4] = q5bar;
+      mesh->q[cnt+5] = q6bar;
+#else
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
       mesh->q[cnt+1] = ramp*q2bar;
       mesh->q[cnt+2] = ramp*q3bar;
       mesh->q[cnt+3] = ramp*ramp*q4bar;
       mesh->q[cnt+4] = ramp*ramp*q5bar;
       mesh->q[cnt+5] = ramp*ramp*q6bar;
+
+#endif
+      
     
       cnt += mesh->Nfields;
 
@@ -162,8 +160,9 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
   
-
-  dfloat xmin = -4, xmax = 8, ymin = -4, ymax = 4;
+// 
+  // dfloat xmin = -4, xmax = 8, ymin = -4, ymax = 4;
+  dfloat xmin = -2, xmax = 2, ymin = -2, ymax = 2;
   dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
   
@@ -317,7 +316,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 5000;
+  mesh->errorStep = 1.;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 

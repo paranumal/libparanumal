@@ -34,7 +34,8 @@ AOBJS    = \
 boltzmannMain3D.o \
 boltzmannSetup3D.o \
 boltzmannRun3D.o \
-boltzmannRampFunction3D.o
+boltzmannRampFunction3D.o \
+boltzmannLserkStep3D.o 
 
 # library objects
 LOBJS = \
