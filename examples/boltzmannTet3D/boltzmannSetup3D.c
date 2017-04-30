@@ -93,7 +93,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		sigma22 = 0., sigma23 = 0.;
 		sigma33 = 0.; 
 		//
-		mesh->finalTime = 20.;
+		mesh->finalTime = 0.01;
 	}
 
  // DEFINE MEAN FLOW
@@ -318,7 +318,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	// Choose DEVICE
-	// sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+	//printf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
 	sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
 	// sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
 	//sprintf(deviceConfig, "mode = Serial");  
@@ -378,7 +378,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	   mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
 
 	// specialization for Boltzmann
-
+  // Later change according to meshOccaSetup3D
 	kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
 
 	kernelInfo.addDefine("p_pmlAlpha", (float).2);
@@ -391,9 +391,6 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	int NblockS = 128/maxNodes; // works for CUDA
 	kernelInfo.addDefine("p_NblockS", NblockS);
-
-	
-
 	printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
 
 	// physics 
@@ -468,35 +465,35 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		// 		}     
 	 // 		}
 
-		// if(strstr(options, "COLLOCATION")){ 
-		// 	 printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
-		// 	 mesh->volumeKernel =
-		// 	 mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-		// 	        "boltzmannVolume2D",
-		// 	        kernelInfo);
-		     
-		// 		 if(strstr(options,"UNSPLIT")){ // Unsplit PML
+		if(strstr(options, "COLLOCATION")){ 
+			 printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");
+			 mesh->volumeKernel =
+			 mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume3D.okl",
+			        "boltzmannVolume3D",
+			        kernelInfo);
+			   
+			// if(strstr(options,"UNSPLIT")){ // Unsplit PML
 
-		// 				printf("Compiling Unsplit pml volume kernel with nodal collocation for nonlinear term\n");
-		// 				mesh->pmlVolumeKernel =
-		// 				mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-		// 				    "boltzmannUnsplitPmlVolume2D",
-		// 				    kernelInfo); 
-		// 		 }
+			// 	printf("Compiling Unsplit pml volume kernel with nodal collocation for nonlinear term\n");
+			// 	mesh->pmlVolumeKernel =
+			// 	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+			// 	    "boltzmannUnsplitPmlVolume2D",
+			// 	    kernelInfo); 
+			// }
 
-		//    else{ // Split PM       
-		    
-		//    }
+			// else{ // Split PM       
 
-
-		// 	}
+			// }
 
 
-	 // printf("Compiling surface kernel\n");
-	 // mesh->surfaceKernel =
-	 // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-	 //      "boltzmannSurface2D",
-	 //      kernelInfo);
+			}
+
+
+	 printf("Compiling surface kernel\n");
+	 mesh->surfaceKernel =
+	 mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface3D.okl",
+	      "boltzmannSurface3D",
+	      kernelInfo);
 
 
 		//  if(strstr(options,"UNSPLIT")){ // Unsplit PML
@@ -533,10 +530,10 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			
 		// 	}
 
-	 // mesh->haloExtractKernel =
-	 // mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-	 // "meshHaloExtract2D",
-	 // kernelInfo);
+	 mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+				       "meshHaloExtract3D",
+				       kernelInfo);
 
 	}
 

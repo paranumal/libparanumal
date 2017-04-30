@@ -7,6 +7,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
  if(strstr(options, "PML")){
 
     dfloat maxQ1 = 0, minQ1 = 1e9;
+    iint fid = 0; //  
     for(iint e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
         dfloat q1=0;
@@ -14,11 +15,10 @@ void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
-        maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields]));
-        minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields]));
+        maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields + fid]));
+        minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields + fid]));
       }
     }
-
 
     // compute maximum over all processes
     dfloat globalMaxQ1, globalMinQ1;
