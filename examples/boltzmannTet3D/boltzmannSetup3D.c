@@ -5,7 +5,7 @@
 
 void boltzmannSetup3D(mesh3D *mesh, char * options){
 
-  mesh->Nfields    = 12;
+  mesh->Nfields    = 12; // for float4
 	// compute samples of q at interpolation nodes
 	mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 	           sizeof(dfloat));
@@ -352,13 +352,14 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
   }
 
 
+  // if(strstr(options, "PML")){ 
 	// mesh->o_sigmax =
 	//  mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
 	// mesh->o_sigmay =
 	//  mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
 	// mesh->o_sigmaz =
 	// 	mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmaz);
-
+  // }
 
 	mesh->nonPmlNelements = nonPmlNelements;
 	mesh->pmlNelements    = pmlNelements;
@@ -376,16 +377,6 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
 
 	kernelInfo.addDefine("p_pmlAlpha", (float).2);
-
-	// int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-	// kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-	// int NblockV = 128/mesh->Np; // works for CUDA
-	// kernelInfo.addDefine("p_NblockV", NblockV);
-
-	// int NblockS = 128/maxNodes; // works for CUDA
-	// kernelInfo.addDefine("p_NblockS", NblockS);
-	// printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
 
 	// physics 
 	// kernelInfo.addDefine("p_Lambda2", 0.5f);
@@ -440,23 +431,19 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 				  "boltzmannRelaxationCub3D",
 				  kernelInfo); 
 
-		// 		if(strstr(options,"UNSPLIT")){ // Unsplit PML
+				 //  // Unsplit PML
 
-		// 			printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
-		// 			mesh->pmlVolumeKernel =
-		// 			mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-		// 			    "boltzmannUnsplitPmlVolumeCub2D",
-		// 			    kernelInfo);
-		// 			//
-		// 			printf("Compiling LSERK Unsplit pml relaxation kernel with cubature integration\n");
-		// 			mesh->pmlRelaxationKernel =
-		// 			mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-		// 			"boltzmannUnsplitPmlRelaxationCub2D",
-		// 			kernelInfo);  
-		// 		}
-
-		// 		else{ // Split PML
-		// 		}     
+					// printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
+					// mesh->pmlVolumeKernel =
+					// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+					//     "boltzmannUnsplitPmlVolumeCub2D",
+					//     kernelInfo);
+					// //
+					// printf("Compiling LSERK Unsplit pml relaxation kernel with cubature integration\n");
+					// mesh->pmlRelaxationKernel =
+					// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
+					// "boltzmannUnsplitPmlRelaxationCub2D",
+					// kernelInfo);     
     	}
 
 		if(strstr(options, "COLLOCATION")){ 
@@ -466,18 +453,14 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			        "boltzmannVolume3D",
 			        kernelInfo);
 			   
-			// if(strstr(options,"UNSPLIT")){ // Unsplit PML
+			// Unsplit PML
 
 			// 	printf("Compiling Unsplit pml volume kernel with nodal collocation for nonlinear term\n");
 			// 	mesh->pmlVolumeKernel =
 			// 	mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
 			// 	    "boltzmannUnsplitPmlVolume2D",
 			// 	    kernelInfo); 
-			// }
-
-			// else{ // Split PM       
-
-			// }
+			
 
 
 			}
@@ -490,17 +473,14 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	      kernelInfo);
 
 
-		//  if(strstr(options,"UNSPLIT")){ // Unsplit PML
+		 // Unsplit PML
 		   
 		// 		printf("Compiling Unsplit  pml surface kernel\n");
 		// 		mesh->pmlSurfaceKernel =
 		// 		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
 		// 		  "boltzmannUnsplitPmlSurface2D",
 		// 		  kernelInfo);
-		//    }
-
-		//    else{ // Split PM       
-		//    }
+		
 
 
 
@@ -511,18 +491,14 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		  kernelInfo);
 
 
-		// 	if(strstr(options,"UNSPLIT")){ // Unsplit PML
+		 // Unsplit PML
 
 		// 		printf("Compiling Unsplit pml update kernel\n");
 		// 		mesh->pmlUpdateKernel =
 		// 		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
 		// 		"boltzmannLSERKUnsplitPmlUpdate2D",
 		// 		kernelInfo);
-		// 	}
-
-		// 	else{ // Split PM       
-			
-		// 	}
+		
 
 	 mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
