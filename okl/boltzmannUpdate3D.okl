@@ -1,0 +1,47 @@
+
+kernel void boltzmannLSERKUpdate3D(const iint Nelements,
+				    const iint * restrict elementIds,
+				    const dfloat dt,	
+				    const dfloat rka,
+				    const dfloat rkb,
+				    const dfloat4 * restrict rhsq,
+				          dfloat4 * restrict resq,
+				          dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 2*(n + element*p_Np);
+
+      dfloat4 resqa = resq[base+0];
+      dfloat4 resqb = resq[base+1];
+      dfloat4 resqc = resq[base+2];
+
+      dfloat4 rhsqa = rhsq[base+0];
+      dfloat4 rhsqb = rhsq[base+1];
+      dfloat4 rhsqc = rhsq[base+2];
+
+      dfloat4 qa    = q[base+0];
+      dfloat4 qb    = q[base+1];
+      dfloat4 qc    = q[base+2];
+
+      resqa = rka*resqa + dt*rhsqa;
+      resqb = rka*resqb + dt*rhsqb;
+      resqc = rka*resqc + dt*rhsqc;
+
+      qa += rkb*resqa;
+      qb += rkb*resqb;
+      qc += rkb*resqc;
+      
+      resq[base+0] = resqa;
+      resq[base+1] = resqb;
+      resq[base+2] = resqc;
+      
+      q[base+0] = qa;
+      q[base+1] = qb;
+      q[base+2] = qc;
+    }
+  }
+}
+

@@ -34,6 +34,9 @@ AOBJS    = \
 boltzmannMain3D.o \
 boltzmannSetup3D.o \
 boltzmannRun3D.o \
+boltzmannReport3D.o \
+boltzmannError3D.o \
+boltzmannComputeVorticity3D.o \
 boltzmannRampFunction3D.o \
 boltzmannLserkStep3D.o 
 

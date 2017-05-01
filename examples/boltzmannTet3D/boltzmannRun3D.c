@@ -8,10 +8,6 @@ void boltzmannRun3D(mesh3D *mesh, char *options){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   occa::initTimer(mesh->device);
-
-
-   
-
     for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       if(strstr(options, "LSERK")){
@@ -38,15 +34,15 @@ void boltzmannRun3D(mesh3D *mesh, char *options){
       //  boltzmannSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
       // }
 
-     // if(strstr(options, "REPORT")){
-     //  if((tstep%mesh->errorStep)==0){
-     //    boltzmannReport2D(mesh, tstep,options);
-     //  }
-     // }
+     if(strstr(options, "REPORT")){
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport3D(mesh, tstep,options);
+      }
+     }
     }
   
   //For Final Time
-  //boltzmannReport2D(mesh, mesh->NtimeSteps,options);
+  boltzmannReport3D(mesh, mesh->NtimeSteps,options);
 
   occa::printTimer();
 
