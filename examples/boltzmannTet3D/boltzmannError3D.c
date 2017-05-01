@@ -26,7 +26,7 @@ void boltzmannError3D(mesh3D *mesh, dfloat time,char *options){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0)
     printf("%g %g %g (time,min(density),max(density)\n",time, globalMinQ1, globalMaxQ1);
-
+  
   if(isnan(globalMinQ1) || isnan(globalMaxQ1))
     exit(EXIT_FAILURE);  
 }

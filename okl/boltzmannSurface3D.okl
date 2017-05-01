@@ -160,23 +160,25 @@ kernel void boltzmannSurface3D(const iint Nelements,
 	    if(idP<0) idP = idM;
 	  
 	    // load negative and positive trace node values of q
-	    dfloat4 qMa = q[2*idM], qMb = q[2*idM+1], qMc = q[2*idM+2];
+	    dfloat4 qMa = q[3*idM], qMb = q[3*idM+1], qMc = q[3*idM+2];
 	    dfloat q1M = qMa.x, q2M  = qMa.y, q3M = qMa.z, q4M = qMa.w;
 	    dfloat q5M = qMb.x, q6M  = qMb.y, q7M = qMb.z, q8M = qMb.w;
 	    dfloat q9M = qMc.x, q10M = qMc.y;
 
-        dfloat4 qPa = q[2*idP], qPb = q[2*idP+1], qPc = q[2*idP+2];
+        dfloat4 qPa = q[3*idP], qPb = q[3*idP+1], qPc = q[3*idP+2];
         dfloat q1P = qPa.x, q2P  = qPa.y, q3P = qPa.z, q4P = qPa.w;
 	    dfloat q5P = qPb.x, q6P  = qPb.y, q7P = qPb.z, q8P = qPb.w;
 	    dfloat q9P = qPc.x, q10P = qPc.y;
 	    	    
 	    // apply boundary condition
 	    iint bc = EToB[face+p_Nfaces*element];
-	    if(bc>0)
+	    if(bc>0){
 	      boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz,ramp,
 				               q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
 				               &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P);
-	    
+	       // if(bc==1)
+	       // printf("%g %g %g\n",q1P,q2P,q3P);
+	    }
 	    // compute (q^*)
 	    dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;		    
 	    
@@ -187,8 +189,8 @@ kernel void boltzmannSurface3D(const iint Nelements,
 
 	      // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ;
-
-	    dfloat dq1, dq2, dq3, dq4, dq5, dq6, dq7, dq8, dq9, dq10;		    
+	    dfloat dq1, dq2, dq3, dq4, dq5, dq6, dq7, dq8, dq9, dq10;
+	    //		    
 	    dq1  = q1U - q1M;
 	    dq2  = q2U - q2M;
 	    dq3  = q3U - q3M;
@@ -226,12 +228,10 @@ kernel void boltzmannSurface3D(const iint Nelements,
 	iint e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
-	    iint id = p_Np*element + n;
+	    iint id = 3*(p_Np*element + n);
 	    
 	    // load RHS
-	    dfloat4 rhsqna = rhsq[2*id+0];
-	    dfloat4 rhsqnb = rhsq[2*id+1];
-	    dfloat4 rhsqnc = rhsq[2*id+2];
+	    dfloat4 rhsqna = rhsq[id+0], rhsqnb = rhsq[id+1], rhsqnc = rhsq[id+2];
 
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
 	    occaUnroll(p_NfacesNfp)
@@ -251,9 +251,9 @@ kernel void boltzmannSurface3D(const iint Nelements,
 		rhsqnc.y += L*s_fluxq[es][9][m];
 	      }
 	    // store incremented rhs
-	    rhsq[2*id+0] = rhsqna;
-	    rhsq[2*id+1] = rhsqnb;
-	    rhsq[2*id+2] = rhsqnc;
+	    rhsq[id+0] = rhsqna;
+	    rhsq[id+1] = rhsqnb;
+	    rhsq[id+2] = rhsqnc;
 
 
 	  }

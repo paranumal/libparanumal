@@ -5,11 +5,7 @@
 
 void boltzmannSetup3D(mesh3D *mesh, char * options){
 
-	mesh->Nfields    = 12;
-	mesh->pmlNfields = 8; 
-	//
-	printf("mesh->Nfields: %d \t mesh->pmlNfields: %d \n", mesh->Nfields,mesh->pmlNfields);
-  
+  mesh->Nfields    = 12;
 	// compute samples of q at interpolation nodes
 	mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 	           sizeof(dfloat));
@@ -17,7 +13,8 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	           sizeof(dfloat));
 	mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 	           sizeof(dfloat));
-
+   
+   // mesh->pmlNfields = 8;
 	// mesh->pmlqx    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
 	//         sizeof(dfloat));
 	// mesh->rhspmlqx = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
@@ -40,9 +37,9 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	//         sizeof(dfloat));
 
 	//  
-	mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-	mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-	mesh->sigmaz = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+	// mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+	// mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+	// mesh->sigmaz = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
    
   // Initial Conditions, Flow Properties
 	dfloat Ma = 0.f , Re= 0.f, rho = 1.f, nu = 0.f;
@@ -137,33 +134,33 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
     
       cnt += mesh->Nfields;
 
-      if(strstr(options, "PML")){
-      // Pml Region 
-	      iint id = mesh->Np*mesh->Nfields*e + n;
-	      mesh->pmlqx[id+0*mesh->Np] = 0.f*q1bar;
-	      mesh->pmlqx[id+1*mesh->Np] = 0.f*q2bar;
-	      mesh->pmlqx[id+2*mesh->Np] = 0.f*q3bar;
-	      mesh->pmlqx[id+3*mesh->Np] = 0.f*q4bar;
-	      mesh->pmlqx[id+4*mesh->Np] = 0.f*q5bar;
-	      mesh->pmlqx[id+5*mesh->Np] = 0.f*q6bar;
-	      mesh->pmlqx[id+6*mesh->Np] = 0.f*q8bar;
-	      //
-	      mesh->pmlqy[id+0*mesh->Np] = 0.f*q1bar;
-	      mesh->pmlqy[id+1*mesh->Np] = 0.f*q2bar;
-	      mesh->pmlqy[id+2*mesh->Np] = 0.f*q3bar;
-	      mesh->pmlqy[id+3*mesh->Np] = 0.f*q4bar;
-	      mesh->pmlqy[id+4*mesh->Np] = 0.f*q5bar;
-	      mesh->pmlqy[id+5*mesh->Np] = 0.f*q7bar;
-	      mesh->pmlqy[id+6*mesh->Np] = 0.f*q9bar;
-	      //
-	      mesh->pmlqz[id+0*mesh->Np] = 0.f*q1bar;
-	      mesh->pmlqz[id+1*mesh->Np] = 0.f*q2bar;
-	      mesh->pmlqz[id+2*mesh->Np] = 0.f*q3bar;
-	      mesh->pmlqz[id+3*mesh->Np] = 0.f*q4bar;
-	      mesh->pmlqz[id+4*mesh->Np] = 0.f*q6bar;
-	      mesh->pmlqz[id+5*mesh->Np] = 0.f*q7bar;
-	      mesh->pmlqz[id+6*mesh->Np] = 0.f*q10bar;
-      }
+      // if(strstr(options, "PML")){
+      // // Pml Region 
+	     //  iint id = mesh->Np*mesh->Nfields*e + n;
+	     //  mesh->pmlqx[id+0*mesh->Np] = 0.f*q1bar;
+	     //  mesh->pmlqx[id+1*mesh->Np] = 0.f*q2bar;
+	     //  mesh->pmlqx[id+2*mesh->Np] = 0.f*q3bar;
+	     //  mesh->pmlqx[id+3*mesh->Np] = 0.f*q4bar;
+	     //  mesh->pmlqx[id+4*mesh->Np] = 0.f*q5bar;
+	     //  mesh->pmlqx[id+5*mesh->Np] = 0.f*q6bar;
+	     //  mesh->pmlqx[id+6*mesh->Np] = 0.f*q8bar;
+	     //  //
+	     //  mesh->pmlqy[id+0*mesh->Np] = 0.f*q1bar;
+	     //  mesh->pmlqy[id+1*mesh->Np] = 0.f*q2bar;
+	     //  mesh->pmlqy[id+2*mesh->Np] = 0.f*q3bar;
+	     //  mesh->pmlqy[id+3*mesh->Np] = 0.f*q4bar;
+	     //  mesh->pmlqy[id+4*mesh->Np] = 0.f*q5bar;
+	     //  mesh->pmlqy[id+5*mesh->Np] = 0.f*q7bar;
+	     //  mesh->pmlqy[id+6*mesh->Np] = 0.f*q9bar;
+	     //  //
+	     //  mesh->pmlqz[id+0*mesh->Np] = 0.f*q1bar;
+	     //  mesh->pmlqz[id+1*mesh->Np] = 0.f*q2bar;
+	     //  mesh->pmlqz[id+2*mesh->Np] = 0.f*q3bar;
+	     //  mesh->pmlqz[id+3*mesh->Np] = 0.f*q4bar;
+	     //  mesh->pmlqz[id+4*mesh->Np] = 0.f*q6bar;
+	     //  mesh->pmlqz[id+5*mesh->Np] = 0.f*q7bar;
+	     //  mesh->pmlqz[id+6*mesh->Np] = 0.f*q10bar;
+      // }
     
 
     }
@@ -197,35 +194,35 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			dfloat y = mesh->y[n + e*mesh->Np];
 			dfloat z = mesh->z[n + e*mesh->Np];
 
-  			if(strstr(options,"PML")){
+  			// if(strstr(options,"PML")){
 
-			  if(cx>xmax){
-			    mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
-			    isPml = 1;
-			  }
-			  if(cx<xmin){
-			     mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
-			     isPml = 1;
-			  }
-			  if(cy>ymax){
-			    mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
-			    isPml = 1;
-			  }
-			  if(cy<ymin){
-			    mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
-			    isPml = 1;
-			  }
-			   if(cz>zmax){
-			      // mesh->sigmaz[mesh->Np*e + n] = zsigma;
-			    mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmax,2);			   
-			    isPml = 1;
-			  }
-			  if(cz<zmin){
-			     // mesh->sigmaz[mesh->Np*e + n] = zsigma;
-			    mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmin,2);			   
-			    isPml = 1;
-			  }
-      }
+			  // if(cx>xmax){
+			  //   mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmax,2);
+			  //   isPml = 1;
+			  // }
+			  // if(cx<xmin){
+			  //    mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
+			  //    isPml = 1;
+			  // }
+			  // if(cy>ymax){
+			  //   mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
+			  //   isPml = 1;
+			  // }
+			  // if(cy<ymin){
+			  //   mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymin,2);
+			  //   isPml = 1;
+			  // }
+			  //  if(cz>zmax){
+			  //     // mesh->sigmaz[mesh->Np*e + n] = zsigma;
+			  //   mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmax,2);			   
+			  //   isPml = 1;
+			  // }
+			  // if(cz<zmin){
+			  //    // mesh->sigmaz[mesh->Np*e + n] = zsigma;
+			  //   mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmin,2);			   
+			  //   isPml = 1;
+			  // }
+     //  }
     }
     
 	 if(isPml)
@@ -329,38 +326,38 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	if(strstr(options, "LSERK")){
 
-	   if(strstr(options, "PML")){ 
-		    mesh->o_pmlqx =    
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-		    mesh->o_rhspmlqx =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqx);
-		    mesh->o_respmlqx =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqx);
+	   // if(strstr(options, "PML")){ 
+		  //   mesh->o_pmlqx =    
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+		  //   mesh->o_rhspmlqx =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqx);
+		  //   mesh->o_respmlqx =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqx);
 
-		    mesh->o_pmlqy =    
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-		    mesh->o_rhspmlqy =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqy);
-		    mesh->o_respmlqy =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqy);
-		      //
-		      mesh->o_pmlqz =    
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-		    mesh->o_rhspmlqz =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqy);
-		    mesh->o_respmlqz =
-		      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqy);
-	      }  
+		  //   mesh->o_pmlqy =    
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+		  //   mesh->o_rhspmlqy =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqy);
+		  //   mesh->o_respmlqy =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqy);
+		  //     //
+		  //     mesh->o_pmlqz =    
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+		  //   mesh->o_rhspmlqz =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->rhspmlqy);
+		  //   mesh->o_respmlqz =
+		  //     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->pmlNfields*sizeof(dfloat), mesh->respmlqy);
+	   //    }  
 
   }
 
 
-	mesh->o_sigmax =
-	 mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
-	mesh->o_sigmay =
-	 mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
-	mesh->o_sigmaz =
-		mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmaz);
+	// mesh->o_sigmax =
+	//  mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
+	// mesh->o_sigmay =
+	//  mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
+	// mesh->o_sigmaz =
+	// 	mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmaz);
 
 
 	mesh->nonPmlNelements = nonPmlNelements;
@@ -380,18 +377,18 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	kernelInfo.addDefine("p_pmlAlpha", (float).2);
 
-	int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-	kernelInfo.addDefine("p_maxNodes", maxNodes);
+	// int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+	// kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-	int NblockV = 128/mesh->Np; // works for CUDA
-	kernelInfo.addDefine("p_NblockV", NblockV);
+	// int NblockV = 128/mesh->Np; // works for CUDA
+	// kernelInfo.addDefine("p_NblockV", NblockV);
 
-	int NblockS = 128/maxNodes; // works for CUDA
-	kernelInfo.addDefine("p_NblockS", NblockS);
-	printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+	// int NblockS = 128/maxNodes; // works for CUDA
+	// kernelInfo.addDefine("p_NblockS", NblockS);
+	// printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
 
 	// physics 
-	kernelInfo.addDefine("p_Lambda2", 0.5f);
+	// kernelInfo.addDefine("p_Lambda2", 0.5f);
 	kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
 	kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
 	kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
@@ -429,19 +426,19 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	  if(strstr(options, "LSERK")){ 
 
-		//  if(strstr(options, "CUBATURE")){ 
+		 if(strstr(options, "CUBATURE")){ 
 		       
-		// 		printf("Compiling LSERK volume kernel with cubature integration\n");
-		// 		mesh->volumeKernel =
-		// 		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-		// 		     "boltzmannVolumeCub2D",
-		// 		     kernelInfo);
+				printf("Compiling LSERK volume kernel with cubature integration\n");
+				mesh->volumeKernel =
+				mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume3D.okl",
+				     "boltzmannVolumeCub3D",
+				     kernelInfo);
 
-		// 		printf("Compiling LSERK relaxation kernel with cubature integration\n");
-		// 		mesh->relaxationKernel =
-		// 		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-		// 		  "boltzmannRelaxationCub2D",
-		// 		  kernelInfo); 
+				printf("Compiling LSERK relaxation kernel with cubature integration\n");
+				mesh->relaxationKernel =
+				mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation3D.okl",
+				  "boltzmannRelaxationCub3D",
+				  kernelInfo); 
 
 		// 		if(strstr(options,"UNSPLIT")){ // Unsplit PML
 
@@ -460,7 +457,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 		// 		else{ // Split PML
 		// 		}     
-	 // 		}
+    	}
 
 		if(strstr(options, "COLLOCATION")){ 
 			 printf("Compiling pml volume kernel with nodal collocation for nonlinear term\n");

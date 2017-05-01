@@ -12,19 +12,11 @@ kernel void boltzmannLSERKUpdate3D(const iint Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
       const iint element = elementIds[e];
-      const iint base = 2*(n + element*p_Np);
+      const iint base = 3*(n + element*p_Np);
 
-      dfloat4 resqa = resq[base+0];
-      dfloat4 resqb = resq[base+1];
-      dfloat4 resqc = resq[base+2];
-
-      dfloat4 rhsqa = rhsq[base+0];
-      dfloat4 rhsqb = rhsq[base+1];
-      dfloat4 rhsqc = rhsq[base+2];
-
-      dfloat4 qa    = q[base+0];
-      dfloat4 qb    = q[base+1];
-      dfloat4 qc    = q[base+2];
+      dfloat4 resqa = resq[base+0], resqb = resq[base+1], resqc = resq[base+2];
+      dfloat4 rhsqa = rhsq[base+0], rhsqb = rhsq[base+1], rhsqc = rhsq[base+2];
+      dfloat4 qa    = q[base+0],    qb    = q[base+1],    qc    = q[base+2];
 
       resqa = rka*resqa + dt*rhsqa;
       resqb = rka*resqb + dt*rhsqb;
