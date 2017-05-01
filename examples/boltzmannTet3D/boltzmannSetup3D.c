@@ -18,26 +18,26 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 	           sizeof(dfloat));
 
-	mesh->pmlqx    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->rhspmlqx = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->respmlqx = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
+	// mesh->pmlqx    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->rhspmlqx = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->respmlqx = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
 
-	mesh->pmlqy    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->rhspmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->respmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
+	// mesh->pmlqy    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->rhspmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->respmlqy = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
 
-	mesh->pmlqz    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->rhspmlqz = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->respmlqz = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
+	// mesh->pmlqz    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->rhspmlqz = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
+	// mesh->respmlqz = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
+	//         sizeof(dfloat));
 
 	//  
 	mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
@@ -76,7 +76,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	else{
 		printf("Starting initial conditions for NONPML\n");
 		Ma = 0.1;     //Set Mach number
-		Re = 1000.;   // Set Reynolds number
+		Re = 100.;   // Set Reynolds number
 		//
 		Uref = 1.;   // Set Uref
 		Lref = 1.;   // set Lref
@@ -93,7 +93,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		sigma22 = 0., sigma23 = 0.;
 		sigma33 = 0.; 
 		//
-		mesh->finalTime = 0.01;
+		mesh->finalTime = 5.0;
 	}
 
  // DEFINE MEAN FLOW
@@ -205,12 +205,10 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			  }
 			  if(cx<xmin){
 			     mesh->sigmax[mesh->Np*e + n] = xsigma*pow(x-xmin,2);
-			  
-			    isPml = 1;
+			     isPml = 1;
 			  }
 			  if(cy>ymax){
 			    mesh->sigmay[mesh->Np*e + n] = ysigma*pow(y-ymax,2);
-			   
 			    isPml = 1;
 			  }
 			  if(cy<ymin){
@@ -218,12 +216,12 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			    isPml = 1;
 			  }
 			   if(cz>zmax){
-			       // mesh->sigmay[mesh->Np*e + n] = ysigma;
+			      // mesh->sigmaz[mesh->Np*e + n] = zsigma;
 			    mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmax,2);			   
 			    isPml = 1;
 			  }
 			  if(cz<zmin){
-			     // mesh->sigmay[mesh->Np*e + n] = ysigma;
+			     // mesh->sigmaz[mesh->Np*e + n] = zsigma;
 			    mesh->sigmaz[mesh->Np*e + n] = zsigma*pow(z-zmin,2);			   
 			    isPml = 1;
 			  }
@@ -359,12 +357,11 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	mesh->o_sigmax =
 	 mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmax);
-
 	mesh->o_sigmay =
 	 mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmay);
-
 	mesh->o_sigmaz =
 		mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->sigmaz);
+
 
 	mesh->nonPmlNelements = nonPmlNelements;
 	mesh->pmlNelements    = pmlNelements;
@@ -403,15 +400,15 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
 	//
-	kernelInfo.addDefine("p_q1bar", q1bar);
-	kernelInfo.addDefine("p_q2bar", q2bar);
-	kernelInfo.addDefine("p_q3bar", q3bar);
-	kernelInfo.addDefine("p_q4bar", q4bar);
-	kernelInfo.addDefine("p_q5bar", q5bar);
-	kernelInfo.addDefine("p_q6bar", q6bar);
-	kernelInfo.addDefine("p_q7bar", q7bar);
-	kernelInfo.addDefine("p_q8bar", q8bar);
-	kernelInfo.addDefine("p_q9bar", q9bar);
+	kernelInfo.addDefine("p_q1bar",  q1bar);
+	kernelInfo.addDefine("p_q2bar",  q2bar);
+	kernelInfo.addDefine("p_q3bar",  q3bar);
+	kernelInfo.addDefine("p_q4bar",  q4bar);
+	kernelInfo.addDefine("p_q5bar",  q5bar);
+	kernelInfo.addDefine("p_q6bar",  q6bar);
+	kernelInfo.addDefine("p_q7bar",  q7bar);
+	kernelInfo.addDefine("p_q8bar",  q8bar);
+	kernelInfo.addDefine("p_q9bar",  q9bar);
 	kernelInfo.addDefine("p_q10bar", q10bar);
 	//
 	kernelInfo.addDefine("p_alpha0", (float).01f);
@@ -510,11 +507,11 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 
 
-		// printf("Compiling update kernel\n");
-		// mesh->updateKernel =
-		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-		//   "boltzmannLSERKUpdate2D",
-		//   kernelInfo);
+		printf("Compiling update kernel\n");
+		mesh->updateKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate3D.okl",
+		  "boltzmannLSERKUpdate3D",
+		  kernelInfo);
 
 
 		// 	if(strstr(options,"UNSPLIT")){ // Unsplit PML
