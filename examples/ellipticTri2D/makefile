@@ -17,12 +17,12 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  -I../../3rdParty/ALMOND/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
+		 	-I../../utilities/parALMOND/include
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github \
-			-L../../3rdParty/amg2013 -lgs -lamg2013 \
-			-L../../3rdParty/ALMOND -lALMOND
+LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
+			-L../../utilities/parALMOND -lparALMOND
 
 # libraries to be linked in
 LIBS	=  $(links) -llapack -lblas
