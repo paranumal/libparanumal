@@ -313,17 +313,13 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   }
 
   if(strstr(options, "LOCALALMOND")){
-
-    // TW: need to set up local numbering here (replace globalNumbering with localNumbering)
-
-    // TW: to here.
-    
+ 
     precon->almond = almondSetup(mesh->device,
          Nnum, 
-				 globalStarts, // TW: need to replace this
-				 recvNtotal,      // TW: number of nonzeros
-				 recvRows,        // TW: need to use local numbering
-				 recvCols,        // TW: need to use local numbering 
+				 globalStarts,
+				 recvNtotal,      
+				 recvRows,        
+				 recvCols,       
 				 recvVals,
 				 sendSortId, 
 				 globalSortId, 
