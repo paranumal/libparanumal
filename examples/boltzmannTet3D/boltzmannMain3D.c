@@ -12,7 +12,7 @@ int main(int argc, char **argv){
   // out         = REPORT, REPORT-VTU, NO  
   // bc          = UNSPLITPML, SPLITPML, NONE
   
-   char *options =strdup("mode = SOLVER , out = REPORT-VTU, relaxation = COLLOCATION, stab = NO, time = LSERK, bc = NO");
+   char *options =strdup("mode = SOLVER,out = REPORT-VTU,relaxation=CUBATURE,stab=NO,time=LSERK,bc=NO");
   
 
     if(argc!=3){
@@ -21,7 +21,7 @@ int main(int argc, char **argv){
     }
 
     // int specify polynomial degree 
-    int N            = atoi(argv[2]);
+    int N = atoi(argv[2]);
     // set up mesh stuff
     mesh3D *mesh = meshSetupTet3D(argv[1], N);
         
