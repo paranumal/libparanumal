@@ -42,8 +42,7 @@ boltzmannSetup2D.o \
 boltzmannLserkStep2D.o \
 boltzmannMrabStep2D.o \
 boltzmannSaab3Step2D.o \
-boltzmannUnsplitPmlLsimexStep2D.o \
-boltzmannSplitPmlLsimexStep2D.o \
+boltzmannLsimexStep2D.o \
 boltzmannSark3Step2D.o \
 boltzmannLserk3Step2D.o \
 boltzmannRampFunction2D.o \
