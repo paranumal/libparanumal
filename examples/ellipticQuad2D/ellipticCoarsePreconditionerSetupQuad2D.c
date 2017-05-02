@@ -147,50 +147,50 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
-	dfloat Snm = 0;
- 
-	// use GLL nodes for integration
-	// (since Jacobian is high order tensor-product polynomial)
-	for(iint j=0;j<mesh->Nq;++j){
-	  for(iint i=0;i<mesh->Nq;++i){
-	    iint id = i+j*mesh->Nq;
-      
-	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
-	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
-	    dfloat V1ni  = V1[n*mesh->Np+id];
-      
-	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
-	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
-	    dfloat V1mi  = V1[m*mesh->Np+id];
+      	dfloat Snm = 0;
+       
+      	// use GLL nodes for integration
+      	// (since Jacobian is high order tensor-product polynomial)
+      	for(iint j=0;j<mesh->Nq;++j){
+      	  for(iint i=0;i<mesh->Nq;++i){
+      	    iint id = i+j*mesh->Nq;
+            
+      	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
+      	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
+      	    dfloat V1ni  = V1[n*mesh->Np+id];
+            
+      	    dfloat Vr1mi = Vr1[m*mesh->Np+id];
+      	    dfloat Vs1mi = Vs1[m*mesh->Np+id];
+      	    dfloat V1mi  = V1[m*mesh->Np+id];
 
-	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
-	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
-	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
-	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
-	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
+      	    dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
+      	    dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
+      	    dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
+      	    dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
+      	    dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
 
-	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
-	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
-	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
-	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
-      
-	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
-	    Snm += (lambda*V1ni*V1mi)*JW;
-	  }
-	}
-	//  Snm = (n==m) ? 1: 0;
+      	    dfloat Vx1ni = rx*Vr1ni+sx*Vs1ni;
+      	    dfloat Vy1ni = ry*Vr1ni+sy*Vs1ni;
+      	    dfloat Vx1mi = rx*Vr1mi+sx*Vs1mi;
+      	    dfloat Vy1mi = ry*Vr1mi+sy*Vs1mi;
+            
+      	    Snm += (Vx1ni*Vx1mi+Vy1ni*Vy1mi)*JW;
+      	    Snm += (lambda*V1ni*V1mi)*JW;
+      	  }
+      	}
+      	//  Snm = (n==m) ? 1: 0;
 
-	valsA[cnt] = Snm;
-	rowsA[cnt] = e*mesh->Nverts+n;
-	colsA[cnt] = e*mesh->Nverts+m;
+      	valsA[cnt] = Snm;
+      	rowsA[cnt] = e*mesh->Nverts+n;
+      	colsA[cnt] = e*mesh->Nverts+m;
 
-	// pack non-zero
-	sendNonZeros[cnt].val = Snm;
-	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
-	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
-	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
-  
-	++cnt;
+      	// pack non-zero
+      	sendNonZeros[cnt].val = Snm;
+      	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+      	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+      	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+        
+      	++cnt;
       }
     }
   }
@@ -248,8 +248,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
   }
 
   //collect global assembled matrix
-  iint globalnnz[size];
-  iint globalnnzOffset[size+1];
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
   MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;

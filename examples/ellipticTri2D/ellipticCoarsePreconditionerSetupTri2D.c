@@ -143,11 +143,12 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     cVs1[2*mesh->cubNp+n] = 0.5*(+1);
   }
 
-  dfloat Srr1[3][3], Srs1[3][3], Sss1[3][3], MM1[3][3];
+  dfloat Srr1[3][3], Srs1[3][3], Ssr1[3][3], Sss1[3][3], MM1[3][3];
   for(iint n=0;n<mesh->Nverts;++n){
     for(iint m=0;m<mesh->Nverts;++m){
       Srr1[n][m] = 0;
       Srs1[n][m] = 0;
+      Ssr1[n][m] = 0;
       Sss1[n][m] = 0;
       MM1[n][m] = 0;
       
@@ -157,6 +158,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
       	dfloat cw = mesh->cubw[i];
       	Srr1[n][m] += cw*(cVr1[idn]*cVr1[idm]);
       	Srs1[n][m] += cw*(cVr1[idn]*cVs1[idm]);
+        Ssr1[n][m] += cw*(cVs1[idn]*cVr1[idm]);
       	Sss1[n][m] += cw*(cVs1[idn]*cVs1[idm]);
       	MM1[n][m] += cw*(cV1[idn]*cV1[idm]);
       }
@@ -178,6 +180,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
       	
       	Snm  = J*(rx*rx+ry*ry)*Srr1[n][m];
       	Snm += J*(rx*sx+ry*sy)*Srs1[n][m];
+        Snm += J*(sx*rx+sy*ry)*Ssr1[n][m];
       	Snm += J*(sx*sx+sy*sy)*Sss1[n][m];
       	Snm += J*lambda*MM1[n][m];
 
@@ -249,8 +252,8 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   }
   
   //collect global assembled matrix
-  iint globalnnz[size];
-  iint globalnnzOffset[size+1];
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
   MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;

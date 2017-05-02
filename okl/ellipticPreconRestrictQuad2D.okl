@@ -8,11 +8,10 @@ kernel void ellipticFooQuad2D(const iint Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint j=0;j<p_Nq;++j;inner1){
       for(iint i=0;i<p_Nq;++i;inner0){
-	iint idP = (i+1) + (p_NqP*(j+1)) + e*(p_NpP);	
-	iint id  = i   + p_Nq*j + e*p_Np;
-	  Rq[id] = Pq[idP];
-	  //	  Rq[id] = 1;
-	}
+		iint idP = (i+1) + (p_NqP*(j+1)) + e*(p_NpP);	
+		iint id  = i   + p_Nq*j + e*p_Np;
+		  Rq[id] = Pq[idP];
+		  //	  Rq[id] = 1;
       }
     }
   }
