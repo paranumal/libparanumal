@@ -37,3 +37,166 @@ kernel void boltzmannLSERKUpdate3D(const iint Nelements,
   }
 }
 
+
+kernel void boltzmannSARK3StageUpdate3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat rka,
+            const dfloat erka,
+            const dfloat rkb,
+            const dfloat erkb,
+            const dfloat4 * restrict rhsq1,
+            const dfloat4 * restrict rhsq2,
+            const dfloat4 * restrict qold,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 3*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[base+0], rhsq1b = rhsq1[base+1], rhsq1c = rhsq1[base+2];
+      dfloat4 rhsq2a = rhsq2[base+0], rhsq2b = rhsq2[base+1], rhsq2c = rhsq2[base+2];
+      //
+      dfloat4 qoa = qold[base+0], qob = qold[base+1], qoc = qold[base+2];
+      
+      //
+      dfloat4 qa, qb, qc;
+      qa.x   = qoa.x + dt*( rka*rhsq1a.x + rkb*rhsq2a.x ); 
+      qa.y   = qoa.y + dt*( rka*rhsq1a.y + rkb*rhsq2a.y ); 
+      qa.z   = qoa.z + dt*( rka*rhsq1a.z + rkb*rhsq2a.z ); 
+      qa.w   = qoa.w + dt*( rka*rhsq1a.w + rkb*rhsq2a.w ); 
+     
+      qb.x   = expdt*qob.x + dt*( erka* rhsq1b.x + erkb* rhsq2b.x ); 
+      qb.y   = expdt*qob.y + dt*( erka* rhsq1b.y + erkb* rhsq2b.y ); 
+      qb.z   = expdt*qob.z + dt*( erka* rhsq1b.z + erkb* rhsq2b.z ); 
+      qb.w   = expdt*qob.w + dt*( erka* rhsq1b.w + erkb* rhsq2b.w ); 
+
+      qc.x   = expdt*qoc.x + dt*( erka* rhsq1c.x + erkb* rhsq2c.x ); 
+      qc.y   = expdt*qoc.y + dt*( erka* rhsq1c.y + erkb* rhsq2c.y ); 
+      
+
+      q[base+0] = qa;
+      q[base+1] = qb;
+      q[base+2] = qc;
+
+    }
+  }
+}
+
+
+
+kernel void boltzmannSARK3Update3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat rka,
+            const dfloat erka,
+            const dfloat rkb,
+            const dfloat erkb,
+            const dfloat rkc,
+            const dfloat erkc,
+            const dfloat4 * restrict rhsq1,
+            const dfloat4 * restrict rhsq2,
+            const dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict qold,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 3*(n + element*p_Np);
+      dfloat4 rhsq1a = rhsq1[base+0], rhsq1b = rhsq1[base+1], rhsq1c = rhsq1[base+2];
+      dfloat4 rhsq2a = rhsq2[base+0], rhsq2b = rhsq2[base+1], rhsq2c = rhsq2[base+2];
+      dfloat4 rhsq3a = rhsq3[base+0], rhsq3b = rhsq3[base+1], rhsq3c = rhsq3[base+2];
+      dfloat4    qoa = qold[base+0],     qob = qold[base+1],     qoc = qold[base+2];
+      
+      //
+      dfloat4 qa, qb, qc;
+      qa.x   = qoa.x + dt*( rka*rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x ); 
+      qa.y   = qoa.y + dt*( rka*rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y ); 
+      qa.z   = qoa.z + dt*( rka*rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z ); 
+      qa.w   = qoa.w + dt*( rka*rhsq1a.w + rkb*rhsq2a.w + rkc*rhsq3a.w ); 
+     
+      qb.x   = expdt*qob.x + dt*( erka* rhsq1b.x + erkb* rhsq2b.x + erkc*rhsq3b.x ); 
+      qb.y   = expdt*qob.y + dt*( erka* rhsq1b.y + erkb* rhsq2b.y + erkc*rhsq3b.y ); 
+      qb.z   = expdt*qob.z + dt*( erka* rhsq1b.z + erkb* rhsq2b.z + erkc*rhsq3b.z ); 
+      qb.w   = expdt*qob.w + dt*( erka* rhsq1b.w + erkb* rhsq2b.w + erkc*rhsq3b.w ); 
+
+      qc.x   = expdt*qoc.x + dt*( erka* rhsq1c.x + erkb* rhsq2c.x + erkc*rhsq3c.x); 
+      qc.y   = expdt*qoc.y + dt*( erka* rhsq1c.y + erkb* rhsq2c.y + erkc*rhsq3c.y); 
+      
+
+      q[base+0] = qa;
+      q[base+1] = qb;
+      q[base+2] = qc;
+
+      //
+      qold[base+0] = qa;
+      qold[base+1] = qb;
+      qold[base+2] = qc;
+
+
+    }
+  }
+}
+
+
+
+kernel void boltzmannSAAB3Update3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat expdt, 
+            const dfloat ab1,
+            const dfloat ab2,
+            const dfloat ab3,
+            const dfloat saab1,
+            const dfloat saab2,
+            const dfloat saab3,
+                  dfloat4 * restrict rhsq3,
+                  dfloat4 * restrict rhsq2,
+                  dfloat4 * restrict rhsq1,
+                  dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+
+      const iint base = 3*(n + element*p_Np);
+      dfloat4 rhsq1a = rhsq1[base+0], rhsq1b = rhsq1[base+1], rhsq1c = rhsq1[base+2];
+      dfloat4 rhsq2a = rhsq2[base+0], rhsq2b = rhsq2[base+1], rhsq2c = rhsq2[base+2];
+      dfloat4 rhsq3a = rhsq3[base+0], rhsq3b = rhsq3[base+1], rhsq3c = rhsq3[base+2];
+      //
+      dfloat4 qa = q[base+0], qb = q[base+1], qc = q[base+2];
+      //
+      qa.x   += ab1*rhsq1a.x + ab2*rhsq2a.x + ab3*rhsq3a.x; 
+      qa.y   += ab1*rhsq1a.y + ab2*rhsq2a.y + ab3*rhsq3a.y; 
+      qa.z   += ab1*rhsq1a.z + ab2*rhsq2a.z + ab3*rhsq3a.z; 
+      qa.w   += ab1*rhsq1a.w + ab2*rhsq2a.w + ab3*rhsq3a.w; 
+     
+      qb.x   = expdt*qb.x + saab1*rhsq1b.x + saab2*rhsq2b.x + saab3*rhsq3b.x; 
+      qb.y   = expdt*qb.y + saab1*rhsq1b.y + saab2*rhsq2b.y + saab3*rhsq3b.y; 
+      qb.z   = expdt*qb.z + saab1*rhsq1b.z + saab2*rhsq2b.z + saab3*rhsq3b.z; 
+      qb.w   = expdt*qb.w + saab1*rhsq1b.w + saab2*rhsq2b.w + saab3*rhsq3b.w; 
+
+      qc.x   = expdt*qc.x + saab1*rhsq1c.x + saab2*rhsq2c.x + saab3*rhsq3c.x; 
+      qc.y   = expdt*qc.y + saab1*rhsq1c.y + saab2*rhsq2c.y + saab3*rhsq3c.y; 
+      //           
+      rhsq3[base+0] = rhsq2a;
+      rhsq3[base+1] = rhsq2b;
+      rhsq3[base+2] = rhsq2c;
+      //
+      rhsq2[base+0] = rhsq1a;
+      rhsq2[base+1] = rhsq1b;
+      rhsq2[base+2] = rhsq1c;
+      //
+      q[base+0] = qa;
+      q[base+1] = qb;
+      q[base+2] = qc;
+    }
+  }
+}
