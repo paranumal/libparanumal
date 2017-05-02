@@ -10,9 +10,9 @@ int main(int argc, char **argv){
   // relaxation  = CUBATURE, COLLOCATION, 
   // time        = LSERK, LSIMEX, SARK3, SAAB3
   // out         = REPORT, REPORT-VTU, NO  
-  // bc          = UNSPLITPML, SPLITPML, NONE
+  // bc          = PML, NONE
   
-   char *options =strdup("mode = SOLVER,out = REPORT-VTU,relaxation=CUBATURE,stab=NO,time=LSERK,bc=NO");
+   char *options =strdup("mode = SOLVER,out = REPORT-VTU,relaxation=COLLOCATION,stab=NO,time=SAAB3,bc=NO");
   
 
     if(argc!=3){

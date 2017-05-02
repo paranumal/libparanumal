@@ -25,14 +25,13 @@ void boltzmannRun3D(mesh3D *mesh, char *options){
       //   }
       // }
       
-      // if(strstr(options, "SARK3")){
-      //  boltzmannSark3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-      // }
+      if(strstr(options, "SARK3")){
+       boltzmannSark3Step3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
 
-      // if(strstr(options, "SAAB3")){
-
-      //  boltzmannSaab3Step2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-      // }
+      if(strstr(options, "SAAB3")){
+       boltzmannSaab3Step3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
 
      if(strstr(options, "REPORT")){
       if((tstep%mesh->errorStep)==0){

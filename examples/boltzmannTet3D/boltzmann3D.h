@@ -19,3 +19,9 @@ void boltzmannRampFunction3D(dfloat t, dfloat *ramp, dfloat *drampdt);
 
 void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
+void boltzmannSark3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
+void boltzmannSaab3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
