@@ -270,8 +270,8 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
   }
 
   //collect global assembled matrix
-  iint globalnnz[size];
-  iint globalnnzOffset[size+1];
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
   MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
