@@ -549,6 +549,38 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
     }         
   }
   
+  else if(strstr(options, "LSIMEX")){ 
+    mesh->o_qY =    
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    // pml variables
+    mesh->o_qZ =    
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    // 
+    mesh->o_qS =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
+
+    if(strstr(options, "PML")){ 
+  //     // pml variables
+  //     mesh->o_pmlqx =    
+  // mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+  //     mesh->o_qSx =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  //     mesh->o_qYx =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  //     mesh->o_qZx =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqx);
+
+  //     mesh->o_pmlqy =    
+  // mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+  //     mesh->o_qSy =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqx);
+  //     mesh->o_qYy =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhspmlqy);
+  //     mesh->o_qZy =
+  // mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->respmlqy);
+    }
+  } 
 
 
   if(strstr(options, "PML")){ 
@@ -851,6 +883,113 @@ else if(strstr(options, "SARK3")){
 		"meshHaloExtract3D",
 		kernelInfo);    
 
+
+  }
+
+  else if(strstr(options, "LSIMEX")){ 
+ 
+		// RESIDUAL UPDATE KERNELS
+		printf("Compiling LSIMEX non-pml residual update kernel\n");
+		mesh->residualUpdateKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate3D.okl",
+		"boltzmannLSIMEXResidualUpdate3D",
+		kernelInfo);
+
+		printf("Compiling LSIMEX non-pml implicit update kernel\n");
+		mesh->implicitUpdateKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate3D.okl",
+		"boltzmannLSIMEXImplicitUpdate3D",
+		kernelInfo);
+
+
+		// printf("Compiling LSIMEX Unsplit pml residual update kernel\n");
+		// mesh->pmlResidualUpdateKernel =
+		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+		//     "boltzmannLSIMEXUnsplitPmlResidualUpdate2D",
+		//     kernelInfo);
+		// //
+		// printf("Compiling LSIMEX Unsplit pml implicit update kernel\n");
+		// mesh->pmlImplicitUpdateKernel =
+		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+		//     "boltzmannLSIMEXUnsplitPmlImplicitUpdate2D",
+		//     kernelInfo);
+
+     
+		if(strstr(options, "CUBATURE")){ 
+			printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
+
+			mesh->implicitSolveKernel = 
+			mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve3D.okl",
+			   "boltzmannLSIMEXImplicitSolveCub3D",
+			   kernelInfo); 
+
+
+			// printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
+			// mesh->pmlImplicitSolveKernel = 
+			// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+			//    "boltzmannLSIMEXImplicitSolveCub2D",
+			//    kernelInfo); 
+
+		}
+    else if(strstr(options, "COLLOCATION")){ 
+      //
+			printf("Compiling LSIMEX non-pml Implicit Iteration kernel\n");
+			mesh->implicitSolveKernel = 
+			mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve3D.okl",
+			"boltzmannLSIMEXImplicitSolve3D",
+			kernelInfo); 
+			// //
+			// printf("Compiling LSIMEX Unsplit pml Implicit Iteration  kernel\n");
+			// mesh->pmlImplicitSolveKernel = 
+			// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
+			// "boltzmannLSIMEXImplicitSolve2D",
+			// kernelInfo);      
+
+    }
+
+		printf("Compiling LSIMEX volume kernel integration\n");
+		mesh->volumeKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume3D.okl",
+		"boltzmannVolumeCub3D",
+		kernelInfo);
+
+		// printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
+		// mesh->pmlVolumeKernel =
+		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+		//   "boltzmannUnsplitPmlVolumeCub2D",
+		//   kernelInfo);
+
+		printf("Compiling surface kernel\n");
+		mesh->surfaceKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface3D.okl",
+		"boltzmannSurface3D",
+		kernelInfo);
+		//
+
+		// printf("Compiling Unsplit  pml surface kernel\n");
+		// mesh->pmlSurfaceKernel =
+		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
+		// "boltzmannUnsplitPmlSurface2D",
+		// kernelInfo);
+
+
+		printf("Compiling LSIMEX non-pml update kernel\n");
+		mesh->updateKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate3D.okl",
+		"boltzmannLSIMEXUpdate3D",
+		kernelInfo);
+		//
+
+		// printf("Compiling LSIMEX Unsplit pml update kernel\n");
+		// mesh->pmlUpdateKernel =
+		// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+		// "boltzmannLSIMEXUnsplitPmlUpdate2D",
+		// kernelInfo);
+
+		mesh->haloExtractKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+		"meshHaloExtract3D",
+		kernelInfo); 
 
   }
 

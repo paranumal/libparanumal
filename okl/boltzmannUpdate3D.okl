@@ -200,3 +200,96 @@ kernel void boltzmannSAAB3Update3D(const iint Nelements,
     }
   }
 }
+
+
+
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannLSIMEXResidualUpdate3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat aki,
+            const dfloat ake, 
+            const dfloat4 * restrict q,
+            const dfloat4 * restrict qZ,
+                  dfloat4 * restrict qY){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = 3*(n + element*p_Np);
+      
+      dfloat4 qima = qZ[base+0], qimb = qZ[base+1], qimc = qZ[base+2];
+      dfloat4 qexa = qY[base+0], qexb = qY[base+1], qexc = qY[base+2];
+      dfloat4 qa   = q[base+0],  qb   = q[base+1],  qc   = q[base+2];
+      //
+      qY[base+0] = qa + ake*dt*qexa + aki*dt*qima;
+      qY[base+1] = qb + ake*dt*qexb + aki*dt*qimb;
+      qY[base+2] = qc + ake*dt*qexc + aki*dt*qimc;
+      
+
+    }
+  }
+}
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannLSIMEXImplicitUpdate3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat akk,
+            const dfloat4 * restrict qZ,
+            const dfloat4 * restrict qY,
+                  dfloat4 * restrict q,
+                  dfloat4 * restrict qS){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      //
+      const iint element = elementIds[e];
+      const iint base = 3*(n + element*p_Np);
+
+      dfloat4 qima = qZ[base+0], qimb = qZ[base+1], qimc = qZ[base+2];
+      dfloat4 qexa = qY[base+0], qexb = qY[base+1], qexc = qY[base+2];
+      dfloat4 qa   = q[base+0],  qb   = q[base+1],  qc   = q[base+2];
+      //
+      qS[base+0] = qa; 
+      qS[base+1] = qb; 
+      qS[base+2] = qc; 
+      //
+      q[base+0] = qexa + akk*dt*qima;
+      q[base+1] = qexb + akk*dt*qimb; 
+      q[base+2] = qexc + akk*dt*qimc;       
+
+    }
+  }
+}
+
+
+// Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
+kernel void boltzmannLSIMEXUpdate3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat dt, 
+            const dfloat akk,
+            const dfloat4 * restrict qZ,
+            const dfloat4 * restrict qY,
+            const dfloat4 * restrict qS,
+                  dfloat4 * restrict q){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint element = elementIds[e];
+      const iint base = 3*(n + element*p_Np);
+
+      dfloat4 qima = qZ[base+0], qimb = qZ[base+1], qimc = qZ[base+2];
+      dfloat4 qexa = qY[base+0], qexb = qY[base+1], qexc = qY[base+2];
+      dfloat4 qa   = qS[base+0],  qb  = qS[base+1], qc   = qS[base+2];
+      //
+      q[base+0] = qa + akk*dt*(qima + qexa);
+      q[base+1] = qb + akk*dt*(qimb + qexb); 
+      q[base+2] = qc + akk*dt*(qimc + qexc);   
+    }
+  }
+}
