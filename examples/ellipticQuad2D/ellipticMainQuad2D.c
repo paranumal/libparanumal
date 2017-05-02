@@ -228,7 +228,7 @@ void ellipticPreconditioner2D(mesh2D *mesh,
     //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
 
     // compute local precon on DEVICE
-     mesh->device.finish();
+    mesh->device.finish();
     occa::tic("OASpreconKernel");
     if(strstr(options, "CONTINUOUS")) {
 

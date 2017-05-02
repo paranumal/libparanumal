@@ -51,7 +51,7 @@ int parallelCompareFaces(const void *a,
 // mesh is the local partition
 void meshParallelConnect(mesh_t *mesh){
 
-  int rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -70,18 +70,18 @@ void meshParallelConnect(mesh_t *mesh){
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1){
-	// find rank of destination for sorting based on max(face vertices)%size
-	iint maxv = 0;
-	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
-	  iint id = mesh->EToV[e*mesh->Nverts + nid];
-	  maxv = mymax(maxv, id);
-	}
-	iint destRank = maxv%size;
-	
-	// increment send size for 
-	++Nsend[destRank];
-	++allNsend;
+        // find rank of destination for sorting based on max(face vertices)%size
+        iint maxv = 0;
+        for(iint n=0;n<mesh->NfaceVertices;++n){
+          iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+          iint id = mesh->EToV[e*mesh->Nverts + nid];
+          maxv = mymax(maxv, id);
+        }
+        iint destRank = maxv%size;
+
+        // increment send size for 
+        ++Nsend[destRank];
+        ++allNsend;
       }
     }
   }
@@ -102,36 +102,36 @@ void meshParallelConnect(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1){
 
-	// find rank of destination for sorting based on max(face vertices)%size
-	iint maxv = 0;
-	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
-	  iint id = mesh->EToV[e*mesh->Nverts + nid];
-	  maxv = mymax(maxv, id);
-	}
-	iint destRank = maxv%size;
-	
-	// populate face to send out staged in segment of sendFaces array
-	iint id = sendOffsets[destRank]+Nsend[destRank];
+      	// find rank of destination for sorting based on max(face vertices)%size
+      	iint maxv = 0;
+      	for(iint n=0;n<mesh->NfaceVertices;++n){
+      	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+      	  iint id = mesh->EToV[e*mesh->Nverts + nid];
+      	  maxv = mymax(maxv, id);
+      	}
+      	iint destRank = maxv%size;
+      	
+      	// populate face to send out staged in segment of sendFaces array
+      	iint id = sendOffsets[destRank]+Nsend[destRank];
 
-	
-	sendFaces[id].element = e;
-	sendFaces[id].face = f;
-	for(iint n=0;n<mesh->NfaceVertices;++n){
-	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
-	  sendFaces[id].v[n] = mesh->EToV[e*mesh->Nverts + nid];
-	}
+      	
+      	sendFaces[id].element = e;
+      	sendFaces[id].face = f;
+      	for(iint n=0;n<mesh->NfaceVertices;++n){
+      	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+      	  sendFaces[id].v[n] = mesh->EToV[e*mesh->Nverts + nid];
+      	}
 
-	mysort(sendFaces[id].v,mesh->NfaceVertices, "descending");
+      	mysort(sendFaces[id].v,mesh->NfaceVertices, "descending");
 
-	sendFaces[id].NfaceVertices = mesh->NfaceVertices;
-	sendFaces[id].rank = rank;
+      	sendFaces[id].NfaceVertices = mesh->NfaceVertices;
+      	sendFaces[id].rank = rank;
 
-	sendFaces[id].elementN = -1;
-	sendFaces[id].faceN = -1;
-	sendFaces[id].rankN = -1;
-	
-	++Nsend[destRank];
+      	sendFaces[id].elementN = -1;
+      	sendFaces[id].faceN = -1;
+      	sendFaces[id].rankN = -1;
+      	
+      	++Nsend[destRank];
       }
     }
   }

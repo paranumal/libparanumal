@@ -36,13 +36,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
   iint Nnum = mesh->Nverts*mesh->Nelements;
-  
+
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
-#if 0
-  // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
-#else
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   
@@ -62,8 +58,6 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
                                          sendSortId, &globalSortId, &compressId,
                                          sendCounts, sendOffsets, recvCounts, recvOffsets);
-  
-#endif
   
   // build gs
   void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
@@ -149,22 +143,24 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     cVs1[2*mesh->cubNp+n] = 0.5*(+1);
   }
 
-  dfloat Srr1[3][3], Srs1[3][3], Sss1[3][3], MM1[3][3];
+  dfloat Srr1[3][3], Srs1[3][3], Ssr1[3][3], Sss1[3][3], MM1[3][3];
   for(iint n=0;n<mesh->Nverts;++n){
     for(iint m=0;m<mesh->Nverts;++m){
       Srr1[n][m] = 0;
       Srs1[n][m] = 0;
+      Ssr1[n][m] = 0;
       Sss1[n][m] = 0;
       MM1[n][m] = 0;
       
       for(iint i=0;i<mesh->cubNp;++i){
-	iint idn = n*mesh->cubNp+i;
-	iint idm = m*mesh->cubNp+i;
-	dfloat cw = mesh->cubw[i];
-	Srr1[n][m] += cw*(cVr1[idn]*cVr1[idm]);
-	Srs1[n][m] += cw*(cVr1[idn]*cVs1[idm]);
-	Sss1[n][m] += cw*(cVs1[idn]*cVs1[idm]);
-	MM1[n][m] += cw*(cV1[idn]*cV1[idm]);
+      	iint idn = n*mesh->cubNp+i;
+      	iint idm = m*mesh->cubNp+i;
+      	dfloat cw = mesh->cubw[i];
+      	Srr1[n][m] += cw*(cVr1[idn]*cVr1[idm]);
+      	Srs1[n][m] += cw*(cVr1[idn]*cVs1[idm]);
+        Ssr1[n][m] += cw*(cVs1[idn]*cVr1[idm]);
+      	Sss1[n][m] += cw*(cVs1[idn]*cVs1[idm]);
+      	MM1[n][m] += cw*(cV1[idn]*cV1[idm]);
       }
     }
   }	
@@ -174,30 +170,31 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       for(iint m=0;m<mesh->Nverts;++m){
-	dfloat Snm = 0;
+      	dfloat Snm = 0;
 
-	dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
-	dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
-	dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
-	dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
-	dfloat J  = mesh->vgeo[e*mesh->Nvgeo +  JID];
-	
-	Snm  = J*(rx*rx+ry*ry)*Srr1[n][m];
-	Snm += J*(rx*sx+ry*sy)*Srs1[n][m];
-	Snm += J*(sx*sx+sy*sy)*Sss1[n][m];
-	Snm += J*lambda*MM1[n][m];
+      	dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
+      	dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
+      	dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
+      	dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
+      	dfloat J  = mesh->vgeo[e*mesh->Nvgeo +  JID];
+      	
+      	Snm  = J*(rx*rx+ry*ry)*Srr1[n][m];
+      	Snm += J*(rx*sx+ry*sy)*Srs1[n][m];
+        Snm += J*(sx*rx+sy*ry)*Ssr1[n][m];
+      	Snm += J*(sx*sx+sy*sy)*Sss1[n][m];
+      	Snm += J*lambda*MM1[n][m];
 
-	valsA[cnt] = Snm;
-	rowsA[cnt] = e*mesh->Nverts+n;
-	colsA[cnt] = e*mesh->Nverts+m;
+      	valsA[cnt] = Snm;
+      	rowsA[cnt] = e*mesh->Nverts+n;
+      	colsA[cnt] = e*mesh->Nverts+m;
 
-	// pack non-zero
-	sendNonZeros[cnt].val = Snm;
-	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
-	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
-	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
-	
-	++cnt;
+      	// pack non-zero
+      	sendNonZeros[cnt].val = Snm;
+      	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+      	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+      	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+      	
+      	++cnt;
       }
     }
   }
@@ -254,6 +251,40 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     recvVals[n] = recvNonZeros[n].val;
   }
   
+  //collect global assembled matrix
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
+  MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
+                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
+  globalnnzOffset[0] = 0;
+  for (iint n=0;n<size;n++)
+    globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
+
+  iint globalnnzTotal = globalnnzOffset[size];
+
+  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
+  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
+    globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
+  }
+  nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
+
+  MPI_Allgatherv(recvNonZeros, recvNtotal*sizeof(nonZero_t), MPI_CHAR, 
+                globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+  
+
+  iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
+
+  for (iint n=0;n<globalnnzTotal;n++) {
+    globalRows[n] = globalNonZero[n].row;
+    globalCols[n] = globalNonZero[n].col;
+    globalVals[n] = globalNonZero[n].val;
+  }
+
   
   printf("Done building coarse matrix system\n");
   if(strstr(options, "XXT")){
@@ -268,28 +299,94 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 			   dfloatString); // 0 if no null space
   }
 
-  if(strstr(options, "ALMOND")){
-    printf("Starting Almond setup\n");
+  if(strstr(options, "LOCALALMOND")){
+ 
     precon->almond = almondSetup(mesh->device,
-				 Nnum,
-				 globalStarts[1],
-				 globalNumbering,
-				 recvNtotal, // number of nonzeros
-				 recvRows,
-				 recvCols, 
-				 recvVals,
-				 globalSortId,
-				 compressId,
-				 0,
-				 iintString,
-				 dfloatString); // 0 if no null space
+         Nnum, 
+         globalStarts,
+         recvNtotal,      
+         recvRows,        
+         recvCols,       
+         recvVals,
+         sendSortId, 
+         globalSortId, 
+         compressId,
+         sendCounts, 
+         sendOffsets, 
+         recvCounts, 
+         recvOffsets,    
+         0); // 0 if no null space
     
-    printf("Done Almond setup\n");
   }
-  
+
+  if(strstr(options, "GLOBALALMOND")){
+    
+    precon->parAlmond = almondGlobalSetup(mesh->device, 
+         Nnum, 
+         globalStarts, 
+         globalnnzTotal,      
+         globalRows,        
+         globalCols,        
+         globalVals,
+         sendSortId, 
+         globalSortId, 
+         compressId,
+         sendCounts, 
+         sendOffsets, 
+         recvCounts, 
+         recvOffsets,    
+         0);             // 0 if no null space
+  }
+
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   
+  free(AsendCounts);
+  free(ArecvCounts);
+  free(AsendOffsets);
+  free(ArecvOffsets);
+
+  if(strstr(options, "UBERGRID")){
+    iint coarseTotal;
+
+    iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
+    iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
+
+    iint nnz2;
+    iint *globalNumbering2;
+    iint *rowsA2;
+    iint *colsA2;
+    dfloat *valsA2;  
+
+    /* populate b here */
+    if (strstr(options,"GLOBALALMOND")) {
+
+      almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
+                              &nnz2,&rowsA2,&colsA2, &valsA2);
+
+      precon->coarseNp = coarseNp[rank];
+      precon->coarseTotal = coarseOffsets[size];
+      coarseTotal = coarseOffsets[size];
+      precon->coarseOffsets = coarseOffsets;
+
+      // need to create numbering for really coarse grid on each process for xxt
+      precon->xxt2 = xxtSetup(coarseTotal,
+          globalNumbering2,
+          nnz2,
+          rowsA2,
+          colsA2,
+          valsA2,
+          0,
+          iintString,
+          dfloatString);
+
+      almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
+                      precon->coarseTotal,
+                      precon->coarseOffsets[rank]);
+
+      printf("Done UberCoarse setup\n");
+    }
+  }
 }

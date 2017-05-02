@@ -41,6 +41,14 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;
+
+  iint coarseNp;
+  iint coarseTotal;
+  iint *coarseOffsets;
+  dfloat *B, *tmp2;
+  occa::memory *o_B, o_tmp2;
+  void *xxt2;
+  void *parAlmond;
   
 } precon_t;
 
