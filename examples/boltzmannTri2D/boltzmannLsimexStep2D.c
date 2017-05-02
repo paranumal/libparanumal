@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannUnsplitPmlLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannLsimexStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				   dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
