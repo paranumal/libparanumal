@@ -58,11 +58,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     nu = Uref*Lref/Re; 
     mesh->tauInv = mesh->RT/nu;
     
-    // Create Periodic Boundaries
-    printf("Creating periodic connections if exist \n");
-    dfloat xper = 1.0;   dfloat yper = 0.0;
-    boltzmannPeriodic2D(mesh,xper,yper);
-
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
@@ -82,10 +77,12 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     nu = Uref*Lref/Re; 
     mesh->tauInv = mesh->RT/nu;
     
+    #if 0
     // Create Periodic Boundaries
     printf("Creating periodic connections if exist \n");
     dfloat xper = 1.0;   dfloat yper = 0.0;
     boltzmannPeriodic2D(mesh,xper,yper);
+    #endif
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
