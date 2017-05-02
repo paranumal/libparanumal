@@ -208,8 +208,5 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
   
-  // coarse grid preconditioner (only continous elements)
-  ellipticCoarsePreconditionerSetupTri2D(mesh, precon, lambda, options);
-
   return precon;
 }

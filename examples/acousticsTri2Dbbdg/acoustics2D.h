@@ -12,7 +12,6 @@
 
 #define USE_BERN 1
 #define WADG 1
-#define MRAB_MAX_LEVELS 10
 #define TIME_DISC MRAB
 
 void acousticsSetup2D(mesh2D *mesh);

@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 // complete a time step using Semi-Analytic Adams-Bahforth 
-void boltzmannSplitPmlSaab3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannSaab3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 

@@ -12,8 +12,6 @@ void meshPartitionStatistics(mesh_t *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
-  /* make sure mesh is connected */
-  meshParallelConnect(mesh);
   
   /* now gather statistics on connectivity between processes */
   iint *comms = (iint*) calloc(size, sizeof(iint));

@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannSplitPmlSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannSark3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer,char * options){
 
 
