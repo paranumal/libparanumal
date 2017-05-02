@@ -383,8 +383,8 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   const iint nnz = C->nnz;
 
   iint *FineToCoarse = (iint *) calloc(m, sizeof(iint));
+  for (iint i =0;i<m;i++) FineToCoarse[i] = -1;
 
-  //FineToCoarse.resize(m, -1);
   dfloat *Tr     = (dfloat *) calloc(m, sizeof(dfloat)); 
   dfloat *rands  = (dfloat *) calloc(m, sizeof(dfloat)); 
   dfloat *Tr_hat = (dfloat *) calloc(m, sizeof(dfloat));
@@ -397,6 +397,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   for(iint i=0; i<m; i++){
     rands[i] = (dfloat) drand48();
     Ti[i] = Ti_hat[i] = i;
+    states[i] = 0;
   }
 
   // count the number of
@@ -406,6 +407,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   for(iint i=0; i<m; i++) {
     Tr[i] = rands[i];
     Tr_hat[i] = rands[i];
+    Ts_hat[i] = 0;
   }
 
   bool done = false;
@@ -415,6 +417,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
     for(iint i=0; i<m; i++){
 
       iint smax = states[i];
+
       dfloat rmax = rands[i];
       iint imax = i;
 
@@ -469,7 +472,6 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       // if there is an MIS node within distance 2, I am removed
       if(states[i] == 0 && smax == 1)
         states[i] = -1;
-
     }
 
     // if number of undecided nodes = 0, algorithm terminates  
@@ -539,6 +541,15 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       FineToCoarse[i] = FineToCoarse[imax];
   }
 
+  free(Tr    ); 
+  free(rands ); 
+  free(Tr_hat);
+  free(Ts    );
+  free(Ts_hat);
+  free(Ti    );
+  free(Ti_hat);
+  free(states);
+
   return FineToCoarse;
 }
 
@@ -585,14 +596,18 @@ void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
 
 
 struct key_value_pair1{
-  iint key;
-  iint value;
+  long key;
+  long value;
 };
 
-struct compare_key1{
-  bool operator()(key_value_pair1 a, key_value_pair1 b){
-    return a.key < b.key;
-  }
+int compare_key1(const void *a, const void *b){
+  struct key_value_pair1 *pa = (struct key_value_pair1 *) a;
+  struct key_value_pair1 *pb = (struct key_value_pair1 *) b;
+
+  if (pa->key < pb->key) return -1;
+  if (pa->key > pb->key) return +1;
+
+  return 0;
 };
 
 csr *galerkinProd(agmgLevel *level){
@@ -617,7 +632,7 @@ csr *galerkinProd(agmgLevel *level){
   for (iint i=0; i<level->A->nnz;i++) //copy A coefs
     dummyCoefs[i] = level->A->coefs[i];
 
-  iint base = numAgg+1;
+  long base = numAgg+1;
   struct key_value_pair1 *pair = (struct key_value_pair1 *) calloc(level->A->nnz,sizeof(struct key_value_pair1));
 
   for(iint i=0; i<level->A->Nrows; i++){
@@ -632,14 +647,14 @@ csr *galerkinProd(agmgLevel *level){
       pair[jj].value = jj;
 
       if (I == J)
-        pair[jj].key = I * base;
+        pair[jj].key = ((long)I) * base;
       else
-        pair[jj].key = I * base + J+1;
+        pair[jj].key = ((long)I) * base + ((long) (J+1));
 
     }
   }
 
-  std::stable_sort(pair, pair+level->A->nnz, compare_key1() );
+  qsort(pair, level->A->nnz, sizeof(struct key_value_pair1), compare_key1);
 
   iint nnz = 1;
   for(iint i=1; i<level->A->nnz; i++)
