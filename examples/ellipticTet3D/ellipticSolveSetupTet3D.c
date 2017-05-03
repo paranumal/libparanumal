@@ -47,8 +47,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax); 
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  //int NblockV = 256/mesh->Np; // get close to 256 threads
+  //kernelInfo.addDefine("p_NblockV", NblockV);
   
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
@@ -119,6 +119,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+    printf("Np = %d, Nelements = %d\n", mesh->Np, mesh->Nelements);
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					       mesh->Np*mesh->Nelements,
 					       sizeof(dfloat),

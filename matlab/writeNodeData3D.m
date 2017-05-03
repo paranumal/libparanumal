@@ -149,7 +149,7 @@ if N < 7
     
     fprintf(fid, '%% cubature node coordinates\n');
     for n=1:Ncub
-        fprintf(fid, '%17.15E %17.15E %17.15E\n', cubr(n), cubs(n), cubt(n));
+        fprintf(fid, '%17.15E %17.15E %17.15E %17.15E\n', cubr(n), cubs(n), cubt(n), cubw(n));
     end
     
     fprintf(fid,'%% cubature interpolation matrix\n');

@@ -30,6 +30,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 			 mesh->o_vgeo,
 			 mesh->o_DrT,
 			 mesh->o_DsT,
+       mesh->o_DtT,
 			 o_q,
 			 solver->o_grad);
 
@@ -48,6 +49,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 		     mesh->o_sgeo,
 		     mesh->o_DrT,
 		     mesh->o_DsT,
+         mesh->o_DtT,
 		     mesh->o_LIFTT,
 		     mesh->o_MM,
 		     solver->o_grad,

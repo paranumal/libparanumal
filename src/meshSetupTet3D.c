@@ -26,14 +26,17 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   // compute geometric factors
   meshGeometricFactorsTet3D(mesh);
 
+  // set up halo exchange info for MPI (do before connect face nodes)
+  meshHaloSetup(mesh);
+  
+  // connect face nodes (find trace indices)
+  meshConnectFaceNodes3D(mesh);
+
   // compute surface geofacs
   meshSurfaceGeometricFactorsTet3D(mesh);
 
-  // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetup(mesh);
-
-  // connect face nodes (find trace indices)
-  meshConnectFaceNodes3D(mesh);
+  // global nodes
+  meshParallelConnectNodes(mesh);
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

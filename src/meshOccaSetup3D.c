@@ -178,6 +178,9 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
                           mesh->sgeo);
   }else if (mesh->Nverts==4){     // for tets
+    mesh->o_MM =
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+        mesh->MM);
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
@@ -308,6 +311,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_SZID", SZID);
   kernelInfo.addDefine("p_TZID", TZID);
 
+  kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
-
 }
