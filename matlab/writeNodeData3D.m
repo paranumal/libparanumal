@@ -1,6 +1,8 @@
 
-function writeNodeData3D(N)
+function writeNodeData3D(inN)
 
+Globals3D;
+N = inN;
 [r,s,t] = Nodes3D(N);
 [r,s,t] = xyztorst(r,s,t);
 
@@ -55,6 +57,15 @@ for n=1:Np
     fprintf(fid, '%17.15E ', Dt(n,m));
   end
   fprintf(fid, '\n');
+end
+
+MM = inv(transpose(V))/V;
+fprintf(fid, '%% reference mass matrix\n');
+for n=1:Np
+    for m=1:Np
+        fprintf(fid, '%17.15E ', MM(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 fprintf(fid, '%% faceNodes\n');
@@ -186,5 +197,75 @@ end
 
 end
 %%
+
+%% elliptic patch problem
+K = 5;
+
+VX = [-1, 1,      0,          0,           0,         5/3,        -5/3,         0];
+VY = [ 0, 0,sqrt(3),  1/sqrt(3),-7*sqrt(3)/9, 8*sqrt(3)/9, 8*sqrt(3)/9, 1/sqrt(3)];
+VZ = [ 0, 0,      0,2*sqrt(6)/3, 4*sqrt(6)/9, 4*sqrt(6)/9, 4*sqrt(6)/9,-2*sqrt(6)/3];
+
+EToV = [1,2,3,4;
+        1,2,4,5;
+        2,3,4,6;
+        3,1,4,7;
+        1,3,2,8];
+
+BCType = [0,0,0,0;
+          0,0,0,0;
+          0,0,0,0;
+          0,0,0,0;
+          0,0,0,0];
+
+StartUp3D;
+  
+% build weak Poisson operator matrices
+[A, M] = PoissonIPDG3D();
+
+%% hack since we know W&B face 1 nodes are first
+vmapP = reshape(vmapP, Nfp*Nfaces, K);
+idsP = vmapP(:,1);
+subind = [(1:Np)';idsP];
+
+subA = full(A(subind,subind));
+subM = full(M(subind,subind));
+
+spy(abs(subA)>1e-10);
+condSubA = cond(subA);
+
+[B,d] = eig(subA, subM);
+
+%% A = S + lambda*M 
+%%   = M*(M\S + lambda*I) 
+%%   ~ J*Mhat*(Mhat\Shat/hscale2 + lambda*I) 
+%%   ~ J*Mhat*Bhat*(d/scale + lambda*I)/Bhat
+%% inv(A) ~ Bhat*inv(J*(d/scale+lambda*I))*inv(Mhat*Bhat)
+
+forwardMatrix = inv(subM*B);
+diagOp = diag(d);
+backwardMatrix = B;
+
+NpP = size(subA,1);
+fprintf(fid, '%% stencil size for IPDG OAS NpP\n');
+fprintf(fid, '%d\n', NpP);
+fprintf(fid, '%% forward matrix [ change of basis for IPDG OAS precon ]\n');
+for n=1:NpP
+  for m=1:NpP
+  fprintf(fid, '%17.15E ', forwardMatrix(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% diagOp \n');
+for n=1:NpP
+    fprintf(fid, '%17.15E ', diagOp(n));
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% backward matrix [ reverse change of basis for IPDG OAS precon ]\n');
+for n=1:NpP
+  for m=1:NpP
+    fprintf(fid, '%17.15E ', backwardMatrix(n,m));
+  end
+  fprintf(fid, '\n');
+end
 
 fclose(fid);

@@ -1,0 +1,87 @@
+#if 0
+// q  \in  Np x Nelements
+// Pq \in  NpPx Nelements
+
+//                        |         | 
+// form invP, P wrt   o x x x x x x x x o
+//                        |         |
+
+// 1D transforms (assume J=const)
+//  S = (lambda*W + hScaling*trans(D)*W*D) // stiffness matrix (also needs assembly)
+//
+//  S~ = W\S = W\trans(D)*W*D
+//  S~ = V*Mu*inv(V) [ [V,Mu] = eig(S~) ]
+//
+//  S = W*V*(lambda*I+hScaling*Mu)*inv(V)
+//
+// inv(S) = V*(lambda*I + hScaling*Mu)^{-1}*inv(W*V)
+//
+// invP := inv(W*V)
+// P = V
+//
+// inv(S) = P*(lambda*I + hscaling*Mu)^{-1}*invP
+
+// 1. multiply by invP in each direcction
+// 2. divide nodewise by  (lambda + Mu_i/h_r^2 + Mu_j/h_s^2 + Mu_k/h_t^2)*h_r*h_s*h_t/8 for suitable h_r,h_s,h_t
+//    use h_r = 1/min r_x ? give or take a factor of 2
+// 3. multiply by P in each direction
+#endif
+
+
+kernel void ellipticOasPreconTri2D_v0(const iint Nelements,
+          const iint   * restrict vmapPP,
+          const dfloat * restrict forwardT,
+          const dfloat * restrict diagInvOp,
+          const dfloat * restrict backT,
+          const dfloat * restrict q,
+          dfloat * restrict Pq){
+  
+  for(iint e=0; e<Nelements; ++e; outer0){
+
+    shared dfloat s_q1[p_NpP];
+    shared dfloat s_q2[p_NpP];
+    
+    for(iint n=0;n<p_NpP;++n;inner0){
+      // load element
+      if(n<p_Np)
+        s_q1[n] = q[n+e*p_Np];
+
+      // load overlap
+      if(n>=p_Np){
+        const iint id = vmapPP[n-p_Np+e*p_Nfaces*p_Nfp];
+        s_q1[n] = q[id];
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // forward transform and scaling
+    for(iint n=0;n<p_NpP;++n;inner0){
+      dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
+      
+      dfloat res = 0;
+
+      occaUnroll(p_NpP)
+        for(iint i=0;i<p_NpP;++i){
+          res += forwardT[n+i*p_NpP]*s_q1[i];
+        }
+
+      s_q2[n] = res*r_diagInvOp;
+    }
+
+    barrier(localMemFence);
+
+    // backward transform
+    for(iint n=0;n<p_NpP;++n;inner0){
+      dfloat res = 0;
+
+      occaUnroll(p_Np)
+        for(iint i=0;i<p_NpP;++i){
+          res += backT[n+i*p_NpP]*s_q2[i];
+        }
+        
+      Pq[n+e*p_NpP] = res;
+    }
+  } 
+}
+
