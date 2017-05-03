@@ -1,6 +1,8 @@
 
 function writeNodeData2D(inN)
-% Globals2D;
+
+Globals2D;
+
 N = inN;
 [r,s] = Nodes2D(N);
 [r,s] = xytors(r,s);
@@ -151,7 +153,7 @@ cV'*diag(cubw)*cV;
 cubDrT = V*transpose(cVr)*diag(cubw);
 cubDsT = V*transpose(cVs)*diag(cubw);
 cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
-if 1
+if 0
   Ncut = 0;   scut = 2; 
  filter = Filter2D(V,N,Ncut,scut);    
  cubFilterProject  = filter*cubProject;  
@@ -186,7 +188,7 @@ end
 cubProject
 testIdentity = cubProject*cInterp;
 
-if 1
+if 0
 fprintf(fid, '%% cubature filter projection matrix\n');
 for n=1:Np
     for m=1:Ncub
