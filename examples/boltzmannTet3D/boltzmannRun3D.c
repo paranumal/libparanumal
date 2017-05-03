@@ -14,16 +14,9 @@ void boltzmannRun3D(mesh3D *mesh, char *options){
       boltzmannLserkStep3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
-      // if(strstr(options, "LSIMEX")){
-
-      //   if(strstr(options, "UNSPLITPML")){
-      //     boltzmannUnsplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-      //     }
-      //   else{
-      //     boltzmannSplitPmlLsimexStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
-
-      //   }
-      // }
+      if(strstr(options, "LSIMEX")){
+      boltzmannLsimexStep3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
+      }
       
       if(strstr(options, "SARK3")){
        boltzmannSark3Step3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer,options);
