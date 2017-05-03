@@ -176,16 +176,24 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
     dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
     
-    dfloat Jhrinv2 = J*(rx*rx+ry*ry);
-    dfloat Jhsinv2 = J*(sx*sx+sy*sy);
-    dfloat Jhinv2 = Jhrinv2 + Jhsinv2; mymin(Jhrinv2,Jhsinv2);
-    //    dfloat Jhinv2 = mymax(Jhrinv2,Jhsinv2);
+    //metric tensor on this element
+    dfloat grr = rx*rx+ry*ry;
+    dfloat grs = rx*sx+ry*sy;
+    dfloat gss = sx*sx+sy*sy;
+
+    //eigenvalues of the metric
+    dfloat eigG1 = 0.5*(grr + gss) - 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
+    dfloat eigG2 = 0.5*(grr + gss) + 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
     
+    //TODO Average? Min/Max/Avg Eigenvalue? What works best for the scaling?
+    dfloat Jhinv2 = J*(eigG1+eigG2);
+    //dfloat Jhinv2 = J*mymax(eigG1,eigG2);
+    //dfloat Jhinv2 = J*mymin(eigG1,eigG2);
+
     for(iint n=0;n<NpP;++n){
       iint pid = n + e*NpP;
 	
       diagInvOpDg[pid] = 1./(J*lambda + Jhinv2*mesh->oasDiagOpDg[n]);
-      
     }
   }
   
