@@ -550,6 +550,34 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
   }
   
   else if(strstr(options, "LSIMEX")){ 
+
+	  mesh->Nimex = 4;
+	  mesh->LsimexB[0] = 0.0;
+	  mesh->LsimexB[1] = 673488652607.0 /2334033219546.0 ;
+	  mesh->LsimexB[2] = 493801219040.0/853653026979.0;
+	  mesh->LsimexB[3] = 184814777513.0/1389668723319.0;  
+	  //
+	  mesh->LsimexC[0] = 0.0;
+	  mesh->LsimexC[1] = 3375509829940.0/4525919076317.00;
+	  mesh->LsimexC[2] = 272778623835.0/1039454778728.0;
+	  mesh->LsimexC[3] = 1.0;
+	  //
+	  mesh->LsimexAd[0] =0.0;
+	  mesh->LsimexAd[1] =3375509829940.0/4525919076317.0;
+	  mesh->LsimexAd[2] =566138307881.0/912153721139.0;
+	  mesh->LsimexAd[3] =184814777513.0/1389668723319.0;
+
+	  mesh->LsimexABi[0] = 0.0;
+	  mesh->LsimexABi[1] = 0.0;
+	  mesh->LsimexABi[2] = -11712383888607531889907.0/32694570495602105556248.0 - 673488652607.0 /2334033219546.0;
+	  mesh->LsimexABi[3] = 0.0;
+	  //
+	  mesh->LsimexABe[0] = 0.0;
+	  mesh->LsimexABe[1] = 3375509829940.0/4525919076317.0;
+	  mesh->LsimexABe[2] = 272778623835.0/1039454778728.0 - 673488652607.0 /2334033219546.0;
+	  mesh->LsimexABe[3] = 1660544566939.0/2334033219546.0-493801219040.0/853653026979.0 ;
+
+
     mesh->o_qY =    
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
     // pml variables

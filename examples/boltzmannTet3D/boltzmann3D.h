@@ -25,3 +25,6 @@ void boltzmannSark3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
 
 void boltzmannSaab3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
+void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
