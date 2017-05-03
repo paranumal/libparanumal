@@ -1,4 +1,4 @@
-function tets = delaunayFixVol(r,s,t)
+function tets = delaunayFixVolume(r,s,t)
 
 tets = delaunay(r,s,t);
 

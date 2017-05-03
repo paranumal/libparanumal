@@ -1,0 +1,185 @@
+#include "ellipticTet3D.h"
+
+solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
+
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  iint NtotalP = mesh->NpP*mesh->Nelements;
+  iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
+  iint NallP  = NtotalP;
+  
+  solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
+
+  solver->mesh = mesh;
+
+  solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  solver->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  solver->zP  = (dfloat*) calloc(NallP,  sizeof(dfloat));
+  solver->Ax  = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  solver->Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
+
+  solver->grad = (dfloat*) calloc(Nall*4, sizeof(dfloat));
+
+  solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
+  solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
+  solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
+  solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
+
+  solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
+  
+  // use this for OAS precon pairwise halo exchange
+  solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+  solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+
+  solver->type = strdup(dfloatString);
+
+  solver->Nblock = Nblock;
+
+  // add custom defines
+  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+
+  int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
+  kernelInfo.addDefine("p_Nmax", Nmax); 
+
+  int NblockV = 256/mesh->Np; // get close to 256 threads
+  kernelInfo.addDefine("p_NblockV", NblockV);
+  
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+				       "meshHaloExtract3D",
+				       kernelInfo);
+
+  mesh->gatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+				       "gather",
+				       kernelInfo);
+
+  mesh->scatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+				       "scatter",
+				       kernelInfo);
+
+  mesh->getKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+				       "get",
+				       kernelInfo);
+
+  mesh->putKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+				       "put",
+				       kernelInfo);
+
+  mesh->weightedInnerProduct1Kernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
+				       "weightedInnerProduct1",
+				       kernelInfo);
+
+  mesh->weightedInnerProduct2Kernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
+				       "weightedInnerProduct2",
+				       kernelInfo);
+
+  mesh->innerProductKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
+				       "innerProduct",
+				       kernelInfo);
+  
+  mesh->scaledAddKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+					 "scaledAdd",
+					 kernelInfo);
+
+  mesh->dotMultiplyKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
+					 "dotMultiply",
+					 kernelInfo);
+
+  mesh->dotDivideKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
+					 "dotDivide",
+					 kernelInfo);
+
+
+  mesh->gradientKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl", 
+				       "ellipticGradientTet3D",
+					 kernelInfo);
+
+
+  mesh->ipdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl", 
+				       "ellipticAxIpdgTet3D",
+				       kernelInfo);  
+
+  
+  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+  solver->ogs = meshParallelGatherScatterSetup(mesh,
+					       mesh->Np*mesh->Nelements,
+					       sizeof(dfloat),
+					       mesh->gatherLocalIds,
+					       mesh->gatherBaseIds, 
+					       mesh->gatherHaloFlags);
+  
+  
+  solver->precon = ellipticPreconditionerSetupTet3D(mesh, solver->ogs, lambda, options);
+  
+  solver->precon->preconKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl", 
+				       "ellipticOasPreconTet3D",
+				       kernelInfo);
+  
+  solver->precon->restrictKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl", 
+				       "ellipticFooTet3D",
+				       kernelInfo);
+
+  solver->precon->coarsenKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+				       "ellipticPreconCoarsen",
+				       kernelInfo);
+
+  solver->precon->prolongateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+				       "ellipticPreconProlongate",
+				       kernelInfo);
+
+  // probably should relocate this
+  // build weights for continuous SEM L2 project --->                                                        
+  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat J = mesh->vgeo[e*mesh->Nvgeo + JID];
+      localMM[n+e*mesh->Np] = J;
+    }
+  }
+
+  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+
+  // sum up all contributions at base nodes and scatter back                                                 
+  ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
+
+  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
+
+  free(localMM); o_MM.free(); o_localMM.free();
+  // <------                                            
+
+  mesh->device.finish();
+  occa::tic("CoarsePreconditionerSetup");
+  // coarse grid preconditioner (only continous elements)
+  // do this here since we need A*x
+  ellipticCoarsePreconditionerSetupTet3D(mesh, solver->precon, lambda, options);
+
+  mesh->device.finish();
+  occa::toc("CoarsePreconditionerSetup");
+
+  return solver;
+}
