@@ -13,7 +13,7 @@
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
   const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];				\
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\	
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
   									\
   const dfloat4 gradqM = gradq[idM];					\
   const dfloat4 gradqP = gradq[idP];					\

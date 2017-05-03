@@ -28,7 +28,7 @@
 #endif
 
 
-kernel void ellipticOasPreconTri2D_v0(const iint Nelements,
+kernel void ellipticOasPreconTet3D(const iint Nelements,
           const iint   * restrict vmapPP,
           const dfloat * restrict forwardT,
           const dfloat * restrict diagInvOp,

@@ -30,15 +30,15 @@ kernel void ellipticGradientTet3D(const int Nelements,
           const iint es = e-eo;
           const int gid = e*p_Nvgeo;
 
-          const dfloat drdx = vgeo[e*Nvgeo + p_RXID];
-          const dfloat drdy = vgeo[e*Nvgeo + p_RYID];
-          const dfloat drdz = vgeo[e*Nvgeo + p_RZID];
-          const dfloat dsdx = vgeo[e*Nvgeo + p_SXID];
-          const dfloat dsdy = vgeo[e*Nvgeo + p_SYID];
-          const dfloat dsdz = vgeo[e*Nvgeo + p_SZID];
-          const dfloat dtdx = vgeo[e*Nvgeo + p_TXID];
-          const dfloat dtdy = vgeo[e*Nvgeo + p_TYID];
-          const dfloat dtdz = vgeo[e*Nvgeo + p_TZID];    
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat drdz = vgeo[gid + p_RZID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+          const dfloat dsdz = vgeo[gid + p_SZID];
+          const dfloat dtdx = vgeo[gid + p_TXID];
+          const dfloat dtdy = vgeo[gid + p_TYID];
+          const dfloat dtdz = vgeo[gid + p_TZID];    
 
           // compute 1D derivatives
           dfloat qr = 0, qs = 0, qt =0;

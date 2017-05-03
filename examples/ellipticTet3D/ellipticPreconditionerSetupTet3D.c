@@ -181,6 +181,7 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     dfloat sz = mesh->vgeo[e*mesh->Nvgeo + SZID];
     dfloat tz = mesh->vgeo[e*mesh->Nvgeo + TZID];
 
+    //TODO cahnge this tothe eigenvalues of the element metric tensor
     dfloat Jhrinv2 = J*(rx*rx+ry*ry+rz*rz);
     dfloat Jhsinv2 = J*(sx*sx+sy*sy+sz*sz);
     dfloat Jhtinv2 = J*(tx*tx+ty*ty+tz*tz);
@@ -212,9 +213,6 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
-  
-  // coarse grid preconditioner (only continous elements)
-  ellipticCoarsePreconditionerSetupTet3D(mesh, precon, lambda, options);
 
   return precon;
 }
