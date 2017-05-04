@@ -39,31 +39,31 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::tic("volumeKernel");
     
-    // // compute volume contribution to DG boltzmann RHS
-    // if(mesh->pmlNelements){	
-    // 	mesh->device.finish();
-    //    occa::tic("PML_volumeKernel");
+    // compute volume contribution to DG boltzmann RHS
+    if(mesh->pmlNelements){	
+    	mesh->device.finish();
+       occa::tic("PML_volumeKernel");
 
-    //   mesh->pmlVolumeKernel(mesh->pmlNelements,
-			 //    mesh->o_pmlElementIds,
-			 //    ramp, 
-			 //    drampdt,
-			 //    mesh->o_vgeo,
-			 //    mesh->o_sigmax,
-			 //    mesh->o_sigmay,
-			 //    mesh->o_DrT,
-			 //    mesh->o_DsT,
-			 //    mesh->o_q,
-			 //    mesh->o_pmlqx,
-			 //    mesh->o_pmlqy,
-			 //    mesh->o_rhsq,
-			 //    mesh->o_rhspmlqx,
-			 //    mesh->o_rhspmlqy);
-    //   //
-    //    mesh->device.finish();
-    //   occa::toc("PML_volumeKernel");	
+      mesh->pmlVolumeKernel(mesh->pmlNelements,
+			    mesh->o_pmlElementIds,
+			    ramp, 
+			    drampdt,
+			    mesh->o_vgeo,
+			    mesh->o_sigmax,
+			    mesh->o_sigmay,
+			    mesh->o_sigmaz,
+			    mesh->o_DrT,
+			    mesh->o_DsT,
+			    mesh->o_DtT,
+			    mesh->o_q,
+                mesh->o_pmlq,
+			    mesh->o_rhsq,
+			    mesh->o_rhspmlq);
+      //
+       mesh->device.finish();
+      occa::toc("PML_volumeKernel");	
 
-    // }
+    }
 
     // compute volume contribution to DG boltzmann RHS added d/dt (ramp(qbar)) to RHS
     if(mesh->nonPmlNelements){
@@ -150,31 +150,31 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::tic("surfaceKernel");
 
-    //  if(mesh->pmlNelements){
+     if(mesh->pmlNelements){
      
-    //   mesh->device.finish();
-    // occa::tic("PML_surfaceKernel"); 
+    mesh->device.finish();
+    occa::tic("PML_surfaceKernel"); 
 
-    // // compute surface contribution to DG boltzmann RHS
-    // mesh->pmlSurfaceKernel(mesh->pmlNelements,
-			 //   mesh->o_pmlElementIds,
-			 //   mesh->o_sgeo,
-			 //   mesh->o_LIFTT,
-			 //   mesh->o_vmapM,
-			 //   mesh->o_vmapP,
-			 //   mesh->o_EToB,
-			 //   t,
-			 //   mesh->o_x,
-			 //   mesh->o_y,
-			 //   ramp,
-			 //   mesh->o_q,
-			 //   mesh->o_rhsq,
-			 //   mesh->o_rhspmlqx,
-			 //   mesh->o_rhspmlqy);
+    // compute surface contribution to DG boltzmann RHS
+    mesh->pmlSurfaceKernel(mesh->pmlNelements,
+			   mesh->o_pmlElementIds,
+			   mesh->o_sgeo,
+			   mesh->o_LIFTT,
+			   mesh->o_vmapM,
+			   mesh->o_vmapP,
+			   mesh->o_EToB,
+			   t,
+			   mesh->o_x,
+			   mesh->o_y,
+			   mesh->o_z,
+			   ramp,
+			   mesh->o_q,
+			   mesh->o_rhsq,
+			   mesh->o_rhspmlq);
 
-    // mesh->device.finish();
-    // occa::toc("PML_surfaceKernel"); 
-    // }
+    mesh->device.finish();
+    occa::toc("PML_surfaceKernel"); 
+    }
     
     if(mesh->nonPmlNelements){
     	  mesh->device.finish();
@@ -213,28 +213,25 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::tic("updateKernel");
     
-   //  //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
-   //  if (mesh->pmlNelements){   
-   //  	 mesh->device.finish();
-   //    occa::tic("PML_updateKernel"); 
-   //    mesh->pmlUpdateKernel(mesh->pmlNelements,
-			//     mesh->o_pmlElementIds,
-			//     mesh->dt,
-			//     mesh->rka[rk],
-			//     mesh->rkb[rk],
-			//     rampUpdate,
-			//     mesh->o_rhsq,
-			//     mesh->o_rhspmlqx,
-			//     mesh->o_rhspmlqy,
-			//     mesh->o_resq,
-			//     mesh->o_respmlqx,
-			//     mesh->o_respmlqy,
-			//     mesh->o_pmlqx,
-			//     mesh->o_pmlqy,
-			//     mesh->o_q);
-   //     mesh->device.finish();
-   //    occa::toc("PML_updateKernel"); 
-   // }
+    //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
+    if (mesh->pmlNelements){   
+    	 // mesh->device.finish();
+      // occa::tic("PML_updateKernel"); 
+      // mesh->pmlUpdateKernel(mesh->pmlNelements,
+			   //  mesh->o_pmlElementIds,
+			   //  mesh->dt,
+			   //  mesh->rka[rk],
+			   //  mesh->rkb[rk],
+			   //  rampUpdate,
+			   //  mesh->o_rhsq,
+			   //  mesh->o_rhspmlq,
+			   //  mesh->o_resq,
+			   //  mesh->o_respmlq,
+			   //  mesh->o_pmlq,
+			   //  mesh->o_q);
+      //  mesh->device.finish();
+      // occa::toc("PML_updateKernel"); 
+   }
     
     if(mesh->nonPmlNelements){
     	 mesh->device.finish();
