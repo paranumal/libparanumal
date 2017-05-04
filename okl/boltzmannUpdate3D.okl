@@ -1,4 +1,27 @@
-
+//
+#define QXID1 0  
+#define QXID2 1  
+#define QXID3 2
+#define QXID4 3  
+#define QXID5 4  
+#define QXID6 5  
+#define QXID8 6 
+//
+#define QYID1 7  
+#define QYID2 8  
+#define QYID3 9
+#define QYID4 10  
+#define QYID5 11  
+#define QYID7 12  
+#define QYID9 13 
+//
+#define QZID1 14  
+#define QZID2 15  
+#define QZID3 16
+#define QZID4 17  
+#define QZID6 18  
+#define QZID7 19  
+#define QZID10  20   
 kernel void boltzmannLSERKUpdate3D(const iint Nelements,
 				    const iint * restrict elementIds,
 				    const dfloat dt,	
@@ -290,6 +313,180 @@ kernel void boltzmannLSIMEXUpdate3D(const iint Nelements,
       q[base+0] = qa + akk*dt*(qima + qexa);
       q[base+1] = qb + akk*dt*(qimb + qexb); 
       q[base+2] = qc + akk*dt*(qimc + qexc);   
+    }
+  }
+}
+
+
+
+
+
+kernel void boltzmannLSERKPmlUpdate3D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat rka,
+              const dfloat rkb,
+              const dfloat ramp, 
+              const dfloat4 * restrict rhsq, 
+              const dfloat * restrict rhspmlq,
+                    dfloat4 * restrict resq,
+                    dfloat * restrict respmlq,
+                    dfloat * restrict pmlq,
+                    dfloat4 * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint element = elementIds[e];
+
+      const iint base = element*p_Np*p_pmlNfields+n;
+      
+        // No-Need to Qx7 Qx9 Qx10
+      dfloat resqx1 =  respmlq[base+QXID1*p_Np];
+      dfloat resqx2 =  respmlq[base+QXID2*p_Np];
+      dfloat resqx3 =  respmlq[base+QXID3*p_Np];
+      dfloat resqx4 =  respmlq[base+QXID4*p_Np];
+      dfloat resqx5 =  respmlq[base+QXID5*p_Np];
+      dfloat resqx6 =  respmlq[base+QXID6*p_Np];
+      dfloat resqx8 =  respmlq[base+QXID8*p_Np];  
+      // No-Need to Qy6 Qy8 Qy10
+      dfloat resqy1 =  respmlq[base+QYID1*p_Np];
+      dfloat resqy2 =  respmlq[base+QYID2*p_Np];
+      dfloat resqy3 =  respmlq[base+QYID3*p_Np];
+      dfloat resqy4 =  respmlq[base+QYID4*p_Np];
+      dfloat resqy5 =  respmlq[base+QYID5*p_Np];
+      dfloat resqy7 =  respmlq[base+QYID7*p_Np];
+      dfloat resqy9 =  respmlq[base+QYID9*p_Np];
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat resqz1 = respmlq[base+QZID1 *p_Np];
+      dfloat resqz2 = respmlq[base+QZID2 *p_Np];
+      dfloat resqz3 = respmlq[base+QZID3 *p_Np];
+      dfloat resqz4 = respmlq[base+QZID4 *p_Np];
+      dfloat resqz6 = respmlq[base+QZID6 *p_Np];
+      dfloat resqz7 = respmlq[base+QZID7 *p_Np];
+      dfloat resqz10= respmlq[base+QZID10*p_Np];
+
+        // No-Need to Qx7 Qx9 Qx10
+      dfloat rhsqx1 = rhspmlq[base+QXID1*p_Np];
+      dfloat rhsqx2 = rhspmlq[base+QXID2*p_Np];
+      dfloat rhsqx3 = rhspmlq[base+QXID3*p_Np];
+      dfloat rhsqx4 = rhspmlq[base+QXID4*p_Np];
+      dfloat rhsqx5 = rhspmlq[base+QXID5*p_Np];
+      dfloat rhsqx6 = rhspmlq[base+QXID6*p_Np];
+      dfloat rhsqx8 = rhspmlq[base+QXID8*p_Np];  
+      // No-Need to Qy6 Qy8 Qy10
+      dfloat rhsqy1 = rhspmlq[base+QYID1*p_Np];
+      dfloat rhsqy2 = rhspmlq[base+QYID2*p_Np];
+      dfloat rhsqy3 = rhspmlq[base+QYID3*p_Np];
+      dfloat rhsqy4 = rhspmlq[base+QYID4*p_Np];
+      dfloat rhsqy5 = rhspmlq[base+QYID5*p_Np];
+      dfloat rhsqy7 = rhspmlq[base+QYID7*p_Np];
+      dfloat rhsqy9 = rhspmlq[base+QYID9*p_Np];
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz1  = rhspmlq[base+QZID1 *p_Np];
+      dfloat rhsqz2  = rhspmlq[base+QZID2 *p_Np];
+      dfloat rhsqz3  = rhspmlq[base+QZID3 *p_Np];
+      dfloat rhsqz4  = rhspmlq[base+QZID4 *p_Np];
+      dfloat rhsqz6  = rhspmlq[base+QZID6 *p_Np];
+      dfloat rhsqz7  = rhspmlq[base+QZID7 *p_Np];
+      dfloat rhsqz10 = rhspmlq[base+QZID10*p_Np];
+      
+      resqx1 = rka*resqx1 + dt*rhsqx1;
+      resqx2 = rka*resqx2 + dt*rhsqx2;
+      resqx3 = rka*resqx3 + dt*rhsqx3;
+      resqx4 = rka*resqx4 + dt*rhsqx4;
+      resqx5 = rka*resqx5 + dt*rhsqx5;
+      resqx6 = rka*resqx6 + dt*rhsqx6;
+      resqx8 = rka*resqx8 + dt*rhsqx8;
+
+      resqy1 = rka*resqy1 + dt*rhsqy1;
+      resqy2 = rka*resqy2 + dt*rhsqy2;
+      resqy3 = rka*resqy3 + dt*rhsqy3;
+      resqy4 = rka*resqy4 + dt*rhsqy4;
+      resqy5 = rka*resqy5 + dt*rhsqy5;
+      resqy7 = rka*resqy7 + dt*rhsqy7;
+      resqy9 = rka*resqy9 + dt*rhsqy9;
+
+      resqz1  = rka*resqz1  + dt*rhsqz1 ;
+      resqz2  = rka*resqz2  + dt*rhsqz2 ;
+      resqz3  = rka*resqz3  + dt*rhsqz3 ;
+      resqz4  = rka*resqz4  + dt*rhsqz4 ;
+      resqz6  = rka*resqz6  + dt*rhsqz6 ;
+      resqz7  = rka*resqz7  + dt*rhsqz7 ;
+      resqz10 = rka*resqz10 + dt*rhsqz10;
+
+      pmlq[base+QXID1*p_Np] += rkb*resqx1;
+      pmlq[base+QXID2*p_Np] += rkb*resqx2;
+      pmlq[base+QXID3*p_Np] += rkb*resqx3;
+      pmlq[base+QXID4*p_Np] += rkb*resqx4;
+      pmlq[base+QXID5*p_Np] += rkb*resqx5;
+      pmlq[base+QXID6*p_Np] += rkb*resqx6;
+      pmlq[base+QXID8*p_Np] += rkb*resqx8;  
+      // No-Need to Qy6 Qy8 Qy10
+      pmlq[base+QYID1*p_Np] += rkb*resqy1;
+      pmlq[base+QYID2*p_Np] += rkb*resqy2;
+      pmlq[base+QYID3*p_Np] += rkb*resqy3;
+      pmlq[base+QYID4*p_Np] += rkb*resqy4;
+      pmlq[base+QYID5*p_Np] += rkb*resqy5;
+      pmlq[base+QYID7*p_Np] += rkb*resqy7;
+      pmlq[base+QYID9*p_Np] += rkb*resqy9;
+      // No-Need to Qz5 Qz8 Qz9
+      pmlq[base+QZID1 *p_Np] += rkb*resqz1 ;
+      pmlq[base+QZID2 *p_Np] += rkb*resqz2 ;
+      pmlq[base+QZID3 *p_Np] += rkb*resqz3 ;
+      pmlq[base+QZID4 *p_Np] += rkb*resqz4 ;
+      pmlq[base+QZID6 *p_Np] += rkb*resqz6 ;
+      pmlq[base+QZID7 *p_Np] += rkb*resqz7 ;
+      pmlq[base+QZID10*p_Np] += rkb*resqz10;
+      //
+      respmlq[base+QXID1*p_Np] = resqx1;
+      respmlq[base+QXID2*p_Np] = resqx2;
+      respmlq[base+QXID3*p_Np] = resqx3;
+      respmlq[base+QXID4*p_Np] = resqx4;
+      respmlq[base+QXID5*p_Np] = resqx5;
+      respmlq[base+QXID6*p_Np] = resqx6;
+      respmlq[base+QXID8*p_Np] = resqx8;  
+      // No-Need to Qy6 Qy8 Qy10
+      respmlq[base+QYID1*p_Np] = resqy1;
+      respmlq[base+QYID2*p_Np] = resqy2;
+      respmlq[base+QYID3*p_Np] = resqy3;
+      respmlq[base+QYID4*p_Np] = resqy4;
+      respmlq[base+QYID5*p_Np] = resqy5;
+      respmlq[base+QYID7*p_Np] = resqy7;
+      respmlq[base+QYID9*p_Np] = resqy9;
+      // No-Need to Qz5 Qz8 Qz9
+      respmlq[base+QZID1 *p_Np] = resqz1 ;
+      respmlq[base+QZID2 *p_Np] = resqz2 ;
+      respmlq[base+QZID3 *p_Np] = resqz3 ;
+      respmlq[base+QZID4 *p_Np] = resqz4 ;
+      respmlq[base+QZID6 *p_Np] = resqz6 ;
+      respmlq[base+QZID7 *p_Np] = resqz7 ;
+      respmlq[base+QZID10*p_Np] = resqz10;
+      
+
+      const iint id   = 3*(n + element*p_Np); 
+      dfloat4 resqa = resq[id+0], resqb = resq[id+1], resqc = resq[id+2];
+      dfloat4 rhsqa = rhsq[id+0], rhsqb = rhsq[id+1], rhsqc = rhsq[id+2];
+      dfloat4 qa    = q[id+0],    qb    = q[id+1],    qc    = q[id+2];
+
+      resqa = rka*resqa + dt*rhsqa;
+      resqb = rka*resqb + dt*rhsqb;
+      resqc = rka*resqc + dt*rhsqc;
+
+      qa += rkb*resqa;
+      qb += rkb*resqb;
+      qc += rkb*resqc;
+      
+      resq[id+0] = resqa;
+      resq[id+1] = resqb;
+      resq[id+2] = resqc;
+      
+      q[id+0] = qa;
+      q[id+1] = qb;
+      q[id+2] = qc;
+
+      
     }
   }
 }

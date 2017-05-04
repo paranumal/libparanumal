@@ -216,10 +216,10 @@ typedef struct {
   dfloat *respmlqz; // residual data array (for LSERK time-stepping)
   dfloat *sigmaz;
     
-  // dfloat *pmlNT;    // time integrated relaxtion term
-  // dfloat *rhspmlNT; //
-  // dfloat *respmlNT; //
-
+  //dfloat *pmlq;    // Z-pml data array
+  dfloat *rhspmlq; // right hand side data array
+  dfloat *respmlq; // residual data array (for LSERK time-stepping)
+  
   
   
   // occa stuff
@@ -267,7 +267,7 @@ typedef struct {
   iint nonPmlNelements;
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
-  
+
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
   occa::memory o_pmlqz, o_rhspmlqz, o_respmlqz;
@@ -286,13 +286,12 @@ typedef struct {
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
-  occa::memory o_qZnt;
-
+  
   
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
   
-  occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
+  occa::memory o_pmlq,  o_rhspmlq,  o_respmlq;
 
   
 
