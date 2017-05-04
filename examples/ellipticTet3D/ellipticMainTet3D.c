@@ -21,9 +21,9 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be IPDG
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
-  //char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
-  char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
+  //char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=NONE");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
+  //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
 
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
       
       r[id] = -rhs*J;
-      x[id] = 0;
+      x[id] = 0.;//nrhs[n];
       mesh->q[id] = nrhs[n];
     }
 #endif
@@ -101,7 +101,24 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
+  //o_x.copyFrom(mesh->q);
+
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
+  //void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
+  //ellipticOperator3D(solver, lambda, o_x, o_r, options);
+
+//  mesh->gradientKernel(mesh->Nelements,
+//       mesh->o_vgeo,
+//       mesh->o_DrT,
+//       mesh->o_DsT,
+//       mesh->o_DtT,
+//       o_x,
+//       solver->o_grad);
+//
+//  dfloat *grad = (dfloat *) calloc(4*mesh->Nelements*mesh->Np,sizeof(dfloat));
+//  solver->o_grad.copyTo(grad);
+//  for (iint n=0;n<mesh->Nelements*mesh->Np;n++)
+//    mesh->q[n] = grad[4*n+3];
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
@@ -125,6 +142,9 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
   
+
+  //for (iint n=0;n<mesh->Nelements*mesh->Np;n++)
+  //  mesh->q[n] = r[n];
   meshPlotVTU3D(mesh, "foo", 0);
   
   // close down MPI

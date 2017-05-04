@@ -142,7 +142,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
 #define NZID 2 
 #define SJID 3  
 #define IJID 4
-#define WSJID 5
-#define IHID 6
+#define IHID 5
+#define WSJID 6
 #endif
 
