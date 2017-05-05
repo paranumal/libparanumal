@@ -36,6 +36,10 @@ LIBS	=  $(links) -llapack -lblas
 # list of objects to be compiled
 AOBJS    = \
 ellipticSetupHex3D.o \
+ellipticSolveSetupHex3D.o \
+ellipticSolveHex3D.o \
+ellipticHaloExchange3D.o \
+ellipticParallelGatherScatterHex3D.o \
 ellipticPreconditionerSetupHex3D.o \
 ellipticCoarsePreconditionerSetupHex3D.o\
 ../../src/almondCoarseSolve.o

@@ -20,7 +20,7 @@ int parallelCompareBaseId(const void *a, const void *b){
 
 }
 
-precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda){
+precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

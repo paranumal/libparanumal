@@ -398,6 +398,8 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
       precon->coarseOffsets = coarseOffsets;
 
     } else {
+      /* This is disabled for now since we require the solver_t struct for the elliptic operator call */
+      /*
       if(strstr(options,"LOCALALMOND")) {
         //if using ALMOND for patch solve, build the ubercoarse from ALMOND
         dfloat *coarseB;
@@ -518,8 +520,8 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
       o_b.free();
       o_gradb.free();
       o_Ab.free();
+    */
     }
-    
     // need to create numbering for really coarse grid on each process for xxt
     precon->xxt2 = xxtSetup(coarseTotal,
 			    globalNumbering2,
