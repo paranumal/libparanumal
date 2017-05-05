@@ -25,7 +25,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../3rdParty/gslib.github -lgs \
 			-L../../utilities/parALMOND -lparALMOND 
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  $(links) -llapack -lblas
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -37,6 +37,10 @@ LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
 # list of objects to be compiled
 AOBJS    = \
 ellipticSetupQuad2D.o \
+ellipticSolveSetupQuad2D.o \
+ellipticSolveQuad2D.o \
+ellipticHaloExchange2D.o \
+ellipticParallelGatherScatterQuad2D.o \
 ellipticPreconditionerSetupQuad2D.o\
 ellipticCoarsePreconditionerSetupQuad2D.o\
 ellipticCoarsePreconditionerQuad2D.o\
