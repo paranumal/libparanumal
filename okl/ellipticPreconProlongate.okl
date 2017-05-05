@@ -1,14 +1,14 @@
 kernel void ellipticPreconProlongate_v0(const iint Nelements,
-					const dfloat * restrict V1,
-					const dfloat * restrict q1,
-					dfloat * restrict qN){
+          const dfloat * restrict V1,
+          const dfloat * restrict q1,
+          dfloat * restrict qN){
   
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
       dfloat tmp = 0; // qN[e*p_Np+n] ;
 
       for(iint i=0;i<p_Nverts;++i){
-	tmp += V1[i*p_Np + n]*q1[e*p_Nverts + i];
+        tmp += V1[i*p_Np + n]*q1[e*p_Nverts + i];
       }
       qN[e*p_Np+n] = tmp;
     }
@@ -17,9 +17,9 @@ kernel void ellipticPreconProlongate_v0(const iint Nelements,
 
 
 kernel void ellipticPreconProlongate(const iint Nelements,
-				     const dfloat * restrict V1,
-				     const dfloat * restrict q1,
-				     dfloat * restrict qN){
+             const dfloat * restrict V1,
+             const dfloat * restrict q1,
+             dfloat * restrict qN){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
@@ -28,16 +28,16 @@ kernel void ellipticPreconProlongate(const iint Nelements,
 
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-	iint t = n + es*p_Np;
-	
-	if(t<p_Nverts*p_NblockV)
-	  if(eo*p_Nverts + t<Nelements*p_Nverts)
-	    s_q1[0][t] = q1[eo*p_Nverts+t];
+        iint t = n + es*p_Np;
+        
+        if(t<p_Nverts*p_NblockV)
+          if(eo*p_Nverts + t<Nelements*p_Nverts)
+            s_q1[0][t] = q1[eo*p_Nverts+t];
 
-	while(t<p_Np*p_Nverts){
-	  s_V1[0][t] = V1[t];
-	  t += p_Np*p_NblockV;
-	}
+        while(t<p_Np*p_Nverts){
+          s_V1[0][t] = V1[t];
+          t += p_Np*p_NblockV;
+        }
       }
     }
     
@@ -45,17 +45,17 @@ kernel void ellipticPreconProlongate(const iint Nelements,
 
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-	iint e = eo + es;
-	if(e<Nelements){
-	  dfloat tmp = 0; 
+        iint e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0; 
 
-	  occaUnroll(p_Nverts)
-	    for(iint i=0;i<p_Nverts;++i){
-	      tmp += s_V1[i][n]*s_q1[es][i];
-	    }
+          occaUnroll(p_Nverts)
+            for(iint i=0;i<p_Nverts;++i){
+              tmp += s_V1[i][n]*s_q1[es][i];
+            }
 
-	  qN[e*p_Np+n] = tmp;
-	}
+          qN[e*p_Np+n] = tmp;
+        }
       }
     }
   }
@@ -64,9 +64,9 @@ kernel void ellipticPreconProlongate(const iint Nelements,
 
 #if 0
 kernel void ellipticPreconProlongateQuad2D(const iint Nelements,
-					   const dfloat * restrict V1,
-					   const dfloat * restrict q1,
-					   dfloat * restrict qN){
+             const dfloat * restrict V1,
+             const dfloat * restrict q1,
+             dfloat * restrict qN){
   
   
   for(iint e=0;e<Nelements;++e;outer0){
@@ -78,13 +78,13 @@ kernel void ellipticPreconProlongateQuad2D(const iint Nelements,
     
     for(iint j=0;j<p_Nq;++j;inner1){
       for(iint i=0;i<p_Nq;++i;inner0){
-	iint id = i+j*p_Nq;
-	if(id<p_Nq1*p_Nq1){
-	  s_q11[0][id] = q1[id+e*p_Nq1*p_Nq1];
-	}
-	if(id<p_Nq1*p_Nq){
-	  s_V1[0][id] = V1[id];
-	}
+  iint id = i+j*p_Nq;
+  if(id<p_Nq1*p_Nq1){
+    s_q11[0][id] = q1[id+e*p_Nq1*p_Nq1];
+  }
+  if(id<p_Nq1*p_Nq){
+    s_V1[0][id] = V1[id];
+  }
       }
     }
     
@@ -94,12 +94,12 @@ kernel void ellipticPreconProlongateQuad2D(const iint Nelements,
     
     for(iint j=0;j<p_Nq;++j;inner1){
       for(iint i=0;i<p_Nq;++i;inner0){
-	if(j<2){
-	  dfloat res = 0;
-	  for(iint m=0;m<p_Nq1;++m)
-	    res += s_V1[i][m]*s_q11[j][m];
-	  s_q1N[j][i] = res;
-	}
+  if(j<2){
+    dfloat res = 0;
+    for(iint m=0;m<p_Nq1;++m)
+      res += s_V1[i][m]*s_q11[j][m];
+    s_q1N[j][i] = res;
+  }
       }
     }
 
@@ -110,11 +110,11 @@ kernel void ellipticPreconProlongateQuad2D(const iint Nelements,
     for(iint j=0;j<p_Nq;++j;inner1){
       for(iint i=0;i<p_Nq;++i;inner0){
 
-	dfloat res = 0;
-	for(iint m=0;m<p_Nq1;++m)
-	  res += s_V1[j][m]*s_q1N[m][i];
+  dfloat res = 0;
+  for(iint m=0;m<p_Nq1;++m)
+    res += s_V1[j][m]*s_q1N[m][i];
 
-	qN[i+j*p_Nq+e*p_Nq*p_Nq] = res;
+  qN[i+j*p_Nq+e*p_Nq*p_Nq] = res;
       }
     }
   }

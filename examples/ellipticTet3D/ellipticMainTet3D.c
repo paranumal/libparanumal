@@ -49,37 +49,14 @@ int main(int argc, char **argv){
   const dfloat tol = 1e-6;
 
   // load rhs into r
-  dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
-
-#if 0
-    for(iint n=0;n<mesh->cubNp;++n){
-      dfloat cx = 0, cy = 0;
-      for(iint m=0;m<mesh->Np;++m){
-	cx += mesh->cubInterp[m+n*mesh->Np]*mesh->x[m+e*mesh->Np];
-	cy += mesh->cubInterp[m+n*mesh->Np]*mesh->y[m+e*mesh->Np];
-      }
-      dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-      dfloat w = mesh->cubw[n];
-      
-      cf[n] = -J*w*(2*M_PI*M_PI+lambda)*cos(M_PI*cx)*cos(M_PI*cy);
-    }
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat rhs = 0;
-      for(iint m=0;m<mesh->cubNp;++m){
-	rhs += mesh->cubInterp[n+m*mesh->Np]*cf[m];
-      }
-      iint id = n+e*mesh->Np;
-      r[id] = -rhs;
-      x[id] = 0; // initial guess
-    }
-#else
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(iint n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
       dfloat zn = mesh->z[n+e*mesh->Np];
+      //x[n+e*mesh->Np] = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
       nrhs[n] = -(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
@@ -90,36 +67,17 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
       
       r[id] = -rhs*J;
-      x[id] = 0.;//nrhs[n];
+      x[id] = 0.;
       mesh->q[id] = nrhs[n];
     }
-#endif
   }
   free(nrhs);
-  free(cf);
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  //o_x.copyFrom(mesh->q);
-
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
-  //void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-  //ellipticOperator3D(solver, lambda, o_x, o_r, options);
-
-//  mesh->gradientKernel(mesh->Nelements,
-//       mesh->o_vgeo,
-//       mesh->o_DrT,
-//       mesh->o_DsT,
-//       mesh->o_DtT,
-//       o_x,
-//       solver->o_grad);
-//
-//  dfloat *grad = (dfloat *) calloc(4*mesh->Nelements*mesh->Np,sizeof(dfloat));
-//  solver->o_grad.copyTo(grad);
-//  for (iint n=0;n<mesh->Nelements*mesh->Np;n++)
-//    mesh->q[n] = grad[4*n+3];
-
+  
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
@@ -142,9 +100,6 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
   
-
-  //for (iint n=0;n<mesh->Nelements*mesh->Np;n++)
-  //  mesh->q[n] = r[n];
   meshPlotVTU3D(mesh, "foo", 0);
   
   // close down MPI

@@ -167,9 +167,6 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   dfloat *diagInvOpDg = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
 
-    // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
-    // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
-    
     dfloat J = mesh->vgeo[e*mesh->Nvgeo + JID];
     dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
     dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
@@ -181,13 +178,12 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     dfloat sz = mesh->vgeo[e*mesh->Nvgeo + SZID];
     dfloat tz = mesh->vgeo[e*mesh->Nvgeo + TZID];
 
-    //TODO cahnge this tothe eigenvalues of the element metric tensor
+    //TODO change this to the eigenvalues of the element metric tensor
     dfloat Jhrinv2 = J*(rx*rx+ry*ry+rz*rz);
     dfloat Jhsinv2 = J*(sx*sx+sy*sy+sz*sz);
     dfloat Jhtinv2 = J*(tx*tx+ty*ty+tz*tz);
-    dfloat Jhinv2 = Jhrinv2 + Jhsinv2 + Jhtinv2; //mymin(Jhrinv2,Jhsinv2);
-    //    dfloat Jhinv2 = mymax(Jhrinv2,Jhsinv2);
-    
+    dfloat Jhinv2 = (Jhrinv2 + Jhsinv2 + Jhtinv2)/3; 
+    //dfloat Jhinv2 = mymax(mymax(Jhrinv2, Jhsinv2),Jhtinv2); 
     for(iint n=0;n<NpP;++n){
       iint pid = n + e*NpP;
 	
