@@ -8,29 +8,29 @@
 #define TYID 7
 #define TZID 8
 //
-#define QXID1 0  
-#define QXID2 1  
-#define QXID3 2
-#define QXID4 3  
-#define QXID5 4  
-#define QXID6 5  
-#define QXID8 6 
+#define QXID1  0  
+#define QXID2  1  
+#define QXID3  2
+#define QXID4  3  
+#define QXID5  4  
+#define QXID6  5  
+#define QXID8  6 
 //
-#define QYID1 7  
-#define QYID2 8  
-#define QYID3 9
-#define QYID4 10  
-#define QYID5 11  
-#define QYID7 12  
-#define QYID9 13 
+#define QYID1  7  
+#define QYID2  8  
+#define QYID3  9
+#define QYID4  10  
+#define QYID5  11  
+#define QYID7  12  
+#define QYID9  13 
 //
-#define QZID1 14  
-#define QZID2 15  
-#define QZID3 16
-#define QZID4 17  
-#define QZID6 18  
-#define QZID7 19  
-#define QZID10  20   
+#define QZID1  14  
+#define QZID2  15  
+#define QZID3  16
+#define QZID4  17  
+#define QZID6  18  
+#define QZID7  19  
+#define QZID10 20   
 
 
 kernel void boltzmannVolume3D(const iint Nelements,
@@ -79,7 +79,7 @@ kernel void boltzmannVolume3D(const iint Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
+   // make sure all node data is loaded into shared
     barrier(localMemFence);
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
@@ -89,15 +89,15 @@ kernel void boltzmannVolume3D(const iint Nelements,
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	  const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	  const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	  const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	  const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	  const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	  const dfloat drdx = vgeo[element*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[element*p_Nvgeo + RYID];
+	  const dfloat drdz = vgeo[element*p_Nvgeo + RZID];
+	  const dfloat dsdx = vgeo[element*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[element*p_Nvgeo + SYID];
+	  const dfloat dsdz = vgeo[element*p_Nvgeo + SZID];
+	  const dfloat dtdx = vgeo[element*p_Nvgeo + TXID];
+	  const dfloat dtdy = vgeo[element*p_Nvgeo + TYID];
+	  const dfloat dtdz = vgeo[element*p_Nvgeo + TZID];
 
 	  // compute 'r', 's', 't' derivatives of (q_m) at node n
 	  dfloat dq1dr= 0.f, dq2dr= 0.f, dq3dr= 0.f, dq4dr= 0.f, dq5dr = 0.f;
@@ -314,15 +314,15 @@ kernel void boltzmannSAVolume3D(const iint Nelements,
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	  const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	  const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	  const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	  const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	  const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	  const dfloat drdx = vgeo[element*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[element*p_Nvgeo + RYID];
+	  const dfloat drdz = vgeo[element*p_Nvgeo + RZID];
+	  const dfloat dsdx = vgeo[element*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[element*p_Nvgeo + SYID];
+	  const dfloat dsdz = vgeo[element*p_Nvgeo + SZID];
+	  const dfloat dtdx = vgeo[element*p_Nvgeo + TXID];
+	  const dfloat dtdy = vgeo[element*p_Nvgeo + TYID];
+	  const dfloat dtdz = vgeo[element*p_Nvgeo + TZID];
 
 	  // compute 'r', 's', 't' derivatives of (q_m) at node n
 	  dfloat dq1dr= 0.f, dq2dr= 0.f, dq3dr= 0.f, dq4dr= 0.f, dq5dr = 0.f;
@@ -540,15 +540,15 @@ kernel void boltzmannVolumeCub3D(const iint Nelements,
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	  const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	  const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	  const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	  const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	  const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	  const dfloat drdx = vgeo[element*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[element*p_Nvgeo + RYID];
+	  const dfloat drdz = vgeo[element*p_Nvgeo + RZID];
+	  const dfloat dsdx = vgeo[element*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[element*p_Nvgeo + SYID];
+	  const dfloat dsdz = vgeo[element*p_Nvgeo + SZID];
+	  const dfloat dtdx = vgeo[element*p_Nvgeo + TXID];
+	  const dfloat dtdy = vgeo[element*p_Nvgeo + TYID];
+	  const dfloat dtdz = vgeo[element*p_Nvgeo + TZID];
 
 	  // compute 'r', 's', 't' derivatives of (q_m) at node n
 	  dfloat dq1dr= 0.f, dq2dr= 0.f, dq3dr= 0.f, dq4dr= 0.f, dq5dr = 0.f;
@@ -750,26 +750,25 @@ kernel void boltzmannPmlVolume3D(const iint Nelements,
 	}
       }
     }
-
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-  for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	  iint e = eo+es; // element in block
-	  if(e<Nelements){
+	iint e = eo+es; // element in block
+	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	  const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	  const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	  const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	  const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	  const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	  const dfloat drdx = vgeo[element*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[element*p_Nvgeo + RYID];
+	  const dfloat drdz = vgeo[element*p_Nvgeo + RZID];
+	  const dfloat dsdx = vgeo[element*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[element*p_Nvgeo + SYID];
+	  const dfloat dsdz = vgeo[element*p_Nvgeo + SZID];
+	  const dfloat dtdx = vgeo[element*p_Nvgeo + TXID];
+	  const dfloat dtdy = vgeo[element*p_Nvgeo + TYID];
+	  const dfloat dtdz = vgeo[element*p_Nvgeo + TZID];
 
 	  const dfloat sigmaxe = sigmax[element*p_Np+n];
 	  const dfloat sigmaye = sigmay[element*p_Np+n];
@@ -816,7 +815,7 @@ for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	  occaUnroll(p_Np)
+	   occaUnroll(p_Np)
 	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -871,23 +870,33 @@ for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
 	  dfloat dq4dx  = drdx*dq4dr  + dsdx*dq4ds  + dtdx*dq4dt;
 	  dfloat dq5dx  = drdx*dq5dr  + dsdx*dq5ds  + dtdx*dq5dt;
 	  dfloat dq6dx  = drdx*dq6dr  + dsdx*dq6ds  + dtdx*dq6dt;
+	  //dfloat dq7dx  = drdx*dq7dr  + dsdx*dq7ds  + dtdx*dq7dt;
 	  dfloat dq8dx  = drdx*dq8dr  + dsdx*dq8ds  + dtdx*dq8dt;
-    //
+	  //dfloat dq9dx  = drdx*dq9dr  + dsdx*dq9ds  + dtdx*dq9dt;
+	  //dfloat dq10dx = drdx*dq10dr + dsdx*dq10ds + dtdx*dq10dt;
+
 	  dfloat dq1dy  = drdy*dq1dr  + dsdy*dq1ds  + dtdy*dq1dt;
 	  dfloat dq2dy  = drdy*dq2dr  + dsdy*dq2ds  + dtdy*dq2dt;
 	  dfloat dq3dy  = drdy*dq3dr  + dsdy*dq3ds  + dtdy*dq3dt;
 	  dfloat dq4dy  = drdy*dq4dr  + dsdy*dq4ds  + dtdy*dq4dt;
 	  dfloat dq5dy  = drdy*dq5dr  + dsdy*dq5ds  + dtdy*dq5dt;
+	  //dfloat dq6dy  = drdy*dq6dr  + dsdy*dq6ds  + dtdy*dq6dt;
 	  dfloat dq7dy  = drdy*dq7dr  + dsdy*dq7ds  + dtdy*dq7dt;
+	 // dfloat dq8dy  = drdy*dq8dr  + dsdy*dq8ds  + dtdy*dq8dt;
 	  dfloat dq9dy  = drdy*dq9dr  + dsdy*dq9ds  + dtdy*dq9dt;
-    //
+	 // dfloat dq10dy = drdy*dq10dr + dsdy*dq10ds + dtdy*dq10dt;
+
 	  dfloat dq1dz  = drdz*dq1dr  + dsdz*dq1ds  + dtdz*dq1dt;
 	  dfloat dq2dz  = drdz*dq2dr  + dsdz*dq2ds  + dtdz*dq2dt;
 	  dfloat dq3dz  = drdz*dq3dr  + dsdz*dq3ds  + dtdz*dq3dt;
 	  dfloat dq4dz  = drdz*dq4dr  + dsdz*dq4ds  + dtdz*dq4dt;
+	  //dfloat dq5dz  = drdz*dq5dr  + dsdz*dq5ds  + dtdz*dq5dt;
 	  dfloat dq6dz  = drdz*dq6dr  + dsdz*dq6ds  + dtdz*dq6dt;
 	  dfloat dq7dz  = drdz*dq7dr  + dsdz*dq7ds  + dtdz*dq7dt;
+	//  dfloat dq8dz  = drdz*dq8dr  + dsdz*dq8ds  + dtdz*dq8dt;
+	 // dfloat dq9dz  = drdz*dq9dr  + dsdz*dq9ds  + dtdz*dq9dt;
 	  dfloat dq10dz = drdz*dq10dr + dsdz*dq10ds + dtdz*dq10dt;
+	  
 	  //
 
 	  // A*dq/dx
@@ -950,12 +959,12 @@ for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
 	  dfloat rhsq2  = 0.f;
 	  dfloat rhsq3  = 0.f;
 	  dfloat rhsq4  = 0.f;
-	  dfloat rhsq5  = p_tauInv*(s_q[es][4][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-	  dfloat rhsq6  = p_tauInv*(s_q[es][5][n] - (s_q[es][1][n]*s_q[es][3][n]/s_q[es][0][n]));
-	  dfloat rhsq7  = p_tauInv*(s_q[es][6][n] - (s_q[es][2][n]*s_q[es][3][n]/s_q[es][0][n]));
-	  dfloat rhsq8  = p_tauInv*(s_q[es][7][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-	  dfloat rhsq9  = p_tauInv*(s_q[es][8][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-	  dfloat rhsq10 = p_tauInv*(s_q[es][9][n] - p_invsqrt2*(s_q[es][3][n]*s_q[es][3][n]/s_q[es][0][n]));
+	  dfloat rhsq5  = -p_tauInv*(s_q[es][4][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+	  dfloat rhsq6  = -p_tauInv*(s_q[es][5][n] - (s_q[es][1][n]*s_q[es][3][n]/s_q[es][0][n]));
+	  dfloat rhsq7  = -p_tauInv*(s_q[es][6][n] - (s_q[es][2][n]*s_q[es][3][n]/s_q[es][0][n]));
+	  dfloat rhsq8  = -p_tauInv*(s_q[es][7][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+	  dfloat rhsq9  = -p_tauInv*(s_q[es][8][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+	  dfloat rhsq10 = -p_tauInv*(s_q[es][9][n] - p_invsqrt2*(s_q[es][3][n]*s_q[es][3][n]/s_q[es][0][n]));
 
 	  // BGK relaxation approximation to the Boltzmann collision operator
     rhsq1  += -msigmaxe*(pmlqx1)-msigmaye*(pmlqy1)-msigmaze*(pmlqz1)+Aqx1+Bqy1+Cqz1;
@@ -963,16 +972,16 @@ for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
 	  rhsq3  += -msigmaxe*(pmlqx3)-msigmaye*(pmlqy3)-msigmaze*(pmlqz3)+Aqx3+Bqy3+Cqz3;
 	  rhsq4  += -msigmaxe*(pmlqx4)-msigmaye*(pmlqy4)-msigmaze*(pmlqz4)+Aqx4+Bqy4+Cqz4;
 	  rhsq5  += -msigmaxe*(pmlqx5)-msigmaye*(pmlqy5)                  +Aqx5+Bqy5     ;
-	  rhsq6  += -msigmaxe*(pmlqx6)                 -msigmaze*(pmlqz6) +Aqx6     +Cqz4;
-	  rhsq7  +=                   -msigmaye*(pmlqy7)-msigmaze*(pmlqz7)     +Bqy4+Cqz4;
-	  rhsq8  += -msigmaxe*(pmlqx8) +Aqx8;
-	  rhsq9  += -msigmaye*(pmlqy9) +Bqy9;
-	  rhsq10 += -msigmaze*(pmlqz10)+Cqz10;
+	  rhsq6  += -msigmaxe*(pmlqx6)                  -msigmaze*(pmlqz6) +Aqx6     +Cqz6;
+	  rhsq7  +=                   -msigmaye*(pmlqy7)-msigmaze*(pmlqz7)     +Bqy7+Cqz7;
+	  rhsq8  += -msigmaxe*(pmlqx8)                                    +Aqx8          ;
+	  rhsq9  +=                   -msigmaye*(pmlqy9)                       +Bqy9     ;
+	  rhsq10 +=                                     -msigmaze*(pmlqz10)         +Cqz10;
 	  //
 	  // add mean flow forcing
 	  rhsq2  += drampdt*p_q2bar;
 	  rhsq3  += drampdt*p_q3bar;
-	  rhsq4  += drampdt*p_q3bar;
+	  rhsq4  += drampdt*p_q4bar; 
 	  // 
 	  rhsq5  += 2.f*ramp*drampdt*p_q5bar;
 	  rhsq6  += 2.f*ramp*drampdt*p_q6bar;

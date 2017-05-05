@@ -22,6 +22,7 @@
 #define QZID6 18  
 #define QZID7 19  
 #define QZID10  20   
+
 kernel void boltzmannLSERKUpdate3D(const iint Nelements,
 				    const iint * restrict elementIds,
 				    const dfloat dt,	
@@ -328,11 +329,11 @@ kernel void boltzmannLSERKPmlUpdate3D(const iint Nelements,
               const dfloat rkb,
               const dfloat ramp, 
               const dfloat4 * restrict rhsq, 
-              const dfloat * restrict rhspmlq,
+              const dfloat *  restrict rhspmlq,
                     dfloat4 * restrict resq,
-                    dfloat * restrict respmlq,
-                    dfloat * restrict pmlq,
-                    dfloat4 * restrict q){
+                    dfloat *  restrict respmlq,
+                    dfloat4 * restrict q,
+                    dfloat *  restrict pmlq){
   
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
