@@ -39,7 +39,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occa::tic("ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
+    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+3)/3.; // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
 		     mesh->o_vmapP,

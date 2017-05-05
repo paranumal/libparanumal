@@ -101,7 +101,7 @@ void ellipticOperator3D(mesh3D *mesh, dfloat *sendBuffer, dfloat *recvBuffer,
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, o_gradq);
 
-    dfloat tau = 2.f*mesh->Nq*mesh->Nq;
+    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
     mesh->ipdgKernel(mesh->Nelements,
 		     mesh->o_vmapM,
 		     mesh->o_vmapP,

@@ -119,7 +119,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-    printf("Np = %d, Nelements = %d\n", mesh->Np, mesh->Nelements);
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					       mesh->Np*mesh->Nelements,
 					       sizeof(dfloat),

@@ -104,8 +104,8 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
         iint baseP = eP*mesh->Nfaces + fP;
         
         // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
-        dfloat hinvM = 2*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
-        dfloat hinvP = 2*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+        dfloat hinvM = 0.5*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+        dfloat hinvP = 0.5*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
         
         mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
         mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
