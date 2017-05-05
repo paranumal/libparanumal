@@ -7,20 +7,14 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
   mesh->Nfields    = 12; // for float4
 	// compute samples of q at interpolation nodes
-	mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-	           sizeof(dfloat));
-	mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-	           sizeof(dfloat));
-	mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-	           sizeof(dfloat));
+	mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,sizeof(dfloat));
+	mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
+	mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
    
   mesh->pmlNfields = 21;
-	mesh->pmlq    = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->rhspmlq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
-	mesh->respmlq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,
-	        sizeof(dfloat));
+	mesh->pmlq    = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,sizeof(dfloat));
+	mesh->rhspmlq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,sizeof(dfloat));
+	mesh->respmlq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->pmlNfields,sizeof(dfloat));
 
 	mesh->sigmax = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
 	mesh->sigmay = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
@@ -37,7 +31,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	if(strstr(options, "PML")){
 		printf("Starting initial conditions for PML\n");
 		Ma = 0.1;     //Set Mach number
-		Re = 100.;   // Set Reynolds number
+		Re = 1000.;   // Set Reynolds number
 		//
 		Uref = 1.;   // Set Uref
 		Lref = 1.;   // set Lref
@@ -48,7 +42,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		nu = Uref*Lref/Re; 
 		mesh->tauInv = mesh->RT/nu;
 		//printf("starting initial conditions\n"); //Zero Flow Conditions
-		rho     = 1., u       = 0., v       = 0.; w = 0.; 
+		rho     = 1., u       = 1., v       = 0.; w = 0.; 
 		sigma11 = 0., sigma12 = 0., sigma13 = 0.;
 		sigma22 = 0., sigma23 = 0.;
 		sigma33 = 0.; 
@@ -58,7 +52,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 	else{
 		printf("Starting initial conditions for NONPML\n");
 		Ma = 0.1;     //Set Mach number
-		Re = 100.;   // Set Reynolds number
+		Re = 1000.;   // Set Reynolds number
 		//
 		Uref = 1.;   // Set Uref
 		Lref = 1.;   // set Lref
@@ -70,12 +64,12 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		mesh->tauInv = mesh->RT/nu;
 
 		//printf("starting initial conditions\n"); //Zero Flow Conditions
-		rho     = 1., u       = 0., v       = 0.; w = 0.; 
+		rho     = 1., u       = 1., v       = 0.; w = 0.; 
 		sigma11 = 0., sigma12 = 0., sigma13 = 0.;
 		sigma22 = 0., sigma23 = 0.;
 		sigma33 = 0.; 
 		//
-		mesh->finalTime = 5.0;
+		mesh->finalTime = 2.0;
 	}
 
  // DEFINE MEAN FLOW
@@ -121,23 +115,23 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
       if(strstr(options, "PML")){
       // Pml Region 
-	      iint id = mesh->Np*mesh->Nfields*e + n;
+	      iint id = mesh->Np*mesh->pmlNfields*e + n;
 	      // No-Need to Qx7 Qx9 Qx10
-	      mesh->pmlq[id+QXID1*mesh->Np] = 0.f*q1bar;
-	      mesh->pmlq[id+QXID2*mesh->Np] = 0.f*q2bar;
-	      mesh->pmlq[id+QXID3*mesh->Np] = 0.f*q3bar;
-	      mesh->pmlq[id+QXID4*mesh->Np] = 0.f*q4bar;
-	      mesh->pmlq[id+QXID5*mesh->Np] = 0.f*q5bar;
-	      mesh->pmlq[id+QXID6*mesh->Np] = 0.f*q6bar;
-	      mesh->pmlq[id+QXID8*mesh->Np] = 0.f*q8bar;     
+	      mesh->pmlq[id+QXID1*mesh->Np]   = 0.f*q1bar;
+	      mesh->pmlq[id+QXID2*mesh->Np]   = 0.f*q2bar;
+	      mesh->pmlq[id+QXID3*mesh->Np]   = 0.f*q3bar;
+	      mesh->pmlq[id+QXID4*mesh->Np]   = 0.f*q4bar;
+	      mesh->pmlq[id+QXID5*mesh->Np]   = 0.f*q5bar;
+	      mesh->pmlq[id+QXID6*mesh->Np]   = 0.f*q6bar;
+	      mesh->pmlq[id+QXID8*mesh->Np]   = 0.f*q8bar;     
 	      // No-Need to Qy6 Qy8 Qy10
-        mesh->pmlq[id+QYID1*mesh->Np] = 0.f*q1bar;
-	      mesh->pmlq[id+QYID2*mesh->Np] = 0.f*q2bar;
-	      mesh->pmlq[id+QYID3*mesh->Np] = 0.f*q3bar;
-	      mesh->pmlq[id+QYID4*mesh->Np] = 0.f*q4bar;
-	      mesh->pmlq[id+QYID5*mesh->Np] = 0.f*q5bar;
-	      mesh->pmlq[id+QYID7*mesh->Np] = 0.f*q7bar;
-	      mesh->pmlq[id+QYID9*mesh->Np] = 0.f*q9bar;
+        mesh->pmlq[id+QYID1*mesh->Np]   = 0.f*q1bar;
+	      mesh->pmlq[id+QYID2*mesh->Np]   = 0.f*q2bar;
+	      mesh->pmlq[id+QYID3*mesh->Np]   = 0.f*q3bar;
+	      mesh->pmlq[id+QYID4*mesh->Np]   = 0.f*q4bar;
+	      mesh->pmlq[id+QYID5*mesh->Np]   = 0.f*q5bar;
+	      mesh->pmlq[id+QYID7*mesh->Np]   = 0.f*q7bar;
+	      mesh->pmlq[id+QYID9*mesh->Np]   = 0.f*q9bar;
 	      // No-Need to Qz5 Qz8 Qz9
         mesh->pmlq[id+QZID1 *mesh->Np]  = 0.f*q1bar;
 	      mesh->pmlq[id+QZID2 *mesh->Np]  = 0.f*q2bar;
@@ -155,7 +149,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
   
    
-  dfloat xmin = -20, xmax = 10, ymin = -4, ymax = 4, zmin = -4, zmax = 4;
+  dfloat xmin = -4., xmax = 12., ymin = -4, ymax = 4, zmin = -4, zmax = 4;
   dfloat xsigma = 80, ysigma = 80, zsigma = 80;
     
   iint *pmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
@@ -180,7 +174,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			dfloat y = mesh->y[n + e*mesh->Np];
 			dfloat z = mesh->z[n + e*mesh->Np];
 
-  			if(strstr(options,"PML")){
+			if(strstr(options,"PML")){
 
 			  if(cx>xmax){
 			  	// mesh->sigmax[mesh->Np*e + n] = xsigma;
@@ -213,7 +207,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 			    isPml = 1;
 			  }
      }
-    }
+		}
     
 	 if(isPml)
 	   pmlElementIds[pmlNelements++] = e;
@@ -284,7 +278,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
    // errorStep
-  mesh->errorStep = 10;
+  mesh->errorStep = 5000;
 
   // Report Problem Inputs
   printf("===================Writing Problem Properties======================\n");

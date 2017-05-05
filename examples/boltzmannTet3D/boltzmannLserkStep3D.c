@@ -33,8 +33,7 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     // COMPUTE RAMP FUNCTION 
     dfloat ramp, drampdt;
     boltzmannRampFunction3D(t, &ramp, &drampdt);
-      
-
+    
     // VOLUME KERNELS
     mesh->device.finish();
     occa::tic("volumeKernel");
@@ -206,7 +205,6 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
     dfloat rampUpdate, drampdtUpdate;
     boltzmannRampFunction3D(tupdate, &rampUpdate, &drampdtUpdate);
-    //rampUpdate = 1.0f; drampdtUpdate = 0.0f;
 
 
     //UPDATE
@@ -215,22 +213,22 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     
     //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
     if (mesh->pmlNelements){   
-    	 // mesh->device.finish();
-      // occa::tic("PML_updateKernel"); 
-      // mesh->pmlUpdateKernel(mesh->pmlNelements,
-			   //  mesh->o_pmlElementIds,
-			   //  mesh->dt,
-			   //  mesh->rka[rk],
-			   //  mesh->rkb[rk],
-			   //  rampUpdate,
-			   //  mesh->o_rhsq,
-			   //  mesh->o_rhspmlq,
-			   //  mesh->o_resq,
-			   //  mesh->o_respmlq,
-			   //  mesh->o_pmlq,
-			   //  mesh->o_q);
-      //  mesh->device.finish();
-      // occa::toc("PML_updateKernel"); 
+    mesh->device.finish();
+      occa::tic("PML_updateKernel"); 
+      mesh->pmlUpdateKernel(mesh->pmlNelements,
+			    mesh->o_pmlElementIds,
+			    mesh->dt,
+			    mesh->rka[rk],
+			    mesh->rkb[rk],
+			    rampUpdate,
+			    mesh->o_rhsq,
+			    mesh->o_rhspmlq,
+			    mesh->o_resq,
+			    mesh->o_respmlq,
+			    mesh->o_q,
+			    mesh->o_pmlq);
+       mesh->device.finish();
+      occa::toc("PML_updateKernel"); 
    }
     
     if(mesh->nonPmlNelements){
