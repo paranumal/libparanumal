@@ -26,7 +26,6 @@ int main(int argc, char **argv){
   //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
   
   // set up mesh stuff
-
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
   ogs_t *ogs;
   precon_t *precon;
@@ -35,7 +34,6 @@ int main(int argc, char **argv){
   dfloat lambda = 1;
   
   // set up
-  //  ellipticSetupTri2D(mesh, &ogs, &precon, lambda);
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
 
@@ -45,9 +43,6 @@ int main(int argc, char **argv){
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   
-  // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
-
   // load rhs into r
   dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -84,7 +79,7 @@ int main(int argc, char **argv){
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
       for(iint m=0;m<mesh->Np;++m){
-	rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
       }
       iint id = n+e*mesh->Np;
       

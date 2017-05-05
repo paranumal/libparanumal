@@ -24,7 +24,4 @@ void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo){
   void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
-
-
-  
 }

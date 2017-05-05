@@ -393,7 +393,11 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       precon->coarseOffsets = coarseOffsets;
 
     } else {
+      /* This is disabled for now since we require the solver_t struct for the elliptic operator call */
+      /*
       if(strstr(options,"LOCALALMOND")) {
+        
+        
         //if using ALMOND for patch solve, build the ubercoarse from ALMOND
         dfloat *coarseB;
 
@@ -481,7 +485,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
         }     
         
         // need to provide ogs for A*b 
-        ellipticOperator2D(mesh, sendBuffer, recvBuffer, ogs, lambda, o_b, o_gradb, o_Ab, options);
+        ellipticOperator2D(solver, lambda, o_b, o_Ab, options);
             
         o_Ab.copyTo(Ab);
             
@@ -513,6 +517,7 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs
       o_b.free();
       o_gradb.free();
       o_Ab.free();
+      */
     }
 
 #if 0
