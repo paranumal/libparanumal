@@ -651,17 +651,17 @@ if(strstr(options, "LSERK")){
 
 		 // Unsplit PML
 
-			// printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
-			// mesh->pmlVolumeKernel =
-			// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-			//     "boltzmannUnsplitPmlVolumeCub2D",
-			//     kernelInfo);
-			// //
-			// printf("Compiling LSERK Unsplit pml relaxation kernel with cubature integration\n");
-			// mesh->pmlRelaxationKernel =
-			// mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-			// "boltzmannUnsplitPmlRelaxationCub2D",
-			// kernelInfo);     
+		printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
+		mesh->pmlVolumeKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume3D.okl",
+		    "boltzmannPmlVolumeCub3D",
+		    kernelInfo);
+		//
+		printf("Compiling LSERK Unsplit pml relaxation kernel with cubature integration\n");
+		mesh->pmlRelaxationKernel =
+		mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation3D.okl",
+		  "boltzmannRelaxationCub3D",
+		  kernelInfo);    
 	}
 
 	if(strstr(options, "COLLOCATION")){ 

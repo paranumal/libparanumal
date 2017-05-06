@@ -94,23 +94,21 @@ void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
 	// VOLUME KERNELS
     mesh->device.finish();
     occa::tic("relaxationKernel");
-		// // compute relaxation terms using cubature integration
-		// if(mesh->pmlNelements){
-		// 	mesh->device.finish();
-  //          occa::tic("PML_relaxationKernel");
+		// compute relaxation terms using cubature integration
+		if(mesh->pmlNelements){
+			mesh->device.finish();
+           occa::tic("PML_relaxationKernel");
 
-		//   mesh->pmlRelaxationKernel(mesh->pmlNelements,
-		// 		     mesh->o_pmlElementIds,
-		// 		     mesh->o_cubInterpT,
-		// 		     mesh->o_cubProjectT,
-		// 		     mesh->o_q,
-		// 		     mesh->o_rhsq,
-		// 		     mesh->o_rhspmlqx,
-		// 		     mesh->o_rhspmlqy);
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+				     mesh->o_pmlElementIds,
+				     mesh->o_cubInterpT,
+				     mesh->o_cubProjectT,
+				     mesh->o_q,
+				     mesh->o_rhsq); 
 
-		//    mesh->device.finish();
-  //          occa::toc("PML_relaxationKernel");
-		// }
+		   mesh->device.finish();
+           occa::toc("PML_relaxationKernel");
+		}
 
 		// compute relaxation terms using cubature
 		if(mesh->nonPmlNelements){
