@@ -313,17 +313,17 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat dq1[p_NblockS][p_maxNodes];
-    shared dfloat dq2[p_NblockS][p_maxNodes];
-    shared dfloat dq3[p_NblockS][p_maxNodes];
-    shared dfloat dq4[p_NblockS][p_maxNodes];
-    shared dfloat dq5[p_NblockS][p_maxNodes];
-    shared dfloat dq6[p_NblockS][p_maxNodes];   
-    shared dfloat dq8[p_NblockS][p_maxNodes];
-    shared dfloat dq9[p_NblockS][p_maxNodes];   
-    shared dfloat dq10[p_NblockS][p_maxNodes];
-    exclusive iint element;
+    // shared storage for q*
+    shared dfloat s_dq1[p_NblockS][p_maxNodes];
+    shared dfloat s_dq2[p_NblockS][p_maxNodes];
+    shared dfloat s_dq3[p_NblockS][p_maxNodes];
+    shared dfloat s_dq4[p_NblockS][p_maxNodes];
+    shared dfloat s_dq5[p_NblockS][p_maxNodes];
+    shared dfloat s_dq6[p_NblockS][p_maxNodes];   
+    shared dfloat s_dq8[p_NblockS][p_maxNodes];
+    shared dfloat s_dq9[p_NblockS][p_maxNodes];   
+    shared dfloat s_dq10[p_NblockS][p_maxNodes];
+    exclusive iint element, nx, ny, nz;
 
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
@@ -399,9 +399,9 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
     // for each node in the element
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
-	const iint e = eo + es;
-	if(e<Nelements){
-	  if(n<p_Np){
+	      const iint e = eo + es;
+	        if(e<Nelements){
+	           if(n<p_Np){
 	        
 	    // load rhs data from volume fluxes
 	    dfloat ndq1 = 0.f, ndq2 = 0.f, ndq3 = 0.f, ndq4 = 0.f, ndq5 = 0.f;
