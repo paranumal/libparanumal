@@ -172,14 +172,5 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------                                            
 
-  mesh->device.finish();
-  occa::tic("CoarsePreconditionerSetup");
-  // coarse grid preconditioner (only continous elements)
-  // do this here since we need A*x
-  ellipticCoarsePreconditionerSetupTri2D(mesh, solver->precon, lambda, options);
-
-  mesh->device.finish();
-  occa::toc("CoarsePreconditionerSetup");
-
   return solver;
 }

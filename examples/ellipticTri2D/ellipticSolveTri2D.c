@@ -129,16 +129,16 @@ void ellipticPreconditioner2D(solver_t *solver,
   dfloat *recvBuffer = solver->recvBuffer;
 
   if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
+    mesh->device.finish();
+    occa::tic("Project");
 
-      // r <= S*G*r 
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
-      // r <= W*S*G*r (Project^t*r)
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
-      mesh->device.finish();
-      occa::toc("Project");
-    }
+    // r <= S*G*r 
+    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+    // r <= W*S*G*r (Project^t*r)
+    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
+    mesh->device.finish();
+    occa::toc("Project");
+  }
 
   if(strstr(options, "OAS")){
     
@@ -225,17 +225,15 @@ void ellipticPreconditioner2D(solver_t *solver,
       mesh->device.finish();
       occa::toc("coarseGrid");
     }
+  } else if (strstr(options, "FULLALMOND")) {
 
-    if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
-      mesh->device.finish();
-      occa::toc("Project");
-    }
-  }
-  else if(strstr(options, "JACOBI")){
+    o_r.copyTo(precon->r1); 
+    occa::tic("parALMOND");
+    almondSolve(precon->z1, precon->parAlmond, precon->r1);
+    occa::toc("parALMOND");
+    o_z.copyFrom(precon->z1);
+  
+  } else if(strstr(options, "JACOBI")){
 
     occa::tic("dotDivideKernel");   
     mesh->device.finish();
@@ -248,6 +246,15 @@ void ellipticPreconditioner2D(solver_t *solver,
   else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
+
+  if(strstr(options,"PROJECT")){
+    mesh->device.finish();
+    occa::tic("Project");
+    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
+    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
+    mesh->device.finish();
+    occa::toc("Project");
+  }  
 }
 
 

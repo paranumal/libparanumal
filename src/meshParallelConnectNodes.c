@@ -92,22 +92,22 @@ void meshParallelConnectNodes(mesh_t *mesh){
     // label halo flags
     for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
-	for(iint n=0;n<mesh->Nfp;++n){
-	  iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
-	  gatherNumbering[id].haloFlag = 1;
-	}
+      	for(iint n=0;n<mesh->Nfp;++n){
+      	  iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+      	  gatherNumbering[id].haloFlag = 1;
+      	}
       }
     }
 		      
     // use element-to-boundary connectivity to create tag for local nodes
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
-	iint tag = mesh->EToB[e*mesh->Nfaces+f];
-	iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
-	if(tag>0){
-	  gatherNumbering[id].tag = tag;
-	  gatherNumbering[id].priorityTag = tag;
-	}
+      	iint tag = mesh->EToB[e*mesh->Nfaces+f];
+      	iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+      	if(tag>0){
+      	  gatherNumbering[id].tag = tag;
+      	  gatherNumbering[id].priorityTag = tag;
+      	}
       }
     }
   }
@@ -130,51 +130,51 @@ void meshParallelConnectNodes(mesh_t *mesh){
     // compare trace nodes
     for(iint e=0;e<mesh->Nelements;++e){
       for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-	iint id  = e*mesh->Nfp*mesh->Nfaces + n;
-	iint idM = mesh->vmapM[id];
-	iint idP = mesh->vmapP[id];
-	iint gidM = gatherNumbering[idM].baseId;
-	iint gidP = gatherNumbering[idP].baseId;
+      	iint id  = e*mesh->Nfp*mesh->Nfaces + n;
+      	iint idM = mesh->vmapM[id];
+      	iint idP = mesh->vmapP[id];
+      	iint gidM = gatherNumbering[idM].baseId;
+      	iint gidP = gatherNumbering[idP].baseId;
 
-	iint baseRankM = gatherNumbering[idM].baseRank;
-	iint baseRankP = gatherNumbering[idP].baseRank;
+      	iint baseRankM = gatherNumbering[idM].baseRank;
+      	iint baseRankP = gatherNumbering[idP].baseRank;
 
-	// use minimum of trace variables
-	iint haloM = gatherNumbering[idM].haloFlag;
-	iint haloP = gatherNumbering[idP].haloFlag;
-	gatherNumbering[idM].haloFlag = mymax(haloM, haloP);
-	gatherNumbering[idP].haloFlag = mymax(haloM, haloP);
-	
-	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
-	  ++localChange;
-	  gatherNumbering[idP].baseElement = gatherNumbering[idM].baseElement;
-	  gatherNumbering[idP].baseNode    = gatherNumbering[idM].baseNode;
-	  gatherNumbering[idP].baseRank    = gatherNumbering[idM].baseRank;
-	  gatherNumbering[idP].baseId      = gatherNumbering[idM].baseId;
-	}
-	
-	if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
-	  ++localChange;
-	  gatherNumbering[idM].baseElement = gatherNumbering[idP].baseElement;
-	  gatherNumbering[idM].baseNode    = gatherNumbering[idP].baseNode;
-	  gatherNumbering[idM].baseRank    = gatherNumbering[idP].baseRank;
-	  gatherNumbering[idM].baseId      = gatherNumbering[idP].baseId;
-	}
-	
-	iint tagM = gatherNumbering[idM].priorityTag;
-	iint tagP = gatherNumbering[idP].priorityTag;
+      	// use minimum of trace variables
+      	iint haloM = gatherNumbering[idM].haloFlag;
+      	iint haloP = gatherNumbering[idP].haloFlag;
+      	gatherNumbering[idM].haloFlag = mymax(haloM, haloP);
+      	gatherNumbering[idP].haloFlag = mymax(haloM, haloP);
+      	
+      	if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
+      	  ++localChange;
+      	  gatherNumbering[idP].baseElement = gatherNumbering[idM].baseElement;
+      	  gatherNumbering[idP].baseNode    = gatherNumbering[idM].baseNode;
+      	  gatherNumbering[idP].baseRank    = gatherNumbering[idM].baseRank;
+      	  gatherNumbering[idP].baseId      = gatherNumbering[idM].baseId;
+      	}
+      	
+      	if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
+      	  ++localChange;
+      	  gatherNumbering[idM].baseElement = gatherNumbering[idP].baseElement;
+      	  gatherNumbering[idM].baseNode    = gatherNumbering[idP].baseNode;
+      	  gatherNumbering[idM].baseRank    = gatherNumbering[idP].baseRank;
+      	  gatherNumbering[idM].baseId      = gatherNumbering[idP].baseId;
+      	}
+      	
+      	iint tagM = gatherNumbering[idM].priorityTag;
+      	iint tagP = gatherNumbering[idP].priorityTag;
 
-	// use maximum non-zero tag for both nodes
-	if(tagM!=tagP){
-	  if(tagP>tagM){
-	    ++localChange;
-	    gatherNumbering[idM].priorityTag = tagP;
-	  }
-	  if(tagM>tagP){
-	    ++localChange;
-	    gatherNumbering[idP].priorityTag = tagM;
-	  }
-	}
+      	// use maximum non-zero tag for both nodes
+      	if(tagM!=tagP){
+      	  if(tagP>tagM){
+      	    ++localChange;
+      	    gatherNumbering[idM].priorityTag = tagP;
+      	  }
+      	  if(tagM>tagP){
+      	    ++localChange;
+      	    gatherNumbering[idP].priorityTag = tagM;
+      	  }
+      	}
       }
     }
 
