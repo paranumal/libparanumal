@@ -262,25 +262,22 @@ void ellipticPreconditioner2D(solver_t *solver,
       occa::toc("prolongateKernel");
 
       // do we have to DG gatherscatter here 
-      
       dfloat one = 1.;
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
 
       mesh->device.finish();
       occa::toc("coarseGrid");
     }
-
-    if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-      ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
-      mesh->device.finish();
-      occa::toc("Project");
-    }
     
-  }
-  else if(strstr(options, "JACOBI")){
+  } else if (strstr(options, "FULLALMOND")) {
+
+    o_r.copyTo(precon->r1); 
+    occa::tic("parALMOND");
+    almondSolve(precon->z1, precon->parAlmond, precon->r1);
+    occa::toc("parALMOND");
+    o_z.copyFrom(precon->z1);
+
+  } else if(strstr(options, "JACOBI")){
 
     mesh->device.finish();
     occa::tic("dotDivideKernel");   
@@ -290,8 +287,18 @@ void ellipticPreconditioner2D(solver_t *solver,
     mesh->device.finish();
     occa::toc("dotDivideKernel");   
   }
-  else // turn off preconditioner
+  else {// turn off preconditioner
     o_z.copyFrom(o_r); 
+  }
+
+  if(strstr(options,"PROJECT")){
+    mesh->device.finish();
+    occa::tic("Project");
+    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
+    ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
+    mesh->device.finish();
+    occa::toc("Project");
+  }
 }
 
 
