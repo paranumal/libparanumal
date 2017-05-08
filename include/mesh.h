@@ -274,7 +274,7 @@ typedef struct {
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
   
   // Boltzmann SARK extra storage for exponential update
-  occa::memory o_resqex; 
+  // occa::memory o_resqex; 
 
   // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used 
   occa::memory o_expsigmax, o_expsigmay;
@@ -291,7 +291,8 @@ typedef struct {
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
   
-  occa::memory o_pmlq,  o_rhspmlq,  o_respmlq;
+  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; 
+  occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3;
 
   
 
