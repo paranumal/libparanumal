@@ -264,9 +264,10 @@ iint almondSolve(dfloat* x,
   if(1){
     //solve(parAlmond->almond, parAlmond->rhs, parAlmond->x);
     solve(parAlmond->almond, parAlmond->o_rhs, parAlmond->o_x);
+    parAlmond->o_x.copyTo(parAlmond->x);
   } else{
-    iint maxIt = 40;
-    dfloat tol = 1e-2;
+    iint maxIt = 400;
+    dfloat tol = 1e-14;
     pcg(parAlmond->almond,
         parAlmond->A,
 			  parAlmond->rhs,
@@ -274,8 +275,6 @@ iint almondSolve(dfloat* x,
 			  maxIt,
 			  tol);
   }
-
-  parAlmond->o_x.copyTo(parAlmond->x);
 
   //scatter
   for(iint n=0;n<parAlmond->numLocalRows;++n){

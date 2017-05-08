@@ -20,9 +20,11 @@ void pcg(almond_t *almond,
   almond->ktype = PCG;
 
   // initial residual
-  dfloat localNB = norm(m,b);
+  dfloat localNB = innerProd(m, b, b);
   dfloat globalNB;
   MPI_Allreduce(&localNB,&globalNB,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+  globalNB = sqrt(globalNB);
 
   // initial guess
   dfloat *x0 = (dfloat *) calloc(n, sizeof(dfloat));
@@ -32,7 +34,7 @@ void pcg(almond_t *almond,
   zeqaxpy(A, -1.0, x0, 1.0, b, r0);
 
   dfloat *r = (dfloat *) calloc(m, sizeof(dfloat));
-  for (iint i=0; i<n; i++) {
+  for (iint i=0; i<m; i++) {
     r[i] = r0[i];
     x[i] = x0[i];
   }
@@ -53,6 +55,8 @@ void pcg(almond_t *almond,
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
     solve(almond, r, di);
+    //for (iint k=0;k<m;k++)
+    //  di[k] = r[k];
 
     // rho = di'*r
     rhoLocal = innerProd(m, di, r);
@@ -71,8 +75,8 @@ void pcg(almond_t *almond,
     axpy(A, 1.0, di, 0.0, Adi);
     diAdiLocal = innerProd(m, di, Adi);
     MPI_Allreduce(&diAdiLocal,&diAdiGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-
-    alpha =  rho/ diAdiGlobal;
+    
+    alpha =  rhoGlobal/ diAdiGlobal;
 
     // update solution
     //    x = x + alpha * di;
@@ -82,16 +86,20 @@ void pcg(almond_t *almond,
     // r = r - alpha * Adi;
     vectorAdd(m, -alpha, Adi, 1.0, r);
 
-    resvec[i] = norm(m, r);
+    localRes = innerProd(m, r, r);
+    MPI_Allreduce(&localRes,&globalRes,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    globalRes = sqrt(globalRes);
 
-    di_previous = di;
+    for (iint k=0;k<m;k++)
+      di_previous[k] = di[k];
+
     rho_previous = rhoGlobal;
 
-    localRes = resvec[i];
+    resvec[i] = globalRes;
 
-    MPI_Allreduce(&localRes,&globalRes,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    //printf("iter = %d, globalRes = %g\n",i, globalRes);
 
-    if(globalRes < tol*globalNB){
+    if(globalRes < tol){ //*globalNB){
       flag = 0;
       break;
     }

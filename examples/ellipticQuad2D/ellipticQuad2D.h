@@ -70,7 +70,7 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerQuad2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, ogs_t *ogs, dfloat lambda, const char *options);
+void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
 
 typedef struct {
 

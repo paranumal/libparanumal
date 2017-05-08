@@ -83,12 +83,12 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     ogs->Nhalo = 0;
     for(iint n=0;n<ogs->Ngather;++n){
       for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-	if(gatherHaloFlags[id]){
-	  haloLocalIds[ogs->Nhalo] = n;
-	  haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
-	  ++ogs->Nhalo;
-	  break;
-	}
+      	if(gatherHaloFlags[id]){
+      	  haloLocalIds[ogs->Nhalo] = n;
+      	  haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
+      	  ++ogs->Nhalo;
+      	  break;
+      	}
       }
     }     
     
