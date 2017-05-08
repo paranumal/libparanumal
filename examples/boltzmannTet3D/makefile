@@ -41,7 +41,8 @@ boltzmannRampFunction3D.o \
 boltzmannLserkStep3D.o \
 boltzmannSark3Step3D.o \
 boltzmannSaab3Step3D.o \
-boltzmannLsimexStep3D.o 
+boltzmannLsimexStep3D.o \
+boltzmannPlotVTU3D.o
 
 # library objects
 LOBJS = \

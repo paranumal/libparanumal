@@ -22,13 +22,15 @@ void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options){
     // do error stuff on host
     boltzmannError3D(mesh, t, options);
     if(strstr(options, "VTU")){ 
+
+    //iint fld = 0;  
     // compute vorticity
-    //boltzmannComputeVorticity3D(mesh, mesh->q, 0, mesh->Nfields);
+    //boltzmannComputeVorticity3D(mesh, mesh->q, fld, mesh->Nfields);
     // output field files
-    iint fld = 1;
+    
     char fname[BUFSIZ];
     sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
-    meshPlotVTU3D(mesh, fname, fld);
+    boltzmannPlotVTU3D(mesh, fname);
     }
   }
   else{
@@ -38,12 +40,13 @@ void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options){
    if(strstr(options, "VTU")){ 
     //boltzmannCouetteError2D(mesh, t);
     // compute vorticity
-    // boltzmannComputeVorticity3D(mesh, mesh->q, 0, mesh->Nfields);
+    //iint fld = 0;
+    //boltzmannComputeVorticity3D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
-    iint fld = 0;
+    
     char fname[BUFSIZ];
     sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
-    meshPlotVTU3D(mesh, fname, fld);
+    boltzmannPlotVTU3D(mesh, fname);
   }
   
     
