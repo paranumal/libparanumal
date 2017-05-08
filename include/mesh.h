@@ -286,13 +286,15 @@ typedef struct {
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
+
   
   
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
   
-  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; 
-  occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3;
+  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
+  occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
+  occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
 
   
 
