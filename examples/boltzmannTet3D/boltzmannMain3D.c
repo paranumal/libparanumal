@@ -12,7 +12,7 @@ int main(int argc, char **argv){
   // out         = REPORT, REPORT-VTU, NO  
   // bc          = PML, NONE
   
-   char *options =strdup("mode = SOLVER,out = REPORT-VTU,relaxation=CUBATURE,stab=NO,time=LSERK,bc=PML");
+   char *options =strdup("mode = SOLVER,out = REPORT-VTU,relaxation=CUBATURE,stab=NO,time=SAAB3,bc=PML");
   
 
     if(argc!=3){

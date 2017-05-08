@@ -491,3 +491,656 @@ kernel void boltzmannLSERKPmlUpdate3D(const iint Nelements,
     }
   }
 }
+
+
+kernel void boltzmannSARK3PmlStageUpdate3D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat rka,
+              const dfloat erka,
+              const dfloat rkb,
+              const dfloat erkb,
+              const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
+              const dfloat * restrict rhspmlq1,
+              const dfloat4 * restrict rhsq2, 
+              const dfloat * restrict rhspmlq2,
+              const dfloat4 * restrict qold,
+              const dfloat * restrict pmlqold,
+                    dfloat4 * restrict q,
+                    dfloat * restrict pmlq){
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = element*p_Np*p_pmlNfields+n;
+         // No-Need to Qx7 Qx9 Qx10
+      dfloat rhsqx11 =  rhspmlq1[base+QXID1*p_Np];
+      dfloat rhsqx12 =  rhspmlq1[base+QXID2*p_Np];
+      dfloat rhsqx13 =  rhspmlq1[base+QXID3*p_Np];
+      dfloat rhsqx14 =  rhspmlq1[base+QXID4*p_Np];
+      dfloat rhsqx15 =  rhspmlq1[base+QXID5*p_Np];
+      dfloat rhsqx16 =  rhspmlq1[base+QXID6*p_Np];
+      dfloat rhsqx18 =  rhspmlq1[base+QXID8*p_Np]; 
+      //
+      dfloat rhsqx21 =  rhspmlq2[base+QXID1*p_Np];
+      dfloat rhsqx22 =  rhspmlq2[base+QXID2*p_Np];
+      dfloat rhsqx23 =  rhspmlq2[base+QXID3*p_Np];
+      dfloat rhsqx24 =  rhspmlq2[base+QXID4*p_Np];
+      dfloat rhsqx25 =  rhspmlq2[base+QXID5*p_Np];
+      dfloat rhsqx26 =  rhspmlq2[base+QXID6*p_Np];
+      dfloat rhsqx28 =  rhspmlq2[base+QXID8*p_Np];   
+      
+      // No-Need to Qy6 Qy8 Qy10
+      dfloat rhsqy11 =  rhspmlq1[base+QYID1*p_Np];
+      dfloat rhsqy12 =  rhspmlq1[base+QYID2*p_Np];
+      dfloat rhsqy13 =  rhspmlq1[base+QYID3*p_Np];
+      dfloat rhsqy14 =  rhspmlq1[base+QYID4*p_Np];
+      dfloat rhsqy15 =  rhspmlq1[base+QYID5*p_Np];
+      dfloat rhsqy17 =  rhspmlq1[base+QYID7*p_Np];
+      dfloat rhsqy19 =  rhspmlq1[base+QYID9*p_Np];
+      //
+      dfloat rhsqy21 =  rhspmlq2[base+QYID1*p_Np];
+      dfloat rhsqy22 =  rhspmlq2[base+QYID2*p_Np];
+      dfloat rhsqy23 =  rhspmlq2[base+QYID3*p_Np];
+      dfloat rhsqy24 =  rhspmlq2[base+QYID4*p_Np];
+      dfloat rhsqy25 =  rhspmlq2[base+QYID5*p_Np];
+      dfloat rhsqy27 =  rhspmlq2[base+QYID7*p_Np];
+      dfloat rhsqy29 =  rhspmlq2[base+QYID9*p_Np];
+
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz11  = rhspmlq1[base+QZID1 *p_Np];
+      dfloat rhsqz12  = rhspmlq1[base+QZID2 *p_Np];
+      dfloat rhsqz13  = rhspmlq1[base+QZID3 *p_Np];
+      dfloat rhsqz14  = rhspmlq1[base+QZID4 *p_Np];
+      dfloat rhsqz16  = rhspmlq1[base+QZID6 *p_Np];
+      dfloat rhsqz17  = rhspmlq1[base+QZID7 *p_Np];
+      dfloat rhsqz110 = rhspmlq1[base+QZID10*p_Np];
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz21  = rhspmlq2[base+QZID1 *p_Np];
+      dfloat rhsqz22  = rhspmlq2[base+QZID2 *p_Np];
+      dfloat rhsqz23  = rhspmlq2[base+QZID3 *p_Np];
+      dfloat rhsqz24  = rhspmlq2[base+QZID4 *p_Np];
+      dfloat rhsqz26  = rhspmlq2[base+QZID6 *p_Np];
+      dfloat rhsqz27  = rhspmlq2[base+QZID7 *p_Np];
+      dfloat rhsqz210 = rhspmlq2[base+QZID10*p_Np];
+      //
+      //Q OLD
+      dfloat qxold1 =  pmlqold[base+QXID1*p_Np];
+      dfloat qxold2 =  pmlqold[base+QXID2*p_Np];
+      dfloat qxold3 =  pmlqold[base+QXID3*p_Np];
+      dfloat qxold4 =  pmlqold[base+QXID4*p_Np];
+      dfloat qxold5 =  pmlqold[base+QXID5*p_Np];
+      dfloat qxold6 =  pmlqold[base+QXID6*p_Np];
+      dfloat qxold8 =  pmlqold[base+QXID8*p_Np]; 
+      //
+      dfloat qyold1 =  pmlqold[base+QYID1*p_Np];
+      dfloat qyold2 =  pmlqold[base+QYID2*p_Np];
+      dfloat qyold3 =  pmlqold[base+QYID3*p_Np];
+      dfloat qyold4 =  pmlqold[base+QYID4*p_Np];
+      dfloat qyold5 =  pmlqold[base+QYID5*p_Np];
+      dfloat qyold7 =  pmlqold[base+QYID7*p_Np];
+      dfloat qyold9 =  pmlqold[base+QYID9*p_Np];
+      //
+      dfloat qzold1  = pmlqold[base+QZID1 *p_Np];
+      dfloat qzold2  = pmlqold[base+QZID2 *p_Np];
+      dfloat qzold3  = pmlqold[base+QZID3 *p_Np];
+      dfloat qzold4  = pmlqold[base+QZID4 *p_Np];
+      dfloat qzold6  = pmlqold[base+QZID6 *p_Np];
+      dfloat qzold7  = pmlqold[base+QZID7 *p_Np];
+      dfloat qzold10 = pmlqold[base+QZID10*p_Np];
+      //
+      pmlq[base+QXID1*p_Np] = qxold1 + dt*(rka*rhsqx11 + rkb*rhsqx21); 
+      pmlq[base+QXID2*p_Np] = qxold2 + dt*(rka*rhsqx12 + rkb*rhsqx22); 
+      pmlq[base+QXID3*p_Np] = qxold3 + dt*(rka*rhsqx13 + rkb*rhsqx23); 
+      pmlq[base+QXID4*p_Np] = qxold4 + dt*(rka*rhsqx14 + rkb*rhsqx24); 
+      pmlq[base+QXID5*p_Np] = qxold5 + dt*(rka*rhsqx15 + rkb*rhsqx25); 
+      pmlq[base+QXID6*p_Np] = qxold6 + dt*(rka*rhsqx16 + rkb*rhsqx26); 
+      pmlq[base+QXID8*p_Np] = qxold8 + dt*(rka*rhsqx18 + rkb*rhsqx28); 
+      //
+      pmlq[base+QYID1*p_Np] = qyold1 + dt*(rka*rhsqy11 + rkb*rhsqy21);
+      pmlq[base+QYID2*p_Np] = qyold2 + dt*(rka*rhsqy12 + rkb*rhsqy22);
+      pmlq[base+QYID3*p_Np] = qyold3 + dt*(rka*rhsqy13 + rkb*rhsqy23);
+      pmlq[base+QYID4*p_Np] = qyold4 + dt*(rka*rhsqy14 + rkb*rhsqy24);
+      pmlq[base+QYID5*p_Np] = qyold5 + dt*(rka*rhsqy15 + rkb*rhsqy25);
+      pmlq[base+QYID7*p_Np] = qyold7 + dt*(rka*rhsqy17 + rkb*rhsqy27);
+      pmlq[base+QYID9*p_Np] = qyold9 + dt*(rka*rhsqy19 + rkb*rhsqy29);
+      //
+      pmlq[base+QZID1 *p_Np] = qzold1  + dt*(rka*rhsqz11  + rkb*rhsqz21 );
+      pmlq[base+QZID2 *p_Np] = qzold2  + dt*(rka*rhsqz12  + rkb*rhsqz22 );
+      pmlq[base+QZID3 *p_Np] = qzold3  + dt*(rka*rhsqz13  + rkb*rhsqz23 );
+      pmlq[base+QZID4 *p_Np] = qzold4  + dt*(rka*rhsqz14  + rkb*rhsqz24 );
+      pmlq[base+QZID6 *p_Np] = qzold6  + dt*(rka*rhsqz16  + rkb*rhsqz26 );
+      pmlq[base+QZID7 *p_Np] = qzold7  + dt*(rka*rhsqz17  + rkb*rhsqz27 );
+      pmlq[base+QZID10*p_Np] = qzold10 + dt*(rka*rhsqz110 + rkb*rhsqz210);
+
+      // Update Q
+
+      const iint id = 3*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[id+0], rhsq1b = rhsq1[id+1], rhsq1c = rhsq1[id+2];
+      dfloat4 rhsq2a = rhsq2[id+0], rhsq2b = rhsq2[id+1], rhsq2c = rhsq2[id+2];
+      //
+      dfloat4 qoa = qold[id+0], qob = qold[id+1], qoc = qold[id+2];
+      
+      //
+      dfloat4 qa, qb, qc;
+      qa.x   = qoa.x + dt*( rka*rhsq1a.x + rkb*rhsq2a.x ); 
+      qa.y   = qoa.y + dt*( rka*rhsq1a.y + rkb*rhsq2a.y ); 
+      qa.z   = qoa.z + dt*( rka*rhsq1a.z + rkb*rhsq2a.z ); 
+      qa.w   = qoa.w + dt*( rka*rhsq1a.w + rkb*rhsq2a.w ); 
+     
+      qb.x   = expdt*qob.x + dt*( erka* rhsq1b.x + erkb* rhsq2b.x ); 
+      qb.y   = expdt*qob.y + dt*( erka* rhsq1b.y + erkb* rhsq2b.y ); 
+      qb.z   = expdt*qob.z + dt*( erka* rhsq1b.z + erkb* rhsq2b.z ); 
+      qb.w   = expdt*qob.w + dt*( erka* rhsq1b.w + erkb* rhsq2b.w ); 
+
+      qc.x   = expdt*qoc.x + dt*( erka* rhsq1c.x + erkb* rhsq2c.x ); 
+      qc.y   = expdt*qoc.y + dt*( erka* rhsq1c.y + erkb* rhsq2c.y ); 
+      
+      q[id+0] = qa;
+      q[id+1] = qb;
+      q[id+2] = qc; 
+     
+    }
+  }
+}
+
+
+kernel void boltzmannSARK3PmlUpdate3D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat rka,
+              const dfloat erka,
+              const dfloat rkb,
+              const dfloat erkb,
+              const dfloat rkc,
+              const dfloat erkc,
+              const dfloat ramp, 
+              const dfloat4 * restrict rhsq1,
+              const dfloat * restrict rhspmlq1,
+              const dfloat4 * restrict rhsq2, 
+              const dfloat * restrict rhspmlq2,
+              const dfloat4 * restrict rhsq3, 
+              const dfloat * restrict rhspmlq3,
+                    dfloat4 * restrict qold,
+                    dfloat * restrict pmlqold,
+                    dfloat4 * restrict q, 
+                    dfloat * restrict pmlq){
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = element*p_Np*p_pmlNfields+n;
+
+      // No-Need to Qx7 Qx9 Qx10
+      dfloat rhsqx11 =  rhspmlq1[base+QXID1*p_Np];
+      dfloat rhsqx12 =  rhspmlq1[base+QXID2*p_Np];
+      dfloat rhsqx13 =  rhspmlq1[base+QXID3*p_Np];
+      dfloat rhsqx14 =  rhspmlq1[base+QXID4*p_Np];
+      dfloat rhsqx15 =  rhspmlq1[base+QXID5*p_Np];
+      dfloat rhsqx16 =  rhspmlq1[base+QXID6*p_Np];
+      dfloat rhsqx18 =  rhspmlq1[base+QXID8*p_Np]; 
+      //
+      dfloat rhsqx21 =  rhspmlq2[base+QXID1*p_Np];
+      dfloat rhsqx22 =  rhspmlq2[base+QXID2*p_Np];
+      dfloat rhsqx23 =  rhspmlq2[base+QXID3*p_Np];
+      dfloat rhsqx24 =  rhspmlq2[base+QXID4*p_Np];
+      dfloat rhsqx25 =  rhspmlq2[base+QXID5*p_Np];
+      dfloat rhsqx26 =  rhspmlq2[base+QXID6*p_Np];
+      dfloat rhsqx28 =  rhspmlq2[base+QXID8*p_Np]; 
+      //
+      dfloat rhsqx31 =  rhspmlq3[base+QXID1*p_Np];
+      dfloat rhsqx32 =  rhspmlq3[base+QXID2*p_Np];
+      dfloat rhsqx33 =  rhspmlq3[base+QXID3*p_Np];
+      dfloat rhsqx34 =  rhspmlq3[base+QXID4*p_Np];
+      dfloat rhsqx35 =  rhspmlq3[base+QXID5*p_Np];
+      dfloat rhsqx36 =  rhspmlq3[base+QXID6*p_Np];
+      dfloat rhsqx38 =  rhspmlq3[base+QXID8*p_Np];    
+      
+      // No-Need to Qy6 Qy8 Qy10
+      dfloat rhsqy11 =  rhspmlq1[base+QYID1*p_Np];
+      dfloat rhsqy12 =  rhspmlq1[base+QYID2*p_Np];
+      dfloat rhsqy13 =  rhspmlq1[base+QYID3*p_Np];
+      dfloat rhsqy14 =  rhspmlq1[base+QYID4*p_Np];
+      dfloat rhsqy15 =  rhspmlq1[base+QYID5*p_Np];
+      dfloat rhsqy17 =  rhspmlq1[base+QYID7*p_Np];
+      dfloat rhsqy19 =  rhspmlq1[base+QYID9*p_Np];
+      //
+      dfloat rhsqy21 =  rhspmlq2[base+QYID1*p_Np];
+      dfloat rhsqy22 =  rhspmlq2[base+QYID2*p_Np];
+      dfloat rhsqy23 =  rhspmlq2[base+QYID3*p_Np];
+      dfloat rhsqy24 =  rhspmlq2[base+QYID4*p_Np];
+      dfloat rhsqy25 =  rhspmlq2[base+QYID5*p_Np];
+      dfloat rhsqy27 =  rhspmlq2[base+QYID7*p_Np];
+      dfloat rhsqy29 =  rhspmlq2[base+QYID9*p_Np];
+      //
+      dfloat rhsqy31 =  rhspmlq3[base+QYID1*p_Np];
+      dfloat rhsqy32 =  rhspmlq3[base+QYID2*p_Np];
+      dfloat rhsqy33 =  rhspmlq3[base+QYID3*p_Np];
+      dfloat rhsqy34 =  rhspmlq3[base+QYID4*p_Np];
+      dfloat rhsqy35 =  rhspmlq3[base+QYID5*p_Np];
+      dfloat rhsqy37 =  rhspmlq3[base+QYID7*p_Np];
+      dfloat rhsqy39 =  rhspmlq3[base+QYID9*p_Np];
+
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz11  = rhspmlq1[base+QZID1 *p_Np];
+      dfloat rhsqz12  = rhspmlq1[base+QZID2 *p_Np];
+      dfloat rhsqz13  = rhspmlq1[base+QZID3 *p_Np];
+      dfloat rhsqz14  = rhspmlq1[base+QZID4 *p_Np];
+      dfloat rhsqz16  = rhspmlq1[base+QZID6 *p_Np];
+      dfloat rhsqz17  = rhspmlq1[base+QZID7 *p_Np];
+      dfloat rhsqz110 = rhspmlq1[base+QZID10*p_Np];
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz21  = rhspmlq2[base+QZID1 *p_Np];
+      dfloat rhsqz22  = rhspmlq2[base+QZID2 *p_Np];
+      dfloat rhsqz23  = rhspmlq2[base+QZID3 *p_Np];
+      dfloat rhsqz24  = rhspmlq2[base+QZID4 *p_Np];
+      dfloat rhsqz26  = rhspmlq2[base+QZID6 *p_Np];
+      dfloat rhsqz27  = rhspmlq2[base+QZID7 *p_Np];
+      dfloat rhsqz210 = rhspmlq2[base+QZID10*p_Np];
+      //
+      dfloat rhsqz31  = rhspmlq3[base+QZID1 *p_Np];
+      dfloat rhsqz32  = rhspmlq3[base+QZID2 *p_Np];
+      dfloat rhsqz33  = rhspmlq3[base+QZID3 *p_Np];
+      dfloat rhsqz34  = rhspmlq3[base+QZID4 *p_Np];
+      dfloat rhsqz36  = rhspmlq3[base+QZID6 *p_Np];
+      dfloat rhsqz37  = rhspmlq3[base+QZID7 *p_Np];
+      dfloat rhsqz310 = rhspmlq3[base+QZID10*p_Np];
+      //
+      //Q OLD
+      dfloat qxold1 =  pmlqold[base+QXID1*p_Np];
+      dfloat qxold2 =  pmlqold[base+QXID2*p_Np];
+      dfloat qxold3 =  pmlqold[base+QXID3*p_Np];
+      dfloat qxold4 =  pmlqold[base+QXID4*p_Np];
+      dfloat qxold5 =  pmlqold[base+QXID5*p_Np];
+      dfloat qxold6 =  pmlqold[base+QXID6*p_Np];
+      dfloat qxold8 =  pmlqold[base+QXID8*p_Np]; 
+      //
+      dfloat qyold1 =  pmlqold[base+QYID1*p_Np];
+      dfloat qyold2 =  pmlqold[base+QYID2*p_Np];
+      dfloat qyold3 =  pmlqold[base+QYID3*p_Np];
+      dfloat qyold4 =  pmlqold[base+QYID4*p_Np];
+      dfloat qyold5 =  pmlqold[base+QYID5*p_Np];
+      dfloat qyold7 =  pmlqold[base+QYID7*p_Np];
+      dfloat qyold9 =  pmlqold[base+QYID9*p_Np];
+      //
+      dfloat qzold1  = pmlqold[base+QZID1 *p_Np];
+      dfloat qzold2  = pmlqold[base+QZID2 *p_Np];
+      dfloat qzold3  = pmlqold[base+QZID3 *p_Np];
+      dfloat qzold4  = pmlqold[base+QZID4 *p_Np];
+      dfloat qzold6  = pmlqold[base+QZID6 *p_Np];
+      dfloat qzold7  = pmlqold[base+QZID7 *p_Np];
+      dfloat qzold10 = pmlqold[base+QZID10*p_Np];
+      //
+
+      //
+      dfloat qx1 = qxold1 + dt*(rka*rhsqx11 + rkb*rhsqx21 + rkc*rhsqx31); 
+      dfloat qx2 = qxold2 + dt*(rka*rhsqx12 + rkb*rhsqx22 + rkc*rhsqx32); 
+      dfloat qx3 = qxold3 + dt*(rka*rhsqx13 + rkb*rhsqx23 + rkc*rhsqx33); 
+      dfloat qx4 = qxold4 + dt*(rka*rhsqx14 + rkb*rhsqx24 + rkc*rhsqx34); 
+      dfloat qx5 = qxold5 + dt*(rka*rhsqx15 + rkb*rhsqx25 + rkc*rhsqx35); 
+      dfloat qx6 = qxold6 + dt*(rka*rhsqx16 + rkb*rhsqx26 + rkc*rhsqx36); 
+      dfloat qx8 = qxold8 + dt*(rka*rhsqx18 + rkb*rhsqx28 + rkc*rhsqx38); 
+      //
+      dfloat qy1 = qyold1 + dt*(rka*rhsqy11 + rkb*rhsqy21 + rkc*rhsqy31);
+      dfloat qy2 = qyold2 + dt*(rka*rhsqy12 + rkb*rhsqy22 + rkc*rhsqy32);
+      dfloat qy3 = qyold3 + dt*(rka*rhsqy13 + rkb*rhsqy23 + rkc*rhsqy33);
+      dfloat qy4 = qyold4 + dt*(rka*rhsqy14 + rkb*rhsqy24 + rkc*rhsqy34);
+      dfloat qy5 = qyold5 + dt*(rka*rhsqy15 + rkb*rhsqy25 + rkc*rhsqy35);
+      dfloat qy7 = qyold7 + dt*(rka*rhsqy17 + rkb*rhsqy27 + rkc*rhsqy37);
+      dfloat qy9 = qyold9 + dt*(rka*rhsqy19 + rkb*rhsqy29 + rkc*rhsqy39);
+      //
+      dfloat qz1  = qzold1  + dt*(rka*rhsqz11  + rkb*rhsqz21  + rkc*rhsqz31 );
+      dfloat qz2  = qzold2  + dt*(rka*rhsqz12  + rkb*rhsqz22  + rkc*rhsqz32 );
+      dfloat qz3  = qzold3  + dt*(rka*rhsqz13  + rkb*rhsqz23  + rkc*rhsqz33 );
+      dfloat qz4  = qzold4  + dt*(rka*rhsqz14  + rkb*rhsqz24  + rkc*rhsqz34 );
+      dfloat qz6  = qzold6  + dt*(rka*rhsqz16  + rkb*rhsqz26  + rkc*rhsqz36 );
+      dfloat qz7  = qzold7  + dt*(rka*rhsqz17  + rkb*rhsqz27  + rkc*rhsqz37 );
+      dfloat qz10 = qzold10 + dt*(rka*rhsqz110 + rkb*rhsqz210 + rkc*rhsqz310);
+      //
+      pmlq[base+QXID1*p_Np] = qx1 ; 
+      pmlq[base+QXID2*p_Np] = qx2 ; 
+      pmlq[base+QXID3*p_Np] = qx3 ; 
+      pmlq[base+QXID4*p_Np] = qx4 ; 
+      pmlq[base+QXID5*p_Np] = qx5 ; 
+      pmlq[base+QXID6*p_Np] = qx6 ; 
+      pmlq[base+QXID8*p_Np] = qx8 ; 
+      
+      //
+      pmlq[base+QYID1*p_Np] = qy1;
+      pmlq[base+QYID2*p_Np] = qy2;
+      pmlq[base+QYID3*p_Np] = qy3;
+      pmlq[base+QYID4*p_Np] = qy4;
+      pmlq[base+QYID5*p_Np] = qy5;
+      pmlq[base+QYID7*p_Np] = qy7;
+      pmlq[base+QYID9*p_Np] = qy9;
+      //
+      pmlq[base+QZID1 *p_Np] = qz1 ;
+      pmlq[base+QZID2 *p_Np] = qz2 ;
+      pmlq[base+QZID3 *p_Np] = qz3 ;
+      pmlq[base+QZID4 *p_Np] = qz4 ;
+      pmlq[base+QZID6 *p_Np] = qz6 ;
+      pmlq[base+QZID7 *p_Np] = qz7 ;
+      pmlq[base+QZID10*p_Np] = qz10;
+      //
+      pmlqold[base+QXID1*p_Np] = qx1 ; 
+      pmlqold[base+QXID2*p_Np] = qx2 ; 
+      pmlqold[base+QXID3*p_Np] = qx3 ; 
+      pmlqold[base+QXID4*p_Np] = qx4 ; 
+      pmlqold[base+QXID5*p_Np] = qx5 ; 
+      pmlqold[base+QXID6*p_Np] = qx6 ; 
+      pmlqold[base+QXID8*p_Np] = qx8 ; 
+      //
+      pmlqold[base+QYID1*p_Np] = qy1;
+      pmlqold[base+QYID2*p_Np] = qy2;
+      pmlqold[base+QYID3*p_Np] = qy3;
+      pmlqold[base+QYID4*p_Np] = qy4;
+      pmlqold[base+QYID5*p_Np] = qy5;
+      pmlqold[base+QYID7*p_Np] = qy7;
+      pmlqold[base+QYID9*p_Np] = qy9;
+      //
+      pmlqold[base+QZID1 *p_Np] = qz1 ;
+      pmlqold[base+QZID2 *p_Np] = qz2 ;
+      pmlqold[base+QZID3 *p_Np] = qz3 ;
+      pmlqold[base+QZID4 *p_Np] = qz4 ;
+      pmlqold[base+QZID6 *p_Np] = qz6 ;
+      pmlqold[base+QZID7 *p_Np] = qz7 ;
+      pmlqold[base+QZID10*p_Np] = qz10;
+
+      // Update Q
+      const iint id = 3*(n + element*p_Np);
+
+      dfloat4 rhsq1a = rhsq1[id+0], rhsq1b = rhsq1[id+1], rhsq1c = rhsq1[id+2];
+      dfloat4 rhsq2a = rhsq2[id+0], rhsq2b = rhsq2[id+1], rhsq2c = rhsq2[id+2];
+      dfloat4 rhsq3a = rhsq3[id+0], rhsq3b = rhsq3[id+1], rhsq3c = rhsq3[id+2];
+      dfloat4    qoa = qold[id+0],     qob = qold[id+1],     qoc = qold[id+2];
+      
+      //
+      dfloat4 qa, qb, qc;
+      qa.x   = qoa.x + dt*( rka*rhsq1a.x + rkb*rhsq2a.x + rkc*rhsq3a.x ); 
+      qa.y   = qoa.y + dt*( rka*rhsq1a.y + rkb*rhsq2a.y + rkc*rhsq3a.y ); 
+      qa.z   = qoa.z + dt*( rka*rhsq1a.z + rkb*rhsq2a.z + rkc*rhsq3a.z ); 
+      qa.w   = qoa.w + dt*( rka*rhsq1a.w + rkb*rhsq2a.w + rkc*rhsq3a.w ); 
+     
+      qb.x   = expdt*qob.x + dt*( erka* rhsq1b.x + erkb* rhsq2b.x + erkc*rhsq3b.x ); 
+      qb.y   = expdt*qob.y + dt*( erka* rhsq1b.y + erkb* rhsq2b.y + erkc*rhsq3b.y ); 
+      qb.z   = expdt*qob.z + dt*( erka* rhsq1b.z + erkb* rhsq2b.z + erkc*rhsq3b.z ); 
+      qb.w   = expdt*qob.w + dt*( erka* rhsq1b.w + erkb* rhsq2b.w + erkc*rhsq3b.w ); 
+
+      qc.x   = expdt*qoc.x + dt*( erka* rhsq1c.x + erkb* rhsq2c.x + erkc*rhsq3c.x); 
+      qc.y   = expdt*qoc.y + dt*( erka* rhsq1c.y + erkb* rhsq2c.y + erkc*rhsq3c.y); 
+      
+      q[id+0] = qa;
+      q[id+1] = qb;
+      q[id+2] = qc;
+      //
+      qold[id+0] = qa;
+      qold[id+1] = qb;
+      qold[id+2] = qc;
+
+      
+      
+     
+    }
+  }
+}
+
+
+kernel void boltzmannSAAB3PmlUpdate3D(const iint Nelements,
+              const iint * restrict elementIds, 
+              const dfloat dt,  
+              const dfloat expdt, 
+              const dfloat ramp, 
+              const dfloat ab1,
+              const dfloat ab2,
+              const dfloat ab3,
+              const dfloat saab1,
+              const dfloat saab2,
+              const dfloat saab3, 
+              const dfloat4 * restrict rhsq1,
+              const dfloat * restrict rhspmlq1,
+                    dfloat4 * restrict rhsq2, 
+                    dfloat * restrict rhspmlq2,
+                    dfloat4 * restrict rhsq3, 
+                    dfloat * restrict rhspmlq3,
+                    dfloat4 * restrict q, 
+                    dfloat * restrict pmlq){
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
+      const iint base = element*p_Np*p_pmlNfields+n;
+      // No-Need to Qx7 Qx9 Qx10
+      dfloat rhsqx11=rhspmlq1[base+QXID1*p_Np];
+      dfloat rhsqx12=rhspmlq1[base+QXID2*p_Np];
+      dfloat rhsqx13=rhspmlq1[base+QXID3*p_Np];
+      dfloat rhsqx14=rhspmlq1[base+QXID4*p_Np];
+      dfloat rhsqx15=rhspmlq1[base+QXID5*p_Np];
+      dfloat rhsqx16=rhspmlq1[base+QXID6*p_Np];
+      dfloat rhsqx18=rhspmlq1[base+QXID8*p_Np]; 
+      //
+      dfloat rhsqx21=rhspmlq2[base+QXID1*p_Np];
+      dfloat rhsqx22=rhspmlq2[base+QXID2*p_Np];
+      dfloat rhsqx23=rhspmlq2[base+QXID3*p_Np];
+      dfloat rhsqx24=rhspmlq2[base+QXID4*p_Np];
+      dfloat rhsqx25=rhspmlq2[base+QXID5*p_Np];
+      dfloat rhsqx26=rhspmlq2[base+QXID6*p_Np];
+      dfloat rhsqx28=rhspmlq2[base+QXID8*p_Np]; 
+      //
+      dfloat rhsqx31=rhspmlq3[base+QXID1*p_Np];
+      dfloat rhsqx32=rhspmlq3[base+QXID2*p_Np];
+      dfloat rhsqx33=rhspmlq3[base+QXID3*p_Np];
+      dfloat rhsqx34=rhspmlq3[base+QXID4*p_Np];
+      dfloat rhsqx35=rhspmlq3[base+QXID5*p_Np];
+      dfloat rhsqx36=rhspmlq3[base+QXID6*p_Np];
+      dfloat rhsqx38=rhspmlq3[base+QXID8*p_Np];    
+      
+      // No-Need to Qy6 Qy8 Qy10
+      dfloat rhsqy11=rhspmlq1[base+QYID1*p_Np];
+      dfloat rhsqy12=rhspmlq1[base+QYID2*p_Np];
+      dfloat rhsqy13=rhspmlq1[base+QYID3*p_Np];
+      dfloat rhsqy14=rhspmlq1[base+QYID4*p_Np];
+      dfloat rhsqy15=rhspmlq1[base+QYID5*p_Np];
+      dfloat rhsqy17=rhspmlq1[base+QYID7*p_Np];
+      dfloat rhsqy19=rhspmlq1[base+QYID9*p_Np];
+      //
+      dfloat rhsqy21=rhspmlq2[base+QYID1*p_Np];
+      dfloat rhsqy22=rhspmlq2[base+QYID2*p_Np];
+      dfloat rhsqy23=rhspmlq2[base+QYID3*p_Np];
+      dfloat rhsqy24=rhspmlq2[base+QYID4*p_Np];
+      dfloat rhsqy25=rhspmlq2[base+QYID5*p_Np];
+      dfloat rhsqy27=rhspmlq2[base+QYID7*p_Np];
+      dfloat rhsqy29=rhspmlq2[base+QYID9*p_Np];
+      //
+      dfloat rhsqy31= rhspmlq3[base+QYID1*p_Np];
+      dfloat rhsqy32= rhspmlq3[base+QYID2*p_Np];
+      dfloat rhsqy33= rhspmlq3[base+QYID3*p_Np];
+      dfloat rhsqy34= rhspmlq3[base+QYID4*p_Np];
+      dfloat rhsqy35= rhspmlq3[base+QYID5*p_Np];
+      dfloat rhsqy37= rhspmlq3[base+QYID7*p_Np];
+      dfloat rhsqy39= rhspmlq3[base+QYID9*p_Np];
+
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz11 =rhspmlq1[base+QZID1 *p_Np];
+      dfloat rhsqz12 =rhspmlq1[base+QZID2 *p_Np];
+      dfloat rhsqz13 =rhspmlq1[base+QZID3 *p_Np];
+      dfloat rhsqz14 =rhspmlq1[base+QZID4 *p_Np];
+      dfloat rhsqz16 =rhspmlq1[base+QZID6 *p_Np];
+      dfloat rhsqz17 =rhspmlq1[base+QZID7 *p_Np];
+      dfloat rhsqz110=rhspmlq1[base+QZID10*p_Np];
+      // No-Need to Qz5 Qz8 Qz9
+      dfloat rhsqz21 =rhspmlq2[base+QZID1 *p_Np];
+      dfloat rhsqz22 =rhspmlq2[base+QZID2 *p_Np];
+      dfloat rhsqz23 =rhspmlq2[base+QZID3 *p_Np];
+      dfloat rhsqz24 =rhspmlq2[base+QZID4 *p_Np];
+      dfloat rhsqz26 =rhspmlq2[base+QZID6 *p_Np];
+      dfloat rhsqz27 =rhspmlq2[base+QZID7 *p_Np];
+      dfloat rhsqz210=rhspmlq2[base+QZID10*p_Np];
+      //
+      dfloat rhsqz31 =rhspmlq3[base+QZID1 *p_Np];
+      dfloat rhsqz32 =rhspmlq3[base+QZID2 *p_Np];
+      dfloat rhsqz33 =rhspmlq3[base+QZID3 *p_Np];
+      dfloat rhsqz34 =rhspmlq3[base+QZID4 *p_Np];
+      dfloat rhsqz36 =rhspmlq3[base+QZID6 *p_Np];
+      dfloat rhsqz37 =rhspmlq3[base+QZID7 *p_Np];
+      dfloat rhsqz310=rhspmlq3[base+QZID10*p_Np];
+      // //
+      dfloat qx1 = pmlq[base+QXID1*p_Np];  
+      dfloat qx2 = pmlq[base+QXID2*p_Np];  
+      dfloat qx3 = pmlq[base+QXID3*p_Np];  
+      dfloat qx4 = pmlq[base+QXID4*p_Np];  
+      dfloat qx5 = pmlq[base+QXID5*p_Np];  
+      dfloat qx6 = pmlq[base+QXID6*p_Np];  
+      dfloat qx8 = pmlq[base+QXID8*p_Np];  
+      //
+      dfloat qy1 = pmlq[base+QYID1*p_Np];
+      dfloat qy2 = pmlq[base+QYID2*p_Np];
+      dfloat qy3 = pmlq[base+QYID3*p_Np];
+      dfloat qy4 = pmlq[base+QYID4*p_Np];
+      dfloat qy5 = pmlq[base+QYID5*p_Np];
+      dfloat qy7 = pmlq[base+QYID7*p_Np];
+      dfloat qy9 = pmlq[base+QYID9*p_Np];
+      //
+      dfloat qz1  = pmlq[base+QZID1 *p_Np];
+      dfloat qz2  = pmlq[base+QZID2 *p_Np];
+      dfloat qz3  = pmlq[base+QZID3 *p_Np];
+      dfloat qz4  = pmlq[base+QZID4 *p_Np];
+      dfloat qz6  = pmlq[base+QZID6 *p_Np];
+      dfloat qz7  = pmlq[base+QZID7 *p_Np];
+      dfloat qz10 = pmlq[base+QZID10*p_Np];
+      
+      //
+      qx1 += ab1*rhsqx11 + ab2*rhsqx21 + ab3*rhsqx31; 
+      qx2 += ab1*rhsqx12 + ab2*rhsqx22 + ab3*rhsqx32; 
+      qx3 += ab1*rhsqx13 + ab2*rhsqx23 + ab3*rhsqx33; 
+      qx4 += ab1*rhsqx14 + ab2*rhsqx24 + ab3*rhsqx34; 
+      qx5 += ab1*rhsqx15 + ab2*rhsqx25 + ab3*rhsqx35; 
+      qx6 += ab1*rhsqx16 + ab2*rhsqx26 + ab3*rhsqx36; 
+      qx8 += ab1*rhsqx18 + ab2*rhsqx28 + ab3*rhsqx38; 
+      //
+      qy1 += ab1*rhsqy11 + ab2*rhsqy21 + ab3*rhsqy31;
+      qy2 += ab1*rhsqy12 + ab2*rhsqy22 + ab3*rhsqy32;
+      qy3 += ab1*rhsqy13 + ab2*rhsqy23 + ab3*rhsqy33;
+      qy4 += ab1*rhsqy14 + ab2*rhsqy24 + ab3*rhsqy34;
+      qy5 += ab1*rhsqy15 + ab2*rhsqy25 + ab3*rhsqy35;
+      qy7 += ab1*rhsqy17 + ab2*rhsqy27 + ab3*rhsqy37;
+      qy9 += ab1*rhsqy19 + ab2*rhsqy29 + ab3*rhsqy39;
+      //
+      qz1  += ab1*rhsqz11  + ab2*rhsqz21  + ab3*rhsqz31 ;
+      qz2  += ab1*rhsqz12  + ab2*rhsqz22  + ab3*rhsqz32 ;
+      qz3  += ab1*rhsqz13  + ab2*rhsqz23  + ab3*rhsqz33 ;
+      qz4  += ab1*rhsqz14  + ab2*rhsqz24  + ab3*rhsqz34 ;
+      qz6  += ab1*rhsqz16  + ab2*rhsqz26  + ab3*rhsqz36 ;
+      qz7  += ab1*rhsqz17  + ab2*rhsqz27  + ab3*rhsqz37 ;
+      qz10 += ab1*rhsqz110 + ab2*rhsqz210 + ab3*rhsqz310;
+      //
+      pmlq[base+QXID1*p_Np] = qx1; 
+      pmlq[base+QXID2*p_Np] = qx2; 
+      pmlq[base+QXID3*p_Np] = qx3; 
+      pmlq[base+QXID4*p_Np] = qx4; 
+      pmlq[base+QXID5*p_Np] = qx5; 
+      pmlq[base+QXID6*p_Np] = qx6; 
+      pmlq[base+QXID8*p_Np] = qx8;    
+ 
+      pmlq[base+QYID1*p_Np] = qy1;
+      pmlq[base+QYID2*p_Np] = qy2;
+      pmlq[base+QYID3*p_Np] = qy3;
+      pmlq[base+QYID4*p_Np] = qy4;
+      pmlq[base+QYID5*p_Np] = qy5;
+      pmlq[base+QYID7*p_Np] = qy7;
+      pmlq[base+QYID9*p_Np] = qy9;
+   
+      pmlq[base+QZID1 *p_Np] = qz1;
+      pmlq[base+QZID2 *p_Np] = qz2;
+      pmlq[base+QZID3 *p_Np] = qz3;
+      pmlq[base+QZID4 *p_Np] = qz4;
+      pmlq[base+QZID6 *p_Np] = qz6;
+      pmlq[base+QZID7 *p_Np] = qz7;
+      pmlq[base+QZID10*p_Np] = qz10;
+      // //
+      rhspmlq2[base+QXID1*p_Np] = rhsqx11;
+      rhspmlq2[base+QXID2*p_Np] = rhsqx12;
+      rhspmlq2[base+QXID3*p_Np] = rhsqx13;
+      rhspmlq2[base+QXID4*p_Np] = rhsqx14;
+      rhspmlq2[base+QXID5*p_Np] = rhsqx15;
+      rhspmlq2[base+QXID6*p_Np] = rhsqx16;
+      rhspmlq2[base+QXID8*p_Np] = rhsqx18; 
+      
+      rhspmlq3[base+QXID1*p_Np] = rhsqx21;
+      rhspmlq3[base+QXID2*p_Np] = rhsqx22;
+      rhspmlq3[base+QXID3*p_Np] = rhsqx23;
+      rhspmlq3[base+QXID4*p_Np] = rhsqx24;
+      rhspmlq3[base+QXID5*p_Np] = rhsqx25;
+      rhspmlq3[base+QXID6*p_Np] = rhsqx26;
+      rhspmlq3[base+QXID8*p_Np] = rhsqx28; 
+      //
+      rhspmlq2[base+QYID1*p_Np] = rhsqy11;
+      rhspmlq2[base+QYID2*p_Np] = rhsqy12;
+      rhspmlq2[base+QYID3*p_Np] = rhsqy13;
+      rhspmlq2[base+QYID4*p_Np] = rhsqy14;
+      rhspmlq2[base+QYID5*p_Np] = rhsqy15;
+      rhspmlq2[base+QYID7*p_Np] = rhsqy17;
+      rhspmlq2[base+QYID9*p_Np] = rhsqy19;
+      
+      rhspmlq3[base+QYID1*p_Np] = rhsqy21;
+      rhspmlq3[base+QYID2*p_Np] = rhsqy22;
+      rhspmlq3[base+QYID3*p_Np] = rhsqy23;
+      rhspmlq3[base+QYID4*p_Np] = rhsqy24;
+      rhspmlq3[base+QYID5*p_Np] = rhsqy25;
+      rhspmlq3[base+QYID7*p_Np] = rhsqy27;
+      rhspmlq3[base+QYID9*p_Np] = rhsqy29;
+      // //
+      rhspmlq2[base+QZID1 *p_Np] = rhsqz11;
+      rhspmlq2[base+QZID2 *p_Np] = rhsqz12;
+      rhspmlq2[base+QZID3 *p_Np] = rhsqz13;
+      rhspmlq2[base+QZID4 *p_Np] = rhsqz14;
+      rhspmlq2[base+QZID6 *p_Np] = rhsqz16;
+      rhspmlq2[base+QZID7 *p_Np] = rhsqz17;
+      rhspmlq2[base+QZID10*p_Np] = rhsqz110;
+
+      rhspmlq3[base+QZID1 *p_Np] = rhsqz21;
+      rhspmlq3[base+QZID2 *p_Np] = rhsqz22;
+      rhspmlq3[base+QZID3 *p_Np] = rhsqz23;
+      rhspmlq3[base+QZID4 *p_Np] = rhsqz24;
+      rhspmlq3[base+QZID6 *p_Np] = rhsqz26;
+      rhspmlq3[base+QZID7 *p_Np] = rhsqz27;
+      rhspmlq3[base+QZID10*p_Np] = rhsqz210;
+
+
+      const iint id = 3*(n + element*p_Np);
+      dfloat4 rhsq1a = rhsq1[id+0], rhsq1b = rhsq1[id+1], rhsq1c = rhsq1[id+2];
+      dfloat4 rhsq2a = rhsq2[id+0], rhsq2b = rhsq2[id+1], rhsq2c = rhsq2[id+2];
+      dfloat4 rhsq3a = rhsq3[id+0], rhsq3b = rhsq3[id+1], rhsq3c = rhsq3[id+2];
+      //
+      dfloat4 qa = q[id+0], qb = q[id+1], qc = q[id+2];
+      //
+      qa.x   += ab1*rhsq1a.x + ab2*rhsq2a.x + ab3*rhsq3a.x; 
+      qa.y   += ab1*rhsq1a.y + ab2*rhsq2a.y + ab3*rhsq3a.y; 
+      qa.z   += ab1*rhsq1a.z + ab2*rhsq2a.z + ab3*rhsq3a.z; 
+      qa.w   += ab1*rhsq1a.w + ab2*rhsq2a.w + ab3*rhsq3a.w; 
+     
+      qb.x   = expdt*qb.x + saab1*rhsq1b.x + saab2*rhsq2b.x + saab3*rhsq3b.x; 
+      qb.y   = expdt*qb.y + saab1*rhsq1b.y + saab2*rhsq2b.y + saab3*rhsq3b.y; 
+      qb.z   = expdt*qb.z + saab1*rhsq1b.z + saab2*rhsq2b.z + saab3*rhsq3b.z; 
+      qb.w   = expdt*qb.w + saab1*rhsq1b.w + saab2*rhsq2b.w + saab3*rhsq3b.w; 
+
+      qc.x   = expdt*qc.x + saab1*rhsq1c.x + saab2*rhsq2c.x + saab3*rhsq3c.x; 
+      qc.y   = expdt*qc.y + saab1*rhsq1c.y + saab2*rhsq2c.y + saab3*rhsq3c.y; 
+      //           
+      rhsq3[id+0] = rhsq2a;
+      rhsq3[id+1] = rhsq2b;
+      rhsq3[id+2] = rhsq2c;
+      //
+      rhsq2[id+0] = rhsq1a;
+      rhsq2[id+1] = rhsq1b;
+      rhsq2[id+2] = rhsq1c;
+      //
+      q[id+0] = qa;
+      q[id+1] = qb;
+      q[id+2] = qc;
+      
+      
+     
+    }
+  }
+}

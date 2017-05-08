@@ -1,8 +1,4 @@
 
-#define DENSITY_SHIFT 0
-
-
-
 // Fully Explicit Scheme Uses Clasical half Half Splitting
 kernel void boltzmannRelaxationCub3D(const iint Nelements,
 					     const iint * restrict elementIds,
