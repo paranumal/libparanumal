@@ -22,20 +22,18 @@ void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
       occa::tic("residualUpdateKernel");
       // compute volume contribution to DG boltzmann RHS
       if(mesh->pmlNelements){
-	// //	printf("pmlNel = %d\n", mesh->pmlNelements);
-	// mesh->pmlResidualUpdateKernel(mesh->pmlNelements,
-	// 			      mesh->o_pmlElementIds,
-	// 			      mesh->dt,
-	// 			      ramp,
-	// 			      mesh->LsimexABi[k],
-	// 			      mesh->LsimexABe[k],
-	// 			      mesh->o_pmlqx,
-	// 			      mesh->o_pmlqy,
-	// 			      mesh->o_qZx,
-	// 			      mesh->o_qZy,
-	// 			      mesh->o_qYx,
-	// 			      mesh->o_qYy
-	// 			      );
+	//	printf("pmlNel = %d\n", mesh->pmlNelements);
+	mesh->pmlResidualUpdateKernel(mesh->pmlNelements,
+				      mesh->o_pmlElementIds,
+				      mesh->dt,
+				      ramp,
+				      mesh->LsimexABi[k],
+				      mesh->LsimexABe[k],
+				      mesh->o_q,
+				      mesh->o_pmlq,
+				      mesh->o_qZ,
+				      mesh->o_qY,
+				      mesh->o_pmlqY);
       }
       if(mesh->nonPmlNelements){
 	//	printf("nonPmlNel = %d\n", mesh->nonPmlNelements);
@@ -55,42 +53,32 @@ void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
       
       // Compute Implicit Part of Boltzmann, node based no communication
       if(mesh->pmlNelements){
- //      	//Implicit Solve Satge
- //      mesh->device.finish();
- //      occa::tic("pmlImplicitSolve");
-	//   mesh->pmlImplicitSolveKernel(mesh->pmlNelements,
-	// 			     mesh->o_pmlElementIds,
-	// 			     mesh->dt,
-	// 			     ramp,
-	// 			     mesh->LsimexAd[k],
-	// 			     // mesh->o_sigmax,
-	// 		      //    mesh->o_sigmay,
-	// 			     mesh->o_cubInterpT,
-	// 			     mesh->o_cubProjectT,
-	// 			     mesh->o_qYx,
-	// 			     mesh->o_qYy,
-	// 			     mesh->o_qZx,
-	// 			     mesh->o_qZy,
-	// 			     mesh->o_qZ);
-
-	// // No surface term for implicit part
-	// mesh->pmlImplicitUpdateKernel(mesh->pmlNelements,
-	// 			      mesh->o_pmlElementIds,
-	// 			      mesh->dt,
-	// 			      ramp,
-	// 			      mesh->LsimexAd[k],
-	// 			      mesh->o_qZx,
-	// 			      mesh->o_qZy,
-	// 			      mesh->o_qYx,
-	// 			      mesh->o_qYy,
-	// 			      mesh->o_pmlqx,
-	// 			      mesh->o_pmlqy,
-	// 			      mesh->o_qSx,
-	// 			      mesh->o_qSy,
-	// 			      mesh->o_qS,
-	// 			      mesh->o_q);
-	// mesh->device.finish();
- //      occa::toc("pmlImplicitSolve");
+      	//Implicit Solve Satge
+      mesh->device.finish();
+      occa::tic("pmlImplicitSolve");
+	  mesh->pmlImplicitSolveKernel(mesh->pmlNelements,
+				     mesh->o_pmlElementIds,
+				     mesh->dt,
+			         mesh->LsimexAd[k],
+			         mesh->o_cubInterpT,
+			         mesh->o_cubProjectT,
+			         mesh->o_qY,
+			         mesh->o_qZ); 
+	// No surface term for implicit part
+	mesh->pmlImplicitUpdateKernel(mesh->pmlNelements,
+				      mesh->o_pmlElementIds,
+				      mesh->dt,
+				      ramp,
+				      mesh->LsimexAd[k],
+				      mesh->o_qY,
+				      mesh->o_pmlqY,
+				      mesh->o_qZ,
+				      mesh->o_q,
+				      mesh->o_pmlq,
+				      mesh->o_qS,
+				      mesh->o_pmlqS);
+	mesh->device.finish();
+      occa::toc("pmlImplicitSolve");
 
       }
     
@@ -154,19 +142,21 @@ void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
       occa::tic("volumeKernel");    
       //compute volume contribution to DG boltzmann RHS
       if(mesh->pmlNelements){
-	// mesh->pmlVolumeKernel(mesh->pmlNelements,
-	// 		      mesh->o_pmlElementIds,
-	// 		      ramp,
-	// 		      mesh->o_vgeo,
-	// 		      mesh->o_sigmax,
-	// 		      mesh->o_sigmay,
-	// 		      mesh->o_DrT,
-	// 		      mesh->o_DsT,
-	// 		      mesh->o_q,
-	// 		      mesh->o_pmlqx,
-	// 		      mesh->o_pmlqy,
-	// 		      mesh->o_qYx,
-	// 		      mesh->o_qYy); 
+	mesh->pmlVolumeKernel(mesh->pmlNelements,
+			      mesh->o_pmlElementIds,
+			      ramp,
+			      drampdt,
+			      mesh->o_vgeo,
+			      mesh->o_sigmax,
+			      mesh->o_sigmay,
+			      mesh->o_sigmaz,
+			      mesh->o_DrT,
+			      mesh->o_DsT,
+			      mesh->o_DtT,
+			      mesh->o_q,
+			      mesh->o_pmlq,
+			      mesh->o_qY,
+			      mesh->o_pmlqY); 
       }
     
       // compute volume contribution to DG boltzmann RHS
@@ -207,21 +197,22 @@ void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
       mesh->device.finish();
       occa::tic("surfaceKernel");
       if (mesh->pmlNelements){  
-	// // compute surface contribution to DG boltzmann RHS
-	// mesh->pmlSurfaceKernel(mesh->pmlNelements,
-	// 		       mesh->o_pmlElementIds,
-	// 		       mesh->o_sgeo,
-	// 		       mesh->o_LIFTT,
-	// 		       mesh->o_vmapM,
-	// 		       mesh->o_vmapP,
-	// 		       mesh->o_EToB,
-	// 		       t,
-	// 		       mesh->o_x,
-	// 		       mesh->o_y,
-	// 		       ramp,
-	// 		       mesh->o_q,
-	// 		       mesh->o_qYx,
-	// 		       mesh->o_qYy);
+	// compute surface contribution to DG boltzmann RHS
+	mesh->pmlSurfaceKernel(mesh->pmlNelements,
+			       mesh->o_pmlElementIds,
+			       mesh->o_sgeo,
+			       mesh->o_LIFTT,
+			       mesh->o_vmapM,
+			       mesh->o_vmapP,
+			       mesh->o_EToB,
+			       t,
+			       mesh->o_x,
+			       mesh->o_y,
+			       mesh->o_z,
+			       ramp,
+			       mesh->o_q,
+			       mesh->o_qY,
+			       mesh->o_pmlqY);
       }
     
       if(mesh->nonPmlNelements)
@@ -252,20 +243,18 @@ void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
     
       //printf("running with %d pml Nelements\n",mesh->pmlNelements);    
       if (mesh->pmlNelements){   
-	// mesh->pmlUpdateKernel(mesh->pmlNelements,
-	// 		      mesh->o_pmlElementIds,
-	// 		      mesh->dt,
-	// 		      mesh->LsimexB[k],
-	// 		      ramp,
-	// 		      mesh->o_qZx,
-	// 		      mesh->o_qZy,
-	// 		      mesh->o_qYx,
-	// 		      mesh->o_qYy,
-	// 		      mesh->o_qSx,
-	// 		      mesh->o_qSy,
-	// 		      mesh->o_pmlqx,
-	// 		      mesh->o_pmlqy,
-	// 		      mesh->o_q);
+	mesh->pmlUpdateKernel(mesh->pmlNelements,
+			      mesh->o_pmlElementIds,
+			      mesh->dt,
+			      mesh->LsimexB[k],
+			      ramp,
+			      mesh->o_qZ,
+			      mesh->o_qY,
+			      mesh->o_pmlqY,
+			      mesh->o_qS,
+			      mesh->o_pmlqS,
+			      mesh->o_q,
+			      mesh->o_pmlq);
       }
     
       if(mesh->nonPmlNelements){
