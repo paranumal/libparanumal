@@ -15,7 +15,7 @@ void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options);
 
 void boltzmannError3D(mesh3D *mesh, dfloat time,char *options);
 
-void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfields);
+void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint Nfields);
 
 void boltzmannPlotVTU3D(mesh3D *mesh, char *fileNameBase);
 
