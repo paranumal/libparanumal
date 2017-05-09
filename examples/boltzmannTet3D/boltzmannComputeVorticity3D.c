@@ -1,6 +1,6 @@
 #include "boltzmann3D.h"
 
-void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfields){
+void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint Nfields){
   
   // compute vorticity
   dfloat *u = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -11,7 +11,7 @@ void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfie
     
     for(iint n=0;n<mesh->Np;++n){
       iint base = mesh->Nfields*(n + e*mesh->Np);
-      dfloat rho = mesh->q[base];
+      dfloat rho = mesh->q[base + 0];
       u[n] = mesh->q[1 + base]*mesh->sqrtRT/rho;
       v[n] = mesh->q[2 + base]*mesh->sqrtRT/rho;
       w[n] = mesh->q[3 + base]*mesh->sqrtRT/rho;
@@ -22,6 +22,7 @@ void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfie
       dfloat dvdr = 0, dvds = 0, dvdt =0 ;
       dfloat dwdr = 0, dwds = 0, dwdt =0 ;
       for(iint m=0;m<mesh->Np;++m){
+
       	dudr += mesh->Dr[n*mesh->Np+m]*u[m];
       	duds += mesh->Ds[n*mesh->Np+m]*u[m];
         dudt += mesh->Dt[n*mesh->Np+m]*u[m];
@@ -43,16 +44,17 @@ void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfie
                     mesh->vgeo[mesh->Nvgeo*e+SZID]*dvds +
                     mesh->vgeo[mesh->Nvgeo*e+TZID]*dvdt ;
 
-      q[outfld + Nfields*(n+e*mesh->Np)] = dwdy-dvdz;
+      q[4 + Nfields*(n+e*mesh->Np)] = dwdy-dvdz;
 
       dfloat dwdx = mesh->vgeo[mesh->Nvgeo*e+RXID]*dwdr + 
                     mesh->vgeo[mesh->Nvgeo*e+SXID]*dwds +
                     mesh->vgeo[mesh->Nvgeo*e+TXID]*dwdt ;
+
       dfloat dudz = mesh->vgeo[mesh->Nvgeo*e+RZID]*dudr + 
                     mesh->vgeo[mesh->Nvgeo*e+SZID]*duds +
                     mesh->vgeo[mesh->Nvgeo*e+TZID]*dudt;
 
-      q[outfld+1 + Nfields*(n+e*mesh->Np)] = -dwdx + dudz;
+      q[5 + Nfields*(n+e*mesh->Np)] = -dwdx + dudz;
 
       dfloat dvdx = mesh->vgeo[mesh->Nvgeo*e+RXID]*dvdr + 
                     mesh->vgeo[mesh->Nvgeo*e+SXID]*dvds +
@@ -62,7 +64,7 @@ void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint outfld, iint Nfie
                     mesh->vgeo[mesh->Nvgeo*e+SYID]*duds +
                     mesh->vgeo[mesh->Nvgeo*e+TYID]*dudt;
                     
-      q[outfld+2 + Nfields*(n+e*mesh->Np)] = dvdx-dudy;
+      q[6 + Nfields*(n+e*mesh->Np)] = dvdx-dudy;
     }
   }
   free(u);
