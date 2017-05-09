@@ -1,6 +1,6 @@
-#include "boltzmann2D.h"
+#include "boltzmann3D.h"
 
-void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
+void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options){
 
   dfloat t = (tstep+1)*mesh->dt;
   
@@ -12,7 +12,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0){
     dfloat ramp, drampdt;
-    boltzmannRampFunction2D(t, &ramp, &drampdt);
+    boltzmannRampFunction3D(t, &ramp, &drampdt);
     printf("t: %g ramp: %g drampdt: %g\n", t, ramp, drampdt);
   }
   
@@ -20,32 +20,30 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
 
   if(strstr(options, "PML")){ 
     // do error stuff on host
-    boltzmannError2D(mesh, t, options);
+    boltzmannError3D(mesh, t, options);
 
-   
     if(strstr(options, "VTU")){ 
-    // compute vorticity
-    //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
-    // output field files
-    iint fld = 1;
+
+    boltzmannComputeVorticity3D(mesh, mesh->q,mesh->Nfields);
+        
     char fname[BUFSIZ];
     sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
-    meshPlotVTU2D(mesh, fname, fld);
-   }
+    boltzmannPlotVTU3D(mesh, fname);
+    }
   }
   else{
     // do error stuff on host
-    boltzmannError2D(mesh, t, options);
+    boltzmannError3D(mesh, t, options);
 
    if(strstr(options, "VTU")){ 
-    //boltzmannCouetteError2D(mesh, t);
-    // compute vorticity
-    //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
-    // output field files
-    iint fld = 1;
+
+    boltzmannError3D(mesh, t, options);
+    
+    boltzmannComputeVorticity3D(mesh, mesh->q,mesh->Nfields);
+  
     char fname[BUFSIZ];
     sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
-    meshPlotVTU2D(mesh, fname, fld);
+    boltzmannPlotVTU3D(mesh, fname);
   }
   
     
