@@ -1,6 +1,28 @@
 #include "ellipticTri2D.h"
 
+void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
+
+  // build degree vector
+  for(iint n=0;n<Ntotal;++n)
+    deg[n] = 1;
+
+  occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
+  
+  o_deg.copyFrom(deg);
+  
+  ellipticParallelGatherScatterTri2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
+  
+  o_deg.copyTo(deg);
+
+  mesh->device.finish();
+  o_deg.free();
+  
+}
+
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
+
+  iint rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NpP*mesh->Nelements;
@@ -75,6 +97,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "put",
 				       kernelInfo);
 
+  mesh->AxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+               "ellipticAxTri2D",
+               kernelInfo);
+
   mesh->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
@@ -117,7 +144,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "ellipticAxIpdgTri2D",
 				       kernelInfo);  
 
-  
+  mesh->device.finish();
+  occa::tic("GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					       mesh->Np*mesh->Nelements,
@@ -125,10 +153,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 					       mesh->gatherLocalIds,
 					       mesh->gatherBaseIds, 
 					       mesh->gatherHaloFlags);
-  
-  
+  mesh->device.finish();
+  occa::toc("GatherScatterSetup");
+
+  mesh->device.finish();
+  occa::tic("PreconditionerSetup");
   solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda, options);
-  
+  mesh->device.finish();
+  occa::toc("PreconditionerSetup");
+
   solver->precon->preconKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
 				       "ellipticOasPreconTri2D",
@@ -148,6 +181,30 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
 				       "ellipticPreconProlongate",
 				       kernelInfo);
+
+
+  mesh->device.finish();
+  occa::tic("DegreeVectorSetup");
+  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
+  
+  ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
+
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
+    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
+  }
+  else
+    for(iint n=0;n<Ntotal;++n)
+      invDegree[n] = 1.;
+  
+  solver->o_invDegree.copyFrom(invDegree);
+  mesh->device.finish();
+  occa::toc("DegreeVectorSetup");
 
   // probably should relocate this
   // build weights for continuous SEM L2 project --->                                                        

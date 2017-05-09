@@ -22,9 +22,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda,
     // compute local element operations and store result in o_Aq
     mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
     
-    // parallel gather scatter
-    ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
-    
   } else{
 
     ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
@@ -49,6 +46,11 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda,
          o_Aq);
 
   }
+
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    // parallel gather scatter
+    ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+
   mesh->device.finish();
   occa::toc("AxKernel");
 }
@@ -85,7 +87,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   mesh->device.finish();
   occa::tic("weighted inner product2");
 
-  if(strstr(options,"CONTINUOUS"))
+  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
     mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
@@ -148,15 +150,6 @@ void ellipticPreconditioner2D(solver_t *solver,
   dfloat *recvBuffer = solver->recvBuffer;
 
 
-  if(strstr(options,"PROJECT")){
-    mesh->device.finish();
-    occa::tic("Project");
-    ellipticParallelGatherScatterQuad2D(mesh, ogs, o_r, o_r, dfloatString, "add");
-    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
-    mesh->device.finish();
-    occa::toc("Project");
-  }
-
   if(strstr(options, "OAS")){
     
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
@@ -168,7 +161,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     // compute local precon on DEVICE
     mesh->device.finish();
     occa::tic("OASpreconKernel");
-    if(strstr(options, "CONTINUOUS")) {
+    if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")) {
 
       precon->preconKernel(mesh->Nelements,
          precon->o_vmapPP,
@@ -178,9 +171,7 @@ void ellipticPreconditioner2D(solver_t *solver,
          precon->o_oasBack,
          o_r,
          o_zP);
-
       ellipticParallelGatherScatterQuad2D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
-      
     }
     else{
       
@@ -192,10 +183,8 @@ void ellipticPreconditioner2D(solver_t *solver,
          precon->o_oasBackDg,
          o_r,
          o_zP);
-
-      // OAS => additive Schwarz => sum up patch solutions
       ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
-    }
+    } 
     mesh->device.finish();
     occa::toc("OASpreconKernel");
     
@@ -290,15 +279,6 @@ void ellipticPreconditioner2D(solver_t *solver,
   else {// turn off preconditioner
     o_z.copyFrom(o_r); 
   }
-
-  if(strstr(options,"PROJECT")){
-    mesh->device.finish();
-    occa::tic("Project");
-    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-    ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
-    mesh->device.finish();
-    occa::toc("Project");
-  }
 }
 
 
@@ -306,7 +286,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   mesh_t *mesh = solver->mesh;
   
-  int rank;
+  iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
@@ -334,7 +314,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter 
-  if(strstr(options, "CONTINUOUS"))
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
     ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
   
   mesh->device.finish();
