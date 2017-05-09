@@ -185,7 +185,7 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 
 
   mesh->device.finish();
-  occa::tic("CoarseDegreeVectorSetup");
+  occa::tic("DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -193,7 +193,7 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
-  if(strstr(options, "CONTINUOUS")){
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
     for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
       if(degree[n] == 0) printf("WARNING!!!!\n");
       invDegree[n] = 1./degree[n];
@@ -205,7 +205,7 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   
   solver->o_invDegree.copyFrom(invDegree);
   mesh->device.finish();
-  occa::toc("CoarseDegreeVectorSetup");
+  occa::toc("DegreeVectorSetup");
 
 
   // find maximum degree  

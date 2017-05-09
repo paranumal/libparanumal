@@ -10,6 +10,11 @@ void meshGeometricFactorsTri2D(mesh2D *mesh){
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo, 
 				sizeof(dfloat));
   
+  /* number of second order geometric factors */
+  mesh->Nggeo = 4;
+  mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
+  
+
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -38,5 +43,11 @@ void meshGeometricFactorsTri2D(mesh2D *mesh){
     mesh->vgeo[mesh->Nvgeo*e + SXID] = sx;
     mesh->vgeo[mesh->Nvgeo*e + SYID] = sy;
     mesh->vgeo[mesh->Nvgeo*e +  JID] = J;
+
+    /* store second order geometric factors */
+    mesh->ggeo[mesh->Nggeo*e + G00ID] = J*(rx*rx + ry*ry);
+    mesh->ggeo[mesh->Nggeo*e + G01ID] = J*(rx*sx + ry*sy);
+    mesh->ggeo[mesh->Nggeo*e + G11ID] = J*(sx*sx + sy*sy);
+    mesh->ggeo[mesh->Nggeo*e + GWJID]  = J;
   }
 }

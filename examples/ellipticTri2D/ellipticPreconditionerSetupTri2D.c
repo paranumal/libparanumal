@@ -280,29 +280,6 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
     iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
     iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
-      
-    //build element stiffness matrices
-    dfloat *Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    dfloat *Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    dfloat *Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    dfloat *Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
-        Srr[m+n*mesh->Np] = 0.;
-        Srs[m+n*mesh->Np] = 0.;
-        Ssr[m+n*mesh->Np] = 0.;
-        Sss[m+n*mesh->Np] = 0.;
-
-        for (iint k=0;k<mesh->Np;k++) {
-          for (iint l=0;l<mesh->Np;l++) {
-            Srr[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            Srs[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            Ssr[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            Sss[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-          }
-        } 
-      }
-    }
 
     //Build unassembed non-zeros
     printf("Building full matrix system\n");
@@ -312,16 +289,15 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
         for (iint m=0;m<mesh->Np;m++) {
           dfloat val = 0.;
 
-          dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
-          dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
-          dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
-          dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
-          dfloat J  = mesh->vgeo[e*mesh->Nvgeo +  JID];
+          dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
+          dfloat Grs = mesh->ggeo[e*mesh->Nggeo + G01ID];
+          dfloat Gss = mesh->ggeo[e*mesh->Nggeo + G11ID];
+          dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
-          val += J*(rx*rx+ry*ry)*Srr[m+n*mesh->Np];
-          val += J*(rx*sx+ry*sy)*Srs[m+n*mesh->Np];
-          val += J*(sx*rx+sy*ry)*Ssr[m+n*mesh->Np];
-          val += J*(sx*sx+sy*sy)*Sss[m+n*mesh->Np];
+          val += Grr*mesh->Srr[m+n*mesh->Np];
+          val += Grs*mesh->Srs[m+n*mesh->Np];
+          val += Grs*mesh->Ssr[m+n*mesh->Np];
+          val += Gss*mesh->Sss[m+n*mesh->Np];
           val += J*lambda*mesh->MM[m+n*mesh->Np];
 
           vals[cnt] = val;

@@ -256,7 +256,7 @@ iint almondSolve(dfloat* x,
     parAlmond->rhs[n] = 0.;
     parAlmond->x[n] = 0.;
     for (iint id=parAlmond->compressId[n];id<parAlmond->compressId[n+1];id++) 
-      parAlmond->rhs[n] += parAlmond->rhsSort[id];
+      parAlmond->rhs[n] = parAlmond->rhsSort[id];
   }
 
   parAlmond->o_rhs.copyFrom(parAlmond->rhs);
