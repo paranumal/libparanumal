@@ -45,9 +45,9 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
     fprintf(fp, "      <Points>\n");
     fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
 
-    if(rank==0){  // root writes out its coordinates
-      printf("printing local verts \n");
-      for(iint e=0;e<mesh->Nelements;++e){
+if(rank==0){  // root writes out its coordinates
+printf("printing local verts \n");
+for(iint e=0;e<mesh->Nelements;++e){
 	fprintf(fp, "        ");
 	for(iint n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g %g\n",
@@ -78,7 +78,7 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
       MPI_Recv(tmpEZ, allNelements[r]*mesh->Nverts, 
 	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
       
-      for(iint e=0;e<allNelements[r];++e){
+for(iint e=0;e<allNelements[r];++e){
 	fprintf(fp, "        ");
 	for(iint n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g %g\n",
@@ -102,7 +102,7 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
     
     for(iint r=0;r<size;++r){
       for(iint e=0;e<allNelements[r];++e)
-	fprintf(fp, "         %d\n", r);
+	      fprintf(fp, "         %d\n", r);
     }
     
     fprintf(fp, "       </DataArray>\n");
@@ -114,11 +114,11 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
     iint cnt=0;
     for(iint r=0;r<size;++r){
       for(iint e=0;e<allNelements[r];++e){
-	for(iint n=0;n<mesh->Nverts;++n){
-	  fprintf(fp, "%d ", cnt);
-	  ++cnt;
-	}
-	fprintf(fp, "\n");
+	        for(iint n=0;n<mesh->Nverts;++n){
+	         fprintf(fp, "%d ", cnt);
+	         ++cnt;
+	        }
+	     fprintf(fp, "\n");
       }
     }
 

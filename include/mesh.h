@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -200,24 +200,27 @@ typedef struct {
   dfloat *pmlresq;
   //
 
+  dfloat *invTau;
 
   dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
-  
-  dfloat *invTau;
-   
 
   dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
-    
-  dfloat *pmlNT;    // time integrated relaxtion term
-  dfloat *rhspmlNT; //
-  dfloat *respmlNT; //
 
+  dfloat *pmlqz;    // Z-pml data array
+  dfloat *rhspmlqz; // right hand side data array
+  dfloat *respmlqz; // residual data array (for LSERK time-stepping)
+  dfloat *sigmaz;
+    
+  //dfloat *pmlq;    // Z-pml data array
+  dfloat *rhspmlq; // right hand side data array
+  dfloat *respmlq; // residual data array (for LSERK time-stepping)
+  
   
   
   // occa stuff
@@ -260,19 +263,20 @@ typedef struct {
 
 
   // pml vars
-  occa::memory o_sigmax, o_sigmay;
+  occa::memory o_sigmax, o_sigmay, o_sigmaz;
 
   iint pmlNelements;
   iint nonPmlNelements;
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
-  
+
   occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
   occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
+  occa::memory o_pmlqz, o_rhspmlqz, o_respmlqz;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
   
   // Boltzmann SARK extra storage for exponential update
-  occa::memory o_resqex; 
+  // occa::memory o_resqex; 
 
   // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used 
   occa::memory o_expsigmax, o_expsigmay;
@@ -284,13 +288,15 @@ typedef struct {
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
-  occa::memory o_qZnt;
 
+  
   
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
   
-  occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
+  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
+  occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
+  occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
 
   
 
@@ -344,14 +350,7 @@ typedef struct {
 
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
-  occa::kernel pmlRelaxationKernel;
-  
-  // Boltzmann SAAB low order updates
-  // occa::kernel updateFirstOrderKernel;
-  // occa::kernel updateSecondOrderKernel;
-  // occa::kernel pmlUpdateFirstOrderKernel;
-  // occa::kernel pmlUpdateSecondOrderKernel;
-  
+  occa::kernel pmlRelaxationKernel; 
   // //Boltzmann Imex Kernels
      
   occa::kernel implicitUpdateKernel;

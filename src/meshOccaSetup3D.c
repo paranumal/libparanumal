@@ -111,7 +111,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       	cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
       	cubDtWT[n+m*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
       	
-
       	cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
       	cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
       }
@@ -251,16 +250,17 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_IHID", IHID);
 
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 128/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_Lambda2", 0.5f);  
 
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);

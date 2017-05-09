@@ -144,5 +144,31 @@ ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
 #define IJID 4
 #define IHID 5
 #define WSJID 6
+//
+//offsets for boltzmann PML variables
+#define QXID1 0  
+#define QXID2 1  
+#define QXID3 2
+#define QXID4 3  
+#define QXID5 4  
+#define QXID6 5  
+#define QXID8 6 
+//
+#define QYID1 7  
+#define QYID2 8  
+#define QYID3 9
+#define QYID4 10  
+#define QYID5 11  
+#define QYID7 12  
+#define QYID9 13 
+//
+#define QZID1 14  
+#define QZID2 15  
+#define QZID3 16
+#define QZID4 17  
+#define QZID6 18  
+#define QZID7 19  
+#define QZID10  20   
+
 #endif
 
