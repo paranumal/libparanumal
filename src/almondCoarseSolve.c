@@ -266,8 +266,8 @@ iint almondSolve(dfloat* x,
     solve(parAlmond->almond, parAlmond->o_rhs, parAlmond->o_x);
     parAlmond->o_x.copyTo(parAlmond->x);
   } else{
-    iint maxIt = 400;
-    dfloat tol = 1e-14;
+    iint maxIt = 4000;
+    dfloat tol = 1e-7;
     pcg(parAlmond->almond,
         parAlmond->A,
 			  parAlmond->rhs,

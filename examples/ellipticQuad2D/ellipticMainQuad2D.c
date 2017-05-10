@@ -83,7 +83,7 @@ int main(int argc, char **argv){
       
       maxError = mymax(maxError, error);
 
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 
