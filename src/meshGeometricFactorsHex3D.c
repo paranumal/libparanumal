@@ -14,6 +14,8 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
   /* number of second order geometric factors */
   mesh->Nggeo = 7;
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
+
+  dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
   
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
@@ -51,6 +53,18 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
 	  /* compute geometric factors for affine coordinate transform*/
 	  dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
+	  dfloat hr = sqrt(xr*xr+yr*yr+zr*zr);
+	  dfloat hs = sqrt(xs*xs+ys*ys+zs*zs);
+	  dfloat ht = sqrt(xt*xt+yt*yt+zt*zt);
+	  minJ = mymin(J, minJ);
+	  maxJ = mymax(J, maxJ);
+	  maxSkew = mymax(maxSkew, hr/hs);
+	  maxSkew = mymax(maxSkew, hr/ht);
+	  maxSkew = mymax(maxSkew, hs/hr);
+	  maxSkew = mymax(maxSkew, hs/ht);
+	  maxSkew = mymax(maxSkew, ht/hr);
+	  maxSkew = mymax(maxSkew, ht/hs);
+	  
 	  if(J<1e-12) printf("J = %g !!!!!!!!!!!!!\n", J);
 	  
 	  dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
@@ -88,4 +102,6 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
       }
     }
   }
+
+  printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
 }
