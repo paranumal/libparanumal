@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -76,7 +76,9 @@ typedef struct {
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *MM;           // reference mass matrix
-  dfloat *Srr,*Srs,*Ssr,*Sss; //element stiffness matrices
+  dfloat *Srr,*Srs, *Srt; //element stiffness matrices
+  dfloat *Ssr,*Sss, *Sst;
+  dfloat *Str,*Sts, *Stt;
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
   // indices of vertex nodes
@@ -231,7 +233,9 @@ typedef struct {
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
 
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
-  occa::memory o_SrrT, o_SrsT, o_SsrT, o_SssT; //element stiffness matrices
+  occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
+  occa::memory o_SsrT, o_SssT, o_SstT;
+  occa::memory o_StrT, o_StsT, o_SttT;
 
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;

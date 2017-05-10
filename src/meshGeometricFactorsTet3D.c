@@ -7,7 +7,13 @@ void meshGeometricFactorsTet3D(mesh3D *mesh){
   /* unified storage array for geometric factors */
   mesh->Nvgeo = 10;
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo, 
-				sizeof(dfloat));
+        sizeof(dfloat));
+
+  /* number of second order geometric factors */
+  mesh->Nggeo = 7;
+  mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
+  
+
   dfloat minJ = 1e9, maxJ = -1e9;
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
@@ -48,7 +54,16 @@ void meshGeometricFactorsTet3D(mesh3D *mesh){
     mesh->vgeo[mesh->Nvgeo*e + TZID] = tz;
     mesh->vgeo[mesh->Nvgeo*e +  JID] = J;
     //    printf("geo: %g,%g,%g - %g,%g,%g - %g,%g,%g\n",
-    //	   rx,ry,rz, sx,sy,sz, tx,ty,tz);
+    //     rx,ry,rz, sx,sy,sz, tx,ty,tz);
+
+    /* store second order geometric factors */
+    mesh->ggeo[mesh->Nggeo*e + G00ID] = J*(rx*rx + ry*ry + rz*rz);
+    mesh->ggeo[mesh->Nggeo*e + G01ID] = J*(rx*sx + ry*sy + rz*sz);
+    mesh->ggeo[mesh->Nggeo*e + G02ID] = J*(rx*tx + ry*ty + rz*tz);
+    mesh->ggeo[mesh->Nggeo*e + G11ID] = J*(sx*sx + sy*sy + sz*sz);
+    mesh->ggeo[mesh->Nggeo*e + G12ID] = J*(sx*tx + sy*ty + sz*tz);
+    mesh->ggeo[mesh->Nggeo*e + G22ID] = J*(tx*tx + ty*ty + tz*tz);
+    mesh->ggeo[mesh->Nggeo*e + GWJID] = J;
   }
 
   printf("minJ = %g, maxJ = %g\n", minJ, maxJ);

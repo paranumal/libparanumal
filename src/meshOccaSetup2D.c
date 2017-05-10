@@ -29,37 +29,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     }
   }
 
-  //build element stiffness matrices
-  mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Np;m++) {
-      for (iint k=0;k<mesh->Np;k++) {
-        for (iint l=0;l<mesh->Np;l++) {
-          mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-          mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-          mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-          mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-        }
-      } 
-    }
-  }
-  dfloat *SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Np;m++) {  
-      SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-      SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
-      SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
-      SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
-    }
-  }
-
-
   // build volume cubature matrix transposes
   iint cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
   dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
@@ -141,6 +110,40 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   // =============== end BB stuff =============================
 
+
+
+  //build element stiffness matrices
+  dfloat *SrrT, *SrsT, *SsrT, *SssT;
+  if (mesh->Nverts == 3) {
+    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        for (iint k=0;k<mesh->Np;k++) {
+          for (iint l=0;l<mesh->Np;l++) {
+            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+k*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          }
+        } 
+      }
+    }
+    SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {  
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+        SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      }
+    }
+  }
 
   
   mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
@@ -224,11 +227,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			LIFTT);
 
-  mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
-  mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
-  mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
-  mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
-
   if(mesh->Nverts==4){
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
@@ -236,6 +234,9 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
 			  mesh->sgeo);
+    mesh->o_ggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+        mesh->ggeo);
   }
   else{
     printf("LOADING TRIANGLE MASS MATRIX\n");
@@ -250,11 +251,16 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			  mesh->sgeo);
+
+    mesh->o_ggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nggeo*sizeof(dfloat),
+        mesh->ggeo);
+
+    mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
+    mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
+    mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
+    mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
   }
-  
-  mesh->o_ggeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-			  mesh->ggeo);
   
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),

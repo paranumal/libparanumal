@@ -1,5 +1,24 @@
 #include "ellipticTet3D.h"
 
+void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
+
+  // build degree vector
+  for(iint n=0;n<Ntotal;++n)
+    deg[n] = 1;
+
+  occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
+  
+  o_deg.copyFrom(deg);
+  
+  ellipticParallelGatherScatterTet3D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
+  
+  o_deg.copyTo(deg);
+
+  mesh->device.finish();
+  o_deg.free();
+  
+}
+
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
 
   iint Ntotal = mesh->Np*mesh->Nelements;
@@ -75,6 +94,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "put",
 				       kernelInfo);
 
+  mesh->AxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+               "ellipticAxTet3D",
+               kernelInfo);
+
   mesh->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
@@ -149,6 +173,29 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 
+  mesh->device.finish();
+  occa::tic("DegreeVectorSetup");
+  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
+  
+  ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
+
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
+    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
+  }
+  else
+    for(iint n=0;n<Ntotal;++n)
+      invDegree[n] = 1.;
+  
+  solver->o_invDegree.copyFrom(invDegree);
+  mesh->device.finish();
+  occa::toc("DegreeVectorSetup");
+
   // probably should relocate this
   // build weights for continuous SEM L2 project --->                                                        
   dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -171,15 +218,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------                                            
-
-  mesh->device.finish();
-  occa::tic("CoarsePreconditionerSetup");
-  // coarse grid preconditioner (only continous elements)
-  // do this here since we need A*x
-  ellipticCoarsePreconditionerSetupTet3D(mesh, solver->precon, lambda, options);
-
-  mesh->device.finish();
-  occa::toc("CoarsePreconditionerSetup");
 
   return solver;
 }

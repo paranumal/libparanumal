@@ -254,13 +254,5 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   free(localMM); o_MM.free(); o_localMM.free();
   // <------
   
-  mesh->device.finish();
-  occa::tic("CoarsePreconditionerSetup");
-  // do this here since we need A*x
-  ellipticCoarsePreconditionerSetupHex3D(mesh, solver->precon, solver->ogs, lambda, options);
-
-  mesh->device.finish();
-  occa::toc("CoarsePreconditionerSetup");
-
   return solver;
 }

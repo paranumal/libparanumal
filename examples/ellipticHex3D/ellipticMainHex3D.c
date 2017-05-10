@@ -25,7 +25,8 @@ int main(int argc, char **argv){
   //char *options = strdup("solver=PCG preconditioner=OAS method=CONTINUOUS"); 
   char *options =
     //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
-    strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
+    //strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
+    strdup("solver=PCG method=IPDG,PROJECT preconditioner=FULLALMOND");
 
   // set up mesh stuff
   mesh3D *mesh = meshSetupHex3D(argv[1], N);

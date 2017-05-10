@@ -16,8 +16,20 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
   
-  if(strstr(options, "IPDG")){
-    // halo exchange prior to A*q
+  if(strstr(options, "CONTINUOUS")){
+    // compute local element operations and store result in o_Aq
+    mesh->AxKernel(mesh->Nelements, 
+                   mesh->o_ggeo, 
+                   mesh->o_SrrT, mesh->o_SrsT, mesh->o_SrtT,
+                   mesh->o_SsrT, mesh->o_SssT, mesh->o_SstT, 
+                   mesh->o_StrT, mesh->o_StsT, mesh->o_SttT,
+                   mesh->o_MM,
+                   lambda, 
+                   o_q, 
+                   o_Aq);
+    
+  } else{
+
     ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
@@ -27,12 +39,12 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
     mesh->gradientKernel(allNelements,
-			 mesh->o_vgeo,
-			 mesh->o_DrT,
-			 mesh->o_DsT,
+       mesh->o_vgeo,
+       mesh->o_DrT,
+       mesh->o_DsT,
        mesh->o_DtT,
-			 o_q,
-			 solver->o_grad);
+       o_q,
+       solver->o_grad);
 
     mesh->device.finish();
     occa::toc("gradientKernel");
@@ -41,27 +53,28 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     // TW NOTE WAS 2 !
     dfloat tau = 2.f*(mesh->N+1)*(mesh->N+3)/3.; // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
-		     mesh->o_vmapM,
-		     mesh->o_vmapP,
-		     lambda,
-		     tau,
-		     mesh->o_vgeo,
-		     mesh->o_sgeo,
-		     mesh->o_DrT,
-		     mesh->o_DsT,
+         mesh->o_vmapM,
+         mesh->o_vmapP,
+         lambda,
+         tau,
+         mesh->o_vgeo,
+         mesh->o_sgeo,
+         mesh->o_DrT,
+         mesh->o_DsT,
          mesh->o_DtT,
-		     mesh->o_LIFTT,
-		     mesh->o_MM,
-		     solver->o_grad,
-		     o_Aq);
+         mesh->o_LIFTT,
+         mesh->o_MM,
+         solver->o_grad,
+         o_Aq);
 
     mesh->device.finish();
     occa::toc("ipdgKernel");
   }
-  else{
-    
-    
-  }
+
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    // parallel gather scatter
+    ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+ 
   mesh->device.finish();
   occa::toc("AxKernel");
   
@@ -82,6 +95,43 @@ dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dflo
   mesh->device.finish();
   occa::toc("scaledAddKernel");
   
+}
+
+dfloat ellipticWeightedInnerProduct(solver_t *solver,
+            occa::memory &o_w,
+            occa::memory &o_a,
+            occa::memory &o_b,
+            const char *options){
+
+  mesh_t *mesh = solver->mesh;
+  dfloat *tmp = solver->tmp;
+  iint Nblock = solver->Nblock;
+  iint Ntotal = mesh->Nelements*mesh->Np;
+
+  occa::memory &o_tmp = solver->o_tmp;
+
+  mesh->device.finish();
+  occa::tic("weighted inner product2");
+
+  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
+    mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
+  else
+    mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+  
+  mesh->device.finish();
+  occa::toc("weighted inner product2");
+  
+  o_tmp.copyTo(tmp);
+
+  dfloat wab = 0;
+  for(iint n=0;n<Nblock;++n){
+    wab += tmp[n];
+  }
+      
+  dfloat globalwab = 0;
+  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+  return globalwab;
 }
 
 dfloat ellipticInnerProduct(solver_t *solver,
@@ -130,17 +180,6 @@ void ellipticPreconditioner3D(solver_t *solver,
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
 
-  if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
-
-      // r <= S*G*r 
-      ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
-      // r <= W*S*G*r (Project^t*r)
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
-      mesh->device.finish();
-      occa::toc("Project");
-    }
 
   if(strstr(options, "OAS")){
     
@@ -227,17 +266,15 @@ void ellipticPreconditioner3D(solver_t *solver,
       mesh->device.finish();
       occa::toc("coarseGrid");
     }
+  } else if (strstr(options, "FULLALMOND")) {
 
-    if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-      ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
-      mesh->device.finish();
-      occa::toc("Project");
-    }
-  }
-  else if(strstr(options, "JACOBI")){
+    o_r.copyTo(precon->r1); 
+    occa::tic("parALMOND");
+    almondSolve(precon->z1, precon->parAlmond, precon->r1);
+    occa::toc("parALMOND");
+    o_z.copyFrom(precon->z1);
+
+  } else if(strstr(options, "JACOBI")){
 
     occa::tic("dotDivideKernel");   
     mesh->device.finish();
@@ -284,6 +321,11 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
+  // gather-scatter 
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+
+
   mesh->device.finish();
   occa::tic("Preconditioner");
   if(strstr(options,"PCG")){
@@ -303,8 +345,8 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   
   // dot(r,r)
-  dfloat rdotr0 = ellipticInnerProduct(solver, o_r, o_r);
-  dfloat rdotz0 = ellipticInnerProduct(solver, o_r, o_z);
+  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  dfloat rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   iint Niter = 0;
@@ -319,7 +361,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     ellipticOperator3D(solver, lambda, o_p, o_Ap, options); 
    
     // dot(p,A*p)
-    dfloat pAp =  ellipticInnerProduct(solver, o_p, o_Ap);
+    dfloat pAp =  ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
     
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -335,7 +377,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     ellipticScaledAdd(solver, -alpha, o_Ap, 1.f, o_r);
     
     // dot(r,r)
-    rdotr1 = ellipticInnerProduct(solver, o_r, o_r);
+    rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
     
     if(rdotr1 < tol*tol) break;
 
@@ -347,11 +389,11 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
       ellipticPreconditioner3D(solver, o_r, o_zP, o_z, options);
 
       // dot(r,z)
-      rdotz1 = ellipticInnerProduct(solver, o_r, o_z);
+      rdotz1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
 
       // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
       if(strstr(options,"FLEXIBLE")){
-        dfloat zdotAp = ellipticInnerProduct(solver, o_z, o_Ap);
+        dfloat zdotAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_z, o_Ap, options);
         beta = -alpha*zdotAp/rdotz0;
       }
       else{

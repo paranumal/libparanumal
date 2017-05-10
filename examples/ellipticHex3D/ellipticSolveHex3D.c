@@ -49,6 +49,11 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
         
   }
 
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    // parallel gather scatter
+    ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+ 
+
   mesh->device.finish();
   occa::toc("AxKernel");
 }
@@ -86,7 +91,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   mesh->device.finish();
   occa::tic("weighted inner product2");
 
-  if(strstr(options,"CONTINUOUS"))
+  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
     mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
@@ -120,15 +125,6 @@ void ellipticPreconditioner3D(solver_t *solver,
   
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
-
-  if(strstr(options,"PROJECT")){
-    mesh->device.finish();
-    occa::tic("Project");
-    ellipticParallelGatherScatterHex3D(mesh, ogs, o_r, o_r, dfloatString, "add");
-    mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_r, o_r);
-    mesh->device.finish();
-    occa::toc("Project");
-  }
 
   if(strstr(options, "OAS")){
 
@@ -248,17 +244,15 @@ void ellipticPreconditioner3D(solver_t *solver,
       mesh->device.finish();
       occa::toc("coarseGrid");
     }
+  } else if (strstr(options, "FULLALMOND")) {
 
-    if(strstr(options,"PROJECT")){
-      mesh->device.finish();
-      occa::tic("Project");
-      mesh->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->o_projectL2, o_z, o_z);
-      ellipticParallelGatherScatterHex3D(mesh, ogs, o_z, o_z, dfloatString, "add");
-      mesh->device.finish();
-      occa::toc("Project");
-    }
-  }
-  else if(strstr(options, "JACOBI")){
+    o_r.copyTo(precon->r1); 
+    occa::tic("parALMOND");
+    almondSolve(precon->z1, precon->parAlmond, precon->r1);
+    occa::toc("parALMOND");
+    o_z.copyFrom(precon->z1);
+  
+  } else if(strstr(options, "JACOBI")){
 
     mesh->device.finish();
     occa::tic("dotDivideKernel");   
@@ -299,7 +293,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   // gather-scatter
-  if(strstr(options,"CONTINUOUS"))
+  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
     ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
   
   mesh->device.finish();

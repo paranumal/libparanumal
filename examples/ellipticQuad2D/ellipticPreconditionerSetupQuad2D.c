@@ -180,7 +180,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     }
 
     // make preconBaseIds => preconNumbering
-    precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
     precon->ogsP = meshParallelGatherScatterSetup(mesh,
   						NlocalP,
   						sizeof(dfloat),
@@ -446,40 +445,50 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     printf("Building full matrix system\n");
     iint cnt =0;
     for (iint e=0;e<mesh->Nelements;e++) {
-      for (iint m=0;m<mesh->Nq;m++) {
-        for (iint n=0;n<mesh->Nq;n++) {
-          for (iint j=0;j<mesh->Nq;j++) {
-            for (iint i=0;i<mesh->Nq;i++) {
-              
+      for (iint ny=0;ny<mesh->Nq;ny++) {
+        for (iint nx=0;nx<mesh->Nq;nx++) {
+          for (iint my=0;my<mesh->Nq;my++) {
+            for (iint mx=0;mx<mesh->Nq;mx++) {
+              iint id;
               dfloat val = 0.;
               
-              for (iint l=0;l<mesh->Nq;l++) {
+              if (ny==my) {
                 for (iint k=0;k<mesh->Nq;k++) {
-                  iint id = k+l*mesh->Nq;
-                  dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RXID*mesh->Np];
-                  dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SXID*mesh->Np];
-                  dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + RYID*mesh->Np];
-                  dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + SYID*mesh->Np];
-                  dfloat JW = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + id + JWID*mesh->Np];
+                  id = k+ny*mesh->Nq;
+                  dfloat Grr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
 
-                  if ((m==l)&&(j==l))
-                    val += JW*(rx*rx+ry*ry)*(mesh->D[n+k*mesh->Nq]*mesh->D[i+k*mesh->Nq]);
-                  if ((m==l)&&(i==k))
-                    val += JW*(rx*sx+ry*sy)*(mesh->D[n+k*mesh->Nq]*mesh->D[j+l*mesh->Nq]);
-                  if ((n==k)&&(j==l))
-                    val += JW*(sx*rx+sy*ry)*(mesh->D[m+l*mesh->Nq]*mesh->D[i+k*mesh->Nq]);
-                  if ((n==k)&&(i==k))
-                    val += JW*(sx*sx+sy*sy)*(mesh->D[m+l*mesh->Nq]*mesh->D[j+l*mesh->Nq]);
-                  if ((n==k)&&(i==k)&&(m==l)&&(j==l))
-                    val += JW*lambda;
+                  val += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
                 }
               }
+              
+              id = mx+ny*mesh->Nq;
+              dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+              val += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
 
+              id = nx+my*mesh->Nq;
+              dfloat Gsr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+              val += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
+
+              if (nx==mx) {
+                for (iint k=0;k<mesh->Nq;k++) {
+                  id = nx+k*mesh->Nq;
+                  dfloat Gss = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
+
+                  val += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
+                }
+              }
+              
+              if ((nx==mx)&&(ny==my)) {
+                id = nx + ny*mesh->Nq;
+                dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
+                val += JW*lambda;
+              }
+              
               // pack non-zero
               sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n+m*mesh->Nq];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + i+j*mesh->Nq];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + n+m*mesh->Nq];
+              sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq];
+              sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq];
+              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq];
               cnt++;
             }
           }
