@@ -18,8 +18,7 @@ ycmax   = DefineNumber[ 0.5];
 ycmin   = DefineNumber[-0.5];
 zcmax   = DefineNumber[ 0.5];
 zcmin   = DefineNumber[-0.5];
-
-
+//
 Point(1) = {xmin, ymin, zmin, r};
 Point(2) = {xmax, ymin, zmin, r};
 Point(3) = {xmax, ymax, zmin, r};
