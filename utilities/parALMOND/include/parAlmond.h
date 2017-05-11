@@ -51,6 +51,9 @@ typedef struct {
   occa::kernel ellJacobi1Kernel;
   occa::kernel cooAXKernel1; 
   occa::kernel cooAXKernel2; 
+  occa::kernel dcsrAXPYKernel; 
+  occa::kernel dcsrZeqAXPYKernel; 
+  occa::kernel dcsrJacobiKernel; 
   occa::kernel copyKernel; 
   occa::kernel scaleVectorKernel;
   occa::kernel partialInnerProdKernel;

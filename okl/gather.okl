@@ -13,8 +13,8 @@ kernel void gather(const iint Ngather,
       dfloat gq = 0.f;
 
       for(iint n=start;n<end;++n){
-	const iint id = gatherIds[n];
-	gq += q[id];
+      	const iint id = gatherIds[n];
+      	gq += q[id];
       }
 
       gatherq[g] = gq;

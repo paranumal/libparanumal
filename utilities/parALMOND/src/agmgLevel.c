@@ -14,7 +14,7 @@ void interpolate(agmgLevel *level, dfloat *x, dfloat *Px){
 }
 
 void interpolate(almond_t *almond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
-  axpy(almond, level->dcsrP, 1.0, o_x, 1.0, o_Px);
+  axpy(almond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
 }
 
 void allocate(agmgLevel *level){

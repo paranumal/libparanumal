@@ -41,6 +41,15 @@ void buildAlmondKernels(almond_t *almond){
   almond->cooAXKernel2 = almond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
 			 "spmv_coo_kernel2", defs);
 
+  almond->dcsrAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+       "dcsrAXPY", defs);
+  
+  almond->dcsrZeqAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+       "dcsrZeqAXPY", defs);
+  
+  almond->dcsrJacobiKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+       "dcsrJacobi", defs);
+
   almond->copyKernel = almond->device.buildKernelFromSource(DPWD "/okl/copy.okl",
 		      "copyKernel", defs);
 
