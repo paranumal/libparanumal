@@ -22,6 +22,9 @@ void axpy(almond_t *almond, ell *A, dfloat alpha, occa::memory o_x, dfloat beta,
 void zeqaxpy(almond_t *almond, ell *A, dfloat alpha, occa::memory o_x, 
             dfloat beta, occa::memory o_y,  occa::memory o_z);
 
+void zeqaxpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, 
+              occa::memory o_y, occa::memory o_z);
+
 void ax(almond_t *almond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o_y);
 
 //smoothing
@@ -30,6 +33,9 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
 void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
 void smoothDampedJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x,
              				dfloat alpha, bool x_is_zero);
+void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
+void smoothDampedJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x,
+         					dfloat alpha, bool x_is_zero);
 
 //halo exchange
 void csrHaloSetup(csr *A, iint *globalColStarts);

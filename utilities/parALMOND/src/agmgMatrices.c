@@ -54,6 +54,16 @@ dcsr *newDCSR(almond_t *almond, csr *B){
     A->o_coefs     = almond->device.malloc(A->nnz*sizeof(dfloat), B->coefs);
   }
 
+  if(B->Nrows) {
+    dfloat *diagInv = (dfloat *) calloc(A->Nrows, sizeof(dfloat));
+
+    for(iint i=0; i<B->Nrows; i++)
+      diagInv[i] = 1.0/B->coefs[B->rowStarts[i]];
+    A->o_diagInv = almond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
+    A->o_temp1 = almond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
+    free(diagInv); 
+  }
+
   A->NsendTotal = B->NsendTotal;
   A->NrecvTotal = B->NrecvTotal;
 
@@ -311,10 +321,12 @@ void axpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta
                   A->numLocalIds*sizeof(dfloat));
   }
 
-  const iint n = A->Nrows;
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, A->Nrows, 
-                A->o_cols, A->o_coefs, o_x, o_y);
+  //almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, A->Nrows, 
+  //              A->o_cols, A->o_coefs, o_x, o_y);
+  almond->dcsrAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha,beta, 
+                A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y);
   almond->device.finish();
   occa::toc("dcsr axpy");
 
@@ -442,7 +454,42 @@ void ax(almond_t *almond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o
   }
 }
 
+void zeqaxpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, 
+              occa::memory o_y, occa::memory o_z) {
 
+  almond->device.finish();
+  occa::tic("dcsr axpy");
+  if (A->NsendTotal) {
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+    
+    //copy from device
+    A->o_haloBuffer.copyTo(A->sendBuffer);
+  }
+
+  if (A->NsendTotal + A->NrecvTotal) {
+    // start halo exchange
+    dcsrHaloExchangeStart(A, sizeof(dfloat), A->sendBuffer, A->recvBuffer);
+
+    // immediately end the exchange TODO: make the exchange async using the A = E + C hybrid form
+    dcsrHaloExchangeFinish(A);
+  }
+
+  if(A->NrecvTotal) {
+    //copy back to device
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
+                  A->numLocalIds*sizeof(dfloat));
+  }
+
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
+
+  //almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, A->Nrows, 
+  //              A->o_cols, A->o_coefs, o_x, o_y);
+  almond->dcsrZeqAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha, beta, 
+                A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y,o_z);
+  almond->device.finish();
+  occa::toc("dcsr axpy");
+
+}
 
 void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
@@ -636,6 +683,106 @@ void smoothDampedJacobi(almond_t *almond,
   occa::toc("hyb smoothDampedJacobi");
 }
 
+
+void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
+
+  almond->device.finish();
+  occa::tic("dcsr smoothJacobi");
+  if(x_is_zero){
+    dfloat alpha = 1.0;
+    dfloat beta = 0.0;
+    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    occa::toc("dcsr smoothJacobi");
+    return;
+  }
+
+
+  if (A->NsendTotal) {
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+  
+    //copy from device
+    A->o_haloBuffer.copyTo(A->sendBuffer);
+  }
+
+  if (A->NsendTotal+A->NrecvTotal) {
+    // start halo exchange
+    dcsrHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+
+    dcsrHaloExchangeFinish(A);
+  }
+
+  if (A->NrecvTotal) {
+    //copy back to device
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+  }
+
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
+
+  almond->device.finish();
+  occa::tic("dcsrJacobi");
+  almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
+                            A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
+  almond->device.finish();
+  occa::toc("dcsrJacobi");
+
+  // x = invD*temp1
+  dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
+  almond->device.finish();
+  occa::toc("dcsr smoothJacobi");
+}
+
+
+void smoothDampedJacobi(almond_t *almond,
+         dcsr *A,
+         occa::memory o_r,
+         occa::memory o_x,
+         dfloat alpha,
+         bool x_is_zero){
+
+  almond->device.finish();
+  occa::tic("dcsr smoothDampedJacobi");
+  if(x_is_zero){
+    dfloat beta = 0.0;
+    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    occa::toc("dcsr smoothDampedJacobi");
+    return;
+  }
+
+  if (A->NsendTotal) {
+    almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+  
+    //copy from device
+    A->o_haloBuffer.copyTo(A->sendBuffer);
+  }
+
+  if (A->NsendTotal+A->NrecvTotal) {
+    // start halo exchange
+    dcsrHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+
+    dcsrHaloExchangeFinish(A);
+  }
+
+  if (A->NrecvTotal) {
+    //copy back to device
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+  }
+
+  const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
+
+  almond->device.finish();
+  occa::tic("dcsrJacobi");
+  almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
+                    A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
+  almond->device.finish();
+  occa::toc("dcsrJacobi");
+
+  // x = alpha*invD*temp1 + (1-alpha)*x
+  const dfloat beta = 1.0 - alpha;
+  dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
+
+  almond->device.finish();
+  occa::toc("dcsr smoothDampedJacobi");
+}
 
 // set up halo infomation for inter-processor MPI 
 // exchange of trace nodes

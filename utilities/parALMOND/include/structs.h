@@ -101,6 +101,9 @@ typedef struct dcsr_t {
   occa::memory o_cols;
   occa::memory o_coefs;
 
+  occa::memory o_diagInv;
+  occa::memory o_temp1;
+
   // MPI halo exchange info
   iint  numLocalIds;
   iint  NHalo;
@@ -132,9 +135,11 @@ typedef struct agmgLevel_t {
 
   iint *globalRowStarts; //global partitioning
 
-  hyb  *deviceA;
-  dcsr *dcsrP;
-  hyb  *deviceR;
+  //hyb  *deviceA;
+  dcsr  *deviceA;
+  dcsr  *dcsrP;
+  //hyb  *deviceR;
+  dcsr  *deviceR;
 
   dfloat *nullA;
 
