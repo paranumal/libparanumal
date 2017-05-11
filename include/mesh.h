@@ -221,6 +221,12 @@ typedef struct {
   dfloat *respmlq; // residual data array (for LSERK time-stepping)
   
   
+
+
+
+
+
+  
   
   // occa stuff
   occa::device device;
@@ -295,8 +301,8 @@ typedef struct {
   occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
   occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
-
   
+    
 
   
   // CG gather-scatter info
