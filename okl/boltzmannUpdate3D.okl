@@ -255,6 +255,16 @@ kernel void boltzmannLSIMEXResidualUpdate3D(const iint Nelements,
 
     }
   }
+
+#if 0
+  // TW alternative process as a vector operation
+  for(iint n=0;n<Nelements*p_Np*3;++n;tile(256)){
+    if(n<Nelements*p_Np*3){
+      qY[n] = q[n] + ake*dt*qY[n] + aki*dt*qZ[n];
+    }
+  }
+#endif
+
 }
 
 
@@ -288,6 +298,19 @@ kernel void boltzmannLSIMEXImplicitUpdate3D(const iint Nelements,
 
     }
   }
+
+#if 0
+  // TW alternative process as a vector operation
+  for(iint n=0;n<Nelements*p_Np*3;++n;tile(256)){
+    if(n<Nelements*p_Np*3){
+      dfloat4 qn = q[n];
+      qS[n] = qn;
+      q[n] = qY[n] + akk*dt*qZ[n];
+    }
+  }
+#endif
+
+  
 }
 
 
@@ -316,6 +339,17 @@ kernel void boltzmannLSIMEXUpdate3D(const iint Nelements,
       q[base+2] = qc + akk*dt*(qimc + qexc);   
     }
   }
+
+#if 0
+  // TW alternative process as a vector operation
+  for(iint n=0;n<Nelements*p_Np*3;++n;tile(256)){
+    if(n<Nelements*p_Np*3){
+      q[n] = qS[n] + akk*dt*(qZ[n]+qY[n]);
+    }
+  }
+#endif
+
+  
 }
 
 
