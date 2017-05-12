@@ -4,6 +4,9 @@
 #include <mpi.h>
 #include "mesh2D.h"
 
+#define UXID 0
+#define UYID 1
+
 typedef struct {
 
 mesh_t *mesh;	
@@ -18,7 +21,7 @@ dfloat finalTime; // final time to run acoustics to
 iint   NtimeSteps;// number of time steps 
 iint   errorStep; 
 
-
+dfloat a0, a1, b0, b1, g0; 
 dfloat *U,  *Pr, *rhsU, *rhsPr;
 dfloat *UO, *UI, *NU; 
 dfloat g[2]; // gravitational Acceleration
@@ -26,6 +29,9 @@ dfloat g[2]; // gravitational Acceleration
 occa::memory o_U, o_UO, o_UI, o_NU, o_Pr;
 occa::memory o_rhsU, o_rhsPr; 
 
+
+occa::kernel haloExtractKernel;
+//
 occa::kernel advectionVolumeKernel; // deprecated
 occa::kernel advectionSurfaceKernel; 
 occa::kernel advectionUpdateKernel;   
@@ -46,13 +52,15 @@ void insError2D(solver_t *solver, dfloat time,char *options);
 void insAdvectionStep2D(solver_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
+// void insPressureStep2D(solver_t *solver, iint tstep, iint haloBytes,
+// 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
 
 
 
 
-#define UXID 0
-#define UYID 1
+
+
 
 
