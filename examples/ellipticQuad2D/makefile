@@ -42,9 +42,8 @@ ellipticSolveQuad2D.o \
 ellipticHaloExchange2D.o \
 ellipticParallelGatherScatterQuad2D.o \
 ellipticPreconditionerSetupQuad2D.o\
-ellipticCoarsePreconditionerSetupQuad2D.o\
-ellipticCoarsePreconditionerQuad2D.o\
-../../src/almondCoarseSolve.o
+ellipticCoarsePreconditionerSetupQuad2D.o
+
 
 # library objects
 LOBJS = \
@@ -67,13 +66,18 @@ LOBJS = \
 ../../src/meshGeometricFactorsQuad2D.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
+../../src/meshParallelGather.o \
+../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
+../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
+../../src/timer.o\
+../../src/almondCoarseSolve.o \
 ./diagnostic.o\
 
 

@@ -396,13 +396,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     
     free(diagA);
 
-    mesh->device.finish();
-    occa::tic("CoarsePreconditionerSetup");
     // coarse grid preconditioner (only continous elements)
-    // do this here since we need A*x
+    occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, lambda, options);
-    mesh->device.finish();
-    occa::toc("CoarsePreconditionerSetup");
+    occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
 
   } else if (strstr(options,"FULLALMOND")) {
     // ------------------------------------------------------------------------------------
@@ -411,15 +408,6 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
     iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-    
-    iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
-    iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
-
-    iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
-    iint *globalSortId;
-    iint *compressId;
 
     iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
@@ -429,10 +417,11 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     }
 
     // squeeze node numbering
-    meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
-                                           sendSortId, &globalSortId, &compressId,
-                                           sendCounts, sendOffsets, recvCounts, recvOffsets);
-    
+    meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+
+    //use the ordering to define a gather+scatter for assembly
+    hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+
     // 2. Build non-zeros of stiffness matrix (unassembled)
     iint nnz = mesh->Np*mesh->Np*mesh->Nelements;
     nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
@@ -484,12 +473,15 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
                 val += JW*lambda;
               }
               
-              // pack non-zero
-              sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq];
-              cnt++;
+              dfloat nonZeroThreshold = 1e-7;
+              if (fabs(val)>nonZeroThreshold) {
+                // pack non-zero
+                sendNonZeros[cnt].val = val;
+                sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq];
+                sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq];
+                sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq];
+                cnt++;
+              }
             }
           }
         }
@@ -582,21 +574,16 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       globalVals[n] = globalNonZero[n].val;
     }
 
-    precon->parAlmond = almondGlobalSetup(mesh->device, 
-                                         Nnum, 
-                                         globalStarts, 
-                                         globalnnzTotal,      
-                                         globalRows,        
-                                         globalCols,        
-                                         globalVals,
-                                         sendSortId, 
-                                         globalSortId, 
-                                         compressId,
-                                         sendCounts, 
-                                         sendOffsets, 
-                                         recvCounts, 
-                                         recvOffsets,    
-                                         0);             // 0 if no null space
+    precon->parAlmond = almondSetup(mesh, 
+                                   Nnum, 
+                                   globalStarts, 
+                                   globalnnzTotal,      
+                                   globalRows,        
+                                   globalCols,        
+                                   globalVals,    
+                                   0,             // 0 if no null space
+                                   hgs,
+                                   1);       //rhs will be passed gather-scattered
 
     precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
     precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -620,7 +607,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       iint *colsA2;
       dfloat *valsA2;  
 
-      almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
+      almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
                               &nnz2,&rowsA2,&colsA2, &valsA2);
 
       precon->coarseNp = coarseNp[rank];

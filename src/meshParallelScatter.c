@@ -22,50 +22,52 @@ void meshParallelScatter(mesh_t *mesh,
   
   if(hgs->NsendTotal||hgs->NrecvTotal){  
     // copy halo data to HOST to DEVICE
-    hgs->o_gatherTmp.copyTo(hgs->recvBuffer, hgs->NrecvTotal*sizeof(dfloat), hgs->haloOffset*sizeof(dfloat));
+    if (hgs->NrecvTotal)
+      hgs->o_gatherTmp.copyTo(hgs->recvBuffer, hgs->NrecvTotal*sizeof(dfloat), hgs->haloOffset*sizeof(dfloat));
 
     iint tag = 999;
 
     // initiate immediate send  and receives to each other process as needed
-    iint sendOffset = 0, sendMessage = 0;
+    iint sendOffset = 0,sendMessage=0;
     for(iint r=0;r<size;++r){
       if(r!=rank){
         if(hgs->Nsend[r]){
           MPI_Irecv(hgs->sendBuffer+sendOffset, hgs->Nsend[r], MPI_DFLOAT, r, tag,
               MPI_COMM_WORLD, (MPI_Request*)hgs->haloSendRequests+sendMessage);
-          sendOffset += Nsend[r];
+          sendOffset += hgs->Nsend[r];
           ++sendMessage;
         }
       }
     }
-    iint recvOffset = 0, recvMessage = 0;
+    iint recvOffset = 0,recvMessage=0;
     for(iint r=0;r<size;++r){
       if(r!=rank){
         if(hgs->Nrecv[r]){
           MPI_Isend(hgs->recvBuffer+recvOffset, hgs->Nrecv[r], MPI_DFLOAT, r, tag,
               MPI_COMM_WORLD, (MPI_Request*)hgs->haloRecvRequests+recvMessage);
-          recvOffset += Nrecv[r];
+          recvOffset += hgs->Nrecv[r];
           ++recvMessage;
         }
       }
     }
 
     // Wait for all sent messages to have left and received messages to have arrived
-    MPI_Status *sendStatus = (MPI_Status*) calloc(sendMessages, sizeof(MPI_Status));
-    MPI_Status *recvStatus = (MPI_Status*) calloc(recvMessages, sizeof(MPI_Status));
+    MPI_Status *sendStatus = (MPI_Status*) calloc(sendMessage, sizeof(MPI_Status));
+    MPI_Status *recvStatus = (MPI_Status*) calloc(recvMessage, sizeof(MPI_Status));
     
-    MPI_Waitall(sendMessages, (MPI_Request*)hgs->haloRecvRequests, recvStatus);
-    MPI_Waitall(recvMessages, (MPI_Request*)hgs->haloSendRequests, sendStatus);
+    MPI_Waitall(recvMessage, (MPI_Request*)hgs->haloRecvRequests, recvStatus);
+    MPI_Waitall(sendMessage, (MPI_Request*)hgs->haloSendRequests, sendStatus);
     
     free(recvStatus);
     free(sendStatus);    
 
     // copy scattered halo data from DEVICE to HOST
-    hgs->o_gatherTmp.copyFrom(hgs->sendBuffer, hgs->NsendTotal*sizeof(dfloat), hgs->haloOffset*sizeof(dfloat));
+    if (hgs->NsendTotal)
+      hgs->o_gatherTmp.copyFrom(hgs->sendBuffer, hgs->NsendTotal*sizeof(dfloat), hgs->haloOffset*sizeof(dfloat));
   }
 
   // extract scattered nodes
-  mesh->putKernel(hgs->Nlocal, hgs->o_gatherTmp, hgs->o_sortIds, hgs->o_sv); // subv = v[ids]
+  mesh->putKernel(hgs->Nlocal, hgs->o_gatherTmp, hgs->o_sortIds, o_sv); // subv = v[ids]
 
   occaTimerToc(mesh->device,"hgsScatterKernel");
 }

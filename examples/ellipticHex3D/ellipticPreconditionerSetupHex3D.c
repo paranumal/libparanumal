@@ -469,15 +469,6 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
 
     iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-    
-    iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
-    iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
-
-    iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
-    iint *globalSortId;
-    iint *compressId;
 
     iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
@@ -487,11 +478,10 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     }
 
     // squeeze node numbering
-    meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
-                                           sendSortId, &globalSortId, &compressId,
-                                           sendCounts, sendOffsets, recvCounts, recvOffsets);
+    meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
     
-
+    //use the ordering to define a gather+scatter for assembly
+    hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
     // 2. Build non-zeros of stiffness matrix (unassembled)
     iint nnz = mesh->Np*mesh->Np*mesh->Nelements;
@@ -680,31 +670,16 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       globalVals[n] = globalNonZero[n].val;
     }
 
-    occaTimerTic(mesh->device,"GatherScatterSetup");
-    // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-    ogs_t *ogsAlmond = meshParallelGatherScatterSetup(mesh,
-            mesh->Np*mesh->Nelements,
-            sizeof(dfloat),
-            mesh->gatherLocalIds,
-            mesh->gatherBaseIds, 
-            mesh->gatherHaloFlags);
-    occaTimerToc(mesh->device,"GatherScatterSetup");
-
-    precon->parAlmond = almondGlobalSetup(mesh->device, 
-                                         Nnum, 
-                                         globalStarts, 
-                                         globalnnzTotal,      
-                                         globalRows,        
-                                         globalCols,        
-                                         globalVals,
-                                         sendSortId, 
-                                         globalSortId, 
-                                         compressId,
-                                         sendCounts, 
-                                         sendOffsets, 
-                                         recvCounts, 
-                                         recvOffsets,    
-                                         0);             // 0 if no null space
+    precon->parAlmond = almondSetup(mesh, 
+                                   Nnum, 
+                                   globalStarts, 
+                                   globalnnzTotal,      
+                                   globalRows,        
+                                   globalCols,        
+                                   globalVals,    
+                                   0,             // 0 if no null space
+                                   hgs,
+                                   1);       //rhs will be passed gather-scattered
 
     precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
     precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -728,7 +703,7 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       iint *colsA2;
       dfloat *valsA2;  
 
-      almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
+      almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
                               &nnz2,&rowsA2,&colsA2, &valsA2);
 
       precon->coarseNp = coarseNp[rank];

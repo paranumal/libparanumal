@@ -42,7 +42,7 @@ ellipticHaloExchange3D.o \
 ellipticParallelGatherScatterHex3D.o \
 ellipticPreconditionerSetupHex3D.o \
 ellipticCoarsePreconditionerSetupHex3D.o\
-../../src/almondCoarseSolve.o
+
 
 # library objects
 LOBJS = \
@@ -65,15 +65,18 @@ LOBJS = \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
+../../src/meshParallelGather.o \
+../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
+../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o \
-../../src/timer.o
-
+../../src/timer.o \
+../../src/almondCoarseSolve.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

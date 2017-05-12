@@ -420,10 +420,8 @@ void meshParallelConnect(mesh_t *mesh);
 void meshParallelConnectNodes(mesh_t *mesh);
 
 /* renumber global nodes to remove gaps */
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, iint *globalOwners, iint *globalStarts,
-                                            iint *sendSortId, iint **globalSortId, iint **compressId,
-                                            iint *sendCounts, iint *sendOffsets,
-                                            iint *recvCounts, iint *recvOffsets);
+void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering, 
+                                          iint *globalOwners, iint *globalStarts);
 
 void meshHaloSetup(mesh_t *mesh);
 
@@ -451,6 +449,10 @@ void meshPartitionStatistics(mesh_t *mesh);
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
+hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
+                              iint Nlocal,     // number of local nodes
+                              iint *globalNumbering,  // global index of nodes
+                              iint *globalOwners);
 void meshParallelGather(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_sv);
 
@@ -504,49 +506,27 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void * almondSetup(occa::device device,
+void *almondSetup(mesh_t *mesh,
        iint  Nnum,
        iint* rowStarts, 
        iint  nnz, 
        iint* Ai,
        iint* Aj,
        dfloat* Avals,
-       iint    *sendSortId, 
-       iint    *globalSortId, 
-       iint    *compressId,
-       iint    *sendCounts, 
-       iint    *sendOffsets, 
-       iint    *recvCounts, 
-       iint    *recvOffsets,
-       iint   nullSpace);
+       iint   nullSpace,
+       hgs_t *hgs,
+       iint preGathered);
 
-void * almondGlobalSetup(occa::device device, 
-       iint  Nnum,
-       iint* rowStarts, 
-       iint  nnz, 
-       iint* Ai,
-       iint* Aj,
-       dfloat* Avals,
-       iint    *sendSortId, 
-       iint    *globalSortId, 
-       iint    *compressId,
-       iint    *sendCounts, 
-       iint    *sendOffsets, 
-       iint    *recvCounts, 
-       iint    *recvOffsets,
-       iint   nullSpace);
-
-
-iint almondSolve(dfloat* x,
-    void* A,
-    dfloat* rhs); 
-
+void almondSolve(mesh_t *mesh, 
+    occa::memory o_x,
+    void* ALMOND,
+    occa::memory o_rhs); 
 
 int almondFree(void* A);
 
 void almondProlongateCoarseProblem(void *ALMOND, iint *coarseNp, iint *coarseOffsets, dfloat **B);
 
-void almondGlobalCoarseSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
+void almondCoarseSolveSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
                     iint *nnz, iint **rows, iint **cols, dfloat **vals);
 
 void almondSetCoarseSolve(void* ALMOND, void (*coarseSolve)(void*,void*,void*),
