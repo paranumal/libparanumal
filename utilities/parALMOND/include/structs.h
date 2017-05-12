@@ -135,11 +135,11 @@ typedef struct agmgLevel_t {
 
   iint *globalRowStarts; //global partitioning
 
-  //hyb  *deviceA;
-  dcsr  *deviceA;
+  hyb  *deviceA;
+  //dcsr  *deviceA;
   dcsr  *dcsrP;
-  //hyb  *deviceR;
-  dcsr  *deviceR;
+  hyb  *deviceR;
+  //dcsr  *deviceR;
 
   dfloat *nullA;
 

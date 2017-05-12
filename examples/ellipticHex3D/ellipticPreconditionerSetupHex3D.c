@@ -455,13 +455,10 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
         mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
     }
 
-    mesh->device.finish();
-    occa::tic("CoarsePreconditionerSetup");
+    occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     // do this here since we need A*x
     ellipticCoarsePreconditionerSetupHex3D(mesh, precon, ogs, lambda, options);
-
-    mesh->device.finish();
-    occa::toc("CoarsePreconditionerSetup");
+    occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
 
     
     free(diagA);
@@ -494,6 +491,8 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
                                            sendSortId, &globalSortId, &compressId,
                                            sendCounts, sendOffsets, recvCounts, recvOffsets);
     
+
+
     // 2. Build non-zeros of stiffness matrix (unassembled)
     iint nnz = mesh->Np*mesh->Np*mesh->Nelements;
     nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
@@ -579,11 +578,14 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
               }
               
               // pack non-zero
-              sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
-              cnt++;
+              dfloat nonZeroThreshold = 1e-7;
+              if (fabs(val) >= nonZeroThreshold) {
+                sendNonZeros[cnt].val = val;
+                sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
+                sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq];
+                sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
+                cnt++;
+              }
           }
           }
           }
@@ -677,6 +679,16 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       globalCols[n] = globalNonZero[n].col;
       globalVals[n] = globalNonZero[n].val;
     }
+
+    occaTimerTic(mesh->device,"GatherScatterSetup");
+    // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+    ogs_t *ogsAlmond = meshParallelGatherScatterSetup(mesh,
+            mesh->Np*mesh->Nelements,
+            sizeof(dfloat),
+            mesh->gatherLocalIds,
+            mesh->gatherBaseIds, 
+            mesh->gatherHaloFlags);
+    occaTimerToc(mesh->device,"GatherScatterSetup");
 
     precon->parAlmond = almondGlobalSetup(mesh->device, 
                                          Nnum, 

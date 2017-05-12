@@ -7,7 +7,7 @@ sources = $(wildcard $(sDir)/*c)
 includes = $(wildcard $(iDir)/*h)
 objects = $(subst $(sDir)/,$(objDir)/,$(sources:.c=.o))
 
-flags = -I${OCCA_DIR}/include -I$(iDir) 
+flags = -I${OCCA_DIR}/include -I$(iDir) -I../../include
 libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas 
 
 ifeq ($(shell uname -s),Darwin)
