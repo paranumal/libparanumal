@@ -451,6 +451,10 @@ void meshPartitionStatistics(mesh_t *mesh);
 void meshConnectBoundary(mesh_t *mesh);
 
 
+void occaTimerTic(occa::device device,std::string name);
+
+void occaTimerToc(occa::device device,std::string name);
+
 extern "C"
 {
   void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);

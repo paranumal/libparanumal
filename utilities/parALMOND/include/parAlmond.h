@@ -1,31 +1,12 @@
-#include <math.h>
-#include <stdlib.h>
+#ifndef PARALMOND_H 
+#define PARALMOND_H 1
+
+#include "mesh.h"
 #include <mpi.h>
-#include <occa.hpp>
 
 #define AGMGBDIM 32 //block size
 #define SIMDWIDTH 32 //width of simd blocks
 #define MAX_LEVELS 100
-
-#if 0
-#define iint int
-#define dfloat float
-#define MPI_IINT MPI_INT
-#define MPI_DFLOAT MPI_FLOAT
-#define iintFormat "%d"
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#define iintString "int"
-#else
-#define iint int
-#define dfloat double
-#define MPI_IINT MPI_INT
-#define MPI_DFLOAT MPI_DOUBLE
-#define iintFormat "%d"
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#define iintString "int"
-#endif
 
 typedef enum {PCG=0,GMRES=1}KrylovType;
 typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
@@ -89,3 +70,5 @@ void gmres(almond_t *almond, hyb *A, occa::memory o_b, occa::memory o_x, iint ma
 
 void pcg(almond_t *almond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
 void pcg(almond_t *almond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
+
+#endif
