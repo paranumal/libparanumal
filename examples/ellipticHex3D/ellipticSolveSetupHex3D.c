@@ -142,8 +142,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "ellipticAxIpdgHex3D",
                kernelInfo);
   
-  mesh->device.finish();
-  occa::tic("GatherScatterSetup");
+  occaTimerTic(mesh->device,"GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
           mesh->Np*mesh->Nelements,
@@ -151,11 +150,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
           mesh->gatherLocalIds,
           mesh->gatherBaseIds, 
           mesh->gatherHaloFlags);
-  mesh->device.finish();
-  occa::toc("GatherScatterSetup");
+  occaTimerToc(mesh->device,"GatherScatterSetup");
 
-  mesh->device.finish();
-  occa::tic("PreconditionerSetup");
+  occaTimerTic(mesh->device,"PreconditionerSetup");
   solver->precon = ellipticPreconditionerSetupHex3D(mesh, solver->ogs, lambda, options);
 
 
@@ -179,12 +176,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "ellipticPreconProlongate",
                kernelInfo);
   
-  mesh->device.finish();
-  occa::toc("PreconditionerSetup");
+  occaTimerToc(mesh->device,"PreconditionerSetup");
 
-
-  mesh->device.finish();
-  occa::tic("CoarseDegreeVectorSetup");
+  occaTimerTic(mesh->device,"CoarseDegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -203,8 +197,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       invDegree[n] = 1.;
   
   solver->o_invDegree.copyFrom(invDegree);
-  mesh->device.finish();
-  occa::toc("CoarseDegreeVectorSetup");
+  occaTimerToc(mesh->device,"CoarseDegreeVectorSetup");
 
   // find maximum degree  
   for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
