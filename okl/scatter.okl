@@ -14,8 +14,8 @@ kernel void scatter(const iint Nscatter,
       const iint end = scatterStarts[s+1];
       
       for(iint n=start;n<end;++n){
-	const iint id =	scatterIds[n];
-	scatterq[id] = qs;
+      	const iint id =	scatterIds[n];
+      	scatterq[id] = qs;
       }
     }
   }
