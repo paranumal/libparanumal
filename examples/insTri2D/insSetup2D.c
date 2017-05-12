@@ -186,6 +186,8 @@
 
   ins->o_Pr =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pr);
+
+  ins->o_NU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NU);  
    
   ins->o_UO  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UO);
 
@@ -209,6 +211,39 @@
         kernelInfo);
   // }
 
+   // KERNEL DEFINITIONS
+  // if(strstr(options, "CUBATURE")){ 
+  // printf("Compiling Advection volume kernel with cubature integration\n");
+  // mesh->volumeKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+  //     "insAdvectionVolumeCub2D",
+  //       kernelInfo);
+  // }
+  // else{
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->advectionSurfaceKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+      "insAdvectionSurface2D",
+        kernelInfo);
+  // }
+
+
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->advectionUpdateKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+      "insAdvectionUpdate2D",
+        kernelInfo);
+
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+      "meshHaloExtract2D",
+      kernelInfo);
+
+  printf("Compiling INS Halo Extract Kernel\n");
+  ins->haloExtractKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExtract.okl",
+      "insHaloExtract2D",
+        kernelInfo);
 
 return ins;
 
