@@ -142,8 +142,7 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 				       "ellipticAxIpdgQuad2D",
 				       kernelInfo);  
 
-  mesh->device.finish();
-  occa::tic("GatherScatterSetup");
+  occaTimerTic(mesh->device,"GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					mesh->Np*mesh->Nelements,
@@ -151,11 +150,9 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 					mesh->gatherLocalIds,
 					mesh->gatherBaseIds, 
 					mesh->gatherHaloFlags);
-  mesh->device.finish();
-  occa::toc("GatherScatterSetup");
+  occaTimerToc(mesh->device,"GatherScatterSetup");
 
-  mesh->device.finish();
-  occa::tic("PreconditionerSetup");
+  occaTimerTic(mesh->device,"PreconditionerSetup");
   solver->precon = ellipticPreconditionerSetupQuad2D(mesh, solver->ogs, lambda, options);
 
   
@@ -179,13 +176,10 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 				       "ellipticPreconProlongate",
 				       kernelInfo);
 
-  mesh->device.finish();
-  occa::toc("PreconditionerSetup");
+  occaTimerToc(mesh->device,"PreconditionerSetup");
 
 
-
-  mesh->device.finish();
-  occa::tic("DegreeVectorSetup");
+  occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -193,68 +187,13 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
-    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-      if(degree[n] == 0) printf("WARNING!!!!\n");
-      invDegree[n] = 1./degree[n];
-    }
+  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+    if(degree[n] == 0) printf("WARNING!!!!\n");
+    invDegree[n] = 1./degree[n];
   }
-  else
-    for(iint n=0;n<Ntotal;++n)
-      invDegree[n] = 1.;
   
   solver->o_invDegree.copyFrom(invDegree);
-  mesh->device.finish();
-  occa::toc("DegreeVectorSetup");
-
-
-  // find maximum degree  
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    mesh->rhsq[n] = 1;
-  }
-  mesh->o_rhsq.copyFrom(mesh->rhsq);
-  
-  ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString, "add");
-
-  mesh->o_rhsq.copyTo(mesh->rhsq);
-  
-  dfloat maxDegree = 0, minDegree = 1e9;
-  dfloat gatherMaxDegree = 0, gatherMinDegree = 1e9;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    maxDegree = mymax(maxDegree, mesh->rhsq[n]);
-    minDegree = mymin(minDegree, mesh->rhsq[n]);
-  }
-
-  MPI_Allreduce(&maxDegree, &gatherMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&minDegree, &gatherMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-  if(rank==0){
-    printf("max degree = " dfloatFormat "\n", gatherMaxDegree);
-    printf("min degree = " dfloatFormat "\n", gatherMinDegree);
-  }
-
-  
-  // build weights for continuous SEM L2 project --->
-  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
-      localMM[n+e*mesh->Np] = wJ;
-    }
-  }
-
-  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-
-  // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
-
-  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
-
-  free(localMM); o_MM.free(); o_localMM.free();
-  // <------
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
 
   return solver;
 }

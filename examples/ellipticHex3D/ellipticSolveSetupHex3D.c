@@ -178,7 +178,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  occaTimerTic(mesh->device,"CoarseDegreeVectorSetup");
+  occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -186,66 +186,13 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
-  if(strstr(options, "CONTINUOUS")){
-    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-      if(degree[n] == 0) printf("WARNING!!!!\n");
-      invDegree[n] = 1./degree[n];
-    }
+  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+    if(degree[n] == 0) printf("WARNING!!!!\n");
+    invDegree[n] = 1./degree[n];
   }
-  else
-    for(iint n=0;n<Ntotal;++n)
-      invDegree[n] = 1.;
   
   solver->o_invDegree.copyFrom(invDegree);
-  occaTimerToc(mesh->device,"CoarseDegreeVectorSetup");
-
-  // find maximum degree  
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    mesh->rhsq[n] = 1;
-  }
-  mesh->o_rhsq.copyFrom(mesh->rhsq);
-  
-  ellipticParallelGatherScatterHex3D(mesh, solver->ogs, mesh->o_rhsq, mesh->o_rhsq, dfloatString, "add");
-
-  mesh->o_rhsq.copyTo(mesh->rhsq);
-  
-  dfloat maxDegree = 0, minDegree = 1e9;
-  dfloat gatherMaxDegree = 0, gatherMinDegree = 1e9;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    maxDegree = mymax(maxDegree, mesh->rhsq[n]);
-    minDegree = mymin(minDegree, mesh->rhsq[n]);
-  }
-
-  MPI_Allreduce(&maxDegree, &gatherMaxDegree, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&minDegree, &gatherMinDegree, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-  if(rank==0){
-    printf("max degree = " dfloatFormat "\n", gatherMaxDegree);
-    printf("min degree = " dfloatFormat "\n", gatherMinDegree);
-  }
-
-
-  // build weights for continuous SEM L2 project --->
-  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
-      localMM[n+e*mesh->Np] = wJ;
-    }
-  }
-
-  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-
-  // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
-
-  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
-
-  free(localMM); o_MM.free(); o_localMM.free();
-  // <------
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
   
   return solver;
 }

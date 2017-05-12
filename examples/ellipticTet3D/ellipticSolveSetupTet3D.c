@@ -143,14 +143,16 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+  occaTimerTic(mesh->device,"GatherScatterSetup");
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					       mesh->Np*mesh->Nelements,
 					       sizeof(dfloat),
 					       mesh->gatherLocalIds,
 					       mesh->gatherBaseIds, 
 					       mesh->gatherHaloFlags);
+  occaTimerToc(mesh->device,"GatherScatterSetup"); 
   
-  
+  occaTimerTic(mesh->device,"PreconditionerSetup");
   solver->precon = ellipticPreconditionerSetupTet3D(mesh, solver->ogs, lambda, options);
   
   solver->precon->preconKernel = 
@@ -172,9 +174,9 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
 				       "ellipticPreconProlongate",
 				       kernelInfo);
+  occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  mesh->device.finish();
-  occa::tic("DegreeVectorSetup");
+  occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
@@ -182,42 +184,13 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
-    for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-      if(degree[n] == 0) printf("WARNING!!!!\n");
-      invDegree[n] = 1./degree[n];
-    }
+  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+    if(degree[n] == 0) printf("WARNING!!!!\n");
+    invDegree[n] = 1./degree[n];
   }
-  else
-    for(iint n=0;n<Ntotal;++n)
-      invDegree[n] = 1.;
   
   solver->o_invDegree.copyFrom(invDegree);
-  mesh->device.finish();
-  occa::toc("DegreeVectorSetup");
-
-  // probably should relocate this
-  // build weights for continuous SEM L2 project --->                                                        
-  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat J = mesh->vgeo[e*mesh->Nvgeo + JID];
-      localMM[n+e*mesh->Np] = J;
-    }
-  }
-
-  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-
-  // sum up all contributions at base nodes and scatter back                                                 
-  ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
-
-  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
-
-  free(localMM); o_MM.free(); o_localMM.free();
-  // <------                                            
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
 
   return solver;
 }

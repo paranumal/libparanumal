@@ -65,13 +65,17 @@ LOBJS = \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
+../../src/meshParallelGather.o \
+../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
+../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
+../../src/timer.o\
 ./diagnostic.o\
 ../../src/almondCoarseSolve.o
 

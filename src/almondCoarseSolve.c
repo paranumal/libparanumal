@@ -4,31 +4,18 @@
 typedef struct {
   csr *A;
   almond_t *almond;
-  dfloat *rhs;
-  dfloat *x;
-  dfloat *nullA;
 
   hgs_t *hgs;
+  iint preGathered;
 
   iint numLocalRows;
   iint Nnum;
-  iint recvNnum;
-  iint nnz;
-
-  iint *sendSortId, *globalSortId, *compressId;
-  iint *sendCounts, *sendOffsets,  *recvCounts, *recvOffsets;
-
-  dfloat *xUnassembled;
-  dfloat *rhsUnassembled;
-
-  dfloat *xSort;
-  dfloat *rhsSort;
 
   occa::memory o_rhs, o_x;
 
 } parAlmond_t;
 
-void * almondSetup(occa::device device, 
+void * almondSetup(mesh_t *mesh, 
        iint  Nnum,
        iint* rowStarts, 
        iint  nnz, 
@@ -36,7 +23,9 @@ void * almondSetup(occa::device device,
        iint* Aj,
        dfloat* Avals,
        iint   nullSpace,
-       hgs_t *hgs) {
+       hgs_t *hgs,
+       iint preGathered) //1 if the rhs is gather-scattered before calling solve
+{
 
   parAlmond_t *parAlmond = (parAlmond_t*) calloc(1, sizeof(parAlmond_t));
 
@@ -45,6 +34,7 @@ void * almondSetup(occa::device device,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   parAlmond->hgs = hgs;
+  parAlmond->preGathered = preGathered;
 
   parAlmond->numLocalRows = rowStarts[rank+1]-rowStarts[rank];
   
@@ -68,17 +58,22 @@ void * almondSetup(occa::device device,
   parAlmond->A = newCSR(numGlobalRows, numGlobalRows, nnz, 
                         vRowStarts, vAj, vAvals);
 
-  parAlmond->nullA = (dfloat *) calloc(numGlobalRows, sizeof(dfloat));
-  for (iint i=0;i<numGlobalRows;i++) parAlmond->nullA[i] = 1;
+  dfloat *nullA = (dfloat *) calloc(numGlobalRows, sizeof(dfloat));
+  for (iint i=0;i<numGlobalRows;i++) nullA[i] = 1;
   
-  parAlmond->almond = setup(parAlmond->A, parAlmond->nullA, rowStarts);
-  sync_setup_on_device(parAlmond->almond, device);
+  parAlmond->almond = setup(parAlmond->A, nullA, rowStarts);
+  sync_setup_on_device(parAlmond->almond, mesh->device);
   
+  free(vRowStarts);
+  free(vAj);
+  free(vAvals);
+  free(nullA);
+
   parAlmond->almond->ktype = PCG;
   
   dfloat *dummy = (dfloat *) calloc(parAlmond->numLocalRows,sizeof(dfloat));
-  parAlmond->o_rhs = device.malloc(parAlmond->numLocalRows*sizeof(dfloat), dummy);
-  parAlmond->o_x   = device.malloc(parAlmond->numLocalRows*sizeof(dfloat), dummy);
+  parAlmond->o_rhs = mesh->device.malloc(parAlmond->numLocalRows*sizeof(dfloat), dummy);
+  parAlmond->o_x   = mesh->device.malloc(parAlmond->numLocalRows*sizeof(dfloat), dummy);
   free(dummy);
 
   return (void *) parAlmond;
@@ -93,7 +88,7 @@ void almondSolve(mesh_t *mesh, occa::memory o_x, void *A, occa::memory o_rhs) {
 
   //if the rhs has already been gather scattered, weight the gathered rhs
   if(parAlmond->preGathered)
-    mesh->dotMultiplyKernel(parAlmond->numLocalRows,parAlmond->hgs->o_degreeInv,
+    mesh->dotMultiplyKernel(parAlmond->hgs->Ngather,parAlmond->hgs->o_invDegree,
                           parAlmond->o_rhs, parAlmond->o_rhs);
 
   solve(parAlmond->almond, parAlmond->o_rhs, parAlmond->o_x);
@@ -107,7 +102,7 @@ int almondFree(void* A) {
   return 0;
 }
 
-void almondGlobalCoarseSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
+void almondCoarseSolveSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
                     iint *nnz, iint **rows, iint **cols, dfloat **vals) {
 
   iint size, rank;
