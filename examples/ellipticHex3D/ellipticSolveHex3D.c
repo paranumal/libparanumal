@@ -190,21 +190,10 @@ void ellipticPreconditioner3D(solver_t *solver,
         precon->o_z1.copyFrom(precon->z1);
       }
 
-      if(strstr(options,"GLOBALALMOND")){
-        // should eliminate these copies
-        occaTimerTic(mesh->device,"parAlmond");
-        precon->o_r1.copyTo(precon->r1); 
-        almondSolve(precon->z1, precon->parAlmond, precon->r1);
-        precon->o_z1.copyFrom(precon->z1);
-        occaTimerToc(mesh->device,"parAlmond");
-      }      
-
-      if(strstr(options,"LOCALALMOND")){
+      if(strstr(options,"ALMOND")){
         // should eliminate these copies
         occaTimerTic(mesh->device,"Almond");
-        precon->o_r1.copyTo(precon->r1); 
-        almondSolve(precon->z1, precon->almond, precon->r1);
-        precon->o_z1.copyFrom(precon->z1);
+        almondSolve(mesh,precon->o_z1, precon->almond, precon->o_r1);
         occaTimerToc(mesh->device,"Almond");
       }
 
@@ -221,17 +210,15 @@ void ellipticPreconditioner3D(solver_t *solver,
     }
   } else if (strstr(options, "FULLALMOND")) {
 
-    o_r.copyTo(precon->r1); 
     occaTimerTic(mesh->device,"parALMOND");
-    almondSolve(precon->z1, precon->parAlmond, precon->r1);
+    almondSolve(mesh,o_z, precon->parAlmond, o_r);
     occaTimerToc(mesh->device,"parALMOND");
-    o_z.copyFrom(precon->z1);
   
   } else if(strstr(options, "JACOBI")){
 
-    occaTimerTic(mesh->device,"dotDivideKernel");   
-    // Jacobi preconditioner
     iint Ntotal = mesh->Np*mesh->Nelements;
+    // Jacobi preconditioner
+    occaTimerTic(mesh->device,"dotDivideKernel");   
     mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");   
   }

@@ -41,41 +41,15 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
 
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-  
-  iint *sendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *sendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *recvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *recvOffsets = (iint*) calloc(size+1, sizeof(iint));
-
-  iint *sendSortId = (iint *) calloc(Nnum,sizeof(iint));
-  iint *globalSortId;
-  iint *compressId;
 
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
   // squeeze numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,
-                                         sendSortId, &globalSortId, &compressId,
-                                         sendCounts, sendOffsets, recvCounts, recvOffsets);
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
   
-  // build gs
-  void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
-
-  dfloat *degree = (dfloat*) calloc(Nnum, sizeof(dfloat));
-  for(iint n=0;n<Nnum;++n)
-    degree[n] = 1;
-  
-  gsParallelGatherScatter(gsh, degree, dfloatString, "add");
-  
-  dfloat *invDegree = (dfloat*) calloc(Nnum, sizeof(dfloat));
-  for(iint n=0;n<Nnum;++n)
-    invDegree[n] = 1./degree[n];
-
-  precon->o_coarseInvDegree = mesh->device.malloc(Nnum*sizeof(dfloat), invDegree);
-
-  // clean up
-  gsParallelGatherScatterDestroy(gsh);
+  //use the ordering to define a gather+scatter for assembly
+  hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
   // temporary
   precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
@@ -228,17 +202,21 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
         Snm += J*(tx*sx+ty*sy+tz*sz)*Sts1[n][m];
         Snm += J*(tx*tx+ty*ty+tz*tz)*Stt1[n][m];
       	Snm += J*lambda*MM1[n][m];
-      	valsA[cnt] = Snm;
-      	rowsA[cnt] = e*mesh->Nverts+n;
-      	colsA[cnt] = e*mesh->Nverts+m;
 
-      	// pack non-zero
-      	sendNonZeros[cnt].val = Snm;
-      	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
-      	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
-      	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
-      	
-      	++cnt;
+        dfloat nonZeroThreshold = 1e-7;
+        if(fabs(Snm)>nonZeroThreshold) {
+        	valsA[cnt] = Snm;
+        	rowsA[cnt] = e*mesh->Nverts+n;
+        	colsA[cnt] = e*mesh->Nverts+m;
+
+        	// pack non-zero
+        	sendNonZeros[cnt].val = Snm;
+        	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
+        	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
+        	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
+        	
+        	++cnt;
+        }
       }
     }
   }
@@ -343,43 +321,19 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
 			   dfloatString); // 0 if no null space
   }
 
-  if(strstr(options, "LOCALALMOND")){
+  if(strstr(options, "ALMOND")){
  
-    precon->almond = almondSetup(mesh->device,
+    precon->almond = almondSetup(mesh,
          Nnum, 
          globalStarts,
          recvNtotal,      
          recvRows,        
          recvCols,       
-         recvVals,
-         sendSortId, 
-         globalSortId, 
-         compressId,
-         sendCounts, 
-         sendOffsets, 
-         recvCounts, 
-         recvOffsets,    
-         0); // 0 if no null space
+         recvVals,   
+         0, // 0 if no null space
+         hgs,
+         1); //rhs will be passed gather-scattered
     
-  }
-
-  if(strstr(options, "GLOBALALMOND")){
-    
-    precon->parAlmond = almondGlobalSetup(mesh->device, 
-         Nnum, 
-         globalStarts, 
-         globalnnzTotal,      
-         globalRows,        
-         globalCols,        
-         globalVals,
-         sendSortId, 
-         globalSortId, 
-         compressId,
-         sendCounts, 
-         sendOffsets, 
-         recvCounts, 
-         recvOffsets,    
-         0);             // 0 if no null space
   }
 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -392,7 +346,13 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
   free(AsendOffsets);
   free(ArecvOffsets);
 
-  if(strstr(options, "UBERGRID")){
+  if(strstr(options, "UBERGRID")&&strstr(options,"ALMOND")){
+    /* pseudo code for building (really) coarse system */
+    iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
+    iint coarseNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts;
+    dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+    iint localCoarseNp;
     iint coarseTotal;
 
     iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
@@ -404,19 +364,16 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
     iint *colsA2;
     dfloat *valsA2;  
 
-    /* populate b here */
-    if (strstr(options,"GLOBALALMOND")) {
+    almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
+                            &nnz2,&rowsA2,&colsA2, &valsA2);
 
-      almondGlobalCoarseSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
-                              &nnz2,&rowsA2,&colsA2, &valsA2);
-
-      precon->coarseNp = coarseNp[rank];
-      precon->coarseTotal = coarseOffsets[size];
-      coarseTotal = coarseOffsets[size];
-      precon->coarseOffsets = coarseOffsets;
-
-      // need to create numbering for really coarse grid on each process for xxt
-      precon->xxt2 = xxtSetup(coarseTotal,
+    precon->coarseNp = coarseNp[rank];
+    precon->coarseTotal = coarseOffsets[size];
+    coarseTotal = coarseOffsets[size];
+    precon->coarseOffsets = coarseOffsets;
+  
+    // need to create numbering for really coarse grid on each process for xxt
+    precon->xxt2 = xxtSetup(coarseTotal,
           globalNumbering2,
           nnz2,
           rowsA2,
@@ -426,11 +383,11 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
           iintString,
           dfloatString);
 
-      almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
+    almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
                       precon->coarseTotal,
                       precon->coarseOffsets[rank]);
 
-      printf("Done UberCoarse setup\n");
-    }
+    // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
+    printf("Done UberCoarse setup\n");
   }
 }
