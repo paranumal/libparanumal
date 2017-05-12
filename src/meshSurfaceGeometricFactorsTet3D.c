@@ -7,13 +7,13 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
   mesh->Nsgeo = 6;
-  mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfaces, 
-        sizeof(dfloat));
+  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+                            mesh->Nsgeo*mesh->Nfaces, sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    iint id = e*mesh->Nverts;
     dfloat xe1 = mesh->EX[id+0], ye1 = mesh->EY[id+0], ze1 = mesh->EZ[id+0];
     dfloat xe2 = mesh->EX[id+1], ye2 = mesh->EY[id+1], ze2 = mesh->EZ[id+1];
     dfloat xe3 = mesh->EX[id+2], ye3 = mesh->EY[id+2], ze3 = mesh->EZ[id+2];
@@ -33,7 +33,7 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     if(J<0) printf("bugger: got negative geofac\n");
     
     /* face 1 */
-    int base = mesh->Nsgeo*mesh->Nfaces*e;
+    iint base = mesh->Nsgeo*mesh->Nfaces*e;
     dfloat nx1 = -tx;
     dfloat ny1 = -ty;
     dfloat nz1 = -tz;
@@ -99,10 +99,10 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
         iint eP = (idP>=0) ? (idP/mesh->Np):e;
 
         iint fP = mesh->EToF[baseM];
-        fP = (fP==-1)?f:fP;
+        fP = (fP==-1) ? f:fP;
 
         iint baseP = eP*mesh->Nfaces + fP;
-        
+
         // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
         dfloat hinvM = 0.5*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
         dfloat hinvP = 0.5*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
