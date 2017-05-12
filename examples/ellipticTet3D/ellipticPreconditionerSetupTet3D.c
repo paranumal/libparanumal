@@ -208,22 +208,6 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     precon->o_oasDiagInvOpDg =
       mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
-    if(Nhalo){
-      dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
-      
-      // import geometric factors from halo elements
-      mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
-      
-      meshHaloExchange(mesh,
-  		     mesh->Nvgeo*sizeof(dfloat),
-  		     mesh->vgeo,
-  		     vgeoSendBuffer,
-  		     mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
-      
-      mesh->o_vgeo =
-        mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-    }
-
     // coarse grid preconditioner (only continous elements)
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     ellipticCoarsePreconditionerSetupTet3D(mesh, precon, lambda, options);

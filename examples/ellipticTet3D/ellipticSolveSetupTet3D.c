@@ -192,5 +192,23 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
+  if(mesh->totalHaloPairs){
+    iint Nlocal = mesh->Np*mesh->Nelements;
+    iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
+
   return solver;
 }

@@ -439,22 +439,6 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     // sum up
     meshParallelGatherScatter(mesh, ogs, precon->o_diagA, precon->o_diagA, dfloatString, "add");
 
-    if(Nhalo){
-      dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
-      
-      // import geometric factors from halo elements
-      mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
-      
-      meshHaloExchange(mesh,
-  		     mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-  		     mesh->vgeo,
-  		     vgeoSendBuffer,
-  		     mesh->vgeo + Nlocal*mesh->Nvgeo);
-      
-      mesh->o_vgeo =
-        mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-    }
-
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     // do this here since we need A*x
     ellipticCoarsePreconditionerSetupHex3D(mesh, precon, ogs, lambda, options);
