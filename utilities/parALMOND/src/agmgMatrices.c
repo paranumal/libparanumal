@@ -298,8 +298,7 @@ void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z)
 
 void axpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
 
-  almond->device.finish();
-  occa::tic("dcsr axpy");
+  occaTimerTic(almond->device,"dcsr axpy");
   if (A->NsendTotal) {
     almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
     
@@ -323,19 +322,16 @@ void axpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta
 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  //almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, A->Nrows, 
-  //              A->o_cols, A->o_coefs, o_x, o_y);
-  almond->dcsrAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha,beta, 
-                A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y);
-  almond->device.finish();
-  occa::toc("dcsr axpy");
-
+  almond->agg_interpolateKernel(numBlocks, AGMGBDIM, A->Nrows, 
+                A->o_cols, A->o_coefs, o_x, o_y);
+  //almond->dcsrAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha,beta, 
+  //              A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y);
+  occaTimerToc(almond->device,"dcsr axpy");
 }
 
 void axpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
 
-  almond->device.finish();
-  occa::tic("hyb axpy");
+  occaTimerTic(almond->device,"hyb axpy");
   if (A->NsendTotal) {
     almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
@@ -363,16 +359,14 @@ void axpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta,
   if(A->C->nnz)
     ax(almond, A->C, alpha, o_x, o_y);
 
-  almond->device.finish();
-  occa::toc("hyb axpy");
+  occaTimerToc(almond->device,"hyb axpy");
 }
 
 
 void zeqaxpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x,
     dfloat beta,  occa::memory o_y, occa::memory o_z) {
 
-  almond->device.finish();
-  occa::tic("hyb zeqaxpy");
+  occaTimerTic(almond->device,"hyb zeqaxpy");
   if (A->NsendTotal) {
     almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
   
@@ -399,21 +393,19 @@ void zeqaxpy(almond_t *almond, hyb *A, dfloat alpha, occa::memory o_x,
   // z <-- alpha*C*x + z
   if(A->C->nnz)
     ax(almond, A->C, alpha, o_x, o_z);
-  almond->device.finish();
-  occa::toc("hyb zeqaxpy");
+
+  occaTimerToc(almond->device,"hyb zeqaxpy");
 }
 
 void axpy(almond_t *almond, ell *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
 
   if(A->Nrows){
-    almond->device.finish();
-    occa::tic("ell axpy");
+    occaTimerTic(almond->device,"ell axpy");
     const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
     almond->ellAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, A->nnzPerRow, A->strideLength, alpha, beta,
                    A->o_cols, A->o_coefs, o_x, o_y);
-    almond->device.finish();
-    occa::toc("ell axpy");
+    occaTimerToc(almond->device,"ell axpy");
   }
 }
 
@@ -421,14 +413,12 @@ void zeqaxpy(almond_t *almond, ell *A, dfloat alpha, occa::memory o_x,
             dfloat beta, occa::memory o_y,  occa::memory o_z) {
 
   if(A->Nrows){
-    almond->device.finish();
-    occa::tic("ell zeqaxpy");
+    occaTimerTic(almond->device,"ell zeqaxpy");
     const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
     almond->ellZeqAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, A->nnzPerRow, A->strideLength, alpha, beta,
                      A->o_cols, A->o_coefs, o_x, o_y, o_z);
-    almond->device.finish();
-    occa::toc("ell zeqaxpy");
+    occaTimerToc(almond->device,"ell zeqaxpy");
   }
 }
 
@@ -438,27 +428,22 @@ void ax(almond_t *almond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o
   const iint numBlocks = (C->nnz+AGMGBDIM-1)/AGMGBDIM;
 
   if(C->nnz){
-    almond->device.finish();
-    occa::tic("coo ax1");
+    occaTimerTic(almond->device,"coo ax1");
     // do block-wise product
     almond->cooAXKernel1(numBlocks, AGMGBDIM, C->nnz, alpha, C->o_rows, C->o_cols, C->o_coefs,
         o_x, o_y, C->o_temp_rows, C->o_temp_Ax);
-    almond->device.finish();
-    occa::toc("coo ax1");
+    occaTimerToc(almond->device,"coo ax1");
 
-    almond->device.finish();
-    occa::tic("coo ax2");
+    occaTimerTic(almond->device,"coo ax2");
     almond->cooAXKernel2(1, 1, numBlocks, C->o_temp_rows, C->o_temp_Ax, o_y);
-    almond->device.finish();
-    occa::toc("coo ax2");
+    occaTimerToc(almond->device,"coo ax2");
   }
 }
 
 void zeqaxpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, 
               occa::memory o_y, occa::memory o_z) {
 
-  almond->device.finish();
-  occa::tic("dcsr axpy");
+  occaTimerTic(almond->device,"dcsr axpy");
   if (A->NsendTotal) {
     almond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
     
@@ -486,8 +471,7 @@ void zeqaxpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat b
   //              A->o_cols, A->o_coefs, o_x, o_y);
   almond->dcsrZeqAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha, beta, 
                 A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y,o_z);
-  almond->device.finish();
-  occa::toc("dcsr axpy");
+  occaTimerToc(almond->device,"dcsr axpy");
 
 }
 
@@ -575,13 +559,12 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
 
 void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
 
-  almond->device.finish();
-  occa::tic("hyb smoothJacobi");
+  occaTimerTic(almond->device,"hyb smoothJacobi");
   if(x_is_zero){
     dfloat alpha = 1.0;
     dfloat beta = 0.0;
     dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
-    occa::toc("hyb smoothJacobi");
+    occaTimerToc(almond->device,"hyb smoothJacobi");
     return;
   }
 
@@ -608,12 +591,10 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->device.finish();
-  occa::tic("ellJacobi1");
+  occaTimerTic(almond->device,"ellJacobi1");
   almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                   A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
-  almond->device.finish();
-  occa::toc("ellJacobi1");
+  occaTimerToc(almond->device,"ellJacobi1");
 
   // temp1 += -C*x
   if(A->C->nnz)
@@ -621,8 +602,7 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
 
   // x = invD*temp1
   dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
-  almond->device.finish();
-  occa::toc("hyb smoothJacobi");
+  occaTimerToc(almond->device,"hyb smoothJacobi");
 }
 
 
@@ -633,12 +613,11 @@ void smoothDampedJacobi(almond_t *almond,
          dfloat alpha,
          bool x_is_zero){
 
-  almond->device.finish();
-  occa::tic("hyb smoothDampedJacobi");
+  occaTimerTic(almond->device,"hyb smoothDampedJacobi");
   if(x_is_zero){
     dfloat beta = 0.0;
     dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
-    occa::toc("hyb smoothDampedJacobi");
+    occaTimerToc(almond->device,"hyb smoothDampedJacobi");
     return;
   }
 
@@ -664,12 +643,10 @@ void smoothDampedJacobi(almond_t *almond,
 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->device.finish();
-  occa::tic("ellJacobi1");
+  occaTimerTic(almond->device,"ellJacobi1");
   almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                     A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
-  almond->device.finish();
-  occa::toc("ellJacobi1");
+  occaTimerToc(almond->device,"ellJacobi1");
 
   // temp1 += -C*x
   if(A->C->nnz)
@@ -679,20 +656,18 @@ void smoothDampedJacobi(almond_t *almond,
   const dfloat beta = 1.0 - alpha;
   dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
 
-  almond->device.finish();
-  occa::toc("hyb smoothDampedJacobi");
+  occaTimerToc(almond->device,"hyb smoothDampedJacobi");
 }
 
 
 void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
 
-  almond->device.finish();
-  occa::tic("dcsr smoothJacobi");
+  occaTimerTic(almond->device,"dcsr smoothJacobi");
   if(x_is_zero){
     dfloat alpha = 1.0;
     dfloat beta = 0.0;
     dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
-    occa::toc("dcsr smoothJacobi");
+    occaTimerToc(almond->device,"dcsr smoothJacobi");
     return;
   }
 
@@ -718,17 +693,14 @@ void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x,
 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->device.finish();
-  occa::tic("dcsrJacobi");
+  occaTimerTic(almond->device,"dcsrJacobi");
   almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
                             A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
-  almond->device.finish();
-  occa::toc("dcsrJacobi");
+  occaTimerToc(almond->device,"dcsrJacobi");
 
   // x = invD*temp1
   dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
-  almond->device.finish();
-  occa::toc("dcsr smoothJacobi");
+  occaTimerToc(almond->device,"dcsr smoothJacobi");
 }
 
 
@@ -739,12 +711,11 @@ void smoothDampedJacobi(almond_t *almond,
          dfloat alpha,
          bool x_is_zero){
 
-  almond->device.finish();
-  occa::tic("dcsr smoothDampedJacobi");
+  occaTimerTic(almond->device,"dcsr smoothDampedJacobi");
   if(x_is_zero){
     dfloat beta = 0.0;
     dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
-    occa::toc("dcsr smoothDampedJacobi");
+    occaTimerToc(almond->device,"dcsr smoothDampedJacobi");
     return;
   }
 
@@ -769,19 +740,16 @@ void smoothDampedJacobi(almond_t *almond,
 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->device.finish();
-  occa::tic("dcsrJacobi");
+  occaTimerTic(almond->device,"dcsrJacobi");
   almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
                     A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
-  almond->device.finish();
-  occa::toc("dcsrJacobi");
+  occaTimerToc(almond->device,"dcsrJacobi");
 
   // x = alpha*invD*temp1 + (1-alpha)*x
   const dfloat beta = 1.0 - alpha;
   dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
 
-  almond->device.finish();
-  occa::toc("dcsr smoothDampedJacobi");
+  occaTimerToc(almond->device,"dcsr smoothDampedJacobi");
 }
 
 // set up halo infomation for inter-processor MPI 

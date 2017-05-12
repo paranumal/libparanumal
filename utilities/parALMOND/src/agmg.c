@@ -138,12 +138,12 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
   buildAlmondKernels(almond);
 
   for(int i=0; i<almond->numLevels; i++){
-    //almond->levels[i]->deviceA = newHYB(almond, almond->levels[i]->A);
-    almond->levels[i]->deviceA = newDCSR(almond, almond->levels[i]->A);
+    almond->levels[i]->deviceA = newHYB(almond, almond->levels[i]->A);
+    //almond->levels[i]->deviceA = newDCSR(almond, almond->levels[i]->A);
     if (i < almond->numLevels-1) {
       almond->levels[i]->dcsrP   = newDCSR(almond, almond->levels[i]->P);
-      //almond->levels[i]->deviceR = newHYB(almond, almond->levels[i]->R);
-      almond->levels[i]->deviceR = newDCSR(almond, almond->levels[i]->R);
+      almond->levels[i]->deviceR = newHYB(almond, almond->levels[i]->R);
+      //almond->levels[i]->deviceR = newDCSR(almond, almond->levels[i]->R);
     }
 
     iint N = almond->levels[i]->Ncols;
@@ -162,7 +162,6 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
     }
   }
 }
-
 
 void solve(almond_t *almond, dfloat *rhs, dfloat *x){
   //copy rhs and zero x
@@ -202,17 +201,18 @@ void kcycle(almond_t *almond, int k){
 
   char name[BUFSIZ];
   sprintf(name, "host kcycle level %d", k);
-  occa::tic(name);
+  occaTimerTic(almond->device,name);
 
   // if its not first level zero it out
   if(k>0)
     scaleVector(m, almond->levels[k]->x, 0.0);
 
+
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x, true);
 
-  // res = - A*x + rhs (i.e., rhs - A*x)
+    // res = - A*x + rhs (i.e., rhs - A*x)
   zeqaxpy(almond->levels[k]->A, -1.0, almond->levels[k]->x, 1.0, 
-            almond->levels[k]->rhs, almond->levels[k]->res);
+          almond->levels[k]->rhs, almond->levels[k]->res);
 
   // restrict the residual to next level
   restrict(almond->levels[k], almond->levels[k]->res, almond->levels[k+1]->rhs);
@@ -346,7 +346,7 @@ void kcycle(almond_t *almond, int k){
 
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
 
-  occa::toc(name);
+  occaTimerToc(almond->device,name);
 }
 
 
@@ -359,18 +359,24 @@ void device_kcycle(almond_t *almond, int k){
 
   char name[BUFSIZ];
   sprintf(name, "device kcycle level %d", k);
-  almond->device.finish();
-  //occa::tic(name);
+  occaTimerTic(almond->device,name);
 
   // if its not first level zero it out
   if(k>0)
     scaleVector(almond, m, almond->levels[k]->o_x, 0.0);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
+  //use matrix free action if its been given
+  //if ((k==0)&&almond->matFreeAX) {
+  //  matFreeSmooth(almond, almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
+  //  matFreeZeqAXPY(almond, -1.0, almond->levels[k]->o_x,  1.0,
+  //           almond->levels[k]->o_rhs, almond->levels[k]->o_res);
+  //} else {
+    smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
 
-  // res = - A*x + rhs (i.e., rhs - A*x)
-  zeqaxpy(almond, almond->levels[k]->deviceA, -1.0, almond->levels[k]->o_x,  1.0,
-           almond->levels[k]->o_rhs, almond->levels[k]->o_res);
+    // res = - A*x + rhs (i.e., rhs - A*x)
+    zeqaxpy(almond, almond->levels[k]->deviceA, -1.0, almond->levels[k]->o_x,  1.0,
+             almond->levels[k]->o_rhs, almond->levels[k]->o_res);
+  //}
 
   // restrict the residual to next level
   restrict(almond, almond->levels[k], almond->levels[k]->o_res, almond->levels[k+1]->o_rhs);
@@ -496,10 +502,14 @@ void device_kcycle(almond_t *almond, int k){
 
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
+  //use matrix free action if its been given
+  //if ((k==0)&&almond->matFreeAX) {
+  //  matFreeSmooth(almond, almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
+  //} else {
+    smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
+  //}
 
-  almond->device.finish();
-  //occa::toc(name);
+  occaTimerToc(almond->device,name);
 }
 
 
@@ -511,7 +521,7 @@ void vcycle(almond_t *almond, int k) {
 
   char name[BUFSIZ];
   sprintf(name, "host vcycle level %d", k);
-  occa::tic(name);
+  occaTimerTic(almond->device,name);
 
   // if its not first level zero it out
   if(k>0)
@@ -550,7 +560,7 @@ void vcycle(almond_t *almond, int k) {
   interpolate(almond->levels[k], almond->levels[k+1]->x, almond->levels[k]->x);
   smooth(almond->levels[k], almond->levels[k]->rhs, almond->levels[k]->x,false);
 
-  occa::toc(name);
+  occaTimerToc(almond->device,name);
 }
 
 
@@ -571,19 +581,22 @@ void device_vcycle(almond_t *almond, int k){
 
   char name[BUFSIZ];
   sprintf(name, "device vcycle level %d", k);
-  almond->device.finish();
-  occa::tic(name);
+  occaTimerTic(almond->device,name);
 
   // if its not first level zero it out
   if(k>0)
     scaleVector(almond, m, almond->levels[k]->o_x, 0.0);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
-
-  // res = rhs - A*x
-  zeqaxpy(almond, almond->levels[k]->deviceA, -1.0, almond->levels[k]->o_x,  1.0,
-           almond->levels[k]->o_rhs, almond->levels[k]->o_res);
-
+  //if ((k==0)&&almond->matFreeAX) {
+  //  matFreeSmooth(almond, almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
+  //  matFreeZeqAXPY(almond, -1.0, almond->levels[k]->o_x,  1.0,
+  //           almond->levels[k]->o_rhs, almond->levels[k]->o_res);
+  //} else {
+    smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x, true);
+    // res = rhs - A*x
+    zeqaxpy(almond, almond->levels[k]->deviceA, -1.0, almond->levels[k]->o_x,  1.0,
+             almond->levels[k]->o_rhs, almond->levels[k]->o_res);
+  //}
 
   // restrict the residual to next level
   restrict(almond, almond->levels[k], almond->levels[k]->o_res, almond->levels[k+1]->o_rhs);
@@ -610,8 +623,11 @@ void device_vcycle(almond_t *almond, int k){
 
   interpolate(almond, almond->levels[k], almond->levels[k+1]->o_x, almond->levels[k]->o_x);
 
-  smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x,false);
+  //if ((k==0)&&almond->matFreeAX) {
+  //  matFreeSmooth(almond, almond->levels[k]->o_rhs, almond->levels[k]->o_x, false);
+  //} else {
+    smooth(almond, almond->levels[k], almond->levels[k]->o_rhs, almond->levels[k]->o_x,false);
+  //}
 
-  almond->device.finish();
-  occa::toc(name);
+  occaTimerToc(almond->device,name);
 }

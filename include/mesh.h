@@ -26,6 +26,7 @@
 #endif
 
 #include "ogs_t.h"
+#include "hgs_t.h"
 
 typedef struct {
 
@@ -450,6 +451,11 @@ void meshPartitionStatistics(mesh_t *mesh);
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
+void meshParallelGather(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_gv);
+void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_sv);
+
+void occaTimerTic(occa::device device,std::string name);
+void occaTimerToc(occa::device device,std::string name); 
 
 extern "C"
 {
@@ -545,6 +551,8 @@ void almondGlobalCoarseSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, 
 
 void almondSetCoarseSolve(void* ALMOND, void (*coarseSolve)(void*,void*,void*),
                           void *ACoarse, iint coarseTotal,iint coarseOffset); 
+
+
 
 #endif
 
