@@ -469,7 +469,8 @@ void zeqaxpy(almond_t *almond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat b
 
   //almond->agg_interpolateKernel((n+AGMGBDIM-1)/AGMGBDIM, AGMGBDIM, A->Nrows, 
   //              A->o_cols, A->o_coefs, o_x, o_y);
-  almond->dcsrZeqAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha, beta, 
+  if (A->Nrows)
+    almond->dcsrZeqAXPYKernel(numBlocks, AGMGBDIM, A->Nrows, alpha, beta, 
                 A->o_rowStarts, A->o_cols, A->o_coefs, o_x, o_y,o_z);
   occaTimerToc(almond->device,"dcsr axpy");
 
@@ -563,7 +564,8 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
   if(x_is_zero){
     dfloat alpha = 1.0;
     dfloat beta = 0.0;
-    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    if (A->Nrows)
+      dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
     occaTimerToc(almond->device,"hyb smoothJacobi");
     return;
   }
@@ -592,7 +594,8 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
   occaTimerTic(almond->device,"ellJacobi1");
-  almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+  if (A->Nrows)
+    almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                   A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(almond->device,"ellJacobi1");
 
@@ -601,7 +604,8 @@ void smoothJacobi(almond_t *almond, hyb *A, occa::memory o_r, occa::memory o_x, 
     ax(almond, A->C, -1.0, o_x, A->o_temp1);
 
   // x = invD*temp1
-  dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
+  if (A->Nrows)
+    dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
   occaTimerToc(almond->device,"hyb smoothJacobi");
 }
 
@@ -616,7 +620,8 @@ void smoothDampedJacobi(almond_t *almond,
   occaTimerTic(almond->device,"hyb smoothDampedJacobi");
   if(x_is_zero){
     dfloat beta = 0.0;
-    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    if (A->Nrows)
+      dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
     occaTimerToc(almond->device,"hyb smoothDampedJacobi");
     return;
   }
@@ -644,7 +649,8 @@ void smoothDampedJacobi(almond_t *almond,
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
   occaTimerTic(almond->device,"ellJacobi1");
-  almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+  if (A->Nrows)
+    almond->ellJacobi1Kernel(numBlocks, AGMGBDIM, A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
                     A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(almond->device,"ellJacobi1");
 
@@ -654,7 +660,8 @@ void smoothDampedJacobi(almond_t *almond,
 
   // x = alpha*invD*temp1 + (1-alpha)*x
   const dfloat beta = 1.0 - alpha;
-  dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
+  if (A->Nrows)
+    dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
 
   occaTimerToc(almond->device,"hyb smoothDampedJacobi");
 }
@@ -666,7 +673,8 @@ void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x,
   if(x_is_zero){
     dfloat alpha = 1.0;
     dfloat beta = 0.0;
-    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    if (A->Nrows)
+      dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
     occaTimerToc(almond->device,"dcsr smoothJacobi");
     return;
   }
@@ -694,12 +702,14 @@ void smoothJacobi(almond_t *almond, dcsr *A, occa::memory o_r, occa::memory o_x,
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
   occaTimerTic(almond->device,"dcsrJacobi");
-  almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
+  if (A->Nrows)
+    almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
                             A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(almond->device,"dcsrJacobi");
 
   // x = invD*temp1
-  dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
+  if (A->Nrows)
+    dotStar(almond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
   occaTimerToc(almond->device,"dcsr smoothJacobi");
 }
 
@@ -714,7 +724,8 @@ void smoothDampedJacobi(almond_t *almond,
   occaTimerTic(almond->device,"dcsr smoothDampedJacobi");
   if(x_is_zero){
     dfloat beta = 0.0;
-    dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
+    if (A->Nrows)
+      dotStar(almond, A->Nrows, alpha, A->o_diagInv, o_r, beta, o_x);
     occaTimerToc(almond->device,"dcsr smoothDampedJacobi");
     return;
   }
@@ -741,13 +752,15 @@ void smoothDampedJacobi(almond_t *almond,
   const iint numBlocks = (A->Nrows+AGMGBDIM-1)/AGMGBDIM;
 
   occaTimerTic(almond->device,"dcsrJacobi");
-  almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
+  if (A->Nrows)
+    almond->dcsrJacobiKernel(numBlocks, AGMGBDIM, A->Nrows, A->o_rowStarts,
                     A->o_cols, A->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(almond->device,"dcsrJacobi");
 
   // x = alpha*invD*temp1 + (1-alpha)*x
   const dfloat beta = 1.0 - alpha;
-  dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
+  if (A->Nrows)
+    dotStar(almond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
 
   occaTimerToc(almond->device,"dcsr smoothDampedJacobi");
 }
