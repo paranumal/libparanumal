@@ -6,10 +6,11 @@
   solver_t *insSetup2D(mesh2D *mesh, char * options){
   
   solver_t *ins = (solver_t*) calloc(1, sizeof(solver_t));
-  ins->mesh = mesh;
+  
 
 
-  ins->Nfields = 2; // Hold Each   
+  ins->Nfields = 2; 
+  mesh->Nfields = ins->Nfields; // Hold For Now!!!!! need to update meshOccaSetUP   
   // compute samples of q at interpolation nodes
   ins->U     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
   ins->Pr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -52,8 +53,8 @@
 
 
 
-  // Define total DOF per field for INS i.e. Nelelemts*Np + Nelements_halo
-  ins->NtotalDofs = mesh->Nelements*mesh->Np + mesh->totalHaloPairs ; 
+  // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
+  ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ; 
   // Initialize
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -169,6 +170,7 @@
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NtotalDofs", ins->NtotalDofs);
 
+
   // kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
   // kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
   // kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
@@ -244,6 +246,8 @@
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExtract.okl",
       "insHaloExtract2D",
         kernelInfo);
+
+ ins->mesh = mesh;   
 
 return ins;
 

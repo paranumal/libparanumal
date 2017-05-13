@@ -265,31 +265,31 @@ kernel void insAdvectionUpdate2D(const iint Nelements,
 				                            dfloat * restrict NU,
 				                            dfloat * restrict UI){
   
-  // // Low storage Runge Kutta time step update
-  // for(iint e=0;e<Nelements;++e;outer0){
-  //   for(iint n=0;n<p_Np;++n;inner0){
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
      
-  //    const iint id = e*p_Np+n;
-  //    //
-		//  const dfloat ux  = U[id + UXID*p_NtotalDofs];
-		//  const dfloat uy  = U[id + UYID*p_NtotalDofs];
-		//  //
-		//  const dfloat uxo = UO[id + UXID*p_NtotalDofs];
-		//  const dfloat uyo = UO[id + UYID*p_NtotalDofs];
-  //    //
-  //    const dfloat nux = rhsU[id + UXID*p_NtotalDofs];
-		//  const dfloat nuy = rhsU[id + UYID*p_NtotalDofs];
-  //    //
-  //    const dfloat nuxo = NU[id + UXID*p_NtotalDofs];
-		//  const dfloat nuyo = NU[id + UYID*p_NtotalDofs];
-  //    //
-  //    NU[id+ UXID*p_NtotalDofs] = nux;
-  //    NU[id+ UYID*p_NtotalDofs] = nuy;
-  //    //
-  //    UI[id+ UXID*p_NtotalDofs] = ((a0*ux+a1*uxo)-dt*(b0*nux+b1*nuxo))/g0 ;
-  //    UI[id+ UXID*p_NtotalDofs] = ((a0*uy+a1*uyo)-dt*(b0*nuy+b1*nuyo))/g0 ;
+     const iint id = e*p_Np+n;
+     //
+		 const dfloat ux  = U[id + UXID*p_NtotalDofs];
+		 const dfloat uy  = U[id + UYID*p_NtotalDofs];
+		 //
+		 const dfloat uxo = UO[id + UXID*p_NtotalDofs];
+		 const dfloat uyo = UO[id + UYID*p_NtotalDofs];
+     //
+     const dfloat nux = rhsU[id + UXID*p_NtotalDofs];
+		 const dfloat nuy = rhsU[id + UYID*p_NtotalDofs];
+     //
+     const dfloat nuxo = NU[id + UXID*p_NtotalDofs];
+		 const dfloat nuyo = NU[id + UYID*p_NtotalDofs];
+     //
+     NU[id+ UXID*p_NtotalDofs] = nux;
+     NU[id+ UYID*p_NtotalDofs] = nuy;
+     //
+     UI[id+ UXID*p_NtotalDofs] = ((a0*ux+a1*uxo)-dt*(b0*nux+b1*nuxo))/g0 ;
+     UI[id+ UXID*p_NtotalDofs] = ((a0*uy+a1*uyo)-dt*(b0*nuy+b1*nuyo))/g0 ;
 
-  //   }
-  // }
+    }
+  }
 }
 
