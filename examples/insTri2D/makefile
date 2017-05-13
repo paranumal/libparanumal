@@ -40,7 +40,8 @@ insMakePeriodic2D.o \
 insPlotVTU2D.o \
 insError2D.o \
 insReport2D.o \
-insAdvectionStep2D.o 
+insAdvectionStep2D.o \
+insPressureStep2D.o  
 
 LOBJS    = \
 ../../src/meshParallelReaderTri2D.o \
@@ -68,7 +69,7 @@ LOBJS    = \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-boltzmannMain3D:$(AOBJS) $(LOBJS)
+insMain2D:$(AOBJS) $(LOBJS)
 	$(LD)  $(LDFLAGS)  -o insMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 # what to do if user types "make clean"
 clean :

@@ -22,17 +22,17 @@ void insRun2D(solver_t *ins, char *options){
 
 
   
-  // // Switch to second order
-  // ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
+  // Switch to second order
+  ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
 
 
-  // occa::initTimer(mesh->device);
+  occa::initTimer(mesh->device);
 
   // for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
   //      //
-  //      insAdvectionStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
+  //      insAdvectionStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
   //      //
-  //      //insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
+  //      insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
 
 
 

@@ -11,14 +11,13 @@ kernel void insHaloExtract2D(const iint NhaloElements,
 			            dfloat * restrict haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
-    //for(iint f =0;f<Nfields;++f;inner1){ 
+    //for(iint f=0; f<Nfields; f++;  inner1){
       for(iint n=0;n<Np*Nfields;++n;inner0){     // for all entries in this element
         const iint id = haloElements[e];
-        const iint f  = n/Nfields; 
-         haloq[n + Np*e + f*NhaloElements*Np] = q[n + Np*id + f*p_NtotalDofs];
-         // haloq[n + Np*e + UYID*NhaloElements] = q[n + Np*id + UYID*p_NtotalDofs];
-
-     //   }
+        const iint f  = n/Np; //field
+        const iint i  = n - f*Np;    // local id
+         haloq[i + Np*e + f*NhaloElements*Np] = q[i + Np*id + f*p_NtotalDofs];
+       //}
       }
     }
   }

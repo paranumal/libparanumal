@@ -16,27 +16,16 @@ void insAdvectionStep2D(solver_t *ins,
    //Exctract Halo On Device
 
 	if(mesh->totalHaloPairs>0){
-
-		printf("%d \n", mesh->totalHaloPairs);
-      // EXCTRACT HALO  on DEVICE
-      iint Nentries = mesh->Np*ins->Nfields;
       
-  // ins->haloExtractKernel(mesh->totalHaloPairs,
-		//                  mesh->Np,
-		//                  ins->Nfields,
-		//                  mesh->o_haloElementList,
-		//                  ins->o_U,
-		//                  mesh->o_haloBuffer);
-
-	 mesh->haloExtractKernel(mesh->totalHaloPairs,
-			                 Nentries,
-			                 mesh->o_haloElementList,
-			                 ins->o_U,
-			                 mesh->o_haloBuffer);	
-      
+    ins->haloExtractKernel(mesh->totalHaloPairs,
+		                 mesh->Np,
+		                 ins->Nfields,
+		                 mesh->o_haloElementList,
+		                 ins->o_U,
+		                 mesh->o_haloBuffer);
+		                       
       // copy extracted halo to HOST 
-      mesh->o_haloBuffer.copyTo(sendBuffer);      
-      
+      mesh->o_haloBuffer.copyTo(sendBuffer);            
       // start halo exchange
       meshHaloExchangeStart(mesh,
 			                mesh->Np*ins->Nfields*sizeof(dfloat), 
@@ -69,6 +58,10 @@ void insAdvectionStep2D(solver_t *ins,
       ins->o_U.copyFrom(recvBuffer+UYID*haloBytes/ins->Nfields, 
       	                haloBytes/ins->Nfields,
       	                offset+UYID*ins->NtotalDofs);
+
+
+
+
     }
 
  // Compute Surface Conribution

@@ -52,8 +52,8 @@ void insError2D(solver_t *solver, dfloat time,char *options);
 void insAdvectionStep2D(solver_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
-// void insPressureStep2D(solver_t *solver, iint tstep, iint haloBytes,
-// 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+void insPressureStep2D(solver_t *solver, iint tstep, iint haloBytes,
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
 
