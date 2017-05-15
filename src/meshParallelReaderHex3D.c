@@ -57,6 +57,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
 	   VX+n, VY+n, VZ+n);
+
   }
   
   /* look for section with Element node data */
