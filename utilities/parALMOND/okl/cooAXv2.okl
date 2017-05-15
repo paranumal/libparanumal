@@ -1,0 +1,24 @@
+
+// y += alpha*A*x
+
+kernel void spmv_coo_kernel(const int   num_nonzeros,
+			    const datafloat   alpha,
+			    const       int *restrict starts,
+			    const       int *restrict cols,
+			    const datafloat *restrict Ax,
+			    const datafloat *restrict x,
+			    datafloat *restrict y){
+  
+  for(iint n=0;n<num_nonzeros;++n;tile(256)){
+    iint start = starts[n];
+    iint end = starts[n+1];
+    
+    dfloat res = y[n];
+    dfloat Axn = 0;
+    for(iint i=start;i<end;++i){
+      Axn += Ax[i]*x[cols[i]];
+    }
+    y[n] += alpha*Axn;
+  }
+}
+	
