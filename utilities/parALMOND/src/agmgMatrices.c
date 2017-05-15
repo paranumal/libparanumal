@@ -482,6 +482,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
   occa::tic("csr smoothJacobi");
   // x = inv(D)*(b-R*x)  where R = A-D
   if(x_is_zero){
+    #pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
       dfloat invD = 1.0/A->coefs[A->rowStarts[i]];
       x[i] = invD*r[i];
@@ -494,6 +495,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
   dfloat y[A->Nrows];
 
+#pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
 
@@ -510,6 +512,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
   }
 
   // copy the buffer vector to x
+#pragma omp parallel for
   for (iint i=0;i<A->Nrows;i++)
     x[i] = y[i];
 
@@ -521,6 +524,7 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
   
   occa::tic("csr smoothDampedJacobi");
   if(x_is_zero){
+#pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
       dfloat invD = 1.0/A->coefs[A->rowStarts[i]];
       x[i] = alpha*invD*r[i];
@@ -536,6 +540,7 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
 
   const dfloat oneMalpha = 1. - alpha;
 
+#pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
 
@@ -552,6 +557,7 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
   }
 
   // copy the buffer vector to x
+#pragma omp parallel for
   for (iint i=0;i<A->Nrows;i++)
     x[i] = y[i];
 

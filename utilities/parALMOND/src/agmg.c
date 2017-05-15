@@ -164,7 +164,10 @@ void sync_setup_on_device(almond_t *almond, occa::device dev){
 }
 
 void solve(almond_t *almond, dfloat *rhs, dfloat *x){
+
+
   //copy rhs and zero x
+#pragma omp parallel for
   for (iint n=0;n<almond->levels[0]->A->Nrows;n++) {
     almond->levels[0]->rhs[n] = rhs[n];
     almond->levels[0]->x[n] = 0.0;
@@ -174,6 +177,7 @@ void solve(almond_t *almond, dfloat *rhs, dfloat *x){
   //vcycle(almond, 0);
 
   //copy back
+#pragma omp parallel for
   for (iint n=0;n<almond->levels[0]->A->Nrows;n++)
     x[n] = almond->levels[0]->x[n];
 }
@@ -185,8 +189,8 @@ void solve(almond_t *almond, occa::memory o_rhs, occa::memory o_x){
   copyVector(almond, N, o_rhs, almond->levels[0]->o_rhs);
   scaleVector(almond, N, almond->levels[0]->o_x, 0.);
 
-  device_kcycle(almond, 0);
-  //device_vcycle(almond, 0);
+  //device_kcycle(almond, 0);
+  device_vcycle(almond, 0);
 
   //copy back
   copyVector(almond, N, almond->levels[0]->o_x, o_x);
@@ -566,7 +570,7 @@ void vcycle(almond_t *almond, int k) {
 
 void device_vcycle(almond_t *almond, int k){
 
-#define GPU_CPU_SWITCH_SIZE 0 //TODO move this the the almond struct?
+#define GPU_CPU_SWITCH_SIZE 1024 //TODO move this the the almond struct?
 
   const iint m = almond->levels[k]->Nrows;
   const iint mCoarse = almond->levels[k+1]->Nrows;
