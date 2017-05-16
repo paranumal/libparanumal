@@ -31,10 +31,16 @@ occa::memory o_rhsU, o_rhsPr;
 
 
 occa::kernel haloExtractKernel;
+occa::kernel haloScatterKernel;
+
 //
 occa::kernel advectionVolumeKernel; // deprecated
 occa::kernel advectionSurfaceKernel; 
-occa::kernel advectionUpdateKernel;   
+occa::kernel advectionUpdateKernel;  
+//
+occa::kernel pressureRhsVolumeKernel; 
+occa::kernel pressureRhsSurfaceKernel;
+
   
 }solver_t;
 

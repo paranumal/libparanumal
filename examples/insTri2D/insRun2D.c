@@ -28,11 +28,11 @@ void insRun2D(solver_t *ins, char *options){
 
   occa::initTimer(mesh->device);
 
-  // for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
-  //      //
-  //      insAdvectionStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
-  //      //
-  //      insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
+  for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
+       //
+       insAdvectionStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
+       
+       insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
 
 
 
@@ -42,12 +42,12 @@ void insRun2D(solver_t *ins, char *options){
 
 
 
-  //    if(strstr(options, "REPORT")){
-  //     if((tstep%ins->errorStep)==0){
-  //       insReport2D(ins, tstep,options);
-  //     }
-  //   }
-  //   }
+     if(strstr(options, "REPORT")){
+      if((tstep%ins->errorStep)==0){
+        insReport2D(ins, tstep,options);
+      }
+    }
+    }
   
   // // For Final Time
   insReport2D(ins, ins->NtimeSteps,options);
