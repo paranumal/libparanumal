@@ -6,14 +6,7 @@
 								\
   for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
     for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
-      s_res[ty][tx] = r_ip;					\
-    }								\
-  }								\
-								\
-  barrier(localMemFence);					\
-								\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
+      s_ip[ty][tx] = r_ip;					\
       if(tx<p_RDIMX/2) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/2];	\
       if(tx<p_RDIMX/4) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/4];	\
       if(tx<p_RDIMX/8) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/8];	\
