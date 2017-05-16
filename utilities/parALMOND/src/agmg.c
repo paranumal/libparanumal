@@ -65,7 +65,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     const iint coarseDim = coarseA->Nrows;
 
     // allocate vectors required
-    allocate(levels[lev]);
+    //allocate(levels[lev]);
 
     SmoothType s = DAMPED_JACOBI;
     //SmoothType s = JACOBI;
@@ -93,7 +93,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     }
 
     if(coarseA->Nrows <= coarseSize || dim < 2*coarseDim){
-      allocate(levels[lev+1]);
+      //allocate(levels[lev+1]);
       setup_smoother(levels[lev+1],JACOBI);
       break;
     }
@@ -125,10 +125,6 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
       levels[n]->Nrows = M;
       levels[n]->Ncols = Nmax;
-
-      levels[n]->x    = (dfloat *) calloc(Nmax,sizeof(dfloat));
-      levels[n]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
-      levels[n]->res  = (dfloat *) calloc(Nmax,sizeof(dfloat));
     }
     levels[numLevels-1]->A = distribute(levels[numLevels-1]->A,
                                   levels[numLevels-1]->globalRowStarts,
@@ -141,10 +137,22 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
     levels[numLevels-1]->Nrows = M;
     levels[numLevels-1]->Ncols = Nmax;
+  }
 
-    levels[numLevels-1]->x    = (dfloat *) calloc(Nmax,sizeof(dfloat));
-    levels[numLevels-1]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
-    levels[numLevels-1]->res  = (dfloat *) calloc(Nmax,sizeof(dfloat));
+  //allocate vectors required
+  for (int n=0;n<numLevels;n++) {
+    iint M = levels[n]->Nrows;
+    iint N = levels[n]->Ncols;
+
+    if ((n>0)&&(n<numLevels-1)) { //kcycle vectors
+      levels[n]->ckp1 = (dfloat *) calloc(N,sizeof(dfloat)); 
+      levels[n]->vkp1 = (dfloat *) calloc(M,sizeof(dfloat)); 
+      levels[n]->wkp1 = (dfloat *) calloc(M,sizeof(dfloat));
+    }
+
+    levels[n]->x    = (dfloat *) calloc(N,sizeof(dfloat));
+    levels[n]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
+    levels[n]->res  = (dfloat *) calloc(N,sizeof(dfloat));
   }
 
   //set up base solver using xxt
@@ -247,10 +255,8 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
 
     if(i > 0){
       parAlmond->levels[i]->o_ckp1 = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->x);
-      parAlmond->levels[i]->o_dkp1 = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->x);
       parAlmond->levels[i]->o_vkp1 = parAlmond->device.malloc(M*sizeof(dfloat), parAlmond->levels[i]->x);
       parAlmond->levels[i]->o_wkp1 = parAlmond->device.malloc(M*sizeof(dfloat), parAlmond->levels[i]->x);
-      parAlmond->levels[i]->o_rkp1 = parAlmond->device.malloc(M*sizeof(dfloat), parAlmond->levels[i]->x);
     }
   }
 
@@ -293,108 +299,80 @@ void kcycle(parAlmond_t *parAlmond, int k){
   // restrict the residual to next level
   restrict(parAlmond->levels[k], parAlmond->levels[k]->res, parAlmond->levels[k+1]->rhs);
 
-  dfloat *ckp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
-  dfloat *vkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat)); 
-  dfloat *dkp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
-  dfloat *wkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat)); 
-  dfloat *rkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat));
-
   if(k+1 < parAlmond->numLevels - 1){
+    dfloat *ckp1 = parAlmond->levels[k+1]->ckp1; 
+    dfloat *vkp1 = parAlmond->levels[k+1]->vkp1; 
+    dfloat *wkp1 = parAlmond->levels[k+1]->wkp1;
+    dfloat *dkp1 = parAlmond->levels[k+1]->x; 
+    dfloat *rkp1 = parAlmond->levels[k+1]->rhs;
 
     // first inner krylov iteration
     kcycle(parAlmond, k+1);
 
-    for (iint i=0;i<mCoarse; i++)
-      ckp1[i] = parAlmond->levels[k+1]->x[i];
+    //ckp1 = x
+    memcpy(ckp1,parAlmond->levels[k+1]->x,mCoarse*sizeof(dfloat));
 
     // v = A*c
     axpy(parAlmond->levels[k+1]->A, 1.0, ckp1, 0.0, vkp1);
 
-    for (iint i=0;i<mCoarse; i++)
-      rkp1[i] = parAlmond->levels[k+1]->rhs[i];
+    dfloat rhoLocal[3], rhoGlobal[3];
 
-    dfloat rho1, alpha1, norm_rkp1, norm_rktilde_p;
-    dfloat rho1Global, alpha1Global, norm_rkp1Global, norm_rktilde_pGlobal;
+    dfloat rho1, alpha1, norm_rkp1;
+    dfloat norm_rktilde_p, norm_rktilde_pGlobal;
 
-    if(parAlmond->ktype == PCG){
-      rho1   = innerProd(mCoarse, vkp1, ckp1);
-      alpha1 = innerProd(mCoarse, rkp1, ckp1);
-      MPI_Allreduce(&rho1,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      MPI_Allreduce(&alpha1,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-    }
+    if(parAlmond->ktype == PCG)
+      kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1);
 
-    if(parAlmond->ktype == GMRES){
-      rho1   = innerProd(mCoarse,vkp1, vkp1);
-      alpha1 = innerProd(mCoarse,vkp1, rkp1);
-      MPI_Allreduce(&rho1,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      MPI_Allreduce(&alpha1,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-    }
+    if(parAlmond->ktype == GMRES)
+      kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1);
 
-    norm_rkp1 = innerProd(mCoarse,rkp1,rkp1);
-    MPI_Allreduce(&norm_rkp1,&norm_rkp1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-    norm_rkp1Global = sqrt(norm_rkp1Global);
+    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+    alpha1 = rhoGlobal[0];
+    rho1   = rhoGlobal[1];
+    norm_rkp1 = sqrt(rhoGlobal[2]);
 
     // rkp1 = rkp1 - (alpha1/rho1)*vkp1
-    vectorAdd(mCoarse, -alpha1Global/rho1Global, vkp1, 1.0, rkp1);
-
-    norm_rktilde_p = innerProd(mCoarse,rkp1,rkp1);
+    norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1);
     MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
-    for (iint i=0;i<mCoarse; i++)
-      parAlmond->levels[k+1]->rhs[i] = rkp1[i];
-
     dfloat t = 0.2;
 
-    if(norm_rktilde_pGlobal < t*norm_rkp1Global){
-      //      parAlmond->levels[k+1]->x = (alpha1/rho1)*ckp1
-      dfloat adivrho = alpha1Global/rho1Global;
-      vectorAdd(mCoarse, adivrho, ckp1, 0., parAlmond->levels[k+1]->x);
+    if(norm_rktilde_pGlobal < t*norm_rkp1){
+      // x = (alpha1/rho1)*x
+      scaleVector(mCoarse, parAlmond->levels[k+1]->x, alpha1/rho1);
     } else{
     
       kcycle(parAlmond, k+1);
-
-      dfloat *dkp1 = (dfloat *) calloc(nCoarse,sizeof(dfloat)); 
-      dfloat *wkp1 = (dfloat *) calloc(mCoarse,sizeof(dfloat));
-
-      for (iint i=0;i<mCoarse; i++)
-        dkp1[i] = parAlmond->levels[k+1]->x[i];
 
       // w = A*d
       axpy(parAlmond->levels[k+1]->A, 1.0, dkp1, 0., wkp1);
 
       dfloat gamma, beta, alpha2;
-      dfloat gammaGlobal, betaGlobal, alpha2Global;
 
-      if(parAlmond->ktype == PCG){
-        gamma  = innerProd(mCoarse, vkp1, dkp1);
-        beta   = innerProd(mCoarse, wkp1, dkp1);
-        alpha2 = innerProd(mCoarse, rkp1, dkp1);
-        MPI_Allreduce(&gamma,&gammaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&beta,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&alpha2,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      }
-      if(parAlmond->ktype == GMRES){
-        gamma  = innerProd(mCoarse, wkp1, vkp1);
-        beta   = innerProd(mCoarse, wkp1, wkp1);
-        alpha2 = innerProd(mCoarse, wkp1, rkp1);
-        MPI_Allreduce(&gamma,&gammaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&beta,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&alpha2,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      }
+      if(parAlmond->ktype == PCG)
+        kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1);
 
-      if(fabs(rho1Global) > (dfloat) 1e-20){
+      if(parAlmond->ktype == GMRES)
+        kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1);
 
-        dfloat rho2 = betaGlobal - gammaGlobal*gammaGlobal/rho1Global;
+      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+      gamma  = rhoGlobal[0];
+      beta   = rhoGlobal[1];
+      alpha2 = rhoGlobal[2];
+
+      if(fabs(rho1) > (dfloat) 1e-20){
+
+        dfloat rho2 = beta - gamma*gamma/rho1;
 
         if(fabs(rho2) > (dfloat) 1e-20){
-
           // parAlmond->levels[k+1]->x = (alpha1/rho1 - (gam*alpha2)/(rho1*rho2))*ckp1 + (alpha2/rho2)*dkp1
-          dfloat a = alpha1Global/rho1Global - gammaGlobal*alpha2Global/(rho1Global*rho2);
-          dfloat b = alpha2Global/rho2;
+          dfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
+          dfloat b = alpha2/rho2;
 
-          vectorAdd(mCoarse, a, ckp1, 0.0, parAlmond->levels[k+1]->x);
-          vectorAdd(mCoarse, b, dkp1, 1.0, parAlmond->levels[k+1]->x);
+          vectorAdd(mCoarse, a, ckp1, b, parAlmond->levels[k+1]->x);
         }
       }
     }
@@ -466,95 +444,87 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       device_kcycle(parAlmond,k+1);
 
       //ckp1 = parAlmond->levels[k+1]->x;
-      copyVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, parAlmond->levels[k+1]->o_ckp1);
+      parAlmond->levels[k+1]->o_ckp1.copyFrom(parAlmond->levels[k+1]->o_x);
 
       // v = A*c
       axpy(parAlmond, parAlmond->levels[k+1]->deviceA, 1.0, parAlmond->levels[k+1]->o_ckp1, 0.0,
               parAlmond->levels[k+1]->o_vkp1);
 
-      // rkp1 = parAlmond->levels[k+1]->rhs;
-      copyVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_rhs, parAlmond->levels[k+1]->o_rkp1);
+      dfloat rhoLocal[3], rhoGlobal[3];
 
-      dfloat rho1Local, alpha1Local, norm_rkp1Local, norm_rktilde_pLocal;
-      dfloat rho1Global, alpha1Global, norm_rkp1Global, norm_rktilde_pGlobal;
+      dfloat rho1, alpha1, norm_rkp1;
+      dfloat norm_rktilde_pLocal, norm_rktilde_pGlobal;
 
-      if(parAlmond->ktype == PCG){
-        rho1Local   = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_ckp1, parAlmond->levels[k+1]->o_vkp1);
-        alpha1Local = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_ckp1, parAlmond->levels[k+1]->o_rkp1);
-        MPI_Allreduce(&rho1Local,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&alpha1Local,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      }
+      if(parAlmond->ktype == PCG)
+        kcycleCombinedOp1(parAlmond, mCoarse, rhoLocal, 
+                          parAlmond->levels[k+1]->o_ckp1, 
+                          parAlmond->levels[k+1]->o_rhs, 
+                          parAlmond->levels[k+1]->o_vkp1);
 
-      if(parAlmond->ktype == GMRES){
-        rho1Local   = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_vkp1, parAlmond->levels[k+1]->o_vkp1);
-        alpha1Local = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_vkp1, parAlmond->levels[k+1]->o_rkp1);
-        MPI_Allreduce(&rho1Local,&rho1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        MPI_Allreduce(&alpha1Local,&alpha1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      }
+      if(parAlmond->ktype == GMRES)
+        kcycleCombinedOp1(parAlmond, mCoarse, rhoLocal, 
+                          parAlmond->levels[k+1]->o_vkp1, 
+                          parAlmond->levels[k+1]->o_rhs, 
+                          parAlmond->levels[k+1]->o_vkp1);
    
-      norm_rkp1Local = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_rkp1,parAlmond->levels[k+1]->o_rkp1);
-      MPI_Allreduce(&norm_rkp1Local,&norm_rkp1Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      norm_rkp1Global = sqrt(norm_rkp1Global);
+      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+      alpha1 = rhoGlobal[0];
+      rho1   = rhoGlobal[1];
+      norm_rkp1 = sqrt(rhoGlobal[2]);
 
       // rkp1 = rkp1 - (alpha1/rho1)*vkp1
-      vectorAdd(parAlmond, mCoarse, -alpha1Global/rho1Global, parAlmond->levels[k+1]->o_vkp1, 1.0,
-          parAlmond->levels[k+1]->o_rkp1 );
-
-      norm_rktilde_pLocal = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_rkp1,parAlmond->levels[k+1]->o_rkp1);
+      norm_rktilde_pLocal = vectorAddInnerProd(parAlmond, mCoarse, -alpha1/rho1, 
+                                                parAlmond->levels[k+1]->o_vkp1, 1.0,
+                                                parAlmond->levels[k+1]->o_rhs);
       MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
       norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
-      //      parAlmond->levels[k+1]->rhs = rkp1;
-      copyVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_rkp1, parAlmond->levels[k+1]->o_rhs);
 
       dfloat t = 0.2;
-
-      if(norm_rktilde_pGlobal < t*norm_rkp1Global){
-        //      parAlmond->levels[k+1]->x = (alpha1/rho1)*ckp1
-        vectorAdd(parAlmond, mCoarse, alpha1Global/rho1Global, parAlmond->levels[k+1]->o_ckp1, 0., parAlmond->levels[k+1]->o_x);
+      if(norm_rktilde_pGlobal < t*norm_rkp1){
+        //      parAlmond->levels[k+1]->x = (alpha1/rho1)*x
+        scaleVector(parAlmond,mCoarse, parAlmond->levels[k+1]->o_x, alpha1/rho1);
       } else{
-
         device_kcycle(parAlmond,k+1);
 
-        //  dkp1 = parAlmond->levels[k+1]->x;
-        copyVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, parAlmond->levels[k+1]->o_dkp1);
-
         // w = A*d
-        axpy(parAlmond, parAlmond->levels[k+1]->deviceA, 1.0, parAlmond->levels[k+1]->o_dkp1, 0.,
+        axpy(parAlmond, parAlmond->levels[k+1]->deviceA, 1.0, parAlmond->levels[k+1]->o_x, 0.,
                 parAlmond->levels[k+1]->o_wkp1);
 
-        dfloat gammaLocal, betaLocal, alpha2Local;
-        dfloat gammaGlobal, betaGlobal, alpha2Global;
+        dfloat gamma, beta, alpha2;
 
-        if(parAlmond->ktype == PCG){
-          gammaLocal  = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_dkp1, parAlmond->levels[k+1]->o_vkp1);
-          betaLocal   = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_dkp1, parAlmond->levels[k+1]->o_wkp1);
-          alpha2Local = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_dkp1, parAlmond->levels[k+1]->o_rkp1);
-          MPI_Allreduce(&gammaLocal,&gammaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-          MPI_Allreduce(&betaLocal,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-          MPI_Allreduce(&alpha2Local,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        }
-        if(parAlmond->ktype == GMRES){
-          gammaLocal  = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_wkp1, parAlmond->levels[k+1]->o_vkp1);
-          betaLocal   = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_wkp1, parAlmond->levels[k+1]->o_wkp1);
-          alpha2Local = innerProd(parAlmond, mCoarse, parAlmond->levels[k+1]->o_wkp1, parAlmond->levels[k+1]->o_rkp1);
-          MPI_Allreduce(&gammaLocal,&gammaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-          MPI_Allreduce(&betaLocal,&betaGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-          MPI_Allreduce(&alpha2Local,&alpha2Global,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-        }
+        if(parAlmond->ktype == PCG)
+          kcycleCombinedOp2(parAlmond,mCoarse,rhoLocal,
+                            parAlmond->levels[k+1]->o_x,
+                            parAlmond->levels[k+1]->o_vkp1,
+                            parAlmond->levels[k+1]->o_wkp1,
+                            parAlmond->levels[k+1]->o_rhs);
 
-        if(fabs(rho1Global) > (dfloat) 1e-20){
+        if(parAlmond->ktype == GMRES)
+          kcycleCombinedOp2(parAlmond,mCoarse,rhoLocal,
+                            parAlmond->levels[k+1]->o_wkp1,
+                            parAlmond->levels[k+1]->o_vkp1,
+                            parAlmond->levels[k+1]->o_wkp1,
+                            parAlmond->levels[k+1]->o_rhs);
 
-          dfloat rho2 = betaGlobal - gammaGlobal*gammaGlobal/rho1Global;
+        MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+        gamma  = rhoGlobal[0];
+        beta   = rhoGlobal[1];
+        alpha2 = rhoGlobal[2];
+
+        if(fabs(rho1) > (dfloat) 1e-20){
+
+          dfloat rho2 = beta - gamma*gamma/rho1;
 
           if(fabs(rho2) > (dfloat) 1e-20){
             // parAlmond->levels[k+1]->x = (alpha1/rho1 - (gam*alpha2)/(rho1*rho2))*ckp1 + (alpha2/rho2)*dkp1
+            dfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
+            dfloat b = alpha2/rho2;
 
-            dfloat a = alpha1Global/rho1Global - gammaGlobal*alpha2Global/(rho1Global*rho2);
-            dfloat b = alpha2Global/rho2;
-
-            vectorAdd(parAlmond, mCoarse, a, parAlmond->levels[k+1]->o_ckp1, 0.0, parAlmond->levels[k+1]->o_x);
-            vectorAdd(parAlmond, mCoarse, b, parAlmond->levels[k+1]->o_dkp1, 1.0, parAlmond->levels[k+1]->o_x);
+            vectorAdd(parAlmond, mCoarse, a, parAlmond->levels[k+1]->o_ckp1, 
+                                          b, parAlmond->levels[k+1]->o_x);
           }
         }
       }

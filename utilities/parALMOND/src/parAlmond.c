@@ -93,9 +93,6 @@ void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memo
 
   mesh_t* mesh = parAlmond->mesh;
 
-  //parAlmond->mesh->dotMultiplyKernel(parAlmond->hgs->Ngather,parAlmond->hgs->o_invDegree,
-  //                        o_x, o_x);
-
   //scatter x 
   meshParallelScatter(mesh, parAlmond->hgs, o_x, parAlmond->o_x);
 
@@ -105,9 +102,6 @@ void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memo
 
   //gather the result back to the global problem
   meshParallelGather(mesh, parAlmond->hgs, parAlmond->o_Ax, o_Ax);
-
-  
-
 }
 
 void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
