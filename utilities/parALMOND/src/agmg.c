@@ -639,7 +639,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
 
 void device_vcycle(parAlmond_t *parAlmond, int k){
 
-#define GPU_CPU_SWITCH_SIZE 0 //TODO move this the the parAlmond struct?
+#define GPU_CPU_SWITCH_SIZE 1024 //TODO move this the the almond struct?
 
   const iint m = parAlmond->levels[k]->Nrows;
   const iint mCoarse = parAlmond->levels[k+1]->Nrows;
