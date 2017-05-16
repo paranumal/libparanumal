@@ -510,7 +510,7 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void *almondSetup(mesh_t *mesh,
+void *parAlmondSetup(mesh_t *mesh,
        iint  Nnum,
        iint* rowStarts, 
        iint  nnz, 
@@ -519,23 +519,16 @@ void *almondSetup(mesh_t *mesh,
        dfloat* Avals,
        iint   nullSpace,
        hgs_t *hgs,
-       iint preGathered);
+       const char* options);
 
-void almondSolve(mesh_t *mesh, 
-    occa::memory o_x,
+void parAlmondPrecon(occa::memory o_x,
     void* ALMOND,
     occa::memory o_rhs); 
 
-int almondFree(void* A);
+int parAlmondFree(void* A);
 
-void almondProlongateCoarseProblem(void *ALMOND, iint *coarseNp, iint *coarseOffsets, dfloat **B);
-
-void almondCoarseSolveSetup(void *ALMOND, iint *coarseNp, iint *coarseOffsets, iint **globalNumbering,
-                    iint *nnz, iint **rows, iint **cols, dfloat **vals);
-
-void almondSetCoarseSolve(void* ALMOND, void (*coarseSolve)(void*,void*,void*),
-                          void *ACoarse, iint coarseTotal,iint coarseOffset); 
-
+void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
+                        void **args);
 
 
 #endif

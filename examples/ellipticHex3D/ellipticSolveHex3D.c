@@ -52,6 +52,45 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   occaTimerToc(mesh->device,"AxKernel");
 }
 
+
+void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options) {
+
+  solver_t *solver = (solver_t *) args[0];
+  dfloat  *lambda  = (dfloat *)  args[1];
+
+  mesh_t *mesh = solver->mesh;
+  dfloat *sendBuffer = solver->sendBuffer;
+  dfloat *recvBuffer = solver->recvBuffer;
+
+  // compute local element operations and store result in o_Aq
+  if(strstr(options, "CONTINUOUS")){
+    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+  }
+  else{
+
+    ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
+
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+
+    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
+    mesh->ipdgKernel(mesh->Nelements,
+         mesh->o_vmapM,
+         mesh->o_vmapP,
+         lambda,
+         tau,
+         mesh->o_vgeo,
+         mesh->o_sgeo,
+         mesh->o_D,
+         solver->o_grad,
+         o_Aq);
+        
+  }
+}
+
+
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   mesh_t *mesh = solver->mesh;
@@ -190,7 +229,7 @@ void ellipticPreconditioner3D(solver_t *solver,
       if(strstr(options,"ALMOND")){
         // should eliminate these copies
         occaTimerTic(mesh->device,"Almond");
-        almondSolve(mesh,precon->o_z1, precon->almond, precon->o_r1);
+        parAlmondPrecon(precon->o_z1, precon->almond, precon->o_r1);
         occaTimerToc(mesh->device,"Almond");
       }
 
@@ -208,7 +247,7 @@ void ellipticPreconditioner3D(solver_t *solver,
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
-    almondSolve(mesh,o_z, precon->parAlmond, o_r);
+    parAlmondPrecon(o_z, precon->parAlmond, o_r);
     occaTimerToc(mesh->device,"parALMOND");
   
   } else if(strstr(options, "JACOBI")){

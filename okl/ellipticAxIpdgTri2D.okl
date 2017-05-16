@@ -64,7 +64,7 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
 	gradqP.x *= sc;
 	gradqP.y *= sc;
-	
+
 	const dfloat dq = gradqP.w - gradqM.w;
 	const dfloat half = 0.5f;
 	

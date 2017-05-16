@@ -104,6 +104,10 @@ typedef struct {
 // block size for reduction (hard coded)
 #define blockSize 256 
 
+void ellipticOperator2D(solver_t *solver, dfloat lambda,
+      occa::memory &o_q, occa::memory &o_Aq, const char *options);
+
+void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
 int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 

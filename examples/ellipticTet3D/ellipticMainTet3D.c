@@ -23,7 +23,7 @@ int main(int argc, char **argv){
   //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
   //char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=NONE");
   //char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,GLOBALALMOND,UBERGRID method=IPDG,PROJECT coarse=COARSEGRID");
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND method=IPDG,PROJECT");
+  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
   //char *options = strdup("solver=PCG preconditioner=FULLALMOND method=IPDG,PROJECT");
   
   // set up mesh stuff

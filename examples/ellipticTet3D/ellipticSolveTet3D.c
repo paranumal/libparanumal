@@ -75,6 +75,68 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   
 }
 
+void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options) {
+
+  solver_t *solver = (solver_t *) args[0];
+  dfloat  *lambda  = (dfloat *)  args[1];
+
+  mesh_t *mesh = solver->mesh;
+  dfloat *sendBuffer = solver->sendBuffer;
+  dfloat *recvBuffer = solver->recvBuffer;
+
+  if(strstr(options, "CONTINUOUS")){
+    // compute local element operations and store result in o_Aq
+    mesh->AxKernel(mesh->Nelements, 
+                   mesh->o_ggeo, 
+                   mesh->o_SrrT, mesh->o_SrsT, mesh->o_SrtT,
+                   mesh->o_SsrT, mesh->o_SssT, mesh->o_SstT, 
+                   mesh->o_StrT, mesh->o_StsT, mesh->o_SttT,
+                   mesh->o_MM,
+                   lambda, 
+                   o_q, 
+                   o_Aq);
+    
+  } else{
+
+    ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
+
+    occaTimerTic(mesh->device,"gradientKernel");    
+    
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
+    mesh->gradientKernel(allNelements,
+       mesh->o_vgeo,
+       mesh->o_DrT,
+       mesh->o_DsT,
+       mesh->o_DtT,
+       o_q,
+       solver->o_grad);
+
+    occaTimerToc(mesh->device,"gradientKernel");
+    occaTimerTic(mesh->device,"ipdgKernel");
+    
+    // TW NOTE WAS 2 !
+    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+3)/3.; // 1/h factor built into kernel 
+    mesh->ipdgKernel(mesh->Nelements,
+         mesh->o_vmapM,
+         mesh->o_vmapP,
+         lambda,
+         tau,
+         mesh->o_vgeo,
+         mesh->o_sgeo,
+         mesh->o_DrT,
+         mesh->o_DsT,
+         mesh->o_DtT,
+         mesh->o_LIFTT,
+         mesh->o_MM,
+         solver->o_grad,
+         o_Aq);
+
+    occaTimerToc(mesh->device,"ipdgKernel");
+  }
+}
+
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   mesh_t *mesh = solver->mesh;
@@ -211,7 +273,7 @@ void ellipticPreconditioner3D(solver_t *solver,
 
       if(strstr(options,"ALMOND")){
       	occaTimerTic(mesh->device,"parALMOND");
-      	almondSolve(mesh, precon->o_z1, precon->parAlmond, precon->o_r1);
+      	parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
       	occaTimerToc(mesh->device,"parALMOND");
       }
       
@@ -229,7 +291,7 @@ void ellipticPreconditioner3D(solver_t *solver,
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
-    almondSolve(mesh, o_z, precon->parAlmond, o_r);
+    parAlmondPrecon(o_z, precon->parAlmond, o_r);
     occaTimerToc(mesh->device,"parALMOND");
 
   } else if(strstr(options, "JACOBI")){

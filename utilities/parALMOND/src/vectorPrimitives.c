@@ -72,55 +72,55 @@ dfloat maxEntry(iint n, dfloat *a){
   return maxVal;
 }
 
-void copyVector(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
+void copyVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
 
-  occaTimerTic(almond->device,"copyKernel");
+  occaTimerTic(parAlmond->device,"copyKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->copyKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
-  occaTimerToc(almond->device,"copyKernel");
+  parAlmond->copyKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
+  occaTimerToc(parAlmond->device,"copyKernel");
 }
 
 
-void scaleVector(almond_t *almond, iint N, occa::memory o_a, dfloat alpha){
+void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
 
-  occaTimerTic(almond->device,"scaleKernel");
+  occaTimerTic(parAlmond->device,"scaleKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
-  occaTimerToc(almond->device,"scaleKernel");
+  parAlmond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
+  occaTimerToc(parAlmond->device,"scaleKernel");
 }
 
-void dotStar(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
+void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
 
-  occaTimerTic(almond->device,"dotStarKernel");
+  occaTimerTic(parAlmond->device,"dotStarKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->simpleDotStarKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
-  occaTimerToc(almond->device,"dotStarKernel");
+  parAlmond->simpleDotStarKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
+  occaTimerToc(parAlmond->device,"dotStarKernel");
 }
 
-void dotStar(almond_t *almond, iint N, dfloat alpha, occa::memory o_a,
+void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c){
 
-  occaTimerTic(almond->device,"dotStarKernel");
+  occaTimerTic(parAlmond->device,"dotStarKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
-  almond->dotStarKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_a, o_b, o_c);
-  occaTimerToc(almond->device,"dotStarKernel");
+  parAlmond->dotStarKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_a, o_b, o_c);
+  occaTimerToc(parAlmond->device,"dotStarKernel");
 }
 
-dfloat innerProd(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
+dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
 
-  occaTimerTic(almond->device,"innerProdKernel");
+  occaTimerTic(parAlmond->device,"innerProdKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
   dfloat *hostRed = (dfloat *) calloc(numBlocks, sizeof(dfloat));
 
   occa::memory o_dRed =
-    almond->device.malloc(numBlocks*sizeof(dfloat), hostRed);
+    parAlmond->device.malloc(numBlocks*sizeof(dfloat), hostRed);
 
-  almond->partialInnerProdKernel(numBlocks, AGMGBDIM, N, o_a, o_b, o_dRed);
+  parAlmond->partialInnerProdKernel(numBlocks, AGMGBDIM, N, o_a, o_b, o_dRed);
 
   o_dRed.copyTo(hostRed);
 
@@ -130,26 +130,26 @@ dfloat innerProd(almond_t *almond, iint N, occa::memory o_a, occa::memory o_b){
 
   free(hostRed);
   o_dRed.free();
-  occaTimerToc(almond->device,"innerProdKernel");
+  occaTimerToc(parAlmond->device,"innerProdKernel");
 
   return result;
 }
 
-void vectorAdd(almond_t *almond, iint N, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y){
+void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y){
 
-  occaTimerTic(almond->device,"vectorAddKernel");
+  occaTimerTic(parAlmond->device,"vectorAddKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
   
-  almond->vectorAddKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y);
-  occaTimerToc(almond->device,"vectorAddKernel");
+  parAlmond->vectorAddKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y);
+  occaTimerToc(parAlmond->device,"vectorAddKernel");
 }
 
-void vectorAdd(almond_t *almond, iint N, dfloat alpha, occa::memory o_x,
+void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x,
 	 dfloat beta, occa::memory o_y, occa::memory o_z){
 
-  occaTimerTic(almond->device,"vectorAddKernel2");
+  occaTimerTic(parAlmond->device,"vectorAddKernel2");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
   
-  almond->vectorAddKernel2(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y, o_z);
-  occaTimerToc(almond->device,"vectorAddKernel2");
+  parAlmond->vectorAddKernel2(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y, o_z);
+  occaTimerToc(parAlmond->device,"vectorAddKernel2");
 }

@@ -323,7 +323,7 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
 
   if(strstr(options, "ALMOND")){
  
-    precon->almond = almondSetup(mesh,
+    precon->parAlmond = parAlmondSetup(mesh,
          Nnum, 
          globalStarts,
          recvNtotal,      
@@ -332,7 +332,7 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
          recvVals,   
          0, // 0 if no null space
          hgs,
-         1); //rhs will be passed gather-scattered
+         options); 
     
   }
 
@@ -346,48 +346,4 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
   free(AsendOffsets);
   free(ArecvOffsets);
 
-  if(strstr(options, "UBERGRID")&&strstr(options,"ALMOND")){
-    /* pseudo code for building (really) coarse system */
-    iint Ntotal = mesh->Np*(mesh->Nelements + mesh->totalHaloPairs);
-    iint coarseNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts;
-    dfloat *zero = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-
-    iint localCoarseNp;
-    iint coarseTotal;
-
-    iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
-    iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
-
-    iint nnz2;
-    iint *globalNumbering2;
-    iint *rowsA2;
-    iint *colsA2;
-    dfloat *valsA2;  
-
-    almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
-                            &nnz2,&rowsA2,&colsA2, &valsA2);
-
-    precon->coarseNp = coarseNp[rank];
-    precon->coarseTotal = coarseOffsets[size];
-    coarseTotal = coarseOffsets[size];
-    precon->coarseOffsets = coarseOffsets;
-  
-    // need to create numbering for really coarse grid on each process for xxt
-    precon->xxt2 = xxtSetup(coarseTotal,
-          globalNumbering2,
-          nnz2,
-          rowsA2,
-          colsA2,
-          valsA2,
-          0,
-          iintString,
-          dfloatString);
-
-    almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
-                      precon->coarseTotal,
-                      precon->coarseOffsets[rank]);
-
-    // also need to store the b array for prolongation restriction (will require coarseNp vector inner products to compute rhs on each process
-    printf("Done UberCoarse setup\n");
-  }
 }

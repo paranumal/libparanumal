@@ -213,5 +213,18 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  if (strstr(options,"MATRIXFREE")) { 
+    //set matrix free A in parAlmond
+    void **args = (void **) calloc(2,sizeof(void *));
+    dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
+    
+    *vlambda = lambda;
+
+    args[0] = (void *) solver;
+    args[1] = (void *) vlambda;
+
+    parAlmondSetMatFreeAX(solver->precon->parAlmond,ellipticMatrixFreeAx,args);
+  }
+
   return solver;
 }

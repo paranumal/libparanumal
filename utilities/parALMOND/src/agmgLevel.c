@@ -5,16 +5,16 @@ void restrict(agmgLevel *level, dfloat *r, dfloat *Rr){
   axpy(level->R, 1.0, r, 0.0, Rr);
 }
 
-void restrict(almond_t *almond, agmgLevel *level, occa::memory o_r, occa::memory o_Rr){
-  axpy(almond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
+void restrict(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_r, occa::memory o_Rr){
+  axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
 }
 
 void interpolate(agmgLevel *level, dfloat *x, dfloat *Px){
   axpy(level->P, 1.0, x, 1.0, Px);
 }
 
-void interpolate(almond_t *almond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
-  axpy(almond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
+void interpolate(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
+  axpy(parAlmond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
 }
 
 void allocate(agmgLevel *level){
@@ -276,15 +276,27 @@ void smooth(agmgLevel *level, dfloat *rhs, dfloat *x, bool x_is_zero){
 }
 
 
-void smooth(almond_t *almond, agmgLevel *level, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
+void smooth(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
 
   if(level->stype == JACOBI){
-    smoothJacobi(almond, level->deviceA, o_rhs, o_x, x_is_zero);
+    smoothJacobi(parAlmond, level->deviceA, o_rhs, o_x, x_is_zero);
     return;
   }
 
   if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(almond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
+    smoothDampedJacobi(parAlmond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
+    return;
+  }
+}
+
+void matFreeSmooth(parAlmond_t *parAlmond, agmgLevel *level, occa::memory &o_r, occa::memory &o_x, bool x_is_zero) {
+  if(level->stype == JACOBI){
+    matFreeSmoothJacobi(parAlmond, level->deviceA, o_r, o_x, x_is_zero);
+    return;
+  }
+
+  if(level->stype == DAMPED_JACOBI){
+    matFreeSmoothDampedJacobi(parAlmond, level->deviceA, o_r, o_x, level->smoother_params[0], x_is_zero);
     return;
   }
 }

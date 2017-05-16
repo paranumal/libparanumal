@@ -1,6 +1,6 @@
 #include "parAlmond.h"
 
-void buildAlmondKernels(almond_t *almond){
+void buildAlmondKernels(parAlmond_t *parAlmond){
 
   occa::kernelInfo defs;
 
@@ -21,59 +21,59 @@ void buildAlmondKernels(almond_t *almond){
   defs.addInclude(DPWD "/okl/workgroup_reduce.h");
   defs.addInclude(DPWD "/okl/workgroup_reduce_max.h");
 
-  if(almond->device.mode()=="OpenCL")
-    almond->device.setCompilerFlags("-cl-opt-disable");
+  if(parAlmond->device.mode()=="OpenCL")
+    parAlmond->device.setCompilerFlags("-cl-opt-disable");
 
   printf("Compiling parALMOND Kernels \n");
 
-  almond->ellAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
+  parAlmond->ellAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
 		   "ellAXPY", defs);
 
-  almond->ellZeqAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
+  parAlmond->ellZeqAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
 		      "ellZeqAXPY", defs);
 
-  almond->ellJacobi1Kernel = almond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
+  parAlmond->ellJacobi1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
 		      "ellJacobi1", defs);
 
-  almond->cooAXKernel1 = almond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
+  parAlmond->cooAXKernel1 = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
 			 "spmv_coo_kernel1", defs);
 
-  almond->cooAXKernel2 = almond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
+  parAlmond->cooAXKernel2 = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
 			 "spmv_coo_kernel2", defs);
 
-  almond->dcsrAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+  parAlmond->dcsrAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
        "dcsrAXPY", defs);
   
-  almond->dcsrZeqAXPYKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+  parAlmond->dcsrZeqAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
        "dcsrZeqAXPY", defs);
   
-  almond->dcsrJacobiKernel = almond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
+  parAlmond->dcsrJacobiKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
        "dcsrJacobi", defs);
 
-  almond->copyKernel = almond->device.buildKernelFromSource(DPWD "/okl/copy.okl",
+  parAlmond->copyKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/copy.okl",
 		      "copyKernel", defs);
 
-  almond->scaleVectorKernel = almond->device.buildKernelFromSource(DPWD "/okl/scaleVector.okl",
+  parAlmond->scaleVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/scaleVector.okl",
 			   "scaleVectorKernel", defs);
 
-  almond->partialInnerProdKernel = almond->device.buildKernelFromSource(DPWD "/okl/partialInnerProd.okl",
+  parAlmond->partialInnerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/partialInnerProd.okl",
 			    "partialInnerProd", defs);
 
-  almond->vectorAddKernel = almond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
+  parAlmond->vectorAddKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
 			   "vectorAddKernel", defs);
 
-  almond->vectorAddKernel2 = almond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
+  parAlmond->vectorAddKernel2 = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
 			    "vectorAddKernel2", defs);
 
-  almond->dotStarKernel = almond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
+  parAlmond->dotStarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
 			 "dotStarKernel", defs);
 
-  almond->simpleDotStarKernel = almond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
+  parAlmond->simpleDotStarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
 			       "simpleDotStarKernel", defs);
 
-  almond->haloExtract = almond->device.buildKernelFromSource(DPWD "/okl/haloExtract.okl",
+  parAlmond->haloExtract = parAlmond->device.buildKernelFromSource(DPWD "/okl/haloExtract.okl",
       "haloExtract", defs);
 
-  almond->agg_interpolateKernel = almond->device.buildKernelFromSource(DPWD "/okl/agg_interpolate.okl",
+  parAlmond->agg_interpolateKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/agg_interpolate.okl",
              "agg_interpolate", defs);
 }
