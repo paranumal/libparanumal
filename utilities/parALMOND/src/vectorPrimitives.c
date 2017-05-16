@@ -2,121 +2,143 @@
 
 
 dfloat norm(iint n, dfloat *a){
-
-  occa::tic("norm");
   dfloat result = 0.;
+  #pragma omp parallel for reduction(+:result)
   for(iint i=0; i<n; i++){
     result += a[i]*a[i];
   }
-
-  result = sqrt(result);
-  occa::toc("norm");
-  return result;
+  return sqrt(result);
 }
-
 
 dfloat innerProd(iint n, dfloat *a, dfloat *b){
-  
-  occa::tic("innerProd");
   dfloat result = 0.;
+  #pragma omp parallel for reduction(+:result)
   for(iint i=0; i<n; i++)
     result += a[i]*b[i];
-  occa::toc("innerProd");
-
   return result;
 }
 
+void doubleInnerProd(iint n, dfloat *aDotbc, dfloat *a, dfloat *b, dfloat *c) {
+  dfloat aDotb = 0.;
+  dfloat aDotc = 0.;
+  #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc)
+  for(iint i=0; i<n; i++) {
+    aDotb += a[i]*b[i];
+    aDotc += a[i]*c[i];
+  }
+  aDotbc[0] = aDotb;
+  aDotbc[1] = aDotc;
+}
+
+// returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
+void kcycleCombinedOp1(iint n, dfloat *aDotbc, dfloat *a, dfloat *b, dfloat *c) {
+  dfloat aDotb = 0.;
+  dfloat aDotc = 0.;
+  dfloat bDotb = 0.;
+  #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:bDotb)
+  for(iint i=0; i<n; i++) {
+    aDotb += a[i]*b[i];
+    aDotc += a[i]*c[i];
+    bDotb += b[i]*b[i];
+  }
+  aDotbc[0] = aDotb;
+  aDotbc[1] = aDotc;
+  aDotbc[2] = bDotb;
+}
+
+// returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
+void kcycleCombinedOp2(iint n, dfloat *aDotbcd, dfloat *a, dfloat *b, dfloat *c, dfloat* d) {
+  dfloat aDotb = 0.;
+  dfloat aDotc = 0.;
+  dfloat aDotd = 0.;
+  #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:aDotd)
+  for(iint i=0; i<n; i++) {
+    aDotb += a[i]*b[i];
+    aDotc += a[i]*c[i];
+    aDotd += a[i]*d[i];
+  }
+  aDotbcd[0] = aDotb;
+  aDotbcd[1] = aDotc;
+  aDotbcd[2] = aDotd;
+}
 
 // y = beta*y + alpha*x
 void vectorAdd(iint n, dfloat alpha, dfloat *x, dfloat beta, dfloat *y){
-  occa::tic("vectorAdd");
+  #pragma omp parallel for
   for(iint i=0; i<n; i++)
     y[i] = beta*y[i] + alpha*x[i];
-  occa::toc("vectorAdd");
+}
+
+// y = beta*y + alpha*x, and return y\dot y
+dfloat vectorAddInnerProd(iint n, dfloat alpha, dfloat *x, dfloat beta, dfloat *y){
+  dfloat result = 0.;
+  #pragma omp parallel for reduction(+:result)
+  for(iint i=0; i<n; i++) {
+    y[i] = beta*y[i] + alpha*x[i];
+    result += y[i]*y[i];
+  }
+  return result;
 }
 
 void dotStar(iint m, dfloat *a, dfloat *b){
-  occa::tic("dotStar");
+  #pragma omp parallel for
   for(iint i=0; i<m; i++)
     b[i] *= a[i];
-  occa::toc("dotStar");
 }
 
 void scaleVector(iint m, dfloat *a, dfloat alpha){
-  occa::tic("scaleVector");
+  #pragma omp parallel for
   for(iint i=0; i<m; i++)
     a[i] *= alpha;
-  occa::toc("scaleVector");
 }
 
 void randomize(iint m, dfloat *a){
+  #pragma omp parallel for
   for(iint i=0; i<m; i++)
     a[i] = (dfloat) drand48();
 }
-
 
 dfloat maxEntry(iint n, dfloat *a){
   if(n == 0)
     return 0;
 
   dfloat maxVal = 0.;
-
+  #pragma omp parallel for reduction(max:maxVal)
   for(iint i=0; i<n; i++){
     dfloat a2 = (a[i] < 0) ? -a[i] : a[i];
-
     if(maxVal < a2){
       maxVal = a2;
     }
   }
-
   return maxVal;
 }
 
 void copyVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-
-  occaTimerTic(parAlmond->device,"copyKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-
   parAlmond->copyKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
-  occaTimerToc(parAlmond->device,"copyKernel");
 }
 
 
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
-
-  occaTimerTic(parAlmond->device,"scaleKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-
   parAlmond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
-  occaTimerToc(parAlmond->device,"scaleKernel");
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-
-  occaTimerTic(parAlmond->device,"dotStarKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-
   parAlmond->simpleDotStarKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
-  occaTimerToc(parAlmond->device,"dotStarKernel");
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c){
-
-  occaTimerTic(parAlmond->device,"dotStarKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-
   parAlmond->dotStarKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_a, o_b, o_c);
-  occaTimerToc(parAlmond->device,"dotStarKernel");
 }
 
 dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-
-  occaTimerTic(parAlmond->device,"innerProdKernel");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
 
   dfloat *hostRed = (dfloat *) calloc(numBlocks, sizeof(dfloat));
-
   occa::memory o_dRed =
     parAlmond->device.malloc(numBlocks*sizeof(dfloat), hostRed);
 
@@ -130,26 +152,40 @@ dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory 
 
   free(hostRed);
   o_dRed.free();
-  occaTimerToc(parAlmond->device,"innerProdKernel");
 
   return result;
 }
 
-void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y){
+// returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
+void kcycleCombinedOp1(parAlmond_t *parAlmond, iint n, dfloat *aDotbc, occa::memory o_a, 
+                                        occa::memory o_b, occa::memory o_c) {
+  aDotbc[0] = 0.;
+  aDotbc[1] = 0.;
+  aDotbc[2] = 0.;
+}
 
-  occaTimerTic(parAlmond->device,"vectorAddKernel");
+// returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
+void kcycleCombinedOp2(parAlmond_t *parAlmond, iint n, dfloat *aDotbcd, occa::memory o_a, 
+                                              occa::memory o_b, occa::memory o_c, occa::memory o_d) {
+  aDotbc[0] = 0.;
+  aDotbc[1] = 0.;
+  aDotbc[2] = 0.; 
+}
+
+// y = beta*y + alpha*x, and return y\dot y
+dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint n, dfloat alpha, occa::memory o_x, 
+                                                          dfloat beta, occa::memory o_y){
+  dfloat result =0.;
+}
+
+
+void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y){
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  
   parAlmond->vectorAddKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y);
-  occaTimerToc(parAlmond->device,"vectorAddKernel");
 }
 
 void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x,
 	 dfloat beta, occa::memory o_y, occa::memory o_z){
-
-  occaTimerTic(parAlmond->device,"vectorAddKernel2");
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  
   parAlmond->vectorAddKernel2(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y, o_z);
-  occaTimerToc(parAlmond->device,"vectorAddKernel2");
 }

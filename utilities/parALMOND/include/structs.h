@@ -145,8 +145,10 @@ typedef struct agmgLevel_t {
 
   dfloat *rhs, *res, *x;
 
+  dfloat *ckp1, *vkp1, *wkp1;
+
   occa::memory o_rhs, o_res, o_x;
-  occa::memory o_ckp1, o_dkp1, o_vkp1, o_wkp1, o_rkp1;
+  occa::memory o_ckp1, o_vkp1, o_wkp1;
 
   dfloat *smoother_params;
 

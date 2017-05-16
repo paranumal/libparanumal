@@ -273,6 +273,7 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
   csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
   // y[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
+  #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
     const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
 
@@ -291,6 +292,7 @@ void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z)
   csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
+  #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
     const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
 
@@ -500,7 +502,6 @@ void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o
 }
 
 void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
-
 
   occa::tic("csr smoothJacobi");
   // x = inv(D)*(b-R*x)  where R = A-D
