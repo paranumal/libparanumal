@@ -52,12 +52,11 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
 	int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
-
+	
 	res = 0;
 	while(i<N){ // scan through whole array
 	  datafloat yi =  beta*y[i] + alpha*x[i];
 	  res += yi*yi;
-	  s_ip[ty][tx] = res;
 	  y[i] = yi;
 	  i += outerDim0*p_RDIMX*p_RDIMY; 
 	}
