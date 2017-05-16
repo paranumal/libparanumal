@@ -34,6 +34,9 @@
       }									\
     }									\
   }
+
+#define p_RDIMX 32
+#define p_RDIMY 8
   
 // y = beta*y + alpha*x
 // ip = y.y 
@@ -45,9 +48,6 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
 				        datafloat *restrict y,
 					datafloat *restrict ip){
 
-#define p_RDIMX 32
-#define p_RDIMY 8
-  
   for(int b=0;b<outerDim0;++b;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
@@ -83,9 +83,6 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
 					const datafloat *restrict c,
 					datafloat *restrict ips){
 
-#define p_RDIMX 32
-#define p_RDIMY 8
-  
   for(int b=0;b<outerDim0;++b;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
