@@ -1,42 +1,43 @@
-
-#define twoPhaseReduction(r_ip, s_ip, s_res, g_ip)			\
-									\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){					\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){				\
-      s_res[ty][tx] = r_ip;						\
-    }									\
-  }									\
-									\
-  barrier(localMemFence);						\
- 									\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){					\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){				\
-      if(tx<p_RDIMX/2) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/2];		\
-      if(tx<p_RDIMX/4) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/4];		\
-      if(tx<p_RDIMX/8) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/8];		\
-      if(tx<p_RDIMX/16)s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/16];		\
-      if(tx<p_RDIMX/32)s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/32];		\
-      if(tx==0) s_res[ty] = s_ip[ty][tx];				\
-    }									\
-  }									\
-  									\
-  barrier(localMemFence);						\
-									\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){					\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){				\
-      if(ty==0){							\
-	if(tx<p_RDIMY/2)  s_res[tx] += s_res[tx+p_RDIMY/2];		\
-	if(tx<p_RDIMY/4)  s_res[tx] += s_res[tx+p_RDIMY/4];		\
-	if(tx<p_RDIMY/8)  s_res[tx] += s_res[tx+p_RDIMY/8];		\
-	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];		\
-	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];		\
-	if(tx==0) atomicAdd(g_ip, s_res[0]);				\
-      }									\
-    }									\
-  }
-
 #define p_RDIMX 32
 #define p_RDIMY 8
+
+// used a macro since I am not sure what happens with exclusive variables in OpenMP mode
+#define twoPhaseReduction(r_ip, s_ip, s_res, g_ip)		\
+								\
+  for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
+    for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
+      s_res[ty][tx] = r_ip;					\
+    }								\
+  }								\
+								\
+  barrier(localMemFence);					\
+								\
+  for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
+    for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
+      if(tx<p_RDIMX/2) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/2];	\
+      if(tx<p_RDIMX/4) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/4];	\
+      if(tx<p_RDIMX/8) s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/8];	\
+      if(tx<p_RDIMX/16)s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/16];	\
+      if(tx<p_RDIMX/32)s_ip[ty][tx] += s_ip[ty][tx+p_RDIMX/32];	\
+      if(tx==0) s_res[ty] = s_ip[ty][tx];			\
+    }								\
+  }								\
+								\
+  barrier(localMemFence);					\
+								\
+  for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
+    for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
+      if(ty==0){						\
+	if(tx<p_RDIMY/2)  s_res[tx] += s_res[tx+p_RDIMY/2];	\
+	if(tx<p_RDIMY/4)  s_res[tx] += s_res[tx+p_RDIMY/4];	\
+	if(tx<p_RDIMY/8)  s_res[tx] += s_res[tx+p_RDIMY/8];	\
+	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
+	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
+	if(tx==0) atomicAdd(g_ip, s_res[0]);			\
+      }								\
+    }								\
+  }
+
   
 // y = beta*y + alpha*x
 // ip = y.y 
@@ -57,16 +58,15 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-	const int t = tx + ty*p_RDIMX;
-	int i = t + b*p_RDIMX*p_RDIMY;
+	int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
 
 	res = 0;
-	while(i<N){
+	while(i<N){ // scan through whole array
 	  datafloat yi =  beta*y[i] + alpha*x[i];
 	  res += yi*yi;
 	  s_ip[ty][tx] = res;
 	  y[i] = yi;
-	  i += outerDim0*p_RDIMX*p_RDIMY; // scan
+	  i += outerDim0*p_RDIMX*p_RDIMY; 
 	}
       }
     }
@@ -92,28 +92,27 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-	const int t = tx + ty*p_RDIMX;
-	const int i = t + b*p_RDIMX*p_RDIMY;
+	const int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
 
 	abi = 0.f;
 	aci = 0.f;
 	bbi = 0.f;
 	
-	while(i<N){
+	while(i<N){ // scan through whole array
 	  const datafloat ai =  a[i];
 	  const datafloat bi =  b[i];
 	  const datafloat ci =  c[i];
 	  abi += ai*bi;
 	  aci += ai*ci;
 	  bbi += bi*bi;
-	  i += outerDim0*p_RDIMX*p_RDIMY; // scan
+	  i += outerDim0*p_RDIMX*p_RDIMY; 
 	}
       }
     }
 
-    twoPhaseReduction(abi, s_ip, s_res, ip+0);
-    twoPhaseReduction(aci, s_ip, s_res, ip+1);
-    twoPhaseReduction(bbi, s_ip, s_res, ip+2);
+    twoPhaseReduction(abi, s_ip, s_res, ips+0);
+    twoPhaseReduction(aci, s_ip, s_res, ips+1);
+    twoPhaseReduction(bbi, s_ip, s_res, ips+2);
   }
 }
     
