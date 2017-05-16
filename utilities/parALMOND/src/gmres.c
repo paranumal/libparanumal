@@ -25,7 +25,7 @@ void gmresUpdate(iint Nrows,
   }
 }
 
-void gmresUpdate(almond_t *almond, iint Nrows,
+void gmresUpdate(parAlmond_t *parAlmond, iint Nrows,
      occa::memory o_x,
 	   occa::memory *o_V,
 	   dfloat *H,
@@ -45,12 +45,12 @@ void gmresUpdate(almond_t *almond, iint Nrows,
   }
 
   for(iint j=0; j<end; ++j){
-    vectorAdd(almond, Nrows, y[j], o_V[j], 1.0, o_x);
+    vectorAdd(parAlmond, Nrows, y[j], o_V[j], 1.0, o_x);
   }
 }
 
 //TODO need to link this with MPI
-void gmres(almond_t *almond,
+void gmres(parAlmond_t *parAlmond,
      csr *A,
      dfloat *b,
      dfloat *x,
@@ -60,7 +60,7 @@ void gmres(almond_t *almond,
   iint m = A->Nrows;
   iint n = A->Ncols;
 
-  almond->ktype = GMRES;
+  parAlmond->ktype = GMRES;
 
   // initial residual
   dfloat nb = norm(m, b);
@@ -68,7 +68,9 @@ void gmres(almond_t *almond,
   dfloat *r = (dfloat *) calloc(m,sizeof(dfloat));
 
   // M r = b - A*x0
-  solve(almond, b, r);
+  //solve(parAlmond, b, r);
+  for (iint k=0;k<m;k++)
+    r[k] = b[k];
 
   dfloat nr = norm(m, r);
 
@@ -102,7 +104,9 @@ void gmres(almond_t *almond,
     axpy(A, 1.0, V[i], 0.0, Av);
 
     // M w = A vi
-    solve(almond, Av, w);
+    //solve(parAlmond, Av, w);
+    for (iint k=0;k<m;k++)
+      w[k] = Av[k];
 
     for(iint k=0; k<=i; ++k){
       dfloat hki = innerProd(m, w, V[k]);
@@ -162,7 +166,7 @@ void gmres(almond_t *almond,
 }
 
 //TODO need to link this with MPI
-void gmres(almond_t *almond,
+void gmres(parAlmond_t *parAlmond,
      hyb *A,
      occa::memory o_b,
      occa::memory o_x,
@@ -175,22 +179,24 @@ void gmres(almond_t *almond,
 
   iint sz = m*sizeof(dfloat);
 
-  almond->ktype = GMRES;
+  parAlmond->ktype = GMRES;
 
   // initial residual
-  dfloat nb = innerProd(almond, m, o_b, o_b);
+  dfloat nb = innerProd(parAlmond, m, o_b, o_b);
   nb = sqrt(nb);
 
   dfloat *dummy = (dfloat*) calloc(m, sizeof(dfloat));
 
-  occa::memory  o_r = almond->device.malloc(sz, dummy);
-  occa::memory o_Av = almond->device.malloc(sz, dummy);
-  occa::memory  o_w = almond->device.malloc(sz, dummy);
+  occa::memory  o_r = parAlmond->device.malloc(sz, dummy);
+  occa::memory o_Av = parAlmond->device.malloc(sz, dummy);
+  occa::memory  o_w = parAlmond->device.malloc(sz, dummy);
 
   // M r = b - A*x0
-  solve(almond, o_b, o_r);
+  //solve(parAlmond, o_b, o_r);
+  o_r.copyFrom(o_b);
 
-  dfloat nr = innerProd(almond, m, o_r, o_r);
+
+  dfloat nr = innerProd(parAlmond, m, o_r, o_r);
   nr = sqrt(nr);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
@@ -199,11 +205,11 @@ void gmres(almond_t *almond,
   occa::memory *o_V = (occa::memory *) calloc(maxIt, sizeof(occa::memory));
 
   for(iint i=0; i<maxIt; ++i){
-    o_V[i] = almond->device.malloc(sz, dummy);
+    o_V[i] = parAlmond->device.malloc(sz, dummy);
   }
 
   // V(:,0) = r/nr
-  vectorAdd(almond, m, (1./nr), o_r, 0., o_V[0]);
+  vectorAdd(parAlmond, m, (1./nr), o_r, 0., o_V[0]);
 
   dfloat *H = (dfloat *) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat *) calloc(4*maxIt, sizeof(dfloat));
@@ -218,22 +224,23 @@ void gmres(almond_t *almond,
     end = i+1;
 
     // Av = A*V(:.i)
-    axpy(almond, A, 1.0, o_V[i], 0.0, o_Av);
+    axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_Av);
 
     // M w = A vi
-    solve(almond, o_Av, o_w);
+    //solve(parAlmond, o_Av, o_w);
+    o_w.copyFrom(o_Av);
 
     for(iint k=0; k<=i; ++k){
-      dfloat hki = innerProd(almond, m, o_w, o_V[k]);
+      dfloat hki = innerProd(parAlmond, m, o_w, o_V[k]);
 
       // w = w - hki*V[k]
-      vectorAdd(almond, m, -hki, o_V[k], 1.0, o_w);
+      vectorAdd(parAlmond, m, -hki, o_V[k], 1.0, o_w);
 
       // H(k,i) = hki
       H[k + i*(maxIt+1)] = hki;
     }
 
-    dfloat nw = innerProd(almond, m, o_w, o_w);
+    dfloat nw = innerProd(parAlmond, m, o_w, o_w);
     nw = sqrt(nw);
     H[i+1 + i*(maxIt+1)] = nw;
 
@@ -270,11 +277,11 @@ void gmres(almond_t *almond,
 
     if(i < maxIt-1){
       // V(:,i+1) = w/nw
-      vectorAdd(almond, m, 1./nw, o_w, 0.0, o_V[i+1]);
+      vectorAdd(parAlmond, m, 1./nw, o_w, 0.0, o_V[i+1]);
     }
   }
 
-  gmresUpdate(almond, m, o_x, o_V, H, s, end, maxIt);
+  gmresUpdate(parAlmond, m, o_x, o_V, H, s, end, maxIt);
 
   if(end == maxIt)
     printf("gmres did not converge in given number of iterations \n");

@@ -75,8 +75,7 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o \
-../../src/timer.o \
-../../src/almondCoarseSolve.o
+../../src/timer.o 
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

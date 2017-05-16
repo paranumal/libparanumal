@@ -379,7 +379,7 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       globalVals[n] = globalNonZero[n].val;
     }
 
-    precon->parAlmond = almondSetup(mesh, 
+    precon->parAlmond = parAlmondSetup(mesh, 
                                    Nnum, 
                                    globalStarts, 
                                    globalnnzTotal,      
@@ -388,7 +388,7 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
                                    globalVals,    
                                    0,             // 0 if no null space
                                    hgs,
-                                   1);       //rhs will be passed gather-scattered
+                                   options);
 
     precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
     precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -399,45 +399,6 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     free(ArecvCounts);
     free(AsendOffsets);
     free(ArecvOffsets);
-
-    if(strstr(options, "UBERGRID")){
-      iint coarseTotal;
-
-      iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
-      iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
-
-      iint nnz2;
-      iint *globalNumbering2;
-      iint *rowsA2;
-      iint *colsA2;
-      dfloat *valsA2;  
-
-      almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
-                              &nnz2,&rowsA2,&colsA2, &valsA2);
-
-      precon->coarseNp = coarseNp[rank];
-      precon->coarseTotal = coarseOffsets[size];
-      coarseTotal = coarseOffsets[size];
-      precon->coarseOffsets = coarseOffsets;
-
-      // need to create numbering for really coarse grid on each process for xxt
-      precon->xxt2 = xxtSetup(coarseTotal,
-          globalNumbering2,
-          nnz2,
-          rowsA2,
-          colsA2,
-          valsA2,
-          0,
-          iintString,
-          dfloatString);
-
-      almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
-                      precon->coarseTotal,
-                      precon->coarseOffsets[rank]);
-
-      printf("Done UberCoarse setup\n"); 
-    }    
   }
-
   return precon;
 }

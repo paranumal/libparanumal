@@ -1,7 +1,7 @@
 #include "parAlmond.h"
 
 
-void pcg(almond_t *almond,
+void pcg(parAlmond_t *parAlmond,
    csr *A,
    dfloat *b,
    dfloat *x,
@@ -17,7 +17,7 @@ void pcg(almond_t *almond,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  almond->ktype = PCG;
+  parAlmond->ktype = PCG;
 
   // initial residual
   dfloat localNB = innerProd(m, b, b);
@@ -54,9 +54,9 @@ void pcg(almond_t *almond,
   for (iint i=1; i<=maxIt; i++){
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    solve(almond, r, di);
-    //for (iint k=0;k<m;k++)
-    //  di[k] = r[k];
+    //solve(parAlmond, r, di);
+    for (iint k=0;k<m;k++)
+      di[k] = r[k];
 
     // rho = di'*r
     rhoLocal = innerProd(m, di, r);
@@ -112,7 +112,7 @@ void pcg(almond_t *almond,
 }
 
 //TODO need to link the MPI processes in this solve
-void pcg(almond_t *almond,
+void pcg(parAlmond_t *parAlmond,
    hyb *A,
    occa::memory o_b,
    occa::memory o_x,
@@ -122,10 +122,10 @@ void pcg(almond_t *almond,
   const iint m = A->Nrows;
   const iint n = A->Ncols;
 
-  almond->ktype = PCG;
+  parAlmond->ktype = PCG;
 
   // initial residual
-  dfloat nb = innerProd(almond, m, o_b, o_b);
+  dfloat nb = innerProd(parAlmond, m, o_b, o_b);
   nb = sqrt(nb);
 
   occa::memory o_x0, o_r0, o_r, o_di, o_Adi, o_di_previous;
@@ -133,21 +133,21 @@ void pcg(almond_t *almond,
   dfloat *dummy = (dfloat *) calloc(m, sizeof(dfloat));
 
   // initial guess
-  o_x0 = almond->device.malloc(m*sizeof(dfloat), dummy);
-  o_r0 = almond->device.malloc(m*sizeof(dfloat), dummy);
-  o_r = almond->device.malloc(m*sizeof(dfloat), dummy);
-  o_di = almond->device.malloc(m*sizeof(dfloat), dummy);
-  o_Adi = almond->device.malloc(m*sizeof(dfloat), dummy);
-  o_di_previous = almond->device.malloc(m*sizeof(dfloat), dummy);
+  o_x0 = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  o_r0 = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  o_r = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  o_di = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  o_Adi = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  o_di_previous = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
 
   // initial residue  r0 = b - A*x0;
-  zeqaxpy(almond, A, -1.0, o_x0, 1.0, o_b, o_r0);
+  zeqaxpy(parAlmond, A, -1.0, o_x0, 1.0, o_b, o_r0);
 
   //    r = r0;
-  copyVector(almond, m, o_r0, o_r);
+  copyVector(parAlmond, m, o_r0, o_r);
 
   //    x = x0;
-  copyVector(almond, m, o_x0, o_x);
+  copyVector(parAlmond, m, o_x0, o_x);
 
 
   dfloat rho, alpha, beta, rho_previous;
@@ -161,10 +161,11 @@ void pcg(almond_t *almond,
   for (iint i=1; i<=maxIt; i++){
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    solve(almond, o_r, o_di);
+    //solve(parAlmond, o_r, o_di);
+    o_di.copyFrom(o_r);
 
     // rho = di'*r
-    rho = innerProd(almond, m, o_di, o_r);
+    rho = innerProd(parAlmond, m, o_di, o_r);
 
     // TODO : try flexible conjugate gradient
 
@@ -172,27 +173,27 @@ void pcg(almond_t *almond,
       beta = rho/rho_previous;
 
       // di = di + beta*di_previous
-      vectorAdd(almond, m, beta, o_di_previous, 1.0, o_di);
+      vectorAdd(parAlmond, m, beta, o_di_previous, 1.0, o_di);
     }
 
     //   Adi = A*di;
-    axpy(almond, A, 1.0, o_di, 0.0, o_Adi);
+    axpy(parAlmond, A, 1.0, o_di, 0.0, o_Adi);
 
-    alpha =  rho/ innerProd(almond, m, o_di, o_Adi);
+    alpha =  rho/ innerProd(parAlmond, m, o_di, o_Adi);
 
     // update solution
     //    x = x + alpha * di;
-    vectorAdd(almond, m, alpha, o_di, 1.0, o_x);
+    vectorAdd(parAlmond, m, alpha, o_di, 1.0, o_x);
 
     // update residue
     // r = r - alpha * Adi;
-    vectorAdd(almond, m, -alpha, o_Adi, 1.0, o_r);
+    vectorAdd(parAlmond, m, -alpha, o_Adi, 1.0, o_r);
 
-    resvec[i] = innerProd(almond, m, o_r, o_r);
+    resvec[i] = innerProd(parAlmond, m, o_r, o_r);
     resvec[i] = sqrt(resvec[i]);
 
     //      di_previous = di;
-    copyVector(almond, m, o_di, o_di_previous);
+    copyVector(parAlmond, m, o_di, o_di_previous);
     rho_previous = rho;
 
     if(resvec[i] < tol*nb){
@@ -202,9 +203,9 @@ void pcg(almond_t *almond,
   }
 
   // r = b - A*x
-  zeqaxpy(almond, A, -1.0, o_x, 1.0, o_b, o_r);
+  zeqaxpy(parAlmond, A, -1.0, o_x, 1.0, o_b, o_r);
 
-  dfloat relres = sqrt(innerProd(almond, m, o_r, o_r))/nb;
+  dfloat relres = sqrt(innerProd(parAlmond, m, o_r, o_r))/nb;
 }
 
 

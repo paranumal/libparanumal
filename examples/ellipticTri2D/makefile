@@ -77,7 +77,6 @@ LOBJS = \
 ../../src/hash.o\
 ../../src/timer.o\
 ./diagnostic.o\
-../../src/almondCoarseSolve.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

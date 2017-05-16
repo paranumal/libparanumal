@@ -278,7 +278,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 
   if(strstr(options, "ALMOND")){
  
-    precon->almond = almondSetup(mesh,
+    precon->almond = parAlmondSetup(mesh,
          Nnum, 
          globalStarts,
          recvNtotal,      
@@ -287,7 +287,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
          recvVals,
          0, // 0 if no null space
          hgs,
-         1); //rhs will be passed gather-scattered
+         options); //rhs will be passed gather-scattered
   }
 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -300,41 +300,4 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   free(AsendOffsets);
   free(ArecvOffsets);
 
-  if(strstr(options, "UBERGRID")&&strstr(options,"ALMOND")){
-    iint coarseTotal;
-
-    iint* coarseNp      = (iint *) calloc(size,sizeof(iint));
-    iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
-
-    iint nnz2;
-    iint *globalNumbering2;
-    iint *rowsA2;
-    iint *colsA2;
-    dfloat *valsA2;  
-
-    almondCoarseSolveSetup(precon->parAlmond,coarseNp,coarseOffsets,&globalNumbering2,
-                            &nnz2,&rowsA2,&colsA2, &valsA2);
-
-    precon->coarseNp = coarseNp[rank];
-    precon->coarseTotal = coarseOffsets[size];
-    coarseTotal = coarseOffsets[size];
-    precon->coarseOffsets = coarseOffsets;
-
-    // need to create numbering for really coarse grid on each process for xxt
-    precon->xxt2 = xxtSetup(coarseTotal,
-        globalNumbering2,
-        nnz2,
-        rowsA2,
-        colsA2,
-        valsA2,
-        0,
-        iintString,
-        dfloatString);
-
-    almondSetCoarseSolve(precon->parAlmond, xxtSolve,precon->xxt2,
-                    precon->coarseTotal,
-                    precon->coarseOffsets[rank]);
-
-    printf("Done UberCoarse setup\n");
-  }
 }

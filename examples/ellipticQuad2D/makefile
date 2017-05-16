@@ -77,7 +77,6 @@ LOBJS = \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ../../src/timer.o\
-../../src/almondCoarseSolve.o \
 ./diagnostic.o\
 
 

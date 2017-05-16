@@ -19,13 +19,24 @@ typedef struct {
 
 	KrylovType ktype;
 
-	//Coarse solver
-	void (*coarseSolve)(void*,void*,void*);
-	void *ACoarse;
+  mesh_t *mesh;
+  hgs_t *hgs;
+  const char* options;
+
+  //Matrix Free args 
+  void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options);
+  void **MatFreeArgs;
+
+	//Coarse xxt solver
+	void *Acoarse;
 	iint coarseTotal;
 	iint coarseOffset;
+  dfloat *xCoarse, *rhsCoarse;
 
 	occa::device device;
+
+  occa::memory o_x;
+  occa::memory o_Ax;
 
   occa::kernel ellAXPYKernel; 
   occa::kernel ellZeqAXPYKernel;
@@ -45,30 +56,29 @@ typedef struct {
   occa::kernel haloExtract;
   occa::kernel agg_interpolateKernel;
 
-} almond_t;
+} parAlmond_t;
 
 #include "agmgLevel.h"
 #include "agmgMatrices.h"
 #include "vectorPrimitives.h"
 
 
-almond_t *setup(csr *A, dfloat *nullA, iint *globalRowStarts);
-void sync_setup_on_device(almond_t *almond, occa::device dev);
-void buildAlmondKernels(almond_t *almond);
+parAlmond_t *agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
+void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev);
+void buildAlmondKernels(parAlmond_t *parAlmond);
 
-void solve(almond_t *almond, dfloat *rhs, dfloat* x);
-void solve(almond_t *almond, occa::memory o_rhs, occa::memory o_x);
+void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memory &o_Ax);
 
-void kcycle(almond_t *almond, int k);
-void device_kcycle(almond_t *almond, int k);
+void kcycle(parAlmond_t *parAlmond, int k);
+void device_kcycle(parAlmond_t *parAlmond, int k);
 
-void vcycle(almond_t *almond, int k);
-void device_vcycle(almond_t *almond, int k);
+void vcycle(parAlmond_t *parAlmond, int k);
+void device_vcycle(parAlmond_t *parAlmond, int k);
 
-void gmres(almond_t *almond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
-void gmres(almond_t *almond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
+void gmres(parAlmond_t *parAlmond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
+void gmres(parAlmond_t *parAlmond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
 
-void pcg(almond_t *almond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
-void pcg(almond_t *almond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
+void pcg(parAlmond_t *parAlmond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
+void pcg(parAlmond_t *parAlmond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
 
 #endif
