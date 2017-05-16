@@ -1,0 +1,274 @@
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3  
+#define  JID 4
+#define JWID 5
+//
+#define UXID 0
+#define UYID 1
+
+
+
+
+// void boundaryConditions2D(const iint bc,
+// 			              const dfloat  t, const dfloat  x, const dfloat  y,
+// 			              const dfloat  nx, const dfloat  ny,
+// 			              const dfloat  uxM, const dfloat  uyM, 
+// 			              dfloat * restrict uxB, dfloat * restrict uyB){
+
+//   if(bc==1){ // Wall 
+//     *uxB = -uxM; 
+//     *uyB = -uyM;
+//   }
+//   if(bc==2){ // Inflow
+//   	dfloat nu   = 1.0/40.0;
+//   	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+//     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
+//     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+//   }
+//   if(bc==3){ // Outflow 
+//   // do nothing 
+//   	dfloat nu   = 1.0/40.0;
+//   	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+
+//     *uxB = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
+//     *uyB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+//   }
+// }
+
+
+
+kernel void insPressureRhsVolume2D(	const iint Nelements,
+									const dfloat g0,
+									const dfloat dt,
+									const dfloat * restrict vgeo,
+									const dfloat * restrict DrT,
+									const dfloat * restrict DsT,
+									const dfloat * restrict UI,
+									dfloat * restrict rhsPr
+				          ){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+   
+   // Hold Flux Vector on Shared
+   shared dfloat s_UxI[p_NblockV][p_Np];
+   shared dfloat s_UyI[p_NblockV][p_Np];
+   //
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+		iint e = eo+es; // element in block
+		if(e<Nelements){ 
+		 const iint id = e*p_Np+n;
+		 const dfloat uxi = UI[id + UXID*p_NtotalDofs];
+		 const dfloat uyi = UI[id + UYID*p_NtotalDofs];
+		 //
+		  s_UxI[es][n] = uxi;
+		  s_UyI[es][n] = uyi;
+	}
+      }
+    }
+
+     // make sure all node data is loaded into shared
+     barrier(localMemFence);
+
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	
+	iint e = eo+es; // element in block
+	if(e<Nelements){	  
+	  // prefetch geometric factors (constant on triangle)
+	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+	  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+	  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+	  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+	  const dfloat jac  = vgeo[e*p_Nvgeo + JID];
+
+	  // compute 'r' and 's' derivatives of (q_m) at node n
+      dfloat duxdr = 0.f, duxds = 0.f, duydr = 0.f, duyds = 0.f; 
+	  occaUnroll(p_Np)
+	  for(iint i=0;i<p_Np;++i){
+	    const dfloat Drni = DrT[n+i*p_Np];
+	    const dfloat Dsni = DsT[n+i*p_Np];
+	    // 
+	    duxdr += Drni*s_UxI[es][i];
+	    duxds += Dsni*s_UxI[es][i];
+	    duydr += Drni*s_UyI[es][i];
+	    duyds += Dsni*s_UyI[es][i];
+	    
+	  }
+	  const iint id = e*p_Np+n;
+	  rhsPr[e*p_Np+n]= -jac*(drdx*duxdr + drdy*duydr + dsdx*duxds + dsdy*duyds)*g0/dt;   
+     
+	 	 
+	}
+      }
+    }
+ }
+}
+
+
+
+
+
+kernel void insPressureRhsSurface2D(const iint Nelements,
+				     const dfloat * restrict sgeo,
+				     const dfloat * restrict LIFTT,
+				     const iint   * restrict vmapM,
+				     const iint   * restrict vmapP,
+				     const iint   * restrict EToB,
+				     const dfloat time,
+				     const dfloat * restrict x,
+				     const dfloat * restrict y,
+				     const dfloar * restrict U,
+				     const dfloat * restrict NU,
+				     const dfloat * restrict UI,
+				           dfloat * restrict rhsPr){
+  
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    // shared storage for flux terms
+    shared dfloat s_dPdn[p_NblockS][p_Nfp*p_Nfaces]; 
+     // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	   iint e = eo + es;
+	    if(e<Nelements){
+	      if(n<p_Nfp*p_Nfaces){
+			// find face that owns this node
+			iint face = n/p_Nfp;
+			// load surface geofactors for this face
+			iint bc = EToB[face+p_Nfaces*e];
+			//
+			iint sid   = p_Nsgeo*(e*p_Nfaces+face);
+			dfloat nx  = sgeo[sid+0];
+			dfloat ny  = sgeo[sid+1];
+			//
+			dfloat sJ  = sgeo[sid+2];
+			dfloat invJ= sgeo[sid+3];
+			// indices of negative and positive traces of face node
+			iint id    = e*p_Nfp*p_Nfaces + n;
+			iint vid   = vmapM[id]; // Volume node indexing 
+			// load negative and positive trace node values of q
+			dfloat  ux  = U[vid + UXID*p_NtotalDofs];
+			dfloat  uy  = U[vid + UYID*p_NtotalDofs];
+			//
+			dfloat  uxi = UI[vid + UXID*p_NtotalDofs];
+			dfloat  uyi = UI[vid + UYID*p_NtotalDofs];
+			//
+
+
+		    
+		    if(bc>0)
+		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym, &uxp, &uyp);
+
+
+        // Find max normal velocity
+		    dfloat unm   = occaFabs(nx*uxm + ny*uym);
+		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);
+            
+        dfloat unmax = (unm > unp) ? unm : unp;
+
+        // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+				s_fluxUx[es][n] = -0.5f*( nx*(uxm*uxm-uxp*uxp) + (uxm*uym-uxp*uyp) - unmax*(uxm-uxp) );
+				s_fluxUy[es][n] = -0.5f*( nx*(uym*uxm-uyp*uxp) + (uym*uym-uyp*uyp) - unmax*(uym-uyp) );
+	   
+
+
+       	 }
+    		}
+			}
+		}
+    
+     #if 0
+    // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	         if(n<p_Nfp*p_Nfaces){
+	         	  iint face = n/p_Nfp;
+	         	  if(face<Nface)
+	         	    if(s_maxVel[es][0 + face*p_Nfp] < s_maxVel[es][n])
+	         	  	   s_maxVel[es][0 + face*p_Nfp] = s_maxVel[es][n];
+	         }
+	       }
+	     }
+	   #endif
+
+
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // for each node in the element
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+	      iint e = eo + es;
+	       if(e<Nelements){
+	          if(n<p_Np){
+				     iint id = e*p_Np + n;
+             dfloat rhsux = rhsU[id + UXID*p_NtotalDofs];
+             dfloat rhsuy = rhsU[id + UYID*p_NtotalDofs];
+				    // Lift
+				    occaUnroll(p_NfacesNfp)
+				      for(int m=0;m<p_NfacesNfp;++m){
+								dfloat L = LIFTT[n+m*p_Np];
+								rhsux  += L*s_fluxUx[es][m];
+								rhsuy  += L*s_fluxUy[es][m];
+	      	 }
+	  
+	      rhsU[id + UXID*p_NtotalDofs] = rhsux;
+        rhsU[id + UYID*p_NtotalDofs] = rhsuy;
+	  }
+	}
+      }
+    }
+  }
+
+
+}
+
+
+
+// kernel void insAdvectionUpdate2D(const iint Nelements,
+// 				                      const dfloat dt,	
+// 				                      const dfloat a0,
+// 				                      const dfloat a1,
+// 				                      const dfloat b0,
+// 				                      const dfloat b1,
+// 				                      const dfloat g0,
+// 				                      const dfloat * restrict U,
+// 				                      const dfloat * restrict UO,
+// 				                      const dfloat * restrict rhsU,
+// 				                            dfloat * restrict NU,
+// 				                            dfloat * restrict UI){
+  
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+     
+//      const iint id = e*p_Np+n;
+//      //
+// 		 const dfloat ux  = U[id + UXID*p_NtotalDofs];
+// 		 const dfloat uy  = U[id + UYID*p_NtotalDofs];
+// 		 //
+// 		 const dfloat uxo = UO[id + UXID*p_NtotalDofs];
+// 		 const dfloat uyo = UO[id + UYID*p_NtotalDofs];
+//      //
+//      const dfloat nux = rhsU[id + UXID*p_NtotalDofs];
+// 		 const dfloat nuy = rhsU[id + UYID*p_NtotalDofs];
+//      //
+//      const dfloat nuxo = NU[id + UXID*p_NtotalDofs];
+// 		 const dfloat nuyo = NU[id + UYID*p_NtotalDofs];
+//      //
+//      NU[id+ UXID*p_NtotalDofs] = nux;
+//      NU[id+ UYID*p_NtotalDofs] = nuy;
+//      //
+//      UI[id+ UXID*p_NtotalDofs] = ((a0*ux+a1*uxo)-dt*(b0*nux+b1*nuxo))/g0 ;
+//      UI[id+ UXID*p_NtotalDofs] = ((a0*uy+a1*uyo)-dt*(b0*nuy+b1*nuyo))/g0 ;
+
+//     }
+//   }
+// }
+

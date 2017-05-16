@@ -6,11 +6,11 @@
   solver_t *insSetup2D(mesh2D *mesh, char * options){
   
   solver_t *ins = (solver_t*) calloc(1, sizeof(solver_t));
-  
-
-
+   
   ins->Nfields = 2; 
   mesh->Nfields = ins->Nfields; // Hold For Now!!!!! need to update meshOccaSetUP   
+
+  ins->mesh = mesh;  
   // compute samples of q at interpolation nodes
   ins->U     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
   ins->Pr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -189,11 +189,13 @@
   ins->o_Pr =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pr);
 
-  ins->o_NU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NU);  
-   
-  ins->o_UO  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UO);
+  ins->o_rhsPr= mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsPr);  
 
-  ins->o_UI  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UI);
+  ins->o_NU   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NU);  
+    
+  ins->o_UO   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UO);
+
+  ins->o_UI   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UI);
 
 
 
@@ -236,16 +238,26 @@
       "insAdvectionUpdate2D",
         kernelInfo);
 
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-      "meshHaloExtract2D",
-      kernelInfo);
 
+  printf("Compiling Pressure RHS volume kernel with collocation integration\n");
+  ins->pressureRhsVolumeKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPressure2D.okl",
+      "insPressureRhsVolume2D",
+        kernelInfo);
+
+
+  
   printf("Compiling INS Halo Extract Kernel\n");
   ins->haloExtractKernel= 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExtract.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
       "insHaloExtract2D",
         kernelInfo);
+
+   printf("Compiling INS Halo Extract Kernel\n");
+  ins->haloScatterKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insHaloScatter2D",
+        kernelInfo);  
 
  ins->mesh = mesh;   
 
