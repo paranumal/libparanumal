@@ -569,7 +569,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
         gammaHOST = rhoGlobal[0];
         betaHOST   = rhoGlobal[1];
-        alpha2HOST = sqrt(rhoGlobal[2]);
+        alpha2HOST = rhoGlobal[2];
 
         printf("---kcycleCombinedOp2---\n");
         printf("gamma  DEVICE = %g, gamma  HOST = %g\n", gamma, gammaHOST);
