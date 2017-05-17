@@ -78,7 +78,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   }
 
   //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
-  ////kcycle(parAlmond,0);
+  //kcycle(parAlmond,0);
   //vcycle(parAlmond,0);
   //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
 
