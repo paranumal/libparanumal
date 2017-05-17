@@ -113,12 +113,6 @@ dfloat maxEntry(iint n, dfloat *a){
   return maxVal;
 }
 
-void copyVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->copyKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
-}
-
-
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
   const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
   parAlmond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
@@ -156,26 +150,42 @@ dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory 
   return result;
 }
 
+#define RDIMX 32
+#define RDIMY 8
+
+
 // returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
-void kcycleCombinedOp1(parAlmond_t *parAlmond, iint n, dfloat *aDotbc, occa::memory o_a, 
+void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::memory o_a, 
                                         occa::memory o_b, occa::memory o_c) {
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+
   aDotbc[0] = 0.;
   aDotbc[1] = 0.;
   aDotbc[2] = 0.;
+
+  parAlmond->kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,aDotbc);
 }
 
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
-void kcycleCombinedOp2(parAlmond_t *parAlmond, iint n, dfloat *aDotbcd, occa::memory o_a, 
+void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::memory o_a, 
                                               occa::memory o_b, occa::memory o_c, occa::memory o_d) {
-  aDotbc[0] = 0.;
-  aDotbc[1] = 0.;
-  aDotbc[2] = 0.; 
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+
+  aDotbcd[0] = 0.;
+  aDotbcd[1] = 0.;
+  aDotbcd[2] = 0.;
+
+  parAlmond->kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_d,aDotbcd);
 }
 
 // y = beta*y + alpha*x, and return y\dot y
-dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint n, dfloat alpha, occa::memory o_x, 
+dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, 
                                                           dfloat beta, occa::memory o_y){
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+
   dfloat result =0.;
+  parAlmond->vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,result);
+  return result;
 }
 
 

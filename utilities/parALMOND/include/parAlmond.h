@@ -41,12 +41,10 @@ typedef struct {
   occa::kernel ellAXPYKernel; 
   occa::kernel ellZeqAXPYKernel;
   occa::kernel ellJacobi1Kernel;
-  occa::kernel cooAXKernel1; 
-  occa::kernel cooAXKernel2; 
+  occa::kernel cooAXKernel; 
   occa::kernel dcsrAXPYKernel; 
   occa::kernel dcsrZeqAXPYKernel; 
   occa::kernel dcsrJacobiKernel; 
-  occa::kernel copyKernel; 
   occa::kernel scaleVectorKernel;
   occa::kernel partialInnerProdKernel;
   occa::kernel vectorAddKernel;
@@ -55,6 +53,9 @@ typedef struct {
   occa::kernel simpleDotStarKernel;
   occa::kernel haloExtract;
   occa::kernel agg_interpolateKernel;
+  occa::kernel vectorAddInnerProdKernel;
+  occa::kernel kcycleCombinedOp1Kernel;
+  occa::kernel kcycleCombinedOp2Kernel;
 
 } parAlmond_t;
 

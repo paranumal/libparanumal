@@ -48,7 +48,7 @@ typedef struct coo_t {
   iint nnz;
 
   // device memory
-  occa::memory o_rows;
+  occa::memory o_offsets;
   occa::memory o_cols;
   occa::memory o_coefs;
 

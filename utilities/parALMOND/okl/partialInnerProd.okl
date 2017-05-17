@@ -21,10 +21,10 @@ kernel void partialInnerProd(const int outerDim0, const int innerDim0,
       // is thread in range for the addition
       datafloat d = 0.f;
       while(n<N){
-	const datafloat xn = x[n];
-	const datafloat yn = y[n];
-	d += xn*yn;
-	n += gx;
+      	const datafloat xn = x[n];
+      	const datafloat yn = y[n];
+      	d += xn*yn;
+      	n += gx;
       }
 
       // assume bx power of 2
