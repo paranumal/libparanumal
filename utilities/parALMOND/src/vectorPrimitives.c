@@ -157,7 +157,7 @@ dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory 
 // returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
 void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::memory o_a, 
                                         occa::memory o_b, occa::memory o_c) {
-  const iint numBlocks = 1; (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
 
   aDotbc[0] = 0.;
   aDotbc[1] = 0.;
@@ -171,7 +171,7 @@ void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::mem
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
 void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::memory o_a, 
                                               occa::memory o_b, occa::memory o_c, occa::memory o_d) {
-  const iint numBlocks = 1; (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
 
   aDotbcd[0] = 0.;
   aDotbcd[1] = 0.;
@@ -185,7 +185,7 @@ void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::me
 // y = beta*y + alpha*x, and return y\dot y
 dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, 
                                                           dfloat beta, occa::memory o_y){
-  const iint numBlocks = 1; (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
 
   dfloat result =0.;
 
