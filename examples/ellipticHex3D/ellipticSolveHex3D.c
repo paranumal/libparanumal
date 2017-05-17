@@ -311,7 +311,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   iint Niter = 0;
-  dfloat alpha, beta;
+  dfloat alpha, beta, pAp;
     
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
@@ -321,7 +321,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     ellipticOperator3D(solver, lambda, o_p, o_Ap, options); 
 
     // dot(p,A*p)
-    dfloat pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
+    pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
 
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -376,14 +376,14 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
     
-    if(rank==0)
-      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-
     ++Niter;
     
   }while(rdotr0>(tol*tol));
 
   occaTimerToc(mesh->device,"PCG");
+  
+  if(rank==0)
+    printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
   occa::printTimer();
 
