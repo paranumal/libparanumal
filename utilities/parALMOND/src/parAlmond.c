@@ -82,8 +82,8 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   //vcycle(parAlmond,0);
   //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
 
-  //device_kcycle(parAlmond, 0);
-  device_vcycle(parAlmond, 0);
+  device_kcycle(parAlmond, 0);
+  //device_vcycle(parAlmond, 0);
 
   //scatter the result
   meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
