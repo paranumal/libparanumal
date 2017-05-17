@@ -178,7 +178,7 @@ void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::me
   aDotbcd[2] = 0.;
 
   parAlmond->o_rho.copyFrom(aDotbcd);
-  parAlmond->kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_d,parAlmond->o_rho);
+  parAlmond->kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,parAlmond->o_rho);
   parAlmond->o_rho.copyTo(aDotbcd);
 }
 
