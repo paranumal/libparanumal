@@ -7,11 +7,13 @@ sources = $(wildcard $(sDir)/*c)
 includes = $(wildcard $(iDir)/*h)
 objects = $(subst $(sDir)/,$(objDir)/,$(sources:.c=.o))
 
-flags = -fopenmp -I${OCCA_DIR}/include -I$(iDir) -I../../include
+flags = -I${OCCA_DIR}/include -I$(iDir) -I../../include
 libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas 
 
 flags  += -D DPWD='"${CURDIR}"'
 CC =  mpic++ #${CXX}#mpicxx
+
+flags += -fopenmp
 
 # Debug Option
 ifeq ($(DEBUG), 1)

@@ -19,7 +19,7 @@ kernel void cooAXKernel(const int   numRows,
       for(int i=start;i<end;++i){
         Axn += coeffs[i]*x[cols[i]];
       }
-      y[n] += alpha*Axn;
+      y[n] = res + alpha*Axn;
     }
   }
 }

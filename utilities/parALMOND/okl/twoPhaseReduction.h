@@ -29,7 +29,7 @@
       	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
       	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
       	if(tx==0) { \
-          val = s_res[0]; \
+          datafloat val = s_res[0]; \
           atomicAdd(g_ip, val);     \
         } \
       }								\

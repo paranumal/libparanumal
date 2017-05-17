@@ -507,7 +507,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
   csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
 
-  dfloat y[A->Nrows];
+  dfloat y[A->Nrows]; //TODO get rid of this stack alloc
 
 #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){

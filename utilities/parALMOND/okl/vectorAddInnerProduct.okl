@@ -13,7 +13,7 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
     shared volatile datafloat s_res[p_RDIMY];
-    exclusive datafloat res, val;
+    exclusive datafloat res;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
@@ -22,7 +22,7 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
       	res = 0;
       	while(i<N){ // scan through whole array
       	  datafloat yi =  beta*y[i] + alpha*x[i];
-      	  res += yi*yi;
+      	  res += (yi*yi);
       	  y[i] = yi;
       	  i += outerDim0*p_RDIMX*p_RDIMY; 
       	}
