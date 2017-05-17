@@ -1,0 +1,8 @@
+
+kernel void vectorSet(const int N, const datafloat alpha, const datafloat *x){
+
+  for(int n=0;n<N;++n;tile(256)){
+    if(n<N)
+      x[n] = alpha;
+  }
+}
