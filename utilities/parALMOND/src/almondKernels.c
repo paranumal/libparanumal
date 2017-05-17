@@ -35,11 +35,8 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   parAlmond->ellJacobi1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
 		      "ellJacobi1", defs);
 
-  parAlmond->cooAXKernel1 = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
-			 "spmv_coo_kernel1", defs);
-
-  parAlmond->cooAXKernel2 = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
-			 "spmv_coo_kernel2", defs);
+  parAlmond->cooAXKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAXv2.okl",
+			 "cooAXKernel", defs);
 
   parAlmond->dcsrAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
        "dcsrAXPY", defs);
@@ -49,9 +46,6 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   
   parAlmond->dcsrJacobiKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dcsrAXPY.okl",
        "dcsrJacobi", defs);
-
-  parAlmond->copyKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/copy.okl",
-		      "copyKernel", defs);
 
   parAlmond->scaleVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/scaleVector.okl",
 			   "scaleVectorKernel", defs);
@@ -76,4 +70,14 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
 
   parAlmond->agg_interpolateKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/agg_interpolate.okl",
              "agg_interpolate", defs);
+
+  parAlmond->vectorAddInnerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAddInnerProduct.okl",
+             "vectorAddInnerProductKernel", defs);
+
+  parAlmond->kcycleCombinedOp1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
+             "kcycleCombinedOp1Kernel", defs);  
+
+  parAlmond->kcycleCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
+             "kcycleCombinedOp2Kernel", defs);
+
 }

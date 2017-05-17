@@ -178,12 +178,12 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->C->Ncols = A->Ncols;
   A->C->nnz   = nnzC;
 
-  iint *Crows;
+  iint *Coffsets;
   iint *Ccols;
   dfloat *Ccoefs;
 
   if (nnzC) {
-    Crows  = (iint *) calloc(nnzC, sizeof(iint));
+    Coffsets  = (iint *) calloc(A->Nrows+1, sizeof(iint));
     Ccols  = (iint *) calloc(nnzC, sizeof(iint));
     Ccoefs = (dfloat *) calloc(nnzC, sizeof(dfloat));
   }
@@ -205,13 +205,17 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     // store the remaining in coo format
     if(rowNnz > nnzPerRow){
       for(iint c=nnzPerRow; c<rowNnz; c++){
-        Crows[nnzC]   = i;
+        Coffsets[i]++;
         Ccols[nnzC]   = csrA->cols[Jstart+c];
         Ccoefs[nnzC]  = csrA->coefs[Jstart+c];
         nnzC++;
       }
     }
   }
+
+  //use counts to create offsets
+  for (iint i=0;i<A->Nrows;i++)
+    Coffsets[i+1] += Coffsets[i];
 
   // copy the data to device memory
   if(A->Nrows) {
@@ -226,9 +230,9 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     free(Ecols); free(Ecoefs);
   }
   if(A->C->nnz){
-    A->C->o_rows  = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Crows);
-    A->C->o_cols  = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
-    A->C->o_coefs = parAlmond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
+    A->C->o_offsets = parAlmond->device.malloc((A->Nrows+1)*sizeof(iint), Coffsets);
+    A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
+    A->C->o_coefs   = parAlmond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
 
     const iint numBlocks = (A->C->nnz + AGMGBDIM - 1)/AGMGBDIM;
 
@@ -238,7 +242,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     A->C->o_temp_rows = parAlmond->device.malloc(numBlocks*sizeof(iint), dummyRows);
     A->C->o_temp_Ax   = parAlmond->device.malloc(numBlocks*sizeof(dfloat), dummyAx);
 
-    free(Crows); free(Ccols); free(Ccoefs);
+    free(Coffsets); free(Ccols); free(Ccoefs);
     free(dummyAx); free(dummyRows);
   }
 
@@ -432,21 +436,13 @@ void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x,
   }
 }
 
-
 void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o_y) {
 
-  const iint numBlocks = (C->nnz+AGMGBDIM-1)/AGMGBDIM;
-
+  // do block-wise product
   if(C->nnz){
-    occaTimerTic(parAlmond->device,"coo ax1");
-    // do block-wise product
-    parAlmond->cooAXKernel1(numBlocks, AGMGBDIM, C->nnz, alpha, C->o_rows, C->o_cols, C->o_coefs,
-        o_x, o_y, C->o_temp_rows, C->o_temp_Ax);
-    occaTimerToc(parAlmond->device,"coo ax1");
-
-    occaTimerTic(parAlmond->device,"coo ax2");
-    parAlmond->cooAXKernel2(1, 1, numBlocks, C->o_temp_rows, C->o_temp_Ax, o_y);
-    occaTimerToc(parAlmond->device,"coo ax2");
+    occaTimerTic(parAlmond->device,"coo ax");
+    parAlmond->cooAXKernel(C->Nrows, alpha, C->o_offsets, C->o_cols, C->o_coefs,o_x, o_y);
+    occaTimerToc(parAlmond->device,"coo ax");
   }
 }
 

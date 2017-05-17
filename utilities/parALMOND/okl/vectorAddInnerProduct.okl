@@ -19,16 +19,16 @@
   }								\
 								\
   barrier(localMemFence);					\
-								\
+							\
   for(int ty=0;ty<p_RDIMY;++ty;inner1){				\
     for(int tx=0;tx<p_RDIMX;++tx;inner0){			\
       if(ty==0){						\
-	if(tx<p_RDIMY/2)  s_res[tx] += s_res[tx+p_RDIMY/2];	\
-	if(tx<p_RDIMY/4)  s_res[tx] += s_res[tx+p_RDIMY/4];	\
-	if(tx<p_RDIMY/8)  s_res[tx] += s_res[tx+p_RDIMY/8];	\
-	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
-	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
-	if(tx==0) atomicAdd(g_ip, s_res[0]);			\
+      	if(tx<p_RDIMY/2)  s_res[tx] += s_res[tx+p_RDIMY/2];	\
+      	if(tx<p_RDIMY/4)  s_res[tx] += s_res[tx+p_RDIMY/4];	\
+      	if(tx<p_RDIMY/8)  s_res[tx] += s_res[tx+p_RDIMY/8];	\
+      	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
+      	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
+      	if(tx==0) atomicAdd(g_ip, s_res[0]);			\
       }								\
     }								\
   }
@@ -53,15 +53,15 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-	int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
-	
-	res = 0;
-	while(i<N){ // scan through whole array
-	  datafloat yi =  beta*y[i] + alpha*x[i];
-	  res += yi*yi;
-	  y[i] = yi;
-	  i += outerDim0*p_RDIMX*p_RDIMY; 
-	}
+      	int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
+      	
+      	res = 0;
+      	while(i<N){ // scan through whole array
+      	  datafloat yi =  beta*y[i] + alpha*x[i];
+      	  res += yi*yi;
+      	  y[i] = yi;
+      	  i += outerDim0*p_RDIMX*p_RDIMY; 
+      	}
       }
     }
     
@@ -69,44 +69,4 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
   }
 }
 
-// a.b, a.c, b.b
-kernel void vectorAddTripleInnerProductKernel(const int outerDim0,
-					      const int   N,
-					      const datafloat *restrict a,
-					      const datafloat *restrict b,
-					      const datafloat *restrict c,
-					      datafloat *restrict ips){
-
-  for(int b=0;b<outerDim0;++b;outer0){
-
-    shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile datafloat s_res[p_RDIMY];
-
-    exclusive datafloat abi, aci, bbi;
-    
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
-	const int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
-
-	abi = 0.f;
-	aci = 0.f;
-	bbi = 0.f;
-	
-	while(i<N){ // scan through whole array
-	  const datafloat ai =  a[i];
-	  const datafloat bi =  b[i];
-	  const datafloat ci =  c[i];
-	  abi += ai*bi;
-	  aci += ai*ci;
-	  bbi += bi*bi;
-	  i += outerDim0*p_RDIMX*p_RDIMY; 
-	}
-      }
-    }
-
-    twoPhaseReduction(abi, s_ip, s_res, ips+0);
-    twoPhaseReduction(aci, s_ip, s_res, ips+1);
-    twoPhaseReduction(bbi, s_ip, s_res, ips+2);
-  }
-}
     

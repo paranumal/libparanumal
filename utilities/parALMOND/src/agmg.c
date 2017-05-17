@@ -264,7 +264,7 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   if (strstr(parAlmond->options,"MATRIXFREE")) {
     parAlmond->levels[0]->deviceA->E->o_cols.free();
     parAlmond->levels[0]->deviceA->E->o_coefs.free();
-    parAlmond->levels[0]->deviceA->C->o_rows.free();
+    parAlmond->levels[0]->deviceA->C->o_offsets.free();
     parAlmond->levels[0]->deviceA->C->o_cols.free();
     parAlmond->levels[0]->deviceA->C->o_coefs.free();
     parAlmond->levels[0]->deviceA->C->o_temp_rows.free();
