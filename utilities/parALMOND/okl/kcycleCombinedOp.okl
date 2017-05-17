@@ -29,7 +29,8 @@
       	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
       	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
       	if(tx==0) { \
-          atomicAdd(g_ip, s_res[0]);			\
+          val = s_res[0]; \
+          atomicAdd(g_ip, val);			\
         } \
       }								\
     }								\
@@ -41,14 +42,14 @@ kernel void kcycleCombinedOp1Kernel(const int outerDim0,
 					      const datafloat *restrict a,
 					      const datafloat *restrict b,
 					      const datafloat *restrict c,
-					      datafloat *ips){
+					            datafloat *restrict ips){
 
   for(int g=0;g<outerDim0;++g;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
     shared datafloat s_res[p_RDIMY];
 
-    exclusive datafloat abi, aci, bbi;
+    exclusive datafloat abi, aci, bbi, val;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
@@ -83,14 +84,14 @@ kernel void kcycleCombinedOp2Kernel(const int outerDim0,
                 const datafloat *restrict b,
                 const datafloat *restrict c,
                 const datafloat *restrict d,
-                datafloat *ips){
+                      datafloat *restrict ips){
 
   for(int g=0;g<outerDim0;++g;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared datafloat s_res[p_RDIMY];
+    shared volatile datafloat s_res[p_RDIMY];
 
-    exclusive datafloat abi, aci, adi;
+    exclusive datafloat abi, aci, adi, val;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){

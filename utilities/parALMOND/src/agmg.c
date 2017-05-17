@@ -246,7 +246,6 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
       parAlmond->levels[i]->deviceR = newHYB(parAlmond, parAlmond->levels[i]->R);
     }
 
-    printf("allocating M = %d rows and N = %d cols\n", M, N);
     parAlmond->levels[i]->o_x   = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->x);
     parAlmond->levels[i]->o_rhs = parAlmond->device.malloc(M*sizeof(dfloat), parAlmond->levels[i]->rhs);
     parAlmond->levels[i]->o_res = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->res);
