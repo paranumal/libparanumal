@@ -149,7 +149,6 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
       levels[n]->vkp1 = (dfloat *) calloc(M,sizeof(dfloat)); 
       levels[n]->wkp1 = (dfloat *) calloc(M,sizeof(dfloat));
     }
-
     levels[n]->x    = (dfloat *) calloc(N,sizeof(dfloat));
     levels[n]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
     levels[n]->res  = (dfloat *) calloc(N,sizeof(dfloat));
@@ -238,17 +237,16 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   buildAlmondKernels(parAlmond);
 
   for(int i=0; i<parAlmond->numLevels; i++){
+    iint N = parAlmond->levels[i]->Ncols;
+    iint M = parAlmond->levels[i]->Nrows;
+    
     parAlmond->levels[i]->deviceA = newHYB(parAlmond, parAlmond->levels[i]->A);
-    //parAlmond->levels[i]->deviceA = newDCSR(parAlmond, parAlmond->levels[i]->A);
     if (i < parAlmond->numLevels-1) {
       parAlmond->levels[i]->dcsrP   = newDCSR(parAlmond, parAlmond->levels[i]->P);
       parAlmond->levels[i]->deviceR = newHYB(parAlmond, parAlmond->levels[i]->R);
-      //parAlmond->levels[i]->deviceR = newDCSR(parAlmond, parAlmond->levels[i]->R);
     }
 
-    iint N = parAlmond->levels[i]->Ncols;
-    iint M = parAlmond->levels[i]->Nrows;
-
+    printf("allocating M = %d rows and N = %d cols\n", M, N);
     parAlmond->levels[i]->o_x   = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->x);
     parAlmond->levels[i]->o_rhs = parAlmond->device.malloc(M*sizeof(dfloat), parAlmond->levels[i]->rhs);
     parAlmond->levels[i]->o_res = parAlmond->device.malloc(N*sizeof(dfloat), parAlmond->levels[i]->res);
@@ -264,11 +262,11 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   if (strstr(parAlmond->options,"MATRIXFREE")) {
     parAlmond->levels[0]->deviceA->E->o_cols.free();
     parAlmond->levels[0]->deviceA->E->o_coefs.free();
-    parAlmond->levels[0]->deviceA->C->o_offsets.free();
-    parAlmond->levels[0]->deviceA->C->o_cols.free();
-    parAlmond->levels[0]->deviceA->C->o_coefs.free();
-    parAlmond->levels[0]->deviceA->C->o_temp_rows.free();
-    parAlmond->levels[0]->deviceA->C->o_temp_Ax.free();
+    if (parAlmond->levels[0]->deviceA->C->nnz) {
+      parAlmond->levels[0]->deviceA->C->o_offsets.free();
+      parAlmond->levels[0]->deviceA->C->o_cols.free();
+      parAlmond->levels[0]->deviceA->C->o_coefs.free();
+    }
     if(parAlmond->levels[0]->deviceA->NsendTotal) {
       parAlmond->levels[0]->deviceA->o_haloElementList.free();
       parAlmond->levels[0]->deviceA->o_haloBuffer.free();

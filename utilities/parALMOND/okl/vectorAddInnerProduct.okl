@@ -28,7 +28,9 @@
       	if(tx<p_RDIMY/8)  s_res[tx] += s_res[tx+p_RDIMY/8];	\
       	if(tx<p_RDIMY/16) s_res[tx] += s_res[tx+p_RDIMY/16];	\
       	if(tx<p_RDIMY/32) s_res[tx] += s_res[tx+p_RDIMY/32];	\
-      	if(tx==0) atomicAdd(g_ip, s_res[0]);			\
+      	if(tx==0) { \
+          atomicAdd(g_ip, s_res[0]);     \
+        } \
       }								\
     }								\
   }
@@ -42,13 +44,12 @@ kernel void vectorAddInnerProductKernel(const int outerDim0,
 					const datafloat   beta,
 					const datafloat *restrict x,
 				        datafloat *restrict y,
-					datafloat *restrict ip){
+					datafloat *ip){
 
   for(int b=0;b<outerDim0;++b;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile datafloat s_res[p_RDIMY];
-
+    shared  datafloat s_res[p_RDIMY];
     exclusive datafloat res;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
