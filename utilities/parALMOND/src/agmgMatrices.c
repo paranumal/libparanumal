@@ -100,7 +100,7 @@ dcsr *newDCSR(parAlmond_t *parAlmond, csr *B){
 }
 
 hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
-  
+
   hyb *A = (hyb *) calloc(1,sizeof(hyb));
 
   A->Nrows  = csrA->Nrows;
@@ -108,17 +108,17 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   dfloat *diagInv;
   iint *rowCounters;
-  if (A->Nrows) {
-    diagInv = (dfloat *) calloc(A->Nrows, sizeof(dfloat));
-    rowCounters = (iint*) calloc(A->Nrows, sizeof(iint));
+  if (csrA->Nrows) {
+    diagInv = (dfloat *) calloc(csrA->Nrows, sizeof(dfloat));
+    rowCounters = (iint*) calloc(csrA->Nrows, sizeof(iint));
   }
 
-  for(iint i=0; i<A->Nrows; i++)
+  for(iint i=0; i<csrA->Nrows; i++)
     diagInv[i] = 1.0/csrA->coefs[csrA->rowStarts[i]];
 
   iint maxNnzPerRow = 0;
-  iint minNnzPerRow = A->Ncols;
-  for(iint i=0; i<A->Nrows; i++) {
+  iint minNnzPerRow = csrA->Ncols;
+  for(iint i=0; i<csrA->Nrows; i++) {
     iint rowNnz = csrA->rowStarts[i+1] - csrA->rowStarts[i];
     rowCounters[i] = rowNnz;
 
@@ -136,7 +136,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   if (numBins)
     bins = (iint *) calloc(numBins, sizeof(iint));
 
-  for(iint i=0; i<A->Nrows; i++){
+  for(iint i=0; i<csrA->Nrows; i++){
     bins[rowCounters[i]-minNnzPerRow]++;
   }
 
@@ -152,44 +152,44 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   A->E = (ell *) calloc(1, sizeof(ell));
 
-  A->E->Nrows = A->Nrows;
-  A->E->Ncols = A->Ncols;
+  A->E->Nrows = csrA->Nrows;
+  A->E->Ncols = csrA->Ncols;
   A->E->nnzPerRow = nnzPerRow;
-  A->E->strideLength = A->Nrows;
+  A->E->strideLength = csrA->Nrows;
 
   iint *Ecols;
   dfloat *Ecoefs;
   if(nnzPerRow){
-    Ecols  = (iint *) calloc(A->Nrows*nnzPerRow, sizeof(iint));
-    Ecoefs = (dfloat *) calloc(A->Nrows*nnzPerRow, sizeof(dfloat));
+    Ecols  = (iint *) calloc(csrA->Nrows*nnzPerRow, sizeof(iint));
+    Ecoefs = (dfloat *) calloc(csrA->Nrows*nnzPerRow, sizeof(dfloat));
   }
 
   iint nnzC = 0;
 
   // count the number of nonzeros to be stored in coo format
-  for(iint i=0; i< A->Nrows; i++)
+  for(iint i=0; i< csrA->Nrows; i++)
     if(rowCounters[i] > nnzPerRow) nnzC += (rowCounters[i] - nnzPerRow);
 
   A->E->actualNNZ  = csrA->nnz - nnzC;
 
   A->C = (coo *) calloc(1, sizeof(coo));
 
-  A->C->Nrows = A->Nrows;
-  A->C->Ncols = A->Ncols;
+  A->C->Nrows = csrA->Nrows;
+  A->C->Ncols = csrA->Ncols;
   A->C->nnz   = nnzC;
 
   iint *Coffsets;
   iint *Ccols;
   dfloat *Ccoefs;
 
+  Coffsets = (iint *) calloc(csrA->Nrows+1, sizeof(iint));
   if (nnzC) {
-    Coffsets  = (iint *) calloc(A->Nrows+1, sizeof(iint));
-    Ccols  = (iint *) calloc(nnzC, sizeof(iint));
-    Ccoefs = (dfloat *) calloc(nnzC, sizeof(dfloat));
+    Ccols    = (iint *) calloc(nnzC, sizeof(iint));
+    Ccoefs   = (dfloat *) calloc(nnzC, sizeof(dfloat));
   }
 
   nnzC = 0;
-  for(iint i=0; i<A->Nrows; i++){
+  for(iint i=0; i<csrA->Nrows; i++){
     iint Jstart = csrA->rowStarts[i];
     iint Jend   = csrA->rowStarts[i+1];
     iint rowNnz = Jend - Jstart;
@@ -214,37 +214,32 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
 
   //use counts to create offsets
-  for (iint i=0;i<A->Nrows;i++)
+  for (iint i=0;i<csrA->Nrows;i++)
     Coffsets[i+1] += Coffsets[i];
 
   // copy the data to device memory
-  if(A->Nrows) {
-    A->o_diagInv = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
-    A->o_temp1 = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
+  if(csrA->Nrows) {
+    A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), diagInv);
+    A->o_temp1 = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), diagInv);
     free(diagInv); free(rowCounters); free(bins);
   }
 
   if(A->E->nnzPerRow){
-    A->E->o_cols  = parAlmond->device.malloc(A->Nrows*nnzPerRow*sizeof(iint), Ecols);
-    A->E->o_coefs = parAlmond->device.malloc(A->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
+    A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(iint), Ecols);
+    A->E->o_coefs = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
     free(Ecols); free(Ecoefs);
   }
+  
   if(A->C->nnz){
-    A->C->o_offsets = parAlmond->device.malloc((A->Nrows+1)*sizeof(iint), Coffsets);
+    printf("allocating %d rows\n", csrA->Nrows);
+    A->C->o_offsets = parAlmond->device.malloc((csrA->Nrows+1)*sizeof(iint), Coffsets);
     A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
     A->C->o_coefs   = parAlmond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
 
-    const iint numBlocks = (A->C->nnz + AGMGBDIM - 1)/AGMGBDIM;
-
-    iint *dummyRows = (iint *) calloc(numBlocks, sizeof(iint));
-    dfloat *dummyAx = (dfloat *) calloc(numBlocks, sizeof(dfloat));
-
-    A->C->o_temp_rows = parAlmond->device.malloc(numBlocks*sizeof(iint), dummyRows);
-    A->C->o_temp_Ax   = parAlmond->device.malloc(numBlocks*sizeof(dfloat), dummyAx);
-
-    free(Coffsets); free(Ccols); free(Ccoefs);
-    free(dummyAx); free(dummyRows);
+    free(Ccols); free(Ccoefs);
   }
+
+  free(Coffsets);
 
   A->NsendTotal = csrA->NsendTotal;
   A->NrecvTotal = csrA->NrecvTotal;
@@ -440,6 +435,7 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
 
   // do block-wise product
   if(C->nnz){
+    printf("runnign with %d rows \n", C->Nrows);
     occaTimerTic(parAlmond->device,"coo ax");
     parAlmond->cooAXKernel(C->Nrows, alpha, C->o_offsets, C->o_cols, C->o_coefs,o_x, o_y);
     occaTimerToc(parAlmond->device,"coo ax");

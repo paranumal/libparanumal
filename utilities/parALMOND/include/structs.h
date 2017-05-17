@@ -52,10 +52,6 @@ typedef struct coo_t {
   occa::memory o_cols;
   occa::memory o_coefs;
 
-  // buffers for matvec products
-  occa::memory o_temp_rows;
-  occa::memory o_temp_Ax;
-
 } coo;
 
 typedef struct hyb_t {
@@ -136,10 +132,8 @@ typedef struct agmgLevel_t {
   iint *globalRowStarts; //global partitioning
 
   hyb  *deviceA;
-  //dcsr  *deviceA;
   dcsr  *dcsrP;
   hyb  *deviceR;
-  //dcsr  *deviceR;
 
   dfloat *nullA;
 
