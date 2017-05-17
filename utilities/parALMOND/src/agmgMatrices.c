@@ -205,7 +205,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     // store the remaining in coo format
     if(rowNnz > nnzPerRow){
       for(iint c=nnzPerRow; c<rowNnz; c++){
-        Coffsets[i]++;
+        Coffsets[i+1]++;
         Ccols[nnzC]   = csrA->cols[Jstart+c];
         Ccoefs[nnzC]  = csrA->coefs[Jstart+c];
         nnzC++;
