@@ -37,6 +37,7 @@ typedef struct {
 
   occa::memory o_x;
   occa::memory o_Ax;
+  occa::memory o_rho;
 
   occa::kernel ellAXPYKernel; 
   occa::kernel ellZeqAXPYKernel;

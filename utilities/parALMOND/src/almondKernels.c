@@ -20,6 +20,7 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   defs.addInclude(DPWD "/okl/workgroup_segreduce.h");
   defs.addInclude(DPWD "/okl/workgroup_reduce.h");
   defs.addInclude(DPWD "/okl/workgroup_reduce_max.h");
+  defs.addInclude(DPWD "/okl/twoPhaseReduction.h");
 
   if(parAlmond->device.mode()=="OpenCL")
     parAlmond->device.setCompilerFlags("-cl-opt-disable");

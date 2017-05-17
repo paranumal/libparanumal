@@ -257,6 +257,10 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
     }
   }
 
+  //buffer for innerproducts in kcycle
+  dfloat dummy[3];
+  parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat), dummy);
+
   //if using matrix-free A action, free unnecessary buffers
   if (strstr(parAlmond->options,"MATRIXFREE")) {
     parAlmond->levels[0]->deviceA->E->o_cols.free();
