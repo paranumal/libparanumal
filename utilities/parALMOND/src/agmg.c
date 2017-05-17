@@ -10,7 +10,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
   const iint coarseSize = 10;
 
-  double seed = MPI_Wtime();
+  double seed = 1.0;//MPI_Wtime();
   double gSeed;
   MPI_Allreduce(&seed, &gSeed, 1, MPI_LONG, MPI_BXOR, MPI_COMM_WORLD);
   srand48(gSeed);
