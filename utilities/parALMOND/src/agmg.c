@@ -64,9 +64,6 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
     const iint coarseDim = coarseA->Nrows;
 
-    // allocate vectors required
-    //allocate(levels[lev]);
-
     SmoothType s = DAMPED_JACOBI;
     //SmoothType s = JACOBI;
 
@@ -93,7 +90,6 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     }
 
     if(coarseA->Nrows <= coarseSize || dim < 2*coarseDim){
-      //allocate(levels[lev+1]);
       setup_smoother(levels[lev+1],JACOBI);
       break;
     }
@@ -258,8 +254,7 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   }
 
   //buffer for innerproducts in kcycle
-  dfloat dummy[3];
-  parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat), dummy);
+  parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat));
 
   //if using matrix-free A action, free unnecessary buffers
   if (strstr(parAlmond->options,"MATRIXFREE")) {
@@ -474,52 +469,12 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       rho1   = rhoGlobal[1];
       norm_rkp1 = sqrt(rhoGlobal[2]);
 
-      //degugging 1 -----------------------
-      dfloat alpha1HOST, rho1HOST, norm_rkp1HOST;
-
-      dfloat *ckp1 = parAlmond->levels[k+1]->ckp1; 
-      dfloat *vkp1 = parAlmond->levels[k+1]->vkp1; 
-      dfloat *wkp1 = parAlmond->levels[k+1]->wkp1;
-      dfloat *dkp1 = parAlmond->levels[k+1]->x; 
-      dfloat *rkp1 = parAlmond->levels[k+1]->rhs;
-
-      parAlmond->levels[k+1]->o_ckp1.copyTo(ckp1); 
-      parAlmond->levels[k+1]->o_rhs .copyTo(rkp1);
-      parAlmond->levels[k+1]->o_vkp1.copyTo(vkp1);
-
-      kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1);
-
-      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-
-      alpha1HOST = rhoGlobal[0];
-      rho1HOST   = rhoGlobal[1];
-      norm_rkp1HOST = sqrt(rhoGlobal[2]);
-
-      printf("---kcycleCombinedOp1---\n");
-      printf("alpha DEVICE = %g, alpha HOST = %g\n", alpha1, alpha1HOST);
-      printf("rho   DEVICE = %g, rho   HOST = %g\n", rho1, rho1HOST);
-      printf("norm  DEVICE = %g, norm  HOST = %g\n", norm_rkp1, norm_rkp1HOST);
-      //------------------------------
-
-
       // rkp1 = rkp1 - (alpha1/rho1)*vkp1
       norm_rktilde_pLocal = vectorAddInnerProd(parAlmond, mCoarse, -alpha1/rho1, 
                                                 parAlmond->levels[k+1]->o_vkp1, 1.0,
                                                 parAlmond->levels[k+1]->o_rhs);
       MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
       norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
-
-      //debugging 2 -----------------
-      dfloat norm_rktilde_pGlobalHOST;
-
-      norm_rktilde_pLocal = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1);
-      MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobalHOST,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-      norm_rktilde_pGlobalHOST = sqrt(norm_rktilde_pGlobalHOST);
-
-      printf("---vectorAddInnerProd---\n");
-      printf("nomm DEVICE = %g, norm HOST = %g\n", norm_rktilde_pGlobal, norm_rktilde_pGlobalHOST);
-
-      //----------------------------
 
       dfloat t = 0.2;
       if(norm_rktilde_pGlobal < t*norm_rkp1){
@@ -553,29 +508,6 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
         gamma  = rhoGlobal[0];
         beta   = rhoGlobal[1];
         alpha2 = rhoGlobal[2];
-
-
-        //degugging 3 -----------------------
-        dfloat gammaHOST, betaHOST, alpha2HOST;
-
-        parAlmond->levels[k+1]->o_x.copyTo(dkp1); 
-        parAlmond->levels[k+1]->o_vkp1.copyTo(vkp1);
-        parAlmond->levels[k+1]->o_wkp1.copyTo(wkp1);
-        parAlmond->levels[k+1]->o_rhs .copyTo(rkp1);
-
-        kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1);
-
-        MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-
-        gammaHOST = rhoGlobal[0];
-        betaHOST   = rhoGlobal[1];
-        alpha2HOST = rhoGlobal[2];
-
-        printf("---kcycleCombinedOp2---\n");
-        printf("gamma  DEVICE = %g, gamma  HOST = %g\n", gamma, gammaHOST);
-        printf("beta   DEVICE = %g, beta   HOST = %g\n", beta, betaHOST);
-        printf("alpha2 DEVICE = %g, alpha2 HOST = %g\n", alpha2, alpha2HOST);
-        //--------------------------------------
 
         if(fabs(rho1) > (dfloat) 1e-20){
 
@@ -705,7 +637,6 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
 
   // restrict the residual to next level
   restrict(parAlmond, parAlmond->levels[k], parAlmond->levels[k]->o_res, parAlmond->levels[k+1]->o_rhs);
-
 
   if(k+1 < parAlmond->numLevels - 1){
     device_vcycle(parAlmond, k+1);
