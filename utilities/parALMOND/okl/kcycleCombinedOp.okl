@@ -41,7 +41,7 @@ kernel void kcycleCombinedOp1Kernel(const int outerDim0,
 					      const datafloat *restrict c,
 					      datafloat *restrict ips){
 
-  for(int b=0;b<outerDim0;++b;outer0){
+  for(int g=0;g<outerDim0;++g;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
     shared volatile datafloat s_res[p_RDIMY];
@@ -50,7 +50,7 @@ kernel void kcycleCombinedOp1Kernel(const int outerDim0,
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-      	const int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
+	int i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
       	abi = 0.f;
       	aci = 0.f;
@@ -83,7 +83,7 @@ kernel void kcycleCombinedOp2Kernel(const int outerDim0,
                 const datafloat *restrict d,
                 datafloat *restrict ips){
 
-  for(int b=0;b<outerDim0;++b;outer0){
+  for(int g=0;g<outerDim0;++g;outer0){
 
     shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
     shared volatile datafloat s_res[p_RDIMY];
@@ -92,7 +92,7 @@ kernel void kcycleCombinedOp2Kernel(const int outerDim0,
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-        const int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
+        int i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
         abi = 0.f;
         aci = 0.f;
@@ -102,7 +102,7 @@ kernel void kcycleCombinedOp2Kernel(const int outerDim0,
           const datafloat ai =  a[i];
           const datafloat bi =  b[i];
           const datafloat ci =  c[i];
-          const datafloat ci =  d[i];
+          const datafloat di =  d[i];
           abi += ai*bi;
           aci += ai*ci;
           adi += ai*di;
