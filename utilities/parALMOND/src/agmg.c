@@ -64,6 +64,9 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
     const iint coarseDim = coarseA->Nrows;
 
+    // allocate vectors required
+    //allocate(levels[lev]);
+
     SmoothType s = DAMPED_JACOBI;
     //SmoothType s = JACOBI;
 
@@ -90,6 +93,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     }
 
     if(coarseA->Nrows <= coarseSize || dim < 2*coarseDim){
+      //allocate(levels[lev+1]);
       setup_smoother(levels[lev+1],JACOBI);
       break;
     }
@@ -254,7 +258,8 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   }
 
   //buffer for innerproducts in kcycle
-  parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat));
+  dfloat dummy[3];
+  parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat), dummy);
 
   //if using matrix-free A action, free unnecessary buffers
   if (strstr(parAlmond->options,"MATRIXFREE")) {
@@ -611,9 +616,9 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
 
   // switch to cpu if the problem size is too small for gpu
   if(m < GPU_CPU_SWITCH_SIZE){
-    parAlmond->levels[k]->o_rhs.copyTo(&(parAlmond->levels[k]->rhs[0]), m*sizeof(dfloat));
+    parAlmond->levels[k]->o_rhs.copyTo(parAlmond->levels[k]->rhs, m*sizeof(dfloat));
     vcycle(parAlmond, k);
-    parAlmond->levels[k]->o_x.copyFrom(&(parAlmond->levels[k]->x[0]), m*sizeof(dfloat));
+    parAlmond->levels[k]->o_x.copyFrom(parAlmond->levels[k]->x, m*sizeof(dfloat));
     return;
   }
 
@@ -637,6 +642,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
 
   // restrict the residual to next level
   restrict(parAlmond, parAlmond->levels[k], parAlmond->levels[k]->o_res, parAlmond->levels[k+1]->o_rhs);
+
 
   if(k+1 < parAlmond->numLevels - 1){
     device_vcycle(parAlmond, k+1);
