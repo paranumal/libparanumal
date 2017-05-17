@@ -1,5 +1,4 @@
 
-
 void restrict(agmgLevel *level, dfloat *r, dfloat *Rr);
 
 void restrict(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_r, occa::memory o_Rr);
