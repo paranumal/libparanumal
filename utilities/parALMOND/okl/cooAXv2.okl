@@ -10,15 +10,17 @@ kernel void cooAXKernel(const int   numRows,
 			    datafloat *restrict y){
   
   for(int n=0;n<numRows;++n;tile(256)){
-    int start = offsets[n];
-    int end = offsets[n+1];
-    
-    datafloat res = y[n];
-    datafloat Axn = 0;
-    for(int i=start;i<end;++i){
-      Axn += coeffs[i]*x[cols[i]];
+    if (n<numRows) {
+      int start = offsets[n];
+      int end = offsets[n+1];
+      
+      datafloat res = y[n];
+      datafloat Axn = 0;
+      for(int i=start;i<end;++i){
+        Axn += coeffs[i]*x[cols[i]];
+      }
+      y[n] += alpha*Axn;
     }
-    y[n] += alpha*Axn;
   }
 }
 	

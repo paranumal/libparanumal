@@ -231,7 +231,6 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
   
   if(A->C->nnz){
-    printf("allocating %d rows\n", csrA->Nrows);
     A->C->o_offsets = parAlmond->device.malloc((csrA->Nrows+1)*sizeof(iint), Coffsets);
     A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
     A->C->o_coefs   = parAlmond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
@@ -435,7 +434,6 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
 
   // do block-wise product
   if(C->nnz){
-    printf("runnign with %d rows \n", C->Nrows);
     occaTimerTic(parAlmond->device,"coo ax");
     parAlmond->cooAXKernel(C->Nrows, alpha, C->o_offsets, C->o_cols, C->o_coefs,o_x, o_y);
     occaTimerToc(parAlmond->device,"coo ax");
