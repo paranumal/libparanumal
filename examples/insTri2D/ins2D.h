@@ -14,32 +14,37 @@ mesh_t *mesh;
 // INS SOLVER OCCA VARIABLES
 dfloat rho, nu ;
 iint Nfields;
-iint NtotalDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
+iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
 //
 dfloat dt; // time step
 dfloat finalTime; // final time to run acoustics to
 iint   NtimeSteps;// number of time steps 
 iint   errorStep; 
 
-dfloat a0, a1, b0, b1, g0; 
-dfloat *U,  *Pr, *rhsU, *rhsPr;
-dfloat *UO, *UI, *NU; 
+dfloat a0, a1, a2, b0, b1, b2, g0; 
+dfloat *Pr, *rhsU, *rhsPr;
+dfloat *U, *UO, *UOO, *UI, *NU, *NUO,*NUOO; 
 dfloat g[2]; // gravitational Acceleration
 
-occa::memory o_U, o_UO, o_UI, o_NU, o_Pr;
+occa::memory o_U, o_UO, o_UOO, o_UI, o_NU, o_NUO, o_NUOO, o_Pr;
 occa::memory o_rhsU, o_rhsPr; 
 
 
 occa::kernel haloExtractKernel;
 occa::kernel haloScatterKernel;
+//
+occa::kernel helmholtzRhsVolumeKernel;
+occa::kernel helmholtzRhsSurfaceKernel;
+occa::kernel helmholtzRhsUpdateKernel;
 
-//
-occa::kernel advectionVolumeKernel; // deprecated
-occa::kernel advectionSurfaceKernel; 
-occa::kernel advectionUpdateKernel;  
-//
-occa::kernel pressureRhsVolumeKernel; 
-occa::kernel pressureRhsSurfaceKernel;
+
+// //
+// occa::kernel advectionVolumeKernel; // deprecated
+// occa::kernel advectionSurfaceKernel; 
+// occa::kernel advectionUpdateKernel;  
+// //
+// occa::kernel pressureRhsVolumeKernel; 
+// occa::kernel pressureRhsSurfaceKernel;
 
   
 }solver_t;
@@ -55,7 +60,7 @@ void insPlotVTU2D(solver_t *solver, char *fileNameBase);
 void insReport2D(solver_t *solver, iint tstep, char *options);
 void insError2D(solver_t *solver, dfloat time,char *options);
 
-void insAdvectionStep2D(solver_t *solver, iint tstep, iint haloBytes,
+void insHelmholtzStep2D(solver_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 void insPressureStep2D(solver_t *solver, iint tstep, iint haloBytes,
