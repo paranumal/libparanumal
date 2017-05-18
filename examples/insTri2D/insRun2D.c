@@ -5,7 +5,7 @@ void insRun2D(solver_t *ins, char *options){
   mesh2D *mesh = ins->mesh; 
 
   // Allocate MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*ins->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*(ins->Nfields+1)*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
@@ -13,26 +13,31 @@ void insRun2D(solver_t *ins, char *options){
 
  
   //First Order Coefficients
-  ins->a0 = 1.0, ins->b0 = 1.0,  ins->a1 = 0.0, ins->b1 =0.0, ins->g0 = 1.0; 
+  ins->a0 = 1.0, ins->b0 = 1.f;
+  ins->a1 = 0.f, ins->b1 = 0.f;
+  ins->b2 = 0.f, ins->b2 = 0.f;
+  ins->g0 = 1.f; 
 
    
-  insAdvectionStep2D(ins, 0, haloBytes, sendBuffer, recvBuffer,options);
+  insHelmholtzStep2D(ins, 0, haloBytes, sendBuffer, recvBuffer, options);
+
+
 
 
 
 
   
   // Switch to second order
-  ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
+  //ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
 
 
   occa::initTimer(mesh->device);
 
   for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
        //
-       insAdvectionStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
+       //insHelmholtzStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
        
-       insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
+       //insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
 
 
 

@@ -54,11 +54,11 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 	
 	// load surface geofactors for this face
 	iint sid = p_Nsgeo*(e*p_Nfaces+face);
-	nx = sgeo[sid+p_NXID];
-	ny = sgeo[sid+p_NYID];
-	sJ = sgeo[sid+p_SJID];
-	invJ = sgeo[sid+p_IJID];
-	hinv = sgeo[sid+p_IHID];
+	nx       = sgeo[sid+p_NXID];
+	ny       = sgeo[sid+p_NYID];
+	sJ       = sgeo[sid+p_SJID];
+	invJ     = sgeo[sid+p_IJID];
+	hinv     = sgeo[sid+p_IHID];
 
 	// Neumann boundary condition
 	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;

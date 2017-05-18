@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep2D(solver_t *ins, iint tstep,  iint haloBytes,
+void insHelmholtzStep2D(solver_t *ins, iint tstep,  iint haloBytes,
 				               dfloat * sendBuffer, dfloat * recvBuffer,  char   * options){
 
 	mesh2D *mesh = ins->mesh; 
@@ -14,10 +14,11 @@ void insAdvectionStep2D(solver_t *ins, iint tstep,  iint haloBytes,
 	if(mesh->totalHaloPairs>0){
 	 
     ins->haloExtractKernel(mesh->Nelements,
-                         mesh->totalHaloPairs,
-                         mesh->o_haloElementList,
-                         ins->o_U,
-                         mesh->o_haloBuffer);
+                           mesh->totalHaloPairs,
+                           mesh->o_haloElementList,
+                           ins->o_U,
+                           ins->o_Pr,
+                           mesh->o_haloBuffer);
 
     // copy extracted halo to HOST 
     mesh->o_haloBuffer.copyTo(sendBuffer);            
@@ -30,11 +31,13 @@ void insAdvectionStep2D(solver_t *ins, iint tstep,  iint haloBytes,
 
   	// Compute Volume Contribution
 
-   ins->advectionVolumeKernel(mesh->Nelements,
+   ins->helmholtzRhsVolumeKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_DrT,
                               mesh->o_DsT,
                               ins->o_U,
+                              ins->o_Pr,
+                              ins->o_NU,   
                               ins->o_rhsU);
 
 
@@ -49,11 +52,12 @@ void insAdvectionStep2D(solver_t *ins, iint tstep,  iint haloBytes,
                           mesh->totalHaloPairs,
                           mesh->o_haloElementList,
                           ins->o_U,
+                          ins->o_Pr,
                           mesh->o_haloBuffer);
   }
 
  // Compute Surface Conribution
-  ins->advectionSurfaceKernel(mesh->Nelements,
+  ins->helmholtzRhsSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
                               mesh->o_vmapM,
@@ -63,20 +67,28 @@ void insAdvectionStep2D(solver_t *ins, iint tstep,  iint haloBytes,
                               mesh->o_x,
                               mesh->o_y,
                               ins->o_U,
+                              ins->o_Pr,
+                              ins->o_NU,
                               ins->o_rhsU);
  // Update fields
-    ins->advectionUpdateKernel(mesh->Nelements,
+    ins->helmholtzRhsUpdateKernel(mesh->Nelements,
+                              mesh->o_vgeo,
+                              mesh->o_MM,
                               ins->dt,	
                               ins->a0,
                               ins->a1,
+                              ins->a2,
                               ins->b0,
                               ins->b1,
-                              ins->g0,
+                              ins->b2,
                               ins->o_U,
                               ins->o_UO,
-                              ins->o_rhsU,
+                              ins->o_UOO,
                               ins->o_NU,
-                              ins->o_UI);
+                              ins->o_NUO,
+                              ins->o_NUOO,
+                              ins->o_rhsU
+                              );
 
    
 }
