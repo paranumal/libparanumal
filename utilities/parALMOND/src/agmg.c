@@ -289,7 +289,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  scaleVector(m, parAlmond->levels[k]->x, 0.0);
+  setVector(m, parAlmond->levels[k]->x, 0.0);
 
   smooth(parAlmond->levels[k], parAlmond->levels[k]->rhs, parAlmond->levels[k]->x, true);
 
@@ -417,7 +417,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  scaleVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
+  setVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
 
   //use matrix free action if its been given
   if ((k==0)&&strstr(parAlmond->options,"MATRIXFREE")) {
@@ -539,7 +539,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse); 
       parAlmond->levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));  
     } else {
-      scaleVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);
+      setVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);
       smooth(parAlmond, parAlmond->levels[k+1], parAlmond->levels[k+1]->o_rhs, parAlmond->levels[k+1]->o_x, true);
     }
   }
@@ -568,7 +568,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  scaleVector(m, parAlmond->levels[k]->x,  0.0);
+  setVector(m, parAlmond->levels[k]->x,  0.0);
 
   smooth(parAlmond->levels[k], parAlmond->levels[k]->rhs, parAlmond->levels[k]->x, true);
 
@@ -627,7 +627,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  scaleVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
+  setVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
 
   if ((k==0)&&strstr(parAlmond->options,"MATRIXFREE")){
     matFreeSmooth(parAlmond, parAlmond->levels[k], parAlmond->levels[k]->o_rhs, parAlmond->levels[k]->o_x, true);
@@ -656,7 +656,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse); 
       parAlmond->levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));  
     } else {
-      scaleVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);
+      setVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);
       smooth(parAlmond, parAlmond->levels[k+1], parAlmond->levels[k+1]->o_rhs, parAlmond->levels[k+1]->o_x, true);
     }
   }

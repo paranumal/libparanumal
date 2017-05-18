@@ -1,111 +1,26 @@
-// These codes are adopted from cusp
-// cusp/detail/device/spmv/coo_flat.h and cusp/detail/device/spmv/coo_serial.h
-
-// this kernel assumes that (rows, cols, coefs) are sorted with rows
 
 // y += alpha*A*x
 
-kernel void spmv_coo_kernel1(const int outerDim0, const int innerDim0,
-         const int   num_nonzeros,
-         const datafloat   alpha,
-           const       int *restrict rows,
-           const       int *restrict cols,
-           const datafloat *restrict coefs,
-           const datafloat *restrict x,
-                 datafloat *restrict Ax,
-                       int *restrict temp_rows,
-                 datafloat *restrict temp_Ax){
-
-
-  for(int outerId0=0;outerId0<outerDim0;++outerId0;outer0){
-
-     shared       int  Lrows[bdim+1] aligned;
-     shared datafloat  LAx[bdim] aligned;
-     exclusive datafloat e_left;
-
-    // read the data in to shared memory
-    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
-
-      const int i = innerId0;
-      const int n = innerId0 + innerDim0*outerId0;
-
-      if(n < num_nonzeros){
-        Lrows[i] = rows[n];
-        LAx[i] = alpha * coefs[n] * x[cols[n]];
-
-        if(i == bdim - 1) {
-          if (n+1 < num_nonzeros) {
-            Lrows[i+1] = rows[n+1];
-          } else {
-            Lrows[i+1] = -1;
-          }
-
-        }
-      } else{
-        Lrows[i] = -1;
-        LAx[i] = (datafloat) 0.0;
-
-        if(i == bdim - 1) Lrows[i+1] = -1;
+kernel void cooAXKernel(const iint   numRows,
+			    const dfloat           alpha,
+			    const   iint *restrict offsets,
+			    const   iint *restrict cols,
+			    const dfloat *restrict coeffs,
+			    const dfloat *restrict x,
+			          dfloat *restrict y){
+  
+  for(iint n=0;n<numRows;++n;tile(256)){
+    if (n<numRows) {
+      iint start = offsets[n];
+      iint end = offsets[n+1];
+      
+      dfloat res = y[n];
+      dfloat Axn = 0;
+      for(iint i=start;i<end;++i){
+        Axn += coeffs[i]*x[cols[i]];
       }
-    }
-
-    barrier(localMemFence);
-
-    // perform segmented reduction in the workgroup
-    workgroup_segreduce(e_left, Lrows, LAx); // TW core
-
-    barrier(localMemFence);
-
-    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
-
-      const int i = innerId0;
-      //      const int n = globalId0;
-
-      if(Lrows[i] != Lrows[i+1]){
-  //  Ax[Lrows[i]] = LAx[i];
-  Ax[Lrows[i]] += LAx[i];
-      }
-
-      // check at the last entry
-      if(i == bdim-1){
-  // if the last row of this block is not equal
-  // then there is no trouble
-  if(Lrows[i] != Lrows[i+1]){
-    temp_rows[outerId0] = -1;
-    temp_Ax[outerId0] = (datafloat) 0.;
-  }
-  else{
-    // if there is match at the interface, store the value in
-    // temp_rows and temp_Ax
-    temp_rows[outerId0] = Lrows[i];
-    temp_Ax[outerId0] = LAx[i];
-  }
-      }
+      y[n] = res + alpha*Axn;
     }
   }
 }
-
-
-// only one thread is used
-// num_entries should be no of workgroups from previous kernel
-// TODO do it in one workgroup instead
-kernel void spmv_coo_kernel2(const int outerDim0, const int innerDim0,
-         const int   num_entries,
-           const int *restrict temp_rows,
-           const datafloat *restrict temp_Ax,
-                 datafloat *restrict Ax){
-
-  for(int outerId0=0;outerId0<outerDim0;++outerId0;outer0){
-    for(int innerId0=0;innerId0<innerDim0;++innerId0;inner0){
-      if(innerId0 == 0 && outerId0 == 0){
-  //  printf("using only one thread \n");
-  for(int n = 0; n < num_entries; n++){
-    const int row = temp_rows[n];
-    if(row > -1) Ax[row] += temp_Ax[n];
-  }
-      }
-    }
-  }
-}
-
-
+	

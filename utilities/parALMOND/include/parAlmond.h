@@ -41,19 +41,17 @@ typedef struct {
 
   occa::kernel ellAXPYKernel; 
   occa::kernel ellZeqAXPYKernel;
-  occa::kernel ellJacobi1Kernel;
+  occa::kernel ellJacobiKernel;
   occa::kernel cooAXKernel; 
-  occa::kernel dcsrAXPYKernel; 
-  occa::kernel dcsrZeqAXPYKernel; 
-  occa::kernel dcsrJacobiKernel; 
   occa::kernel scaleVectorKernel;
-  occa::kernel partialInnerProdKernel;
   occa::kernel vectorAddKernel;
   occa::kernel vectorAddKernel2; 
+  occa::kernel setVectorKernel;
   occa::kernel dotStarKernel; 
   occa::kernel simpleDotStarKernel;
   occa::kernel haloExtract;
   occa::kernel agg_interpolateKernel;
+  occa::kernel innerProdKernel;
   occa::kernel vectorAddInnerProdKernel;
   occa::kernel kcycleCombinedOp1Kernel;
   occa::kernel kcycleCombinedOp2Kernel;

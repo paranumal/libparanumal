@@ -1,35 +1,35 @@
 
 // a.b, a.c, b.b
-kernel void kcycleCombinedOp1Kernel(const int outerDim0,
-					      const int   N,
-					      const datafloat *restrict a,
-					      const datafloat *restrict b,
-					      const datafloat *restrict c,
-					            datafloat *restrict ips){
+kernel void kcycleCombinedOp1Kernel(const iint Nblocks,
+					      const iint   N,
+					      const dfloat *restrict a,
+					      const dfloat *restrict b,
+					      const dfloat *restrict c,
+					            dfloat *restrict ips){
 
-  for(int g=0;g<outerDim0;++g;outer0){
+  for(iint g=0;g<Nblocks;++g;outer0){
 
-    shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile datafloat s_res[p_RDIMY];
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive datafloat abi, aci, bbi, val;
+    exclusive dfloat abi, aci, bbi;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-	      int i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
+	      iint i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
       	abi = 0.f;
       	aci = 0.f;
       	bbi = 0.f;
       	
       	while(i<N){ // scan through whole array
-      	  const datafloat ai =  a[i];
-      	  const datafloat bi =  b[i];
-      	  const datafloat ci =  c[i];
+      	  const dfloat ai =  a[i];
+      	  const dfloat bi =  b[i];
+      	  const dfloat ci =  c[i];
       	  abi += ai*bi;
       	  aci += ai*ci;
       	  bbi += bi*bi;
-      	  i += outerDim0*p_RDIMX*p_RDIMY; 
+      	  i += Nblocks*p_RDIMX*p_RDIMY; 
       	}
       }
     }
@@ -41,38 +41,38 @@ kernel void kcycleCombinedOp1Kernel(const int outerDim0,
 }
 
 // a.b, a.c, b.b
-kernel void kcycleCombinedOp2Kernel(const int outerDim0,
-                const int   N,
-                const datafloat *restrict a,
-                const datafloat *restrict b,
-                const datafloat *restrict c,
-                const datafloat *restrict d,
-                      datafloat *restrict ips){
+kernel void kcycleCombinedOp2Kernel(const iint Nblocks,
+                const iint   N,
+                const dfloat *restrict a,
+                const dfloat *restrict b,
+                const dfloat *restrict c,
+                const dfloat *restrict d,
+                      dfloat *restrict ips){
 
-  for(int g=0;g<outerDim0;++g;outer0){
+  for(iint g=0;g<Nblocks;++g;outer0){
 
-    shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile datafloat s_res[p_RDIMY];
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive datafloat abi, aci, adi, val;
+    exclusive dfloat abi, aci, adi;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-        int i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
+        iint i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
         abi = 0.f;
         aci = 0.f;
         adi = 0.f;
         
         while(i<N){ // scan through whole array
-          const datafloat ai =  a[i];
-          const datafloat bi =  b[i];
-          const datafloat ci =  c[i];
-          const datafloat di =  d[i];
+          const dfloat ai =  a[i];
+          const dfloat bi =  b[i];
+          const dfloat ci =  c[i];
+          const dfloat di =  d[i];
           abi += ai*bi;
           aci += ai*ci;
           adi += ai*di;
-          i += outerDim0*p_RDIMX*p_RDIMY; 
+          i += Nblocks*p_RDIMX*p_RDIMY; 
         }
       }
     }

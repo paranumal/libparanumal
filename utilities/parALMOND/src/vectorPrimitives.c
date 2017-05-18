@@ -1,6 +1,5 @@
 #include "parAlmond.h"
 
-
 dfloat norm(iint n, dfloat *a){
   dfloat result = 0.;
   #pragma omp parallel for reduction(+:result)
@@ -92,8 +91,13 @@ void scaleVector(iint m, dfloat *a, dfloat alpha){
     a[i] *= alpha;
 }
 
+void setVector(iint m, dfloat *a, dfloat alpha){
+  #pragma omp parallel for
+  for(iint i=0; i<m; i++)
+    a[i] = alpha;
+}
+
 void randomize(iint m, dfloat *a){
-  //#pragma omp parallel for
   for(iint i=0; i<m; i++)
     a[i] = (dfloat) drand48();
 }
@@ -114,55 +118,45 @@ dfloat maxEntry(iint n, dfloat *a){
 }
 
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->scaleVectorKernel(numBlocks, AGMGBDIM, N, alpha, o_a);
+  parAlmond->scaleVectorKernel(N, alpha, o_a);
+}
+
+void setVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
+  parAlmond->setVectorKernel(N, alpha, o_a);
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->simpleDotStarKernel(numBlocks, AGMGBDIM, N, o_a, o_b);
+  parAlmond->simpleDotStarKernel(N, o_a, o_b);
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->dotStarKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_a, o_b, o_c);
-}
-
-dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-
-  dfloat *hostRed = (dfloat *) calloc(numBlocks, sizeof(dfloat));
-  occa::memory o_dRed =
-    parAlmond->device.malloc(numBlocks*sizeof(dfloat), hostRed);
-
-  parAlmond->partialInnerProdKernel(numBlocks, AGMGBDIM, N, o_a, o_b, o_dRed);
-
-  o_dRed.copyTo(hostRed);
-
-  dfloat result = 0.;
-  for(iint i=0; i<numBlocks; i++)
-    result += hostRed[i];
-
-  free(hostRed);
-  o_dRed.free();
-
-  return result;
+  parAlmond->dotStarKernel(N, alpha, beta, o_a, o_b, o_c);
 }
 
 #define RDIMX 32
 #define RDIMY 8
 
+dfloat innerProd(parAlmond_t *parAlmond, iint N, 
+                  occa::memory o_x, occa::memory o_y){
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
+
+  dfloat result =0.;
+
+  parAlmond->o_rho.copyFrom(&result,1*sizeof(dfloat));
+  parAlmond->innerProdKernel(numBlocks,N,o_x,o_y,parAlmond->o_rho);
+  parAlmond->o_rho.copyTo(&result,1*sizeof(dfloat));
+  return result;
+}
 
 // returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
 void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::memory o_a, 
                                         occa::memory o_b, occa::memory o_c) {
-  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
-
   aDotbc[0] = 0.;
   aDotbc[1] = 0.;
   aDotbc[2] = 0.;
 
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
   parAlmond->o_rho.copyFrom(aDotbc);
   parAlmond->kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,parAlmond->o_rho);
   parAlmond->o_rho.copyTo(aDotbc);
@@ -171,12 +165,11 @@ void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::mem
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
 void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::memory o_a, 
                                               occa::memory o_b, occa::memory o_c, occa::memory o_d) {
-  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
-
   aDotbcd[0] = 0.;
   aDotbcd[1] = 0.;
   aDotbcd[2] = 0.;
 
+  const iint numBlocks = (N+RDIMX*RDIMY-1)/(RDIMX*RDIMY);
   parAlmond->o_rho.copyFrom(aDotbcd);
   parAlmond->kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,parAlmond->o_rho);
   parAlmond->o_rho.copyTo(aDotbcd);
@@ -197,12 +190,10 @@ dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::me
 
 
 void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->vectorAddKernel(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y);
+  parAlmond->vectorAddKernel(N, alpha, beta, o_x, o_y);
 }
 
 void vectorAdd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x,
 	 dfloat beta, occa::memory o_y, occa::memory o_z){
-  const iint numBlocks = (N+AGMGBDIM-1)/AGMGBDIM;
-  parAlmond->vectorAddKernel2(numBlocks, AGMGBDIM, N, alpha, beta, o_x, o_y, o_z);
+  parAlmond->vectorAddKernel2(N, alpha, beta, o_x, o_y, o_z);
 }

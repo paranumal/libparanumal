@@ -23,9 +23,6 @@ void axpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, dfloat
 void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, 
             dfloat beta, occa::memory o_y,  occa::memory o_z);
 
-void zeqaxpy(parAlmond_t *parAlmond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, 
-              occa::memory o_y, occa::memory o_z);
-
 void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o_y);
 
 void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, 
@@ -37,9 +34,6 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
 void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
 void smoothDampedJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory o_x,
              				dfloat alpha, bool x_is_zero);
-void smoothJacobi(parAlmond_t *parAlmond, dcsr *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
-void smoothDampedJacobi(parAlmond_t *parAlmond, dcsr *A, occa::memory o_r, occa::memory o_x,
-         					dfloat alpha, bool x_is_zero);
 
 void matFreeSmoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
 void matFreeSmoothDampedJacobi(parAlmond_t *parAlmond, hyb* A, occa::memory o_r,
