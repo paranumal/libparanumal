@@ -279,6 +279,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   occa::memory &o_Ap = solver->o_Ap;
   occa::memory &o_Ax = solver->o_Ax;
 
+  occa::streamTag startTag = mesh->device.tagStream();
+  
   occaTimerTic(mesh->device,"PCG");
 
   // compute A*x
@@ -381,9 +383,16 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   }while(rdotr0>(tol*tol));
 
   occaTimerToc(mesh->device,"PCG");
+
+  occa::streamTag stopTag = mesh->device.tagStream();
+
+  double elapsed = mesh->device.timeBetween(startTag, stopTag);
+  double gElapsed;
+  MPI_Allreduce(&elapsed, &gElapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   
   if(rank==0)
-    printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+    printf("elapsed = %g iter=%05d pAp = %g norm(r) = %g\n",
+	   gElapsed, Niter, pAp, sqrt(rdotr0));
 
   occa::printTimer();
 
