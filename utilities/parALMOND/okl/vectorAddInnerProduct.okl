@@ -1,30 +1,30 @@
   
 // y = beta*y + alpha*x
 // ip = y.y 
-kernel void vectorAddInnerProductKernel(const int outerDim0,
-					const int   N,
-					const datafloat   alpha,
-					const datafloat   beta,
-					const datafloat *restrict x,
-				        datafloat *restrict y,
-					      datafloat *restrict ip){
+kernel void vectorAddInnerProductKernel(const iint Nblocks,
+					const iint   N,
+					const dfloat   alpha,
+					const dfloat   beta,
+					const dfloat *restrict x,
+				        dfloat *restrict y,
+					      dfloat *restrict ip){
 
-  for(int b=0;b<outerDim0;++b;outer0){
+  for(iint b=0;b<Nblocks;++b;outer0){
 
-    shared volatile datafloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile datafloat s_res[p_RDIMY];
-    exclusive datafloat res;
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
+    exclusive dfloat res;
     
     for(int ty=0;ty<p_RDIMY;++ty;inner1){
       for(int tx=0;tx<p_RDIMX;++tx;inner0){
-      	int i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
+      	iint i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
       	
       	res = 0;
       	while(i<N){ // scan through whole array
-      	  datafloat yi =  beta*y[i] + alpha*x[i];
+      	  dfloat yi =  beta*y[i] + alpha*x[i];
       	  res += (yi*yi);
       	  y[i] = yi;
-      	  i += outerDim0*p_RDIMX*p_RDIMY; 
+      	  i += Nblocks*p_RDIMX*p_RDIMY; 
       	}
       }
     }

@@ -3,18 +3,13 @@
 // stored in P_cols
 // y = y + P*x,  (Px is used to represent y in the kernel)
 
-kernel void agg_interpolate(const int outerDim0, 
-			    const int innerDim0,
-			    const int   n,
-			    const int *restrict P_cols,
-			    const datafloat *restrict P_coefs,
-			    const datafloat *restrict x,
-			    datafloat *restrict Px){
+kernel void agg_interpolate(const iint   n,
+          const iint *restrict P_cols,
+          const dfloat *restrict P_coefs,
+          const dfloat *restrict x,
+          dfloat *restrict Px){
 
-  for(int globalId0=0;globalId0<outerDim0*innerDim0;++globalId0;tile(innerDim0)){
-
-    const int i = globalId0;
-
+  for(iint i=0;i<n;++i;tile(256)){
     // 3 co-alesced access and 1 random access
     if(i<n)
       Px[i] += (P_coefs[i]*x[P_cols[i]]);

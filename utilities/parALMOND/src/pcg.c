@@ -144,11 +144,10 @@ void pcg(parAlmond_t *parAlmond,
   zeqaxpy(parAlmond, A, -1.0, o_x0, 1.0, o_b, o_r0);
 
   //    r = r0;
-  copyVector(parAlmond, m, o_r0, o_r);
+  o_r.copyFrom(o_r0);
 
   //    x = x0;
-  copyVector(parAlmond, m, o_x0, o_x);
-
+  o_x.copyFrom(o_x0);
 
   dfloat rho, alpha, beta, rho_previous;
 
@@ -193,7 +192,7 @@ void pcg(parAlmond_t *parAlmond,
     resvec[i] = sqrt(resvec[i]);
 
     //      di_previous = di;
-    copyVector(parAlmond, m, o_di, o_di_previous);
+    o_di_previous.copyFrom(o_di);
     rho_previous = rho;
 
     if(resvec[i] < tol*nb){

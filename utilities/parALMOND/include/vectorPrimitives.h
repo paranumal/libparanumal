@@ -18,20 +18,22 @@ void dotStar(iint m, dfloat *a, dfloat *b);
 
 void scaleVector(iint m, dfloat *a, dfloat alpha);
 
+void setVector(iint m, dfloat *a, dfloat alpha);
+
 void randomize(iint m, dfloat *a);
 
 dfloat maxEntry(iint n, dfloat *a);
 
-void copyVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b);
-
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha);
+
+void setVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha);
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b);
 
 void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c);
 
-dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b);
+dfloat innerProd(parAlmond_t *parAlmond, iint N, occa::memory o_x, occa::memory o_y);
 
 // returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
 void kcycleCombinedOp1(parAlmond_t *parAlmond, iint n, dfloat *aDotbc, occa::memory o_a, 
