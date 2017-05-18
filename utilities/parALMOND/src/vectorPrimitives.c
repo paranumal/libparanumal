@@ -136,11 +136,11 @@ void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 
 #define RDIMX 32
 #define RDIMY 8
-
+#define RLOAD 2
 dfloat innerProd(parAlmond_t *parAlmond, iint N, 
                   occa::memory o_x, occa::memory o_y){
 
-  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/4;
+  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
   dfloat result =0.;
@@ -158,7 +158,7 @@ void kcycleCombinedOp1(parAlmond_t *parAlmond, iint N, dfloat *aDotbc, occa::mem
   aDotbc[1] = 0.;
   aDotbc[2] = 0.;
 
-  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/4;
+  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
   parAlmond->o_rho.copyFrom(aDotbc);
@@ -173,7 +173,7 @@ void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::me
   aDotbcd[1] = 0.;
   aDotbcd[2] = 0.;
 
-  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/4;
+  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
   parAlmond->o_rho.copyFrom(aDotbcd);
@@ -184,7 +184,7 @@ void kcycleCombinedOp2(parAlmond_t *parAlmond, iint N, dfloat *aDotbcd, occa::me
 // y = beta*y + alpha*x, and return y\dot y
 dfloat vectorAddInnerProd(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_x, 
                                                           dfloat beta, occa::memory o_y){
-  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/4;
+  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
   
   dfloat result =0.;
