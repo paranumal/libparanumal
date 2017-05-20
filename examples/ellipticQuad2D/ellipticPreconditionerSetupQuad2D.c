@@ -125,10 +125,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     for(iint e=0;e<mesh->Nelements;++e){
       for(iint j=0;j<mesh->Nq;++j){
         for(iint i=0;i<mesh->Nq;++i){
-  	iint id  = i + j*mesh->Nq + e*mesh->Np;
-  	iint pid = i + 1 + (j+1)*NqP + e*NpP;
+        	iint id  = i + j*mesh->Nq + e*mesh->Np;
+        	iint pid = i + 1 + (j+1)*NqP + e*NpP;
 
-  	preconGatherInfo[pid] = gatherInfo[id];
+        	preconGatherInfo[pid] = gatherInfo[id];
         }
       }
     }
@@ -147,9 +147,9 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
   #if 1
         if(gatherInfo[idM].haloFlag){
-  	preconGatherInfo[idMP].haloFlag = 1;
-  	preconGatherInfo[idMP+offsetP[f]].haloFlag = 1;
-  	preconGatherInfo[idMP+2*offsetP[f]].haloFlag = 1;
+        	preconGatherInfo[idMP].haloFlag = 1;
+        	preconGatherInfo[idMP+offsetP[f]].haloFlag = 1;
+        	preconGatherInfo[idMP+2*offsetP[f]].haloFlag = 1;
         }
   #endif
       }

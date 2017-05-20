@@ -178,6 +178,8 @@ void ellipticPreconditioner2D(solver_t *solver,
 
 
   if(strstr(options, "OAS")){
+    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) 
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
 
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
@@ -219,18 +221,12 @@ void ellipticPreconditioner2D(solver_t *solver,
     if(strstr(options, "COARSEGRID")){ // should split into two parts
       occaTimerTic(mesh->device,"coarseGrid");  
 
-      // halo exchange to make sure each vertex patch has available halo
-      ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-      
-      ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
-      
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       occaTimerTic(mesh->device,"coarsenKernel");
       precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
       occaTimerToc(mesh->device,"coarsenKernel");
 
       if(strstr(options,"XXT")){
-        //mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
         precon->o_r1.copyTo(precon->r1); 
         xxtSolve(precon->z1, precon->xxt,precon->r1);
         precon->o_z1.copyFrom(precon->z1);
