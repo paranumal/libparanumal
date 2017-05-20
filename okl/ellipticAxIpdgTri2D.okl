@@ -17,7 +17,7 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 				const dfloat * restrict LIFTT,
 				const dfloat * restrict MM,
 				const dfloat4 * restrict gradq,
-				dfloat  * restrict Aq){
+				      dfloat  * restrict Aq){
   
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
