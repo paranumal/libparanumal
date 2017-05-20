@@ -176,10 +176,10 @@ void ellipticPreconditioner2D(solver_t *solver,
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
 
+  if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) 
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
 
   if(strstr(options, "OAS")){
-    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) 
-      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
 
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
