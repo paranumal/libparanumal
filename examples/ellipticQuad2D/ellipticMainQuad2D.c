@@ -23,8 +23,9 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
-    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,GLOBALALMOND,UBERGRID");
-    strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
+    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND,UBERGRID");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
     //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
   
   

@@ -178,17 +178,14 @@ void ellipticPreconditioner2D(solver_t *solver,
 
 
   if(strstr(options, "OAS")){
-    
+
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
 
-    //    diagnostic(mesh->Np*mesh->Nelements, o_r, "o_r");
-
     // compute local precon on DEVICE
     occaTimerTic(mesh->device,"OASpreconKernel");
-    if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")) {
-
+    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) {
       precon->preconKernel(mesh->Nelements,
          precon->o_vmapPP,
          precon->o_faceNodesP,
@@ -198,9 +195,9 @@ void ellipticPreconditioner2D(solver_t *solver,
          o_r,
          o_zP);
       ellipticParallelGatherScatterQuad2D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
+      mesh->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeP,o_zP,o_zP);
     }
     else{
-      
       precon->preconKernel(mesh->Nelements,
          mesh->o_vmapP,
          precon->o_faceNodesP,
@@ -210,17 +207,17 @@ void ellipticPreconditioner2D(solver_t *solver,
          o_r,
          o_zP);
       ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
+      mesh->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
     } 
     occaTimerToc(mesh->device,"OASpreconKernel");
-    
+
     // extract block interiors on DEVICE
     occaTimerTic(mesh->device,"restrictKernel");
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
     occaTimerToc(mesh->device,"restrictKernel");   
 
-
     if(strstr(options, "COARSEGRID")){ // should split into two parts
-      occaTimerTic(mesh->device,"coarseGrid");
+      occaTimerTic(mesh->device,"coarseGrid");  
 
       // halo exchange to make sure each vertex patch has available halo
       ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
@@ -229,10 +226,11 @@ void ellipticPreconditioner2D(solver_t *solver,
       
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       occaTimerTic(mesh->device,"coarsenKernel");
-      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
       occaTimerToc(mesh->device,"coarsenKernel");
 
       if(strstr(options,"XXT")){
+        //mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
         precon->o_r1.copyTo(precon->r1); 
         xxtSolve(precon->z1, precon->xxt,precon->r1);
         precon->o_z1.copyFrom(precon->z1);
@@ -298,16 +296,16 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   occaTimerTic(mesh->device,"PCG");
 
+  // gather-scatter rhs
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+  
   // compute A*x
   ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
   
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
-  // gather-scatter 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
-    ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
-  
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){
 
