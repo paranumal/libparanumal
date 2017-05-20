@@ -65,8 +65,8 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
     squareThreadsP{
 
       if( (j<(p_Nq)) && (i<(p_Nq))){
-	iint m = j*p_Nq + i;
-	s_q1[j+1][i+1] = q[m+e*p_Np];
+      	iint m = j*p_Nq + i;
+      	s_q1[j+1][i+1] = q[m+e*p_Np];
       }
       
       iint n=i+p_NqP*j;
@@ -80,9 +80,9 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       // p_Nfp*p_Nfaces = (N+1)*4 < (N+3)^2
       
       while(n<p_Nfp*p_Nfaces){
-	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
-	s_q1[0][faceNodesP[n]] = q[id];
-	n += p_NqP*p_NqP;
+      	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
+      	s_q1[0][faceNodesP[n]] = q[id];
+      	n += p_NqP*p_NqP;
       }
     }
       
@@ -93,8 +93,8 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       dfloat tmp = 0.f;
 
       //      occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
-	  tmp += s_forward[i][n]*s_q1[j][n];
+    	for(iint n=0;n<p_NqP;++n)
+    	  tmp += s_forward[i][n]*s_q1[j][n];
 
       s_q2[j][i] = tmp;
     }
@@ -106,12 +106,12 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       dfloat tmp = 0.f;
 
       //      occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
-	  tmp += s_forward[j][n]*s_q2[n][i];
+    	for(iint n=0;n<p_NqP;++n)
+    	  tmp += s_forward[j][n]*s_q2[n][i];
       
       // diagonal inverse
-	s_q1[j][i] = r_diagInvOp*tmp;
-	//	s_q1[j][i] = tmp;
+    	s_q1[j][i] = r_diagInvOp*tmp;
+    	//	s_q1[j][i] = tmp;
     }
 
     barrier(localMemFence);
@@ -121,9 +121,9 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       dfloat tmp = 0.f;
 
       //      occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
-	  tmp += s_back[j][n]*s_q1[n][i];
-      
+    	for(iint n=0;n<p_NqP;++n)
+    	  tmp += s_back[j][n]*s_q1[n][i];
+          
       s_q2[j][i] = tmp;
     }
 
@@ -134,8 +134,8 @@ kernel void ellipticOasPreconQuad2D(const iint Nelements,
       dfloat tmp = 0.f;
 
       //      occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
-	  tmp += s_back[i][n]*s_q2[j][n];
+    	for(iint n=0;n<p_NqP;++n)
+    	  tmp += s_back[i][n]*s_q2[j][n];
 
       const iint idP=i+p_NqP*j+ p_NpP*e;
       
