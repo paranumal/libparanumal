@@ -21,7 +21,7 @@ dfloat finalTime; // final time to run acoustics to
 iint   NtimeSteps;// number of time steps 
 iint   errorStep; 
 
-dfloat a0, a1, a2, b0, b1, b2, g0; 
+dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
 dfloat *Pr, *rhsU, *rhsPr;
 dfloat *U, *UO, *UOO, *UI, *NU, *NUO,*NUOO; 
 dfloat g[2]; // gravitational Acceleration
@@ -36,6 +36,8 @@ occa::kernel haloScatterKernel;
 occa::kernel helmholtzRhsVolumeKernel;
 occa::kernel helmholtzRhsSurfaceKernel;
 occa::kernel helmholtzRhsUpdateKernel;
+occa::kernel helmholtzRhsIpdgBCKernel;
+
 
 
 // //
