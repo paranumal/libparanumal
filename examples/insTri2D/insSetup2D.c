@@ -36,6 +36,7 @@
   dfloat pr   = 0.0  ;   
   dfloat nu   = 1.0/40.0;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
+
   
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitation
   
@@ -50,6 +51,7 @@
   ins->finalTime = 1. ;
   ins->nu        = nu ;
   ins->rho       = rho;
+  ins->tau       = 1000.; 
   //
    //memcpy(ins->g, g,2*sizeof(dfloat));
 
@@ -173,6 +175,7 @@
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NtotalDofs", ins->NtotalDofs);
   kernelInfo.addDefine("p_NDofs",      ins->NDofs);
+  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
 
 
@@ -203,39 +206,47 @@
   ins->o_UOO   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UOO);
   ins->o_UI    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->UI);
 
+  
+  // for(int n=0; n<mesh->Np;n++){
+  //   for(int m=0;m<mesh->Nfp*mesh->Nfaces;m++){
+  //   printf("%g ", mesh->FMM[m+n*mesh->Nfp*mesh->Nfaces]);
+  //   }
+  //  printf("\n");
 
+  // }
 
    // KERNEL DEFINITIONS
-  // if(strstr(options, "CUBATURE")){ 
-  // printf("Compiling Advection volume kernel with cubature integration\n");
-  // mesh->volumeKernel =
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-  //     "insAdvectionVolumeCub2D",
-  //       kernelInfo);
-  // }
-  // else{
+  if(strstr(options, "CUBATURE")){ 
+  printf("Compiling Advection volume kernel with cubature integration\n");
+  ins->helmholtzRhsVolumeKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+      "insHelmholtzRhsVolumeCub2D",
+        kernelInfo);
+   }
+  else{
   printf("Compiling Advection volume kernel with collocation integration\n");
   ins->helmholtzRhsVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
       "insHelmholtzRhsVolume2D",
         kernelInfo);
-  // }
+  }
 
-   // KERNEL DEFINITIONS
-  // if(strstr(options, "CUBATURE")){ 
-  // printf("Compiling Advection volume kernel with cubature integration\n");
-  // mesh->volumeKernel =
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-  //     "insAdvectionVolumeCub2D",
-  //       kernelInfo);
-  // }
-  // else{
+  if(strstr(options, "CUBATURE")){ 
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->helmholtzRhsSurfaceKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+      "insHelmholtzRhsSurfaceCub2D",
+        kernelInfo);
+  }
+  else{
   printf("Compiling Advection volume kernel with collocation integration\n");
   ins->helmholtzRhsSurfaceKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
       "insHelmholtzRhsSurface2D",
         kernelInfo);
-  // }
+  }
+
+
 
 
   printf("Compiling Advection volume kernel with collocation integration\n");
@@ -243,6 +254,29 @@
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
       "insHelmholtzRhsUpdate2D",
         kernelInfo);
+
+
+ if(strstr(options, "CUBATURE")){ 
+  printf("Compiling Advection surface kernel with cubature integration\n");
+  ins->helmholtzRhsIpdgBCKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+      "insHelmholtzRhsIpdgBCCub2D",
+        kernelInfo);  
+  }
+  else{
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->helmholtzRhsIpdgBCKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+      "insHelmholtzRhsIpdgBC2D",
+        kernelInfo);  
+  }
+
+
+  // printf("Compiling Advection volume kernel with collocation integration\n");
+  // ins->helmholtzRhsIpdgBCKernel = 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+  //     "insHelmholtzRhsIpdgBC2D",
+  //       kernelInfo);  
 
 
   // printf("Compiling Pressure RHS volume kernel with collocation integration\n");
@@ -253,17 +287,17 @@
 
 
   
-  printf("Compiling INS Halo Extract Kernel\n");
-  ins->haloExtractKernel= 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-      "insHaloExtract2D",
-        kernelInfo);
+  // printf("Compiling INS Halo Extract Kernel\n");
+  // ins->haloExtractKernel= 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+  //     "insHaloExtract2D",
+  //       kernelInfo);
 
-   printf("Compiling INS Halo Extract Kernel\n");
-  ins->haloScatterKernel= 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-      "insHaloScatter2D",
-        kernelInfo);  
+  //  printf("Compiling INS Halo Extract Kernel\n");
+  // ins->haloScatterKernel= 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+  //     "insHaloScatter2D",
+  //       kernelInfo);  
 
  ins->mesh = mesh;   
 

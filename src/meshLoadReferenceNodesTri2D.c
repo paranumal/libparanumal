@@ -82,6 +82,13 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp);
 
+  fgets(buf, BUFSIZ, fp); // AK read comment
+  mesh->FMM = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->FMM+n);
+  }
+  fgets(buf, BUFSIZ, fp);
+
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
