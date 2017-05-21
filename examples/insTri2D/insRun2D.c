@@ -5,9 +5,13 @@ void insRun2D(solver_t *ins, char *options){
   mesh2D *mesh = ins->mesh; 
 
   // Allocate MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*(ins->Nfields+1)*sizeof(dfloat);
-  dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
-  dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+  iint helmholtzHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  dfloat *helmholtzSendBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  dfloat *helmholtzRecvBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  //
+  iint poissonHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
+  dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
 
   occa::initTimer(mesh->device);
 
@@ -19,8 +23,8 @@ void insRun2D(solver_t *ins, char *options){
   ins->g0 = 1.f; 
 
    
-  insHelmholtzStep2D(ins, 0, haloBytes, sendBuffer, recvBuffer, options);
-
+  insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  insPoissonStep2D(ins, 0, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options);
 
 
 
@@ -35,7 +39,7 @@ void insRun2D(solver_t *ins, char *options){
 
   for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
        //
-       //insHelmholtzStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer, options);
+       //insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
        
        //insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
 
@@ -60,8 +64,13 @@ void insRun2D(solver_t *ins, char *options){
   occa::printTimer();
 
   // Deallocate Halo MPI storage
-  free(recvBuffer);
-  free(sendBuffer);
+  free(helmholtzSendBuffer);
+  free(helmholtzRecvBuffer);
+  //
+  free(poissonSendBuffer);
+  free(poissonRecvBuffer);
+  //
+
 }
 
 

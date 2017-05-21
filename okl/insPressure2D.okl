@@ -46,7 +46,7 @@ kernel void insPressureRhsVolume2D(	const iint Nelements,
 									const dfloat * restrict DrT,
 									const dfloat * restrict DsT,
 									const dfloat * restrict UI,
-									dfloat * restrict rhsPr
+									      dfloat * restrict rhsPr
 				          ){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
