@@ -41,7 +41,7 @@ insPlotVTU2D.o \
 insError2D.o \
 insReport2D.o \
 insHelmholtzStep2D.o \
-insPressureStep2D.o  
+insPoissonStep2D.o  
 
 LOBJS    = \
 ../../src/meshParallelReaderTri2D.o \
