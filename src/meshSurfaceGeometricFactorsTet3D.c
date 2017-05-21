@@ -89,27 +89,27 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     printf("N3=(%g,%g,%g),sJ3=%g\n", nx3/sJ3,ny3/sJ3,nz3/sJ3,sJ3*J);
     printf("N4=(%g,%g,%g),sJ4=%g\n", nx4/sJ4,ny4/sJ4,nz4/sJ4,sJ4*J);
 #endif      
-
-    for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-      for(iint f=0;f<mesh->Nfaces;++f){
-        iint baseM = e*mesh->Nfaces + f;
-
-        // awkward: (need to find eP,fP relative to bulk+halo)
-        iint idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
-        iint eP = (idP>=0) ? (idP/mesh->Np):e;
-
-        iint fP = mesh->EToF[baseM];
-        fP = (fP==-1) ? f:fP;
-
-        iint baseP = eP*mesh->Nfaces + fP;
-
-        // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
-        dfloat hinvM = 0.5*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
-        dfloat hinvP = 0.5*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
-        
-        mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-        mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-      }
+  }
+  
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint baseM = e*mesh->Nfaces + f;
+      
+      // awkward: (need to find eP,fP relative to bulk+halo)
+      iint idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
+      iint eP = (idP>=0) ? (idP/mesh->Np):e;
+      
+      iint fP = mesh->EToF[baseM];
+      fP = (fP==-1) ? f:fP;
+      
+      iint baseP = eP*mesh->Nfaces + fP;
+      
+      // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
+      dfloat hinvM = 0.5*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+      dfloat hinvP = 0.5*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+      
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
   }
 }
