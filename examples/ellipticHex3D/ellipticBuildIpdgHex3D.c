@@ -108,11 +108,11 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	}
 
 	// loop over all faces in this element
-	for(iint f=0;f<mesh->Nfaces;++f){
+	for(iint fM=0;fM<mesh->Nfaces;++fM){
 	  // accumulate flux terms for negative and positive traces
 	  dfloat AnmP = 0;
 	  for(iint i=0;i<mesh->Nfp;++i){
-	    iint vidM = mesh->faceNodes[i+f*mesh->Nfp];
+	    iint vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
 	    // grab vol geofacs at surface nodes
 	    iint baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
@@ -127,8 +127,8 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	    dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
 
 	    // double check vol geometric factors are in halo storage of vgeo
-	    iint idM     = eM*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+i;
-	    iint vidP    = mesh->vmapP[idM]%mesh->Np;
+	    iint idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+	    iint vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
 	    iint localEP = mesh->vmapP[idM]/mesh->Np;
 	    iint baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
 	    dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
@@ -142,7 +142,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	    dfloat dtdzP = mesh->vgeo[baseP+mesh->Np*TZID];
 	    
 	    // grab surface geometric factors
-	    iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + i);
+	    iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
 	    dfloat nx = mesh->sgeo[base+NXID];
 	    dfloat ny = mesh->sgeo[base+NYID];
 	    dfloat nz = mesh->sgeo[base+NZID];
@@ -150,7 +150,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	    dfloat hinv = mesh->sgeo[base+IHID];
 	    
 	    // form negative trace terms in IPDG
-	    int idnM = n*mesh->Np+vidM; // sort this out
+	    int idnM = n*mesh->Np+vidM; 
 	    int idmM = m*mesh->Np+vidM;
 	    int idmP = m*mesh->Np+vidP;
 
@@ -186,8 +186,8 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	  
 	  if(fabs(AnmP)>tol){
 	    // remote info
-	    iint eP    = mesh->EToE[eM*mesh->Nfaces+f];
-	    iint rankP = mesh->EToP[eM*mesh->Nfaces+f]; 
+	    iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+	    iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
 	    (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
 	    (*A)[nnz].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
 	    (*A)[nnz].val = Anm;
