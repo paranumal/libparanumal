@@ -9,18 +9,63 @@ typedef struct{
 
 }nonZero_t;
 
-void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, dfloat *Avals, iint *Arows, iint *Acols, const char *options){
+void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
 
   /* do a halo exchange of local node numbers */
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
-  nonZero_t *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
+  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+
+  // drop tolerance for entries in sparse storage
+  dfloat tol = 1e-8;
+  dfloat tau = 2; // hackery
+
+  // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
+  dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *Br = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *Bs = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *Bt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+
+  iint mode = 0;
+  for(iint nk=0;nk<mesh->N+1;++nk){
+    for(iint nj=0;nj<mesh->N+1;++nj){
+      for(iint ni=0;ni<mesh->N+1;++ni){
+
+	iint node = 0;
+
+	for(iint k=0;k<mesh->N+1;++k){
+	  for(iint j=0;j<mesh->N+1;++j){
+	    for(iint i=0;i<mesh->N+1;++i){
+
+	      if(nk==k && nj==j && ni==i)
+		B[mode*mesh->Np+node] = 1;
+	      if(nj==j && nk==k)
+		Br[mode*mesh->Np+node] = mesh->D[ni*mesh->Nq+i]; // check order
+	      if(ni==i && nk==k)
+		Bs[mode*mesh->Np+node] = mesh->D[nj*mesh->Nq+j]; // check order
+	      if(ni==i && nj==j)
+		Bt[mode*mesh->Np+node] = mesh->D[nk*mesh->Nq+k]; // check order
+	      
+	      ++node;
+	    }
+	  }
+	}
+	
+	++mode;
+      }
+    }
+  }
+	
+  // reset non-zero counter
+  int nnz = 0;
+      
+  // loop over all elements
   for(iint e=0;e<mesh->Nelements;++e){
     
     /* build Dx,Dy,Dz (forget the TP for the moment) */
     for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
 	dfloat Anm = 0;
 
 	// (grad phi_n, grad phi_m)_{D^e}
@@ -49,7 +94,10 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, dfloat *Avals, iint *Ar
 	  Anm += JW*B[idn]*B[idm];
 	}
 
+	// loop over all faces in this element
 	for(iint f=0;f<mesh->Nfaces;++f){
+	  // accumulate flux terms for negative and positive traces
+	  dfloat AnmP = 0;
 	  for(iint i=0;i<mesh->Nfp;++i){
 	    iint vidM = mesh->faceNodes[i+f*mesh->Nfp];
 
@@ -84,34 +132,74 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, dfloat *Avals, iint *Ar
 	    dfloat ny = mesh->sgeo[base+NYID];
 	    dfloat nz = mesh->sgeo[base+NZID];
 	    dfloat wsJ = mesh->sgeo[base+WSJID];
-
+	    dfloat hinv = mesh->sgeo[base+IHID];
+	    
 	    // form negative trace terms in IPDG
-	    int idnM = n*mesh->Np+vidM;
+	    int idnM = n*mesh->Np+vidM; // sort this out
 	    int idmM = m*mesh->Np+vidM;
-	    dfloat dlndxM = drdxM*Br[idn] + dsdxM*Bs[idn] + dtdxM*Bt[idn];
-	    dfloat dlndyM = drdyM*Br[idn] + dsdyM*Bs[idn] + dtdyM*Bt[idn];
-	    dfloat dlndzM = drdzM*Br[idn] + dsdzM*Bs[idn] + dtdzM*Bt[idn];	  
-	    dfloat dlmdxM = drdxM*Br[idm] + dsdxM*Bs[idm] + dtdxM*Bt[idm];
-	    dfloat dlmdyM = drdyM*Br[idm] + dsdyM*Bs[idm] + dtdyM*Bt[idm];
-	    dfloat dlmdzM = drdzM*Br[idm] + dsdzM*Bs[idm] + dtdzM*Bt[idm];
-	    dfloat lnM = B[idn], lmM = B[idm];
+	    int idmP = m*mesh->Np+vidP;
+
+	    dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM*Bt[idnM];
+	    dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM*Bt[idnM];
+	    dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM*Bt[idnM];	  
+	    dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM] + dtdxM*Bt[idmM];
+	    dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM] + dtdyM*Bt[idmM];
+	    dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM*Bt[idmM];
+
+	    dfloat dlndxP = drdxP*Br[idnP] + dsdxP*Bs[idnP] + dtdxP*Bt[idnP];
+	    dfloat dlndyP = drdyP*Br[idnP] + dsdyP*Bs[idnP] + dtdyP*Bt[idnP];
+	    dfloat dlndzP = drdzP*Br[idnP] + dsdzP*Bs[idnP] + dtdzP*Bt[idnP];	  
+	    dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP] + dtdxP*Bt[idmP];
+	    dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP] + dtdyP*Bt[idmP];
+	    dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP] + dtdzP*Bt[idmP];
+
+	    dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;
+	    
+	    dfloat lnM = B[idnM], lmM = B[idmM];
+	    dfloat lnP = B[idnP], lmP = B[idmP];
+	    
 	    dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM;
 	    dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM+nz*dlmdzM;
-	    Anm += wsJ*lnM*ndotgradlmM; // (ln^-, N.grad lm^-) check sign
-	    Anm += wsJ*ndotgradlnM*lmM; // (N.grad ln^-, lm^-) check sign
-	    
+	    dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
+
+	    Anm += -0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
+	    Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
+	    Anm += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
+
+	    // need to check for BC ?
+	    AnmP += -0.5*wsJ*lnM*ndotgradlmP;  // -(ln^-, N.grad lm^+)
+	    AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
+	    AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
+	  }
+	  
+	  if(fabs(AnmP)>tol){
+	    // local block
+	    iint rP = mesh->EToP[e*mesh->Nfaces+f]; // check this 
+	    (*A)[nnz].row = n + e*mesh->Np + rankStarts[rM];
+	    (*A)[nnz].col = m + e*mesh->Np + rankStarts[rP];
+	    (*A)[nnz].val = Anm;
+	    ++nnz;
 	  }
 	}
-
-	dfloat tol = 1e-8;
+	
 	if(fabs(Anm)>tol){
 	  // local block
-	  A[cnt].row = n + e*mesh->Np + cumStarts[r];
-	  A[cnt].col = m + e*mesh->Np + cumStarts[r];
-	  A[cnt].val = Anm;
-	  ++cnt;
+	  (*A)[nnz].row = n + e*mesh->Np + rankStarts[rM];
+	  (*A)[nnz].col = m + e*mesh->Np + rankStarts[rM];
+	  (*A)[nnz].val = Anm;
+	  ++nnz;
 	}
       }
     }
   }
+
+  // free up unused storage
+  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  
+  *nnzA = nnz;
+  
+  free(B);
+  free(Br);
+  free(Bs);
+  free(Bt);
 }
