@@ -156,22 +156,23 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 
 	    dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM*Bt[idnM];
 	    dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM*Bt[idnM];
-	    dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM*Bt[idnM];	  
+	    dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM*Bt[idnM];
+	    dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM;
+	    dfloat lnM = B[idnM];
+
 	    dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM] + dtdxM*Bt[idmM];
 	    dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM] + dtdyM*Bt[idmM];
 	    dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM*Bt[idmM];
+	    dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM+nz*dlmdzM;
+	    dfloat lmM = B[idmM];
+	    
 	    dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP] + dtdxP*Bt[idmP];
 	    dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP] + dtdyP*Bt[idmP];
 	    dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP] + dtdzP*Bt[idmP];
-
-	    dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;
-	    
-	    dfloat lnM = B[idnM], lmM = B[idmM];
+	    dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
 	    dfloat lmP = B[idmP];
 	    
-	    dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM;
-	    dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM+nz*dlmdzM;
-	    dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
+	    dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;	   
 
 	    Anm += -0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
 	    Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
