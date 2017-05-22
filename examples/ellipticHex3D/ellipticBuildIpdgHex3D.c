@@ -11,6 +11,19 @@ typedef struct{
 
 void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
 
+  iint size, rankM;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
+
+  /* find number of elements on each rank */
+  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
+  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+		rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  for(iint r=0;r<size;++r){
+    rankStarts[r+1] = rankStarts[r]+rankNelements[r];
+  }
+  
   /* do a halo exchange of local node numbers */
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
@@ -145,10 +158,6 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	    dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM] + dtdxM*Bt[idmM];
 	    dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM] + dtdyM*Bt[idmM];
 	    dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM*Bt[idmM];
-
-	    dfloat dlndxP = drdxP*Br[idnP] + dsdxP*Bs[idnP] + dtdxP*Bt[idnP];
-	    dfloat dlndyP = drdyP*Br[idnP] + dsdyP*Bs[idnP] + dtdyP*Bt[idnP];
-	    dfloat dlndzP = drdzP*Br[idnP] + dsdzP*Bs[idnP] + dtdzP*Bt[idnP];	  
 	    dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP] + dtdxP*Bt[idmP];
 	    dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP] + dtdyP*Bt[idmP];
 	    dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP] + dtdzP*Bt[idmP];
@@ -174,9 +183,9 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	  
 	  if(fabs(AnmP)>tol){
 	    // local block
-	    iint rP = mesh->EToP[e*mesh->Nfaces+f]; // check this 
-	    (*A)[nnz].row = n + e*mesh->Np + rankStarts[rM];
-	    (*A)[nnz].col = m + e*mesh->Np + rankStarts[rP];
+	    iint rankP = mesh->EToP[e*mesh->Nfaces+f]; // check this 
+	    (*A)[nnz].row = n + e*mesh->Np + rankStarts[rankM];
+	    (*A)[nnz].col = m + e*mesh->Np + rankStarts[rankP];
 	    (*A)[nnz].val = Anm;
 	    ++nnz;
 	  }
@@ -184,8 +193,8 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	
 	if(fabs(Anm)>tol){
 	  // local block
-	  (*A)[nnz].row = n + e*mesh->Np + rankStarts[rM];
-	  (*A)[nnz].col = m + e*mesh->Np + rankStarts[rM];
+	  (*A)[nnz].row = n + e*mesh->Np + rankStarts[rankM];
+	  (*A)[nnz].col = m + e*mesh->Np + rankStarts[rankM];
 	  (*A)[nnz].val = Anm;
 	  ++nnz;
 	}
@@ -198,8 +207,6 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
   
   *nnzA = nnz;
   
-  free(B);
-  free(Br);
-  free(Bs);
-  free(Bt);
+  free(B);  free(Br); free(Bs); free(Bt);
+  free(rankNelements); free(rankStarts);
 }
