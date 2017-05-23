@@ -69,12 +69,13 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   parAlmond_t *parAlmond = (parAlmond_t*) A;
 
   //gather the global problem
-  meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
-
   //if the rhs has already been gather scattered, weight the gathered rhs
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
+    meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
     parAlmond->mesh->dotMultiplyKernel(parAlmond->hgs->Ngather,parAlmond->hgs->o_invDegree,
                           parAlmond->levels[0]->o_rhs, parAlmond->levels[0]->o_rhs);
+  } else {
+    parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
   device_kcycle(parAlmond, 0);
@@ -91,7 +92,11 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   o_x0.free();
 */
   //scatter the result
-  meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
+  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
+    meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
+  } else {
+    o_x.copyFrom(parAlmond->levels[0]->o_x);
+  }
 }
 
 //TODO code this

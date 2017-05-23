@@ -366,6 +366,9 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
+
+    if(rank==0)
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
     
     ++Niter;
     
