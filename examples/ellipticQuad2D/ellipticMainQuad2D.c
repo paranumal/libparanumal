@@ -23,9 +23,8 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
-    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=CONTINUOUS coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT");
-    //strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
+    strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID method=IPDG,PROJECT");
     //strdup("solver=PCG,FLEXIBLE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
   
   
@@ -59,7 +58,8 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[id];
 
       dfloat f = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
-      
+      //dfloat f = 1.0;
+
       r[id] = -wJ*f;
       x[id] = 0; // initial guess
     }
@@ -84,7 +84,7 @@ int main(int argc, char **argv){
       
       maxError = mymax(maxError, error);
 
-      //mesh->q[id] -= exact;
+      mesh->q[id] -= exact;
     }
   }
 
