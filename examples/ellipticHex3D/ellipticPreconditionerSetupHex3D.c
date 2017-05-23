@@ -32,6 +32,8 @@ typedef struct{
 // compare on global indices 
 int parallelCompareRowColumn(const void *a, const void *b);
 
+void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options);
+
 precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, const char *options){
 
   int rank, size;
@@ -495,179 +497,202 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     
     free(diagA);
   } else if (strstr(options,"FULLALMOND")) {
-    // ------------------------------------------------------------------------------------
-    // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-    iint Nnum = mesh->Np*mesh->Nelements;
+    iint recvNtotal;
+    nonZero_t *recvNonZeros;
+    hgs_t *hgs;
 
-    iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+    iint Nnum = mesh->Np*mesh->Nelements;
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-    iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+    if (strstr(options,"IPDG")) {
 
-    for (iint n=0;n<Nnum;n++) {
-      iint id = mesh->gatherLocalIds[n]; 
-      globalNumbering[id] = mesh->gatherBaseIds[n];
-    }
+      MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+      for(iint r=0;r<size;++r)
+        globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
-    // squeeze node numbering
-    meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+      ellipticBuildIpdgHex3D(mesh, lambda, &recvNonZeros, &recvNtotal,options);
     
-    //use the ordering to define a gather+scatter for assembly
-    hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+      qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
 
-    // 2. Build non-zeros of stiffness matrix (unassembled)
-    iint nnz = mesh->Np*mesh->Np*mesh->Nelements;
-    nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
-    iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-    iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-    iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+    } else if (strstr(options,"CONTINUOUS")) {
+      // ------------------------------------------------------------------------------------
+      // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
       
-    //Build unassembed non-zeros
-    printf("Building full matrix system\n");
-    iint cnt =0;
-    for (iint e=0;e<mesh->Nelements;e++) {
-      for (iint nz=0;nz<mesh->Nq;nz++) {
-      for (iint ny=0;ny<mesh->Nq;ny++) {
-      for (iint nx=0;nx<mesh->Nq;nx++) {
-          for (iint mz=0;mz<mesh->Nq;mz++) {
-          for (iint my=0;my<mesh->Nq;my++) {
-          for (iint mx=0;mx<mesh->Nq;mx++) {
-              iint id;
-              dfloat val = 0.;
-              
-              if ((ny==my)&&(nz==mz)) {
-                for (iint k=0;k<mesh->Nq;k++) {
-                  id = k+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                  dfloat Grr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
 
-                  val += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
-                }
-              }
+      iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+      iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
-              if (nz==mz) {
-                id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-                val += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
-
-                id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Gsr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-                val += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
-              }
-
-              if (ny==my) {
-                id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Grt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-                val += Grt*mesh->D[nx+mx*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
-
-                id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
-                dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-                val += Gst*mesh->D[mx+nx*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
-              }
-
-              if ((nx==mx)&&(nz==mz)) {
-                for (iint k=0;k<mesh->Nq;k++) {
-                  id = nx+k*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                  dfloat Gss = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
-
-                  val += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
-                }
-              }
-              
-              if (nx==mx) {
-                id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-                val += Gst*mesh->D[ny+my*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
-
-                id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
-                dfloat Gts = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-                val += Gts*mesh->D[my+ny*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
-              }
-
-              if ((nx==mx)&&(ny==my)) {
-                for (iint k=0;k<mesh->Nq;k++) {
-                  id = nx+ny*mesh->Nq+k*mesh->Nq*mesh->Nq;
-                  dfloat Gtt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
-
-                  val += Gtt*mesh->D[nz+k*mesh->Nq]*mesh->D[mz+k*mesh->Nq];
-                }
-              }
-              
-              if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-                id = nx + ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-                dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
-                val += JW*lambda;
-              }
-              
-              // pack non-zero
-              dfloat nonZeroThreshold = 1e-7;
-              if (fabs(val) >= nonZeroThreshold) {
-                sendNonZeros[cnt].val = val;
-                sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
-                sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq];
-                sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
-                cnt++;
-              }
-          }
-          }
-          }
-        }
-        }
-        }
-    }
-
-    // count how many non-zeros to send to each process
-    for(iint n=0;n<cnt;++n)
-      AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
-
-    // sort by row ordering
-    qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
-    
-    // find how many nodes to expect (should use sparse version)
-    MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
-
-    // find send and recv offsets for gather
-    iint recvNtotal = 0;
-    for(iint r=0;r<size;++r){
-      AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
-      ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-      recvNtotal += ArecvCounts[r]/sizeof(nonZero_t);
-    }
-
-    nonZero_t *recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
-    
-    // determine number to receive
-    MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
-      recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
-      MPI_COMM_WORLD);
-
-    // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-    qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
-
-    // compress duplicates
-    cnt = 0;
-    for(iint n=1;n<recvNtotal;++n){
-      if(recvNonZeros[n].row == recvNonZeros[cnt].row &&
-         recvNonZeros[n].col == recvNonZeros[cnt].col){
-        recvNonZeros[cnt].val += recvNonZeros[n].val;
+      for (iint n=0;n<Nnum;n++) {
+        iint id = mesh->gatherLocalIds[n]; 
+        globalNumbering[id] = mesh->gatherBaseIds[n];
       }
-      else{
-        ++cnt;
-        recvNonZeros[cnt] = recvNonZeros[n];
-      }
-    }
-    recvNtotal = cnt+1;
 
-    iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
-    iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
-    dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
-    
-    for (iint n=0;n<recvNtotal;n++) {
-      recvRows[n] = recvNonZeros[n].row;
-      recvCols[n] = recvNonZeros[n].col;
-      recvVals[n] = recvNonZeros[n].val;
+      // squeeze node numbering
+      meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+      
+      //use the ordering to define a gather+scatter for assembly
+      hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+
+      // 2. Build non-zeros of stiffness matrix (unassembled)
+      iint nnz = mesh->Np*mesh->Np*mesh->Nelements;
+      nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+      iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+      iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+      iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+      iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+        
+      //Build unassembed non-zeros
+      printf("Building full matrix system\n");
+      iint cnt =0;
+      for (iint e=0;e<mesh->Nelements;e++) {
+        for (iint nz=0;nz<mesh->Nq;nz++) {
+        for (iint ny=0;ny<mesh->Nq;ny++) {
+        for (iint nx=0;nx<mesh->Nq;nx++) {
+            for (iint mz=0;mz<mesh->Nq;mz++) {
+            for (iint my=0;my<mesh->Nq;my++) {
+            for (iint mx=0;mx<mesh->Nq;mx++) {
+                iint id;
+                dfloat val = 0.;
+                
+                if ((ny==my)&&(nz==mz)) {
+                  for (iint k=0;k<mesh->Nq;k++) {
+                    id = k+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                    dfloat Grr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
+
+                    val += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
+                  }
+                }
+
+                if (nz==mz) {
+                  id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                  dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+                  val += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
+
+                  id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                  dfloat Gsr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+                  val += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
+                }
+
+                if (ny==my) {
+                  id = mx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                  dfloat Grt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+                  val += Grt*mesh->D[nx+mx*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
+
+                  id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
+                  dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+                  val += Gst*mesh->D[mx+nx*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
+                }
+
+                if ((nx==mx)&&(nz==mz)) {
+                  for (iint k=0;k<mesh->Nq;k++) {
+                    id = nx+k*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                    dfloat Gss = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
+
+                    val += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
+                  }
+                }
+                
+                if (nx==mx) {
+                  id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                  dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+                  val += Gst*mesh->D[ny+my*mesh->Nq]*mesh->D[mz+nz*mesh->Nq];
+
+                  id = nx+ny*mesh->Nq+mz*mesh->Nq*mesh->Nq;
+                  dfloat Gts = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+                  val += Gts*mesh->D[my+ny*mesh->Nq]*mesh->D[nz+mz*mesh->Nq];
+                }
+
+                if ((nx==mx)&&(ny==my)) {
+                  for (iint k=0;k<mesh->Nq;k++) {
+                    id = nx+ny*mesh->Nq+k*mesh->Nq*mesh->Nq;
+                    dfloat Gtt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
+
+                    val += Gtt*mesh->D[nz+k*mesh->Nq]*mesh->D[mz+k*mesh->Nq];
+                  }
+                }
+                
+                if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+                  id = nx + ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
+                  dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
+                  val += JW*lambda;
+                }
+                
+                // pack non-zero
+                dfloat nonZeroThreshold = 1e-7;
+                if (fabs(val) >= nonZeroThreshold) {
+                  sendNonZeros[cnt].val = val;
+                  sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
+                  sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq];
+                  sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq];
+                  cnt++;
+                }
+            }
+            }
+            }
+          }
+          }
+          }
+      }
+
+      // count how many non-zeros to send to each process
+      for(iint n=0;n<cnt;++n)
+        AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+
+      // sort by row ordering
+      qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+      
+      // find how many nodes to expect (should use sparse version)
+      MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+      // find send and recv offsets for gather
+      recvNtotal = 0;
+      for(iint r=0;r<size;++r){
+        AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+        ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+        recvNtotal += ArecvCounts[r]/sizeof(nonZero_t);
+      }
+
+      recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
+      
+      // determine number to receive
+      MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
+        recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
+        MPI_COMM_WORLD);
+
+      // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+      qsort(recvNonZeros, recvNtotal, sizeof(nonZero_t), parallelCompareRowColumn);
+
+      // compress duplicates
+      cnt = 0;
+      for(iint n=1;n<recvNtotal;++n){
+        if(recvNonZeros[n].row == recvNonZeros[cnt].row &&
+           recvNonZeros[n].col == recvNonZeros[cnt].col){
+          recvNonZeros[cnt].val += recvNonZeros[n].val;
+        }
+        else{
+          ++cnt;
+          recvNonZeros[cnt] = recvNonZeros[n];
+        }
+      }
+      recvNtotal = cnt+1;
+
+      iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
+      iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
+      dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
+      
+      for (iint n=0;n<recvNtotal;n++) {
+        recvRows[n] = recvNonZeros[n].row;
+        recvCols[n] = recvNonZeros[n].col;
+        recvVals[n] = recvNonZeros[n].val;
+      }
+
+      free(AsendCounts);
+      free(ArecvCounts);
+      free(AsendOffsets);
+      free(ArecvOffsets);
     }
-    
+
+
     //collect global assembled matrix
     iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
     iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
@@ -717,11 +742,6 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
     precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-    
-    free(AsendCounts);
-    free(ArecvCounts);
-    free(AsendOffsets);
-    free(ArecvOffsets);
 
   } 
   

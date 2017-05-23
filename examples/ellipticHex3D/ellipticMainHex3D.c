@@ -22,8 +22,9 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options =
-    strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,MATRIXFREE");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
   // set up mesh stuff
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
@@ -56,6 +57,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[id];
 
       dfloat f = -(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      //dfloat f=1.0;
 
       r[id] = -wJ*f;
 
@@ -83,7 +85,7 @@ int main(int argc, char **argv){
       
       maxError = mymax(maxError, error);
 
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 

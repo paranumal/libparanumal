@@ -42,6 +42,7 @@ ellipticHaloExchange3D.o \
 ellipticParallelGatherScatterHex3D.o \
 ellipticPreconditionerSetupHex3D.o \
 ellipticCoarsePreconditionerSetupHex3D.o\
+ellipticBuildIpdgHex3D.o
 
 
 # library objects
