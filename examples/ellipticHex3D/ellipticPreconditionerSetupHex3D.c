@@ -236,6 +236,30 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   						gatherBaseIdsP,
   						gatherHaloFlagsP);
 
+    // build degree vector
+    iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+    dfloat *invDegree = (dfloat*) calloc(NtotalP, sizeof(dfloat));
+    dfloat *degree    = (dfloat*) calloc(NtotalP, sizeof(dfloat));
+    precon->o_invDegreeP = mesh->device.malloc(NtotalP*sizeof(dfloat), invDegree);
+    
+    for(iint n=0;n<NtotalP;++n)
+      degree[n] = 1;
+
+    occa::memory o_deg = mesh->device.malloc(NtotalP*sizeof(dfloat), degree);
+    meshParallelGatherScatter(mesh, precon->ogsP, o_deg, o_deg, dfloatString, "add");
+    o_deg.copyTo(degree);
+    mesh->device.finish();
+    o_deg.free();
+
+    for(iint n=0;n<NtotalP;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
+    
+    precon->o_invDegreeP.copyFrom(invDegree);
+    free(degree);
+    free(invDegree);
+
     // -------------------------------------------------------------------------------------------
     // build gather-scatter for overlapping patches
     iint *allNelements = (iint*) calloc(size, sizeof(iint));
@@ -346,6 +370,30 @@ precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
   						 gatherBaseIdsDg,
   						 gatherHaloFlagsDg);
     
+    // build degree vector
+    iint NtotalDGP = NpP*mesh->Nelements;
+    invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
+    degree    = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
+    precon->o_invDegreeDGP = mesh->device.malloc(NtotalDGP*sizeof(dfloat), invDegree);
+    
+    for(iint n=0;n<NtotalDGP;++n)
+      degree[n] = 1;
+
+    o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
+    meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg, dfloatString, "add");
+    o_deg.copyTo(degree);
+    mesh->device.finish();
+    o_deg.free();
+
+    for(iint n=0;n<NtotalDGP;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
+    
+    precon->o_invDegreeDGP.copyFrom(invDegree);
+    free(degree);
+    free(invDegree);
+
     // -------------------------------------------------------------------------------------------
     
 

@@ -178,7 +178,7 @@ void ellipticPreconditioner2D(solver_t *solver,
 
 
   if(strstr(options, "OAS")){    
-    //project weighting
+    //L2 project weighting
     if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
       ellipticParallelGatherScatterQuad2D(mesh,ogs,o_r,o_r,dfloatString,"add");
       mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
@@ -245,16 +245,16 @@ void ellipticPreconditioner2D(solver_t *solver,
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
       occaTimerToc(mesh->device,"prolongateKernel");
 
-      //project weighting
-      if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-        mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,precon->o_ztmp,precon->o_ztmp);
-        ellipticParallelGatherScatterQuad2D(mesh, ogs, precon->o_ztmp, precon->o_ztmp, dfloatString, "add");
-      }
-
       // do we have to DG gatherscatter here 
       dfloat one = 1.;
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
       occaTimerToc(mesh->device,"coarseGrid");
+    }
+
+    //project weighting
+    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
+      ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     }
   } else if (strstr(options, "FULLALMOND")) {
 
