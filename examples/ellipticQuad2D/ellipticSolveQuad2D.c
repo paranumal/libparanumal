@@ -176,10 +176,13 @@ void ellipticPreconditioner2D(solver_t *solver,
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
 
-  if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) 
-      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,solver->o_invDegree,o_r,o_r);
 
-  if(strstr(options, "OAS")){
+  if(strstr(options, "OAS")){    
+    //project weighting
+    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+      ellipticParallelGatherScatterQuad2D(mesh,ogs,o_r,o_r,dfloatString,"add");
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
+    }
 
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     
@@ -218,7 +221,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     precon->restrictKernel(mesh->Nelements, o_zP, o_z);
     occaTimerToc(mesh->device,"restrictKernel");   
 
-    if(strstr(options, "COARSEGRID")){ // should split into two parts
+    if(strstr(options, "COARSEGRID")){ // should split into two parts      
       occaTimerTic(mesh->device,"coarseGrid");  
 
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
@@ -242,12 +245,17 @@ void ellipticPreconditioner2D(solver_t *solver,
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
       occaTimerToc(mesh->device,"prolongateKernel");
 
+      //project weighting
+      if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+        mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,precon->o_ztmp,precon->o_ztmp);
+        ellipticParallelGatherScatterQuad2D(mesh, ogs, precon->o_ztmp, precon->o_ztmp, dfloatString, "add");
+      }
+
       // do we have to DG gatherscatter here 
       dfloat one = 1.;
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
       occaTimerToc(mesh->device,"coarseGrid");
     }
-    
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
@@ -407,4 +415,5 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
 
   return Niter;
+  
 }

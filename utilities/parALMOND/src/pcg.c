@@ -2,11 +2,12 @@
 
 
 void pcg(parAlmond_t *parAlmond,
-   csr *A,
    dfloat *b,
    dfloat *x,
    iint maxIt,
    dfloat tol){
+
+  csr *A = parAlmond->levels[0]->A;
 
   const iint m = A->Nrows;
   const iint n = A->Ncols;
@@ -31,7 +32,7 @@ void pcg(parAlmond_t *parAlmond,
   dfloat *r0 = (dfloat *) calloc(m, sizeof(dfloat));
 
   // initial residue  r0 = b - A*x0;
-  zeqaxpy(A, -1.0, x0, 1.0, b, r0);
+  zeqaxpy(parAlmond->levels[0]->A,-1.0, x0, 1.0, b, r0);
 
   dfloat *r = (dfloat *) calloc(m, sizeof(dfloat));
   for (iint i=0; i<m; i++) {
@@ -52,18 +53,20 @@ void pcg(parAlmond_t *parAlmond,
   resvec[0] = globalNB;
 
   for (iint i=1; i<=maxIt; i++){
+
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    //solve(parAlmond, r, di);
+    for (iint k=0;k<m;k++) 
+      parAlmond->levels[0]->rhs[k] = r[k];
+    kcycle(parAlmond,0);
     for (iint k=0;k<m;k++)
-      di[k] = r[k];
+      di[k] = parAlmond->levels[0]->x[k];
 
     // rho = di'*r
     rhoLocal = innerProd(m, di, r);
     MPI_Allreduce(&rhoLocal,&rhoGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
     // TODO : try flexible conjugate gradient
-
     if(i > 1){
       beta = rhoGlobal/rho_previous;
 
@@ -104,20 +107,16 @@ void pcg(parAlmond_t *parAlmond,
       break;
     }
   }
-
-  // r = b - A*x
-  zeqaxpy(A, -1.0, x, 1.0, b, r);
-
-  dfloat relres = norm(m, r)/globalNB;
 }
 
 //TODO need to link the MPI processes in this solve
 void pcg(parAlmond_t *parAlmond,
-   hyb *A,
    occa::memory o_b,
    occa::memory o_x,
    iint maxIt,
    dfloat tol){
+
+  hyb* A = parAlmond->levels[0]->deviceA;
 
   const iint m = A->Nrows;
   const iint n = A->Ncols;
@@ -160,8 +159,9 @@ void pcg(parAlmond_t *parAlmond,
   for (iint i=1; i<=maxIt; i++){
     // apply preconditioner (make sure that precond is symmetric)
     // di = M^{-1}*r
-    //solve(parAlmond, o_r, o_di);
-    o_di.copyFrom(o_r);
+    parAlmond->levels[0]->o_rhs.copyFrom(o_r);
+    device_kcycle(parAlmond,0);
+    o_di.copyFrom(parAlmond->levels[0]->o_x);
 
     // rho = di'*r
     rho = innerProd(parAlmond, m, o_di, o_r);
@@ -200,11 +200,6 @@ void pcg(parAlmond_t *parAlmond,
       break;
     }
   }
-
-  // r = b - A*x
-  zeqaxpy(parAlmond, A, -1.0, o_x, 1.0, o_b, o_r);
-
-  dfloat relres = sqrt(innerProd(parAlmond, m, o_r, o_r))/nb;
 }
 
 
