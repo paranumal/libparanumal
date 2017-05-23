@@ -195,6 +195,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");                                           
 
+  //fill geometric factors in halo
   if(mesh->totalHaloPairs){
     iint Nlocal = mesh->Nelements*mesh->Np;
     iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
@@ -213,6 +214,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  //set matrix free function pointers
   if (strstr(options,"MATRIXFREE")) { 
     //set matrix free A in parAlmond
     void **args = (void **) calloc(2,sizeof(void *));

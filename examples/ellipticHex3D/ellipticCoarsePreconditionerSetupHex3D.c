@@ -296,7 +296,7 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
 
   if(strstr(options, "ALMOND")){
     
-    precon->almond = parAlmondSetup(mesh,
+    precon->parAlmond = parAlmondSetup(mesh,
          Nnum, 
          globalStarts,
          recvNtotal,      

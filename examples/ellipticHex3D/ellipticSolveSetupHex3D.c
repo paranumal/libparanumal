@@ -194,6 +194,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
   
+  //fill geometric factors in halo
   if(mesh->totalHaloPairs){
     iint Nlocal = mesh->Nelements*mesh->Np;
     iint Nhalo = mesh->totalHaloPairs*mesh->Np;
@@ -212,6 +213,28 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
     mesh->o_vgeo =
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
+
+  // build weights for continuous SEM L2 project --->
+  dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
+      localMM[n+e*mesh->Np] = wJ;
+    }
+  }
+
+  occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+
+  // sum up all contributions at base nodes and scatter back
+  ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
+
+  mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
+  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
+
+  free(localMM); o_MM.free(); o_localMM.free();
+
 
   if (strstr(options,"MATRIXFREE")) { 
     //set matrix free A in parAlmond

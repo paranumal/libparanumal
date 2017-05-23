@@ -156,13 +156,17 @@ void ellipticPreconditioner3D(solver_t *solver,
   dfloat *recvBuffer = solver->recvBuffer;
 
   if(strstr(options, "OAS")){
+    //L2 project weighting
+    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+      ellipticParallelGatherScatterHex3D(mesh,ogs,o_r,o_r,dfloatString,"add");
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
+    }
 
     ellipticStartHaloExchange3D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
     
     occaTimerTic(mesh->device,"OASpreconKernel");
-
     if(strstr(options, "CONTINUOUS")) {
       // compute local precon on DEVICE
       precon->preconKernel(mesh->Nelements,
@@ -173,14 +177,9 @@ void ellipticPreconditioner3D(solver_t *solver,
          precon->o_oasBack,
          o_r,
          o_zP);
-      
-      mesh->device.finish();
-      
-      // gather-scatter precon blocks on DEVICE [ sum up all contributions ]
-      // something goes wrong here:
       ellipticParallelGatherScatterHex3D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
-    }
-    else{
+      mesh->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeP,o_zP,o_zP);
+    } else{
       precon->preconKernel(mesh->Nelements,
          mesh->o_vmapP,
          precon->o_faceNodesP,
@@ -189,15 +188,8 @@ void ellipticPreconditioner3D(solver_t *solver,
          precon->o_oasBackDg,
          o_r,
          o_zP);
-
-      iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
-      //      diagnostic(NtotalP, o_zP, "o_zP before GS"); // ok to here
-      
-      // OAS => additive Schwarz => sum up patch solutions
       ellipticParallelGatherScatterHex3D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
-
-      //      diagnostic(NtotalP, o_zP, "o_zP after GS");
-
+      mesh->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
     }
     occaTimerToc(mesh->device,"OASpreconKernel");
     
@@ -210,14 +202,9 @@ void ellipticPreconditioner3D(solver_t *solver,
     if(strstr(options, "COARSEGRID")){ // should split into two parts
       occaTimerTic(mesh->device,"coarseGrid");
 
-      // halo exchange to make sure each vertex patch has available halo
-      ellipticStartHaloExchange3D(mesh, o_r, sendBuffer, recvBuffer);
-      
-      ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
-      
-      occaTimerTic(mesh->device,"coarsenKernel");
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      occaTimerTic(mesh->device,"coarsenKernel");
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
       occaTimerToc(mesh->device,"coarsenKernel");
 
       if(strstr(options,"XXT")){
@@ -227,9 +214,8 @@ void ellipticPreconditioner3D(solver_t *solver,
       }
 
       if(strstr(options,"ALMOND")){
-        // should eliminate these copies
         occaTimerTic(mesh->device,"Almond");
-        parAlmondPrecon(precon->o_z1, precon->almond, precon->o_r1);
+        parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
         occaTimerToc(mesh->device,"Almond");
       }
 
@@ -237,12 +223,15 @@ void ellipticPreconditioner3D(solver_t *solver,
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
       occaTimerToc(mesh->device,"prolongateKernel");
 
-      // do we have to DG gatherscatter here 
-      
       dfloat one = 1.;
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
-
       occaTimerToc(mesh->device,"coarseGrid");
+    }
+
+    //project weighting
+    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+      mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
+      ellipticParallelGatherScatterHex3D(mesh, ogs, o_z, o_z, dfloatString, "add");
     }
   } else if (strstr(options, "FULLALMOND")) {
 
@@ -267,7 +256,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   mesh_t *mesh = solver->mesh;
   
-  int rank;
+  iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
@@ -283,15 +272,15 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   
   occaTimerTic(mesh->device,"PCG");
 
+  // gather-scatter
+  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
+    ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+
   // compute A*x
   ellipticOperator3D(solver, lambda, o_x, o_Ax, options);
   
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
-
-  // gather-scatter
-  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
-    ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
   
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){

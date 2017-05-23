@@ -229,13 +229,17 @@ void ellipticPreconditioner3D(solver_t *solver,
 
 
   if(strstr(options, "OAS")){
-    
+    //L2 project weighting
+    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+    //  ellipticParallelGatherScatterTri2D(mesh,ogs,o_r,o_r,dfloatString,"add");
+    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
+    //}    
+
     ellipticStartHaloExchange3D(mesh, o_r, sendBuffer, recvBuffer);
     
     ellipticEndHaloExchange3D(mesh, o_r, recvBuffer);
 
     occaTimerTic(mesh->device,"OASpreconKernel");
-
     precon->preconKernel(mesh->Nelements,
 			 mesh->o_vmapP,
 			 precon->o_oasForwardDgT,
@@ -243,10 +247,8 @@ void ellipticPreconditioner3D(solver_t *solver,
 			 precon->o_oasBackDgT,
 			 o_r,
 			 o_zP);
-    
-    // OAS => additive Schwarz => sum up patch solutions
     ellipticParallelGatherScatterTet3D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
-
+    //mesh->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
     occaTimerToc(mesh->device,"OASpreconKernel");
 
     // extract block interiors on DEVICE
@@ -259,7 +261,7 @@ void ellipticPreconditioner3D(solver_t *solver,
 
       // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
       occaTimerTic(mesh->device,"coarsenKernel");
-      precon->coarsenKernel(mesh->Nelements, precon->o_coarseInvDegree, precon->o_V1, o_r, precon->o_r1);
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
       occaTimerToc(mesh->device,"coarsenKernel");
 
       // solve coarse problem using xxt
@@ -288,6 +290,12 @@ void ellipticPreconditioner3D(solver_t *solver,
       
       occaTimerToc(mesh->device,"coarseGrid");
     }
+
+    //project weighting
+    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
+    //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
+    //}
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
@@ -332,15 +340,15 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   
   occaTimerTic(mesh->device,"PCG");
 
+  // gather-scatter 
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+    ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+
   // compute A*x
   ellipticOperator3D(solver, lambda, o_x, solver->o_Ax, options);
   
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
-
-  // gather-scatter 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
-    ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){

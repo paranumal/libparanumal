@@ -155,6 +155,30 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
   						 gatherBaseIdsDg,
   						 gatherHaloFlagsDg);
     
+    // build degree vector
+    iint NtotalDGP = NpP*mesh->Nelements;
+    dfloat *invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
+    dfloat *degree    = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
+    precon->o_invDegreeDGP = mesh->device.malloc(NtotalDGP*sizeof(dfloat), invDegree);
+    
+    for(iint n=0;n<NtotalDGP;++n)
+      degree[n] = 1;
+
+    occa::memory o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
+    meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg, dfloatString, "add");
+    o_deg.copyTo(degree);
+    mesh->device.finish();
+    o_deg.free();
+
+    for(iint n=0;n<NtotalDGP;++n){ // need to weight inner products{
+      if(degree[n] == 0) printf("WARNING!!!!\n");
+      invDegree[n] = 1./degree[n];
+    }
+    
+    precon->o_invDegreeDGP.copyFrom(invDegree);
+    free(degree);
+    free(invDegree);
+
     // -------------------------------------------------------------------------------------------
     // load prebuilt transform matrices
     precon->o_oasForwardDg = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->oasForwardDg);

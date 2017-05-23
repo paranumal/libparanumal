@@ -20,11 +20,10 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=NONE");
-  //char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,GLOBALALMOND,UBERGRID method=IPDG,PROJECT coarse=COARSEGRID");
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
-  //char *options = strdup("solver=PCG preconditioner=FULLALMOND method=IPDG,PROJECT");
+  char *options = 
+    strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
+    //strdup("solver=PCG preconditioner=FULLALMOND method=IPDG,PROJECT");
   
   // set up mesh stuff
 

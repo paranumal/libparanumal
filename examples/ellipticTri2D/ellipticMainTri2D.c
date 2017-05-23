@@ -20,11 +20,10 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // preconditioner can be JACOBI, OAS, NONE
   // method can be IPDG
-  //char *options = strdup("solver=PCG preconditioner=OAS method=IPDG");
-  //  char *options = strdup("solver=PCG preconditioner=OAS,PROJECT method=IPDG coarse=COARSEGRID");
-  //char *options = strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
-  char *options = strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
-  //char *options = strdup("solver=PCG preconditioner=NONE method=IPDG");
+  char *options =
+    strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
+    //strdup("solver=PCG,FLEXIBLE preconditioner=FULLALMOND,UBERGRID,MATRIXFREE method=IPDG,PROJECT");
   
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
@@ -48,29 +47,6 @@ int main(int argc, char **argv){
   dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
-
-#if 0
-    for(iint n=0;n<mesh->cubNp;++n){
-      dfloat cx = 0, cy = 0;
-      for(iint m=0;m<mesh->Np;++m){
-	cx += mesh->cubInterp[m+n*mesh->Np]*mesh->x[m+e*mesh->Np];
-	cy += mesh->cubInterp[m+n*mesh->Np]*mesh->y[m+e*mesh->Np];
-      }
-      dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-      dfloat w = mesh->cubw[n];
-      
-      cf[n] = -J*w*(2*M_PI*M_PI+lambda)*cos(M_PI*cx)*cos(M_PI*cy);
-    }
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat rhs = 0;
-      for(iint m=0;m<mesh->cubNp;++m){
-	rhs += mesh->cubInterp[n+m*mesh->Np]*cf[m];
-      }
-      iint id = n+e*mesh->Np;
-      r[id] = -rhs;
-      x[id] = 0; // initial guess
-    }
-#else
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(iint n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
@@ -88,7 +64,6 @@ int main(int argc, char **argv){
       x[id] = 0;
       mesh->q[id] = nrhs[n];
     }
-#endif
   }
   free(nrhs);
   free(cf);
