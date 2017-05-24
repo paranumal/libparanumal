@@ -42,7 +42,9 @@ ellipticCoarsePreconditionerSetupTri2D.o\
 ellipticSolveTri2D.o\
 ellipticSolveSetupTri2D.o\
 ellipticHaloExchange2D.o\
-ellipticParallelGatherScatterTri2D.o
+ellipticParallelGatherScatterTri2D.o \
+ellipticBuildIpdgTri2D.o \
+ellipticBuildContinuousTri2D.o 
 
 # library objects
 LOBJS = \

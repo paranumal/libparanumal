@@ -34,46 +34,46 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-	// assume that this stores (qx, qy, qz, q) as dfloat4
-	const dfloat4 gradqn = gradq[e*p_Np+n];
-	
-	s_dqdx[n] = gradqn.x;
-	s_dqdy[n] = gradqn.y;
-	s_lapq[n] = lambda*gradqn.w;
+      	// assume that this stores (qx, qy, qz, q) as dfloat4
+      	const dfloat4 gradqn = gradq[e*p_Np+n];
+      	
+      	s_dqdx[n] = gradqn.x;
+      	s_dqdy[n] = gradqn.y;
+      	s_lapq[n] = lambda*gradqn.w;
       }
 
       if(n<p_NfacesNfp){
-	const iint id  = n + e*p_Nfaces*p_Nfp;
-	idM = vmapM[id];					
-	const iint idP = vmapP[id];					
-	// find face that owns this node
-	const iint face = n/p_Nfp;
+      	const iint id  = n + e*p_Nfaces*p_Nfp;
+      	idM = vmapM[id];					
+      	const iint idP = vmapP[id];					
+      	// find face that owns this node
+      	const iint face = n/p_Nfp;
 
-	dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
-	dfloat4 gradqP = gradq[idP];					
-	
-	// load surface geofactors for this face
-	iint sid = p_Nsgeo*(e*p_Nfaces+face);
-	nx = sgeo[sid+p_NXID];
-	ny = sgeo[sid+p_NYID];
-	sJ = sgeo[sid+p_SJID];
-	invJ = sgeo[sid+p_IJID];
-	hinv = sgeo[sid+p_IHID];
+      	dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
+      	dfloat4 gradqP = gradq[idP];					
+      	
+      	// load surface geofactors for this face
+      	iint sid = p_Nsgeo*(e*p_Nfaces+face);
+      	nx = sgeo[sid+p_NXID];
+      	ny = sgeo[sid+p_NYID];
+      	sJ = sgeo[sid+p_SJID];
+      	invJ = sgeo[sid+p_IJID];
+      	hinv = sgeo[sid+p_IHID];
 
-	// Neumann boundary condition
-	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
-	gradqP.x *= sc;
-	gradqP.y *= sc;
+      	// Neumann boundary condition
+      	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
+      	gradqP.x *= sc;
+      	gradqP.y *= sc;
 
-	const dfloat dq = gradqP.w - gradqM.w;
-	const dfloat half = 0.5f;
-	
-	s_nxdq[n] = half*sJ*invJ*nx*dq;
-	s_nydq[n] = half*sJ*invJ*ny*dq;
+      	const dfloat dq = gradqP.w - gradqM.w;
+      	const dfloat half = 0.5f;
+      	
+      	s_nxdq[n] = half*sJ*invJ*nx*dq;
+      	s_nydq[n] = half*sJ*invJ*ny*dq;
 
-	s_lapflux[n] = half*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
-				     -ny*(gradqP.y-gradqM.y)
-				     -tau*hinv*dq);
+      	s_lapflux[n] = half*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
+      				     -ny*(gradqP.y-gradqM.y)
+      				     -tau*hinv*dq);
       }
     }
 
