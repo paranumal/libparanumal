@@ -7,7 +7,7 @@ void insPoissonStep2D(solver_t *ins, iint tstep, iint haloBytes,
 
 mesh2D *mesh = ins->mesh; 
 
-dfloat t = tstep*ins->dt + mesh->dt;
+dfloat t = tstep*ins->dt + ins->dt;
 
 //Exctract Halo On Device
 
@@ -30,7 +30,7 @@ dfloat t = tstep*ins->dt + mesh->dt;
 
 
 
-   // Compute Volume Contribution
+   // computes div u^(n+1) volume term
    ins->poissonRhsVolumeKernel(mesh->Nelements,
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
@@ -55,7 +55,7 @@ dfloat t = tstep*ins->dt + mesh->dt;
   }
 
 
- // Compute Surface Conribution
+   //computes div u^(n+1) surface term
   ins->poissonRhsSurfaceKernel(mesh->Nelements,
   	                          ins->dt,	
                               ins->g0,
@@ -69,6 +69,29 @@ dfloat t = tstep*ins->dt + mesh->dt;
                               mesh->o_y,
                               ins->o_U,
                               ins->o_rhsPr);
+
+
+
+  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                mesh->o_sgeo,
+                                mesh->o_vgeo,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_FMMT,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                mesh->o_EToB,
+                                t,
+                                ins->dt,
+                                ins->tau,
+                                mesh->o_x,
+                                mesh->o_y,
+                                ins->o_Pr,
+                                ins->o_rhsPr
+                                );
+
+
+
 
 
 
