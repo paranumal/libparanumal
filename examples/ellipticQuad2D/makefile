@@ -42,7 +42,9 @@ ellipticSolveQuad2D.o \
 ellipticHaloExchange2D.o \
 ellipticParallelGatherScatterQuad2D.o \
 ellipticPreconditionerSetupQuad2D.o\
-ellipticCoarsePreconditionerSetupQuad2D.o
+ellipticCoarsePreconditionerSetupQuad2D.o \
+ellipticBuildIpdgQuad2D.o \
+ellipticBuildContinuousQuad2D.o
 
 
 # library objects
