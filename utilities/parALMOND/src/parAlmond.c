@@ -108,15 +108,21 @@ void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memo
 
   mesh_t* mesh = parAlmond->mesh;
 
-  //scatter x 
-  meshParallelScatter(mesh, parAlmond->hgs, o_x, parAlmond->o_x);
+  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
+    //scatter x 
+    meshParallelScatter(mesh, parAlmond->hgs, o_x, parAlmond->o_x);
 
-  occaTimerTic(mesh->device,"MatFreeAxKernel");
-  parAlmond->MatFreeAx(parAlmond->MatFreeArgs,parAlmond->o_x,parAlmond->o_Ax,parAlmond->options);
-  occaTimerToc(mesh->device,"MatFreeAxKernel");
+    occaTimerTic(mesh->device,"MatFreeAxKernel");
+    parAlmond->MatFreeAx(parAlmond->MatFreeArgs,parAlmond->o_x,parAlmond->o_Ax,parAlmond->options);
+    occaTimerToc(mesh->device,"MatFreeAxKernel");
 
-  //gather the result back to the global problem
-  meshParallelGather(mesh, parAlmond->hgs, parAlmond->o_Ax, o_Ax);
+    //gather the result back to the global problem
+    meshParallelGather(mesh, parAlmond->hgs, parAlmond->o_Ax, o_Ax);
+  } else {
+    occaTimerTic(mesh->device,"MatFreeAxKernel");
+    parAlmond->MatFreeAx(parAlmond->MatFreeArgs,o_x,o_Ax,parAlmond->options);
+    occaTimerToc(mesh->device,"MatFreeAxKernel");
+  }
 }
 
 void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
