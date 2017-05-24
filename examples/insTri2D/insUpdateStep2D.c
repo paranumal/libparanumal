@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep2D(solver_t *ins, iint tstep, iint haloBytes,
+void insUpdateStep2D(solver_t *ins, iint tstep, iint haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer, 
 				        char   * options){
 
@@ -13,17 +13,18 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 	if(mesh->totalHaloPairs>0){
 	 
-    ins->poissonHaloExtractKernel(mesh->Nelements,
+    ins->updateHaloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
-                           ins->o_U,
+                           ins->o_PrI,
                            mesh->o_haloBuffer);
 
     // copy extracted halo to HOST 
     mesh->o_haloBuffer.copyTo(sendBuffer);            
+   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-                          mesh->Np*ins->NVfields*sizeof(dfloat), 
+                          mesh->Np*sizeof(dfloat), 
                           sendBuffer,
                           recvBuffer);
   	}
@@ -31,13 +32,12 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
    // computes div u^(n+1) volume term
-   ins->poissonRhsVolumeKernel(mesh->Nelements,
+   ins->updateVolumeKernel(mesh->Nelements,
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
                                  mesh->o_DsT,
-                                 mesh->o_MM,
-                                 ins->o_U,  
-                                 ins->o_rhsPr);
+                                 ins->o_PrI,  
+                                 ins->o_rhsU);
 
 
     // COMPLETE HALO EXCHANGE
@@ -47,52 +47,41 @@ dfloat t = tstep*ins->dt + ins->dt;
 
     mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-    ins->poissonHaloScatterKernel(mesh->Nelements,
+    ins->updateHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
-                                  ins->o_U,
+                                  ins->o_PrI,
                                   mesh->o_haloBuffer);
   }
 
 
    //computes div u^(n+1) surface term
-  ins->poissonRhsSurfaceKernel(mesh->Nelements,
-  	                          ins->dt,	
-                              ins->g0,
+  ins->updateSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
-                              mesh->o_FMMT,
+                              mesh->o_LIFTT,
                               mesh->o_vmapM,
                               mesh->o_vmapP,
                               mesh->o_EToB,
                               t,
                               mesh->o_x,
                               mesh->o_y,
+                              ins->o_PrI,
+                              ins->o_rhsU);
+
+   //computes div u^(n+1) surface term
+  ins->updateUpdateKernel(mesh->Nelements,
+                              ins->dt,  
+                              ins->g0,
                               ins->o_U,
-                              ins->o_rhsPr);
+                              ins->o_Pr,
+                              ins->o_rhsU);
 
 
 
-  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
-                                mesh->o_sgeo,
-                                mesh->o_vgeo,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_FMMT,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                t,
-                                ins->dt,
-                                ins->tau,
-                                mesh->o_x,
-                                mesh->o_y,
-                                ins->o_Pr,
-                                ins->o_rhsPr
-                                );
 
 
 
-// Solve for prI
+// Solve for o_PrI
 
 
    

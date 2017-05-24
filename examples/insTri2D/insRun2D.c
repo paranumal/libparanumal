@@ -13,6 +13,11 @@ void insRun2D(solver_t *ins, char *options){
   dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
   dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
 
+  // No need to do like this, just for consistency 
+  iint updateHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  dfloat *updateSendBuffer = (dfloat*) malloc(updateHaloBytes);
+  dfloat *updateRecvBuffer = (dfloat*) malloc(updateHaloBytes);
+
   occa::initTimer(mesh->device);
 
  
@@ -25,23 +30,22 @@ void insRun2D(solver_t *ins, char *options){
    
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insPoissonStep2D(ins, 0, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options);
+  insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
 
-
-
-
-
-  
   // Switch to second order
   //ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
 
 
   occa::initTimer(mesh->device);
 
-  for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
+  for(iint tstep=2;tstep<ins->NtimeSteps;++tstep){
        //
        //insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
        
        //insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
+
+      // insUpdateStep2D(ins, tstep, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+
 
 
 
@@ -69,6 +73,9 @@ void insRun2D(solver_t *ins, char *options){
   //
   free(poissonSendBuffer);
   free(poissonRecvBuffer);
+  //
+  free(updateSendBuffer);
+  free(updateRecvBuffer);
   //
 
 }

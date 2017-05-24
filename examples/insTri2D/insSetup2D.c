@@ -13,8 +13,9 @@
 
   ins->mesh = mesh;  
   // compute samples of q at interpolation nodes
-  ins->U     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->NVfields,sizeof(dfloat));
-  ins->Pr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->U      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->NVfields,sizeof(dfloat));
+  ins->Pr     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->PrI    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   
   //
   ins->rhsU  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
@@ -193,7 +194,10 @@
   ins->o_U  =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->NVfields*sizeof(dfloat), ins->U);
   ins->o_Pr =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pr);   
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pr);  
+
+  ins->o_PrI =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PrI);      
 
 
   ins->o_rhsU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->rhsU);
@@ -295,8 +299,6 @@
 
 
  // ===========================================================================
-
- 
   printf("Compiling Poisson volume kernel with collocation integration\n");
   ins->poissonRhsVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
@@ -328,7 +330,43 @@
   ins->poissonHaloScatterKernel= 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
       "insPoissonHaloScatter2D",
-        kernelInfo);  
+        kernelInfo);
+
+
+// ===========================================================================//
+  printf("Compiling Poisson volume kernel with collocation integration\n");
+  ins->updateVolumeKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
+      "insUpdateVolume2D",
+        kernelInfo);
+
+  printf("Compiling Poisson surface kernel with collocation integration\n");
+  ins->updateSurfaceKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
+      "insUpdateSurface2D",
+        kernelInfo);
+
+
+  printf("Compiling Poisson surface kernel with collocation integration\n");
+  ins->updateUpdateKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
+      "insUpdateUpdate2D",
+        kernelInfo);
+
+
+ printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->updateHaloExtractKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insUpdateHaloExtract2D",
+        kernelInfo);
+
+   printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->updateHaloScatterKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insUpdateHaloScatter2D",
+        kernelInfo); 
+// ===========================================================================//
+
 
  ins->mesh = mesh;   
 

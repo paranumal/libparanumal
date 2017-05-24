@@ -80,6 +80,42 @@ kernel void insPoissonHaloScatter2D(const iint Nelments,
   }
 
 
+kernel void insUpdateHaloExtract2D(const iint Nelments,
+                             const iint NhaloElements,
+                             const iint   * restrict haloElements,
+                             const dfloat * restrict q,
+                                   dfloat * restrict haloq){
+
+  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+      for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
+        const iint id    = haloElements[e];
+         haloq[n + p_Np*e ]     = q[n + p_Np*id ];
+      }
+    }
+  }
+
+
+
+kernel void insUpdateHaloScatter2D(const iint Nelments,
+                             const iint NhaloElements,
+                             const iint   * restrict haloElements,
+                                   dfloat * restrict q,
+                             const dfloat * restrict haloq){
+
+  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+      for(iint n=0;n<p_Np;++n;inner0){ 
+        const iint id    = haloElements[e];
+         q[n + p_Np*(Nelments+e)]                     = haloq[n + p_Np*e];     
+       //}
+      }
+    }
+  }
+
+
+
+
+
+
 // kernel void insHaloExtract3D(const iint Nelments,
 //                              const iint NhaloElements,
 //                              const iint   * restrict haloElements,
