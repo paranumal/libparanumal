@@ -55,11 +55,11 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	      if(nk==k && nj==j && ni==i)
       		      B[mode*mesh->Np+node] = 1;
       	      if(nj==j && nk==k)
-      		      Br[mode*mesh->Np+node] = mesh->D[ni*mesh->Nq+i]; // check order
+      		      Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; // check order
       	      if(ni==i && nk==k)
-      		      Bs[mode*mesh->Np+node] = mesh->D[nj*mesh->Nq+j]; // check order
+      		      Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; // check order
       	      if(ni==i && nj==j)
-      		      Bt[mode*mesh->Np+node] = mesh->D[nk*mesh->Nq+k]; // check order
+      		      Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k]; // check order
       	      
       	      ++node;
       	    }
