@@ -296,41 +296,24 @@
 
  // ===========================================================================
 
-   // KERNEL DEFINITIONS
-  if(strstr(options, "CUBATURE")){ 
-  printf("Compiling Poisson volume kernel with cubature integration\n");
-  ins->poissonRhsVolumeKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-      "insPoissonRhsVolumeCub2D",
-        kernelInfo);
-   }
-  else{
+ 
   printf("Compiling Poisson volume kernel with collocation integration\n");
   ins->poissonRhsVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
       "insPoissonRhsVolume2D",
         kernelInfo);
-  }
 
-
-    // KERNEL DEFINITIONS
-  if(strstr(options, "CUBATURE")){ 
-  printf("Compiling Poisson surface kernel with cubature integration\n");
-  ins->poissonRhsSurfaceKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-      "insPoissonRhsSurfaceCub2D",
-        kernelInfo);
-   }
-  else{
   printf("Compiling Poisson surface kernel with collocation integration\n");
   ins->poissonRhsSurfaceKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
       "insPoissonRhsSurface2D",
         kernelInfo);
-  }
 
-
-
+  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
+  ins->poissonRhsIpdgBCKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+      "insPoissonRhsIpdgBC2D",
+        kernelInfo);
 
 
 

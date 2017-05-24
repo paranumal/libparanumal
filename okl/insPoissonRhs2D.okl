@@ -17,31 +17,34 @@
 #define WSJID 4
 #define IHID 5
 
+
+
 void boundaryConditionsIpdg2D(const iint bc,
 			                           const dfloat  t,    const dfloat  x, const dfloat  y,
-			                           const dfloat  nx,   const dfloat  ny,
-			                           const dfloat  prM,  dfloat * restrict prB){
+			                           const dfloat  nx,   
+			                           const dfloat  ny,
+			                                 dfloat * restrict prB, 
+			                                 dfloat * restrict prnB){
+
+	 dfloat nu   = 1.0/40.0;
+   dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
-    
-
-
+    // enforce del P/ dn = nx*dp/dx + ny/dp/dy
+    *prnB = nx*(-lamda*occaExp(2.0f*lamda*x)) + 0.f; 
   }
   if(bc==2){ // Inflow
-  	
-
+    *prnB = nx*(-lamda*occaExp(2.0f*lamda*x)) + 0.f; 
   }
-  if(bc==3){ // Outflow 
-  
+  if(bc==3){ // Outflow
+  // Enforce P at outflow, Drichlet for pressure 
+  	 *prB = 0.5f*(1.0f - occaExp(2.0f*lamda*x)); 
   }
    
    if(bc==4){ // Slip
     
 
   }
-
-
-
 
 }
 
@@ -262,7 +265,154 @@ kernel void insPoissonRhsSurface2D(const iint Nelements,
 }
 
 
-// Update RhsU
+// Actually solves for Pr increamnet not presssure
+kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
+				                            const dfloat * restrict sgeo,
+				                            const dfloat * restrict vgeo,
+																    const dfloat * restrict DrT,
+																    const dfloat * restrict DsT,
+																    const dfloat * restrict FMMT,
+				                            const iint   * restrict vmapM,
+				                            const iint   * restrict vmapP,
+				                            const iint   * restrict EToB,
+				                            const dfloat time,
+				                            const dfloat dt, 
+				                            const dfloat tau,
+				     										    const dfloat * restrict x,
+				    									      const dfloat * restrict y,
+				     										    const dfloat * restrict Pr,
+				                                  dfloat * restrict rhsPr
+				                                  ){
+for(int e=0;e<Nelements;++e;outer0){
+	// shared storage for flux terms
+	  shared  dfloat s_prB[p_Nfp*p_Nfaces];
+	  shared  dfloat s_prnB[p_Nfp*p_Nfaces];
+    shared  dfloat s_nxprB[p_Nfp*p_Nfaces];
+    shared  dfloat s_nyprB[p_Nfp*p_Nfaces];
+    //
+    shared  dfloat s_Lpr[p_Np];
+	  shared  dfloat s_Lprn[p_Np];
+	  shared  dfloat s_Lnxpr[p_Np];
+	  shared  dfloat s_Lnypr[p_Np];
+	 
+	  exclusive dfloat tau_n;
+	 
+   for(iint n=0;n<p_maxNodes;++n;inner0){
+	      if(n<p_Nfp*p_Nfaces){
+	      	// Find face index and bc type
+					 iint face     = n/p_Nfp;
+					 iint bc       = EToB[face+p_Nfaces*e];
+					  //
+					  s_prB[n]      = 0.f;
+						s_prnB[n]     = 0.f;
+						s_nxprB[n]    = 0.f;
+						s_nyprB[n]    = 0.f;
+					  //
+	        if(bc){ 
+						//
+						const iint id  = n + e*p_Nfaces*p_Nfp;
+						const iint idM = vmapM[id];					
+						const iint idP = vmapP[id];					
+            // load surface geofactors for this face
+						iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+						dfloat nx          = sgeo[sid+p_NXID];
+						dfloat ny          = sgeo[sid+p_NYID];
+						dfloat sJ          = sgeo[sid+p_SJID];
+						//invJ        = sgeo[sid+p_IJID];
+						dfloat hinv  = sgeo[sid+p_IHID];
+
+						tau_n = hinv* tau; // Scale stabilization parameter
+						//					            
+            // Initialize external dirichlet for ux and uy
+            dfloat  prp = 0.f,  prpo = 0.f; 
+            // Initialize external Neumann for ux and uy
+            dfloat  prnp = 0.f, prnpo = 0.f;
+           // Pressure BC at t^(n+1)
+           boundaryConditionsIpdg2D(bc, time, x[idM], y[idM], nx, ny, 
+            	                       &prp, &prnp);
+           // Pressure BC at t^n
+           dfloat timeo = time-dt; 
+           boundaryConditionsIpdg2D(bc,timeo, x[idM], y[idM], nx, ny, 
+            	                      &prpo, &prnpo);
+
+            prp  -= prpo; // increment in pressure bc
+            prnp -= prnpo;         
+					 // Hold RHS information and multiply with sJ
+						s_prB[n]      = sJ*prp;
+						s_prnB[n]     = sJ*prnp;
+						s_nxprB[n]    = sJ*nx*prp;
+						s_nyprB[n]    = sJ*ny*prp;
+    		}
+  		}
+		}
+
+		barrier(localMemFence);
+
+   for(int n=0;n<p_Nmax;++n;inner0){
+      if(n<p_Np){
+	      dfloat prb = 0.f,  prnb =0.f;
+	      dfloat nxpr = 0.f, nypr =0.f;  
+		    // lift remaining surface terms
+		    occaUnroll(p_NfacesNfp)
+		    for(int i=0;i<p_NfacesNfp;++i){
+		    	 const dfloat L = FMMT[n+i*p_Np];
+		       prb   += L*s_prB[i];
+		       prnb  += L*s_prnB[i];
+           nxpr  += L*s_nxprB[i];
+		       nypr  += L*s_nyprB[i];
+		     }	
+
+				s_Lpr[n]      = prb;
+				s_Lprn[n]     = prnb;
+				s_Lnxpr[n]    = nxpr;
+		    s_Lnypr[n]    = nypr;
+	      }
+	    } 
+
+	     barrier(localMemFence);
+   
+
+   // n . grad P
+   for(int n=0;n<p_Nmax;++n;inner0){
+      if(n<p_Np){
+				const int gid = e*p_Nvgeo;
+				const dfloat drdx = vgeo[gid + p_RXID];
+				const dfloat drdy = vgeo[gid + p_RYID];
+				const dfloat dsdx = vgeo[gid + p_SXID];
+				const dfloat dsdy = vgeo[gid + p_SYID];
+				//
+        dfloat drnxpr= 0.f, drnypr= 0.f;
+        dfloat dsnxpr= 0.f, dsnypr= 0.f;
+		    // lift remaining surface terms
+		    occaUnroll(p_Np)
+		    for(int i=0;i<p_Np;++i){
+		    	const dfloat Drni = DrT[i+n*p_Np]; // Take transpose was DrT[n+i*p_Np]
+					const dfloat Dsni = DsT[i+n*p_Np]; // Take transpose was DsT[i+n*p_Np]
+
+					drnxpr += Drni*s_Lnxpr[n];
+					dsnxpr += Dsni*s_Lnxpr[n];
+					//
+					drnypr += Drni*s_Lnypr[n];
+					dsnypr += Dsni*s_Lnypr[n];
+				}
+
+        dfloat dndpr = (drdx*drnxpr + dsdx*dsnxpr + drdy*drnypr + dsdy*dsnypr);
+        const iint id = e*p_Np+n;
+				rhsPr[id] += tau_n*s_Lpr[n] - s_Lprn[n]  -   dndpr;
+
+			}
+
+   }
+
+  }
+}
+
+
+
+
+
+
+
 			
 
 
