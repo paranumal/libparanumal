@@ -71,11 +71,11 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
     }
   }
 	
-  // reset non-zero counter
-  int nnz = 0;
-      
   // loop over all elements
+#pragma omp parallel for
   for(iint eM=0;eM<mesh->Nelements;++eM){
+
+    iint cnt = eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
     
     /* build Dx,Dy,Dz (forget the TP for the moment) */
     for(iint n=0;n<mesh->Np;++n){
@@ -191,32 +191,34 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
             }
       	  }
       	  
-      	  if(fabs(AnmP)>tol){
-      	    // remote info
-      	    iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
-      	    iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
-            if (eP <0) eP = eM;
-            if (rankP<0) rankP = rankM;
-      	    (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-      	    (*A)[nnz].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
-      	    (*A)[nnz].val = AnmP;
-            (*A)[nnz].ownerRank = rankM;
-      	    ++nnz;
-      	  }
+	  // remote info
+	  iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+	  iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
+	  if (eP <0) eP = eM;
+	  if (rankP<0) rankP = rankM;
+	  (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
+	  (*A)[cnt].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
+	  (*A)[cnt].val = AnmP;
+	  (*A)[cnt].ownerRank = rankM;
+	  ++cnt;
       	}
       	
-      	if(fabs(Anm)>tol){
-      	  // local block
-      	  (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-      	  (*A)[nnz].col = m + eM*mesh->Np + rankStarts[rankM];
-      	  (*A)[nnz].val = Anm;
-          (*A)[nnz].ownerRank = rankM;
-      	  ++nnz;
-      	}
+	// local block
+	(*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
+	(*A)[cnt].col = m + eM*mesh->Np + rankStarts[rankM];
+	(*A)[cnt].val = Anm;
+	(*A)[cnt].ownerRank = rankM;
+	++cnt;
       }
     }
   }
 
+  // non-zero counter
+  int nnz = 0;
+  for(iint n=0;n<mesh->Np*mesh->Np*(mesh->Nfaces+1)*mesh->Nelements;++n)
+    if(fabs((*A)[n].val)>tol)
+      (*A)[nnz++] = (*A)[n];
+  
   // free up unused storage
   *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   
