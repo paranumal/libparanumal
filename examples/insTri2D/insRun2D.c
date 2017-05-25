@@ -27,40 +27,39 @@ void insRun2D(solver_t *ins, char *options){
   ins->b2 = 0.f, ins->b2 = 0.f;
   ins->g0 = 1.f; 
 
-   
+  // One First Order Step 
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insPoissonStep2D(ins, 0, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options);
   insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
 
   // Switch to second order
-  //ins->a0 = 2.0, ins->b0 = 2.0,  ins->a1 = -0.5, ins->b1 =-1.0, ins->g0 = 1.5; 
+  ins->a0 =  2.0,  ins->b0  = 2.0f;
+  ins->a1 = -0.5f, ins->b1 = -1.0f;
+  ins->b2 =  0.f,  ins->b2  = 0.f;
+  ins->g0 =  1.5f; 
 
-
-  occa::initTimer(mesh->device);
+  insHelmholtzStep2D(ins, 1, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  insPoissonStep2D(ins, 1, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options);
+  insUpdateStep2D(ins, 1, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+  
+   // Switch to third order
+  ins->a0 =  3.f,       ins->b0  =  3.0f;
+  ins->a1 = -1.5f,      ins->b1  = -3.0f;
+  ins->b2 =  1.f/3.f,   ins->b2  =  1.0f;
+  ins->g0 =  11.f/6.f; 
 
   for(iint tstep=2;tstep<ins->NtimeSteps;++tstep){
        //
-       //insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
-       
-       //insPressureStep2D(ins, tstep, haloBytes, sendBuffer, recvBuffer,options);
-
-      // insUpdateStep2D(ins, tstep, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
-
-
-
-
-
-
-
-
-
+      insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+      insPoissonStep2D(ins, tstep, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options);
+      insUpdateStep2D(ins, tstep, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
 
      if(strstr(options, "REPORT")){
       if((tstep%ins->errorStep)==0){
         insReport2D(ins, tstep,options);
-      }
-    }
-    }
+       }
+     }
+  }
   
   // // For Final Time
   insReport2D(ins, ins->NtimeSteps,options);
