@@ -227,14 +227,6 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
 	C[n*mesh->Np+m] = Anm;
       }
     }
-#if 0
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){
-	printf("%f ", C[n*mesh->Np+m]);
-      }
-      printf("\n");
-    }
-#endif
     
     // going to use C = VR'*diag(WR)*VR in C*x=b -> (VR'*diag(WR)*VR)*x = b
     // [ relies on symmetry to pass direct to dgeev
@@ -246,15 +238,13 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
       (*A)[cnt].col = n + eM*mesh->Np + rankStarts[rankM];
       (*A)[cnt].val = WR[n];
       (*A)[cnt].ownerRank = rankM;
-      //      printf("A[%d][%d] = %g\n", n,n,WR[n]);
+
       ++cnt;
     }
-    printf("done %d of %d\n", eM, mesh->Nelements);
   }
   
   //#pragma omp parallel for
   for(iint eM=0;eM<mesh->Nelements;++eM){
-    printf("HI");
 
     iint cnt = mesh->Nelements*mesh->Np + eM*mesh->Np*mesh->Np*mesh->Nfaces;
     
@@ -262,6 +252,7 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
       iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
       iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
       if (eP>=0){
+	if(rankP<0) rankP = rankM;
 	
 	for(iint n=0;n<mesh->Np;++n){
 	  for(iint m=0;m<mesh->Np;++m){ 
@@ -337,42 +328,29 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
 	}
 	
 	// now pre and post multiply by VR_{eM} and VR_{eP}'
+	dfloat *VRM = VR[0]+eM*mesh->Np*mesh->Np;
+	dfloat *VRP = VR[0]+eP*mesh->Np*mesh->Np;
 	for(iint n=0;n<mesh->Np;++n){
 	  for(iint m=0;m<mesh->Np;++m){
 	    dfloat res = 0;
 	    for(iint i=0;i<mesh->Np;++i){ // column major VR
-	      res += VR[0][eM*mesh->Np*mesh->Np+i+n*mesh->Np]*C[i*mesh->Np+m];
+	      for(iint j=0;j<mesh->Np;++j){
+		res += VRM[i+n*mesh->Np]*C[i*mesh->Np+j]*VRP[j+m*mesh->Np];
+	      }
 	    }
-	    VRxC[n*mesh->Np+m] = res;
-	  }
-	}
 
-	printf("-----\n");
-	for(iint n=0;n<mesh->Np;++n){
-	  for(iint m=0;m<mesh->Np;++m){
-	    dfloat res = 0;
-	    for(iint i=0;i<mesh->Np;++i){ // column major VR
-	      res += VRxC[n*mesh->Np+i]*VR[0][eP*mesh->Np*mesh->Np+m+i*mesh->Np];
-	    }
-	    
 	    (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
 	    (*A)[cnt].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
 	    (*A)[cnt].val = res;
 	    (*A)[cnt].ownerRank = rankM;
 
-	    printf("%f ", res);
-	    
 	    ++cnt;
 	  }
-	  printf("\n");
 	}
-	printf("-----\n");
       }
     }
   }
 
-  printf("BY");
-  
   // non-zero counter
   int nnz = 0;
   for(iint n=0;n<nnzLocalBound;++n)
