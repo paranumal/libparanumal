@@ -58,7 +58,7 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
   
   // split A into  (DD + (A-DD))*x = b  where DD is the block diagonal of A
   // build VR such that  VR'*DD*VR = LL where LL is the diagonal of eigs of DD
-  // [ using DD*VR = VR*LL ]
+  // [ using DD*VR = VR*LL => DD = VR*LL*VR' ]
   // i.e.  (VR*LL*VR' + (A-DD))*x = b
   // becomes  VR*(LL + VR'*(A-DD)*VR)*VR'*x = b
   // so solve  (LL+VR'*(A-DD)*VR)*x~ = VR'*b
@@ -131,10 +131,10 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
   dfloat *C  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   
   // loop over all elements
-#pragma omp parallel for
+  //#pragma omp parallel for
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
-    iint cnt = mesh->Nelements*mesh->Np + eM*mesh->Np*mesh->Np*mesh->Nfaces;
+    iint cnt = eM*mesh->Np;
     
     /* build Dx,Dy,Dz (forget the TP for the moment) */
     for(iint n=0;n<mesh->Np;++n){
@@ -185,11 +185,6 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
       	    dfloat dtdyM = mesh->vgeo[baseM+mesh->Np*TYID];
       	    dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
 
-	    // double check vol geometric factors are in halo storage of vgeo
-      	    iint idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-      	    iint vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-      	    iint localEP = mesh->vmapP[idM]/mesh->Np;
-
 	    // grab surface geometric factors
       	    iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
       	    dfloat nx = mesh->sgeo[base+NXID];
@@ -200,7 +195,6 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
 	    
       	    // form negative trace terms in IPDG
       	    int idnM = n*mesh->Np+vidM; 
-      	    int idmP = m*mesh->Np+vidP;
       	    int idmM = m*mesh->Np+vidM;
 
       	    dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM*Bt[idnM];
@@ -233,24 +227,35 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
 	C[n*mesh->Np+m] = Anm;
       }
     }
+#if 0
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){
+	printf("%f ", C[n*mesh->Np+m]);
+      }
+      printf("\n");
+    }
+#endif
     
     // going to use C = VR'*diag(WR)*VR in C*x=b -> (VR'*diag(WR)*VR)*x = b
     // [ relies on symmetry to pass direct to dgeev
     eig(mesh->Np, C, VL, VR[0]+eM*mesh->Np*mesh->Np, WR, WI);
-    
+
     for(iint n=0;n<mesh->Np;++n){
       // local block
       (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
       (*A)[cnt].col = n + eM*mesh->Np + rankStarts[rankM];
       (*A)[cnt].val = WR[n];
       (*A)[cnt].ownerRank = rankM;
+      //      printf("A[%d][%d] = %g\n", n,n,WR[n]);
       ++cnt;
     }
+    printf("done %d of %d\n", eM, mesh->Nelements);
   }
   
-#pragma omp parallel for
+  //#pragma omp parallel for
   for(iint eM=0;eM<mesh->Nelements;++eM){
-    
+    printf("HI");
+
     iint cnt = mesh->Nelements*mesh->Np + eM*mesh->Np*mesh->Np*mesh->Nfaces;
     
     for(iint fM=0;fM<mesh->Nfaces;++fM){
@@ -341,28 +346,36 @@ void ellipticBuildModifiedIpdgHex3D(mesh3D *mesh,
 	    VRxC[n*mesh->Np+m] = res;
 	  }
 	}
-	
+
+	printf("-----\n");
 	for(iint n=0;n<mesh->Np;++n){
 	  for(iint m=0;m<mesh->Np;++m){
 	    dfloat res = 0;
 	    for(iint i=0;i<mesh->Np;++i){ // column major VR
-	      res += VRxC[n*mesh->Np+i]*VR[0][eP*mesh->Np*mesh->Np+n+i*mesh->Np];
+	      res += VRxC[n*mesh->Np+i]*VR[0][eP*mesh->Np*mesh->Np+m+i*mesh->Np];
 	    }
 	    
 	    (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
 	    (*A)[cnt].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
 	    (*A)[cnt].val = res;
 	    (*A)[cnt].ownerRank = rankM;
+
+	    printf("%f ", res);
+	    
 	    ++cnt;
 	  }
+	  printf("\n");
 	}
+	printf("-----\n");
       }
     }
   }
 
+  printf("BY");
+  
   // non-zero counter
   int nnz = 0;
-  for(iint n=0;n<mesh->Np*mesh->Np*(mesh->Nfaces+1)*mesh->Nelements;++n)
+  for(iint n=0;n<nnzLocalBound;++n)
     if(fabs((*A)[n].val)>tol)
       (*A)[nnz++] = (*A)[n];
   
