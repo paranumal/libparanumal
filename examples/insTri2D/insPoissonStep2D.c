@@ -17,10 +17,10 @@ dfloat t = tstep*ins->dt + ins->dt;
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
                            ins->o_U,
-                           mesh->o_haloBuffer);
+                           ins->o_velHaloBuffer);
 
     // copy extracted halo to HOST 
-    mesh->o_haloBuffer.copyTo(sendBuffer);            
+    ins->o_velHaloBuffer.copyTo(sendBuffer);            
     // start halo exchange
     meshHaloExchangeStart(mesh,
                           mesh->Np*ins->NVfields*sizeof(dfloat), 
@@ -51,7 +51,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
                                   ins->o_U,
-                                  mesh->o_haloBuffer);
+                                  ins->o_velHaloBuffer);
   }
 
 

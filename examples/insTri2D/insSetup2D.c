@@ -132,7 +132,7 @@
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep = 1000;
+  ins->errorStep = 100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -179,6 +179,7 @@
   kernelInfo.addDefine("p_NDofs",      ins->NDofs);
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
+  kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
 
 
@@ -195,7 +196,6 @@
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->NVfields*sizeof(dfloat), ins->U);
   ins->o_Pr =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pr);  
-
   ins->o_PrI =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PrI);      
 
@@ -210,8 +210,10 @@
   ins->o_UO    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UO);
   ins->o_UOO   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UOO);
   ins->o_UI    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UI);
-
   
+  ins->o_totHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
+  ins->o_velHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
+  ins->o_prHaloBuffer  = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
   // for(int n=0; n<mesh->Np;n++){
   //   for(int m=0;m<mesh->Nfp*mesh->Nfaces;m++){
   //   printf("%g ", mesh->FMM[m+n*mesh->Nfp*mesh->Nfaces]);

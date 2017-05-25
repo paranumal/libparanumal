@@ -14,6 +14,8 @@
 #define WSJID 4
 #define IHID 5
 
+
+// BCs for -laplace(u) + g0*idt*inu*u
 void boundaryConditionsIpdg2D(const iint bc,
 			                           const dfloat  t,    const dfloat  x, const dfloat  y,
 			                           const dfloat  nx,   const dfloat  ny,
@@ -21,21 +23,20 @@ void boundaryConditionsIpdg2D(const iint bc,
 			                           const dfloat  uxnM, const dfloat  uynM,
 			                                 dfloat * restrict uxB,  dfloat * restrict uyB,
 			                                 dfloat * restrict uxnB, dfloat * restrict uynB){
+	dfloat nu   = 1.0/40.0;
+  dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
     *uxB = 0.f; 
     *uyB = 0.f;
   }
   if(bc==2){ // Inflow
-  	dfloat nu   = 1.0/40.0;
-  	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+  	
     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
   }
   if(bc==3){ // Outflow 
   // do nothing 
-  	dfloat nu   = 1.0/40.0;
-  	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);
     *uxnB = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
     *uynB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
   }
@@ -44,37 +45,36 @@ void boundaryConditionsIpdg2D(const iint bc,
     *uxnB = uxM;
     *uynB = uyM;
   }
-
-
-
-
 }
+
+// BCs for div(u*u) - grad(p) for helmholtz rhs
 
 void boundaryConditionsRhs2D(const iint bc,
 			              const dfloat  t, const dfloat  x, const dfloat  y,
 			              const dfloat  nx, const dfloat  ny,
 			              const dfloat  uxM, const dfloat  uyM, const dfloat prM,
 			                    dfloat * restrict uxB, dfloat * restrict uyB, dfloat * restrict prB){
+	dfloat nu   = 1.0/40.0;
+  dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
     *uxB = 0.f; 
     *uyB = 0.f;
     // For pressure do nothing
+    *prB = prM; // Neumann for Pressure // do nothing
   }
   if(bc==2){ // Inflow
-  	dfloat nu   = 1.0/40.0;
-  	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+  	
     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+    //
+    *prB = prM; // Neumann for Pressure // do nothing
   }
   if(bc==3){ // Outflow 
-  // do nothing 
-  	dfloat nu   = 1.0/40.0;
-  	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-
+    // do nothing 
     *uxB = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
     *uyB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
-
+    //
     *prB = 0.5f*(1.0f - occaExp(2.0f*lamda*x)); //Dirichlet for pressure
   }
 }
@@ -131,13 +131,12 @@ kernel void insHelmholtzRhsVolume2D(const iint Nelements,
 			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
 			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
 			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-			 
-	  // compute 'r' and 's' derivatives of (q_m) at node n
+	      // compute 'r' and 's' derivatives of (q_m) at node n
 				dfloat df11dr = 0.f, df11ds = 0.f; 
 				dfloat df12dr = 0.f, df12ds = 0.f; 
 				dfloat df22dr = 0.f, df22ds = 0.f; 
 				dfloat dprdr  = 0.f, dprds  = 0.f;
-
+        //
 				occaUnroll(p_Np)
 				for(iint i=0;i<p_Np;++i){
 					const dfloat Drni = DrT[n+i*p_Np];
@@ -158,9 +157,11 @@ kernel void insHelmholtzRhsVolume2D(const iint Nelements,
 				// chain rule
         dfloat nux   = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
         dfloat nuy   = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
+        //
         dfloat dprdx = drdx*dprdr  + dsdx*dprds;
         dfloat dprdy = drdy*dprdr  + dsdy*dprds;
-				// Update RhsU
+				
+				// Update
 				const iint id = e*p_Np+n;
 				// Compute div(uxu)
 				NU[id + UXID*p_NDofs]   = nux;
@@ -175,11 +176,7 @@ kernel void insHelmholtzRhsVolume2D(const iint Nelements,
  }
 }
 
-
-
-
-
-
+//
 kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
@@ -196,7 +193,6 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-
     // shared storage for flux terms
     shared dfloat s_fluxNUx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxNUy[p_NblockS][p_Nfp*p_Nfaces];
@@ -206,46 +202,42 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
      // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	   iint e = eo + es;
-	    if(e<Nelements){
+	    iint e = eo + es;
+	     if(e<Nelements){
 	      if(n<p_Nfp*p_Nfaces){
 		    // find face that owns this node
 		    iint face = n/p_Nfp;
 		    // load surface geofactors for this face
 		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-		    dfloat nx   = sgeo[sid+0];
-		    dfloat ny   = sgeo[sid+1];
-		    //
-		    dfloat sJ   = sgeo[sid+2];
-		    dfloat invJ = sgeo[sid+3];
+		    dfloat nx   = sgeo[sid+NXID];
+		    dfloat ny   = sgeo[sid+NYID];
+		    dfloat sJ   = sgeo[sid+SJID];
+		    dfloat invJ = sgeo[sid+IJID];
 		   
 		    // indices of negative and positive traces of face node
 		    iint id  = e*p_Nfp*p_Nfaces + n;
 		    iint idM = vmapM[id];
 		    iint idP = vmapP[id];
 
-		   if(idP<0) idP = idM;
-		  
-	  // load negative and positive trace node values of q
-	     dfloat  uxm = U[idM + UXID*p_NtotalDofs];
-	     dfloat  uxp = U[idP + UXID*p_NtotalDofs];
-	     //
-		   dfloat  uym = U[idM + UYID*p_NtotalDofs];
-		   dfloat  uyp = U[idP + UYID*p_NtotalDofs];
-		   //
-		   dfloat  prm = U[idM];
-		   dfloat  prp = U[idP];
+		   if(idP<0) idP = idM; // bc
+		  // load negative and positive trace node values of q
+		     dfloat  uxm = U[idM + UXID*p_NtotalDofs];
+		     dfloat  uxp = U[idP + UXID*p_NtotalDofs];
+		     //
+			   dfloat  uym = U[idM + UYID*p_NtotalDofs];
+			   dfloat  uyp = U[idP + UYID*p_NtotalDofs];
+			   //
+			   dfloat  prm = Pr[idM];
+			   dfloat  prp = Pr[idP];
 
 		    // apply boundary condition
 		    iint bc = EToB[face+p_Nfaces*e];
 		    if(bc>0)
 		      boundaryConditionsRhs2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym, prm, &uxp, &uyp, &prp);
 
-
-        // Find max normal velocity
+        // Find max normal velocity on the face
 		    dfloat unm   = occaFabs(nx*uxm + ny*uym);
-		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);
-            
+		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);    
         dfloat unmax = (unm > unp) ? unm : unp;
 
         // evaluate "flux" terms: LLF
@@ -261,7 +253,7 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 		}
     
    
-    // wait for all shared memory writes of the previous inner loop to complete
+    // wait for all flux functions are written to shared 
     barrier(localMemFence);
 
     // for each node in the element
@@ -284,7 +276,6 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 								//
 								rhsnux  += L*s_fluxNUx[es][m];
 								rhsnuy  += L*s_fluxNUy[es][m];
-								//
 								rhsux   += L*s_fluxUx[es][m];
 								rhsuy   += L*s_fluxUy[es][m];
 					}
@@ -336,35 +327,41 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 				if(e<Nelements){ 
 					const iint id = e*p_Np+n;
 					const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-					//
+					//U at t^(n)
 					const dfloat ux    = U[id + UXID*p_NtotalDofs];
 					const dfloat uy    = U[id + UYID*p_NtotalDofs];
-					//
+					// U at t^(n-1)
 					const dfloat uxo   = UO[id   + UXID*p_NDofs];
 					const dfloat uyo   = UO[id   + UYID*p_NDofs];
-
+          // U at t^(n-2)
 					const dfloat uxoo  = UOO[id  + UXID*p_NDofs];
 					const dfloat uyoo  = UOO[id  + UYID*p_NDofs];
-					//
+					
+					// NU at t^(n)
 					const dfloat nux   = NU[id   + UXID*p_NDofs];
 					const dfloat nuy   = NU[id   + UYID*p_NDofs];
-					//
+					//NU at t^(n-1)
 					const dfloat nuxo  = NUO[id  + UXID*p_NDofs];
 					const dfloat nuyo  = NUO[id  + UYID*p_NDofs];
-					//
+					//NU at t^(n-2)
 					const dfloat nuxoo = NUOO[id + UXID*p_NDofs];
 					const dfloat nuyoo = NUOO[id + UYID*p_NDofs];
-
+          
+          // Currently holds -grad(P)
 					const dfloat rhsux = rhsU[id + UXID*p_NDofs];
 					const dfloat rhsuy = rhsU[id + UYID*p_NDofs];
+					
 					//Update NU
 					NUOO[id+ UXID*p_NDofs]    = nuxo;
 					NUOO[id+ UYID*p_NDofs]    = nuyo;
 					NUO[id + UXID*p_NDofs]    = nux;
 					NUO[id + UYID*p_NDofs]    = nuy;
-					//
-          s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*ux + a1*uxo + a2*uxoo)/dt - (b0*nux + b1*nuxo + b2*nuxoo));
-          s_rhsUy[es][n]   = J*p_inu*(rhsux + (a0*uy + a1*uyo + a2*uyoo)/dt - (b0*nuy + b1*nuyo + b2*nuyoo)); 
+					
+					// rhsU = -grad(P) + f^(n+1)
+					// -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
+					// !!! hold inv dt later
+          s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*ux + a1*uxo + a2*uxoo)*p_idt - (b0*nux + b1*nuxo + b2*nuxoo));
+          s_rhsUy[es][n]   = J*p_inu*(rhsux + (a0*uy + a1*uyo + a2*uyoo)*p_idt - (b0*nuy + b1*nuyo + b2*nuyoo)); 
 				}
       }
     }
@@ -375,32 +372,24 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	
-			iint e = eo+es; // element in block
-			if(e<Nelements){	  
-			 
-	    // Multiplay with Mass Matrix
+			 iint e = eo+es; // element in block
+			  if(e<Nelements){	  
+	      // Multiplay with Mass Matrix
 				dfloat rhsux = 0.f, rhsuy = 0.f; 
-
 				occaUnroll(p_Np)
-
 				for(iint i=0;i<p_Np;++i){
 					const dfloat M = MM[n+i*p_Np];
-					// 
 					rhsux  += M*s_rhsUx[es][i];
 					rhsuy  += M*s_rhsUy[es][i];
 				}
-
+        // Update
 				const iint id = e*p_Np+n;
-
 				rhsU[id + UXID*p_NDofs] = rhsux;
 				rhsU[id + UYID*p_NDofs] = rhsuy;
 	 
 	      }
       }
     }
-
-  
     
   }
 }
@@ -466,12 +455,11 @@ for(int e=0;e<Nelements;++e;outer0){
 						const iint idM = vmapM[id];					
 						const iint idP = vmapP[id];					
             // load surface geofactors for this face
-						iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-						dfloat nx          = sgeo[sid+p_NXID];
-						dfloat ny          = sgeo[sid+p_NYID];
-						dfloat sJ          = sgeo[sid+p_SJID];
-						//invJ        = sgeo[sid+p_IJID];
-						dfloat hinv  = sgeo[sid+p_IHID];
+						iint sid       = p_Nsgeo*(e*p_Nfaces+face);
+						dfloat nx      = sgeo[sid+p_NXID];
+						dfloat ny      = sgeo[sid+p_NYID];
+						dfloat sJ      = sgeo[sid+p_SJID];
+						dfloat hinv    = sgeo[sid+p_IHID];
 
 						tau_n = hinv* tau; // Scale stabilization parameter
 						//
@@ -491,10 +479,10 @@ for(int e=0;e<Nelements;++e;outer0){
             	                       &uxp, &uyp, &uxnp, &uynp);
             
 					 // Hold RHS information and multiply with sJ
-						s_uxB[n]      = sJ*uxp;
-						s_uyB[n]      = sJ*uyp;
+						s_uxB[n]      = sJ*uxp * hinv*tau ;
+						s_uyB[n]      = sJ*uyp * hinv*tau ;
 						s_uxnB[n]     = sJ*uxnp;
-						s_uxnB[n]     = sJ*uynp;
+						s_uxnB[n]     = sJ*uynp;			
 						//
 						s_nxuxB[n]    = sJ*nx*uxp;
 						s_nxuyB[n]    = sJ*nx*uyp;
@@ -513,27 +501,27 @@ for(int e=0;e<Nelements;++e;outer0){
 		    // lift remaining surface terms
 		    occaUnroll(p_NfacesNfp)
 		    for(int i=0;i<p_NfacesNfp;++i){
-		    	 const dfloat L = FMMT[n+i*p_Np];
-		       uxb  += L*s_uxB[i];
-		       uyb  += L*s_uyB[i];
-		       uxnb += L*s_uxnB[i];
-		       uynb += L*s_uynB[i];
+		    	 const dfloat FM = FMMT[n+i*p_Np];
+		       uxb  += FM*s_uxB[i];
+		       uyb  += FM*s_uyB[i];
+		       uxnb += FM*s_uxnB[i];
+		       uynb += FM*s_uynB[i];
 		       //
-           nxux  += L*s_nxuxB[i];
-		       nxuy  += L*s_nxuyB[i];
-		       nyux  += L*s_nyuxB[i];
-		       nyuy  += L*s_nyuyB[i];
+           nxux += FM*s_nxuxB[i];
+		       nxuy += FM*s_nxuyB[i];
+		       nyux += FM*s_nyuxB[i];
+		       nyuy += FM*s_nyuyB[i];
 
 		     }	
 				s_Lux[n]      = uxb;
 				s_Luy[n]      = uyb;
 				s_Luxn[n]     = uxnb;
-				s_Luxn[n]     = uynb;
+				s_Luyn[n]     = uynb;
 				//
-				s_Lnxux[n]     = nxux;
-		    s_Lnxuy[n]     = nxuy;
-		    s_Lnyux[n]     = nyux;
-		    s_Lnyuy[n]     = nyuy;
+				s_Lnxux[n]    = nxux;
+		    s_Lnxuy[n]    = nxuy;
+		    s_Lnyux[n]    = nyux;
+		    s_Lnyuy[n]    = nyuy;
 	      }
 	    } 
 
@@ -552,9 +540,8 @@ for(int e=0;e<Nelements;++e;outer0){
 		    // lift remaining surface terms
 		    occaUnroll(p_Np)
 		    for(int i=0;i<p_Np;++i){
-		    	const dfloat Drni = DrT[i+n*p_Np]; // Take transpose was DrT[n+i*p_Np]
-					const dfloat Dsni = DsT[i+n*p_Np]; // Take transpose was DsT[i+n*p_Np]
-
+		    	const dfloat Drni = DrT[i+n*p_Np]; // !!!Take transpose was DrT[n+i*p_Np]
+					const dfloat Dsni = DsT[i+n*p_Np]; // !!!Take transpose was DsT[i+n*p_Np]
 					drnxux += Drni*s_Lnxux[n];
 					dsnxux += Dsni*s_Lnxux[n];
 					//
@@ -568,13 +555,15 @@ for(int e=0;e<Nelements;++e;outer0){
 					dsnyuy += Dsni*s_Lnyuy[n];
 				}
 
-        dfloat dndux = -(drdx*drnxux + dsdx*dsnxux + drdy*drnyux + dsdy*dsnyux);
-        dfloat dnduy = -(drdx*drnxuy + dsdx*dsnxuy + drdy*drnyuy + dsdy*dsnyuy);
+				// (grad(phi),U_d) = DxT*
+
+        dfloat dndux =  (drdx*drnxux + dsdx*dsnxux + drdy*drnyux + dsdy*dsnyux);
+        dfloat dnduy =  (drdx*drnxuy + dsdx*dsnxuy + drdy*drnyuy + dsdy*dsnyuy);
 
 
         const iint id = e*p_Np+n;
-				rhsU[id + UXID*p_NDofs] += tau_n*s_Lux[n] + s_Luxn[n] +   dndux;
-				rhsU[id + UYID*p_NDofs] += tau_n*s_Luy[n] + s_Luyn[n] +   dnduy;
+				rhsU[id + UXID*p_NDofs] +=  s_Lux[n] + s_Luxn[n] -   dndux;
+				rhsU[id + UYID*p_NDofs] +=  s_Luy[n] + s_Luyn[n] -   dnduy;
 
 			}
 

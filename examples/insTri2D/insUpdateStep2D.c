@@ -14,13 +14,13 @@ dfloat t = tstep*ins->dt + ins->dt;
 	if(mesh->totalHaloPairs>0){
 	 
     ins->updateHaloExtractKernel(mesh->Nelements,
-                           mesh->totalHaloPairs,
-                           mesh->o_haloElementList,
-                           ins->o_PrI,
-                           mesh->o_haloBuffer);
+                                 mesh->totalHaloPairs,
+                                 mesh->o_haloElementList,
+                                 ins->o_PrI,
+                                 ins->o_prHaloBuffer);
 
     // copy extracted halo to HOST 
-    mesh->o_haloBuffer.copyTo(sendBuffer);            
+    ins->o_prHaloBuffer.copyTo(sendBuffer);            
    
     // start halo exchange
     meshHaloExchangeStart(mesh,
@@ -51,7 +51,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
                                   ins->o_PrI,
-                                  mesh->o_haloBuffer);
+                                  ins->o_prHaloBuffer);
   }
 
 
@@ -63,6 +63,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                               mesh->o_vmapP,
                               mesh->o_EToB,
                               t,
+                              ins->dt,
                               mesh->o_x,
                               mesh->o_y,
                               ins->o_PrI,
@@ -74,6 +75,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                               ins->g0,
                               ins->o_U,
                               ins->o_Pr,
+                              ins->o_PrI,
                               ins->o_rhsU);
 
 

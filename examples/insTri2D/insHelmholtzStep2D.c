@@ -18,10 +18,10 @@ void insHelmholtzStep2D(solver_t *ins, iint tstep,  iint haloBytes,
                            mesh->o_haloElementList,
                            ins->o_U,
                            ins->o_Pr,
-                           mesh->o_haloBuffer);
+                           ins->o_totHaloBuffer);
 
     // copy extracted halo to HOST 
-    mesh->o_haloBuffer.copyTo(sendBuffer);            
+    ins->o_totHaloBuffer.copyTo(sendBuffer);            
     // start halo exchange
     meshHaloExchangeStart(mesh,
                           mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
@@ -53,7 +53,7 @@ void insHelmholtzStep2D(solver_t *ins, iint tstep,  iint haloBytes,
                           mesh->o_haloElementList,
                           ins->o_U,
                           ins->o_Pr,
-                          mesh->o_haloBuffer);
+                          ins->o_totHaloBuffer);
   }
 
  // Compute Surface Conribution
@@ -112,7 +112,7 @@ void insHelmholtzStep2D(solver_t *ins, iint tstep,  iint haloBytes,
 
 
 
-  // SOLVE HELMHOLTZ EQUATION for ins->o_UI
+  // SOLVE HELMHOLTZ EQUATION for ins->o_U
 
 
 
