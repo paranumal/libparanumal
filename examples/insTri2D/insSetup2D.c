@@ -22,7 +22,6 @@
   ins->rhsPr = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
   //
   ins->UO    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
-  ins->UI    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
   //
   ins->NU    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
   ins->NUO   = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->NVfields,sizeof(dfloat));
@@ -208,8 +207,7 @@
   ins->o_NUOO  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->NUOO);   
     
   ins->o_UO    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UO);
-  ins->o_UOO   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UOO);
-  ins->o_UI    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UI);
+  ins->o_UOO   = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->NVfields*sizeof(dfloat), ins->UO);
   
   ins->o_totHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
   ins->o_velHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));

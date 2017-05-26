@@ -23,10 +23,10 @@ iint   errorStep;
 
 dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
 dfloat *Pr,*PrI,*rhsU, *rhsPr;
-dfloat *U, *UO, *UOO, *UI, *NU, *NUO,*NUOO; 
+dfloat *U, *UO, *UOO, *NU, *NUO,*NUOO; 
 dfloat g[2]; // gravitational Acceleration
 
-occa::memory o_U, o_UO, o_UOO, o_UI, o_NU, o_NUO, o_NUOO, o_Pr, o_PrI;
+occa::memory o_U, o_UO, o_UOO, o_NU, o_NUO, o_NUOO, o_Pr, o_PrI;
 occa::memory o_rhsU, o_rhsPr; 
 
 occa::memory o_velHaloBuffer, o_prHaloBuffer, o_totHaloBuffer; 
