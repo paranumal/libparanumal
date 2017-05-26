@@ -3,9 +3,9 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-  solver_t *insSetup2D(mesh2D *mesh, char * options){
+  ins_t *insSetup2D(mesh2D *mesh, char * options){
   
-  solver_t *ins = (solver_t*) calloc(1, sizeof(solver_t));
+  ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
    
   ins->NVfields = 2; // Velocity 
   ins->NTfields = 3; // Velocity + Pressure
@@ -180,16 +180,6 @@
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-
-
-  // kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-  // kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  // kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
-  // kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
-  // kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
-  // kernelInfo.addDefine("p_tauInv", mesh->tauInv);
-
-
   // MEMORY ALLOCATION
   ins->o_U  =    
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->NVfields*sizeof(dfloat), ins->U);
@@ -212,13 +202,8 @@
   ins->o_totHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
   ins->o_velHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
   ins->o_prHaloBuffer  = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
-  // for(int n=0; n<mesh->Np;n++){
-  //   for(int m=0;m<mesh->Nfp*mesh->Nfaces;m++){
-  //   printf("%g ", mesh->FMM[m+n*mesh->Nfp*mesh->Nfaces]);
-  //   }
-  //  printf("\n");
+  
 
-  // }
 
    // KERNEL DEFINITIONS
   if(strstr(options, "CUBATURE")){ 

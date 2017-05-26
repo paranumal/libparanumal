@@ -1,6 +1,6 @@
 #include "ins2D.h"
 
-void insReport2D(solver_t *ins, iint tstep, char *options){
+void insReport2D(ins_t *ins, iint tstep, char *options){
 
   dfloat t = (tstep+1)*ins->dt;
   
