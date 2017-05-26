@@ -5,6 +5,7 @@
 #include "mpi.h"
 #include "mesh2D.h"
 #include "ins2D.h"
+#include "ellipticTri2D.h"
 
 int main(int argc, char **argv){
 
@@ -29,7 +30,7 @@ int main(int argc, char **argv){
   mesh2D *mesh = meshSetupTri2D(argv[1], N);  
   //
   printf("Setup INS Solver: \n");   
-  solver_t *ins = insSetup2D(mesh,options);  
+  ins_t *ins = insSetup2D(mesh,options);  
 
   printf("OCCA Run: \n");  
   insRun2D(ins,options); 

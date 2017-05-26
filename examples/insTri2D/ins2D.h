@@ -38,8 +38,6 @@ occa::kernel poissonHaloExtractKernel;
 occa::kernel poissonHaloScatterKernel;
 occa::kernel updateHaloExtractKernel;
 occa::kernel updateHaloScatterKernel;
-
-
 //
 occa::kernel helmholtzRhsVolumeKernel;
 occa::kernel helmholtzRhsSurfaceKernel;
@@ -55,27 +53,26 @@ occa::kernel updateSurfaceKernel;
 occa::kernel updateUpdateKernel;
 
   
-}solver_t;
+}ins_t;
 
 
-
-solver_t *insSetup2D(mesh2D *mesh, char *options);
+ins_t *insSetup2D(mesh2D *mesh, char *options);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 
-void insRun2D(solver_t *solver, char *options);
-void insPlotVTU2D(solver_t *solver, char *fileNameBase);
-void insReport2D(solver_t *solver, iint tstep, char *options);
-void insError2D(solver_t *solver, dfloat time, char *options);
+void insRun2D(ins_t *solver, char *options);
+void insPlotVTU2D(ins_t *solver, char *fileNameBase);
+void insReport2D(ins_t *solver, iint tstep, char *options);
+void insError2D(ins_t *solver, dfloat time, char *options);
 
-void insHelmholtzStep2D(solver_t *solver, iint tstep, iint haloBytes,
+void insHelmholtzStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
-void insPoissonStep2D(solver_t *solver, iint tstep, iint haloBytes,
+void insPoissonStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
-void insUpdateStep2D(solver_t *solver, iint tstep, iint haloBytes,
+void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 

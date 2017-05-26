@@ -6,7 +6,7 @@
 #include "ins2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void insPlotVTU2D(solver_t *ins, char *fileNameBase){
+void insPlotVTU2D(ins_t *ins, char *fileNameBase){
 
   mesh2D *mesh = ins->mesh;
   

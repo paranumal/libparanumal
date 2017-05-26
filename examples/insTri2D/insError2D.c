@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // currently maximum
-void insError2D(solver_t *ins, dfloat time,char *options){
+void insError2D(ins_t *ins, dfloat time,char *options){
 
     mesh2D *mesh = ins->mesh;
 
