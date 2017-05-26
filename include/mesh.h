@@ -111,6 +111,7 @@ typedef struct {
   iint *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
+  dfloat *FMM;  // Face Mass Matrix  
 
   iint   Nsgeo;
   dfloat *sgeo;
@@ -225,6 +226,12 @@ typedef struct {
   dfloat *respmlq; // residual data array (for LSERK time-stepping)
   
   
+
+
+
+
+
+  
   
   // occa stuff
   occa::device device;
@@ -232,6 +239,7 @@ typedef struct {
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
+  occa::memory o_FMMT;
 
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
@@ -302,8 +310,8 @@ typedef struct {
   occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
   occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
-
   
+    
 
   
   // CG gather-scatter info
