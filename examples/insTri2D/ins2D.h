@@ -3,13 +3,16 @@
 #include <math.h>
 #include <mpi.h>
 #include "mesh2D.h"
+#include "ellipticTri2D.h"
 
 #define UXID 0
 #define UYID 1
 
 typedef struct {
 
-mesh_t *mesh;	
+mesh_t *mesh;
+solver_t *velsolver;
+solver_t *prsolver;	
 
 // INS SOLVER OCCA VARIABLES
 dfloat rho, nu ;
@@ -17,6 +20,7 @@ iint NVfields, NTfields;
 iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
 //
 dfloat dt; // time step
+dfloat lamda; // helmhotz solver -lap(u) + lamda u
 dfloat finalTime; // final time to run acoustics to
 iint   NtimeSteps;// number of time steps 
 iint   errorStep; 
@@ -30,6 +34,10 @@ occa::memory o_U, o_UO, o_UOO, o_NU, o_NUO, o_NUOO, o_Pr, o_PrI;
 occa::memory o_rhsU, o_rhsPr; 
 
 occa::memory o_velHaloBuffer, o_prHaloBuffer, o_totHaloBuffer; 
+
+
+// occa::device device;
+occa::kernelInfo kernelInfo;
 
 
 occa::kernel helmholtzHaloExtractKernel;
@@ -60,16 +68,16 @@ ins_t *insSetup2D(mesh2D *mesh, char *options);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 
-void insRun2D(ins_t *solver, char *options);
+void insRun2D(ins_t *solver, char *options, char *velSolverOptions, char *prSolverOptions);
 void insPlotVTU2D(ins_t *solver, char *fileNameBase);
 void insReport2D(ins_t *solver, iint tstep, char *options);
 void insError2D(ins_t *solver, dfloat time, char *options);
 
 void insHelmholtzStep2D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options, char *velSolverOptions);
 
 void insPoissonStep2D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options, char *prSolverOptions);
 
 
 void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,

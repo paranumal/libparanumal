@@ -5,7 +5,6 @@
 #include "mpi.h"
 #include "mesh2D.h"
 #include "ins2D.h"
-#include "ellipticTri2D.h"
 
 int main(int argc, char **argv){
 
@@ -30,10 +29,19 @@ int main(int argc, char **argv){
   mesh2D *mesh = meshSetupTri2D(argv[1], N);  
   //
   printf("Setup INS Solver: \n");   
-  ins_t *ins = insSetup2D(mesh,options);  
+  ins_t *ins = insSetup2D(mesh,options); 
+
+  // Set-up Solver Options
+  char *velSolverOptions = 
+  strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,MATRIXFREE");
+
+  char *prSolverOptions = 
+  strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
 
   printf("OCCA Run: \n");  
-  insRun2D(ins,options); 
+  //insRun2D(ins,options,velSolverOptions,prSolverOptions); 
+  
+
   // close down MPI
   MPI_Finalize();
 
