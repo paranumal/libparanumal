@@ -2,9 +2,12 @@
 
 // complete a time step using LSERK4
 void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
-				               dfloat * sendBuffer, dfloat * recvBuffer,  char   * options){
+				               dfloat * sendBuffer, dfloat * recvBuffer, 
+                       char   * options, char *velSolverOptions){
 
 	mesh2D *mesh = ins->mesh; 
+
+  solver_t *solver = ins->velsolver; 
 
 	dfloat t = tstep*ins->dt;
 
@@ -114,8 +117,6 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   // SOLVE HELMHOLTZ EQUATION for ins->o_U
 
-
-
-
+ // ellipticSolveTri2D(solver, ins->lamda, ins->o_rhsU, ins->o_U, velSolverOptions);
    
 }

@@ -6,6 +6,7 @@
   ins_t *insSetup2D(mesh2D *mesh, char * options){
   
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
+
    
   ins->NVfields = 2; // Velocity 
   ins->NTfields = 3; // Velocity + Pressure
@@ -135,7 +136,10 @@
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
+  
 
+
+  
     // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank, size;
@@ -149,20 +153,18 @@
 
   // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
-
-
+  
   occa::kernelInfo kernelInfo;
+  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);
-
-    // specialization for Boltzmann
+   // specialization for Boltzmann
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
     
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 128/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 128/maxNodes; // works for CUDA
@@ -259,16 +261,6 @@
         kernelInfo);  
   }
 
-
-  
-
-  // printf("Compiling Pressure RHS volume kernel with collocation integration\n");
-  // ins->pressureRhsVolumeKernel = 
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insPressure2D.okl",
-  //     "insPressureRhsVolume2D",
-  //       kernelInfo);
-
-
   
   printf("Compiling INS Helmholtz Halo Extract Kernel\n");
   ins->helmholtzHaloExtractKernel= 
@@ -351,11 +343,81 @@
       "insUpdateHaloScatter2D",
         kernelInfo); 
 // ===========================================================================//
+  // ELLIPTIC SOLVER FOR TEST
+  #if 1
+  dfloat lambda =1.0;
+  char *prSolverOptions = 
+  strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
+
+  // Set-up Pressure Incriment Solver
+  solver_t *solver = ellipticSolveSetupTri2D(mesh,lambda, kernelInfo, prSolverOptions); 
+  // ins->prsolver = prsolver; 
+
+  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  
+  // load rhs into r
+  dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(iint e=0;e<mesh->Nelements;++e){
+    dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat xn = mesh->x[n+e*mesh->Np];
+      dfloat yn = mesh->y[n+e*mesh->Np];
+      nrhs[n] = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
+    }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat rhs = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+      }
+      iint id = n+e*mesh->Np;
+      
+      r[id] = -rhs*J;
+      x[id] = 0;
+      ins->Pr[id] = nrhs[n];
+    }
+  }
+  free(nrhs);
+  free(cf);
+
+  occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
+
+  ellipticSolveTri2D(solver,lambda , o_r, o_x, prSolverOptions);
+
+  // copy solution from DEVICE to HOST
+  o_x.copyTo(ins->Pr);
+
+  dfloat maxError = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint   id = e*mesh->Np+n;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);
+      dfloat error = fabs(exact-ins->Pr[id]);
+      
+      maxError = mymax(maxError, error);
+    }
+  }
+  
+  dfloat globalMaxError = maxError;
+  //MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  //if(rank==0)
+  printf("globalMaxError = %g\n", globalMaxError);
+  
+  //meshPlotVTU2D(mesh, "foo", 0);
+
+#endif
 
 
- ins->mesh = mesh;   
+   // INS->mesh = mesh; // No modificatin of mesh after this point 
+  ins->mesh = mesh;
+  ins->kernelInfo = kernelInfo;    
 
-return ins;
+  return ins;
 
 }
 

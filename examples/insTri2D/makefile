@@ -1,3 +1,4 @@
+
 ifndef OCCA_DIR
 ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
