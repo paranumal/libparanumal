@@ -68,7 +68,6 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   
   fgets(buf, BUFSIZ, fp); // read comment
-
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
     fscanf(fp, iintFormat, mesh->faceNodes+n);
@@ -299,31 +298,33 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
     fscanf(fp, dfloatFormat, mesh->ELvals+n);
   }
-  
   // BB degree raise matrix (sparse format)
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->BBRaiseids = (iint*) calloc(mesh->Nfp*2, sizeof(iint));
-  for (int n=0;n<mesh->Nfp*2;++n){
-    fscanf(fp, iintFormat, mesh->BBRaiseids+n);
-  }
+  
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->BBRaiseVals = (dfloat*) calloc(mesh->Nfp*2, sizeof(dfloat));
-  for (int n=0;n<mesh->Nfp*2;++n){
-    fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
-  }
+  // NOEL -> below 3 information doesnt exist in matlab data generator !!!!!
+  // fgets(buf, BUFSIZ, fp); // read comment
+  // mesh->BBRaiseids = (iint*) calloc(mesh->Nfp*2, sizeof(iint));
+  // for (int n=0;n<mesh->Nfp*2;++n){
+  //   fscanf(fp, iintFormat, mesh->BBRaiseids+n);
+  // }
 
-  //BB degree lower matrix
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->BBLower = (dfloat*) calloc((mesh->Nfp+1)*mesh->Nfp, sizeof(dfloat));
-  for (int n=0;n<(mesh->Nfp+1)*mesh->Nfp;++n){
-    fscanf(fp, dfloatFormat, mesh->BBLower+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-  // ============ end BB stuff ==================
+  // fgets(buf, BUFSIZ, fp); // read comment
+  // fgets(buf, BUFSIZ, fp); // read comment
+  // mesh->BBRaiseVals = (dfloat*) calloc(mesh->Nfp*2, sizeof(dfloat));
+  // for (int n=0;n<mesh->Nfp*2;++n){
+  //   fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
+  // }
+
+  // //BB degree lower matrix
+  // fgets(buf, BUFSIZ, fp); // read comment
+  // fgets(buf, BUFSIZ, fp); // read comment
+  // mesh->BBLower = (dfloat*) calloc((mesh->Nfp+1)*mesh->Nfp, sizeof(dfloat));
+  // for (int n=0;n<(mesh->Nfp+1)*mesh->Nfp;++n){
+  //   fscanf(fp, dfloatFormat, mesh->BBLower+n);
+  // }
+  // fgets(buf, BUFSIZ, fp);
+  // // ============ end BB stuff ==================
 #endif
 
 
@@ -333,6 +334,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   int NpPcheck;
   sscanf(buf, "%d", &NpPcheck);
   mesh->NpP = NpPcheck;
+
 
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->oasForwardDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));

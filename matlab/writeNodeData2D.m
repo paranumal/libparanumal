@@ -85,7 +85,6 @@ for n=1:Np
     fprintf(fid, '\n');
 end
 
-
 %% compute equispaced nodes on equilateral triangle
 [plotR,plotS] = EquiNodes2D(N+4);
 
