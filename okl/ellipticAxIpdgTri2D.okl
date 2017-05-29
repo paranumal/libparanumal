@@ -66,14 +66,24 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       	gradqP.y *= sc;
 
       	const dfloat dq = gradqP.w - gradqM.w;
-      	//const dfloat half = 0.5f;
+      	const dfloat half = 0.5f;
       	
-      	s_nxdq[n] = 0.5f*sJ*invJ*nx*dq;
-      	s_nydq[n] = 0.5f*sJ*invJ*ny*dq;
+      	s_nxdq[n] = half*sJ*invJ*nx*dq;
+      	s_nydq[n] = half*sJ*invJ*ny*dq;
 
-      	s_lapflux[n] = 0.5f*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
+      	s_lapflux[n] = half*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
       				     -ny*(gradqP.y-gradqM.y)
       				     -tau*hinv*dq);
+
+
+
+        
+        // s_nxdq[n] = 0.5*sJ*invJ*nx*dq;
+        // s_nydq[n] = 0.5*sJ*invJ*ny*dq;
+
+        // s_lapflux[n] = 0.5*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
+        //            -ny*(gradqP.y-gradqM.y)
+        //            -tau*hinv*dq);
 
       }
     }

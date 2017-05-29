@@ -5,7 +5,10 @@
 
 ins_t *insSetup2D(mesh2D *mesh, char * options){
 
-  mesh->Nfields = 1;
+// for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n)
+//   printf("mesh->ELids= %d\n",mesh->ELids[n]);
+  // printf("mesh->NpP= %d\n", mesh->NpP);
+  
   
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -14,19 +17,25 @@ ins_t *insSetup2D(mesh2D *mesh, char * options){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  // sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   
   // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");  
+  // sprintf(deviceConfig, "mode = Serial");  
 
   // compute samples of q at interpolation nodes
+  
+
+  #if 1
+   mesh->Nfields = 1; // Was 1 !!!!!
+
+
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+        sizeof(dfloat));
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+        sizeof(dfloat));
   
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
@@ -38,7 +47,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options){
   // Set-up Pressure Incriment Solver
   solver_t *solver = ellipticSolveSetupTri2D(mesh,lambda, kernelInfo, prSolverOptions); 
   // ins->prsolver = prsolver; 
-  
+  #endif
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
   
   ins->NVfields = 2; // Velocity 
@@ -162,11 +171,16 @@ ins_t *insSetup2D(mesh2D *mesh, char * options){
   
    // specialization for Boltzmann
 
+  #if 0
+  occa::kernelInfo kernelInfo;
+  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+  #endif
+
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
     
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-#if 1
+  #if 1
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
@@ -175,7 +189,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options){
 
   printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
   
-#endif
+  #endif
   
   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
@@ -353,7 +367,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options){
 // ===========================================================================//
   // ELLIPTIC SOLVER FOR TEST
   #if 1
+  //dfloat lambda =1.0;
+  // char *prSolverOptions = 
+  // strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
 
+  // // Set-up Pressure Incriment Solver
+  // solver_t *solver = ellipticSolveSetupTri2D(mesh,lambda, kernelInfo, prSolverOptions); 
+  // ins->prsolver = prsolver; 
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
