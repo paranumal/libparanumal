@@ -19,7 +19,7 @@ LD	= mpic++
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g
+LDFLAGS	= $(compilerFlags) $(flags)
 
 # libraries to be linked in
 LIBS	=  $(links)

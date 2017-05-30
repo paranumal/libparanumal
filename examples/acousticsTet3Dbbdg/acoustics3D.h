@@ -8,24 +8,19 @@
 #define USE_BERN 1
 #define WADG 1
 
-void acousticsRun3D(mesh3D *mesh);
-
-void acousticsOccaRun3D(mesh3D *mesh);
-
-void acousticsRun3Dbbdg(mesh3D *mesh);
-
-void acousticsOccaRun3Dbbdg(mesh3D *mesh);
 
 void acousticsSetup3D(mesh3D *mesh);
 
-void acousticsVolume3D(mesh3D *mesh);
-void acousticsSurface3D(mesh3D *mesh, dfloat time);
+void acousticsRun3Dbbdg(mesh3D *mesh);
+void acousticsOccaRun3Dbbdg(mesh3D *mesh);
 
-void acousticsVolume3Dbbdg(mesh3D *mesh);
-void acousticsSurface3Dbbdg(mesh3D *mesh, dfloat time);
+void acousticsMRABUpdate3D(mesh3D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);
+void acousticsMRABUpdateTrace3D(mesh3D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);
+void acousticsMRABUpdate3D_wadg(mesh3D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);
+void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh, dfloat ab1, dfloat ab2, dfloat ab3, iint lev, dfloat dt);
 
-void acousticsUpdate3D(mesh3D *mesh, dfloat rka, dfloat rkb);
-void acousticsUpdate3D_wadg(mesh3D *mesh, dfloat rka, dfloat rkb);
+void acousticsVolume3Dbbdg(mesh3D *mesh, iint lev);
+void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time);
 
 void acousticsError3D(mesh3D *mesh, dfloat time);
 

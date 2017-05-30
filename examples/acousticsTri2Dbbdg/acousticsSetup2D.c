@@ -252,7 +252,7 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABUpdate2D_wadg",
                kernelInfo);
-      mesh->traceUpdateKernel =
+    mesh->traceUpdateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABTraceUpdate2D_wadg",
                kernelInfo);

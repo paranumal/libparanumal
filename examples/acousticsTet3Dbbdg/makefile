@@ -14,10 +14,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags)
+LDFLAGS	= $(compilerFlags) $(flags) 
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -55,10 +55,14 @@ LOBJS = \
 ../../src/meshConnectFaceNodes3D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
+../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint3D.o \
 ../../src/meshPartitionStatistics.o \
+../../src/meshMRABWeightedPartition3D.o \
+../../src/meshMRABSetup3D.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
