@@ -74,8 +74,8 @@ void insPlotVTU2D(ins_t *ins, char *fileNameBase){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0;
       for(iint m=0;m<mesh->Np;++m){
-        dfloat um = ins->U[m+e*mesh->Np + UXID*ins->NtotalDofs];
-        dfloat vm = ins->U[m+e*mesh->Np + UYID*ins->NtotalDofs];
+        dfloat um = ins->Ux[m+e*mesh->Np];
+        dfloat vm = ins->Uy[m+e*mesh->Np];
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
