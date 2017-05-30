@@ -14,11 +14,11 @@ void insError2D(ins_t *ins, dfloat time,char *options){
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
-        maxUx = mymax(maxUx, fabs(ins->U[id + UXID*mesh->Nelements*mesh->Np]));
-        minUx = mymin(minUx, fabs(ins->U[id + UXID*mesh->Nelements*mesh->Np]));
+        maxUx = mymax(maxUx, fabs(ins->Ux[id]));
+        minUx = mymin(minUx, fabs(ins->Ux[id]));
         //
-        maxUy = mymax(maxUy, fabs(ins->U[id + UYID*mesh->Nelements*mesh->Np]));
-        minUy = mymin(minUy, fabs(ins->U[id + UYID*mesh->Nelements*mesh->Np]));
+        maxUy = mymax(maxUy, fabs(ins->Uy[id]));
+        minUy = mymin(minUy, fabs(ins->Uy[id]));
         //
         maxPr = mymax(maxPr, fabs(ins->Pr[id]));
         minPr = mymin(minPr, fabs(ins->Pr[id]));

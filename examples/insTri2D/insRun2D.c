@@ -1,55 +1,101 @@
 #include "ins2D.h"
 
-void insRun2D(ins_t *ins, char *options, char *velSolverOptions, char *prSolverOptions){
+void insRun2D(ins_t *ins, char *options){
 
   mesh2D *mesh = ins->mesh; 
-  occa::kernelInfo kernelInfo = ins->kernelInfo;
+ 
+ #if 1
   
-    
-  // Set-up Pressure Incriment Solver
-  solver_t *prsolver = ellipticSolveSetupTri2D(mesh,1.0f, kernelInfo, prSolverOptions); 
-  ins->prsolver = prsolver; 
+  solver_t *solver = ins->prsolver;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+  dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   
+  // load rhs into r
+  dfloat *cf = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(iint e=0;e<mesh->Nelements;++e){
+    dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat xn = mesh->x[n+e*mesh->Np];
+      dfloat yn = mesh->y[n+e*mesh->Np];
+      nrhs[n] = -(2*M_PI*M_PI+1.0)*cos(M_PI*xn)*cos(M_PI*yn);
+    }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat rhs = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+      }
+      iint id = n+e*mesh->Np;
+      
+      r[id] = -rhs*J;
+      x[id] = 0;
+      ins->Pr[id] = nrhs[n];
+    }
+  }
+  free(nrhs);
+  free(cf);
 
-  // Allocate MPI send buffer
-  iint helmholtzHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
-  dfloat *helmholtzSendBuffer = (dfloat*) malloc(helmholtzHaloBytes);
-  dfloat *helmholtzRecvBuffer = (dfloat*) malloc(helmholtzHaloBytes);
-  //
-  iint poissonHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
-  dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
-  dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
+  occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  // No need to do like this, just for consistency 
-  iint updateHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  dfloat *updateSendBuffer = (dfloat*) malloc(updateHaloBytes);
-  dfloat *updateRecvBuffer = (dfloat*) malloc(updateHaloBytes);
+  ellipticSolveTri2D(solver,1.0 , o_r, o_x, ins->prsolverOptions);
 
-  occa::initTimer(mesh->device);
+  // copy solution from DEVICE to HOST
+  o_x.copyTo(ins->Pr);
+
+  dfloat maxError = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint   id = e*mesh->Np+n;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);
+      dfloat error = fabs(exact-ins->Pr[id]);
+      
+      maxError = mymax(maxError, error);
+    }
+  }
+  
+  dfloat globalMaxError = maxError;
+  //MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  //if(rank==0)
+  printf("globalMaxError = %g\n", globalMaxError);
+  
+  //meshPlotVTU2D(mesh, "foo", 0);
+
+#endif
+
+
+
+
+
+
+
+
+  // // Allocate MPI send buffer
+  // iint helmholtzHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  // dfloat *helmholtzSendBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  // dfloat *helmholtzRecvBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  // //
+  // iint poissonHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  // dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
+  // dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
+
+  // // No need to do like this, just for consistency 
+  // iint updateHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  // dfloat *updateSendBuffer = (dfloat*) malloc(updateHaloBytes);
+  // dfloat *updateRecvBuffer = (dfloat*) malloc(updateHaloBytes);
+
+  // occa::initTimer(mesh->device);
 
  
-  //First Order Coefficients
-  ins->a0 = 1.0, ins->b0 = 1.f;
-  ins->a1 = 0.f, ins->b1 = 0.f;
-  ins->b2 = 0.f, ins->b2 = 0.f;
-  ins->g0 = 1.f; 
+  // //First Order Coefficients
+  // ins->a0 = 1.0, ins->b0 = 1.f;
+  // ins->a1 = 0.f, ins->b1 = 0.f;
+  // ins->b2 = 0.f, ins->b2 = 0.f;
+  // ins->g0 = 1.f; 
   
 
   // // Set-up First Order Solver
@@ -62,8 +108,8 @@ void insRun2D(ins_t *ins, char *options, char *velSolverOptions, char *prSolverO
   //insPoissonStep2D(ins, 0, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options, prSolverOptions);
   //insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
   //
-  printf("Finished first order step\n");
-  insReport2D(ins, ins->NtimeSteps,options);
+  // printf("Finished first order step\n");
+  // insReport2D(ins, ins->NtimeSteps,options);
 
 
 
@@ -115,17 +161,17 @@ void insRun2D(ins_t *ins, char *options, char *velSolverOptions, char *prSolverO
   // // For Final Time
   // insReport2D(ins, ins->NtimeSteps,options);
 
-  occa::printTimer();
+  // occa::printTimer();
 
-  // Deallocate Halo MPI storage
-  free(helmholtzSendBuffer);
-  free(helmholtzRecvBuffer);
-  //
-  free(poissonSendBuffer);
-  free(poissonRecvBuffer);
-  //
-  free(updateSendBuffer);
-  free(updateRecvBuffer);
+  // // Deallocate Halo MPI storage
+  // free(helmholtzSendBuffer);
+  // free(helmholtzRecvBuffer);
+  // //
+  // free(poissonSendBuffer);
+  // free(poissonRecvBuffer);
+  // //
+  // free(updateSendBuffer);
+  // free(updateRecvBuffer);
   //
 
 }
