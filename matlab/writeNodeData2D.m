@@ -450,7 +450,7 @@ end
 L0vals = zeros(Nfp,3);
 for i = 1:Nfp
     if (i==1)
-        L0vals(i,1:2) = [L0(i,i) L0(i,i+1)];
+        L0vals(i,2:3) = [L0(i,i) L0(i,i+1)]; %tridiagonal fix
     elseif (i==Nfp)
         L0vals(i,1:2) = [L0(i,i-1) L0(i,i)];
     else
@@ -498,6 +498,60 @@ for n=1:Np
     end
     fprintf(fid, '\n');
 end
+
+%degree raise/lower operators along traces
+BBRaise = bern_basis_1D(N,r1Dq)\bern_basis_1D(N-1,r1Dq);
+BBRaise(abs(BBRaise)<tol) = 0;
+
+BBRaiseIds  = zeros(N+1,2);
+BBRaiseVals = zeros(N+1,2);
+
+for i = 1:N+1
+    tmp = find(BBRaise(i,:));
+    BBRaiseVals(i,1:length(tmp)) = BBRaise(i,tmp);
+    tmp = tmp-1; % zero indexing
+    if length(tmp) < 2
+        tmp = [tmp zeros(1,2-length(tmp))];
+    end
+    BBRaiseIds(i,:) = tmp;
+end
+
+[r1Dp1] = JacobiGQ(0,0,N+1);
+VB1Dp1 = bern_basis_1D(N+1,r1Dp1);
+V1Dp1 = Vandermonde1D(N+1, r1Dp1);
+
+[r1D] = JacobiGQ(0,0,N);
+VB1D = bern_basis_1D(N,r1D);
+V1D = Vandermonde1D(N, r1D);
+
+BBLower = V1Dp1\VB1Dp1;
+BBLower = VB1D\V1D*BBLower(1:N+1,1:N+2);
+
+fprintf(fid, '%% BB degree raise ids\n');
+for n=1:N+1
+    for m=1:2
+        fprintf(fid, '%d ', BBRaiseIds(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% BB degree raise values\n');
+for n=1:N+1
+    for m=1:2
+        fprintf(fid, '%17.15E ', BBRaiseVals(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+fprintf(fid, '%% BB degree lower matrix\n');
+for n=1:N+1
+    for m=1:N+2
+        fprintf(fid, '%17.15E ', BBLower(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
+
 
 %% elliptic patch problem
 K = 4;
