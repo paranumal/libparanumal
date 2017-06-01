@@ -1,6 +1,7 @@
 //
 #define UXID 0
 #define UYID 1
+#define PRID 2
 
 #define RXID 0  
 #define RYID 1  
@@ -78,7 +79,8 @@ kernel void insPoissonRhsVolume2D(const iint Nelements,
 																		const dfloat * restrict DrT,
 																		const dfloat * restrict DsT,
 																		const dfloat * restrict MM, 
-																		const dfloat * restrict U,
+																		const dfloat * restrict Ux,
+																		const dfloat * restrict Uy,
 																		      dfloat * restrict rhsPr){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
@@ -95,8 +97,8 @@ kernel void insPoissonRhsVolume2D(const iint Nelements,
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
 					const iint id = e*p_Np+n;
-					const dfloat ux = U[id + UXID*p_NtotalDofs];
-					const dfloat uy = U[id + UYID*p_NtotalDofs];
+					const dfloat ux = Ux[id];
+					const dfloat uy = Uy[id];
 					s_Ux[es][n] = ux;
 					s_Uy[es][n] = uy;          
 				}
@@ -178,7 +180,8 @@ kernel void insPoissonRhsSurface2D(const iint Nelements,
 				     const dfloat time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
-				     const dfloat * restrict U,
+				     const dfloat * restrict Ux,
+				     const dfloat * restrict Uy,
 				           dfloat * restrict rhsPr){ 
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -205,11 +208,11 @@ kernel void insPoissonRhsSurface2D(const iint Nelements,
 		   if(idP<0) idP = idM;
 		  
 				// load negative and positive trace node values of q
-				dfloat  uxm = U[idM + UXID*p_NtotalDofs];
-				dfloat  uxp = U[idP + UXID*p_NtotalDofs];
+				dfloat  uxm = Ux[idM];
+				dfloat  uxp = Ux[idP];
 				//
-				dfloat  uym = U[idM + UYID*p_NtotalDofs];
-				dfloat  uyp = U[idP + UYID*p_NtotalDofs];
+				dfloat  uym = Uy[idM];
+				dfloat  uyp = Uy[idP];
 		   
 		    // apply boundary condition
 		    iint bc = EToB[face+p_Nfaces*e];

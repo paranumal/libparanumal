@@ -5,6 +5,7 @@
 //
 #define UXID 0
 #define UYID 1
+#define PRID 2
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
@@ -68,7 +69,7 @@ void boundaryConditionsRhs2D(const iint bc,
     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
     //
-    *prB = prM; // Neumann for Pressure // do nothing
+    *prB = prM; // Neumann for Pressure   // do nothing
   }
   if(bc==3){ // Outflow 
     // do nothing 
@@ -80,15 +81,18 @@ void boundaryConditionsRhs2D(const iint bc,
 }
 
 
-
+// compute div(NU) + grad(Pr), volume terms
 kernel void insHelmholtzRhsVolume2D(const iint Nelements,
 																		const dfloat * restrict vgeo,
 																		const dfloat * restrict DrT,
 																		const dfloat * restrict DsT,
-																		const dfloat * restrict U,
+																		const dfloat * restrict Ux,
+																		const dfloat * restrict Uy,
 																		const dfloat * restrict Pr,
-																		      dfloat * restrict NU,
-																		      dfloat * restrict rhsU){
+																		      dfloat * restrict NUx,
+																		      dfloat * restrict NUy,
+																		      dfloat * restrict rhsUx, 
+																		      dfloat * restrict rhsUy){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
    
@@ -104,8 +108,8 @@ kernel void insHelmholtzRhsVolume2D(const iint Nelements,
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
 					const iint id = e*p_Np+n;
-					const dfloat ux = U[id + UXID*p_NtotalDofs];
-					const dfloat uy = U[id + UYID*p_NtotalDofs];
+					const dfloat ux = Ux[id];
+					const dfloat uy = Uy[id];
 					const dfloat pr = Pr[id];
 					//
 					s_FxUx[es][n] = ux*ux;
@@ -164,11 +168,11 @@ kernel void insHelmholtzRhsVolume2D(const iint Nelements,
 				// Update
 				const iint id = e*p_Np+n;
 				// Compute div(uxu)
-				NU[id + UXID*p_NDofs]   = nux;
-				NU[id + UYID*p_NDofs]   = nuy;
+				NUx[id]   = nux;
+				NUy[id]   = nuy;
         // rhsU = - grad P
-				rhsU[id + UXID*p_NDofs] = dprdx;
-				rhsU[id + UYID*p_NDofs] = dprdy;
+				rhsUx[id] = dprdx;
+				rhsUy[id] = dprdy;
 	 
 	}
       }
@@ -186,10 +190,13 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 				     const dfloat time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
-				     const dfloat * restrict U,
+				     const dfloat * restrict Ux,
+				     const dfloat * restrict Uy,
 				     const dfloat * restrict Pr,
-				           dfloat * restrict NU,
-				           dfloat * restrict rhsU){
+				           dfloat * restrict NUx,
+				           dfloat * restrict NUy,
+				           dfloat * restrict rhsUx,
+				           dfloat * restrict rhsUy){
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -220,12 +227,12 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 		    iint idP = vmapP[id];
 
 		   if(idP<0) idP = idM; // bc
-		  // load negative and positive trace node values of q
-		     dfloat  uxm = U[idM + UXID*p_NtotalDofs];
-		     dfloat  uxp = U[idP + UXID*p_NtotalDofs];
+		  // load negative and positive trace node values of Ux, Uy, Pr
+		     dfloat  uxm = Ux[idM];
+		     dfloat  uxp = Ux[idP];
 		     //
-			   dfloat  uym = U[idM + UYID*p_NtotalDofs];
-			   dfloat  uyp = U[idP + UYID*p_NtotalDofs];
+			   dfloat  uym = Uy[idM];
+			   dfloat  uyp = Uy[idP];
 			   //
 			   dfloat  prm = Pr[idM];
 			   dfloat  prp = Pr[idP];
@@ -244,7 +251,7 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
         const dfloat sc = invJ * sJ ; 
 				s_fluxNUx[es][n] = sc*(0.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
 				s_fluxNUy[es][n] = sc*(0.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
-        // Centered flux for pr, p*-p = 0.5(prp-prm)
+        // Centered flux for pr, p*-p = 0.5(prp-prm) // Central Flux
         s_fluxUx[es][n]  = sc*(0.5f*nx*(prp-prm));
         s_fluxUy[es][n]  = sc*(0.5f*ny*(prp-prm));
        	 }
@@ -264,11 +271,11 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 						if(n<p_Np){
 							iint id = e*p_Np + n;
 
-							dfloat rhsnux = NU[id + UXID*p_NDofs];
-							dfloat rhsnuy = NU[id + UYID*p_NDofs];
+							dfloat rhsnux = NUx[id];
+							dfloat rhsnuy = NUy[id];
 							//
-							dfloat rhsux = rhsU[id + UXID*p_NDofs];
-							dfloat rhsuy = rhsU[id + UYID*p_NDofs];
+							dfloat rhsux = rhsUx[id];
+							dfloat rhsuy = rhsUy[id];
 							// Lift
 							occaUnroll(p_NfacesNfp)
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -280,11 +287,11 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 								rhsuy   += L*s_fluxUy[es][m];
 					}
           // M^-1* (div(u*u)) + Lift*(F*-F))
-					NU[id + UXID*p_NDofs]   = rhsnux;
-					NU[id + UYID*p_NDofs]   = rhsnuy;
+					NUx[id] = rhsnux;
+					NUy[id] = rhsnuy;
 					//  rhsu = -grad(p)
-					rhsU[id + UXID*p_NtotalDofs] = -rhsux;
-					rhsU[id + UYID*p_NtotalDofs] = -rhsuy;
+					rhsUx[id] = -rhsux;
+					rhsUy[id] = -rhsuy;
 				  }
 				}
       }
@@ -306,14 +313,13 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 				                      const dfloat b0,
 				                      const dfloat b1,
 				                      const dfloat b2,
-				                      const dfloat * restrict U,
+				                      const dfloat * restrict Ux,
+				                      const dfloat * restrict Uy,
 				                      const dfloat * restrict UO,
-				                      const dfloat * restrict UOO,
                               const dfloat * restrict NU,
-				                            dfloat * restrict NUO,
-				                            dfloat * restrict NUOO,
-				                            dfloat * restrict rhsU
-				                            ){
+				                            dfloat * restrict NO,
+				                            dfloat * restrict rhsUx,
+				                            dfloat * restrict rhsUy){
   
   //Low storage Runge Kutta time step update
    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){ 
@@ -325,43 +331,42 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
-					const iint id = e*p_Np+n;
+					const iint id  = e*p_Np+n;
+					const iint idf = n+ 4*p_Np*e;
+
 					const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 					//U at t^(n)
-					const dfloat ux    = U[id + UXID*p_NtotalDofs];
-					const dfloat uy    = U[id + UYID*p_NtotalDofs];
-					// U at t^(n-1)
-					const dfloat uxo   = UO[id   + UXID*p_NDofs];
-					const dfloat uyo   = UO[id   + UYID*p_NDofs];
-          // U at t^(n-2)
-					const dfloat uxoo  = UOO[id  + UXID*p_NDofs];
-					const dfloat uyoo  = UOO[id  + UYID*p_NDofs];
-					
+					const dfloat uxn  = Ux[id];
+					const dfloat uyn  = Uy[id];
 					// NU at t^(n)
-					const dfloat nux   = NU[id   + UXID*p_NDofs];
-					const dfloat nuy   = NU[id   + UYID*p_NDofs];
-					//NU at t^(n-1)
-					const dfloat nuxo  = NUO[id  + UXID*p_NDofs];
-					const dfloat nuyo  = NUO[id  + UYID*p_NDofs];
-					//NU at t^(n-2)
-					const dfloat nuxoo = NUOO[id + UXID*p_NDofs];
-					const dfloat nuyoo = NUOO[id + UYID*p_NDofs];
+					const dfloat nxn  = NU[id];
+					const dfloat nyn  = NU[id];
+					// U at t^(n-1) & (n-2)
+					const dfloat uxn1 = UO[idf+0];
+					const dfloat uyn1 = UO[idf+1];
+					const dfloat uxn2 = UO[idf+2];
+					const dfloat uyn2 = UO[idf+3];
+					//NU at t^(n-1) &at t^(n-2)
+					const dfloat nxn1 = NO[idf+0];
+					const dfloat nyn1 = NO[idf+1];
+					const dfloat nxn2 = NO[idf+2];
+					const dfloat nyn2 = NO[idf+3];
           
           // Currently holds -grad(P)
-					const dfloat rhsux = rhsU[id + UXID*p_NDofs];
-					const dfloat rhsuy = rhsU[id + UYID*p_NDofs];
+					const dfloat rhsux = rhsUx[id];
+					const dfloat rhsuy = rhsUy[id];
 					
 					//Update NU
-					NUOO[id+ UXID*p_NDofs]    = nuxo;
-					NUOO[id+ UYID*p_NDofs]    = nuyo;
-					NUO[id + UXID*p_NDofs]    = nux;
-					NUO[id + UYID*p_NDofs]    = nuy;
+					NO[idf+2]  = nxn1;
+					NO[idf+3]  = nyn1;
+					NO[idf+0]  = nxn;
+					NO[idf+1]  = nyn;
 					
 					// rhsU = -grad(P) + f^(n+1)
 					// -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
 					// !!! hold inv dt later
-          s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*ux + a1*uxo + a2*uxoo)*p_idt - (b0*nux + b1*nuxo + b2*nuxoo));
-          s_rhsUy[es][n]   = J*p_inu*(rhsux + (a0*uy + a1*uyo + a2*uyoo)*p_idt - (b0*nuy + b1*nuyo + b2*nuyoo)); 
+          s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*uxn + a1*uxn1 + a2*uxn2)*p_idt - (b0*nxn + b1*nxn1 + b2*nxn2));
+          s_rhsUy[es][n]   = J*p_inu*(rhsux + (a0*uyn + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn + b1*nyn1 + b2*nyn2)); 
 				}
       }
     }
@@ -384,8 +389,8 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 				}
         // Update
 				const iint id = e*p_Np+n;
-				rhsU[id + UXID*p_NDofs] = rhsux;
-				rhsU[id + UYID*p_NDofs] = rhsuy;
+				rhsUx[id] = rhsux;
+				rhsUy[id] = rhsuy;
 	 
 	      }
       }
@@ -409,8 +414,10 @@ kernel void insHelmholtzRhsIpdgBC2D(const iint Nelements,
 				                            const dfloat tau,
 				     										    const dfloat * restrict x,
 				    									      const dfloat * restrict y,
-				     										    const dfloat * restrict U,
-				                                  dfloat * restrict rhsU
+				     										    const dfloat * restrict Ux,
+				     										    const dfloat * restrict Uy,
+				                                  dfloat * restrict rhsUx,
+				                                  dfloat * restrict rhsUy
 				                                  ){
 for(int e=0;e<Nelements;++e;outer0){
 	// shared storage for flux terms
@@ -464,8 +471,8 @@ for(int e=0;e<Nelements;++e;outer0){
 						tau_n = hinv* tau; // Scale stabilization parameter
 						//
 						// Read interior, may be needed like slip boundaries 
-            dfloat  uxm = U[idM + UXID*p_NtotalDofs];
-	         	dfloat  uym = U[idM + UYID*p_NtotalDofs];
+            dfloat  uxm = Ux[idM];
+	         	dfloat  uym = Uy[idM];
 	         	// Currently specific Neumann Boundaries is not implemented !!!
 	         	dfloat  uxnm = 0.f, uynm =0.f; 
 						            
@@ -562,8 +569,8 @@ for(int e=0;e<Nelements;++e;outer0){
 
 
         const iint id = e*p_Np+n;
-				rhsU[id + UXID*p_NDofs] +=  s_Lux[n] + s_Luxn[n] -   dndux;
-				rhsU[id + UYID*p_NDofs] +=  s_Luy[n] + s_Luyn[n] -   dnduy;
+				rhsUx[id] +=  s_Lux[n] + s_Luxn[n] - dndux;
+				rhsUy[id] +=  s_Luy[n] + s_Luyn[n] - dnduy;
 
 			}
 

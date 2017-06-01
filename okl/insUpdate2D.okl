@@ -43,14 +43,15 @@ kernel void insUpdateVolume2D(const iint Nelements,
 															const dfloat * restrict DrT,
 															const dfloat * restrict DsT,
 															const dfloat * restrict PrI,
-															      dfloat * restrict rhsU){
+															      dfloat * restrict rhsUx,
+															      dfloat * restrict rhsUy){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
    
    // Hold Flux Vector on Shared, use symmetry f21 = f12
    shared dfloat s_PrI[p_NblockV][p_Np];
-   shared dfloat s_FxPr[p_NblockV][p_Np];
-   shared dfloat s_FyPr[p_NblockV][p_Np];
+   // shared dfloat s_FxPr[p_NblockV][p_Np];
+   // shared dfloat s_FyPr[p_NblockV][p_Np];
    
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
@@ -92,8 +93,8 @@ kernel void insUpdateVolume2D(const iint Nelements,
         dfloat dprdy = drdy*dprdr  + dsdy*dprds;
         //
         const iint id = e*p_Np+n;       
-				rhsU[id + UXID*p_NDofs] = dprdx;
-				rhsU[id + UYID*p_NDofs] = dprdy;
+				rhsUx[id] = dprdx;
+				rhsUy[id] = dprdy;
 	     }
       }
     }
@@ -116,7 +117,8 @@ kernel void insUpdateSurface2D(const iint Nelements,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
 				     const dfloat * restrict PrI,
-				           dfloat * restrict rhsU){
+				           dfloat * restrict rhsUx,
+				           dfloat * restrict rhsUy){
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -180,8 +182,8 @@ kernel void insUpdateSurface2D(const iint Nelements,
 						if(n<p_Np){
 							iint id = e*p_Np + n;
 							//
-							dfloat rhsux = rhsU[id + UXID*p_NDofs];
-							dfloat rhsuy = rhsU[id + UYID*p_NDofs];
+							dfloat rhsux = rhsUx[id];
+							dfloat rhsuy = rhsUx[id];
 							// Lift
 							occaUnroll(p_NfacesNfp)
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -191,8 +193,8 @@ kernel void insUpdateSurface2D(const iint Nelements,
 								rhsuy   += L*s_fluxUy[es][m];
 					}
 					//  rhsu = -grad(p)
-					rhsU[id + UXID*p_NtotalDofs] = -rhsux;
-					rhsU[id + UYID*p_NtotalDofs] = -rhsuy;
+					rhsUx[id] = -rhsux;
+					rhsUy[id] = -rhsuy;
 				  }
 				}
       }
@@ -206,10 +208,12 @@ kernel void insUpdateSurface2D(const iint Nelements,
 kernel void insUpdateUpdate2D(const iint Nelements,
 				                      const dfloat dt,	
 				                      const dfloat g0,
-				                            dfloat * restrict U,
+				                            dfloat * restrict Ux,
+				                            dfloat * restrict Uy, 
 				                            dfloat * restrict Pr, 
 				                      const dfloat * restrict PrI,
-				                            dfloat * restrict rhsU
+				                            dfloat * restrict rhsUx,
+				                            dfloat * restrict rhsUy
 				                            ){
 
 	for(iint e=0;e<Nelements;++e;outer0){
@@ -217,8 +221,8 @@ kernel void insUpdateUpdate2D(const iint Nelements,
 			const iint id = n + e*p_Np;
  
       // Update Velocity u = u - ft/g0 * grad(Pr)
-       U[id + UXID*p_NtotalDofs] -= dt/g0 * rhsU[id + UXID*p_NtotalDofs]; 
-       U[id + UYID*p_NtotalDofs] -= dt/g0 * rhsU[id + UYID*p_NtotalDofs]; 
+       Ux[id] -= dt/g0 * rhsUx[id]; 
+       Uy[id] -= dt/g0 * rhsUy[id]; 
       
        // Get Pressure from Pressure Increament
        Pr[id] += PrI[id]; 
