@@ -134,34 +134,58 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nn
           if (vidP == m) qmP[i] =1;
           
           ndotgradqmM[i] = (nx*drdx+ny*drdy)*mesh->Dr[m+vidM*mesh->Np]
-	    +(nx*dsdx+ny*dsdy)*mesh->Ds[m+vidM*mesh->Np];
+	                        +(nx*dsdx+ny*dsdy)*mesh->Ds[m+vidM*mesh->Np];
           ndotgradqmP[i] = (nx*drdxP+ny*drdyP)*mesh->Dr[m+vidP*mesh->Np]
-	    +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
+	                        +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
         }
 
         dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
+
+
         for (iint n=0;n<mesh->Np;n++) {
           for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-	      -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+	                              -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
             BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
           }
 
           dfloat AnmP = 0;
           if (eP < 0) {
+            int qSgn, gradqSgn;
+            int bc = mesh->EToB[fM+mesh->Nfaces*eM];
+            if (strstr(options,"PRESSURE")) {
+              if((bc==1)||(bc==2)){ // Wall/Inflow
+                qSgn     =  1;
+                gradqSgn = -1;
+              } else if (bc==3){ // Outflow 
+                qSgn     = -1;
+                gradqSgn =  1;
+              }
+            } else if (strstr(options,"VELOCITY")) {
+              if((bc==1)||(bc==2)){ // Wall/Inflow
+                qSgn     = -1;
+                gradqSgn =  1;
+              } else if (bc==3){ // Outflow 
+                qSgn     =  1;
+                gradqSgn = -1;
+              }
+            } else {
+              printf("damn, no solver type specified in: 'ellipticBuildIpdgTri2D'\n");
+            }
+
             for (iint i=0;i<mesh->Nfp;i++) {
-              BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
-              BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
+              BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
+              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+		                              +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+		                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }

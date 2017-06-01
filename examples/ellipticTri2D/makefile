@@ -25,7 +25,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L../../utilities/parALMOND -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack
+LIBS	=  $(links) -llapack -lblas
 
 
 # types of files we are going to construct rules for

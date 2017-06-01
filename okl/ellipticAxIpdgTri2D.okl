@@ -1,3 +1,35 @@
+
+void boundaryConditions2D(const int bc, 
+                          const dfloat qxM, 
+                          const dfloat qyM, 
+                          const dfloat qM, 
+                          dfloat * restrict qxP, 
+                          dfloat * restrict qyP, 
+                          dfloat * restrict qP) {
+
+#if SOLVERTYPE==PRESSURE
+  if((bc==1)||(bc==2)){ // Wall/Inflow
+    *qP  =  qM;
+    *qxP = -qxM;
+    *qyP = -qyM;
+  } else if (bc==3){ // Outflow 
+    *qP  = -qM;
+    *qxP =  qxM;
+    *qyP =  qyM;
+  }
+#elif SOLVERTYPE==VELOCITY
+  if((bc==1)||(bc==2)){ // Wall/Inflow
+    *qP  = -qM;
+    *qxP =  qxM;
+    *qyP =  qyM;
+  } else if (bc==3){ // Outflow 
+    *qP  =  qM;
+    *qxP = -qxM;
+    *qyP = -qyM;
+  }
+#endif
+}
+
 // increments gradients of pressure with pseudo-gradients at faces and 
 // increments rhs with pseudo-gradient/penalty terms at faces (need to double check scaling with tau)
 
@@ -12,6 +44,7 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 				const dfloat tau,
 				const dfloat * restrict vgeo,
 				const dfloat * restrict sgeo,
+        const iint   * restrict EToB,
 				const dfloat * restrict DrT,
 				const dfloat * restrict DsT,
 				const dfloat * restrict LIFTT,
@@ -60,10 +93,8 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       	invJ = sgeo[sid+p_IJID];
       	hinv = sgeo[sid+p_IHID];
 
-      	// Neumann boundary condition
-      	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
-      	gradqP.x *= sc;
-      	gradqP.y *= sc;
+        iint bc = EToB[face+p_Nfaces*e];
+        if(bc>0) boundaryConditions2D(bc, gradqM.x, gradqM.y, gradqM.w, &gradqP.x, &gradqP.y, &gradqP.w);
 
       	const dfloat dq = gradqP.w - gradqM.w;
       	const dfloat half = 0.5f;
@@ -74,17 +105,6 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       	s_lapflux[n] = half*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
       				     -ny*(gradqP.y-gradqM.y)
       				     -tau*hinv*dq);
-
-
-
-        
-        // s_nxdq[n] = 0.5*sJ*invJ*nx*dq;
-        // s_nydq[n] = 0.5*sJ*invJ*ny*dq;
-
-        // s_lapflux[n] = 0.5*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
-        //            -ny*(gradqP.y-gradqM.y)
-        //            -tau*hinv*dq);
-
       }
     }
 
