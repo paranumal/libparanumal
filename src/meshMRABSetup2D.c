@@ -74,7 +74,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     }
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
-    meshMRABWeightedPartition2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
+    meshMRABWeightedPartitionTri2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
 
     if (MRABsendBuffer) free(MRABsendBuffer);
     MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));

@@ -1,0 +1,330 @@
+
+kernel void acousticsMRABUpdate3D(const iint Nelements,
+           const iint   * restrict elementIds,
+           const dfloat dt, 
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           dfloat * restrict q,
+           dfloat * restrict fQ,
+           const iint   rhsShift){
+  
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
+      }
+    }
+    barrier(localMemFence);
+
+    //write update
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          q[id+fld] = s_q[p_Nfields*n+fld];
+      }
+    }
+    barrier(localMemFence);
+
+    //write traces
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const iint id = e*p_Nfp*p_Nfaces + n;
+
+        const iint qidM = p_Nfields*(vmapM[id]-e*p_Np);
+        const iint qid  = p_Nfields*id; 
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          fQ[qid+fld] = s_q[qidM+fld];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABTraceUpdate3D(const iint Nelements,
+           const iint   * restrict elementIds,
+           const dfloat dt, 
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           const dfloat * restrict q,
+           dfloat * restrict fQ,
+           const iint   rhsShift){
+  
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
+      }
+    }
+    barrier(localMemFence);
+
+    //write traces
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const iint id = e*p_Nfp*p_Nfaces + n;
+
+        const iint qidM = p_Nfields*(vmapM[id]-e*p_Np);
+        const iint qid  = p_Nfields*id; 
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          fQ[qid+fld] = s_q[qidM+fld];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABUpdate3D_wadg(const iint Nelements,
+           const iint   * restrict elementIds,
+           const dfloat dt, 
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const iint   * restrict vmapM,
+           dfloat * restrict rhsq,
+           dfloat * restrict q,
+           dfloat * restrict fQ,
+           const iint   rhsShift){
+  
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    shared dfloat s_p[p_cubNp];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        s_p[n] = rhsq[rhsId + 3]; // extract pressure rhs
+      }
+
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        const iint e = elementIds[et];
+        // Prefetch value of c2
+        const dfloat c2n = c2[n + e*p_cubNp];
+        
+        dfloat val = 0.f;
+        for (int i=0;i<p_Np;++i){
+          val += cubInterp[n + i*p_cubNp] * s_p[i];
+        }
+
+        // Multiply result by wavespeed c2 at cubature node
+        r_p = val * c2n;
+      }
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        s_p[n] = r_p;
+      }
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        // Extract velocity rhs
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[rhsId + 0];
+        rhsqn[1] = rhsq[rhsId + 1];
+        rhsqn[2] = rhsq[rhsId + 2];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp;++i){
+          rhsp += cubProject[n + i*p_Np] * s_p[i];
+        }
+        rhsqn[3] = rhsp;
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+
+        // Increment solutions (saving rhs)
+        for (int fld = 0; fld < p_Nfields; ++fld) {
+          s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsqn[fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
+          rhsq[rhsId+fld] = rhsqn[fld];
+        }
+      }      
+    }
+    barrier(localMemFence);
+
+    //write update
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          q[id+fld] = s_q[p_Nfields*n+fld];
+      }
+    }
+    barrier(localMemFence);
+
+    //write traces
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const iint id = e*p_Nfp*p_Nfaces + n;
+
+        const iint qidM = p_Nfields*(vmapM[id]-e*p_Np);
+        const iint qid  = p_Nfields*id; 
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          fQ[qid+fld] = s_q[qidM+fld];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABTraceUpdate3D_wadg(const iint Nelements,
+           const iint   * restrict elementIds,
+           const dfloat dt, 
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           const dfloat * restrict q,
+           dfloat * restrict fQ,
+           const iint   rhsShift){
+  
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    shared dfloat s_p[p_cubNp];
+    exclusive dfloat r_p;
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        s_p[n] = rhsq[rhsId + 3]; // extract pressure rhs
+      }
+
+      // Initialize register variable
+      r_p = 0.f;
+    }
+    barrier(localMemFence);
+
+    // Interpolate rhs to cubature nodes
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        const iint e = elementIds[et];
+        // Prefetch value of c2
+        const dfloat c2n = c2[n + e*p_cubNp];
+        
+        dfloat val = 0.f;
+        for (int i=0;i<p_Np;++i){
+          val += cubInterp[n + i*p_cubNp] * s_p[i];
+        }
+
+        // Multiply result by wavespeed c2 at cubature node
+        r_p = val * c2n;
+      }
+    }
+    barrier(localMemFence);
+
+    // Move temporary result back to shared memory
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        s_p[n] = r_p;
+      }
+    }
+    barrier(localMemFence);
+    
+    // Increment solution, project result back down
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n < p_Np){
+        const iint e = elementIds[et];
+        // Extract velocity rhs
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        dfloat rhsqn[p_Nfields];
+        rhsqn[0] = rhsq[rhsId + 0];
+        rhsqn[1] = rhsq[rhsId + 1]; 
+        rhsqn[2] = rhsq[rhsId + 2];  
+        
+        // Project scaled rhs down
+        dfloat rhsp = 0.f;
+        for (int i=0;i<p_cubNp;++i){
+          rhsp += cubProject[n + i*p_Np] * s_p[i];
+        }
+        rhsqn[3] = rhsp;
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+
+        // Increment solutions 
+        for (int fld = 0; fld < p_Nfields; ++fld)
+          s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsqn[fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
+      }      
+    }
+    barrier(localMemFence);
+
+    //write traces
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const iint id = e*p_Nfp*p_Nfaces + n;
+
+        const iint qidM = p_Nfields*(vmapM[id]-e*p_Np);
+        const iint qid  = p_Nfields*id; 
+
+        for (int fld = 0; fld < p_Nfields; ++fld) 
+          fQ[qid+fld] = s_q[qidM+fld];
+      }
+    }
+  }
+}

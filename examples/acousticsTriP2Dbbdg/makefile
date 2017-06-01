@@ -46,6 +46,10 @@ meshConnectFaceNodesP2D.o \
 meshPhysicalNodesTriP2D.o \
 meshPlotVTU2DP.o \
 meshHaloSetupP.o \
+meshMRABSetupP2D.o \
+meshMRABWeightedPartitionTriP2D.o \
+meshBuildMRABClustersP2D.o \
+meshClusteredGeometricPartitionP2D.o \
 meshSurfaceGeometricFactorsTriP2D.o \
 meshLoadReferenceNodesTriP2D.o 
 

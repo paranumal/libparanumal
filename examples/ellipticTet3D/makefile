@@ -42,7 +42,9 @@ ellipticCoarsePreconditionerSetupTet3D.o\
 ellipticSolveTet3D.o\
 ellipticSolveSetupTet3D.o\
 ellipticHaloExchange3D.o\
-ellipticParallelGatherScatterTet3D.o
+ellipticParallelGatherScatterTet3D.o \
+ellipticBuildContinuousTet3D.o \
+ellipticBuildIpdgTet3D.o
 
 # library objects
 LOBJS = \
