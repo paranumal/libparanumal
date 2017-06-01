@@ -4,7 +4,7 @@ void insRun2D(ins_t *ins, char *options){
 
   mesh2D *mesh = ins->mesh; 
  
- #if 1
+ #if 0
   
   solver_t *solver = ins->prsolver;
 
@@ -66,53 +66,37 @@ void insRun2D(ins_t *ins, char *options){
   //meshPlotVTU2D(mesh, "foo", 0);
 
 #endif
+ insReport2D(ins, 0, options);
+  // Allocate MPI buffer for velocity step solver
+  iint helmholtzHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  dfloat *helmholtzSendBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  dfloat *helmholtzRecvBuffer = (dfloat*) malloc(helmholtzHaloBytes);
+  
+  //
+  iint poissonHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
+  dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
 
+  // No need to do like this, just for consistency 
+  iint updateHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  dfloat *updateSendBuffer = (dfloat*) malloc(updateHaloBytes);
+  dfloat *updateRecvBuffer = (dfloat*) malloc(updateHaloBytes);
 
-
-
-
-
-
-
-  // // Allocate MPI send buffer
-  // iint helmholtzHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
-  // dfloat *helmholtzSendBuffer = (dfloat*) malloc(helmholtzHaloBytes);
-  // dfloat *helmholtzRecvBuffer = (dfloat*) malloc(helmholtzHaloBytes);
-  // //
-  // iint poissonHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
-  // dfloat *poissonSendBuffer = (dfloat*) malloc(poissonHaloBytes);
-  // dfloat *poissonRecvBuffer = (dfloat*) malloc(poissonHaloBytes);
-
-  // // No need to do like this, just for consistency 
-  // iint updateHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  // dfloat *updateSendBuffer = (dfloat*) malloc(updateHaloBytes);
-  // dfloat *updateRecvBuffer = (dfloat*) malloc(updateHaloBytes);
-
-  // occa::initTimer(mesh->device);
-
- 
-  // //First Order Coefficients
-  // ins->a0 = 1.0, ins->b0 = 1.f;
-  // ins->a1 = 0.f, ins->b1 = 0.f;
-  // ins->b2 = 0.f, ins->b2 = 0.f;
-  // ins->g0 = 1.f; 
+  occa::initTimer(mesh->device);
+  //First Order Coefficients
+  ins->a0 = 1.0, ins->b0 = 1.f;
+  ins->a1 = 0.f, ins->b1 = 0.f;
+  ins->b2 = 0.f, ins->b2 = 0.f;
+  ins->g0 = 1.f; 
   
 
-  // // Set-up First Order Solver
-  // ins->lamda = ins->g0 / (ins->dt * ins->nu);
-  // solver_t *velsolver = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfo, velSolverOptions); 
-  // ins->velsolver = velsolver; 
-
   // One First Order Step 
-  //insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options, velSolverOptions);
-  //insPoissonStep2D(ins, 0, poissonHaloBytes, poissonSendBuffer, poissonRecvBuffer, options, prSolverOptions);
+  insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
   //insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
   //
-  // printf("Finished first order step\n");
-  // insReport2D(ins, ins->NtimeSteps,options);
-
-
-
+  printf("Finished first order step\n");
+  
   // // Switch to second order
   // ins->a0 =  2.0,  ins->b0  = 2.0f;
   // ins->a1 = -0.5f, ins->b1 = -1.0f;
@@ -161,14 +145,14 @@ void insRun2D(ins_t *ins, char *options){
   // // For Final Time
   // insReport2D(ins, ins->NtimeSteps,options);
 
-  // occa::printTimer();
+  occa::printTimer();
 
   // // Deallocate Halo MPI storage
-  // free(helmholtzSendBuffer);
-  // free(helmholtzRecvBuffer);
+  free(helmholtzSendBuffer);
+  free(helmholtzRecvBuffer);
   // //
-  // free(poissonSendBuffer);
-  // free(poissonRecvBuffer);
+  free(poissonSendBuffer);
+  free(poissonRecvBuffer);
   // //
   // free(updateSendBuffer);
   // free(updateRecvBuffer);

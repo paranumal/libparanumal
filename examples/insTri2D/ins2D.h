@@ -7,6 +7,7 @@
 
 #define UXID 0
 #define UYID 1
+#define PRID 2
 
 typedef struct {
 
@@ -18,8 +19,9 @@ char *prsolverOptions, *velsolverOptions;
 
 // INS SOLVER OCCA VARIABLES
 dfloat rho, nu ;
-iint NVfields, Nfields;
+iint NVfields, NTfields, Nfields;
 iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
+iint ExplicitOrder; 
 //
 dfloat dt; // time step
 dfloat lamda; // helmhotz solver -lap(u) + lamda u
@@ -30,12 +32,12 @@ iint   errorStep;
 dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
 dfloat *NUx, *NUy, *rhsUx, *rhsUy, *rhsPr;
 dfloat *Ux, *Uy, *Pr, *PrI; 
-dfloat *UO, *NUO; 
-dfloat g[2]; // gravitational Acceleration
+dfloat *UO, *NO;  // Storage for old data
+dfloat g[2];      // gravitational Acceleration
 
 occa::memory o_Ux, o_Uy, o_Pr, o_PrI;
 occa::memory o_NUx, o_NUy, o_rhsUx, o_rhsUy, o_rhsPr; 
-occa::memory o_UO, o_NUO;
+occa::memory o_UO, o_NO;
 
 
 occa::memory o_velHaloBuffer, o_prHaloBuffer, o_totHaloBuffer; 
