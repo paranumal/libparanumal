@@ -66,6 +66,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
+  kernelInfo.addDefine("PRESSURE", 1);  
+  kernelInfo.addDefine("VELOCITY", 2);
+
+  if (strstr(options,"PRESSURE")) kernelInfo.addDefine("SOLVERTYPE", 1);     
+  if (strstr(options,"VELOCITY")) kernelInfo.addDefine("SOLVERTYPE", 2);     
+
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax); 
 

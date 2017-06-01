@@ -458,7 +458,7 @@ for(int e=0;e<Nelements;++e;outer0){
 						s_nxuxB[n]    = 0.f, s_nxuyB[n]    = 0.f ;
 						s_nyuxB[n]    = 0.f, s_nyuyB[n]    = 0.f ;
 					//
-	        if(bc){ 
+	        if(bc>0){ 
 						//
 						const iint id  = n + e*p_Nfaces*p_Nfp;
 						const iint idM = vmapM[id];					
