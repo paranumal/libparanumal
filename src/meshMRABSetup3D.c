@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include "mesh2D.h"
+#include "mesh3D.h"
 
-void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
+void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -74,7 +74,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     }
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
-    meshMRABWeightedPartitionTri2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
+    meshMRABWeightedPartition3D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
 
     if (MRABsendBuffer) free(MRABsendBuffer);
     MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));

@@ -3,7 +3,9 @@
 
 function [V Vr Vs Vt V1 V2 V3 V4 id] = bern_basis_tet(N,r,s,t)
 
-[L1 L2 L3 L4] = rsttobary(r,s,t);
+%[L1 L2 L3 L4] = rsttobary(r,s,t);
+
+L1 = -(1+r+s+t)/2; L2 = (1+r)/2; L3 = (1+s)/2; L4 = (1+t)/2;
 
 dL1r = -.5; dL2r = .5; dL3r = 0; dL4r = 0;
 dL1s = -.5; dL2s = 0; dL3s = .5; dL4s = 0;

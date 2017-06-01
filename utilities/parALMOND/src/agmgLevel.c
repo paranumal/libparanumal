@@ -319,16 +319,21 @@ csr * strong_graph(csr *A, dfloat threshold){
 
     dfloat maxOD = 0.;
 
+    dfloat Aii = fabs(A->coefs[A->rowStarts[i]]);
     iint jj = Jstart+1;
     for(; jj<Jend; jj++){
-      dfloat OD = -sign*A->coefs[jj];
+      iint col = A->cols[jj];
+      dfloat Ajj = fabs(A->coefs[A->rowStarts[col]]);
+      dfloat OD = -sign*A->coefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > maxOD) maxOD = OD;
     }
 
     jj = Jstart+1;
     iint strong_per_row = 1; // diagonal entry
     for(; jj<Jend; jj++){
-      dfloat OD = -sign*A->coefs[jj];
+      iint col = A->cols[jj];
+      dfloat Ajj = fabs(A->coefs[A->rowStarts[col]]);
+      dfloat OD = -sign*A->coefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD) strong_per_row++;
     }
 
@@ -348,13 +353,17 @@ csr * strong_graph(csr *A, dfloat threshold){
 
     dfloat sign = (A->coefs[A->rowStarts[i]] >= 0) ? 1:-1;
 
+    dfloat Aii = fabs(A->coefs[A->rowStarts[i]]);
+
     const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
 
     dfloat maxOD = 0.;
 
     iint jj = Jstart+1;
     for(; jj<Jend; jj++){
-      dfloat OD = -sign*A->coefs[jj];
+      iint col = A->cols[jj];
+      dfloat Ajj = fabs(A->coefs[A->rowStarts[col]]);
+      dfloat OD = -sign*A->coefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > maxOD) maxOD = OD;
     }
 
@@ -365,7 +374,9 @@ csr * strong_graph(csr *A, dfloat threshold){
 
     jj = Jstart+1;
     for(; jj<Jend; jj++){
-      dfloat OD = -sign*A->coefs[jj];
+      iint col = A->cols[jj];
+      dfloat Ajj = fabs(A->coefs[A->rowStarts[col]]);
+      dfloat OD = -sign*A->coefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD)
         C->cols[counter++] = A->cols[jj];
     }

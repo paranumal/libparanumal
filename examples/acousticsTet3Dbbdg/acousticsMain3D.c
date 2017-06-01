@@ -21,13 +21,8 @@ int main(int argc, char **argv){
   acousticsSetup3D(mesh);
 
   // run
-  #if USE_BERN
-    acousticsRun3Dbbdg(mesh);
-    //acousticsOccaRun3Dbbdg(mesh);  
-  #else
-    acousticsRun3D(mesh);
-    //acousticsOccaRun3D(mesh);
-  #endif
+  acousticsRun3Dbbdg(mesh);
+  //acousticsOccaRun3Dbbdg(mesh);  
 
   // close down MPI
   MPI_Finalize();

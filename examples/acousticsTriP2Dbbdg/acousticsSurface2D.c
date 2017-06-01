@@ -24,7 +24,7 @@ void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t){
+void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
   // temporary storage for flux terms
   dfloat *fluxu = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
@@ -35,104 +35,42 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t){
   dfloat *fluxv_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
   dfloat *fluxp_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
 
-  dfloat nx, ny, sJ, invJ;
-
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(iint et=0;et<mesh->MRABNelements[lev];++et){
+    iint e = mesh->MRABelementIds[lev][et];
     iint N = mesh->N[e];
-    for (iint f=0;f<mesh->Nfaces;f++){
-      // load element and face number of neighbour
-      iint eP = mesh->EToE[e*mesh->Nfaces+f];
-      iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      iint NP = mesh->N[eP]; 
-      
-      if (eP<0 || fP<0) NP = N; //boundary
-
-      for (iint n=0;n<mesh->Nfp[NP];n++){
-        iint id  = e*mesh->Nfaces*mesh->NfpMax + f*mesh->NfpMax + n;
-        iint idP = mesh->vmapP[id];
-        iint qidP = mesh->Nfields*idP;
-
-        //load qP into flux for now to save space
-        fluxu[n] = mesh->q[qidP+0];
-        fluxv[n] = mesh->q[qidP+1];
-        fluxp[n] = mesh->q[qidP+2];
-      }
-
-      if (NP < N) { 
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          fluxu_copy[f*mesh->Nfp[N] + n] = 0.0;
-          fluxv_copy[f*mesh->Nfp[N] + n] = 0.0;
-          fluxp_copy[f*mesh->Nfp[N] + n] = 0.0;
-          for (iint m=0;m<2;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
-            fluxu_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxu[BBRaiseid];
-            fluxv_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxv[BBRaiseid];
-            fluxp_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxp[BBRaiseid];
-          }
-        }
-      } else if (NP > N) { 
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          fluxu_copy[f*mesh->Nfp[N] +n] = 0.0;
-          fluxv_copy[f*mesh->Nfp[N] +n] = 0.0;
-          fluxp_copy[f*mesh->Nfp[N] +n] = 0.0;
-          for (iint m=0;m<mesh->Nfp[NP];m++){
-            iint id = n*mesh->Nfp[NP] + m;
-            fluxu_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxu[m];
-            fluxv_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxv[m];
-            fluxp_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxp[m];
-          }
-        }
-      } else { //equal order neighbor
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          //load qP into flux_copy to save space
-          fluxu_copy[f*mesh->Nfp[N] + n] = fluxu[n];
-          fluxv_copy[f*mesh->Nfp[N] + n] = fluxv[n];
-          fluxp_copy[f*mesh->Nfp[N] + n] = fluxp[n];
-        }
-      }
-    }
     
-
     // for all face nodes of all elements
     for (iint f=0;f<mesh->Nfaces;f++) {
       for(iint n=0;n<mesh->Nfp[N];++n){
-        iint eP = mesh->EToE[e*mesh->Nfaces+f];
-        iint fP = mesh->EToF[e*mesh->Nfaces+f];
-        iint NP = mesh->N[eP];
-        if (eP <0 || fP<0) NP = N;
-
         // load surface geofactors for this face
         iint sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
-        nx   = mesh->sgeo[sid+0];
-        ny   = mesh->sgeo[sid+1];
-        sJ   = mesh->sgeo[sid+2];
-        invJ = mesh->sgeo[sid+3];
+        dfloat nx   = mesh->sgeo[sid+0];
+        dfloat ny   = mesh->sgeo[sid+1];
+        dfloat sJ   = mesh->sgeo[sid+2];
+        dfloat invJ = mesh->sgeo[sid+3];
 
         // indices of negative and positive traces of face node
         iint id  = e*mesh->NfpMax*mesh->Nfaces +f*mesh->NfpMax + n;
-        iint idM = mesh->vmapM[id];
-        iint idP = mesh->vmapP[id];
-        iint qidM = mesh->Nfields*idM;
+        iint idM = id*mesh->Nfields;
+        iint idP = mesh->mapP[id]*mesh->Nfields;
 
         // load negative trace node values of q
-        dfloat uM = mesh->q[qidM+0];
-        dfloat vM = mesh->q[qidM+1];
-        dfloat pM = mesh->q[qidM+2];
-        
-        // load positive trace node values of q from flux_copy
-        //dfloat uP = mesh->q[qidP+0];
-        //dfloat vP = mesh->q[qidP+1];
-        //dfloat pP = mesh->q[qidP+2];
-        dfloat uP = fluxu_copy[f*mesh->Nfp[N] + n]; 
-        dfloat vP = fluxv_copy[f*mesh->Nfp[N] + n];
-        dfloat pP = fluxp_copy[f*mesh->Nfp[N] + n];
+        dfloat uM = mesh->fQM[idM+0];
+        dfloat vM = mesh->fQM[idM+1];
+        dfloat pM = mesh->fQM[idM+2];
+
+        // load positive trace node values of q
+        dfloat uP = mesh->fQP[idP+0]; 
+        dfloat vP = mesh->fQP[idP+1];
+        dfloat pP = mesh->fQP[idP+2];
 
         // find boundary type
         iint boundaryType = mesh->EToB[e*mesh->Nfaces+f];
-        if(boundaryType>0)
-        boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM], uM, vM, pM, &uP, &vP, &pP);
+        if(boundaryType>0) {
+          iint idM = mesh->vmapM[id];
+          boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM], uM, vM, pM, &uP, &vP, &pP);
+        }
 
         // compute (q^* - q^-)
         dfloat duS = 0.5f*(uP-uM) + mesh->Lambda2*(-nx)*(pP-pM);
@@ -173,7 +111,7 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, dfloat t){
 
     // apply lift reduction and accumulate RHS
     for(iint n=0;n<mesh->Np[N];++n){
-      iint id = mesh->Nfields*(mesh->NpMax*e + n);
+      iint id = 3*mesh->Nfields*(mesh->NpMax*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
       
       // load RHS
       dfloat rhsqnu = mesh->rhsq[id+0];

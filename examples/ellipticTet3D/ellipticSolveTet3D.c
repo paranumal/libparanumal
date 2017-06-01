@@ -48,7 +48,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerTic(mesh->device,"ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+3)/3.; // 1/h factor built into kernel 
+    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,
@@ -117,7 +117,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     occaTimerTic(mesh->device,"ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+3)/3.; // 1/h factor built into kernel 
+    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     mesh->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include "mesh2D.h"
+#include "mesh3D.h"
 
 #define bitRange 10
 
@@ -11,9 +11,9 @@ typedef struct {
   iint level;
   dfloat weight;
 
-  // 4 for maximum number of vertices per element in 2D
-  iint v[4];
-  dfloat EX[4], EY[4];
+  // 8 for maximum number of vertices per element in 3D
+  iint v[8];
+  dfloat EX[8], EY[8], EZ[8];
 
   iint cRank;
   iint cId;
@@ -34,11 +34,11 @@ typedef struct {
   iint destRank;
 
   dfloat weight;
-  unsigned int index; //hilbert index
+  unsigned long long int index; //morton index
 } parallelCluster_t;
 
 //This is linked form meshGeometricPartition2D.c
-unsigned int hilbert2D(unsigned int index1, unsigned int index2);
+unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz);
 void bogusMatch(void *a, void *b);
 
 void meshBuildMRABClusters(mesh_t *mesh, iint lev, dfloat *weights, iint *levels,
@@ -46,8 +46,8 @@ void meshBuildMRABClusters(mesh_t *mesh, iint lev, dfloat *weights, iint *levels
 
 dfloat improveClusteredPartition(iint *Nclusters, parallelCluster_t **parallelClusters);
 
-// geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, iint Nclusters, cluster_t *clusters, 
+// geometric partition of clusters of elements in 3D mesh using Morton ordering + parallelSort
+dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, iint Nclusters, cluster_t *clusters, 
                               iint *Nelements, cElement_t **elements);
 
 
@@ -70,7 +70,7 @@ The algorithm performs the following steps
     the mesh setup. 
 
 ------------------------------------------------------------ */
-void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
+void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels) {
 
   const dfloat TOL = 0.8; //tolerance on what partitions are ruled 'acceptable'
@@ -90,7 +90,7 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
 
   //perform the first weigthed partitioning with no clustering
   meshBuildMRABClusters(mesh, -1, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
-  meshClusteredGeometricPartition2D(mesh, Nclusters, clusters, &Nelements, &elements);
+  meshClusteredGeometricPartition3D(mesh, Nclusters, clusters, &Nelements, &elements);
 
   //initialize the accepted partition
   iint acceptedNelements = Nelements;
@@ -100,7 +100,7 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
     if (rank==0) printf("Clustering level %d...", lev);
     meshBuildMRABClusters(mesh, lev, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
     if (rank==0) printf("done.\n");
-    dfloat partQuality = meshClusteredGeometricPartition2D(mesh, Nclusters, clusters, &Nelements, &elements);
+    dfloat partQuality = meshClusteredGeometricPartition3D(mesh, Nclusters, clusters, &Nelements, &elements);
 
     if (partQuality > TOL) {
       if (rank ==0) printf("Accepting level %d clustered partition...(quality = %g)\n", lev, partQuality);
@@ -114,22 +114,20 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
     }
   }
 
-  //save this partition, and perform the mesh setup again. 
-  free(mesh->EToV);
-  free(mesh->EX);
-  free(mesh->EY);
-  
+  //save this partition, and perform the mesh setup again.  
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (iint*) calloc(mesh->Nelements*mesh->Nverts, sizeof(iint));
-  mesh->EX = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
-  mesh->EY = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
+  mesh->EToV = (iint*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(iint));
+  mesh->EX = (dfloat*) realloc(mesh->EX,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
 
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = acceptedPartition[e].v[n];
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
+      mesh->EZ  [e*mesh->Nverts + n] = acceptedPartition[e].EZ[n];
     }
   }
 
@@ -143,25 +141,24 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
   meshConnectBoundary(mesh);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(mesh);
+  meshPhysicalNodesTet3D(mesh);
 
   // compute geometric factors
-  meshGeometricFactorsTri2D(mesh);
+  meshGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(mesh);
+  meshConnectFaceNodes3D(mesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactorsTri2D(mesh);
+  meshSurfaceGeometricFactorsTet3D(mesh);
 
   // global nodes
   meshParallelConnectNodes(mesh);
 
-  free(mesh->MRABlevel);
-  mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
+  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements+mesh->totalHaloPairs*sizeof(iint));
   for(iint e=0;e<mesh->Nelements;++e) 
     mesh->MRABlevel[e] = acceptedPartition[e].level;
   
@@ -213,6 +210,7 @@ void meshBuildMRABClusters(mesh_t *mesh, iint lev, dfloat *weights, iint *levels
       (*elements)[e].v[n] = mesh->EToV[e*mesh->Nverts+n];
       (*elements)[e].EX[n] = mesh->EX[e*mesh->Nverts+n];
       (*elements)[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
+      (*elements)[e].EZ[n] = mesh->EZ[e*mesh->Nverts+n];
     }
 
     //initialize the clustering numbering
@@ -356,7 +354,7 @@ int compareRank(const void *a, const void *b){
 }
 
 // geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, iint Nclusters, cluster_t *clusters, 
+dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, iint Nclusters, cluster_t *clusters, 
                               iint *Nelements, cElement_t **elements){
 
   iint rank, size;
@@ -375,63 +373,75 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, iint Nclusters, cluster_t
   // local bounding box of element centers
   dfloat mincx = 1e9, maxcx = -1e9;
   dfloat mincy = 1e9, maxcy = -1e9;
+  dfloat mincz = 1e9, maxcz = -1e9;
 
   // compute cluster centers on this process
   for(iint cnt=0;cnt<Nclusters;++cnt){
     iint id = clusters[cnt].offSet;
-    dfloat cx = 0, cy = 0;
+    dfloat cx = 0, cy = 0, cz = 0;
     for (iint e=0;e<clusters[cnt].Nelements;e++) {
       for(iint n=0;n<mesh->Nverts;++n){
         cx += (*elements)[id+e].EX[n];
         cy += (*elements)[id+e].EY[n];
+        cz += (*elements)[id+e].EZ[n];
       }
     }
     cx /= (mesh->Nverts*clusters[cnt].Nelements);
     cy /= (mesh->Nverts*clusters[cnt].Nelements);
+    cz /= (mesh->Nverts*clusters[cnt].Nelements);
     
     mincx = mymin(mincx, cx);
     maxcx = mymax(maxcx, cx);
     mincy = mymin(mincy, cy);
     maxcy = mymax(maxcy, cy);
+    mincz = mymin(mincz, cz);
+    maxcz = mymax(maxcz, cz);
   }
 
   dfloat delta = 1e-4;
   mincx -= delta;
   mincy -= delta;
+  mincz -= delta;
   maxcx += delta;
   maxcy += delta;
+  maxcz += delta;
 
   // find global bounding box of cluster centers
-  dfloat gmincx, gmincy, gmaxcx, gmaxcy;
+  dfloat gmincx, gmincy, gmincz, gmaxcx, gmaxcy, gmaxcz;
   MPI_Allreduce(&mincx, &gmincx, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&mincy, &gmincy, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&mincz, &gmincz, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&maxcx, &gmaxcx, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&maxcz, &gmaxcz, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
   // choose sub-range of Morton lattice coordinates to embed cluster centers in
-  unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));
+  unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
   
   // compute Morton index for each cluster
   for(iint cnt=0;cnt<Nclusters;++cnt){
     // cluster center coordinates
-    dfloat cx = 0, cy = 0;
+    dfloat cx = 0, cy = 0, cz = 0;
     parallelClusters[cnt].weight = 0.;
     iint id = clusters[cnt].offSet;
     for (iint e=0;e<clusters[cnt].Nelements;e++) {
       for(iint n=0;n<mesh->Nverts;++n){
         cx += (*elements)[id+e].EX[n];
         cy += (*elements)[id+e].EY[n];
+        cz += (*elements)[id+e].EZ[n];
       }
       parallelClusters[cnt].weight += (*elements)[id+e].weight;
     }
     cx /= (mesh->Nverts*clusters[cnt].Nelements);
     cy /= (mesh->Nverts*clusters[cnt].Nelements);
+    cz /= (mesh->Nverts*clusters[cnt].Nelements);
 
     unsigned int ix = (cx-gmincx)*Nboxes/(gmaxcx-gmincx);
     unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
+    unsigned int iz = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
 
     //fill the parallel cluster struct
-    parallelClusters[cnt].index =  hilbert2D(ix, iy);
+    parallelClusters[cnt].index =  mortonIndex3D(ix, iy,iz);
     parallelClusters[cnt].Nelements = clusters[cnt].Nelements;
     parallelClusters[cnt].offSet = clusters[cnt].offSet;
     parallelClusters[cnt].rank = rank;
@@ -440,7 +450,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, iint Nclusters, cluster_t
   // pad cluster array with dummy clusters
   for(iint n=Nclusters;n<maxNclusters;++n){
     parallelClusters[n].Nelements = -1;
-    parallelClusters[n].index = hilbert2D(Nboxes+1, Nboxes+1);
+    parallelClusters[n].index = mortonIndex3D(Nboxes+1, Nboxes+1,Nboxes+1);
   }
 
   // odd-even parallel sort of cluster capsules based on their Morton index

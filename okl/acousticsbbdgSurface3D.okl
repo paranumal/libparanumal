@@ -232,6 +232,7 @@ kernel void acousticsSurface3Dbbdg(const iint Nelements,
             dfloat ptmpflux = 0.0;
 
             // sparse application of L0
+            occaUnroll(7)
             for (int m = 0; m < 7; ++m){
               iint   L0id  = L0ids [id + p_Nfp*m];
               dfloat L0val = L0vals[id + p_Nfp*m];
@@ -264,11 +265,11 @@ kernel void acousticsSurface3Dbbdg(const iint Nelements,
             // load RHS
             dfloat rhsqnu = rhsq[id+0];
             dfloat rhsqnv = rhsq[id+1];
-            dfloat rhsqnw = rhsq[id+1];
+            dfloat rhsqnw = rhsq[id+2];
             dfloat rhsqnp = rhsq[id+3];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            occaUnroll(p_max_EL_nnz)
             for (int m = 0; m < p_max_EL_nnz; ++m){
               iint id = n + m*p_Np;
               dfloat ELval = ELvals[id];

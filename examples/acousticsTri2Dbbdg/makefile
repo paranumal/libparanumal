@@ -19,7 +19,7 @@ LD	= mpic++
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g
+LDFLAGS	= $(compilerFlags) $(flags)
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -64,8 +64,10 @@ LOBJS = \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshReader2D.o \
-../../src/meshMRABWeightedPartition2D.o \
 ../../src/meshMRABSetup2D.o \
+../../src/meshBuildMRABClusters2D.o \
+../../src/meshClusteredGeometricPartition2D.o \
+../../src/meshMRABWeightedPartitionTri2D.o \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
