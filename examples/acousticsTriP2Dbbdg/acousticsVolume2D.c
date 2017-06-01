@@ -1,9 +1,11 @@
 #include "acoustics2D.h"
 
-void acousticsVolume2Dbbdg(mesh2D *mesh){
+void acousticsVolume2Dbbdg(mesh2D *mesh, iint lev){
 
   // loop over elements
-  for(iint e=0; e<mesh->Nelements; ++e){
+  for(iint et=0;et<mesh->MRABNelements[lev];++et){
+    iint e = mesh->MRABelementIds[lev][et];
+    
     // prefetch geometric factors (constant on triangle)
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
     dfloat drdy = mesh->vgeo[e*mesh->Nvgeo + RYID];
@@ -58,7 +60,7 @@ void acousticsVolume2Dbbdg(mesh2D *mesh){
       dfloat dpdy = drdy*dpdr + dsdy*dpds;
       
       // indices for writing the RHS terms
-      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint id = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
 
       // store acoustics rhs contributions from collocation differentiation
       mesh->rhsq[id+0] = -dpdx;

@@ -138,7 +138,7 @@ void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
-void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
+void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
 
 #define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )

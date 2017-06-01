@@ -7,12 +7,8 @@
 #include "mesh2D.h"
 
 
-#define LSERK 1
-#define MRAB  2
-
 #define USE_BERN 1
 #define WADG 1
-#define TIME_DISC MRAB
 
 void acousticsSetup2D(mesh2D *mesh);
 
