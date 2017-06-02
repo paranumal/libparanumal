@@ -169,26 +169,20 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   occa::kernelInfo kernelInfoPr  = kernelInfo;
 
   // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *prsolver = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
-  ins->prsolver = prsolver; 
-  // Add drichlet Neumann Flag
-  
+  solver_t *prsolver   = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
+  ins->prsolver        = prsolver; 
   ins->prsolverOptions = prSolverOptions;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  // ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
-  ins->lamda = 1.0/ (ins->dt * ins->nu);
-  solver_t *velsolver = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
-  ins->velsolver = velsolver;  
-  // Add drichlet -Neuman Flag
-
+  ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+  solver_t *velsolver   = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
+  ins->velsolver        = velsolver;  
   ins->velsolverOptions = velSolverOptions;
 
-  mesh->Nfields = ins->NTfields; 
+ // mesh->Nfields = ins->NTfields; 
   #endif
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
-    
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
   #if 1
@@ -245,11 +239,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
 
    // KERNEL DEFINITIONS
   if(strstr(options, "CUBATURE")){ 
-  printf("Compiling Helmholtz volume kernel with cubature integration\n");
-  ins->helmholtzRhsVolumeKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-      "insHelmholtzRhsVolumeCub2D",
-        kernelInfo);
+  // printf("Compiling Helmholtz volume kernel with cubature integration\n");
+  // ins->helmholtzRhsVolumeKernel = 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+  //     "insHelmholtzRhsVolumeCub2D",
+  //       kernelInfo);
    }
   else{
   printf("Compiling Helmholtz volume kernel with collocation integration\n");
@@ -260,11 +254,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   }
 
   if(strstr(options, "CUBATURE")){ 
-  printf("Compiling Helmholtz volume kernel with collocation integration\n");
-  ins->helmholtzRhsSurfaceKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-      "insHelmholtzRhsSurfaceCub2D",
-        kernelInfo);
+  // printf("Compiling Helmholtz volume kernel with collocation integration\n");
+  // ins->helmholtzRhsSurfaceKernel = 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+  //     "insHelmholtzRhsSurfaceCub2D",
+  //       kernelInfo);
   }
   else{
   printf("Compiling Helmholtz volume kernel with collocation integration\n");

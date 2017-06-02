@@ -19,8 +19,8 @@
 
 
 void boundaryConditionsRhs2D(const iint bc,
-			              const dfloat  t,    const dfloat  x, const dfloat  y,
-			              const dfloat  nx,   const dfloat  ny,
+			              const dfloat  t,    const dfloat  x,  const dfloat  y,
+			              const dfloat  nx,   const dfloat  ny,  const dfloat  prM,
 			                    dfloat * restrict prB ){
 	dfloat nu   = 1.0/40.0;
   dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
@@ -32,7 +32,8 @@ void boundaryConditionsRhs2D(const iint bc,
     //*prB = prM; // Do nothing
   }
   if(bc==3){ // Outflow 
-  	 *prB = 0.5f*(1.0f - occaExp(2.0f*lamda*x)); //Dirichlet for pressure
+  	 dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lamda*x));
+  	 *prB = 2.f*prbc - prM;   //Dirichlet for pressure
   }
 }
 
@@ -116,6 +117,7 @@ kernel void insUpdateSurface2D(const iint Nelements,
 				     const dfloat dt, 
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
+				     const dfloat * restrict Pr, 
 				     const dfloat * restrict PrI,
 				           dfloat * restrict rhsUx,
 				           dfloat * restrict rhsUy){
@@ -147,19 +149,17 @@ kernel void insUpdateSurface2D(const iint Nelements,
 		    iint idP = vmapP[id];
 
 		   if(idP<0) idP = idM;
-		  
-	  // load negative and positive trace node values of q
-	     //
-		   dfloat  prim = PrI[idM];  dfloat  prip = PrI[idP];
-       dfloat  prp = 0.f, prpo=0.f ;
+		    dfloat  prim = PrI[idM];  
+		    dfloat  prip = PrI[idP];     
 		    // apply boundary condition
 		    iint bc = EToB[face+p_Nfaces*e];
 		    if(bc>0){
-		      boundaryConditionsRhs2D(bc, time, x[idM], y[idM], nx, ny, &prp);
-		      boundaryConditionsRhs2D(bc, time-dt, x[idM], y[idM], nx, ny, &prpo);
+		    	dfloat  prm  = Pr[idM];   
+          dfloat  prp  = 0.f, prpo=0.f ;
+		      boundaryConditionsRhs2D(bc, time,    x[idM], y[idM], nx, ny, prm, &prp);
+		      boundaryConditionsRhs2D(bc, time-dt, x[idM], y[idM], nx, ny, prm, &prpo);
 		      prip -= prpo ;
 		     }
-
         // evaluate "flux" terms: LLF
         const dfloat sc = invJ * sJ ; 
         // Centered flux for pr, p*-p = 0.5(prp-prm)

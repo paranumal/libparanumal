@@ -14,23 +14,23 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 //Exctract Halo On Device
 
-	if(mesh->totalHaloPairs>0){
+	// if(mesh->totalHaloPairs>0){
 	 
-    ins->poissonHaloExtractKernel(mesh->Nelements,
-                           mesh->totalHaloPairs,
-                           mesh->o_haloElementList,
-                           ins->o_Ux,
-                           ins->o_Uy,
-                           ins->o_velHaloBuffer);
+ //    ins->poissonHaloExtractKernel(mesh->Nelements,
+ //                           mesh->totalHaloPairs,
+ //                           mesh->o_haloElementList,
+ //                           ins->o_Ux,
+ //                           ins->o_Uy,
+ //                           ins->o_velHaloBuffer);
 
-    // copy extracted halo to HOST 
-    ins->o_velHaloBuffer.copyTo(sendBuffer);            
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                          mesh->Np*ins->NVfields*sizeof(dfloat), 
-                          sendBuffer,
-                          recvBuffer);
-  	}
+ //    // copy extracted halo to HOST 
+ //    ins->o_velHaloBuffer.copyTo(sendBuffer);            
+ //    // start halo exchange
+ //    meshHaloExchangeStart(mesh,
+ //                          mesh->Np*ins->NVfields*sizeof(dfloat), 
+ //                          sendBuffer,
+ //                          recvBuffer);
+ //  	}
 
 
 
@@ -45,20 +45,20 @@ dfloat t = tstep*ins->dt + ins->dt;
                                  ins->o_rhsPr);
 
 
-    // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
-    meshHaloExchangeFinish(mesh);
+  //   // COMPLETE HALO EXCHANGE
+  // if(mesh->totalHaloPairs>0){
+  // // wait for halo data to arrive
+  //   meshHaloExchangeFinish(mesh);
 
-    mesh->o_haloBuffer.copyFrom(recvBuffer); 
+  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-    ins->poissonHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  mesh->o_haloElementList,
-                                  ins->o_Ux,
-                                  ins->o_Uy,
-                                  ins->o_velHaloBuffer);
-  }
+  //   ins->poissonHaloScatterKernel(mesh->Nelements,
+  //                                 mesh->totalHaloPairs,
+  //                                 mesh->o_haloElementList,
+  //                                 ins->o_Ux,
+  //                                 ins->o_Uy,
+  //                                 ins->o_velHaloBuffer);
+  // }
 
 
    //computes div u^(n+1) surface term

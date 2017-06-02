@@ -14,24 +14,24 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   // Exctract Halo On Device
 
-	if(mesh->totalHaloPairs>0){
+	// if(mesh->totalHaloPairs>0){
 	 
-    ins->helmholtzHaloExtractKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    mesh->o_haloElementList,
-                                    ins->o_Ux,
-                                    ins->o_Uy,
-                                    ins->o_Pr,
-                                    ins->o_totHaloBuffer);
+ //    ins->helmholtzHaloExtractKernel(mesh->Nelements,
+ //                                    mesh->totalHaloPairs,
+ //                                    mesh->o_haloElementList,
+ //                                    ins->o_Ux,
+ //                                    ins->o_Uy,
+ //                                    ins->o_Pr,
+ //                                    ins->o_totHaloBuffer);
 
-    // copy extracted halo to HOST 
-    ins->o_totHaloBuffer.copyTo(sendBuffer);            
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                          mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
-                          sendBuffer,
-                          recvBuffer);
-  	}
+ //    // copy extracted halo to HOST 
+ //    ins->o_totHaloBuffer.copyTo(sendBuffer);            
+ //    // start halo exchange
+ //    meshHaloExchangeStart(mesh,
+ //                          mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
+ //                          sendBuffer,
+ //                          recvBuffer);
+ //  	}
 
   	// Compute Volume Contribution
 
@@ -48,21 +48,21 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                  ins->o_rhsUy);
 
 
-    // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
-    meshHaloExchangeFinish(mesh);
+  //   // COMPLETE HALO EXCHANGE
+  // if(mesh->totalHaloPairs>0){
+  // // wait for halo data to arrive
+  //   meshHaloExchangeFinish(mesh);
 
-    mesh->o_haloBuffer.copyFrom(recvBuffer); 
+  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-    ins->helmholtzHaloScatterKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    mesh->o_haloElementList,
-                                    ins->o_Ux,
-                                    ins->o_Uy,
-                                    ins->o_Pr,
-                                    ins->o_totHaloBuffer);
-  }
+  //   ins->helmholtzHaloScatterKernel(mesh->Nelements,
+  //                                   mesh->totalHaloPairs,
+  //                                   mesh->o_haloElementList,
+  //                                   ins->o_Ux,
+  //                                   ins->o_Uy,
+  //                                   ins->o_Pr,
+  //                                   ins->o_totHaloBuffer);
+  // }
 
  // Compute Surface Conribution
   ins->helmholtzRhsSurfaceKernel(mesh->Nelements,
@@ -81,7 +81,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_NUy,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
- // Update fields
+ // // Update fields
   ins->helmholtzRhsUpdateKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
@@ -104,23 +104,41 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
 
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-                                mesh->o_sgeo,
-                                mesh->o_vgeo,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_FMMT,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                t,
-                                ins->tau,
-                                mesh->o_x,
-                                mesh->o_y,
-                                ins->o_Ux,
-                                ins->o_Uy,
-                                ins->o_rhsUx,
-                                ins->o_rhsUy
-                                );
+        mesh->o_vmapM,
+        mesh->o_vmapP,
+        ins->lamda,
+        ins->tau,
+        t,
+        mesh->o_x,
+        mesh->o_y,
+        mesh->o_vgeo,
+        mesh->o_sgeo,
+        mesh->o_EToB,
+        mesh->o_DrT,
+        mesh->o_DsT,
+        mesh->o_LIFTT,
+        mesh->o_MM,
+        ins->o_rhsUx,
+        ins->o_rhsUy);
+
+  // ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
+  //                               mesh->o_sgeo,
+  //                               mesh->o_vgeo,
+  //                               mesh->o_DrT,
+  //                               mesh->o_DsT,
+  //                               mesh->o_FMMT,
+  //                               mesh->o_vmapM,
+  //                               mesh->o_vmapP,
+  //                               mesh->o_EToB,
+  //                               t,
+  //                               ins->tau,
+  //                               mesh->o_x,
+  //                               mesh->o_y,
+  //                               ins->o_Ux,
+  //                               ins->o_Uy,
+  //                               ins->o_rhsUx,
+  //                               ins->o_rhsUy
+  //                               );
 
 
 
