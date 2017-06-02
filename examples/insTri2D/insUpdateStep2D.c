@@ -11,23 +11,23 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 //Exctract Halo On Device
 
-	if(mesh->totalHaloPairs>0){
+	// if(mesh->totalHaloPairs>0){
 	 
-    ins->updateHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 ins->o_PrI,
-                                 ins->o_prHaloBuffer);
+ //    ins->updateHaloExtractKernel(mesh->Nelements,
+ //                                 mesh->totalHaloPairs,
+ //                                 mesh->o_haloElementList,
+ //                                 ins->o_PrI,
+ //                                 ins->o_prHaloBuffer);
 
-    // copy extracted halo to HOST 
-    ins->o_prHaloBuffer.copyTo(sendBuffer);            
+ //    // copy extracted halo to HOST 
+ //    ins->o_prHaloBuffer.copyTo(sendBuffer);            
    
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                          mesh->Np*sizeof(dfloat), 
-                          sendBuffer,
-                          recvBuffer);
-  	}
+ //    // start halo exchange
+ //    meshHaloExchangeStart(mesh,
+ //                          mesh->Np*sizeof(dfloat), 
+ //                          sendBuffer,
+ //                          recvBuffer);
+ //  	}
 
 
 
@@ -41,19 +41,19 @@ dfloat t = tstep*ins->dt + ins->dt;
                                  ins->o_rhsUy);
 
 
-    // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
-    meshHaloExchangeFinish(mesh);
+  //   // COMPLETE HALO EXCHANGE
+  // if(mesh->totalHaloPairs>0){
+  // // wait for halo data to arrive
+  //   meshHaloExchangeFinish(mesh);
 
-    mesh->o_haloBuffer.copyFrom(recvBuffer); 
+  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-    ins->updateHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  mesh->o_haloElementList,
-                                  ins->o_PrI,
-                                  ins->o_prHaloBuffer);
-  }
+  //   ins->updateHaloScatterKernel(mesh->Nelements,
+  //                                 mesh->totalHaloPairs,
+  //                                 mesh->o_haloElementList,
+  //                                 ins->o_PrI,
+  //                                 ins->o_prHaloBuffer);
+  // }
 
 
    //computes div u^(n+1) surface term
@@ -67,6 +67,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                               ins->dt,
                               mesh->o_x,
                               mesh->o_y,
+                              ins->o_Pr, 
                               ins->o_PrI,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
@@ -81,13 +82,6 @@ dfloat t = tstep*ins->dt + ins->dt;
                               ins->o_PrI,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
-
-
-
-
-
-
-// Solve for o_PrI
 
 
    
