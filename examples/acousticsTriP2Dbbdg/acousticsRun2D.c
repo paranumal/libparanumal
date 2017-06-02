@@ -357,7 +357,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                   mesh->o_vmapM,
                   mesh->o_rhsq,
                   mesh->o_q,
-                  mesh->o_fQ,
+                  mesh->o_fQM,
+                  mesh->o_fQP,
                   mesh->MRABshiftIndex[l]);    
           }
         }
@@ -375,7 +376,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                   mesh->o_vmapM,
                   mesh->o_rhsq,
                   mesh->o_q,
-                  mesh->o_fQ,
+                  mesh->o_fQM,
+                  mesh->o_fQP,
                   mesh->MRABshiftIndex[lev]);
           }
         }
