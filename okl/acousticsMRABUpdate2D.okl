@@ -29,22 +29,19 @@ kernel void acousticsMRABUpdate2D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    //write update
     for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      const iint e = elementIds[et];
+      
+      //write update
       if (n < p_Np){
-        const iint e = elementIds[et];
         const iint id = p_Nfields*(e*p_Np + n);
 
         for (int fld = 0; fld < p_Nfields; ++fld) 
           q[id+fld] = s_q[p_Nfields*n+fld];
       }
-    }
-    barrier(localMemFence);
 
-    //write traces
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      //write traces
       if (n < p_Nfp*p_Nfaces){
-        const iint e = elementIds[et];
         const iint id = e*p_Nfp*p_Nfaces + n;
 
         const iint qidM = p_Nfields*(vmapM[id]-e*p_Np);
