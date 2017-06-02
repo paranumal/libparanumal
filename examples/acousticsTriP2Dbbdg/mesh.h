@@ -115,6 +115,7 @@ typedef struct {
   // field info for PDE solver
   iint Nfields;
   dfloat *q;    // solution data array
+  dfloat *fQM, *fQP; //solution trace array
   dfloat *rhsq; // right hand side data array
   dfloat *resq; // residual data array (for LSERK time-stepping)
   
@@ -163,6 +164,15 @@ typedef struct {
   iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6];
 
+  // MRAB lists
+  iint MRABNlevels;
+  iint *MRABlevel;
+  iint *MRABNelements, *MRABNhaloElements;
+  iint **MRABelementIds, **MRABhaloIds;
+  iint **MRABNelP, **MRABNhaloEleP;
+  iint ***MRABelIdsP, ***MRABhaloIdsP;
+  iint *MRABshiftIndex;
+
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
   iint    *plotNp;        // number of plot nodes per element
@@ -204,6 +214,7 @@ typedef struct {
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq;
+  occa::memory o_fQM, o_fQP;
 
   occa::memory o_N;
 
@@ -215,7 +226,7 @@ typedef struct {
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   
   occa::memory o_vgeo, o_sgeo;
-  occa::memory o_vmapM, o_vmapP;
+  occa::memory o_vmapM, o_vmapP, o_mapP;
   
   occa::memory o_EToE, o_EToF;
   occa::memory o_EToB, o_x, o_y, o_z;
@@ -226,6 +237,11 @@ typedef struct {
   occa::memory *o_cubInterpT, *o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
   occa::memory o_c2;
+
+  //MRAB element lists
+  occa::memory *o_MRABelementIds, *o_MRABhaloIds;
+  occa::memory *o_MRABNelP, *o_MRABNhaloEleP;
+  occa::memory **o_MRABelIdsP, **o_MRABhaloIdsP;
 
   // DG halo exchange info
   occa::memory o_haloElementList;
@@ -286,6 +302,7 @@ typedef struct {
   occa::kernel *volumeKernel;
   occa::kernel *surfaceKernel;
   occa::kernel *updateKernel;
+  occa::kernel *traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
   

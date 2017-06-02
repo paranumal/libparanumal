@@ -1,0 +1,1020 @@
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3
+
+
+kernel void acousticsbbdgMRABVolume2D_o1(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o1;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o1][3];
+    shared dfloat s_v[p_NblockV_o1][3];
+    shared dfloat s_p[p_NblockV_o1][3];
+
+    for(iint es=0;es<p_NblockV_o1;++es;inner1){// for all elements in block
+      for(iint n=0;n<3;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o1;++es;inner1){// for all elements in block
+      for(iint n=0;n<3;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+3];
+          const iint D2i2 = D2ids[n+3];
+          const iint D3i2 = D3ids[n+3];
+          const dfloat Dval2 = Dvals[n+3];
+
+          const iint D1i3 = D1ids[n+2*3];
+          const iint D2i3 = D2ids[n+2*3];
+          const iint D3i3 = D3ids[n+2*3];   
+          const dfloat Dval3 = Dvals[n+2*3];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+kernel void acousticsbbdgMRABVolume2D_o2(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o2;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o2][6];
+    shared dfloat s_v[p_NblockV_o2][6];
+    shared dfloat s_p[p_NblockV_o2][6];
+
+    for(iint es=0;es<p_NblockV_o2;++es;inner1){// for all elements in block
+      for(iint n=0;n<6;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o2;++es;inner1){// for all elements in block
+      for(iint n=0;n<6;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+6];
+          const iint D2i2 = D2ids[n+6];
+          const iint D3i2 = D3ids[n+6];
+          const dfloat Dval2 = Dvals[n+6];
+
+          const iint D1i3 = D1ids[n+2*6];
+          const iint D2i3 = D2ids[n+2*6];
+          const iint D3i3 = D3ids[n+2*6];   
+          const dfloat Dval3 = Dvals[n+2*6];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+
+kernel void acousticsbbdgMRABVolume2D_o3(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o3;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o3][10];
+    shared dfloat s_v[p_NblockV_o3][10];
+    shared dfloat s_p[p_NblockV_o3][10];
+
+    for(iint es=0;es<p_NblockV_o3;++es;inner1){// for all elements in block
+      for(iint n=0;n<10;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o3;++es;inner1){// for all elements in block
+      for(iint n=0;n<10;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+10];
+          const iint D2i2 = D2ids[n+10];
+          const iint D3i2 = D3ids[n+10];
+          const dfloat Dval2 = Dvals[n+10];
+
+          const iint D1i3 = D1ids[n+2*10];
+          const iint D2i3 = D2ids[n+2*10];
+          const iint D3i3 = D3ids[n+2*10];    
+          const dfloat Dval3 = Dvals[n+2*10];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+
+kernel void acousticsbbdgMRABVolume2D_o4(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o4;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o4][15];
+    shared dfloat s_v[p_NblockV_o4][15];
+    shared dfloat s_p[p_NblockV_o4][15];
+
+    for(iint es=0;es<p_NblockV_o4;++es;inner1){// for all elements in block
+      for(iint n=0;n<15;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o4;++es;inner1){// for all elements in block
+      for(iint n=0;n<15;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+15];
+          const iint D2i2 = D2ids[n+15];
+          const iint D3i2 = D3ids[n+15];
+          const dfloat Dval2 = Dvals[n+15];
+
+          const iint D1i3 = D1ids[n+2*15];
+          const iint D2i3 = D2ids[n+2*15];
+          const iint D3i3 = D3ids[n+2*15];    
+          const dfloat Dval3 = Dvals[n+2*15];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+
+kernel void acousticsbbdgMRABVolume2D_o5(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o5;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o5][21];
+    shared dfloat s_v[p_NblockV_o5][21];
+    shared dfloat s_p[p_NblockV_o5][21];
+
+    for(iint es=0;es<p_NblockV_o5;++es;inner1){// for all elements in block
+      for(iint n=0;n<21;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o5;++es;inner1){// for all elements in block
+      for(iint n=0;n<21;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+21];
+          const iint D2i2 = D2ids[n+21];
+          const iint D3i2 = D3ids[n+21];
+          const dfloat Dval2 = Dvals[n+21];
+
+          const iint D1i3 = D1ids[n+2*21];
+          const iint D2i3 = D2ids[n+2*21];
+          const iint D3i3 = D3ids[n+2*21];    
+          const dfloat Dval3 = Dvals[n+2*21];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+
+kernel void acousticsbbdgMRABVolume2D_o6(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o6;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o6][28];
+    shared dfloat s_v[p_NblockV_o6][28];
+    shared dfloat s_p[p_NblockV_o6][28];
+
+    for(iint es=0;es<p_NblockV_o6;++es;inner1){// for all elements in block
+      for(iint n=0;n<28;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o6;++es;inner1){// for all elements in block
+      for(iint n=0;n<28;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+28];
+          const iint D2i2 = D2ids[n+28];
+          const iint D3i2 = D3ids[n+28];
+          const dfloat Dval2 = Dvals[n+28];
+
+          const iint D1i3 = D1ids[n+2*28];
+          const iint D2i3 = D2ids[n+2*28];
+          const iint D3i3 = D3ids[n+2*28];    
+          const dfloat Dval3 = Dvals[n+2*28];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+kernel void acousticsbbdgMRABVolume2D_o7(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o7;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o7][36];
+    shared dfloat s_v[p_NblockV_o7][36];
+    shared dfloat s_p[p_NblockV_o7][36];
+
+    for(iint es=0;es<p_NblockV_o7;++es;inner1){// for all elements in block
+      for(iint n=0;n<36;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o7;++es;inner1){// for all elements in block
+      for(iint n=0;n<36;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+36];
+          const iint D2i2 = D2ids[n+36];
+          const iint D3i2 = D3ids[n+36];
+          const dfloat Dval2 = Dvals[n+36];
+
+          const iint D1i3 = D1ids[n+2*36];
+          const iint D2i3 = D2ids[n+2*36];
+          const iint D3i3 = D3ids[n+2*36];    
+          const dfloat Dval3 = Dvals[n+2*36];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+kernel void acousticsbbdgMRABVolume2D_o8(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o8;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o8][45];
+    shared dfloat s_v[p_NblockV_o8][45];
+    shared dfloat s_p[p_NblockV_o8][45];
+
+    for(iint es=0;es<p_NblockV_o8;++es;inner1){// for all elements in block
+      for(iint n=0;n<45;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o8;++es;inner1){// for all elements in block
+      for(iint n=0;n<45;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+45];
+          const iint D2i2 = D2ids[n+45];
+          const iint D3i2 = D3ids[n+45];
+          const dfloat Dval2 = Dvals[n+45];
+
+          const iint D1i3 = D1ids[n+2*45];
+          const iint D2i3 = D2ids[n+2*45];
+          const iint D3i3 = D3ids[n+2*45];    
+          const dfloat Dval3 = Dvals[n+2*45];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+kernel void acousticsbbdgMRABVolume2D_o9(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o9;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o9][55];
+    shared dfloat s_v[p_NblockV_o9][55];
+    shared dfloat s_p[p_NblockV_o9][55];
+
+    for(iint es=0;es<p_NblockV_o9;++es;inner1){// for all elements in block
+      for(iint n=0;n<55;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o9;++es;inner1){// for all elements in block
+      for(iint n=0;n<55;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+55];
+          const iint D2i2 = D2ids[n+55];
+          const iint D3i2 = D3ids[n+55];
+          const dfloat Dval2 = Dvals[n+55];
+
+          const iint D1i3 = D1ids[n+2*55];
+          const iint D2i3 = D2ids[n+2*55];
+          const iint D3i3 = D3ids[n+2*55];    
+          const dfloat Dval3 = Dvals[n+2*55];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+
+kernel void acousticsbbdgMRABVolume2D_o10(const iint Nelements,
+          const iint * restrict elementIds,
+          const dfloat * restrict vgeo,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
+          const dfloat * restrict Dvals,    
+          const dfloat * restrict q,
+          dfloat * restrict rhsq,
+          const iint rhsShift){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV_o10;outer0){  // for all elements
+
+    shared dfloat s_u[p_NblockV_o10][66];
+    shared dfloat s_v[p_NblockV_o10][66];
+    shared dfloat s_p[p_NblockV_o10][66];
+
+    for(iint es=0;es<p_NblockV_o10;++es;inner1){// for all elements in block
+      for(iint n=0;n<66;++n;inner0){     // for all nodes in this element
+
+        iint et = eo+es; // element in block
+
+        if(et<Nelements){
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
+          s_u[es][n] = q[id+0];
+          s_v[es][n] = q[id+1];
+          s_p[es][n] = q[id+2];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV_o10;++es;inner1){// for all elements in block
+      for(iint n=0;n<66;++n;inner0){     // for all nodes in this element
+  
+        iint et = eo+es; // element in block
+        if(et<Nelements){
+          const iint e = elementIds[et];
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+66];
+          const iint D2i2 = D2ids[n+66];
+          const iint D3i2 = D3ids[n+66];
+          const dfloat Dval2 = Dvals[n+66];
+
+          const iint D1i3 = D1ids[n+2*66];
+          const iint D2i3 = D2ids[n+2*66];
+          const iint D3i3 = D3ids[n+2*66];    
+          const dfloat Dval3 = Dvals[n+2*66];
+
+          const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D2i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D2i3] - s_u[es][D1i3]));
+          const dfloat duds = .5f*(Dval1*(s_u[es][D3i1] - s_u[es][D1i1]) +
+                  Dval2*(s_u[es][D3i2] - s_u[es][D1i2]) +
+                  Dval3*(s_u[es][D3i3] - s_u[es][D1i3]));
+          
+          const dfloat dvdr = .5f*(Dval1*(s_v[es][D2i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D2i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D2i3] - s_v[es][D1i3]));
+          const dfloat dvds = .5f*(Dval1*(s_v[es][D3i1] - s_v[es][D1i1]) +
+                  Dval2*(s_v[es][D3i2] - s_v[es][D1i2]) +
+                  Dval3*(s_v[es][D3i3] - s_v[es][D1i3]));
+          
+          const dfloat dpdr = .5f*(Dval1*(s_p[es][D2i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D2i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D2i3] - s_p[es][D1i3]));
+          const dfloat dpds = .5f*(Dval1*(s_p[es][D3i1] - s_p[es][D1i1]) +
+                  Dval2*(s_p[es][D3i2] - s_p[es][D1i2]) +
+                  Dval3*(s_p[es][D3i3] - s_p[es][D1i3]));
+
+          // chain rule
+          dfloat dudx = drdx*dudr + dsdx*duds;
+          dfloat dvdy = drdy*dvdr + dsdy*dvds;
+          dfloat dpdx = drdx*dpdr + dsdx*dpds;
+          dfloat dpdy = drdy*dpdr + dsdy*dpds;
+          
+          const iint id = p_Nfields*(e*p_NpMax + n);
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dudx-dvdy;
+        }
+      }
+    }
+  }
+}
+

@@ -64,7 +64,7 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 10;
 
   printf("dt = %g\n", mesh->dt);
 
