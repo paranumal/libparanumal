@@ -135,7 +135,7 @@ void insRun2D(ins_t *ins, char *options){
  //  }
   
  //  // // For Final Time
- //  insReport2D(ins, ins->NtimeSteps,options);
+ insReport2D(ins, ins->NtimeSteps,options);
 
  //  occa::printTimer();
 

@@ -103,31 +103,31 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               );
 
 
-  // ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-  //                               mesh->o_sgeo,
-  //                               mesh->o_vgeo,
-  //                               mesh->o_DrT,
-  //                               mesh->o_DsT,
-  //                               mesh->o_FMMT,
-  //                               mesh->o_vmapM,
-  //                               mesh->o_vmapP,
-  //                               mesh->o_EToB,
-  //                               t,
-  //                               ins->tau,
-  //                               mesh->o_x,
-  //                               mesh->o_y,
-  //                               ins->o_Ux,
-  //                               ins->o_Uy,
-  //                               ins->o_rhsUx,
-  //                               ins->o_rhsUy
-  //                               );
+  ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
+                                mesh->o_sgeo,
+                                mesh->o_vgeo,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_FMMT,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                mesh->o_EToB,
+                                t,
+                                ins->tau,
+                                mesh->o_x,
+                                mesh->o_y,
+                                ins->o_Ux,
+                                ins->o_Uy,
+                                ins->o_rhsUx,
+                                ins->o_rhsUy
+                                );
 
 
 
 
 // USE STREAMING LATER!!!!!!!
   // SOLVE HELMHOLTZ EQUATION for ins->o_U
-#if 1
+#if 0
  ins->o_Ux.copyTo(ins->Ux);
  ins->o_rhsUx.copyTo(ins->rhsUx);
 
@@ -151,7 +151,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 printf("Solving for Ux \n");
  ellipticSolveTri2D( solver, ins->lamda, ins->o_rhsUx, ins->o_Ux, ins->velsolverOptions);
 
-#if 1
+#if 0
 maxU = 0, minU = 1e9;
 maxR = 0, minR = 1e9;
 

@@ -20,9 +20,9 @@ int main(int argc, char **argv){
   char *options = strdup("out=REPORT+VTU, adv = COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-   strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=NONE"); // Jacobi did not work
+   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=NONE"); // Jacobi did not work
   char *prSolverOptions = 
-   strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
+   strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
   if(argc!=3){
     printf("usage: ./main meshes/cavityH005.msh N\n");
