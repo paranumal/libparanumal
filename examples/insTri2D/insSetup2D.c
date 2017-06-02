@@ -75,7 +75,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   ins->finalTime = 1. ;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 1000.; 
+  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); 
   //
   //memcpy(ins->g, g,2*sizeof(dfloat));
 
@@ -165,16 +165,20 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
+  occa::kernelInfo kernelInfoVel = kernelInfo;
+  occa::kernelInfo kernelInfoPr  = kernelInfo;
+
   // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *prsolver = ellipticSolveSetupTri2D(mesh,0.0, kernelInfo, prSolverOptions); 
+  solver_t *prsolver = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
   ins->prsolver = prsolver; 
   // Add drichlet Neumann Flag
   
   ins->prsolverOptions = prSolverOptions;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
-  solver_t *velsolver = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfo, velSolverOptions); 
+  // ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+  ins->lamda = 1.0/ (ins->dt * ins->nu);
+  solver_t *velsolver = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
   ins->velsolver = velsolver;  
   // Add drichlet -Neuman Flag
 

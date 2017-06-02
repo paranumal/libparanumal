@@ -39,6 +39,8 @@ void boundaryConditionsIpdg2D(const iint bc,
   if(bc==2){ // Inflow 	
     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+    // *uxB = uxM;
+    // *uyB = uyM;
   }
   if(bc==3){ // Outflow 
   // do nothing 
@@ -444,7 +446,7 @@ for(int e=0;e<Nelements;++e;outer0){
 	  shared  dfloat s_Lnyuy[p_Np];
 	 
 	  //exclusive iint bc = 0, idM=0; 
-	  exclusive dfloat tau_n;
+	 // exclusive dfloat tau_n;
 	 
    for(iint n=0;n<p_maxNodes;++n;inner0){
 	      if(n<p_Nfp*p_Nfaces){
@@ -470,7 +472,7 @@ for(int e=0;e<Nelements;++e;outer0){
 						dfloat sJ      = sgeo[sid+p_SJID];
 						dfloat hinv    = sgeo[sid+p_IHID];
 
-						tau_n = hinv* tau; // Scale stabilization parameter
+						//tau_n = hinv* tau; // Scale stabilization parameter
 						//
 						// Read interior, may be needed like slip boundaries 
             dfloat  uxm = Ux[idM];
@@ -488,8 +490,8 @@ for(int e=0;e<Nelements;++e;outer0){
             	                       &uxp, &uyp, &uxnp, &uynp);
             
 					 // Hold RHS information and multiply with sJ
-						s_uxB[n]      = sJ*uxp * hinv*tau ;
-						s_uyB[n]      = sJ*uyp * hinv*tau ;
+						s_uxB[n]      = sJ*uxp*hinv*tau ;
+						s_uyB[n]      = sJ*uyp*hinv*tau ;
 						s_uxnB[n]     = sJ*uxnp;
 						s_uxnB[n]     = sJ*uynp;			
 						//
@@ -509,17 +511,17 @@ for(int e=0;e<Nelements;++e;outer0){
 	      dfloat nxux = 0.f, nxuy = 0.f, nyux =0.f, nyuy =0.f;  
 		    // lift remaining surface terms
 		    occaUnroll(p_NfacesNfp)
-		    for(int i=0;i<p_NfacesNfp;++i){
-		    	 const dfloat FM = FMMT[n+i*p_Np];
-		       uxb  += FM*s_uxB[i];
-		       uyb  += FM*s_uyB[i];
-		       uxnb += FM*s_uxnB[i];
-		       uynb += FM*s_uynB[i];
+		    for(int m=0;m<p_Nfaces*p_Nfp;++m){
+		    	 const dfloat FM = FMMT[n+m*p_Np];
+		       uxb  += FM*s_uxB[m];
+		       uyb  += FM*s_uyB[m];
+		       uxnb += FM*s_uxnB[m];
+		       uynb += FM*s_uynB[m];
 		       //
-           nxux += FM*s_nxuxB[i];
-		       nxuy += FM*s_nxuyB[i];
-		       nyux += FM*s_nyuxB[i];
-		       nyuy += FM*s_nyuyB[i];
+           nxux += FM*s_nxuxB[m];
+		       nxuy += FM*s_nxuyB[m];
+		       nyux += FM*s_nyuxB[m];
+		       nyuy += FM*s_nyuyB[m];
 
 		     }	
 				s_Lux[n]      = uxb;
