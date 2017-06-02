@@ -6,7 +6,7 @@
 #include "mpi.h"
 #include "mesh2D.h"
 
-#define WADG 1
+#define WADG 0
 
 void acousticsSetup2D(mesh2D *mesh);
 
