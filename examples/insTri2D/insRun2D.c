@@ -92,8 +92,8 @@ void insRun2D(ins_t *ins, char *options){
   ins->lamda = ins->g0 / (ins->dt * ins->nu); // Update Lamda for first order
   // One First Order Step 
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
- // insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
-  //insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+  insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
+  insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
   //
  //  printf("Finished first order step\n");
   

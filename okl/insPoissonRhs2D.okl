@@ -41,12 +41,6 @@ void boundaryConditionsIpdg2D(const iint bc,
   // Enforce P at outflow, Drichlet for pressure 
   	 *prB = 0.5f*(1.0f - occaExp(2.0f*lamda*x)); 
   }
-   
-   if(bc==4){ // Slip
-    
-
-  }
-
 }
 
 void boundaryConditionsRhs2D(const iint bc,
@@ -73,8 +67,10 @@ void boundaryConditionsRhs2D(const iint bc,
     *uyB = 2.f*uybc-uyM; 
   }
   if(bc==3){ // Outflow 
-  	dfloat uxbc = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
-    dfloat uybc =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+  	dfloat uxbc = uxM;
+  	dfloat uybc = uyM;
+  	// dfloat uxbc = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
+   //  dfloat uybc =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
     //
     *uxB = 2.f*uxbc-uxM; 
     *uyB = 2.f*uybc-uyM; 
