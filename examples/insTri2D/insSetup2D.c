@@ -174,7 +174,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   ins->prsolverOptions = prSolverOptions;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+  //ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+  ins->lamda = (1.0) / (ins->dt * ins->nu);
   solver_t *velsolver   = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
   ins->velsolver        = velsolver;  
   ins->velsolverOptions = velSolverOptions;
