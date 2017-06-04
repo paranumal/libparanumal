@@ -26,7 +26,7 @@ void boundaryConditionsIpdg2D(const iint bc,
 			                        const dfloat  nx,   const dfloat  ny,
 			                        dfloat * restrict uB, dfloat * restrict uxB, dfloat * restrict uyB,
 			                        dfloat * restrict vB, dfloat * restrict vxB, dfloat * restrict vyB){
-	dfloat nu   = 1.0/40.0;
+	dfloat nu   = 1.0f/1.0f;
   dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if((bc==1)||(bc==4)){ // Wall/Slip 
@@ -38,9 +38,14 @@ void boundaryConditionsIpdg2D(const iint bc,
     *vxB = 0.f;
     *vyB = 0.f;
   }
-  if(bc==2){ // Inflow 	
+  if(bc==2){ // Inflow 
+     #if 1	
     *uB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *vB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+    #else
+    *uB = 1.0f; 
+    *vB = 0.0f; 
+    #endif
     
    	*uxB = 0.f; 
     *uyB = 0.f; 
@@ -51,11 +56,19 @@ void boundaryConditionsIpdg2D(const iint bc,
   	// do nothing 
     *uB = 0.f; 
     *vB = 0.f; 
-
+   
+    #if 1
     *uxB = -lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-		*uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
+		*uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
     *vxB =  lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI);
     *vyB =  lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
+    #else
+    *uxB = 0.f;
+		*uyB = 0.f;
+    *vxB = 0.f;
+    *vyB = 0.f;
+
+    #endif
   }
 }
 
@@ -104,7 +117,7 @@ void boundaryConditionsRhs2D(const iint bc,
 			              const dfloat  nx, const dfloat  ny,
 			              const dfloat  uxM, const dfloat  uyM, const dfloat prM,
 			                    dfloat * restrict uxB, dfloat * restrict uyB, dfloat * restrict prB){
-	dfloat nu   = 1.0/40.0;
+	dfloat nu   = 1.0f/1.0f;
   dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
@@ -114,9 +127,14 @@ void boundaryConditionsRhs2D(const iint bc,
     *prB = prM ; // Neumann for Pressure // do nothing
   }
   if(bc==2){ // Inflow
-  	
+  	#if 1
     *uxB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *uyB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+    #else
+     *uxB = 1.0f;
+     *uyB = 0.0f; 
+
+    #endif
     //
     *prB = prM;
   }
@@ -125,7 +143,10 @@ void boundaryConditionsRhs2D(const iint bc,
     *uxB = uxM;
     *uyB = uyM;
     //
-    dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
+    //dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
+    dfloat prbc = prM;
+   
+
     *prB = 2.0f* prbc - prM ; //Dirichlet for pressure in strong form
   }
 }
@@ -249,8 +270,8 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
-    shared dfloat s_fluxNUx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxNUy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
 
@@ -274,7 +295,7 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 		    iint idM = vmapM[id];
 		    iint idP = vmapP[id];
 
-		   if(idP<0) idP = idM; // bc
+		   if(idP<0) idP = idM; // 
 		  // load negative and positive trace node values of Ux, Uy, Pr
 		     dfloat  uxm = Ux[idM], uxp = Ux[idP];
 			   dfloat  uym = Uy[idM], uyp = Uy[idP];
@@ -292,8 +313,8 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 
         // evaluate "flux" terms: LLF
         const dfloat sc = invJ * sJ ; 
-				s_fluxNUx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
-				s_fluxNUy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
+				s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
+				s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
         // Centered flux for pr p*-p = 0.5(prp-prm) // Central Flux
         s_fluxUx[es][n]  = sc*(.5f*nx*(prp-prm));
         s_fluxUy[es][n]  = sc*(.5f*ny*(prp-prm));
@@ -323,8 +344,8 @@ kernel void insHelmholtzRhsSurface2D(const iint Nelements,
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
 								dfloat L = LIFTT[n+m*p_Np];
 								//
-								rhsnux  += L*s_fluxNUx[es][m];
-								rhsnuy  += L*s_fluxNUy[es][m];
+								rhsnux  += L*s_fluxNx[es][m];
+								rhsnuy  += L*s_fluxNy[es][m];
 								rhsux   += L*s_fluxUx[es][m];
 								rhsuy   += L*s_fluxUy[es][m];
 					}
@@ -413,7 +434,7 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 					// -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
 					// !!! hold inv dt later
           s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*uxn0 + a1*uxn1 + a2*uxn2)*p_idt - (b0*nxn0 + b1*nxn1 + b2*nxn2));
-          s_rhsUy[es][n]   = J*p_inu*(rhsux + (a0*uyn0 + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn0 + b1*nyn1 + b2*nyn2)); 
+          s_rhsUy[es][n]   = J*p_inu*(rhsuy + (a0*uyn0 + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn0 + b1*nyn1 + b2*nyn2)); 
 				}
       }
     }
@@ -647,6 +668,8 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
   
   }
 }
+
+
 
 
 // kernel void insHelmholtzRhsIpdgBC2Dv2(const iint Nelements,

@@ -81,6 +81,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_NUy,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
+
  // // Update fields
   ins->helmholtzRhsUpdateKernel(mesh->Nelements,
                               mesh->o_vgeo,
@@ -170,8 +171,8 @@ printf("Solving for Ux \n");
  ellipticSolveTri2D( solver, ins->lamda, ins->o_rhsUx, ins->o_Ux, ins->velsolverOptions);
 
 #if 0
-maxU = 0, minU = 1e9;
-maxR = 0, minR = 1e9;
+dfloat maxU = 0, minU = 1e9;
+dfloat maxR = 0, minR = 1e9;
 
 ins->o_Uy.copyTo(ins->Uy);
 ins->o_rhsUy.copyTo(ins->rhsUy);
@@ -190,6 +191,9 @@ ins->o_rhsUy.copyTo(ins->rhsUy);
   printf("minU: %g maxU: %g minR: %g maxR: %g \n", minU, maxU, minR, maxR);   
 
 #endif
+
+
+
 printf("Solving for Uy \n");
   ellipticSolveTri2D(solver, ins->lamda, ins->o_rhsUy, ins->o_Uy, ins->velsolverOptions);
 

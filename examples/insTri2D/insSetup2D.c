@@ -13,11 +13,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   
   // use rank to choose DEVICE
   // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   
-  // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   // sprintf(deviceConfig, "mode = Serial");  
 
   // compute samples of q at interpolation nodes
@@ -60,10 +60,10 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   dfloat ux   = 0.0  ; 
   dfloat uy   = 0.0  ; 
   dfloat pr   = 0.0  ;   
-  dfloat nu   = 1.0/40.0;  // kinematic viscosity,
+  dfloat nu   = 1.0/1.0;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
   
-  dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitation
+  dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
   
 #if 0
   // Create Periodic Boundaries
@@ -90,11 +90,18 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
+
+      #if 1
       dfloat lamda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;  
       //
       ins->Ux[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y); 
       ins->Uy[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
       ins->Pr[id] = 0.5*(1.0- exp(2.*lamda*x));
+      #else
+      ins->Ux[id] = 0.;  
+      ins->Uy[id] = 0.;
+      ins->Pr[id] = 0.;
+      #endif
 
     }
   }
@@ -168,6 +175,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   occa::kernelInfo kernelInfoVel = kernelInfo;
   occa::kernelInfo kernelInfoPr  = kernelInfo;
 
+
+   printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
   solver_t *prsolver   = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
   ins->prsolver        = prsolver; 
@@ -175,6 +184,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   //ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+   printf("==================VELOCITY SOLVE SETUP=========================\n");
   ins->lamda = (1.0) / (ins->dt * ins->nu);
   solver_t *velsolver   = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
   ins->velsolver        = velsolver;  
@@ -319,11 +329,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
       "insPoissonRhsSurface2D",
         kernelInfo);
 
-  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
-  ins->poissonRhsIpdgBCKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-      "insPoissonRhsIpdgBC2D",
-        kernelInfo);
+  // printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
+  // ins->poissonRhsIpdgBCKernel = 
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+  //     "insPoissonRhsIpdgBC2D",
+  //       kernelInfo);
 
 
 

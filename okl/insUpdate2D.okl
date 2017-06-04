@@ -22,17 +22,21 @@ void boundaryConditionsRhs2D(const iint bc,
 			              const dfloat  t,    const dfloat  x,  const dfloat  y,
 			              const dfloat  nx,   const dfloat  ny,  const dfloat  prM,
 			                    dfloat * restrict prB ){
-	dfloat nu   = 1.0/40.0;
+	dfloat nu   = 1.f/1.f;
   dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
-    //*prB = prM; // Do nothing
+   //*prB = prM; // Do nothing
   }
   if(bc==2){ // Inflow
-    //*prB = prM; // Do nothing
+   //*prB = prM; // Do nothing
   }
   if(bc==3){ // Outflow 
+  	#if 0
   	 dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lamda*x));
+  	#else
+  	dfloat prbc = 0.0f;
+  	#endif
   	 *prB = 2.f*prbc - prM;   //Dirichlet for pressure
   }
 }
