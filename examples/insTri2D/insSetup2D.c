@@ -199,8 +199,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   
   
 
-  ins->PrSolverID  = 0; 
-  ins->PrISolverID = 1; 
+  ins->PrID  = 0; 
+  ins->PrIID = 1; 
   #endif
   
   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
@@ -213,6 +213,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   kernelInfo.addDefine("p_NVfields", ins->NVfields);
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
+  kernelInfo.addDefine("p_nu",      (float) ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
   // MEMORY ALLOCATION

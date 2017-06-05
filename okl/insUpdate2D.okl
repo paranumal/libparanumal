@@ -42,173 +42,7 @@ void boundaryConditionsRhs2D(const iint bc,
 }
 
 
-// Computes volume contribution of div(UI)
-kernel void insUpdateVolume2D(const iint Nelements,
-															const dfloat * restrict vgeo,
-															const dfloat * restrict DrT,
-															const dfloat * restrict DsT,
-															const dfloat * restrict PrI,
-															      dfloat * restrict rhsUx,
-															      dfloat * restrict rhsUy){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-   
-   // Hold Flux Vector on Shared, use symmetry f21 = f12
-   shared dfloat s_PrI[p_NblockV][p_Np];
-   // shared dfloat s_FxPr[p_NblockV][p_Np];
-   // shared dfloat s_FyPr[p_NblockV][p_Np];				     const dfloat dt,
-   
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-				iint e = eo+es; // element in block
-				if(e<Nelements){ 
-					const dfloat pri = PrI[e*p_Np+n];
-					//
-					s_PrI[es][n] = pri;       
-				}
-      }
-    }
 
-     // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	
-			iint e = eo+es; // element in block
-			if(e<Nelements){	  
-			  // prefetch geometric factors (constant on triangle)
-			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	      // compute 'r' and 's' derivatives of (q_m) at node n
-				dfloat dprdr = 0.f, dprds = 0.f; 
-				occaUnroll(p_Np)
-				for(iint i=0;i<p_Np;++i){
-					const dfloat Drni = DrT[n+i*p_Np];
-					const dfloat Dsni = DsT[n+i*p_Np];
-					// 
-					dprdr += Drni*s_PrI[es][i];
-					dprds += Dsni*s_PrI[es][i];
-				}
-
-				dfloat dprdx = drdx*dprdr  + dsdx*dprds;
-        dfloat dprdy = drdy*dprdr  + dsdy*dprds;
-        //
-        const iint id = e*p_Np+n;       
-				rhsUx[id] = dprdx;
-				rhsUy[id] = dprdy;
-	     }
-      }
-    }
- }
-}
-
-
-
-
-
-
-kernel void insUpdateSurface2D(const iint Nelements,
-				     const dfloat * restrict sgeo,
-				     const dfloat * restrict LIFTT,
-				     const iint   * restrict vmapM,
-				     const iint   * restrict vmapP,
-				     const iint   * restrict EToB,
-				     const dfloat time,
-				     const dfloat dt, 
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
-				     const dfloat * restrict Pr, 
-				     const dfloat * restrict PrI,
-				           dfloat * restrict rhsUx,
-				           dfloat * restrict rhsUy){
-  
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
-
-    // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	   iint e = eo + es;
-	    if(e<Nelements){
-	      if(n<p_Nfp*p_Nfaces){
-		    // find face that owns this node
-		    iint face = n/p_Nfp;
-		    // load surface geofactors for this face
-		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-		    dfloat nx   = sgeo[sid+0];
-		    dfloat ny   = sgeo[sid+1];
-		    //
-		    dfloat sJ   = sgeo[sid+2];
-		    dfloat invJ = sgeo[sid+3];
-		   
-		    // indices of negative and positive traces of face node
-		    iint id  = e*p_Nfp*p_Nfaces + n;
-		    iint idM = vmapM[id];
-		    iint idP = vmapP[id];
-
-		   if(idP<0) idP = idM;
-		    dfloat  prim = PrI[idM];  
-		    dfloat  prip = PrI[idP];     
-		    // apply boundary condition
-		    iint bc = EToB[face+p_Nfaces*e];
-		    if(bc>0){
-		    	dfloat  prm  = Pr[idM];   
-          dfloat  prp  = 0.f, prpo=0.f ;
-		      boundaryConditionsRhs2D(bc, time,    x[idM], y[idM], nx, ny, prm, &prp);
-		      boundaryConditionsRhs2D(bc, time-dt, x[idM], y[idM], nx, ny, prm, &prpo);
-		      prip -= prpo ;
-		     }
-        // evaluate "flux" terms: LLF
-        const dfloat sc = invJ * sJ ; 
-        // Centered flux for pr, p*-p = 0.5(prp-prm)
-        s_fluxUx[es][n]  = sc*(0.5f*nx*(prip-prim));
-        s_fluxUy[es][n]  = sc*(0.5f*ny*(prip-prim));
-       	 }
-    		}
-			}
-		}
-    
-   
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
-
-    // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-			for(iint n=0;n<p_maxNodes;++n;inner0){
-				iint e = eo + es;
-					if(e<Nelements){
-						if(n<p_Np){
-							iint id = e*p_Np + n;
-							//
-							dfloat rhsux = rhsUx[id];
-							dfloat rhsuy = rhsUx[id];
-							// Lift
-							occaUnroll(p_NfacesNfp)
-							for(int m=0;m<p_Nfaces*p_Nfp;++m){
-								dfloat L = LIFTT[n+m*p_Np];
-								//
-								rhsux   += L*s_fluxUx[es][m];
-								rhsuy   += L*s_fluxUy[es][m];
-					}
-					//  rhsu = -grad(p)
-					rhsUx[id] = rhsux;
-					rhsUy[id] = rhsuy;
-				  }
-				}
-      }
-    }
-  }
-
-
-}
-
-			
 kernel void insUpdateUpdate2D(const iint Nelements,
 				                      const dfloat dt,	
 				                      const dfloat g0,
@@ -225,9 +59,11 @@ kernel void insUpdateUpdate2D(const iint Nelements,
 			const iint id = n + e*p_Np;
  
       // Update Velocity u = u - ft/g0 * grad(Pr)
-       Ux[id] -= dt/g0 * rhsUx[id]; 
-       Uy[id] -= dt/g0 * rhsUy[id]; 
-      
+       Ux[id] -= dt/g0 * rhsUx[id]*p_inu; 
+       Uy[id] -= dt/g0 * rhsUy[id]*p_inu; 
+       //
+       // Ux[id] -= dt/g0 * rhsUx[id]; 
+       // Uy[id] -= dt/g0 * rhsUy[id];  
        // Get Pressure from Pressure Increament
        Pr[id] += PrI[id]; 
 		}
@@ -235,6 +71,174 @@ kernel void insUpdateUpdate2D(const iint Nelements,
   
  
 }
+// // Computes volume contribution of div(UI)
+// kernel void insUpdateVolume2D(const iint Nelements,
+// 															const dfloat * restrict vgeo,
+// 															const dfloat * restrict DrT,
+// 															const dfloat * restrict DsT,
+// 															const dfloat * restrict PrI,
+// 															      dfloat * restrict rhsUx,
+// 															      dfloat * restrict rhsUy){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+   
+//    // Hold Flux Vector on Shared, use symmetry f21 = f12
+//    shared dfloat s_PrI[p_NblockV][p_Np];
+//    // shared dfloat s_FxPr[p_NblockV][p_Np];
+//    // shared dfloat s_FyPr[p_NblockV][p_Np];				     const dfloat dt,
+   
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+// 				iint e = eo+es; // element in block
+// 				if(e<Nelements){ 
+// 					const dfloat pri = PrI[e*p_Np+n];
+// 					//
+// 					s_PrI[es][n] = pri;       
+// 				}
+//       }
+//     }
+
+//      // Make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	
+// 			iint e = eo+es; // element in block
+// 			if(e<Nelements){	  
+// 			  // prefetch geometric factors (constant on triangle)
+// 			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+// 			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+// 			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+// 			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+// 	      // compute 'r' and 's' derivatives of (q_m) at node n
+// 				dfloat dprdr = 0.f, dprds = 0.f; 
+// 				occaUnroll(p_Np)
+// 				for(iint i=0;i<p_Np;++i){
+// 					const dfloat Drni = DrT[n+i*p_Np];
+// 					const dfloat Dsni = DsT[n+i*p_Np];
+// 					// 
+// 					dprdr += Drni*s_PrI[es][i];
+// 					dprds += Dsni*s_PrI[es][i];
+// 				}
+
+// 				dfloat dprdx = drdx*dprdr  + dsdx*dprds;
+//         dfloat dprdy = drdy*dprdr  + dsdy*dprds;
+//         //
+//         const iint id = e*p_Np+n;       
+// 				rhsUx[id] = dprdx;
+// 				rhsUy[id] = dprdy;
+// 	     }
+//       }
+//     }
+//  }
+// }
+
+
+
+
+
+
+// kernel void insUpdateSurface2D(const iint Nelements,
+// 				     const dfloat * restrict sgeo,
+// 				     const dfloat * restrict LIFTT,
+// 				     const iint   * restrict vmapM,
+// 				     const iint   * restrict vmapP,
+// 				     const iint   * restrict EToB,
+// 				     const dfloat time,
+// 				     const dfloat dt, 
+// 				     const dfloat * restrict x,
+// 				     const dfloat * restrict y,
+// 				     const dfloat * restrict Pr, 
+// 				     const dfloat * restrict PrI,
+// 				           dfloat * restrict rhsUx,
+// 				           dfloat * restrict rhsUy){
+  
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+//     shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
+//     shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
+
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+// 	   iint e = eo + es;
+// 	    if(e<Nelements){
+// 	      if(n<p_Nfp*p_Nfaces){
+// 		    // find face that owns this node
+// 		    iint face = n/p_Nfp;
+// 		    // load surface geofactors for this face
+// 		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+// 		    dfloat nx   = sgeo[sid+0];
+// 		    dfloat ny   = sgeo[sid+1];
+// 		    //
+// 		    dfloat sJ   = sgeo[sid+2];
+// 		    dfloat invJ = sgeo[sid+3];
+		   
+// 		    // indices of negative and positive traces of face node
+// 		    iint id  = e*p_Nfp*p_Nfaces + n;
+// 		    iint idM = vmapM[id];
+// 		    iint idP = vmapP[id];
+
+// 		   if(idP<0) idP = idM;
+// 		    dfloat  prim = PrI[idM];  
+// 		    dfloat  prip = PrI[idP];     
+// 		    // apply boundary condition
+// 		    iint bc = EToB[face+p_Nfaces*e];
+// 		    if(bc>0){
+// 		    	dfloat  prm  = Pr[idM];   
+//           dfloat  prp  = 0.f, prpo=0.f ;
+// 		      boundaryConditionsRhs2D(bc, time,    x[idM], y[idM], nx, ny, prm, &prp);
+// 		      boundaryConditionsRhs2D(bc, time-dt, x[idM], y[idM], nx, ny, prm, &prpo);
+// 		      prip -= prpo ;
+// 		     }
+//         // evaluate "flux" terms: LLF
+//         const dfloat sc = invJ * sJ ; 
+//         // Centered flux for pr, p*-p = 0.5(prp-prm)
+//         s_fluxUx[es][n]  = sc*(0.5f*nx*(prip-prim));
+//         s_fluxUy[es][n]  = sc*(0.5f*ny*(prip-prim));
+//        	 }
+//     		}
+// 			}
+// 		}
+    
+   
+//     // wait for all shared memory writes of the previous inner loop to complete
+//     barrier(localMemFence);
+
+//     // for each node in the element
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+// 			for(iint n=0;n<p_maxNodes;++n;inner0){
+// 				iint e = eo + es;
+// 					if(e<Nelements){
+// 						if(n<p_Np){
+// 							iint id = e*p_Np + n;
+// 							//
+// 							dfloat rhsux = rhsUx[id];
+// 							dfloat rhsuy = rhsUx[id];
+// 							// Lift
+// 							occaUnroll(p_NfacesNfp)
+// 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
+// 								dfloat L = LIFTT[n+m*p_Np];
+// 								//
+// 								rhsux   += L*s_fluxUx[es][m];
+// 								rhsuy   += L*s_fluxUy[es][m];
+// 					}
+// 					//  rhsu = -grad(p)
+// 					rhsUx[id] = rhsux;
+// 					rhsUy[id] = rhsuy;
+// 				  }
+// 				}
+//       }
+//     }
+//   }
+
+
+// }
+
+			
+
 
 
 

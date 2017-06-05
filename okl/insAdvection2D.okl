@@ -22,7 +22,8 @@ void boundaryConditions2D(const iint bc,
 			              const dfloat  t, 
 			              const dfloat  x,	const dfloat  y,
 			              const dfloat  nx, const dfloat  ny,
-			              const dfloat  uxM,const dfloat  uyM,
+			              const dfloat  uxM,
+			              const dfloat  uyM,
 			                    dfloat * restrict uxB, 
 			                    dfloat * restrict uyB){
 	dfloat nu   = 1.0f/40.0f;
@@ -33,11 +34,8 @@ void boundaryConditions2D(const iint bc,
     *uyB = 0.f;
   }
   if(bc==2){ // Inflow
-    // *uxB = 1.0f - exp(lambda*x)*cos(2.f*OCCA_PI*y) ; 
-    // *uyB = 0.5f*lambda/(OCCA_PI)*exp(lambda*x)*sin(2.f*OCCA_PI*y);
-     // do nothing 
-    *uxB = uxM;
-    *uyB = uyM;
+    *uxB = 1.0f - exp(lambda*x)*cos(2.f*OCCA_PI*y) ; 
+    *uyB = 0.5f*lambda/(OCCA_PI)*exp(lambda*x)*sin(2.f*OCCA_PI*y);
   }
   if(bc==3){ // Outflow 
     // do nothing 
@@ -112,9 +110,11 @@ kernel void insAdvectionVolume2D(const iint Nelements,
 					df22ds += Dsni*s_F22[es][i];
 				}
 				// NUx = del(u1xu1)/ dx + del(u1xu2)/dy
-        dfloat nux   = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
+        dfloat nux   = drdx*df11dr + dsdx*df11ds 
+                     + drdy*df12dr + dsdy*df12ds;
 				// NUy = del(u2xu1)/ dx + del(u2xu2)/dy
-        dfloat nuy   = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
+        dfloat nuy   = drdx*df12dr + dsdx*df12ds 
+                     + drdy*df22dr + dsdy*df22ds;
  				
  				// Update
 				const iint id = e*p_Np+n;
@@ -186,8 +186,12 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 
         // evaluate "flux" terms: LLF
         const dfloat sc = invJ * sJ ; 
-				s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
-				s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
+				s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) 
+					                        + ny*(uxp*uyp - uxm*uym) 
+					                        + unmax*(uxm-uxp) ));
+				s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) 
+					                        + ny*(uyp*uyp - uym*uym) 
+					                        + unmax*(uym-uyp) ));
        	 }
     		}
 			}

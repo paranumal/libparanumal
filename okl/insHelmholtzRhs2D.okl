@@ -53,7 +53,7 @@ void boundaryConditionsIpdg2D(const iint bc,
     *vB = 0.f; 
 
     *uxB = -lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-		*uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+    *uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
     *vxB =  lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI);
     *vyB =  lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
    
