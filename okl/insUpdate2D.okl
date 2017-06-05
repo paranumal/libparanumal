@@ -58,12 +58,12 @@ kernel void insUpdateUpdate2D(const iint Nelements,
 		for(iint n=0;n<p_Np;++n;inner0){
 			const iint id = n + e*p_Np;
  
-      // Update Velocity u = u - ft/g0 * grad(Pr)
-       Ux[id] -= dt/g0 * rhsUx[id]*p_inu; 
-       Uy[id] -= dt/g0 * rhsUy[id]*p_inu; 
-       //
-       // Ux[id] -= dt/g0 * rhsUx[id]; 
-       // Uy[id] -= dt/g0 * rhsUy[id];  
+      // Update Velocity u = u - dt/g0 * grad(Pr)
+       Ux[id] -= dt/g0 * rhsUx[id]; 
+       Uy[id] -= dt/g0 * rhsUy[id]; 
+        
+       // Ux[id] -= dt/g0 * rhsUx[id]*p_inu; 
+       // Uy[id] -= dt/g0 * rhsUy[id]*p_inu; 
        // Get Pressure from Pressure Increament
        Pr[id] += PrI[id]; 
 		}
