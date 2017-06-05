@@ -37,7 +37,7 @@ int main(int argc, char **argv){
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
 
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, lambda, kernelInfo, options);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, lambda, mesh->EToB, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
