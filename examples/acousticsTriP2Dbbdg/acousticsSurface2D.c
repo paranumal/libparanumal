@@ -51,7 +51,7 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
         dfloat invJ = mesh->sgeo[sid+3];
 
         // indices of negative and positive traces of face node
-        iint id  = e*mesh->NfpMax*mesh->Nfaces +f*mesh->NfpMax + n;
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint idM = id*mesh->Nfields;
         iint idP = mesh->mapP[id]*mesh->Nfields;
 
