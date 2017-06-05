@@ -20,7 +20,7 @@ int main(int argc, char **argv){
   char *options = strdup("out=REPORT+VTU, adv = COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=NONE"); // Jacobi did not work
+   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND"); // Jacobi did not work
   char *prSolverOptions = 
    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
