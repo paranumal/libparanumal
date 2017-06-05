@@ -131,7 +131,6 @@ printf("maxNUx: %g maxNUy: %g \n", maxNUx, maxNUy);
 insReport2D(ins, 1, options);
 #endif
 
-
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
   insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);

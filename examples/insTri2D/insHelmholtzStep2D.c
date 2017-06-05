@@ -70,7 +70,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               mesh->o_y,
                               t,
                               ins->dt, 
-                              ins->PrID,
+                              0,
                               ins->o_Pr,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
