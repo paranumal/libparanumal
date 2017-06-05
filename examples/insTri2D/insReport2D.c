@@ -6,9 +6,9 @@ void insReport2D(ins_t *ins, iint tstep, char *options){
   
   // copy data back to host
   
-  ins->o_Ux.copyTo(ins->Ux);
-  ins->o_Uy.copyTo(ins->Uy);  
-  ins->o_Pr.copyTo(ins->Pr);
+  ins->o_U.copyTo(ins->U);
+  ins->o_V.copyTo(ins->V);  
+  ins->o_P.copyTo(ins->P);
 
   // report ramp function
   int rank;

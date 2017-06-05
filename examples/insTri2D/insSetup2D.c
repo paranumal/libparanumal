@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *prSolverOptions){
+ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSolverOptions){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -35,18 +35,18 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   
   ins->mesh = mesh;  
   // compute samples of q at interpolation nodes
-  ins->Ux     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->Uy     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->Pr     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->PrI    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->U     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->V     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->P     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->PI    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
   
   //
-  ins->rhsUx  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->rhsUy  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->rhsPr  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->rhsU  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
   //
-  ins->NUx    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->NUy    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));  //
+  ins->NU    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
+  ins->NV    = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));  //
   
   ins->UO     = (dfloat*) calloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields,sizeof(dfloat));
   ins->NO     = (dfloat*) calloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields,sizeof(dfloat));
@@ -92,9 +92,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
 
       dfloat lamda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;  
       //
-      ins->Ux[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y); 
-      ins->Uy[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
-      ins->Pr[id] = 0.5*(1.0- exp(2.*lamda*x));
+      ins->U[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y); 
+      ins->V[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
+      ins->P[id] = 0.5*(1.0- exp(2.*lamda*x));
     }
   }
 
@@ -120,8 +120,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
     for(iint n=0;n<mesh->Np;++n){
       const iint id = n + mesh->Np*e;
       dfloat t = 0;
-      dfloat uxn = ins->Ux[id];
-      dfloat uyn = ins->Uy[id];
+      dfloat uxn = ins->U[id];
+      dfloat uyn = ins->V[id];
 
       //Squared maximum velocity
       dfloat numax = uxn*uxn + uyn*uyn; 
@@ -164,25 +164,49 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  occa::kernelInfo kernelInfoVel = kernelInfo;
-  occa::kernelInfo kernelInfoPr  = kernelInfo;
+  occa::kernelInfo kernelInfoV  = kernelInfo;
+  occa::kernelInfo kernelInfoP  = kernelInfo;
 
+
+   printf("==================ELLIPTIC SOLVE SETUP=========================\n");
+  // SetUp Boundary Conditions Flags for Elliptic Solve
+ 
+  iint *vEToB = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  iint *pEToB = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  //
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      const iint id = f + mesh->Nfaces*e; 
+      const iint bc = mesh->EToB[id];
+
+      if(bc==1 || bc == 2) {// Wall or Inflow
+       vEToB[id] = 1;  // Drichlet for Velocity
+       pEToB[id] = 2;  // Neumann for Pressure
+      }
+
+      if(bc==3) {// OutFlow
+       vEToB[id] = 2; // Neumann for Velocity
+       pEToB[id] = 1; // Dirichlet for Pressure
+      }
+    }
+  }
   // Use third Order Velocity Solve: full rank should converge for low orders
-  //ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
+  //ins->lambda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lamda = (1.0) / (ins->dt * ins->nu);
-  solver_t *velsolver   = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
-  ins->velsolver        = velsolver;  
-  ins->velsolverOptions = velSolverOptions;
+  ins->lambda = (1.0) / (ins->dt * ins->nu);
+  solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->lambda, kernelInfoV, vSolverOptions); 
+  ins->vSolver        = vSolver;  
+  ins->vSolverOptions = vSolverOptions;
 
    printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *prsolver   = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
-  ins->prsolver        = prsolver; 
-  ins->prsolverOptions = prSolverOptions;
+  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, 0.0, kernelInfoP, pSolverOptions); 
+  ins->pSolver        = pSolver; 
+  ins->pSolverOptions = pSolverOptions;
 
 
- // mesh->Nfields = ins->NTfields; 
+  free(vEToB);
+  free(pEToB);
   #endif
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
@@ -199,8 +223,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   
   
 
-  ins->PrID  = 0; 
-  ins->PrIID = 1; 
+  ins->PID  = 0; 
+  ins->PIID = 1; 
   #endif
   
   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
@@ -217,21 +241,21 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
   // MEMORY ALLOCATION
-  ins->o_Ux  =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->Ux);
-  ins->o_Uy  =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->Uy);  
-  ins->o_Pr =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),  ins->Pr);  
-  ins->o_PrI =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PrI);      
+  ins->o_U  =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->U);
+  ins->o_V  =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->V);  
+  ins->o_P =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),  ins->P);  
+  ins->o_PI =    
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);      
 
 
-  ins->o_rhsUx  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsUx);
-  ins->o_rhsUy  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsUy);
-  ins->o_rhsPr  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsPr); 
-  ins->o_NUx    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NUx); 
-  ins->o_NUy    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NUy);  
+  ins->o_rhsU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
+  ins->o_rhsV  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
+  ins->o_rhsP  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsP); 
+  ins->o_NU    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NU); 
+  ins->o_NV    = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->NV);  
   //  
   ins->o_UO     = mesh->device.malloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields*sizeof(dfloat),ins->UO);
   ins->o_NO     = mesh->device.malloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields*sizeof(dfloat),ins->NO);

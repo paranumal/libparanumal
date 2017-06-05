@@ -7,10 +7,10 @@
 #define UYID 1
 #define PRID 2
 
-#define UXN1ID 0
-#define UYN1ID 1
-#define UXN2ID 2
-#define UYN2ID 3
+#define TUN1ID 0
+#define TVN1ID 1
+#define TUN2ID 2
+#define TVN2ID 3
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
@@ -74,20 +74,20 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				                      const dfloat b0,
 				                      const dfloat b1,
 				                      const dfloat b2,
-				                      const dfloat * restrict Ux,
-				                      const dfloat * restrict Uy,
+				                      const dfloat * restrict U,
+				                      const dfloat * restrict V,
 				                            dfloat * restrict UO,
-                              const dfloat * restrict NUx,
-                              const dfloat * restrict NUy,
+                              const dfloat * restrict NU,
+                              const dfloat * restrict NV,
 				                            dfloat * restrict NO,
-				                            dfloat * restrict rhsUx, // grad(Pr)
-				                            dfloat * restrict rhsUy){
+				                            dfloat * restrict rhsU, // grad(Pr)
+				                            dfloat * restrict rhsV){
   
   //Low storage Runge Kutta time step update
    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){ 
   // 	// Hold Flux Vector on Shared, use symmetry f21 = f12
-   shared dfloat s_rhsUx[p_NblockV][p_Np];
-   shared dfloat s_rhsUy[p_NblockV][p_Np];
+   shared dfloat s_rhsU[p_NblockV][p_Np];
+   shared dfloat s_rhsV[p_NblockV][p_Np];
    
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
@@ -98,39 +98,39 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 
 					const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 					//U at t^(n)
-					const dfloat uxn0  = Ux[id];
-					const dfloat uyn0  = Uy[id];
+					const dfloat un0  = U[id];
+					const dfloat vn0  = V[id];
 					// NU at t^(n)
-					const dfloat nxn0  = NUx[id];
-					const dfloat nyn0  = NUy[id];
+					const dfloat nun0 = NU[id];
+					const dfloat nvn0 = NV[id];
 					// U at t^(n-1) & (n-2)
-					const dfloat uxn1 = UO[idf+UXN1ID];
-					const dfloat uyn1 = UO[idf+UYN1ID];
-					const dfloat uxn2 = UO[idf+UXN2ID];
-					const dfloat uyn2 = UO[idf+UYN2ID];
-					//NU at t^(n-1) &at t^(n-2)
-					const dfloat nxn1 = NO[idf+UXN1ID];
-					const dfloat nyn1 = NO[idf+UYN1ID];
-					const dfloat nxn2 = NO[idf+UXN2ID];
-					const dfloat nyn2 = NO[idf+UYN2ID];
+					const dfloat un1  = UO[idf+TUN1ID];
+					const dfloat vn1  = UO[idf+TVN1ID];
+					const dfloat un2  = UO[idf+TUN2ID];
+					const dfloat vn2  = UO[idf+TVN2ID];
+					//NU at t^(n-1) & t^(n-2)
+					const dfloat nun1 = NO[idf+TUN1ID];
+					const dfloat nvn1 = NO[idf+TVN1ID];
+					const dfloat nun2 = NO[idf+TUN2ID];
+					const dfloat nvn2 = NO[idf+TVN2ID];
           
           // Currently holds -grad(Pr)
-					const dfloat dpdx = rhsUx[id];
-					const dfloat dpdy = rhsUy[id];
+					const dfloat dpdx = rhsU[id];
+					const dfloat dpdy = rhsV[id];
 					
 					//Update NU
-					NO[idf+UXN1ID]  = nxn0;
-					NO[idf+UYN1ID]  = nyn0;
-					NO[idf+UXN2ID]  = nxn1;
-					NO[idf+UYN2ID]  = nyn1;
+					NO[idf+TUN1ID]  = nun0;
+					NO[idf+TVN1ID]  = nvn0;
+					NO[idf+TUN2ID]  = nun1;
+					NO[idf+TVN2ID]  = nvn1;
 					// Update U
-          UO[idf+UXN1ID]  = uxn0;
-					UO[idf+UYN1ID]  = uyn0;
-					UO[idf+UXN2ID]  = uxn1;
-					UO[idf+UYN2ID]  = uyn1;				
+          UO[idf+TUN1ID]  = un0;
+					UO[idf+TVN1ID]  = vn0;
+					UO[idf+TUN2ID]  = un1;
+					UO[idf+TVN2ID]  = vn1;				
 					// -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
-          s_rhsUx[es][n]   = J*p_inu*(-dpdx + (a0*uxn0 + a1*uxn1 + a2*uxn2)*p_idt - (b0*nxn0 + b1*nxn1 + b2*nxn2));
-          s_rhsUy[es][n]   = J*p_inu*(-dpdy + (a0*uyn0 + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn0 + b1*nyn1 + b2*nyn2)); 
+          s_rhsU[es][n]   = J*p_inu*(-dpdx + (a0*un0 + a1*un1 + a2*un2)*p_idt - (b0*nun0 + b1*nun1 + b2*nun2));
+          s_rhsV[es][n]   = J*p_inu*(-dpdy + (a0*vn0 + a1*vn1 + a2*vn2)*p_idt - (b0*nvn0 + b1*nvn1 + b2*nvn2)); 
 				}
       }
     }
@@ -144,17 +144,17 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 			 iint e = eo+es; // element in block
 			  if(e<Nelements){	  
 	      // Multiplay with Mass Matrix
-				dfloat rhsux = 0.f, rhsuy = 0.f; 
+				dfloat rhsu = 0.f, rhsv = 0.f; 
 				occaUnroll(p_Np)
 				for(iint i=0;i<p_Np;++i){
 					const dfloat M = MM[n+i*p_Np];
-					rhsux  += M*s_rhsUx[es][i];
-					rhsuy  += M*s_rhsUy[es][i];
+					rhsu  += M*s_rhsU[es][i];
+					rhsv  += M*s_rhsV[es][i];
 				}
         // Update
 				const iint id = e*p_Np+n;
-				rhsUx[id] = rhsux;
-				rhsUy[id] = rhsuy;
+				rhsU[id] = rhsu;
+				rhsV[id] = rhsv;
 	 
 	      }
       }
@@ -169,7 +169,6 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
 				const iint * restrict vmapM,
 				const iint * restrict vmapP,
-				const dfloat lambda,
 				const dfloat tau,
 				const dfloat t,
 				const dfloat * restrict x,
@@ -181,8 +180,8 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
 				const dfloat * restrict DsT,
 				const dfloat * restrict LIFTT,
 				const dfloat * restrict MM,
-				dfloat * restrict rhsUx,
-				dfloat * restrict rhsUy){
+							dfloat * restrict rhsU,
+							dfloat * restrict rhsV){
   
  for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dudx[p_Np];
@@ -359,8 +358,8 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
 				  }
 			
 				const iint id = e*p_Np+n;
-				rhsUx[id] -=  J*Mlapu;
-				rhsUy[id] -=  J*Mlapv;
+				rhsU[id] -=  J*Mlapu;
+				rhsV[id] -=  J*Mlapv;
       }
     }
   

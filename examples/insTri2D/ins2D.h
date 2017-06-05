@@ -12,10 +12,10 @@
 typedef struct {
 
 mesh_t *mesh;
-solver_t *velsolver;
-solver_t *prsolver;
+solver_t *vSolver;
+solver_t *pSolver;
 
-char *prsolverOptions, *velsolverOptions; 	
+char *pSolverOptions, *vSolverOptions; 	
 
 // INS SOLVER OCCA VARIABLES
 dfloat rho, nu ;
@@ -23,22 +23,22 @@ iint NVfields, NTfields, Nfields;
 iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
 iint ExplicitOrder; 
 //
-iint PrID, PrIID;
+iint PID, PIID;
 //
 dfloat dt; // time step
-dfloat lamda; // helmhotz solver -lap(u) + lamda u
+dfloat lambda; // helmhotz solver -lap(u) + lamda u
 dfloat finalTime; // final time to run acoustics to
 iint   NtimeSteps;// number of time steps 
 iint   errorStep; 
 
 dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
-dfloat *NUx, *NUy, *rhsUx, *rhsUy, *rhsPr;
-dfloat *Ux, *Uy, *Pr, *PrI; 
+dfloat *NU, *NV, *rhsU, *rhsV, *rhsP;
+dfloat *U, *V, *P, *PI; 
 dfloat *UO, *NO;  // Storage for old data
 dfloat g[2];      // gravitational Acceleration
 
-occa::memory o_Ux, o_Uy, o_Pr, o_PrI;
-occa::memory o_NUx, o_NUy, o_rhsUx, o_rhsUy, o_rhsPr; 
+occa::memory o_U, o_V, o_P, o_PI;
+occa::memory o_NU, o_NV, o_rhsU, o_rhsV, o_rhsP; 
 occa::memory o_UO, o_NO;
 
 

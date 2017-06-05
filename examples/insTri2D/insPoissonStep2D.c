@@ -7,7 +7,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
 mesh2D *mesh = ins->mesh; 
 
-solver_t *solver = ins->prsolver;
+solver_t *solver = ins->pSolver;
 
 dfloat t = tstep*ins->dt + ins->dt;
 
@@ -39,9 +39,9 @@ dfloat t = tstep*ins->dt + ins->dt;
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
                                  mesh->o_DsT,
-                                 ins->o_Ux, 
-                                 ins->o_Uy, 
-                                 ins->o_rhsPr);
+                                 ins->o_U, 
+                                 ins->o_V, 
+                                 ins->o_rhsP);
 
 
   //   // COMPLETE HALO EXCHANGE
@@ -70,9 +70,9 @@ dfloat t = tstep*ins->dt + ins->dt;
                               t,
                               mesh->o_x,
                               mesh->o_y,
-                              ins->o_Ux,
-                              ins->o_Uy,
-                              ins->o_rhsPr);
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_rhsP);
 
 
 
@@ -83,7 +83,7 @@ dfloat t = tstep*ins->dt + ins->dt;
                               mesh->o_MM,
                               ins->dt,  
                               ins->g0,
-                              ins->o_rhsPr);
+                              ins->o_rhsP);
 
 
 
@@ -112,7 +112,7 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 // ins->o_rhsPr.copyTo(ins->Pr);
 //o_PrI.copyFrom(Pr2);
-ellipticSolveTri2D(solver, 0.0, ins->o_rhsPr, ins->o_PrI,  ins->prsolverOptions);
+ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);
 
    
 }
