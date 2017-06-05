@@ -19,7 +19,8 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
+                      occa::kernelInfo &kernelInfo, const char *options){
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -57,6 +58,10 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   // use this for OAS precon pairwise halo exchange
   solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
   solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+
+  solver->EToB = (iint *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(iint));
+  memcpy(solver->EToB,EToB,mesh->Nelements*mesh->Nfaces*sizeof(iint));
+  solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),solver->EToB);
 
   solver->type = strdup(dfloatString);
 
@@ -103,49 +108,49 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "put",
 				       kernelInfo);
 
-  mesh->AxKernel =
+  solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
                "ellipticAxTri2D",
                kernelInfo);
 
-  mesh->weightedInnerProduct1Kernel =
+  solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
-  mesh->weightedInnerProduct2Kernel =
+  solver->weightedInnerProduct2Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
-  mesh->innerProductKernel =
+  solver->innerProductKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
   
-  mesh->scaledAddKernel =
+  solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
-  mesh->dotMultiplyKernel =
+  solver->dotMultiplyKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
-  mesh->dotDivideKernel = 
+  solver->dotDivideKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
-  mesh->gradientKernel = 
+  solver->gradientKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
 				       "ellipticGradientTri2D",
 					 kernelInfo);
 
 
-  mesh->ipdgKernel =
+  solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
 				       "ellipticAxIpdgTri2D",
 				       kernelInfo);  
