@@ -35,11 +35,10 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
    // computes div u^(n+1) volume term
-   ins->poissonRhsVolumeKernel(mesh->Nelements,
+   ins->divergenceVolumeKernel(mesh->Nelements,
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
                                  mesh->o_DsT,
-                                 mesh->o_MM,
                                  ins->o_Ux, 
                                  ins->o_Uy, 
                                  ins->o_rhsPr);
@@ -62,11 +61,9 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
    //computes div u^(n+1) surface term
-  ins->poissonRhsSurfaceKernel(mesh->Nelements,
-  	                          ins->dt,	
-                              ins->g0,
+  ins->divergenceSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
-                              mesh->o_FMMT,
+                              mesh->o_LIFTT,
                               mesh->o_vmapM,
                               mesh->o_vmapP,
                               mesh->o_EToB,
@@ -76,6 +73,18 @@ dfloat t = tstep*ins->dt + ins->dt;
                               ins->o_Ux,
                               ins->o_Uy,
                               ins->o_rhsPr);
+
+
+
+
+  // compute all forcing i.e. f^(n+1) - grad(Pr)
+  ins->poissonRhsForcingKernel(mesh->Nelements,
+                              mesh->o_vgeo,
+                              mesh->o_MM,
+                              ins->dt,  
+                              ins->g0,
+                              ins->o_rhsPr);
+
 
 
 

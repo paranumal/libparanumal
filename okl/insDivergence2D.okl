@@ -1,0 +1,218 @@
+//
+#define UXID 0
+#define UYID 1
+#define PRID 2
+
+#define RXID 0  
+#define RYID 1  
+#define SXID 2  
+#define SYID 3  
+#define  JID 4
+#define JWID 5
+
+/* offsets for nx, ny, sJ, 1/J */
+#define NXID 0  
+#define NYID 1  
+#define SJID 2  
+#define IJID 3  
+#define WSJID 4
+#define IHID 5
+
+
+
+
+void boundaryConditions2D(const iint bc,
+			              const dfloat  t,    const dfloat  x, const dfloat  y,
+			              const dfloat  nx,   const dfloat  ny,
+			              const dfloat  uxM,  const dfloat  uyM,
+			                    dfloat * restrict uxB, 
+			                    dfloat * restrict uyB){
+
+  dfloat nu   = 1.0f/40.0f;
+  dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+
+  if(bc==1){ // Wall 
+  	dfloat uxbc= 0.f;
+    dfloat uybc= 0.f; 
+    //
+    *uxB = 2.f*uxbc-uxM; 
+    *uyB = 2.f*uybc-uyM; 
+  }
+  if(bc==2){ // Inflow
+    dfloat uxbc = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y)  ; 
+    dfloat uybc = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+    //
+    *uxB = 2.f*uxbc-uxM; 
+    *uyB = 2.f*uybc-uyM; 
+  }
+  if(bc==3){ // Outflow 
+  	dfloat uxbc = uxM;
+  	dfloat uybc = uyM;
+  	// dfloat uxbc = -lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
+    //  dfloat uybc =  lambda*(0.5f*lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+     //
+    *uxB = 2.f*uxbc-uxM; 
+    *uyB = 2.f*uybc-uyM; 
+  }
+}
+
+
+// Computes volume contribution of div(UI)
+kernel void insDivergenceVolume2D(const iint Nelements,
+																		const dfloat * restrict vgeo,
+																		const dfloat * restrict DrT,
+																		const dfloat * restrict DsT,
+																		const dfloat * restrict Ux,
+																		const dfloat * restrict Uy,
+																		      dfloat * restrict rhsU){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+   
+   // Hold Flux Vector on Shared, use symmetry f21 = f12
+   shared dfloat s_Ux[p_NblockV][p_Np];
+   shared dfloat s_Uy[p_NblockV][p_Np];
+  
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+				iint e = eo+es; // element in block
+				if(e<Nelements){ 
+					const iint id = e*p_Np+n;
+					const dfloat ux = Ux[id];
+					const dfloat uy = Uy[id];
+					s_Ux[es][n] = ux;
+					s_Uy[es][n] = uy;          
+				}
+      }
+    }
+
+     // Make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	
+			iint e = eo+es; // element in block
+			if(e<Nelements){	  
+			  // prefetch geometric factors (constant on triangle)
+			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+			  const dfloat J    = vgeo[e*p_Nvgeo +  JID];
+
+	  // compute 'r' and 's' derivatives of (q_m) at node n
+				dfloat duxdr = 0.f, duxds = 0.f; 
+				dfloat duydr = 0.f, duyds = 0.f; 
+				occaUnroll(p_Np)
+				for(iint i=0;i<p_Np;++i){
+					const dfloat Drni = DrT[n+i*p_Np];
+					const dfloat Dsni = DsT[n+i*p_Np];
+					// 
+					duxdr += Drni*s_Ux[es][i];
+					duxds += Dsni*s_Ux[es][i];
+					duydr += Drni*s_Uy[es][i];
+					duyds += Dsni*s_Uy[es][i];
+				}
+				// chain rule
+        dfloat duxdx   = drdx*duxdr + dsdx*duxds;
+        dfloat duydy   = drdy*duydr + dsdy*duyds;
+        //
+        const iint id = e*p_Np+n;
+        rhsU[id] = duxdx + duydy;
+	     }
+      }
+    }
+ }
+}
+
+
+
+
+kernel void insDivergenceSurface2D(const iint Nelements,
+															     const dfloat * restrict sgeo,
+															     const dfloat * restrict LIFTT,
+															     const iint   * restrict vmapM,
+															     const iint   * restrict vmapP,
+															     const iint   * restrict EToB,
+															     const dfloat time,
+															     const dfloat * restrict x,
+															     const dfloat * restrict y,
+															     const dfloat * restrict Ux,
+															     const dfloat * restrict Uy,
+															           dfloat * restrict rhsU){ 
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
+     // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	   iint e = eo + es;
+	    if(e<Nelements){
+	      if(n<p_Nfp*p_Nfaces){
+		    // find face that owns this node
+		    iint face = n/p_Nfp;
+		    // load surface geofactors for this face
+		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+		    dfloat nx   = sgeo[sid+NXID];
+		    dfloat ny   = sgeo[sid+NYID];
+		    dfloat sJ   = sgeo[sid+SJID];	
+		    dfloat invJ = sgeo[sid+IJID];	   
+		    // indices of negative and positive traces of face node
+		    iint id  = e*p_Nfp*p_Nfaces + n;
+		    iint idM = vmapM[id];
+		    iint idP = vmapP[id];
+
+		   if(idP<0) idP = idM;
+		  
+				// load negative and positive trace node values of q
+				dfloat  uxm = Ux[idM];
+				dfloat  uxp = Ux[idP];
+				//
+				dfloat  uym = Uy[idM];
+				dfloat  uyp = Uy[idP];
+		   
+		    // apply boundary condition
+		    iint bc = EToB[face+p_Nfaces*e];
+		    if(bc>0)
+		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym,&uxp, &uyp);
+
+		      const dfloat sc = invJ * sJ ; 
+					s_fluxU[es][n] = 0.5f*sc*(nx*(uxp-uxm) + ny*(uyp-uym)); 
+       	 }
+    		}
+			}
+		}
+    
+   
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // for each node in the element
+    for(iint es=0;es<p_NblockS;++es;inner1){
+			for(iint n=0;n<p_maxNodes;++n;inner0){
+				iint e = eo + es;
+					if(e<Nelements){
+						if(n<p_Np){
+							iint id = e*p_Np + n;
+
+							dfloat rhspr = rhsU[id];
+							// Lift
+							occaUnroll(p_NfacesNfp)
+							for(int m=0;m<p_Nfaces*p_Nfp;++m){
+								dfloat L = LIFTT[n+m*p_Np];
+								rhspr    += L*s_fluxU[es][m];
+					}
+
+					rhsU[id] = rhspr; 
+				  }
+				}
+      }
+    }
+  }
+
+
+}
+
+

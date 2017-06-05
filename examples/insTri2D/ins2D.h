@@ -23,6 +23,8 @@ iint NVfields, NTfields, Nfields;
 iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
 iint ExplicitOrder; 
 //
+iint PrSolverID, PrISolverID;
+//
 dfloat dt; // time step
 dfloat lamda; // helmhotz solver -lap(u) + lamda u
 dfloat finalTime; // final time to run acoustics to
@@ -49,18 +51,23 @@ occa::kernel poissonHaloExtractKernel;
 occa::kernel poissonHaloScatterKernel;
 occa::kernel updateHaloExtractKernel;
 occa::kernel updateHaloScatterKernel;
+
+occa::kernel advectionVolumeKernel;
+occa::kernel advectionSurfaceKernel;
 //
-occa::kernel helmholtzRhsVolumeKernel;
-occa::kernel helmholtzRhsSurfaceKernel;
-occa::kernel helmholtzRhsUpdateKernel;
+occa::kernel gradientVolumeKernel;
+occa::kernel gradientSurfaceKernel;
+occa::kernel divergenceVolumeKernel;
+occa::kernel divergenceSurfaceKernel;
+//
+occa::kernel helmholtzRhsForcingKernel;
 occa::kernel helmholtzRhsIpdgBCKernel;
 
-occa::kernel poissonRhsVolumeKernel;
-occa::kernel poissonRhsSurfaceKernel;
+occa::kernel poissonRhsForcingKernel;
 occa::kernel poissonRhsIpdgBCKernel;
 
-occa::kernel updateVolumeKernel;
-occa::kernel updateSurfaceKernel;
+// occa::kernel updateVolumeKernel;
+// occa::kernel updateSurfaceKernel;
 occa::kernel updateUpdateKernel;
 
   
@@ -76,6 +83,11 @@ void insPlotVTU2D(ins_t *solver, char *fileNameBase);
 void insReport2D(ins_t *solver, iint tstep, char *options);
 void insError2D(ins_t *solver, dfloat time, char *options);
 
+
+
+void insAdvectionStep2D(ins_t *solver, iint tstep, iint haloBytes,
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+
 void insHelmholtzStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
@@ -85,10 +97,4 @@ void insPoissonStep2D(ins_t *solver, iint tstep, iint haloBytes,
 
 void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-
-
-
-
 

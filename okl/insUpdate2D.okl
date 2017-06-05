@@ -22,7 +22,7 @@ void boundaryConditionsRhs2D(const iint bc,
 			              const dfloat  t,    const dfloat  x,  const dfloat  y,
 			              const dfloat  nx,   const dfloat  ny,  const dfloat  prM,
 			                    dfloat * restrict prB ){
-	dfloat nu   = 1.f/1.f;
+	dfloat nu   = 1.f/40.f;
   dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
@@ -56,7 +56,7 @@ kernel void insUpdateVolume2D(const iint Nelements,
    // Hold Flux Vector on Shared, use symmetry f21 = f12
    shared dfloat s_PrI[p_NblockV][p_Np];
    // shared dfloat s_FxPr[p_NblockV][p_Np];
-   // shared dfloat s_FyPr[p_NblockV][p_Np];
+   // shared dfloat s_FyPr[p_NblockV][p_Np];				     const dfloat dt,
    
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
@@ -197,8 +197,8 @@ kernel void insUpdateSurface2D(const iint Nelements,
 								rhsuy   += L*s_fluxUy[es][m];
 					}
 					//  rhsu = -grad(p)
-					rhsUx[id] = -rhsux;
-					rhsUy[id] = -rhsuy;
+					rhsUx[id] = rhsux;
+					rhsUy[id] = rhsuy;
 				  }
 				}
       }
