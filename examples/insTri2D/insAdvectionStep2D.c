@@ -37,10 +37,10 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
                                  mesh->o_DsT,
-                                 ins->o_Ux,
-                                 ins->o_Uy,
-                                 ins->o_NUx,
-                                 ins->o_NUy);
+                                 ins->o_U,
+                                 ins->o_V,
+                                 ins->o_NU,
+                                 ins->o_NV);
 
 
   //   // COMPLETE HALO EXCHANGE
@@ -69,10 +69,10 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               t,
                               mesh->o_x,
                               mesh->o_y,
-                              ins->o_Ux,
-                              ins->o_Uy,
-                              ins->o_NUx,
-                              ins->o_NUy);
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_NU,
+                              ins->o_NV);
 
  
 }

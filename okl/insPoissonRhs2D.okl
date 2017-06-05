@@ -78,11 +78,11 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
 				occaUnroll(p_Np)
 				for(iint i=0;i<p_Np;++i){
 					const dfloat mm = MM[n+i*p_Np];
-					rhs += mm*s_U[es][i];	
+					rhs += J*mm*s_U[es][i];	
 				}
 				const iint id = e*p_Np+n;
 				// U[id] = J* p_nu*g0*p_idt*rhs; 
-				U[id] = J*g0*p_idt*rhs; 
+				U[id] = g0*p_idt*rhs; 
 	     }
       }
     }

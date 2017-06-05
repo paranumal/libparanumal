@@ -10,17 +10,18 @@
 #define JWID 5
 
 /* offsets for nx, ny, sJ, 1/J */
-#define NXID 0  
-#define NYID 1  
-#define SJID 2  
-#define IJID 3  
+#define NXID  0  
+#define NYID  1  
+#define SJID  2  
+#define IJID  3  
 #define WSJID 4
-#define IHID 5
+#define IHID  5
 
 
 void boundaryConditionsRhs2D(const iint bc,
 			              const dfloat  t,    const dfloat  x,  const dfloat  y,
-			              const dfloat  nx,   const dfloat  ny,  const dfloat  prM,
+			              const dfloat  nx,   const dfloat  ny,  
+                    const dfloat  prM,
 			                    dfloat * restrict prB ){
 	dfloat nu   = 1.f/40.f;
   dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
@@ -32,11 +33,7 @@ void boundaryConditionsRhs2D(const iint bc,
    //*prB = prM; // Do nothing
   }
   if(bc==3){ // Outflow 
-  	#if 0
   	 dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lamda*x));
-  	#else
-  	dfloat prbc = 0.0f;
-  	#endif
   	 *prB = 2.f*prbc - prM;   //Dirichlet for pressure
   }
 }
@@ -46,31 +43,28 @@ void boundaryConditionsRhs2D(const iint bc,
 kernel void insUpdateUpdate2D(const iint Nelements,
 				                      const dfloat dt,	
 				                      const dfloat g0,
-				                            dfloat * restrict Ux,
-				                            dfloat * restrict Uy, 
+				                            dfloat * restrict U,
+				                            dfloat * restrict V, 
 				                            dfloat * restrict Pr, 
 				                      const dfloat * restrict PrI,
-				                            dfloat * restrict rhsUx,
-				                            dfloat * restrict rhsUy
+				                            dfloat * restrict rhsU,
+				                            dfloat * restrict rhsV
 				                            ){
 
 	for(iint e=0;e<Nelements;++e;outer0){
 		for(iint n=0;n<p_Np;++n;inner0){
 			const iint id = n + e*p_Np;
- 
       // Update Velocity u = u - dt/g0 * grad(Pr)
-       Ux[id] -= dt/g0 * rhsUx[id]; 
-       Uy[id] -= dt/g0 * rhsUy[id]; 
-        
-       // Ux[id] -= dt/g0 * rhsUx[id]*p_inu; 
-       // Uy[id] -= dt/g0 * rhsUy[id]*p_inu; 
+       U[id] -= dt/g0 * rhsU[id]; 
+       V[id] -= dt/g0 * rhsV[id]; 
        // Get Pressure from Pressure Increament
        Pr[id] += PrI[id]; 
 		}
 	}
-  
- 
 }
+
+
+
 // // Computes volume contribution of div(UI)
 // kernel void insUpdateVolume2D(const iint Nelements,
 // 															const dfloat * restrict vgeo,

@@ -24,35 +24,35 @@
 void boundaryConditions2D(const iint bc,
 			              const dfloat  t,    const dfloat  x, const dfloat  y,
 			              const dfloat  nx,   const dfloat  ny,
-			              const dfloat  uxM,  const dfloat  uyM,
-			                    dfloat * restrict uxB, 
-			                    dfloat * restrict uyB){
+			              const dfloat  uM,  const dfloat  vM,
+			                    dfloat * restrict uB, 
+			                    dfloat * restrict vB){
 
   dfloat nu   = 1.0f/40.0f;
   dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
-  	dfloat uxbc= 0.f;
-    dfloat uybc= 0.f; 
+  	dfloat ubc= 0.f;
+    dfloat vbc= 0.f; 
     //
-    *uxB = 2.f*uxbc-uxM; 
-    *uyB = 2.f*uybc-uyM; 
+    *uB = 2.f*ubc-uM; 
+    *vB = 2.f*vbc-vM; 
   }
   if(bc==2){ // Inflow
-    dfloat uxbc = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y)  ; 
-    dfloat uybc = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+    dfloat ubc = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y)  ; 
+    dfloat vbc = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
     //
-    *uxB = 2.f*uxbc-uxM; 
-    *uyB = 2.f*uybc-uyM; 
+    *uB = 2.f*ubc-uM; 
+    *vB = 2.f*vbc-vM; 
   }
   if(bc==3){ // Outflow 
-  	dfloat uxbc = uxM;
-  	dfloat uybc = uyM;
-  	// dfloat uxbc = -lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
-    //  dfloat uybc =  lambda*(0.5f*lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+  	dfloat ubc = uM;
+  	dfloat vbc = vM;
+  	// dfloat ubc = -lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
+    //  dfloat vbc =  lambda*(0.5f*lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
      //
-    *uxB = 2.f*uxbc-uxM; 
-    *uyB = 2.f*uybc-uyM; 
+    *uB = 2.f*ubc-uM; 
+    *vB = 2.f*vbc-vM; 
   }
 }
 
@@ -62,25 +62,23 @@ kernel void insDivergenceVolume2D(const iint Nelements,
 																		const dfloat * restrict vgeo,
 																		const dfloat * restrict DrT,
 																		const dfloat * restrict DsT,
-																		const dfloat * restrict Ux,
-																		const dfloat * restrict Uy,
-																		      dfloat * restrict rhsU){
+																		const dfloat * restrict U,
+																		const dfloat * restrict V,
+																		      dfloat * restrict divU){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
    
    // Hold Flux Vector on Shared, use symmetry f21 = f12
-   shared dfloat s_Ux[p_NblockV][p_Np];
-   shared dfloat s_Uy[p_NblockV][p_Np];
+   shared dfloat s_U[p_NblockV][p_Np];
+   shared dfloat s_V[p_NblockV][p_Np];
   
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
 					const iint id = e*p_Np+n;
-					const dfloat ux = Ux[id];
-					const dfloat uy = Uy[id];
-					s_Ux[es][n] = ux;
-					s_Uy[es][n] = uy;          
+					s_U[es][n] = U[id];
+					s_V[es][n] = V[id];         
 				}
       }
     }
@@ -102,24 +100,24 @@ kernel void insDivergenceVolume2D(const iint Nelements,
 			  const dfloat J    = vgeo[e*p_Nvgeo +  JID];
 
 	  // compute 'r' and 's' derivatives of (q_m) at node n
-				dfloat duxdr = 0.f, duxds = 0.f; 
-				dfloat duydr = 0.f, duyds = 0.f; 
+				dfloat dudr = 0.f, duds = 0.f; 
+				dfloat dvdr = 0.f, dvds = 0.f; 
 				occaUnroll(p_Np)
 				for(iint i=0;i<p_Np;++i){
 					const dfloat Drni = DrT[n+i*p_Np];
 					const dfloat Dsni = DsT[n+i*p_Np];
 					// 
-					duxdr += Drni*s_Ux[es][i];
-					duxds += Dsni*s_Ux[es][i];
-					duydr += Drni*s_Uy[es][i];
-					duyds += Dsni*s_Uy[es][i];
+					dudr += Drni*s_U[es][i];
+					duds += Dsni*s_U[es][i];
+					dvdr += Drni*s_V[es][i];
+					dvds += Dsni*s_V[es][i];
 				}
 				// chain rule
-        dfloat duxdx   = drdx*duxdr + dsdx*duxds;
-        dfloat duydy   = drdy*duydr + dsdy*duyds;
+        dfloat dudx   = drdx*dudr + dsdx*duds;
+        dfloat dvdy   = drdy*dvdr + dsdy*dvds;
         //
         const iint id = e*p_Np+n;
-        rhsU[id] = duxdx + duydy;
+        divU[id] = dudx + dvdy;
 	     }
       }
     }
@@ -138,9 +136,9 @@ kernel void insDivergenceSurface2D(const iint Nelements,
 															     const dfloat time,
 															     const dfloat * restrict x,
 															     const dfloat * restrict y,
-															     const dfloat * restrict Ux,
-															     const dfloat * restrict Uy,
-															           dfloat * restrict rhsU){ 
+															     const dfloat * restrict U,
+															     const dfloat * restrict V,
+															           dfloat * restrict divU){ 
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
@@ -167,19 +165,19 @@ kernel void insDivergenceSurface2D(const iint Nelements,
 		   if(idP<0) idP = idM;
 		  
 				// load negative and positive trace node values of q
-				dfloat  uxm = Ux[idM];
-				dfloat  uxp = Ux[idP];
+				dfloat  uM = U[idM];
+				dfloat  uP = U[idP];
 				//
-				dfloat  uym = Uy[idM];
-				dfloat  uyp = Uy[idP];
+				dfloat  vM = V[idM];
+				dfloat  vP = V[idP];
 		   
 		    // apply boundary condition
 		    iint bc = EToB[face+p_Nfaces*e];
 		    if(bc>0)
-		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym,&uxp, &uyp);
+		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);
 
 		      const dfloat sc = invJ * sJ ; 
-					s_fluxU[es][n] = 0.5f*sc*(nx*(uxp-uxm) + ny*(uyp-uym)); 
+					s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM)); 
        	 }
     		}
 			}
@@ -196,16 +194,16 @@ kernel void insDivergenceSurface2D(const iint Nelements,
 					if(e<Nelements){
 						if(n<p_Np){
 							iint id = e*p_Np + n;
-
-							dfloat rhsu = rhsU[id];
-							// Lift
+              // Get volume contribution
+							dfloat divu = divU[id];
+							// Add surface contribution
 							occaUnroll(p_NfacesNfp)
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
 								dfloat L = LIFTT[n+m*p_Np];
-								rhsu   += L*s_fluxU[es][m];
+								divu   += L*s_fluxU[es][m];
 					}
-
-					rhsU[id] = rhsu; 
+          // Update
+					divU[id] = divu; 
 				  }
 				}
       }

@@ -53,8 +53,8 @@ kernel void insGradientVolume2D(const iint Nelements,
 																const dfloat * restrict DrT,
 																const dfloat * restrict DsT,
 																const dfloat * restrict U,
-															        dfloat * restrict rhsUx, 
-																		  dfloat * restrict rhsUy){
+															        dfloat * restrict Ux, 
+																		  dfloat * restrict Uy){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  
   // for all elements
@@ -64,8 +64,7 @@ kernel void insGradientVolume2D(const iint Nelements,
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
-					//const dfloat u = U[e*p_Np+n];
-          s_U[es][n]  = U[e*p_Np+n];
+          s_U[es][n]  = U[n + e*p_Np];
 				}
       }
     }
@@ -94,13 +93,10 @@ kernel void insGradientVolume2D(const iint Nelements,
 					dudr  += Drni*s_U[es][i];
 					duds  += Dsni*s_U[es][i];
 				}
-				//
-        dfloat dudx = drdx*dudr + dsdx*duds;
-        dfloat dudy = drdy*dudr + dsdy*duds;
-        //
+				
 				const iint id = e*p_Np+n;
-				rhsUx[id] = dudx;				     
-				rhsUy[id] = dudy;
+				Ux[id] = drdx*dudr + dsdx*duds;				     
+				Uy[id] = drdy*dudr + dsdy*duds;
 	 
 	}
       }
@@ -123,8 +119,8 @@ kernel void insGradientSurface2D(const iint Nelements,
 				     const dfloat dt,
 				     const iint solverID, 
 				     const dfloat * restrict U,
-				           dfloat * restrict rhsUx,
-				           dfloat * restrict rhsUy){
+				           dfloat * restrict Ux,
+				           dfloat * restrict Uy){
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -190,18 +186,18 @@ kernel void insGradientSurface2D(const iint Nelements,
 					if(e<Nelements){
 						if(n<p_Np){
 							iint id = e*p_Np + n;
-							dfloat rhsux  = rhsUx[id];
-							dfloat rhsuy  = rhsUy[id];
+							dfloat ux  = Ux[id];
+							dfloat uy  = Uy[id];
 							// Lift
 							occaUnroll(p_NfacesNfp)
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
 								dfloat L = LIFTT[n+m*p_Np];
-								rhsux   += L*s_fluxUx[es][m];
-								rhsuy   += L*s_fluxUy[es][m];
+								ux   += L*s_fluxUx[es][m];
+								uy   += L*s_fluxUy[es][m];
 					}
 					//  rhsu = grad(p) // Note that multiplied with M^-1
-					rhsUx[id] = rhsux;
-					rhsUy[id] = rhsuy;
+					Ux[id] = ux;
+					Uy[id] = uy;
 				  }
 				}
       }

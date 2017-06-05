@@ -36,9 +36,9 @@ dfloat t = tstep*ins->dt + ins->dt;
                             mesh->o_vgeo,
                             mesh->o_DrT,
                             mesh->o_DsT,
-                            ins->o_PrI,  
-                            ins->o_rhsUx,
-                            ins->o_rhsUy);
+                            ins->o_PI,  
+                            ins->o_rhsU,
+                            ins->o_rhsV);
 
 
   //   // COMPLETE HALO EXCHANGE
@@ -67,10 +67,10 @@ dfloat t = tstep*ins->dt + ins->dt;
                               mesh->o_y,
                               t,
                               ins->dt,
-                              ins->PrIID,
-                              ins->o_PrI,
-                              ins->o_rhsUx,
-                              ins->o_rhsUy);
+                              ins->PIID,
+                              ins->o_PI,
+                              ins->o_rhsU,
+                              ins->o_rhsV);
 
 
 
@@ -78,12 +78,12 @@ dfloat t = tstep*ins->dt + ins->dt;
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,  
                               ins->g0,
-                              ins->o_Ux,
-                              ins->o_Uy,
-                              ins->o_Pr,
-                              ins->o_PrI,
-                              ins->o_rhsUx,
-                              ins->o_rhsUy);
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_P,
+                              ins->o_PI,
+                              ins->o_rhsU,
+                              ins->o_rhsV);
 
 
    
