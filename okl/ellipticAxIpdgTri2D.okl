@@ -7,27 +7,19 @@ void boundaryConditions2D(const int bc,
                           dfloat * restrict qyP, 
                           dfloat * restrict qP) {
 
-#if SOLVERTYPE==PRESSURE
-  if((bc==1)||(bc==2)){ // Wall/Inflow
-    *qP  =  qM;
-    *qxP = -qxM;
-    *qyP = -qyM;
-  } else if (bc==3){ // Outflow 
+  if(bc==1){ // Dirichlet
     *qP  = -qM;
     *qxP =  qxM;
     *qyP =  qyM;
-  }
-#elif SOLVERTYPE==VELOCITY
-  if((bc==1)||(bc==2)){ // Wall/Inflow
-    *qP  = -qM;
-    *qxP =  qxM;
-    *qyP =  qyM;
-  } else if (bc==3){ // Outflow 
+  } else if (bc==2){ // Neumann 
     *qP  =  qM;
     *qxP = -qxM;
     *qyP = -qyM;
+  } else { //Neumann for now
+    *qP  =  qM; 
+    *qxP = -qxM;
+    *qyP = -qyM;
   }
-#endif
 }
 
 // increments gradients of pressure with pseudo-gradients at faces and 

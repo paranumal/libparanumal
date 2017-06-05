@@ -119,7 +119,7 @@ void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, const char *options);
+precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, iint *EToB, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
