@@ -10,7 +10,7 @@ typedef struct{
 
 } nonZero_t;
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -154,25 +154,16 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nn
           dfloat AnmP = 0;
           if (eP < 0) {
             int qSgn, gradqSgn;
-            int bc = mesh->EToB[fM+mesh->Nfaces*eM];
-            if (strstr(options,"PRESSURE")) {
-              if((bc==1)||(bc==2)){ // Wall/Inflow
-                qSgn     =  1;
-                gradqSgn = -1;
-              } else if (bc==3){ // Outflow 
-                qSgn     = -1;
-                gradqSgn =  1;
-              }
-            } else if (strstr(options,"VELOCITY")) {
-              if((bc==1)||(bc==2)){ // Wall/Inflow
-                qSgn     = -1;
-                gradqSgn =  1;
-              } else if (bc==3){ // Outflow 
-                qSgn     =  1;
-                gradqSgn = -1;
-              }
-            } else {
-              printf("damn, no solver type specified in: 'ellipticBuildIpdgTri2D'\n");
+            int bc = EToB[fM+mesh->Nfaces*eM];
+            if(bc==1){ // Dirichlet
+              qSgn     = -1;
+              gradqSgn =  1;
+            } else if (bc==2){ // Neumann
+              qSgn     =  1;
+              gradqSgn = -1;
+            } else { // Neumann for now
+              qSgn     =  1;
+              gradqSgn = -1;
             }
 
             for (iint i=0;i<mesh->Nfp;i++) {
