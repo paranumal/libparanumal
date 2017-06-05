@@ -72,7 +72,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   insMakePeriodic2D(mesh,xper,yper);
 #endif
   // Fill up required fileds
-  ins->finalTime = 1. ;
+  ins->finalTime = 0.01;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); 
@@ -193,7 +193,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Use third Order Velocity Solve: full rank should converge for low orders
   //ins->lambda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (1.0) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
   ins->vSolver        = vSolver;  
   ins->vSolverOptions = vSolverOptions;

@@ -33,7 +33,10 @@ void insRun2D(ins_t *ins, char *options){
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
   insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
-  #if 0
+
+
+ 
+  
   // Switch to second order
   ins->a0 =  2.0,  ins->b0  = 2.0f;
   ins->a1 = -0.5f, ins->b1 = -1.0f;
@@ -47,6 +50,8 @@ void insRun2D(ins_t *ins, char *options){
   insPoissonStep2D(  ins, 1, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
   insUpdateStep2D(   ins, 1, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
 
+
+   #if 0
   // Switch to third order
   ins->a0 =  3.f,       ins->b0  =  3.0f;
   ins->a1 = -1.5f,      ins->b1  = -3.0f;
@@ -55,6 +60,7 @@ void insRun2D(ins_t *ins, char *options){
 
   // Set-up First Order Solver
   ins->lambda = ins->g0 / (ins->dt * ins->nu);
+   #endif
   
     for(iint tstep=2;tstep<ins->NtimeSteps;++tstep){
       //
@@ -69,7 +75,7 @@ void insRun2D(ins_t *ins, char *options){
        }
      }
   }
-  #endif
+ 
   
  //  // // For Final Time
 insReport2D(ins, ins->NtimeSteps,options);
