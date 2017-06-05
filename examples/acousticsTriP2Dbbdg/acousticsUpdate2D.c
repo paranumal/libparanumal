@@ -53,9 +53,9 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
             iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
-            unp[n] += BBRaiseVal*unp[BBRaiseid];
-            vnp[n] += BBRaiseVal*vnp[BBRaiseid];
-            pnp[n] += BBRaiseVal*pnp[BBRaiseid];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
@@ -162,9 +162,9 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
             iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
-            unp[n] += BBRaiseVal*unp[BBRaiseid];
-            vnp[n] += BBRaiseVal*vnp[BBRaiseid];
-            pnp[n] += BBRaiseVal*pnp[BBRaiseid];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
@@ -292,9 +292,9 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
             iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
-            unp[n] += BBRaiseVal*unp[BBRaiseid];
-            vnp[n] += BBRaiseVal*vnp[BBRaiseid];
-            pnp[n] += BBRaiseVal*pnp[BBRaiseid];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
@@ -429,9 +429,9 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
             iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
-            unp[n] += BBRaiseVal*unp[BBRaiseid];
-            vnp[n] += BBRaiseVal*vnp[BBRaiseid];
-            pnp[n] += BBRaiseVal*pnp[BBRaiseid];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
