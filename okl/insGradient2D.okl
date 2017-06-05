@@ -64,8 +64,8 @@ kernel void insGradientVolume2D(const iint Nelements,
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
-					const dfloat u = U[e*p_Np+n];
-          s_U[es][n]  = u;
+					//const dfloat u = U[e*p_Np+n];
+          s_U[es][n]  = U[e*p_Np+n];
 				}
       }
     }
@@ -117,11 +117,11 @@ kernel void insGradientSurface2D(const iint Nelements,
 				     const iint   * restrict vmapM,
 				     const iint   * restrict vmapP,
 				     const iint   * restrict EToB,
+				     const dfloat * restrict x,
+				     const dfloat * restrict y,
 				     const dfloat time,
 				     const dfloat dt,
 				     const iint solverID, 
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
 				     const dfloat * restrict U,
 				           dfloat * restrict rhsUx,
 				           dfloat * restrict rhsUy){
@@ -167,9 +167,6 @@ kernel void insGradientSurface2D(const iint Nelements,
           	boundaryConditions2D(bc, time-dt, x[idM], y[idM], nx, ny, um, &upo);
           	up -= upo; 
 		      }
-  
-       
-
 		    }
 
         // evaluate "flux" terms: LLF

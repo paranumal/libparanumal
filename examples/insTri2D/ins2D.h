@@ -23,7 +23,7 @@ iint NVfields, NTfields, Nfields;
 iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
 iint ExplicitOrder; 
 //
-iint PrSolverID, PrISolverID;
+iint PrID, PrIID;
 //
 dfloat dt; // time step
 dfloat lamda; // helmhotz solver -lap(u) + lamda u

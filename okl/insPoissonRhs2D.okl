@@ -20,28 +20,28 @@
 
 
 
-void boundaryConditionsIpdg2D(const iint bc,
-			                           const dfloat  t,    const dfloat  x, const dfloat  y,
-			                           const dfloat  nx,   
-			                           const dfloat  ny,
-			                                 dfloat * restrict prB, 
-			                                 dfloat * restrict prnB){
+// void boundaryConditionsIpdg2D(const iint bc,
+// 			                           const dfloat  t,    const dfloat  x, const dfloat  y,
+// 			                           const dfloat  nx,   
+// 			                           const dfloat  ny,
+// 			                                 dfloat * restrict prB, 
+// 			                                 dfloat * restrict prnB){
 
-   dfloat nu   = 1.0f/1.0f;
-   dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+//    dfloat nu   = 1.0f/1.0f;
+//    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
-  if(bc==1){ // Wall 
-    // enforce del P/ dn = nx*dp/dx + ny/dp/dy
-    *prnB = nx*(-lambda*occaExp(2.0f*lambda*x)) + 0.f; 
-  }
-  if(bc==2){ // Inflow // for Kowansny use definition of del(p)/dn
-    *prnB = nx*(-lambda*occaExp(2.0f*lambda*x)) + 0.f; 
-  }
-  if(bc==3){ // Outflow
-  // Enforce P at outflow, Drichlet for pressure 
-  	 *prB = 0.5f*(1.0f - occaExp(2.0f*lambda*x)); 
-  }
-}
+//   if(bc==1){ // Wall 
+//     // enforce del P/ dn = nx*dp/dx + ny/dp/dy
+//     *prnB = nx*(-lambda*occaExp(2.0f*lambda*x)) + 0.f; 
+//   }
+//   if(bc==2){ // Inflow // for Kowansny use definition of del(p)/dn
+//     *prnB = nx*(-lambda*occaExp(2.0f*lambda*x)) + 0.f; 
+//   }
+//   if(bc==3){ // Outflow
+//   // Enforce P at outflow, Drichlet for pressure 
+//   	 *prB = 0.5f*(1.0f - occaExp(2.0f*lambda*x)); 
+//   }
+// }
 
 // Computes volume contribution of div(UI)
 kernel void insPoissonRhsForcing2D(const iint Nelements,
@@ -81,7 +81,8 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
 					rhs += mm*s_U[es][i];	
 				}
 				const iint id = e*p_Np+n;
-				U[id] = J* g0*p_idt*rhs ; 
+				U[id] = J* p_nu*g0*p_idt*rhs; 
+				// U[id] = J*g0*p_idt*rhs; 
 	     }
       }
     }

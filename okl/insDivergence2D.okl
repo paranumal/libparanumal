@@ -197,15 +197,15 @@ kernel void insDivergenceSurface2D(const iint Nelements,
 						if(n<p_Np){
 							iint id = e*p_Np + n;
 
-							dfloat rhspr = rhsU[id];
+							dfloat rhsu = rhsU[id];
 							// Lift
 							occaUnroll(p_NfacesNfp)
 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
 								dfloat L = LIFTT[n+m*p_Np];
-								rhspr    += L*s_fluxU[es][m];
+								rhsu   += L*s_fluxU[es][m];
 					}
 
-					rhsU[id] = rhspr; 
+					rhsU[id] = rhsu; 
 				  }
 				}
       }
