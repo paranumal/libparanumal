@@ -39,13 +39,8 @@ void boundaryConditionsIpdg2D(const iint bc,
     *vyB = 0.f;
   }
   if(bc==2){ // Inflow 
-     #if 1	
     *uB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *vB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-    #else
-    *uB = 1.0f; 
-    *vB = 0.0f; 
-    #endif
     
    	*uxB = 0.f; 
     *uyB = 0.f; 
@@ -56,317 +51,20 @@ void boundaryConditionsIpdg2D(const iint bc,
   	// do nothing 
     *uB = 0.f; 
     *vB = 0.f; 
-   
-    #if 1
+
     *uxB = -lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
 		*uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
     *vxB =  lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI);
     *vyB =  lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-    #else
-    *uxB = 0.f;
-		*uyB = 0.f;
-    *vxB = 0.f;
-    *vyB = 0.f;
-
-    #endif
-  }
-}
-
-// // BCs for -laplace(u) + g0*idt*inu*u
-// void boundaryConditionsIpdg2Dv2(const iint bc,
-// 			                           const dfloat  t,    const dfloat  x, const dfloat  y,
-// 			                           const dfloat  nx,   const dfloat  ny,
-// 			                           const dfloat  uxM,  const dfloat  uyM,
-// 			                           const dfloat  uxnM, const dfloat  uynM,
-// 			                                 dfloat * restrict uxB,  dfloat * restrict uyB,
-// 			                                 dfloat * restrict uxnB, dfloat * restrict uynB){
-// 	dfloat nu   = 1.0/40.0;
-//   dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-
-//   if(bc==1){ // Wall 
-//     *uxB = 0.f; 
-//     *uyB = 0.f;
-//   }
-//   if(bc==2){ // Inflow 	
-//     *uxB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
-//     *uyB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-//     // *uxB = uxM;
-//     // *uyB = uyM;
-//   }
-//   if(bc==3){ // Outflow 
-//   // do nothing 
-//     *uxnB = -nx*lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y)
-//     				+ny*2*OCCA_PI-lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
-//     *uynB =  nx*lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI)
-//     				+ny*lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-
-//     //*uxnB = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
-//     //*uynB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
-//   }
    
-//    if(bc==4){ // Slip
-//     *uxnB = 0.;
-//     *uynB = 0.;
-//   }
-// }
-
-// BCs for div(u*u) - grad(p) for helmholtz rhs
-
-void boundaryConditionsRhs2D(const iint bc,
-			              const dfloat  t, const dfloat  x, const dfloat  y,
-			              const dfloat  nx, const dfloat  ny,
-			              const dfloat  uxM, const dfloat  uyM, const dfloat prM,
-			                    dfloat * restrict uxB, dfloat * restrict uyB, dfloat * restrict prB){
-	dfloat nu   = 1.0f/1.0f;
-  dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-
-  if(bc==1){ // Wall 
-    *uxB = 0.f; 
-    *uyB = 0.f;
-    // For pressure do nothing
-    *prB = prM ; // Neumann for Pressure // do nothing
-  }
-  if(bc==2){ // Inflow
-  	#if 1
-    *uxB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
-    *uyB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-    #else
-     *uxB = 1.0f;
-     *uyB = 0.0f; 
-
-    #endif
-    //
-    *prB = prM;
-  }
-  if(bc==3){ // Outflow 
-    // do nothing 
-    *uxB = uxM;
-    *uyB = uyM;
-    //
-    //dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
-    dfloat prbc = prM;
-   
-
-    *prB = 2.0f* prbc - prM ; //Dirichlet for pressure in strong form
   }
 }
 
 
-// compute div(NU) + grad(Pr), volume terms
-kernel void insHelmholtzRhsVolume2D(const iint Nelements,
-																		const dfloat * restrict vgeo,
-																		const dfloat * restrict DrT,
-																		const dfloat * restrict DsT,
-																		const dfloat * restrict Ux,
-																		const dfloat * restrict Uy,
-																		const dfloat * restrict Pr,
-																		      dfloat * restrict NUx,
-																		      dfloat * restrict NUy,
-																		      dfloat * restrict rhsUx, 
-																		      dfloat * restrict rhsUy){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-   
-   // Hold Flux Vector on Shared, use symmetry f21 = f12
-   shared dfloat s_F11[p_NblockV][p_Np];
-   shared dfloat s_F12[p_NblockV][p_Np];
-   shared dfloat s_F22[p_NblockV][p_Np];
-   // Hold Pressure on Shared
-   shared dfloat s_Pr[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-				iint e = eo+es; // element in block
-				if(e<Nelements){ 
-					const iint id = e*p_Np+n;
-					const dfloat ux = Ux[id];
-					const dfloat uy = Uy[id];
-					const dfloat pr = Pr[id];
-					//
-					s_F11[es][n] = ux*ux;
-					s_F12[es][n] = ux*uy;
-					s_F22[es][n] = uy*uy;
-          s_Pr[es][n]  = pr;
+// Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
 
-				}
-      }
-    }
-
-     // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	
-			iint e = eo+es; // element in block
-			if(e<Nelements){	  
-			  // prefetch geometric factors (constant on triangle)
-			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	      // compute 'r' and 's' derivatives of (q_m) at node n
-				dfloat df11dr = 0.f, df11ds = 0.f; 
-				dfloat df12dr = 0.f, df12ds = 0.f; 
-				dfloat df22dr = 0.f, df22ds = 0.f; 
-				dfloat dprdr  = 0.f, dprds  = 0.f;
-        //
-				occaUnroll(p_Np)
-				for(iint i=0;i<p_Np;++i){
-					const dfloat Drni = DrT[n+i*p_Np];
-					const dfloat Dsni = DsT[n+i*p_Np];
-					// 
-					df11dr += Drni*s_F11[es][i];
-					df11ds += Dsni*s_F11[es][i];
-					df12dr += Drni*s_F12[es][i];
-					df12ds += Dsni*s_F12[es][i];
-					df22dr += Drni*s_F22[es][i];
-					df22ds += Dsni*s_F22[es][i];
-					//
-					dprdr  += Drni*s_Pr[es][i];
-					dprds  += Dsni*s_Pr[es][i];
-				}
-				// chain rule
-        dfloat nux   = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
-        dfloat nuy   = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
-        //
-        dfloat dprdx = drdx*dprdr  + dsdx*dprds;
-        dfloat dprdy = drdy*dprdr  + dsdy*dprds;
-				
-				// Update
-				const iint id = e*p_Np+n;
-				// Compute div(uxu)
-				NUx[id]   = nux;
-				NUy[id]   = nuy;
-        // rhsU = - grad P
-				rhsUx[id] = dprdx;
-				rhsUy[id] = dprdy;
-	 
-	}
-      }
-    }
- }
-}
-
-//
-kernel void insHelmholtzRhsSurface2D(const iint Nelements,
-				     const dfloat * restrict sgeo,
-				     const dfloat * restrict LIFTT,
-				     const iint   * restrict vmapM,
-				     const iint   * restrict vmapP,
-				     const iint   * restrict EToB,
-				     const dfloat time,
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
-				     const dfloat * restrict Ux,
-				     const dfloat * restrict Uy,
-				     const dfloat * restrict Pr,
-				           dfloat * restrict NUx,
-				           dfloat * restrict NUy,
-				           dfloat * restrict rhsUx,
-				           dfloat * restrict rhsUy){
-  
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
-
-     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	    iint e = eo + es;
-	     if(e<Nelements){
-	      if(n<p_Nfp*p_Nfaces){
-		    // find face that owns this node
-		    iint face = n/p_Nfp;
-		    // load surface geofactors for this face
-		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-		    dfloat nx   = sgeo[sid+NXID];
-		    dfloat ny   = sgeo[sid+NYID];
-		    dfloat sJ   = sgeo[sid+SJID];
-		    dfloat invJ = sgeo[sid+IJID];
-		   
-		    // indices of negative and positive traces of face node
-		    iint id  = e*p_Nfp*p_Nfaces + n;
-		    iint idM = vmapM[id];
-		    iint idP = vmapP[id];
-
-		   if(idP<0) idP = idM; // 
-		  // load negative and positive trace node values of Ux, Uy, Pr
-		     dfloat  uxm = Ux[idM], uxp = Ux[idP];
-			   dfloat  uym = Uy[idM], uyp = Uy[idP];
-			   dfloat  prm = Pr[idM], prp = Pr[idP];
-
-		    // apply boundary condition
-		    iint bc = EToB[face+p_Nfaces*e];
-		    if(bc>0)
-		      boundaryConditionsRhs2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym, prm, &uxp, &uyp, &prp);
-
-        // Find max normal velocity on the face
-		    dfloat unm   = occaFabs(nx*uxm + ny*uym);
-		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);    
-        dfloat unmax = (unm > unp) ? unm : unp;
-
-        // evaluate "flux" terms: LLF
-        const dfloat sc = invJ * sJ ; 
-				s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
-				s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
-        // Centered flux for pr p*-p = 0.5(prp-prm) // Central Flux
-        s_fluxUx[es][n]  = sc*(.5f*nx*(prp-prm));
-        s_fluxUy[es][n]  = sc*(.5f*ny*(prp-prm));
-       	 }
-    		}
-			}
-		}
-    
-   
-    // wait for all flux functions are written to shared 
-    barrier(localMemFence);
-
-    // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-			for(iint n=0;n<p_maxNodes;++n;inner0){
-				iint e = eo + es;
-					if(e<Nelements){
-						if(n<p_Np){
-							iint id = e*p_Np + n;
-
-							dfloat rhsnux = NUx[id];
-							dfloat rhsnuy = NUy[id];
-							dfloat rhsux  = rhsUx[id];
-							dfloat rhsuy  = rhsUy[id];
-							// Lift
-							occaUnroll(p_NfacesNfp)
-							for(int m=0;m<p_Nfaces*p_Nfp;++m){
-								dfloat L = LIFTT[n+m*p_Np];
-								//
-								rhsnux  += L*s_fluxNx[es][m];
-								rhsnuy  += L*s_fluxNy[es][m];
-								rhsux   += L*s_fluxUx[es][m];
-								rhsuy   += L*s_fluxUy[es][m];
-					}
-          // M^-1* (div(u*u)) + Lift*(F*-F))
-					NUx[id] = rhsnux;
-					NUy[id] = rhsnuy;
-					//  rhsu = -grad(p)
-					rhsUx[id] = -rhsux;
-					rhsUy[id] = -rhsuy;
-				  }
-				}
-      }
-    }
-  }
-
-
-}
-
-
-
-kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
+kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 	                            const dfloat * restrict vgeo,
 					                    const dfloat * restrict MM,
 				                      const dfloat dt,	
@@ -382,7 +80,7 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
                               const dfloat * restrict NUx,
                               const dfloat * restrict NUy,
 				                            dfloat * restrict NO,
-				                            dfloat * restrict rhsUx,
+				                            dfloat * restrict rhsUx, // grad(Pr)
 				                            dfloat * restrict rhsUy){
   
   //Low storage Runge Kutta time step update
@@ -416,9 +114,9 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 					const dfloat nxn2 = NO[idf+UXN2ID];
 					const dfloat nyn2 = NO[idf+UYN2ID];
           
-          // Currently holds -grad(P)
-					const dfloat rhsux = rhsUx[id];
-					const dfloat rhsuy = rhsUy[id];
+          // Currently holds -grad(Pr)
+					const dfloat dpdx = rhsUx[id];
+					const dfloat dpdy = rhsUy[id];
 					
 					//Update NU
 					NO[idf+UXN1ID]  = nxn0;
@@ -430,11 +128,9 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
 					UO[idf+UYN1ID]  = uyn0;
 					UO[idf+UXN2ID]  = uxn1;
 					UO[idf+UYN2ID]  = uyn1;				
-					// rhsU = -grad(P) + f^(n+1)
 					// -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
-					// !!! hold inv dt later
-          s_rhsUx[es][n]   = J*p_inu*(rhsux + (a0*uxn0 + a1*uxn1 + a2*uxn2)*p_idt - (b0*nxn0 + b1*nxn1 + b2*nxn2));
-          s_rhsUy[es][n]   = J*p_inu*(rhsuy + (a0*uyn0 + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn0 + b1*nyn1 + b2*nyn2)); 
+          s_rhsUx[es][n]   = J*p_inu*(-dpdx + (a0*uxn0 + a1*uxn1 + a2*uxn2)*p_idt - (b0*nxn0 + b1*nxn1 + b2*nxn2));
+          s_rhsUy[es][n]   = J*p_inu*(-dpdy + (a0*uyn0 + a1*uyn1 + a2*uyn2)*p_idt - (b0*nyn0 + b1*nyn1 + b2*nyn2)); 
 				}
       }
     }
@@ -466,6 +162,8 @@ kernel void insHelmholtzRhsUpdate2D(const iint Nelements,
     
   }
 }
+
+
 
 
 kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
@@ -668,6 +366,249 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
   
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // compute div(NU) + grad(Pr), volume terms
+// kernel void insHelmholtzRhsVolume2D(const iint Nelements,
+// 																		const dfloat * restrict vgeo,
+// 																		const dfloat * restrict DrT,
+// 																		const dfloat * restrict DsT,
+// 																		const dfloat * restrict Ux,
+// 																		const dfloat * restrict Uy,
+// 																		const dfloat * restrict Pr,
+// 																		      dfloat * restrict NUx,
+// 																		      dfloat * restrict NUy,
+// 																		      dfloat * restrict rhsUx, 
+// 																		      dfloat * restrict rhsUy){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+   
+//    // Hold Flux Vector on Shared, use symmetry f21 = f12
+//    shared dfloat s_F11[p_NblockV][p_Np];
+//    shared dfloat s_F12[p_NblockV][p_Np];
+//    shared dfloat s_F22[p_NblockV][p_Np];
+//    // Hold Pressure on Shared
+//    shared dfloat s_Pr[p_NblockV][p_Np];
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+// 				iint e = eo+es; // element in block
+// 				if(e<Nelements){ 
+// 					const iint id = e*p_Np+n;
+// 					const dfloat ux = Ux[id];
+// 					const dfloat uy = Uy[id];
+// 					const dfloat pr = Pr[id];
+// 					//
+// 					s_F11[es][n] = ux*ux;
+// 					s_F12[es][n] = ux*uy;
+// 					s_F22[es][n] = uy*uy;
+//           s_Pr[es][n]  = pr;
+
+// 				}
+//       }
+//     }
+
+//      // Make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+	
+// 			iint e = eo+es; // element in block
+// 			if(e<Nelements){	  
+// 			  // prefetch geometric factors (constant on triangle)
+// 			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
+// 			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
+// 			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
+// 			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+// 	      // compute 'r' and 's' derivatives of (q_m) at node n
+// 				dfloat df11dr = 0.f, df11ds = 0.f; 
+// 				dfloat df12dr = 0.f, df12ds = 0.f; 
+// 				dfloat df22dr = 0.f, df22ds = 0.f; 
+// 				dfloat dprdr  = 0.f, dprds  = 0.f;
+//         //
+// 				occaUnroll(p_Np)
+// 				for(iint i=0;i<p_Np;++i){
+// 					const dfloat Drni = DrT[n+i*p_Np];
+// 					const dfloat Dsni = DsT[n+i*p_Np];
+// 					// 
+// 					df11dr += Drni*s_F11[es][i];
+// 					df11ds += Dsni*s_F11[es][i];
+// 					df12dr += Drni*s_F12[es][i];
+// 					df12ds += Dsni*s_F12[es][i];
+// 					df22dr += Drni*s_F22[es][i];
+// 					df22ds += Dsni*s_F22[es][i];
+// 					//
+// 					dprdr  += Drni*s_Pr[es][i];
+// 					dprds  += Dsni*s_Pr[es][i];
+// 				}
+// 				// chain rule
+//         dfloat nux   = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
+//         dfloat nuy   = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
+//         //
+//         dfloat dprdx = drdx*dprdr  + dsdx*dprds;
+//         dfloat dprdy = drdy*dprdr  + dsdy*dprds;
+				
+// 				// Update
+// 				const iint id = e*p_Np+n;
+// 				// Compute div(uxu)
+// 				NUx[id]   = nux;
+// 				NUy[id]   = nuy;
+//         // rhsU = - grad P
+// 				rhsUx[id] = dprdx;
+// 				rhsUy[id] = dprdy;
+	 
+// 	}
+//       }
+//     }
+//  }
+// }
+
+// //
+// kernel void insHelmholtzRhsSurface2D(const iint Nelements,
+// 				     const dfloat * restrict sgeo,
+// 				     const dfloat * restrict LIFTT,
+// 				     const iint   * restrict vmapM,
+// 				     const iint   * restrict vmapP,
+// 				     const iint   * restrict EToB,
+// 				     const dfloat time,
+// 				     const dfloat * restrict x,
+// 				     const dfloat * restrict y,
+// 				     const dfloat * restrict Ux,
+// 				     const dfloat * restrict Uy,
+// 				     const dfloat * restrict Pr,
+// 				           dfloat * restrict NUx,
+// 				           dfloat * restrict NUy,
+// 				           dfloat * restrict rhsUx,
+// 				           dfloat * restrict rhsUy){
+  
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+//     // shared storage for flux terms
+//     shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
+//     shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
+//     shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
+//     shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
+
+//      // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+// 	    iint e = eo + es;
+// 	     if(e<Nelements){
+// 	      if(n<p_Nfp*p_Nfaces){
+// 		    // find face that owns this node
+// 		    iint face = n/p_Nfp;
+// 		    // load surface geofactors for this face
+// 		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+// 		    dfloat nx   = sgeo[sid+NXID];
+// 		    dfloat ny   = sgeo[sid+NYID];
+// 		    dfloat sJ   = sgeo[sid+SJID];
+// 		    dfloat invJ = sgeo[sid+IJID];
+		   
+// 		    // indices of negative and positive traces of face node
+// 		    iint id  = e*p_Nfp*p_Nfaces + n;
+// 		    iint idM = vmapM[id];
+// 		    iint idP = vmapP[id];
+
+// 		   if(idP<0) idP = idM; // 
+// 		  // load negative and positive trace node values of Ux, Uy, Pr
+// 		     dfloat  uxm = Ux[idM], uxp = Ux[idP];
+// 			   dfloat  uym = Uy[idM], uyp = Uy[idP];
+// 			   dfloat  prm = Pr[idM], prp = Pr[idP];
+
+// 		    // apply boundary condition
+// 		    iint bc = EToB[face+p_Nfaces*e];
+// 		    if(bc>0)
+// 		      boundaryConditionsRhs2D(bc, time, x[idM], y[idM], nx, ny, uxm, uym, prm, &uxp, &uyp, &prp);
+
+//         // Find max normal velocity on the face
+// 		    dfloat unm   = occaFabs(nx*uxm + ny*uym);
+// 		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);    
+//         dfloat unmax = (unm > unp) ? unm : unp;
+
+//         // evaluate "flux" terms: LLF
+//         const dfloat sc = invJ * sJ ; 
+// 				s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) + ny*(uxp*uyp - uxm*uym) + unmax*(uxm-uxp) ));
+// 				s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) + ny*(uyp*uyp - uym*uym) + unmax*(uym-uyp) ));
+//         // Centered flux for pr p*-p = 0.5(prp-prm) // Central Flux
+//         s_fluxUx[es][n]  = sc*(.5f*nx*(prp-prm));
+//         s_fluxUy[es][n]  = sc*(.5f*ny*(prp-prm));
+//        	 }
+//     		}
+// 			}
+// 		}
+    
+   
+//     // wait for all flux functions are written to shared 
+//     barrier(localMemFence);
+
+//     // for each node in the element
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+// 			for(iint n=0;n<p_maxNodes;++n;inner0){
+// 				iint e = eo + es;
+// 					if(e<Nelements){
+// 						if(n<p_Np){
+// 							iint id = e*p_Np + n;
+
+// 							dfloat rhsnux = NUx[id];
+// 							dfloat rhsnuy = NUy[id];
+// 							dfloat rhsux  = rhsUx[id];
+// 							dfloat rhsuy  = rhsUy[id];
+// 							// Lift
+// 							occaUnroll(p_NfacesNfp)
+// 							for(int m=0;m<p_Nfaces*p_Nfp;++m){
+// 								dfloat L = LIFTT[n+m*p_Np];
+// 								//
+// 								rhsnux  += L*s_fluxNx[es][m];
+// 								rhsnuy  += L*s_fluxNy[es][m];
+// 								rhsux   += L*s_fluxUx[es][m];
+// 								rhsuy   += L*s_fluxUy[es][m];
+// 					}
+//           // M^-1* (div(u*u)) + Lift*(F*-F))
+// 					NUx[id] = rhsnux;
+// 					NUy[id] = rhsnuy;
+// 					//  rhsu = -grad(p)
+// 					rhsUx[id] = -rhsux;
+// 					rhsUy[id] = -rhsuy;
+// 				  }
+// 				}
+//       }
+//     }
+//   }
+
+
+// }
+
+
+
+
+
 
 
 

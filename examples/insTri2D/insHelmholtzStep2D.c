@@ -34,18 +34,13 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
  //  	}
 
   	// Compute Volume Contribution
-
-   ins->helmholtzRhsVolumeKernel(mesh->Nelements,
-                                 mesh->o_vgeo,
-                                 mesh->o_DrT,
-                                 mesh->o_DsT,
-                                 ins->o_Ux,
-                                 ins->o_Uy,
-                                 ins->o_Pr,
-                                 ins->o_NUx,
-                                 ins->o_NUy,   
-                                 ins->o_rhsUx,
-                                 ins->o_rhsUy);
+   ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            ins->o_Pr,  
+                            ins->o_rhsUx,
+                            ins->o_rhsUy);
 
 
   //   // COMPLETE HALO EXCHANGE
@@ -65,25 +60,32 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   // }
 
  // Compute Surface Conribution
-  ins->helmholtzRhsSurfaceKernel(mesh->Nelements,
+  ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
                               mesh->o_vmapM,
                               mesh->o_vmapP,
                               mesh->o_EToB,
                               t,
+                              ins->dt, 
+                              ins->PrSolverID,
                               mesh->o_x,
                               mesh->o_y,
-                              ins->o_Ux,
-                              ins->o_Uy,
                               ins->o_Pr,
-                              ins->o_NUx,
-                              ins->o_NUy,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
 
- // // Update fields
-  ins->helmholtzRhsUpdateKernel(mesh->Nelements,
+
+
+
+
+
+
+
+
+
+ // compute all forcing i.e. f^(n+1) - grad(Pr)
+  ins->helmholtzRhsForcingKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
                               ins->dt,	
@@ -100,50 +102,28 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_NUy,
                               ins->o_NO,
                               ins->o_rhsUx,
-                              ins->o_rhsUy
-                              );
+                              ins->o_rhsUy);
 
 
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-        mesh->o_vmapM,
-        mesh->o_vmapP,
-        ins->lamda,
-        ins->tau,
-        t,
-        mesh->o_x,
-        mesh->o_y,
-        mesh->o_vgeo,
-        mesh->o_sgeo,
-        mesh->o_EToB,
-        mesh->o_DrT,
-        mesh->o_DsT,
-        mesh->o_LIFTT,
-        mesh->o_MM,
-        ins->o_rhsUx,
-        ins->o_rhsUy);
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                ins->lamda,
+                                ins->tau,
+                                t,
+                                mesh->o_x,
+                                mesh->o_y,
+                                mesh->o_vgeo,
+                                mesh->o_sgeo,
+                                mesh->o_EToB,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_LIFTT,
+                                mesh->o_MM,
+                                ins->o_rhsUx,
+                                ins->o_rhsUy);
 
-  // ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-  //                               mesh->o_sgeo,
-  //                               mesh->o_vgeo,
-  //                               mesh->o_DrT,
-  //                               mesh->o_DsT,
-  //                               mesh->o_FMMT,
-  //                               mesh->o_vmapM,
-  //                               mesh->o_vmapP,
-  //                               mesh->o_EToB,
-  //                               t,
-  //                               ins->tau,
-  //                               mesh->o_x,
-  //                               mesh->o_y,
-  //                               ins->o_Ux,
-  //                               ins->o_Uy,
-  //                               ins->o_rhsUx,
-  //                               ins->o_rhsUy
-  //                               );
-
-
-
-
+  
 // USE STREAMING LATER!!!!!!!
   // SOLVE HELMHOLTZ EQUATION for ins->o_U
 #if 0

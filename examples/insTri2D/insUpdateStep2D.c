@@ -31,14 +31,14 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
 
-   // computes div u^(n+1) volume term
-   ins->updateVolumeKernel(mesh->Nelements,
-                                 mesh->o_vgeo,
-                                 mesh->o_DrT,
-                                 mesh->o_DsT,
-                                 ins->o_PrI,  
-                                 ins->o_rhsUx,
-                                 ins->o_rhsUy);
+    // Compute Volume Contribution
+   ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            ins->o_PrI,  
+                            ins->o_rhsUx,
+                            ins->o_rhsUy);
 
 
   //   // COMPLETE HALO EXCHANGE
@@ -56,8 +56,8 @@ dfloat t = tstep*ins->dt + ins->dt;
   // }
 
 
-   //computes div u^(n+1) surface term
-  ins->updateSurfaceKernel(mesh->Nelements,
+  // Compute Surface Conribution
+  ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
                               mesh->o_vmapM,
@@ -65,12 +65,14 @@ dfloat t = tstep*ins->dt + ins->dt;
                               mesh->o_EToB,
                               t,
                               ins->dt,
+                              ins->PrISolverID,
                               mesh->o_x,
                               mesh->o_y,
-                              ins->o_Pr, 
                               ins->o_PrI,
                               ins->o_rhsUx,
                               ins->o_rhsUy);
+
+
 
    //computes div u^(n+1) surface term
   ins->updateUpdateKernel(mesh->Nelements,

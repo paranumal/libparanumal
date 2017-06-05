@@ -51,7 +51,7 @@ void insRun2D(ins_t *ins, char *options){
       iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);
+      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);+++
       dfloat error = fabs(exact-ins->Pr[id]);
       
       maxError = mymax(maxError, error);
@@ -91,9 +91,87 @@ void insRun2D(ins_t *ins, char *options){
   
   ins->lamda = ins->g0 / (ins->dt * ins->nu); // Update Lamda for first order
   // One First Order Step 
+  insAdvectionStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  
+#if 0
+ ins->o_NUx.copyTo(ins->NUx);
+ ins->o_NUy.copyTo(ins->NUy);
+ //
+ dfloat lam = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ; 
+ dfloat pi  = M_PI; 
+//Compare Result with analytically Computed NU
+ dfloat maxNUx = 0, maxNUy = 0; 
+for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
+      dfloat t = 0;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+      
+      //     
+      dfloat nux = lam*exp(2*lam*x)*pow(sin(2*pi*y),2) 
+                  + lam*exp(lam*x)*cos(2*pi*y)*(exp(lam*x)*cos(2*pi*y) - 1);
+      dfloat nuy = (pow(lam,2)*exp(2*lam*x)*cos(2*pi*y)*sin(2*pi*y))/(2*pi) 
+                 - (pow(lam,2)*exp(lam*x)*sin(2*pi*y)*(exp(lam*x)*cos(2*pi*y) - 1))/(2*pi);
+
+      //
+       maxNUx = mymax(maxNUx, fabs(ins->NUx[id] - nux));
+       maxNUy = mymax(maxNUy, fabs(ins->NUy[id] - nuy));
+
+       ins->Ux[id] = fabs(ins->NUx[id] - nux);
+       ins->Uy[id] = fabs(ins->NUy[id] - nuy);
+      
+    }
+  }
+
+ins->o_Ux.copyFrom(ins->Ux);
+ins->o_Uy.copyFrom(ins->Uy);
+printf("maxNUx: %g maxNUy: %g \n", maxNUx, maxNUy);
+
+insReport2D(ins, 1, options);
+#endif
+
+
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
-  //insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
-  //insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+  insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
+  insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   //
  //  printf("Finished first order step\n");
   
@@ -135,7 +213,7 @@ void insRun2D(ins_t *ins, char *options){
  //  }
   
  //  // // For Final Time
- insReport2D(ins, ins->NtimeSteps,options);
+insReport2D(ins, ins->NtimeSteps,options);
 
  //  occa::printTimer();
 
