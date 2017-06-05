@@ -17,7 +17,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   
   if(strstr(options, "CONTINUOUS")){
     // compute local element operations and store result in o_Aq
-    mesh->AxKernel(mesh->Nelements, 
+    solver->AxKernel(mesh->Nelements, 
                    mesh->o_ggeo, 
                    mesh->o_SrrT,
                    mesh->o_SrsT,
@@ -37,7 +37,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerTic(mesh->device,"gradientKernel");    
     
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
-    mesh->gradientKernel(allNelements,
+    solver->gradientKernel(allNelements,
        mesh->o_vgeo,
        mesh->o_DrT,
        mesh->o_DsT,
@@ -49,14 +49,14 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     
     // TW NOTE WAS 2 !
     dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
-    mesh->ipdgKernel(mesh->Nelements,
+    solver->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,
          lambda,
          tau,
          mesh->o_vgeo,
          mesh->o_sgeo,
-         mesh->o_EToB,
+         solver->o_EToB,
          mesh->o_DrT,
          mesh->o_DsT,
          mesh->o_LIFTT,
@@ -85,7 +85,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
   if(strstr(options, "CONTINUOUS")){
     // compute local element operations and store result in o_Aq
-    mesh->AxKernel(mesh->Nelements, 
+    solver->AxKernel(mesh->Nelements, 
                    mesh->o_ggeo, 
                    mesh->o_SrrT,
                    mesh->o_SrsT,
@@ -105,7 +105,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     occaTimerTic(mesh->device,"gradientKernel");    
     
     iint allNelements = mesh->Nelements+mesh->totalHaloPairs; 
-    mesh->gradientKernel(allNelements,
+    solver->gradientKernel(allNelements,
        mesh->o_vgeo,
        mesh->o_DrT,
        mesh->o_DsT,
@@ -117,14 +117,14 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     
     // TW NOTE WAS 2 !
     dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
-    mesh->ipdgKernel(mesh->Nelements,
+    solver->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,
          lambda,
          tau,
          mesh->o_vgeo,
          mesh->o_sgeo,
-         mesh->o_EToB,
+         solver->o_EToB,
          mesh->o_DrT,
          mesh->o_DsT,
          mesh->o_LIFTT,
@@ -144,7 +144,7 @@ dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dflo
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   occaTimerTic(mesh->device,"scaledAddKernel");
-  mesh->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
+  solver->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
   occaTimerToc(mesh->device,"scaledAddKernel");
 }
 
@@ -164,9 +164,9 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   occaTimerTic(mesh->device,"weighted inner product2");
 
   if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
-    mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
+    solver->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
-    mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+    solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
   
   occaTimerToc(mesh->device,"weighted inner product2");
   
@@ -196,7 +196,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   occa::memory &o_tmp = solver->o_tmp;
   
   occaTimerTic(mesh->device,"inner product");
-  mesh->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+  solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
   occaTimerToc(mesh->device,"inner product");
   
   o_tmp.copyTo(tmp);
@@ -304,7 +304,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     iint Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");   
-    mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
+    solver->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");   
   }
   else{ // turn off preconditioner
