@@ -167,13 +167,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   occa::kernelInfo kernelInfoVel = kernelInfo;
   occa::kernelInfo kernelInfoPr  = kernelInfo;
 
-
-   printf("==================PRESSURE SOLVE SETUP========================\n");
-  // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *prsolver   = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
-  ins->prsolver        = prsolver; 
-  ins->prsolverOptions = prSolverOptions;
-
   // Use third Order Velocity Solve: full rank should converge for low orders
   //ins->lamda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
@@ -181,6 +174,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *velSolverOptions, char *pr
   solver_t *velsolver   = ellipticSolveSetupTri2D(mesh, ins->lamda, kernelInfoVel, velSolverOptions); 
   ins->velsolver        = velsolver;  
   ins->velsolverOptions = velSolverOptions;
+
+   printf("==================PRESSURE SOLVE SETUP========================\n");
+  // SETUP PRESSURE and VELOCITY SOLVERS
+  solver_t *prsolver   = ellipticSolveSetupTri2D(mesh,0.0, kernelInfoPr, prSolverOptions); 
+  ins->prsolver        = prsolver; 
+  ins->prsolverOptions = prSolverOptions;
+
 
  // mesh->Nfields = ins->NTfields; 
   #endif
