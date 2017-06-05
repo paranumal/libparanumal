@@ -76,7 +76,7 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   iint acceptedNelements = Nelements;
   acceptedPartition = elements;
 
-  for (iint lev = 0; lev<1; lev++) {
+  for (iint lev = 0; lev<mesh->MRABNlevels; lev++) {
     if (rank==0) printf("Clustering level %d...", lev);
     meshBuildMRABClustersP2D(mesh, lev, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
     if (rank==0) printf("done.\n");
@@ -101,7 +101,6 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->N  =   (iint*) realloc(mesh->N,  (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
-  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -110,7 +109,6 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
     }
     mesh->N[e] = acceptedPartition[e].N;
-    mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
   // connect elements using parallel sort
@@ -136,6 +134,10 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
 
   // compute surface geofacs
   meshSurfaceGeometricFactorsTriP2D(mesh);  
+
+  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+  for(iint e=0;e<mesh->Nelements;++e) 
+    mesh->MRABlevel[e] = acceptedPartition[e].level;
   
   free(acceptedPartition);
 }

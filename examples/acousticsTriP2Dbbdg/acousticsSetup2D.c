@@ -17,11 +17,11 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 0.01;
+  mesh->finalTime = 0.5;
   dfloat cfl = .4; // depends on the stability region size
 
   // errorStep
-  mesh->errorStep = 1;
+  mesh->errorStep = 100;
 
   // set penalty parameter
   mesh->Lambda2 = 0.5;
@@ -50,7 +50,7 @@ void acousticsSetup2D(mesh2D *mesh){
   }
 
   //use dt on each element to setup MRAB
-  int maxLevels = 1;
+  int maxLevels = 10;
   meshMRABSetupP2D(mesh,EtoDT,maxLevels);
 
 
@@ -155,7 +155,7 @@ void acousticsSetup2D(mesh2D *mesh){
     dfloat *Dvals = (dfloat*) calloc(mesh->Np[nn]*3,sizeof(dfloat));  
 
     dfloat *L0vals = (dfloat*) calloc(mesh->Nfp[nn]*3,sizeof(dfloat)); // tridiag
-    iint *ELids = (iint*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn],sizeof(iint));
+    iint    *ELids =   (iint*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn],sizeof(iint));
     dfloat *ELvals = (dfloat*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn],sizeof(dfloat));
     
     for (iint i = 0; i < mesh->Np[nn]; ++i){
