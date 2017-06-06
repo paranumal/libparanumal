@@ -333,3 +333,160 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
   }
 }
 
+
+kernel void insAdvectionCubatureSurface2D(const iint Nelements,
+					  const dfloat * restrict sgeo,
+					  const dfloat * restrict intInterpT, // interpolate to integration nodes
+					  const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+					  const iint   * restrict vmapM,
+					  const iint   * restrict vmapP,
+					  const iint   * restrict EToB,
+					  const dfloat time,
+					  const dfloat * restrict intx, // integration nodes
+					  const dfloat * restrict inty,
+					  const dfloat * restrict Ux,
+					  const dfloat * restrict Uy,
+					  dfloat * restrict NUx,
+					  dfloat * restrict NUy){
+  
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    // shared storage for flux terms
+    shared dfloat s_UxM[p_NblockS][p_NfacesNfp];
+    shared dfloat s_UyM[p_NblockS][p_NfacesNfp];
+    shared dfloat s_UxP[p_NblockS][p_NfacesNfp];
+    shared dfloat s_UyP[p_NblockS][p_NfacesNfp];
+    shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
+    shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
+    
+    // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+
+	iint e = eo + es;
+
+	if(e<Nelements){
+	  if(n<(p_Nfaces*p_Nfp)){
+	    // indices of negative and positive traces of face node
+	    const iint id  = e*p_Nfp*p_Nfaces + n;
+
+	    iint idM = vmapM[id];
+	    iint idP = vmapP[id];
+
+	    if(idP<0) idP = idM;
+    
+	    // load negative and positive trace node values of velocity
+	    s_UxM[es][n] = Ux[idM];
+	    s_UyM[es][n] = Uy[idM];
+	    s_UxP[es][n] = Ux[idP];
+	    s_UyP[es][n] = Uy[idP];
+	  }
+	}
+      }
+    }
+
+    barrier(localMemFence);
+
+    // interpolate to surface integration nodes
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+
+	iint e = eo + es;
+
+	if(e<Nelements){
+	  if(n<(p_Nfaces*p_intNfp)){
+
+	    const iint face = n/p_intNfp; // find face that owns this integration node
+	    
+	    // load surface geofactors for this face
+	    const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+	    const dfloat nx = sgeo[sid+p_NXID];
+	    const dfloat ny = sgeo[sid+p_NYID];
+	    const dfloat sJ = sgeo[sid+p_SJID];
+	    const dfloat invJ = sgeo[sid+p_IJID];
+
+	    dfloat iUxM = 0.f, iUyM = 0.f;
+	    dfloat iUxP = 0.f, iUyP = 0.f;
+
+	    // local block interpolation (face nodes to integration nodes)
+	    for(iint m=0;m<p_Nfp;++m){
+	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+	      const iint fm = face*p_Nfp+m;
+	      iUxM += iInm*s_UxM[es][fm];
+	      iUyM += iInm*s_UyM[es][fm];
+	      
+	      iUxP += iInm*s_UxP[es][fm];
+	      iUyP += iInm*s_UyP[es][fm];
+	    }
+
+
+	    // apply boundary condition
+	    // [ exact to here ]
+	    iint bc = EToB[face+p_Nfaces*e];
+	    
+	    if(bc>0){
+	      boundaryConditions2D(bc,
+				   time, 
+				   intx[n+e*p_Nfaces*p_intNfp], 
+				   inty[n+e*p_Nfaces*p_intNfp], 
+				   nx,
+				   ny,
+				   iUxM,
+				   iUyM,
+				   &iUxP,
+				   &iUyP);
+	    }
+
+	    // Find max normal velocity on the face
+	    dfloat unm   = occaFabs(nx*iUxM + ny*iUyM);
+	    dfloat unp   = occaFabs(nx*iUxP + ny*iUyP);    
+	    dfloat unmax = (unm > unp) ? unm : unp;
+
+	    // evaluate "flux" terms: LLF
+	    const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
+	    s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUxP*iUxP + iUxM*iUxM) 
+					 + ny*(iUxP*iUyP + iUxM*iUyM) 
+					 + unmax*(iUxM-iUxP) ));
+	    s_iFluxNy[es][n] = sc*(.5f*(   nx*(iUyP*iUxP + iUyM*iUxM) 
+					 + ny*(iUyP*iUyP + iUyM*iUyM) 
+					 + unmax*(iUyM-iUyP) ));
+	  }
+	}
+      }
+    }
+    
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // lift from surface integration to volume nodes
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+
+	const iint e = eo + es;
+
+	if(e<Nelements){
+	  if(n<p_Np){
+	    iint id = n + p_Np*e;
+	    // prefetch volume rhs
+	    dfloat NUxn = NUx[id];
+	    dfloat NUyn = NUy[id];
+	    
+	    for(int m=0;m<p_intNfpNfaces;++m){
+	      // RefMassMatrix^{-1}*cInterp^t*cWeight
+	      
+	      const dfloat L = intLIFTT[n+m*p_Np];
+	      
+	      NUxn += L*s_iFluxNx[es][m];
+	      NUyn += L*s_iFluxNy[es][m];
+	    }
+	    
+	    NUx[id] = NUxn;
+	    NUy[id] = NUyn;
+	  }
+	}
+      }
+    }
+  }
+}
+
