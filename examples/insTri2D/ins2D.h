@@ -54,6 +54,9 @@ occa::kernel updateHaloScatterKernel;
 
 occa::kernel advectionVolumeKernel;
 occa::kernel advectionSurfaceKernel;
+
+occa::kernel advectionCubatureVolumeKernel;
+occa::kernel advectionCubatureSurfaceKernel;
 //
 occa::kernel gradientVolumeKernel;
 occa::kernel gradientSurfaceKernel;

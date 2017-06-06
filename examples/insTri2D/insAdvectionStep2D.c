@@ -32,8 +32,19 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
  //  	}
 
   	// Compute Volume Contribution
-
-   ins->advectionVolumeKernel(mesh->Nelements,
+    if(strstr(options, "CUBATURE")){
+       ins->advectionCubatureVolumeKernel(mesh->Nelements,
+                                          mesh->o_vgeo,
+                                          mesh->o_cubDrWT,
+                                          mesh->o_cubDsWT,
+                                          mesh->o_cubInterpT,
+                                          ins->o_U,
+                                          ins->o_V,
+                                          ins->o_NU,
+                                          ins->o_NV);
+    }
+    else{
+     ins->advectionVolumeKernel(mesh->Nelements,
                                  mesh->o_vgeo,
                                  mesh->o_DrT,
                                  mesh->o_DsT,
@@ -41,7 +52,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                  ins->o_V,
                                  ins->o_NU,
                                  ins->o_NV);
+    }
 
+   
 
   //   // COMPLETE HALO EXCHANGE
   // if(mesh->totalHaloPairs>0){
@@ -59,7 +72,26 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   //                                   ins->o_totHaloBuffer);
   // }
 
- // Compute Surface Conribution
+// Compute Volume Contribution
+    if(strstr(options, "CUBATURE")){
+      // Compute Surface Conribution
+  ins->advectionCubatureSurfaceKernel(mesh->Nelements,
+                              mesh->o_sgeo,
+                              mesh->o_intInterpT,
+                              mesh->o_intLIFTT,
+                              mesh->o_vmapM,
+                              mesh->o_vmapP,
+                              mesh->o_EToB,
+                              t,
+                              mesh->o_intx,
+                              mesh->o_inty,
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_NU,
+                              ins->o_NV);
+    }
+    else{
+     // Compute Surface Conribution
   ins->advectionSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
@@ -73,6 +105,11 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_V,
                               ins->o_NU,
                               ins->o_NV);
+    }
+
+
+
+
 
  
 }
