@@ -235,8 +235,8 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 					 const dfloat * restrict vgeo,
-					 const dfloat * restrict cubDrT,
-					 const dfloat * restrict cubDsT,
+					 const dfloat * restrict cubDrTW,
+					 const dfloat * restrict cubDsTW,
 					 const dfloat * restrict cubInterpT,
 					 const dfloat * restrict Ux,
 					 const dfloat * restrict Uy,
@@ -305,17 +305,17 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	  //
 	  occaUnroll(p_Np)
 	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat cDrni = cubDrT[n+i*p_Np];
-	      const dfloat cDsni = cubDsT[n+i*p_Np];
+	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
+	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      // 
-	      df11dr += cDrni*s_cF11[es][i];
-	      df11ds += cDsni*s_cF11[es][i];
+	      df11dr += cDrWni*s_cF11[es][i];
+	      df11ds += cDsWni*s_cF11[es][i];
 	      // 
-	      df12dr += cDrni*s_cF12[es][i];
-	      df12ds += cDsni*s_cF12[es][i];
+	      df12dr += cDrWni*s_cF12[es][i];
+	      df12ds += cDsWni*s_cF12[es][i];
 	      // 
-	      df22dr += cDrni*s_cF22[es][i];
-	      df22ds += cDsni*s_cF22[es][i];
+	      df22dr += cDrWni*s_cF22[es][i];
+	      df22ds += cDsWni*s_cF22[es][i];
 	    }
 	  // NUx = del(u1xu1)/ dx + del(u1xu2)/dy
 	  dfloat nux   = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
@@ -325,7 +325,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	  // Update
 	  const iint id = e*p_Np+n;
 	  // Compute div(uxu)
-	  NUx[id]   = -nux; // note 
+	  NUx[id]   = -nux; // note  change in sign
 	  NUy[id]   = -nuy;		  
 	}
       }
