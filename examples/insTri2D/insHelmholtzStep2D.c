@@ -105,6 +105,14 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_rhsV);
 
 
+
+  // ins->o_rhsU.copyTo(ins->U);
+  // ins->o_rhsV.copyTo(ins->V);
+
+
+
+
+
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
@@ -129,6 +137,6 @@ printf("Solving for Ux \n");
  ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_U, ins->vSolverOptions);
 
 printf("Solving for Uy \n");
-  ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_V, ins->vSolverOptions);
+ ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_V, ins->vSolverOptions);
 
 }

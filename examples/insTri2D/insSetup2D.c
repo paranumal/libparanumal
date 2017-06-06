@@ -132,7 +132,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.5; 
+  dfloat cfl = 0.1; 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
@@ -148,7 +148,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep = 100;
+  ins->errorStep = 1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   
@@ -193,7 +193,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Use third Order Velocity Solve: full rank should converge for low orders
   //ins->lambda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  ins->lambda = (1.0f) / (ins->dt * ins->nu);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
   ins->vSolver        = vSolver;  
   ins->vSolverOptions = vSolverOptions;
@@ -212,6 +212,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
+
+
+  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
+  printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
+
+
   #if 1
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -269,8 +276,21 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
  // =========================================================================== 
-   // KERNEL DEFINITIONS
-  printf("Compiling Advection volume kernel with collocation integration\n");
+  if(strstr(options, "CUBATURE")){ 
+    printf("Compiling Advection volume kernel with cubature integration\n");
+  ins->advectionCubatureVolumeKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+      "insAdvectionCubatureVolume2D",
+        kernelInfo);
+ 
+  printf("Compiling Advection surface kernel with cubature integration\n");
+  ins->advectionCubatureSurfaceKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+      "insAdvectionCubatureSurface2D",
+        kernelInfo);
+  }
+  else{
+printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
       "insAdvectionVolume2D",
@@ -281,6 +301,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
       "insAdvectionSurface2D",
         kernelInfo);
+  }
+  
 // =========================================================================== 
   printf("Compiling Gradient volume kernel with collocation integration\n");
   ins->gradientVolumeKernel = 

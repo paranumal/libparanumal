@@ -235,8 +235,8 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 					 const dfloat * restrict vgeo,
-					 const dfloat * restrict cubDrTW,
-					 const dfloat * restrict cubDsTW,
+					 const dfloat * restrict cubDrWT,
+					 const dfloat * restrict cubDsWT,
 					 const dfloat * restrict cubInterpT,
 					 const dfloat * restrict Ux,
 					 const dfloat * restrict Uy,
@@ -247,7 +247,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
     shared dfloat s_Ux[p_NblockV][p_Np];
-    shared dfloat s_UY[p_NblockV][p_Np];
+    shared dfloat s_Uy[p_NblockV][p_Np];
     shared dfloat s_cF11[p_NblockV][p_cubNp];
     shared dfloat s_cF12[p_NblockV][p_cubNp];
     shared dfloat s_cF22[p_NblockV][p_cubNp];
@@ -271,7 +271,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 
-	  const dfloat cUx = 0, cUy = 0;
+	 dfloat cUx = 0, cUy = 0;
 
 	  for(iint i=0;i<p_Np;++i){
 	    dfloat cIni = cubInterpT[n+i*p_cubNp];
