@@ -341,23 +341,25 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // BB degree raise matrix (sparse format)
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseids[nn] = (iint*) calloc(mesh->Nfp[nn]*2, sizeof(iint));
-    for (int n=0;n<mesh->Nfp[nn]*2;++n){
+    int Nfpp1 = nn+2;
+    mesh->BBRaiseids[nn] = (iint*) calloc(Nfpp1*2, sizeof(iint));
+    for (int n=0;n<Nfpp1*2;++n){
       fscanf(fp, iintFormat, mesh->BBRaiseids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseVals[nn] = (dfloat*) calloc(mesh->Nfp[nn]*2, sizeof(dfloat));
-    for (int n=0;n<mesh->Nfp[nn]*2;++n){
+    mesh->BBRaiseVals[nn] = (dfloat*) calloc(Nfpp1*2, sizeof(dfloat));
+    for (int n=0;n<Nfpp1*2;++n){
       fscanf(fp, dfloatFormat, mesh->BBRaiseVals[nn]+n);
     }
 
     //BB degree lower matrix
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBLower[nn] = (dfloat*) calloc((mesh->Nfp[nn]+1)*mesh->Nfp[nn], sizeof(dfloat));
-    for (int n=0;n<(mesh->Nfp[nn]+1)*mesh->Nfp[nn];++n){
+    int Nfpm1 = nn;
+    mesh->BBLower[nn] = (dfloat*) calloc(Nfpm1*mesh->Nfp[nn], sizeof(dfloat));
+    for (int n=0;n<Nfpm1*mesh->Nfp[nn];++n){
       fscanf(fp, dfloatFormat, mesh->BBLower[nn]+n);
     }
 

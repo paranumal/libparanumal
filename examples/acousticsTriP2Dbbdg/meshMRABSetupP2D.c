@@ -63,6 +63,14 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     }
   }
 
+  //this could change the number of MRAB levels there are, so find the new max level
+  mesh->MRABNlevels = 0;
+  for (iint e=0;e<mesh->Nelements;e++)
+    mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
+  mesh->MRABNlevels++;
+  int localNlevels = mesh->MRABNlevels;
+  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
+  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
 
   //now we need to perform a weighted repartitioning of the mesh to optimize MRAB
   if (size>1) {
