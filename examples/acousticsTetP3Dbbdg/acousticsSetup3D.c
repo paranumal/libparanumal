@@ -8,14 +8,58 @@ iint factorial(iint n) {
 
 void acousticsSetup3D(mesh3D *mesh){
 
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // set time step
+  mesh->finalTime = 0.5;
+  dfloat cfl = .4; // depends on the stability region size
+
+  // errorStep
+  mesh->errorStep = 10;
+
+  // set penalty parameter
+  mesh->Lambda2 = 0.5;
+
+  dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
+  dfloat hmin = 1e9;
+  for(iint e=0;e<mesh->Nelements;++e){ 
+    EtoDT[e] = 1e9;  
+
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+      dfloat sJ   = mesh->sgeo[sid + SJID];
+      dfloat invJ = mesh->sgeo[sid + IJID];
+
+      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+      // h = 0.5/(sJ/J)
+
+      dfloat hest = .5/(sJ*invJ);
+
+      // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
+      dfloat dtEst = cfl*hest/((mesh->N[e]+1.)*(mesh->N[e]+1.)*mesh->Lambda2);
+
+      hmin = mymin(hmin, hest);
+      EtoDT[e] = mymin(EtoDT[e], dtEst);
+    }
+  }
+
+  //use dt on each element to setup MRAB
+  int maxLevels = 1;
+  meshMRABSetupP3D(mesh,EtoDT,maxLevels);
+
+
   mesh->Nfields = 4;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->NpMax*mesh->Nfields, sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->NpMax*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->NpMax*mesh->Nfields,
-				sizeof(dfloat));
+  mesh->fQM = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields,
+            sizeof(dfloat));
+  mesh->fQP = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields,
+            sizeof(dfloat));
 
   // fix this later (initial conditions)
   dfloat time = 0;
@@ -61,56 +105,8 @@ void acousticsSetup3D(mesh3D *mesh){
     }
   }
 
-  //Construct lists of elements of different orders
-  mesh->NelOrder = (iint *) malloc((mesh->NMax+1)*sizeof(iint));
-  mesh->NelList = (iint **) malloc((mesh->NMax+1)*sizeof(iint*));
-  for (iint p=0;p<=mesh->NMax;p++) {
-    mesh->NelOrder[p] =0;
-    for (iint e=0;e<mesh->Nelements;e++){
-      if (mesh->N[e] == p) mesh->NelOrder[p]++; //count the number of elements of order p
-    }
-    mesh->NelList[p] = (iint *) malloc((mesh->NelOrder[p])*sizeof(iint*));
-    iint cnt =0;
-    for (iint e=0;e<mesh->Nelements;e++){
-      if (mesh->N[e] == p) mesh->NelList[p][cnt++]=e; //record the index of this order p element
-    }
-  }
-
-  // set penalty parameter
-  mesh->Lambda2 = 0.5;
-  
-  // set time step
-  dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
-
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
-
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-      
-      dfloat hest = .5/(sJ*invJ);
-
-      hmin = mymin(hmin, hest);
-    }
-  }
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dt = cfl*hmin/((mesh->NMax+1)*(mesh->NMax+1)*mesh->Lambda2);
-
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-  //
-  mesh->finalTime = .5;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  mesh->dt = mesh->finalTime/mesh->NtimeSteps;
-
-  // errorStep
-  mesh->errorStep = 100;
-
+  printf("hmin = %g\n", hmin);
+  printf("cfl = %g\n", cfl);
   printf("dt = %g\n", mesh->dt);
 
   // output mesh
@@ -118,13 +114,11 @@ void acousticsSetup3D(mesh3D *mesh){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
+  
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-    sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
 
   occa::kernelInfo kernelInfo;
 
@@ -421,10 +415,19 @@ void acousticsSetup3D(mesh3D *mesh){
     mesh->device.malloc(mesh->NpMax*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
   mesh->o_rhsq =
     mesh->device.malloc(mesh->NpMax*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  mesh->o_resq =
-    mesh->device.malloc(mesh->NpMax*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
+  mesh->o_fQM = 
+    mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQM);
+  mesh->o_fQP = 
+    mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQP);
 
-
+  mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
+    mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+         mesh->MRABelementIds[lev]);
+    mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+         mesh->MRABelementIds[lev]);
+  }
 
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_NMax", mesh->NMax);
@@ -433,7 +436,7 @@ void acousticsSetup3D(mesh3D *mesh){
   kernelInfo.addDefine("p_NfpMax", mesh->NfpMax);
   kernelInfo.addDefine("p_cubNpMax",mesh->cubNpMax);
   kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
-  kernelInfo.addDefine("p_NfacesNfp", mesh->NfpMax*mesh->Nfaces);
+  kernelInfo.addDefine("p_NfacesNfpMax", mesh->NfpMax*mesh->Nfaces);
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
@@ -472,6 +475,95 @@ void acousticsSetup3D(mesh3D *mesh){
 
   kernelInfo.addDefine("p_JWID", JWID);
 
+  
+  kernelInfo.addDefine("p_Lambda2", 0.5f);
+
+  if(sizeof(dfloat)==4){
+    kernelInfo.addDefine("dfloat","float");
+    kernelInfo.addDefine("dfloat4","float4");
+  }
+  if(sizeof(dfloat)==8){
+    kernelInfo.addDefine("dfloat","double");
+    kernelInfo.addDefine("dfloat4","double4");
+  }
+
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
+  }
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
+  }
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo.addCompilerFlag("--ftz=true");
+    kernelInfo.addCompilerFlag("--prec-div=false");
+    kernelInfo.addCompilerFlag("--prec-sqrt=false");
+    kernelInfo.addCompilerFlag("--use_fast_math");
+    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+  }
+
+  mesh->volumeKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->surfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->updateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->traceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+
+  for (iint p=1;p<=mesh->NMax;p++) {
+    occa::kernelInfo newInfo = kernelInfo;
+
+    newInfo.addDefine("p_N", p);
+    newInfo.addDefine("p_Np", mesh->Np[p]);
+    newInfo.addDefine("p_Nfp", mesh->Nfp[p]);
+    int Nfpp1 = (p+2)*(p+3)/2;
+    int Nfpm1 = (p)*(p+2)/2;
+    newInfo.addDefine("p_Nfpp1", Nfpp1);
+    newInfo.addDefine("p_Nfpm1", Nfpm1);
+    newInfo.addDefine("p_cubNp", mesh->cubNp[p]);
+
+    newInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz[p]);
+
+    int maxNodes = mymax(mesh->Np[p], mesh->Nfp[p]*mesh->Nfaces);
+    newInfo.addDefine("p_maxNodes", maxNodes);
+
+    int NblockV = 512/mesh->Np[p]; // works for CUDA
+    newInfo.addDefine("p_NblockV", NblockV);
+
+    int NblockS = 512/maxNodes; // works for CUDA
+    newInfo.addDefine("p_NblockS", NblockS);
+
+    int maxCubNodes = mymax(mesh->cubNp[p], maxNodes);
+    newInfo.addDefine("p_maxCubNodes", maxCubNodes);
+
+    mesh->volumeKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABVolumeP2D.okl",
+                 "acousticsbbdgMRABVolumeP2D",
+                 newInfo);
+
+    mesh->surfaceKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABSurfaceP2D.okl",
+                 "acousticsbbdgMRABSurfaceP2D",
+                 newInfo);
+
+    #if WADG
+      mesh->updateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
+                 "acousticsMRABUpdateP2D_wadg",
+                 newInfo);
+      mesh->traceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
+                 "acousticsMRABTraceUpdateP2D_wadg",
+                 newInfo);
+    #else 
+      mesh->updateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
+                 "acousticsMRABUpdateP2D",
+                 newInfo);
+      mesh->traceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
+                 "acousticsMRABTraceUpdateP2D",
+                 newInfo);
+    #endif
+
+  }
 
   char p_maxNodesName[BUFSIZ];
   char p_NblockVName[BUFSIZ];
@@ -511,37 +603,7 @@ void acousticsSetup3D(mesh3D *mesh){
 
     kernelInfo.addDefine(p_cubNpName, mesh->cubNpMax);
   }
-  
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
 
-  if(sizeof(dfloat)==4){
-    kernelInfo.addDefine("dfloat","float");
-    kernelInfo.addDefine("dfloat4","float4");
-  }
-  if(sizeof(dfloat)==8){
-    kernelInfo.addDefine("dfloat","double");
-    kernelInfo.addDefine("dfloat4","double4");
-  }
-
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
-  }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
-  }
-
-  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("--ftz=true");
-    kernelInfo.addCompilerFlag("--prec-div=false");
-    kernelInfo.addCompilerFlag("--prec-sqrt=false");
-    kernelInfo.addCompilerFlag("--use_fast_math");
-    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
-  }
-
-  mesh->volumeKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
-  mesh->surfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
-  mesh->updateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
-  
   char volumekernelName[BUFSIZ];
   char surfacekernelName[BUFSIZ];
   char updatekernelName[BUFSIZ];

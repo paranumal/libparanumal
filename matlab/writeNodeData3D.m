@@ -218,7 +218,7 @@ VB2D = bern_basis_tri(N,r2D,s2D);
 
 %% write VDM for conversion
 
-% VB(abs(VB)<tol) = 0;
+
 fprintf(fid, '%% Bernstein VDM matrix\n');
 for n=1:Np
     for m=1:Np
@@ -257,6 +257,7 @@ for i = 1:Np
     if length(tmp) < 4
         tmp = [tmp zeros(1,4-length(tmp))];
     end
+    i
     D1ids(i,:) = tmp; 
    
     
@@ -394,9 +395,9 @@ end
 EL(abs(EL)<tol) = 0;
 
 % accuracy check
-if norm(LIFT-EL*kron(eye(Nfaces),L0),'fro') > tol
-    keyboard
-end
+%if norm(LIFT-EL*kron(eye(Nfaces),L0),'fro') > tol
+%    keyboard
+%end
 
 % L0
 L0ids = zeros(Nfp,7);
@@ -463,13 +464,14 @@ for n=1:Np
 end
 
 %degree raise/lower operators along traces
-BBRaise = bern_basis_tri(N,r2D,s2D)\bern_basis_tri(N-1,r2D,s2D);
+BBRaise = bern_basis_tri(N+1,r2Dp1,s2Dp1)\bern_basis_tri(N,r2Dp1,s2Dp1);
 BBRaise(abs(BBRaise)<tol) = 0;
 
-BBRaiseIds  = zeros(N+1,3);
-BBRaiseVals = zeros(N+1,3);
+Nfpp1 = (N+2)*(N+3)/2;
+BBRaiseIds  = zeros(Nfpp1,3);
+BBRaiseVals = zeros(Nfpp1,3);
 
-for i = 1:Nfp
+for i = 1:Nfpp1
     tmp = find(BBRaise(i,:));
     BBRaiseVals(i,1:length(tmp)) = BBRaise(i,tmp);
     tmp = tmp-1; % zero indexing
@@ -479,29 +481,38 @@ for i = 1:Nfp
     BBRaiseIds(i,:) = tmp;
 end
 
-VB2Dp1 = bern_basis_tri(N+1,r2Dp1,s2Dp1);
-V2Dp1 = Vandermonde2D(N+1, r2Dp1,s2Dp1);
-
 VB2D = bern_basis_tri(N,r2D,s2D);
 V2D = Vandermonde2D(N, r2D,s2D);
 
-Nfp1 = (N+2)*(N+3)/2;
+Nm1 = N-1;
+if (N>1) 
+    [r2Dm1 s2Dm1] = Nodes2D(Nm1); [r2Dm1 s2Dm1] = xytors(r2Dm1,s2Dm1);
+    VB2Dm1 = bern_basis_tri(Nm1,r2Dm1,s2Dm1);
+    V2Dm1 = Vandermonde2D(Nm1, r2Dm1,s2Dm1);
+else 
+    r2Dm1 =0;
+    s2Dm1 =0;
+    VB2Dm1 = 1;
+    V2Dm1 = 1;
+end; 
 
-BBLower = V2Dp1\VB2Dp1;
+Nfpm1 = (Nm1+1)*(Nm1+2)/2;
+
+BBLower = V2D\VB2D;
 BB = [];
 sk =1;
-for n=0:N+1
-  for m=0:N+1-n
-    if n+m<N+1
+for n=0:N
+  for m=0:N-n
+    if n+m<N
       BB = [BB; BBLower(sk,:)];
     end
     sk = sk+1;
   end
 end
-BBLower = VB2D\V2D*BB;
+BBLower = VB2Dm1\V2Dm1*BB;
 
 fprintf(fid, '%% BB degree raise ids\n');
-for n=1:Nfp
+for n=1:Nfpp1
     for m=1:3
         fprintf(fid, '%d ', BBRaiseIds(n,m));
     end
@@ -509,7 +520,7 @@ for n=1:Nfp
 end
 
 fprintf(fid, '%% BB degree raise values\n');
-for n=1:Nfp
+for n=1:Nfpp1
     for m=1:3
         fprintf(fid, '%17.15E ', BBRaiseVals(n,m));
     end
@@ -517,8 +528,8 @@ for n=1:Nfp
 end
 
 fprintf(fid, '%% BB degree lower matrix\n');
-for n=1:Nfp
-    for m=1:Nfp1
+for n=1:Nfpm1
+    for m=1:Nfp
         fprintf(fid, '%17.15E ', BBLower(n,m));
     end
     fprintf(fid, '\n');

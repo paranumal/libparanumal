@@ -102,8 +102,6 @@ void acousticsSetup2D(mesh2D *mesh){
     }
   }
 
-  printf("dt = %g\n", mesh->dt);
-
   printf("hmin = %g\n", hmin);
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", mesh->dt);
