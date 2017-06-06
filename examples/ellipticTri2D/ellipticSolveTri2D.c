@@ -213,6 +213,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
 }
 
 void ellipticPreconditioner2D(solver_t *solver,
+			      dfloat lambda, 
 			      occa::memory &o_r,
 			      occa::memory &o_zP,
 			      occa::memory &o_z,
@@ -299,6 +300,14 @@ void ellipticPreconditioner2D(solver_t *solver,
     parAlmondPrecon(o_z, precon->parAlmond, o_r);
     occaTimerToc(mesh->device,"parALMOND");
   
+  } else if(strstr(options, "BLOCKJACOBI")){
+
+    dfloat invLambda = 1./lambda;
+
+    occaTimerTic(mesh->device,"blockJacobiKernel");
+    precon->blockJacobiKernel(mesh->Nelements, invLambda, mesh->o_vgeo, precon->o_invMM, o_r, o_z);
+    occaTimerToc(mesh->device,"blockJacobiKernel");
+    
   } else if(strstr(options, "JACOBI")){
 
     iint Ntotal = mesh->Np*mesh->Nelements;
@@ -351,7 +360,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(solver, o_r, o_zP, o_z, options); // r => rP => zP => z
+    ellipticPreconditioner2D(solver, lambda, o_r, o_zP, o_z, options); // r => rP => zP => z
     
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -404,7 +413,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner2D(solver, o_r, o_zP, o_z, options);
+      ellipticPreconditioner2D(solver, lambda, o_r, o_zP, o_z, options);
 
       // dot(r,z)
       rdotz1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
