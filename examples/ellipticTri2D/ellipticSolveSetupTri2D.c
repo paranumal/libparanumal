@@ -184,6 +184,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
 				       kernelInfo);
 
 
+  solver->precon->blockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
+				       "ellipticBlockJacobiPreconTri2D",
+				       kernelInfo);
+  
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
