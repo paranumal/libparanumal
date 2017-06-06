@@ -53,7 +53,10 @@ typedef struct {
   occa::memory *o_B, o_tmp2;
   void *xxt2;
   void *parAlmond;
-  
+
+  // block Jacobi precon
+  occa::memory o_invMM;
+  occa::kernel blockJacobiKernel;  
 } precon_t;
 
 

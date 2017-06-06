@@ -2,8 +2,9 @@
 // block Jacobi preconditioner with inverse of mass matrix
 // (assumes mass matrix dominant)
 kernel void ellipticBlockJacobiPreconTri2D(const int Nelements,
+					   const dfloat invLambda,
 					   const dfloat * restrict vgeo,
-					   const dfloat * restrict const B,
+					   const dfloat * restrict B,
 					   const dfloat * restrict q,
 					   dfloat * restrict Pq){  
   
@@ -11,19 +12,22 @@ kernel void ellipticBlockJacobiPreconTri2D(const int Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     
     shared dfloat s_q[p_NblockV][p_Np];
-    shared dfloat s_IJ[p_NblockV];
+    shared dfloat s_scale[p_NblockV];
     
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
 	const iint e = es + eo;
+
+	s_q[es][n] = 0;
 	if(e<Nelements){
 	  // prefetch q
 	  const iint id = e*p_Np+n;
 	  s_q[es][n] = q[id];
 	}
+
 	iint t = n + p_Np*es;
 	if(t<p_NblockV && (t+eo)<Nelements){
-	  s_IJ[t] = vgeo[(eo+t)*p_Nvgeo+p_IJID];
+	  s_scale[t] = invLambda/vgeo[(eo+t)*p_Nvgeo+p_JID];
 	}
       }
     }
@@ -44,7 +48,7 @@ kernel void ellipticBlockJacobiPreconTri2D(const int Nelements,
 	    }
 	  
 	  const iint id = e*p_Np+n; 
-	  Pq[id] = s_IJ[es]*Bqn;
+	  Pq[id] = Bqn*s_scale[es];
 	}
       }
     }

@@ -32,6 +32,13 @@ typedef struct{
 // compare on global indices 
 int parallelCompareRowColumn(const void *a, const void *b);
 
+extern "C"
+{
+  void dgetrf_ (int *, int *, dfloat *, int *, int *, int *);
+  void dgetri_ (int *, dfloat *, int *, int *, dfloat *, int *, int *);
+}
+
+
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options);
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
@@ -268,8 +275,8 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     } else if (strstr(options,"CONTINUOUS")) {
       
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
-    }
-    
+    }    
+
     //collect global assembled matrix
     iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
     iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
@@ -320,6 +327,28 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
     precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   }
+  else if (strstr(options, "BLOCKJACOBI")){
+    
+    // compute inverse mass matrix
+    dfloat *MMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
+    int lwork = mesh->Np*mesh->Np;
+    dfloat *work = (dfloat*) calloc(lwork, sizeof(dfloat));
+    iint info;
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      MMinv[n] = mesh->MM[n];
+    }
+
+    dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
+    dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
+    if(info) 
+      printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
+    
+    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), MMinv);
+    
+    free(MMinv); free(ipiv); free(work);
+  }
+  
     
   return precon;
 }

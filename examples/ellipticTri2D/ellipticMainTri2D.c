@@ -18,12 +18,13 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
-  // preconditioner can be JACOBI, OAS, NONE
+  // preconditioner can be JACOBI, OAS, NONE, BLOCKJACOBI
   // method can be IPDG
   char *options =
     //strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
+    //    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
   
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
