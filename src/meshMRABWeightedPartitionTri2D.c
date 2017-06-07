@@ -22,7 +22,7 @@ typedef struct {
   iint offSet;
 } cluster_t;
 
-void meshBuildMRABClusters2D(mesh_t *mesh, iint lev, dfloat *weights, iint *levels,
+void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *levels,
             iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **newElements);
 
 // geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
@@ -94,15 +94,12 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
   }
 
   //save this partition, and perform the mesh setup again. 
-  free(mesh->EToV);
-  free(mesh->EX);
-  free(mesh->EY);
-  
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (iint*) calloc(mesh->Nelements*mesh->Nverts, sizeof(iint));
-  mesh->EX = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
-  mesh->EY = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
+  mesh->EToV = (iint*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
+  mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -110,6 +107,7 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
     }
+    mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
   // connect elements using parallel sort
@@ -138,11 +136,13 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
 
   // global nodes
   meshParallelConnectNodes(mesh);
-
-  free(mesh->MRABlevel);
-  mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
-  for(iint e=0;e<mesh->Nelements;++e) 
-    mesh->MRABlevel[e] = acceptedPartition[e].level;
+  
+  if (mesh->totalHaloPairs) {
+    mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+    iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    free(MRABsendBuffer);
+  }
   
   free(acceptedPartition);
 }

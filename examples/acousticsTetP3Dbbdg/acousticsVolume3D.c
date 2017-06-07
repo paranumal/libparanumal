@@ -1,10 +1,11 @@
 #include "acoustics3D.h"
 
 
-void acousticsVolume3Dbbdg(mesh3D *mesh){
+void acousticsVolume3Dbbdg(mesh3D *mesh, iint lev){
 
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(iint et=0;et<mesh->MRABNelements[lev];++et){
+    iint e = mesh->MRABelementIds[lev][et];
 
     // prefetch geometric factors (constant on tet)
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
@@ -109,7 +110,7 @@ void acousticsVolume3Dbbdg(mesh3D *mesh){
       dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
       
       // indices for writing the RHS terms
-      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint id = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
 
       // store acoustics rhs contributions from collocation differentiation
       mesh->rhsq[id+0] = -dpdx;

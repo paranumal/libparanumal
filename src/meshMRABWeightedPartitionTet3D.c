@@ -1,18 +1,17 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include "mesh2D.h"
-
+#include "mesh3D.h"
 
 typedef struct {
   iint id;
   iint level;
   dfloat weight;
-  iint N;
 
-  // 4 for maximum number of vertices per element in 2D
-  iint v[4];
-  dfloat EX[4], EY[4];
+  // 8 for maximum number of vertices per element in 3D
+  iint v[8];
+  dfloat EX[8], EY[8], EZ[8];
 
   iint cRank;
   iint cId;
@@ -23,12 +22,13 @@ typedef struct {
   iint offSet;
 } cluster_t;
 
-void meshBuildMRABClustersP2D(mesh_t *mesh, iint lev, dfloat *weights, iint *levels,
+void meshBuildMRABClusters3D(mesh3D *mesh, iint lev, dfloat *weights, iint *levels,
             iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **newElements);
 
-// geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartitionP2D(mesh2D *mesh, iint Nclusters, cluster_t *clusters, 
+// geometric partition of clusters of elements in 3D mesh using Morton ordering + parallelSort
+dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, iint Nclusters, cluster_t *clusters, 
                               iint *Nelements, cElement_t **elements);
+
 
 /* ---------------------------------------------------------
 
@@ -49,8 +49,7 @@ The algorithm performs the following steps
     the mesh setup. 
 
 ------------------------------------------------------------ */
-
-void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
+void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels) {
 
   const dfloat TOL = 0.8; //tolerance on what partitions are ruled 'acceptable'
@@ -69,8 +68,8 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   if (!levels) numLevels = 1;
 
   //perform the first weigthed partitioning with no clustering
-  meshBuildMRABClustersP2D(mesh, -1, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
-  meshClusteredGeometricPartitionP2D(mesh, Nclusters, clusters, &Nelements, &elements);
+  meshBuildMRABClusters3D(mesh, -1, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
+  meshClusteredGeometricPartition3D(mesh, Nclusters, clusters, &Nelements, &elements);
 
   //initialize the accepted partition
   iint acceptedNelements = Nelements;
@@ -78,9 +77,9 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
 
   for (iint lev = 0; lev<mesh->MRABNlevels; lev++) {
     if (rank==0) printf("Clustering level %d...", lev);
-    meshBuildMRABClustersP2D(mesh, lev, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
+    meshBuildMRABClusters3D(mesh, lev, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
     if (rank==0) printf("done.\n");
-    dfloat partQuality = meshClusteredGeometricPartitionP2D(mesh, Nclusters, clusters, &Nelements, &elements);
+    dfloat partQuality = meshClusteredGeometricPartition3D(mesh, Nclusters, clusters, &Nelements, &elements);
 
     if (partQuality > TOL) {
       if (rank ==0) printf("Accepting level %d clustered partition...(quality = %g)\n", lev, partQuality);
@@ -94,13 +93,13 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
     }
   }
 
-  //save this partition, and perform the mesh setup again.   
+  //save this partition, and perform the mesh setup again.  
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (iint*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
-  mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
-  mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
-  mesh->N  =   (iint*) realloc(mesh->N,  mesh->Nelements*sizeof(iint));
+  mesh->EToV = (iint*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(iint));
+  mesh->EX = (dfloat*) realloc(mesh->EX,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
@@ -108,8 +107,8 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
       mesh->EToV[e*mesh->Nverts + n] = acceptedPartition[e].v[n];
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
+      mesh->EZ  [e*mesh->Nverts + n] = acceptedPartition[e].EZ[n];
     }
-    mesh->N[e] = acceptedPartition[e].N;
     mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
@@ -123,29 +122,30 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   meshConnectBoundary(mesh);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTriP2D(mesh);
+  meshPhysicalNodesTet3D(mesh);
 
   // compute geometric factors
-  meshGeometricFactorsTri2D(mesh);
+  meshGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetupP(mesh);
+  meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodesP2D(mesh);
+  meshConnectFaceNodes3D(mesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactorsTriP2D(mesh);  
+  meshSurfaceGeometricFactorsTet3D(mesh);
+
+  // global nodes
+  meshParallelConnectNodes(mesh);
 
   if (mesh->totalHaloPairs) {
-    mesh->N  =   (iint*) realloc(mesh->N, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
     mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
     iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
     meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
-    meshHaloExchange(mesh, sizeof(iint), mesh->N, MRABsendBuffer, mesh->N+mesh->Nelements);
     free(MRABsendBuffer);
   }
-
   
   free(acceptedPartition);
 }
+

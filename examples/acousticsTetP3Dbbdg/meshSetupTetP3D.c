@@ -8,11 +8,11 @@ mesh3D *meshSetupTetP3D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
   
-  // print out connectivity statistics
-  //  meshPartitionStatistics3D(mesh);
-  
   // connect elements using parallel sort
   meshParallelConnect(mesh);
+  
+  // print out connectivity statistics
+  meshPartitionStatistics(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
@@ -26,14 +26,15 @@ mesh3D *meshSetupTetP3D(char *filename, int N){
   // compute geometric factors
   meshGeometricFactorsTet3D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTet3D(mesh);
-
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetupP(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP3D(mesh);
+
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTetP3D(mesh);
+
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

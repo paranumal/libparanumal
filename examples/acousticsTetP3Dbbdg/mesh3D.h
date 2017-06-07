@@ -38,7 +38,7 @@ void meshPlotVTU3DP(mesh3D *mesh, char *fileNameBase, iint fld);
 void meshGeometricFactorsTet3D(mesh3D *mesh);
 void meshGeometricFactorsHex3D(mesh3D *mesh);
 
-void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
+void meshSurfaceGeometricFactorsTetP3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
 void meshPhysicalNodesTetP3D(mesh3D *mesh);
@@ -94,6 +94,11 @@ void meshHaloExchangeFinish3D(mesh3D *mesh);
 void meshBuildFaceNodes3D(mesh3D *mesh);
 void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
+void meshMRABSetupP3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
+
+//MRAB weighted mesh partitioning
+void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
+                                      iint numLevels, iint *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
@@ -125,7 +130,7 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 #define NZID 2 
 #define SJID 3  
 #define IJID 4
-#define WSJID 5
-#define IHID 6
+#define IHID 5
+#define WSJID 6
 #endif
 

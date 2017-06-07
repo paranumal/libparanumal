@@ -336,7 +336,7 @@ void acousticsSetup2D(mesh2D *mesh){
     
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
-      mesh->device.malloc(mesh->totalHaloPairs*mesh->NpMax*mesh->Nfields*sizeof(dfloat));
+      mesh->device.malloc(mesh->totalHaloPairs*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
   }
 
   // find elements that have all neighbors on this process
@@ -374,12 +374,25 @@ void acousticsSetup2D(mesh2D *mesh){
     mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQP);
 
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  mesh->o_MRABelIdsP   = (occa::memory **) malloc(mesh->MRABNlevels*sizeof(occa::memory*));
+  mesh->o_MRABhaloIdsP = (occa::memory **) malloc(mesh->MRABNlevels*sizeof(occa::memory*));
+
   for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
     mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
     mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
+    mesh->o_MRABelIdsP[lev]   = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+    mesh->o_MRABhaloIdsP[lev] = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
+    for (int p=0;p<=mesh->NMax;p++) {
+      if (mesh->MRABNelP[lev][p]) 
+        mesh->o_MRABelIdsP[lev][p]   = mesh->device.malloc(mesh->MRABNelP[lev][p]*sizeof(iint),
+         mesh->MRABelIdsP[lev][p]);
+      if (mesh->MRABNhaloEleP[lev][p])
+        mesh->o_MRABhaloIdsP[lev][p] = mesh->device.malloc(mesh->MRABNhaloEleP[lev][p]*sizeof(iint),
+         mesh->MRABhaloIdsP[lev][p]);
+    }
   }
 
   //-------------------------------------

@@ -2,16 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include "mesh2D.h"
+#include "mesh3D.h"
 
 typedef struct {
   iint id;
   iint level;
   dfloat weight;
+  iint N;
 
-  // 4 for maximum number of vertices per element in 2D
-  iint v[4];
-  dfloat EX[4], EY[4];
+  // 8 for maximum number of vertices per element in 3D
+  iint v[8];
+  dfloat EX[8], EY[8], EZ[8];
 
   iint cRank;
   iint cId;
@@ -36,7 +37,7 @@ int compareCluster(const void *a, const void *b) {
 }
 
 
-void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *levels,
+void meshBuildMRABClustersP3D(mesh_t *mesh, iint lev, dfloat *weights, iint *levels,
             iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **elements) {
 
   iint rank, size;
@@ -59,6 +60,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *leve
     (*elements)[e].id = e;
     (*elements)[e].level = 0.;
     if (levels) (*elements)[e].level = levels[e];
+    (*elements)[e].N = mesh->N[e];
     
     (*elements)[e].weight = 1.;
     if (weights) (*elements)[e].weight = weights[e];
@@ -67,6 +69,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *leve
       (*elements)[e].v[n] = mesh->EToV[e*mesh->Nverts+n];
       (*elements)[e].EX[n] = mesh->EX[e*mesh->Nverts+n];
       (*elements)[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
+      (*elements)[e].EZ[n] = mesh->EZ[e*mesh->Nverts+n];
     }
 
     //initialize the clustering numbering
