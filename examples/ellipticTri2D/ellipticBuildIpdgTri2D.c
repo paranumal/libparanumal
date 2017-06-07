@@ -10,7 +10,7 @@ typedef struct{
 
 } nonZero_t;
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -134,34 +134,49 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nn
           if (vidP == m) qmP[i] =1;
           
           ndotgradqmM[i] = (nx*drdx+ny*drdy)*mesh->Dr[m+vidM*mesh->Np]
-	    +(nx*dsdx+ny*dsdy)*mesh->Ds[m+vidM*mesh->Np];
+	                        +(nx*dsdx+ny*dsdy)*mesh->Ds[m+vidM*mesh->Np];
           ndotgradqmP[i] = (nx*drdxP+ny*drdyP)*mesh->Dr[m+vidP*mesh->Np]
-	    +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
+	                        +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
         }
 
         dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
+
+
         for (iint n=0;n<mesh->Np;n++) {
           for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-	      -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+	                              -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
             BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
           }
 
           dfloat AnmP = 0;
           if (eP < 0) {
+            int qSgn, gradqSgn;
+            int bc = EToB[fM+mesh->Nfaces*eM];
+            if(bc==1){ // Dirichlet
+              qSgn     = -1;
+              gradqSgn =  1;
+            } else if (bc==2){ // Neumann
+              qSgn     =  1;
+              gradqSgn = -1;
+            } else { // Neumann for now
+              qSgn     =  1;
+              gradqSgn = -1;
+            }
+
             for (iint i=0;i<mesh->Nfp;i++) {
-              BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
-              BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
+              BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
+              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+		                              +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+		                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
