@@ -148,7 +148,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep = 1;
+  ins->errorStep =1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   

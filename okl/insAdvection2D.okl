@@ -258,7 +258,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	if(e<Nelements && n<p_Np){ 
 	  const iint id = e*p_Np+n;
 	  s_Ux[es][n] = Ux[id];
-	  s_Uy[es][n] = Ux[id];
+	  s_Uy[es][n] = Uy[id];
 	}
       }
     }

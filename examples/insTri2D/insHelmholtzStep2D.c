@@ -106,13 +106,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
 
 
-  // ins->o_rhsU.copyTo(ins->U);
-  // ins->o_rhsV.copyTo(ins->V);
-
-
-
-
-
+  
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,

@@ -32,9 +32,9 @@ void insRun2D(ins_t *ins, char *options){
   insAdvectionStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insHelmholtzStep2D(ins, 0, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
   insPoissonStep2D(ins,   0, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
-  insUpdateStep2D(ins, 0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+  insUpdateStep2D(ins,    0, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
 
-
+   insReport2D(ins, 1,options);
  
   #if 0
   // Switch to second order
@@ -62,20 +62,20 @@ void insRun2D(ins_t *ins, char *options){
   ins->lambda = ins->g0 / (ins->dt * ins->nu);
    #endif
   
-    for(iint tstep=1;tstep<10;++tstep){
-    // for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
-      //
-      insAdvectionStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
-      insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
-      insPoissonStep2D(ins,   tstep, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
-      insUpdateStep2D(ins,    tstep, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
+  //   for(iint tstep=1;tstep<10;++tstep){
+  //  // for(iint tstep=1;tstep<ins->NtimeSteps;++tstep){
+  //     //
+  //     insAdvectionStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  //     insHelmholtzStep2D(ins, tstep, helmholtzHaloBytes, helmholtzSendBuffer, helmholtzRecvBuffer, options);
+  //     insPoissonStep2D(ins,   tstep, poissonHaloBytes  , poissonSendBuffer  , poissonRecvBuffer  , options);
+  //     insUpdateStep2D(ins,    tstep, updateHaloBytes, updateSendBuffer, updateRecvBuffer, options);
      
-     if(strstr(options, "REPORT")){
-      if((tstep%ins->errorStep)==0){
-        insReport2D(ins, tstep,options);
-       }
-     }
-  }
+  //    if(strstr(options, "REPORT")){
+  //     if((tstep%ins->errorStep)==0){
+  //       insReport2D(ins, tstep,options);
+  //      }
+  //    }
+  // }
  
   
  //  // // For Final Time

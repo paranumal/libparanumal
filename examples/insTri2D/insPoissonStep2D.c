@@ -108,10 +108,7 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
 
-// dfloat *Pr2    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-
-// ins->o_rhsPr.copyTo(ins->Pr);
-//o_PrI.copyFrom(Pr2);
+printf("Solving for P \n");
 ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);
 
    
