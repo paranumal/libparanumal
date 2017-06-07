@@ -1,3 +1,27 @@
+
+void boundaryConditions2D(const int bc, 
+                          const dfloat qxM, 
+                          const dfloat qyM, 
+                          const dfloat qM, 
+                          dfloat * restrict qxP, 
+                          dfloat * restrict qyP, 
+                          dfloat * restrict qP) {
+
+  if(bc==1){ // Dirichlet
+    *qP  = -qM;
+    *qxP =  qxM;
+    *qyP =  qyM;
+  } else if (bc==2){ // Neumann 
+    *qP  =  qM;
+    *qxP = -qxM;
+    *qyP = -qyM;
+  } else { //Neumann for now
+    *qP  =  qM; 
+    *qxP = -qxM;
+    *qyP = -qyM;
+  }
+}
+
 // increments gradients of pressure with pseudo-gradients at faces and 
 // increments rhs with pseudo-gradient/penalty terms at faces (need to double check scaling with tau)
 
@@ -12,12 +36,13 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 				const dfloat tau,
 				const dfloat * restrict vgeo,
 				const dfloat * restrict sgeo,
+        const iint   * restrict EToB,
 				const dfloat * restrict DrT,
 				const dfloat * restrict DsT,
 				const dfloat * restrict LIFTT,
 				const dfloat * restrict MM,
 				const dfloat4 * restrict gradq,
-				dfloat  * restrict Aq){
+				      dfloat  * restrict Aq){
   
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
@@ -60,10 +85,8 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       	invJ = sgeo[sid+p_IJID];
       	hinv = sgeo[sid+p_IHID];
 
-      	// Neumann boundary condition
-      	const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
-      	gradqP.x *= sc;
-      	gradqP.y *= sc;
+        iint bc = EToB[face+p_Nfaces*e];
+        if(bc>0) boundaryConditions2D(bc, gradqM.x, gradqM.y, gradqM.w, &gradqP.x, &gradqP.y, &gradqP.w);
 
       	const dfloat dq = gradqP.w - gradqM.w;
       	const dfloat half = 0.5f;

@@ -1,0 +1,56 @@
+
+// block Jacobi preconditioner with inverse of mass matrix
+// (assumes mass matrix dominant)
+kernel void ellipticBlockJacobiPreconTri2D(const int Nelements,
+					   const dfloat invLambda,
+					   const dfloat * restrict vgeo,
+					   const dfloat * restrict B,
+					   const dfloat * restrict q,
+					   dfloat * restrict Pq){  
+  
+  // block partition of elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_q[p_NblockV][p_Np];
+    shared dfloat s_scale[p_NblockV];
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+	const iint e = es + eo;
+
+	s_q[es][n] = 0;
+	if(e<Nelements){
+	  // prefetch q
+	  const iint id = e*p_Np+n;
+	  s_q[es][n] = q[id];
+	}
+
+	iint t = n + p_Np*es;
+	if(t<p_NblockV && (t+eo)<Nelements){
+	  s_scale[t] = invLambda/vgeo[(eo+t)*p_Nvgeo+p_JID];
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+	const iint e = es + eo;
+
+	if(e<Nelements){
+	  // compute 1D derivatives
+	  dfloat Bqn = 0;
+	  
+	  occaUnroll(p_Np)
+	    for(iint i=0;i<p_Np;++i){
+	      Bqn += B[n+i*p_Np]*s_q[es][i];
+	    }
+	  
+	  const iint id = e*p_Np+n; 
+	  Pq[id] = Bqn*s_scale[es];
+	}
+      }
+    }
+  }
+}

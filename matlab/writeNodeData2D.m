@@ -76,6 +76,15 @@ for n=1:Np
     fprintf(fid, '\n');
 end
 
+FMM = MM*LIFT;
+fprintf(fid, '%% Face Mass matrix\n');
+for n=1:Np
+    for m=1:Nfp*Nfaces
+        fprintf(fid, '%17.15E ', FMM(n,m));
+    end
+    fprintf(fid, '\n');
+end
+
 %% compute equispaced nodes on equilateral triangle
 [plotR,plotS] = EquiNodes2D(N+4);
 
