@@ -45,13 +45,17 @@ meshConnectFaceNodesP3D.o \
 meshPhysicalNodesTetP3D.o \
 meshPlotVTU3DP.o \
 meshHaloSetupP.o \
+meshMRABSetupP3D.o \
+meshMRABWeightedPartitionTetP3D.o \
+meshBuildMRABClustersP3D.o \
+meshClusteredGeometricPartitionP3D.o \
+meshSurfaceGeometricFactorsTetP3D.o \
 meshLoadReferenceNodesTetP3D.o 
 
 # library objects
 LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshParallelReaderTet3D.o \
-../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshGeometricPartition3D.o \

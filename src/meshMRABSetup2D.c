@@ -50,7 +50,8 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //enforce one level difference between neighbours
   for (iint lev=0; lev < mesh->MRABNlevels; lev++){
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    if (mesh->totalHaloPairs) 
+      meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
     for (iint e =0; e<mesh->Nelements;e++) {
       if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
         for (iint f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
@@ -62,7 +63,16 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
       }
     }
   }
+  if (mesh->totalHaloPairs) free(MRABsendBuffer);
 
+  //this could change the number of MRAB levels there are, so find the new max level
+  mesh->MRABNlevels = 0;
+  for (iint e=0;e<mesh->Nelements;e++)
+    mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
+  mesh->MRABNlevels++;
+  int localNlevels = mesh->MRABNlevels;
+  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
+  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
 
   //now we need to perform a weighted repartitioning of the mesh to optimize MRAB
   if (size>1) {
@@ -75,10 +85,6 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
     meshMRABWeightedPartitionTri2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
-
-    if (MRABsendBuffer) free(MRABsendBuffer);
-    MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
   }
 
   //construct element and halo lists
@@ -140,6 +146,4 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-
-  free(MRABsendBuffer);
 }

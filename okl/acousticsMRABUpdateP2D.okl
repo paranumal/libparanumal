@@ -54,7 +54,9 @@ kernel void acousticsMRABUpdateP2D(const iint Nelements,
       }
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint id  = e*p_NfpMax*p_Nfaces + n;
+        const iint f = n / p_Nfp;
+        const iint iid = n % p_Nfp;
+        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
@@ -183,7 +185,9 @@ kernel void acousticsMRABTraceUpdateP2D(const iint Nelements,
       const iint e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint id  = e*p_NfpMax*p_Nfaces + n;
+        const iint f = n / p_Nfp;
+        const iint iid = n % p_Nfp;
+        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
@@ -386,7 +390,9 @@ kernel void acousticsMRABUpdateP2D_wadg(const iint Nelements,
       }
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint id  = e*p_NfpMax*p_Nfaces + n;
+        const iint f = n / p_Nfp;
+        const iint iid = n % p_Nfp;
+        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
@@ -578,7 +584,9 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const iint Nelements,
       const iint e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint id  = e*p_NfpMax*p_Nfaces + n;
+        const iint f = n / p_Nfp;
+        const iint iid = n % p_Nfp;
+        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 

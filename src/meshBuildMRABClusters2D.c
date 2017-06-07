@@ -36,7 +36,7 @@ int compareCluster(const void *a, const void *b) {
 }
 
 
-void meshBuildMRABClusters2D(mesh_t *mesh, iint lev, dfloat *weights, iint *levels,
+void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *levels,
             iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **elements) {
 
   iint rank, size;

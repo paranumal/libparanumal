@@ -57,7 +57,7 @@ kernel void acousticsbbdgMRABSurfaceP2D(const iint Nelements,
     // for all face nodes of all elements 
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+        const iint et = eo + es;
         if(et<Nelements){
           iint e = elementIds[et];
           if(n<p_Nfp*p_Nfaces){
@@ -108,7 +108,7 @@ kernel void acousticsbbdgMRABSurfaceP2D(const iint Nelements,
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+        const iint et = eo + es;
         if(et<Nelements){
           if(n<p_Nfp*p_Nfaces){
             const iint id = n % p_Nfp;  // warning: redundant reads
@@ -141,7 +141,7 @@ kernel void acousticsbbdgMRABSurfaceP2D(const iint Nelements,
     // apply lift reduction and accumulate RHS
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+        const iint et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
             const iint e = elementIds[et];

@@ -171,8 +171,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
               mesh->o_N,
               0.0,
               0.,0.,0.,
-              mesh->o_cubInterpT,
-              mesh->o_cubProjectT,
+              mesh->o_cubInterpT[p],
+              mesh->o_cubProjectT[p],
               mesh->o_c2,
               mesh->o_EToE,
               mesh->o_BBLower[p],
@@ -242,10 +242,10 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
             mesh->volumeKernel[p](mesh->MRABNelP[l][p],
                   mesh->o_MRABelIdsP[l][p],
                   mesh->o_vgeo,
-                  mesh->o_D1ids,
-                  mesh->o_D2ids,
-                  mesh->o_D3ids,
-                  mesh->o_Dvals,
+                  mesh->o_D1ids[p],
+                  mesh->o_D2ids[p],
+                  mesh->o_D3ids[p],
+                  mesh->o_Dvals[p],
                   mesh->o_q,
                   mesh->o_rhsq,
                   mesh->MRABshiftIndex[l]);
@@ -269,9 +269,9 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
             mesh->surfaceKernel[p](mesh->MRABNelP[l][p],
                       mesh->o_MRABelIdsP[l][p],
                       mesh->o_sgeo,
-                      mesh->o_L0vals,
-                      mesh->o_ELids,
-                      mesh->o_ELvals,
+                      mesh->o_L0vals[p],
+                      mesh->o_ELids[p],
+                      mesh->o_ELvals[p],
                       mesh->o_vmapM,
                       mesh->o_mapP,
                       mesh->o_EToB,
@@ -324,8 +324,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                   mesh->o_N,
                   mesh->dt*pow(2,l),
                   a1,a2,a3,
-                  mesh->o_cubInterpT,
-                  mesh->o_cubProjectT,
+                  mesh->o_cubInterpT[p],
+                  mesh->o_cubProjectT[p],
                   mesh->o_c2,
                   mesh->o_EToE,
                   mesh->o_BBLower[p],
@@ -344,14 +344,14 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       }
       if (lev<mesh->MRABNlevels) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[lev][p]) {
+          if (mesh->MRABNhaloEleP[lev][p]) {
             mesh->traceUpdateKernel[p](mesh->MRABNhaloEleP[lev][p],
                   mesh->o_MRABhaloIdsP[lev][p],
                   mesh->o_N,
                   mesh->dt*pow(2,lev-1),
                   b1,b2,b3,
-                  mesh->o_cubInterpT,
-                  mesh->o_cubProjectT,
+                  mesh->o_cubInterpT[p],
+                  mesh->o_cubProjectT[p],
                   mesh->o_c2,
                   mesh->o_EToE,
                   mesh->o_BBLower[p],
@@ -393,7 +393,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
       if (lev<mesh->MRABNlevels) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[lev][p]) {
+          if (mesh->MRABNhaloEleP[lev][p]) {
             mesh->traceUpdateKernel[p](mesh->MRABNhaloEleP[lev][p],
                   mesh->o_MRABhaloIdsP[lev][p],
                   mesh->o_N,

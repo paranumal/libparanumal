@@ -61,11 +61,13 @@ LOBJS = \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint3D.o \
 ../../src/meshPartitionStatistics.o \
-../../src/meshMRABWeightedPartition3D.o \
-../../src/meshMRABSetup3D.o \
-../../src/meshOccaSetup3D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint3D.o \
+../../src/meshMRABSetup3D.o \
+../../src/meshBuildMRABClusters3D.o \
+../../src/meshClusteredGeometricPartition3D.o \
+../../src/meshMRABWeightedPartitionTet3D.o \
+../../src/meshOccaSetup3D.o \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o

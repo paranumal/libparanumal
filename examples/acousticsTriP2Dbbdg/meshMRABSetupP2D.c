@@ -39,7 +39,9 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //compute the level of each element
   mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
-  iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+  iint *MRABsendBuffer;
+  if (mesh->totalHaloPairs) 
+    MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
   for(iint lev=0; lev<mesh->MRABNlevels; lev++){             
     dfloat dtlev = dtGmin*pow(2,lev);   
     for(iint e=0;e<mesh->Nelements;++e){
@@ -50,7 +52,8 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //enforce one level difference between neighbours
   for (iint lev=0; lev < mesh->MRABNlevels; lev++){
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    if (mesh->totalHaloPairs) 
+      meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
     for (iint e =0; e<mesh->Nelements;e++) {
       if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
         for (iint f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
@@ -62,6 +65,7 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
       }
     }
   }
+  if (mesh->totalHaloPairs) free(MRABsendBuffer);
 
   //this could change the number of MRAB levels there are, so find the new max level
   mesh->MRABNlevels = 0;
@@ -84,10 +88,6 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
     meshMRABWeightedPartitionTriP2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
-
-    if (MRABsendBuffer) free(MRABsendBuffer);
-    MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
   }
 
   //construct element and halo lists
@@ -175,6 +175,4 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-
-  free(MRABsendBuffer);
 }

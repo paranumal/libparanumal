@@ -203,9 +203,9 @@ void acousticsSetup3D(mesh3D *mesh){
   char deviceConfig[BUFSIZ];
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
-  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-   sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
 
   mesh->device.setup(deviceConfig);
 
