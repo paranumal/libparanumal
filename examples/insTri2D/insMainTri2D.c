@@ -17,10 +17,10 @@ int main(int argc, char **argv){
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN  
 
-  char *options = strdup("out=REPORT+VTU, adv = COLLOCATION, disc = DISCONT_GALERKIN");
+  char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI"); // Jacobi did not work
+   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI"); 
   char *prSolverOptions = 
    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
