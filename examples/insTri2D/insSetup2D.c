@@ -274,7 +274,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
  // =========================================================================== 
-  if(strstr(options, "CUBATURE")){ 
+  if(1) { // strstr(options, "CUBATURE")){ 
     printf("Compiling Advection volume kernel with cubature integration\n");
   ins->advectionCubatureVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
@@ -287,7 +287,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       "insAdvectionCubatureSurface2D",
         kernelInfo);
   }
-  else{
+  if(1) { // else{
 printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
