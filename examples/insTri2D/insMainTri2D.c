@@ -21,10 +21,10 @@ int main(int argc, char **argv){
   char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERMATRIX"); 
+    strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERMATRIX,MATRIXFREE");
 
   char *prSolverOptions = 
-    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERMATRIX");
+    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERMATRIX,MATRIXFREE");
 
   if(argc!=3){
     printf("usage: ./main meshes/cavityH005.msh N\n");
