@@ -186,11 +186,11 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 
 	    // evaluate "flux" terms: LLF
 	    const dfloat sc = invJ * sJ ; 
-	    s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp - uxm*uxm) 
-					+ ny*(uxp*uyp - uxm*uym) 
+	    s_fluxNx[es][n] = sc*(.5f*( nx*(uxp*uxp + uxm*uxm) 
+					+ ny*(uxp*uyp + uxm*uym) 
 					+ unmax*(uxm-uxp) ));
-	    s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp - uym*uxm) 
-					+ ny*(uyp*uyp - uym*uym) 
+	    s_fluxNy[es][n] = sc*(.5f*( nx*(uyp*uxp + uym*uxm) 
+					+ ny*(uyp*uyp + uym*uym) 
 					+ unmax*(uym-uyp) ));
 	  }
 	}
@@ -303,7 +303,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	  dfloat df12dr = 0.f, df12ds = 0.f; 
 	  dfloat df22dr = 0.f, df22ds = 0.f; 
 	  //
-	  occaUnroll(p_Np)
+	  occaUnroll(p_cubNp)
 	    for(iint i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
@@ -445,12 +445,22 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 
 	    // evaluate "flux" terms: LLF
 	    const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
+
+#if 1
 	    s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUxP*iUxP + iUxM*iUxM) 
 					 + ny*(iUxP*iUyP + iUxM*iUyM) 
 					 + unmax*(iUxM-iUxP) ));
 	    s_iFluxNy[es][n] = sc*(.5f*(   nx*(iUyP*iUxP + iUyM*iUxM) 
 					 + ny*(iUyP*iUyP + iUyM*iUyM) 
 					 + unmax*(iUyM-iUyP) ));
+#else
+	    s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUxP*iUxP - iUxM*iUxM) 
+					 + ny*(iUxP*iUyP - iUxM*iUyM) 
+					 + unmax*(iUxM-iUxP) ));
+	    s_iFluxNy[es][n] = sc*(.5f*(   nx*(iUyP*iUxP + iUyM*iUxM) 
+					 + ny*(iUyP*iUyP - iUyM*iUyM) 
+					 + unmax*(iUyM-iUyP) ));
+#endif
 	  }
 	}
       }
