@@ -19,7 +19,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *EToB,
                       occa::kernelInfo &kernelInfo, const char *options){
 
   iint rank;
@@ -34,6 +34,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
+  solver->tau = tau;
+  
   solver->mesh = mesh;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -160,7 +162,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda, solver->EToB, options);
+  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, solver->EToB, options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   solver->precon->preconKernel = 

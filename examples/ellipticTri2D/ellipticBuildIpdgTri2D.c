@@ -10,7 +10,7 @@ typedef struct{
 
 } nonZero_t;
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -33,7 +33,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
-  dfloat tau = 2; // hackery
+  //  dfloat tau = 20; // hackery
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -139,7 +139,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
 	                        +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv; 
+        dfloat penalty = tau*hinv; // tau*(mesh->N+1)*(mesh->N+1)*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
 
