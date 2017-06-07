@@ -73,7 +73,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->finalTime = 0.01;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 100.f*(mesh->N+1)*(mesh->N+1); 
+  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); 
   //
   //memcpy(ins->g, g,2*sizeof(dfloat));
 
