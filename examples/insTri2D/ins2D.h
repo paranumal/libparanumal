@@ -70,8 +70,6 @@ occa::kernel helmholtzRhsIpdgBCKernel;
 occa::kernel poissonRhsForcingKernel;
 occa::kernel poissonRhsIpdgBCKernel;
 
-// occa::kernel updateVolumeKernel;
-// occa::kernel updateSurfaceKernel;
 occa::kernel updateUpdateKernel;
 
   

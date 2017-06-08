@@ -380,7 +380,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
   
-  do{
+  while(rdotr0>(tol*tol)){
     
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options); 
@@ -446,7 +446,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     ++Niter;
     
-  }while(rdotr0>(tol*tol));
+  }
 
   occaTimerToc(mesh->device,"PCG");
 

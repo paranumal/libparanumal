@@ -86,24 +86,29 @@ if(mesh->totalHaloPairs>0){
 
 
 
+  #if 0 // No time dependent BC
+  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                mesh->o_sgeo,
+                                mesh->o_vgeo,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_LIFTT,
+                                mesh->o_MM,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                mesh->o_EToB,
+                                t,
+                                ins->dt,
+                                ins->tau,
+                                mesh->o_x,
+                                mesh->o_y,
+                                ins->o_P,
+                                ins->o_rhsP
+                                );
 
-  // ins->poissonRhsIpdgBCKernel(mesh->Nelements,
-  //                               mesh->o_sgeo,
-  //                               mesh->o_vgeo,
-  //                               mesh->o_DrT,
-  //                               mesh->o_DsT,
-  //                               mesh->o_FMMT,
-  //                               mesh->o_vmapM,
-  //                               mesh->o_vmapP,
-  //                               mesh->o_EToB,
-  //                               t,
-  //                               ins->dt,
-  //                               ins->tau,
-  //                               mesh->o_x,
-  //                               mesh->o_y,
-  //                               ins->o_Pr,
-  //                               ins->o_rhsPr
-  //                               );
+
+  #endif
+
 
 
 

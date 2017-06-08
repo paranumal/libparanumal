@@ -34,8 +34,13 @@ void boundaryConditions2D(const iint bc,
     *uyB = 0.f;
   }
   if(bc==2){ // Inflow
-    *uxB = 1.0f - exp(lambda*x)*cos(2.f*OCCA_PI*y) ; 
-    *uyB = 0.5f*lambda/(OCCA_PI)*exp(lambda*x)*sin(2.f*OCCA_PI*y);
+  	 #if 0	     
+     *uxB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
+     *uyB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+     #else
+     *uxB = y*(4.5f-y)/(2.25f*2.25f);
+     *uyB = 0.f;
+     #endif 
   }
   if(bc==3){ // Outflow 
     // do nothing 

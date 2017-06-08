@@ -39,8 +39,13 @@ void boundaryConditions2D(const iint bc,
     *vB = 2.f*vbc-vM; 
   }
   if(bc==2){ // Inflow
+   #if 0	     
     dfloat ubc = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y)  ; 
     dfloat vbc = 0.5f*(lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+   #else
+    dfloat ubc = y*(4.5f-y)/(2.25f*2.25f);
+    dfloat vbc = 0.0f;
+   #endif
     //
     *uB = 2.f*ubc-uM; 
     *vB = 2.f*vbc-vM; 
