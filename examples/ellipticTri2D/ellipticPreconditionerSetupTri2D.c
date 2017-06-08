@@ -39,11 +39,11 @@ extern "C"
 }
 
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options);
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options);
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, iint *EToB, const char *options){
+precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *EToB, const char *options){
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -268,7 +268,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat lamb
       for(iint r=0;r<size;++r)
         globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
-      ellipticBuildIpdgTri2D(mesh, lambda, EToB, &A, &nnz,options);
+      ellipticBuildIpdgTri2D(mesh, tau, lambda, EToB, &A, &nnz,options);
     
       qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 

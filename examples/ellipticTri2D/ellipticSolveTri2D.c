@@ -48,22 +48,21 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerTic(mesh->device,"ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         solver->o_EToB,
-         mesh->o_DrT,
-         mesh->o_DsT,
-         mesh->o_LIFTT,
-         mesh->o_MM,
-         solver->o_grad,
-         o_Aq);
-
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       solver->tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       solver->o_EToB,
+		       mesh->o_DrT,
+		       mesh->o_DsT,
+		       mesh->o_LIFTT,
+		       mesh->o_MM,
+		       solver->o_grad,
+		       o_Aq);
+    
     occaTimerToc(mesh->device,"ipdgKernel");
   }
 
@@ -116,21 +115,20 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     occaTimerTic(mesh->device,"ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         solver->o_EToB,
-         mesh->o_DrT,
-         mesh->o_DsT,
-         mesh->o_LIFTT,
-         mesh->o_MM,
-         solver->o_grad,
-         o_Aq);
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       solver->tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       solver->o_EToB,
+		       mesh->o_DrT,
+		       mesh->o_DsT,
+		       mesh->o_LIFTT,
+		       mesh->o_MM,
+		       solver->o_grad,
+		       o_Aq);
 
     occaTimerToc(mesh->device,"ipdgKernel");
   }
