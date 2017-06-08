@@ -47,7 +47,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerToc(mesh->device,"gradientKernel");
     occaTimerTic(mesh->device,"ipdgKernel");
     
-    // TW NOTE WAS 2 !
     solver->ipdgKernel(mesh->Nelements,
 		       mesh->o_vmapM,
 		       mesh->o_vmapP,
