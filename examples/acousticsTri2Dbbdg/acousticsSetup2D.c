@@ -185,8 +185,8 @@ void acousticsSetup2D(mesh2D *mesh){
   char deviceConfig[BUFSIZ];
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
 
   occa::kernelInfo kernelInfo;

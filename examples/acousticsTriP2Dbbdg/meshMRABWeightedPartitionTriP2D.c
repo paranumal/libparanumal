@@ -100,7 +100,8 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   mesh->EToV = (iint*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
   mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
-  mesh->N  =   (iint*) realloc(mesh->N,  (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+  mesh->N  =   (iint*) realloc(mesh->N,  mesh->Nelements*sizeof(iint));
+  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -109,6 +110,7 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
     }
     mesh->N[e] = acceptedPartition[e].N;
+    mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
   // connect elements using parallel sort
@@ -135,9 +137,15 @@ void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
   // compute surface geofacs
   meshSurfaceGeometricFactorsTriP2D(mesh);  
 
-  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
-  for(iint e=0;e<mesh->Nelements;++e) 
-    mesh->MRABlevel[e] = acceptedPartition[e].level;
+  if (mesh->totalHaloPairs) {
+    mesh->N  =   (iint*) realloc(mesh->N, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+    mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
+    iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    meshHaloExchange(mesh, sizeof(iint), mesh->N, MRABsendBuffer, mesh->N+mesh->Nelements);
+    free(MRABsendBuffer);
+  }
+
   
   free(acceptedPartition);
 }
