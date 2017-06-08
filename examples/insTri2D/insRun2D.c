@@ -23,7 +23,7 @@ void insRun2D(ins_t *ins, char *options){
 
   occa::initTimer(mesh->device);
   
-  for(iint tstep=0;tstep<3;++tstep){
+  for(iint tstep=0;tstep<100;++tstep){
 
     switch(tstep){
     case 0:

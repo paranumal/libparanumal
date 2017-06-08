@@ -24,7 +24,7 @@ int main(int argc, char **argv){
     strdup("type=VELOCITY solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
 
   char *prSolverOptions = 
-    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND,UBERMATRIX,MATRIXFREE");
+    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
   if(argc!=3){
     printf("usage: ./main meshes/cavityH005.msh N\n");

@@ -14,7 +14,7 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 if(mesh->totalHaloPairs>0){
    
-     ins->totalHaloExtractKernel(mesh->Nelements,
+     ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
                                  ins->o_U,
@@ -50,7 +50,7 @@ if(mesh->totalHaloPairs>0){
 
     ins->o_vHaloBuffer.copyFrom(recvBuffer); 
 
-    ins->totalHaloScatterKernel(mesh->Nelements,
+    ins->velocityHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
                                     mesh->o_haloElementList,
                                     ins->o_U,
