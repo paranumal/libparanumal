@@ -93,8 +93,8 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	iint e = eo+es; // element in block
 	if(e<Nelements){ 
-	  const iint id  = e*p_Np+n;
-	  const iint idf = 4*(n+ p_Np*e);
+	  const iint id   = e*p_Np+n;
+	  const iint base = n + 4*e*p_Np; //hard coded; 4 fields ,u,v,uold,vold
 
 	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 	  //U at t^(n)
@@ -103,34 +103,36 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 	  // NU at t^(n)
 	  const dfloat nun0 = NU[id];
 	  const dfloat nvn0 = NV[id];
+
 	  // U at t^(n-1) & (n-2)
-	  const dfloat un1  = UO[idf+TUN1ID];
-	  const dfloat vn1  = UO[idf+TVN1ID];
-	  const dfloat un2  = UO[idf+TUN2ID];
-	  const dfloat vn2  = UO[idf+TVN2ID];
+	  const dfloat un1  = UO[base+TUN1ID*p_Np];
+	  const dfloat vn1  = UO[base+TVN1ID*p_Np];
+	  const dfloat un2  = UO[base+TUN2ID*p_Np];
+	  const dfloat vn2  = UO[base+TVN2ID*p_Np];
 	  //NU at t^(n-1) & t^(n-2)
-	  const dfloat nun1 = NO[idf+TUN1ID];
-	  const dfloat nvn1 = NO[idf+TVN1ID];
-	  const dfloat nun2 = NO[idf+TUN2ID];
-	  const dfloat nvn2 = NO[idf+TVN2ID];
+	  const dfloat nun1 = NO[base+TUN1ID*p_Np];
+	  const dfloat nvn1 = NO[base+TVN1ID*p_Np];
+	  const dfloat nun2 = NO[base+TUN2ID*p_Np];
+	  const dfloat nvn2 = NO[base+TVN2ID*p_Np];
           
           // Currently holds -grad(Pr)
 	  const dfloat dpdx = rhsU[id];
 	  const dfloat dpdy = rhsV[id];
 					
 	  //Update NU
-	  NO[idf+TUN1ID]  = nun0;
-	  NO[idf+TVN1ID]  = nvn0;
-	  NO[idf+TUN2ID]  = nun1;
-	  NO[idf+TVN2ID]  = nvn1;
+	  NO[base+TUN1ID*p_Np]  = nun0;
+	  NO[base+TVN1ID*p_Np]  = nvn0;
+	  NO[base+TUN2ID*p_Np]  = nun1;
+	  NO[base+TVN2ID*p_Np]  = nvn1;
 	  // Update U
-          UO[idf+TUN1ID]  = un0;
-	  UO[idf+TVN1ID]  = vn0;
-	  UO[idf+TUN2ID]  = un1;
-	  UO[idf+TVN2ID]  = vn1;				
+      UO[base+TUN1ID*p_Np]  = un0;
+	  UO[base+TVN1ID*p_Np]  = vn0;
+	  UO[base+TUN2ID*p_Np]  = un1;
+	  UO[base+TVN2ID*p_Np]  = vn1;				
 	  // -> -lap(U) + g_o/(dt*nu) = 1/nu*[-grad(P) + sum(a_i*u_i)/dt - sum(b_i*NU_i)]
-          s_rhsU[es][n]   = J*p_inu*(-dpdx + (a0*un0 + a1*un1 + a2*un2)*p_idt - (b0*nun0 + b1*nun1 + b2*nun2));
-          s_rhsV[es][n]   = J*p_inu*(-dpdy + (a0*vn0 + a1*vn1 + a2*vn2)*p_idt - (b0*nvn0 + b1*nvn1 + b2*nvn2)); 
+	  s_rhsU[es][n]   = J*p_inu*(-dpdx + (a0*un0 + a1*un1 + a2*un2)*p_idt - (b0*nun0 + b1*nun1 + b2*nun2));
+	  s_rhsV[es][n]   = J*p_inu*(-dpdy + (a0*vn0 + a1*vn1 + a2*vn2)*p_idt - (b0*nvn0 + b1*nvn1 + b2*nvn2)); 
+	  
 	}
       }
     }
@@ -151,8 +153,6 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 	      rhsu  += M*s_rhsU[es][i];
 	      rhsv  += M*s_rhsV[es][i];
 	    }
-	  // rhsu  = s_rhsU[es][n];
-	  // rhsv  = s_rhsV[es][n];
 	  // Update
 	  const iint id = e*p_Np+n;
 	  rhsU[id] = rhsu;
