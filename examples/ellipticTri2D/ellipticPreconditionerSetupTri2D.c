@@ -299,8 +299,6 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
                   globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
     
-
-    iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
     iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
     iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
     dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));

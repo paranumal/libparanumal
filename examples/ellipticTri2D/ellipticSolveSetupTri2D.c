@@ -69,6 +69,25 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   solver->Nblock = Nblock;
 
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    iint Nlocal = mesh->Nelements*mesh->Np;
+    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
+
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -206,25 +225,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");                                           
-
-  //fill geometric factors in halo
-  if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Nelements*mesh->Np;
-    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
-    
-    // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
-    
-    meshHaloExchange(mesh,
-         mesh->Nvgeo*sizeof(dfloat),
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
-    
-    mesh->o_vgeo =
-      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-  }
 
   //set matrix free function pointers
   if (strstr(options,"MATRIXFREE")) { 
