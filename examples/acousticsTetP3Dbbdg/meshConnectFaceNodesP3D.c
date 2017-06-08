@@ -58,14 +58,14 @@ void meshConnectFaceNodesP3D(mesh3D *mesh){
       iint NP = mesh->N[eP];
 
       for(iint n=0;n<mesh->Nfp[N];++n){
-        iint  idM = mesh->faceNodes[N][f*mesh->Nfp[N]+n] + e*mesh->NpMax;
         iint   id = mesh->Nfaces*mesh->NfpMax*e + f*mesh->NfpMax + n;
+        iint  idM = mesh->faceNodes[N][f*mesh->Nfp[N]+n] + e*mesh->NpMax;
         mesh->vmapM[id] = idM;
       }
 
 
       //Construct node ordering which agrees with neighbour's degree
-      iint id = e*mesh->Nverts;
+      iint id = eP*mesh->Nverts;
 
       dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
       dfloat xe2 = mesh->EX[id+1];
@@ -82,12 +82,12 @@ void meshConnectFaceNodesP3D(mesh3D *mesh){
       dfloat ze3 = mesh->EZ[id+2];
       dfloat ze4 = mesh->EZ[id+3];
       
-      for(iint n=0;n<mesh->Np[NP];++n){ /* for each node */
+      for(iint n=0;n<mesh->Np[N];++n){ /* for each node */
         
         /* (r,s,t) coordinates of interpolation nodes*/
-        dfloat rn = mesh->r[NP][n]; 
-        dfloat sn = mesh->s[NP][n];
-        dfloat tn = mesh->t[NP][n];
+        dfloat rn = mesh->r[N][n]; 
+        dfloat sn = mesh->s[N][n];
+        dfloat tn = mesh->t[N][n];
 
         /* physical coordinate of interpolation node */
         xConnect[n] = -0.5*(1+rn+sn+tn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3 + 0.5*(1+tn)*xe4;
@@ -95,19 +95,19 @@ void meshConnectFaceNodesP3D(mesh3D *mesh){
         zConnect[n] = -0.5*(1+rn+sn+tn)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4;
       }
 
-      for(iint n=0;n<mesh->Nfp[NP];++n){
-        iint  idM = mesh->faceNodes[NP][f*mesh->Nfp[NP]+n]; 
-        dfloat xM = xConnect[idM];
-        dfloat yM = yConnect[idM];
-        dfloat zM = zConnect[idM];
-        iint nP;
+      for(iint n=0;n<mesh->Nfp[N];++n){
+        iint  idM = mesh->faceNodes[N][f*mesh->Nfp[N]+n]; 
+        dfloat xM = mesh->x[e*mesh->NpMax+idM];
+        dfloat yM = mesh->y[e*mesh->NpMax+idM];
+        dfloat zM = mesh->z[e*mesh->NpMax+idM];
+        iint nP=0;
         
         iint  idP = findBestMatch(xM, yM, zM,
-                mesh->Nfp[NP], 
-                mesh->faceNodes[NP]+fP*mesh->Nfp[NP],
-                mesh->x+eP*mesh->NpMax,
-                mesh->y+eP*mesh->NpMax,
-                mesh->z+eP*mesh->NpMax, &nP);
+                mesh->Nfp[N], 
+                mesh->faceNodes[N]+fP*mesh->Nfp[N],
+                xConnect,
+                yConnect,
+                zConnect, &nP);
 
         iint   id = mesh->Nfaces*mesh->NfpMax*e + f*mesh->NfpMax + n;
         mesh->vmapP[id] = idP + eP*mesh->NpMax;

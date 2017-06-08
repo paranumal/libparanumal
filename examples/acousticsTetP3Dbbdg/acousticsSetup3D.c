@@ -119,6 +119,7 @@ void acousticsSetup3D(mesh3D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -278,9 +279,9 @@ void acousticsSetup3D(mesh3D *mesh){
 
     int Nfpp1 =  ((nn+2)*(nn+3))/2;
     int Nfpm1 =  ((nn)*(nn+1))/2;
-    mesh->o_BBLower[nn]     = mesh->device.malloc(mesh->Nfp[nn]*Nfpp1*sizeof(dfloat),mesh->BBLower[nn]);
-    mesh->o_BBRaiseids[nn]  = mesh->device.malloc(mesh->Nfp[nn]*3*sizeof(iint),mesh->BBRaiseids[nn]);
-    mesh->o_BBRaiseVals[nn] = mesh->device.malloc(mesh->Nfp[nn]*3*sizeof(dfloat),mesh->BBRaiseVals[nn]);
+    mesh->o_BBLower[nn]     = mesh->device.malloc(mesh->Nfp[nn]*Nfpm1*sizeof(dfloat),mesh->BBLower[nn]);
+    mesh->o_BBRaiseids[nn]  = mesh->device.malloc(Nfpp1*3*sizeof(iint),mesh->BBRaiseids[nn]);
+    mesh->o_BBRaiseVals[nn] = mesh->device.malloc(Nfpp1*3*sizeof(dfloat),mesh->BBRaiseVals[nn]);
 
     mesh->o_cubInterpT[nn]  = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubInterpT);
     mesh->o_cubProjectT[nn] = mesh->device.malloc(mesh->Np[nn]*mesh->cubNp[nn]*sizeof(dfloat), cubProjectT);
@@ -433,13 +434,16 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->o_MRABhaloIdsP = (occa::memory **) malloc(mesh->MRABNlevels*sizeof(occa::memory*));
 
   for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
-    mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+    if (mesh->MRABNelements[lev])
+      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
-    mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
-         mesh->MRABelementIds[lev]);
+    if (mesh->MRABNhaloElements[lev])
+      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+         mesh->MRABhaloIds[lev]);
+
     mesh->o_MRABelIdsP[lev]   = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
     mesh->o_MRABhaloIdsP[lev] = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
-    for (int p=0;p<=mesh->NMax;p++) {
+    for (int p=1;p<=mesh->NMax;p++) {
       if (mesh->MRABNelP[lev][p]) 
         mesh->o_MRABelIdsP[lev][p]   = mesh->device.malloc(mesh->MRABNelP[lev][p]*sizeof(iint),
          mesh->MRABelIdsP[lev][p]);
@@ -496,7 +500,7 @@ void acousticsSetup3D(mesh3D *mesh){
   kernelInfo.addDefine("p_JWID", JWID);
 
   
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_Lambda2", mesh->Lambda2);
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
@@ -534,7 +538,7 @@ void acousticsSetup3D(mesh3D *mesh){
     newInfo.addDefine("p_Np", mesh->Np[p]);
     newInfo.addDefine("p_Nfp", mesh->Nfp[p]);
     int Nfpp1 = (p+2)*(p+3)/2;
-    int Nfpm1 = (p)*(p+2)/2;
+    int Nfpm1 = (p)*(p+1)/2;
     newInfo.addDefine("p_Nfpp1", Nfpp1);
     newInfo.addDefine("p_Nfpm1", Nfpm1);
     newInfo.addDefine("p_cubNp", mesh->cubNp[p]);

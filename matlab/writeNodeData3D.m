@@ -237,10 +237,10 @@ end
 
 %% write Dmats
 
-D1 = VB\V1; D1(abs(D1)<tol) = 0;
-D2 = VB\V2; D2(abs(D2)<tol) = 0;
-D3 = VB\V3; D3(abs(D3)<tol) = 0;
-D4 = VB\V4; D4(abs(D4)<tol) = 0;
+D1 = VB\V1; D1(abs(D1)< 0.5) = 0; %all the entries are integers
+D2 = VB\V2; D2(abs(D2)< 0.5) = 0;
+D3 = VB\V3; D3(abs(D3)< 0.5) = 0;
+D4 = VB\V4; D4(abs(D4)< 0.5) = 0;
 
 D1ids = zeros(Np,4);
 D2ids = zeros(Np,4);
@@ -257,7 +257,6 @@ for i = 1:Np
     if length(tmp) < 4
         tmp = [tmp zeros(1,4-length(tmp))];
     end
-    i
     D1ids(i,:) = tmp; 
    
     

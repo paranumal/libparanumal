@@ -10,7 +10,7 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
 
   for (int e=0;e<mesh->Nelements;e++){
     mesh->N[e] = N;
-    //if (e%2==0) mesh->N[e] = N-1;
+    if (e%2==0) mesh->N[e] = N-1;
   }
 
   mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
@@ -322,24 +322,25 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     // BB degree raise matrix (sparse format)
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseids[nn] = (iint*) calloc(mesh->Nfp[nn]*3, sizeof(iint));
-    for (int n=0;n<mesh->Nfp[nn]*3;++n){
+    int Nfpp1 = (nn+2)*(nn+3)/2;
+    mesh->BBRaiseids[nn] = (iint*) calloc(Nfpp1*3, sizeof(iint));
+    for (int n=0;n<Nfpp1*3;++n){
       fscanf(fp, iintFormat, mesh->BBRaiseids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseVals[nn] = (dfloat*) calloc(mesh->Nfp[nn]*3, sizeof(dfloat));
-    for (int n=0;n<mesh->Nfp[nn]*3;++n){
+    mesh->BBRaiseVals[nn] = (dfloat*) calloc(Nfpp1*3, sizeof(dfloat));
+    for (int n=0;n<Nfpp1*3;++n){
       fscanf(fp, dfloatFormat, mesh->BBRaiseVals[nn]+n);
     }
 
     //BB degree lower matrix
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    iint NfpPlusOne =  ((nn+2)*(nn+3))/2;
-    mesh->BBLower[nn] = (dfloat*) calloc(NfpPlusOne*mesh->Nfp[nn], sizeof(dfloat));
-    for (int n=0;n<NfpPlusOne*mesh->Nfp[nn];++n){
+    int Nfpm1 = (nn)*(nn+1)/2;
+    mesh->BBLower[nn] = (dfloat*) calloc(Nfpm1*mesh->Nfp[nn], sizeof(dfloat));
+    for (int n=0;n<Nfpm1*mesh->Nfp[nn];++n){
       fscanf(fp, dfloatFormat, mesh->BBLower[nn]+n);
     }
     
