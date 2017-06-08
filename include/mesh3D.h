@@ -115,7 +115,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
 void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
-void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
+void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )

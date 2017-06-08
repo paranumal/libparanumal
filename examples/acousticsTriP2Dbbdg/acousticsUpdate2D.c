@@ -51,8 +51,8 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           vnp[n] = 0.0;
           pnp[n] = 0.0;
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
@@ -65,9 +65,9 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           pnp[n] = 0.0;
           for (iint m=0;m<mesh->Nfp[N];m++){
             iint id = n*mesh->Nfp[N] + m;
-            unp[n] += mesh->BBLower[NP][id]*un[m];
-            vnp[n] += mesh->BBLower[NP][id]*vn[m];
-            pnp[n] += mesh->BBLower[NP][id]*pn[m];
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
@@ -160,8 +160,8 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
           vnp[n] = 0.0;
           pnp[n] = 0.0;
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
@@ -174,9 +174,9 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
           pnp[n] = 0.0;
           for (iint m=0;m<mesh->Nfp[N];m++){
             iint id = n*mesh->Nfp[N] + m;
-            unp[n] += mesh->BBLower[NP][id]*un[m];
-            vnp[n] += mesh->BBLower[NP][id]*vn[m];
-            pnp[n] += mesh->BBLower[NP][id]*pn[m];
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
@@ -290,8 +290,8 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
           vnp[n] = 0.0;
           pnp[n] = 0.0;
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
@@ -304,9 +304,9 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
           pnp[n] = 0.0;
           for (iint m=0;m<mesh->Nfp[N];m++){
             iint id = n*mesh->Nfp[N] + m;
-            unp[n] += mesh->BBLower[NP][id]*un[m];
-            vnp[n] += mesh->BBLower[NP][id]*vn[m];
-            pnp[n] += mesh->BBLower[NP][id]*pn[m];
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
@@ -427,8 +427,8 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
           vnp[n] = 0.0;
           pnp[n] = 0.0;
           for (iint m=0;m<2;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[NP][2*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[NP][2*n+m];
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
@@ -441,9 +441,9 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
           pnp[n] = 0.0;
           for (iint m=0;m<mesh->Nfp[N];m++){
             iint id = n*mesh->Nfp[N] + m;
-            unp[n] += mesh->BBLower[NP][id]*un[m];
-            vnp[n] += mesh->BBLower[NP][id]*vn[m];
-            pnp[n] += mesh->BBLower[NP][id]*pn[m];
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor

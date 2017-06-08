@@ -1,16 +1,6 @@
-#define RXID 0  
-#define RYID 1  
-#define RZID 2  
-#define SXID 3
-#define SYID 4
-#define SZID 5
-#define TXID 6
-#define TYID 7
-#define TZID 8
 
-
-kernel void acousticsVolume3Dbbdg(const iint Nelements,
-          const iint * restrict Elements,
+kernel void acousticsbbdgMRABVolumeP3D(const iint Nelements,
+          const iint * restrict elementIds,
           const dfloat * restrict vgeo,
           const iint * restrict D0ids,
           const iint * restrict D1ids,
@@ -18,7 +8,8 @@ kernel void acousticsVolume3Dbbdg(const iint Nelements,
           const iint * restrict D3ids,
           const dfloat * restrict Dvals,    
           const dfloat * restrict q,
-          dfloat * restrict rhsq){
+          dfloat * restrict rhsq,
+          const iint rhsShift){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -33,7 +24,7 @@ kernel void acousticsVolume3Dbbdg(const iint Nelements,
         iint et = eo+es; // element in block
 
         if(et<Nelements){
-          const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+          const iint id = p_Nfields*(elementIds[et]*p_NpMax + n);
           s_u[es][n] = q[id+0];
           s_v[es][n] = q[id+1];
           s_w[es][n] = q[id+2];
@@ -50,18 +41,18 @@ kernel void acousticsVolume3Dbbdg(const iint Nelements,
   
         iint et = eo+es; // element in block
         if(et<Nelements){
-          const iint e = Elements[et];
+          const iint e = elementIds[et];
 
           // prefetch geometric factors (constant on triangle)
-          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-          const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-          const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-          const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-          const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-          const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
           // compute 'r', 's',  and 't' derivatives of (q_m) at node n
           const iint D0i1 = D0ids[n];
@@ -150,10 +141,11 @@ kernel void acousticsVolume3Dbbdg(const iint Nelements,
           
           // store acoustics rhs contributions from collocation differentiation
           const iint id = p_Nfields*(e*p_NpMax + n);
-          rhsq[id+0] = -dpdx;
-          rhsq[id+1] = -dpdy;
-          rhsq[id+2] = -dpdz;
-          rhsq[id+3] = -dudx-dvdy-dwdz;
+          const iint rhsId = 3*id + p_Nfields*rhsShift;
+          rhsq[rhsId+0] = -dpdx;
+          rhsq[rhsId+1] = -dpdy;
+          rhsq[rhsId+2] = -dpdz;
+          rhsq[rhsId+3] = -dudx-dvdy-dwdz;
         }
       }
     }

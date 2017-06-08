@@ -27,6 +27,7 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
   mesh->Dr = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->Ds = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->Dt = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
+  mesh->MM = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
   mesh->faceNodes = (iint**) malloc((N+1)*(sizeof(iint*)));  
   mesh->LIFT = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
@@ -116,6 +117,12 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     }
     fgets(buf, BUFSIZ, fp); // read comment
 
+    fgets(buf, BUFSIZ, fp); // read comment
+    mesh->MM[nn] = (dfloat*) calloc(mesh->Np[nn]*mesh->Np[nn], sizeof(dfloat));
+    for(int n=0;n<mesh->Np[nn]*mesh->Np[nn];++n){
+      fscanf(fp, dfloatFormat, mesh->MM[nn]+n);
+    }
+    fgets(buf, BUFSIZ, fp); // read comment
 
     fgets(buf, BUFSIZ, fp); // read comment
     mesh->faceNodes[nn] = (iint*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(iint));

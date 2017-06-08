@@ -26,7 +26,7 @@ void boundaryConditions3D(iint bc, dfloat time, dfloat x, dfloat y, dfloat z,
   }
 }
     
-void acousticsSurface3Dbbdg(mesh3D *mesh, dfloat time){
+void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
 
   // temporary storage for flux terms
   dfloat *fluxu = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
@@ -40,102 +40,47 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, dfloat time){
   dfloat *fluxp_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(iint et=0;et<mesh->MRABNelements[lev];++et){
+    iint e = mesh->MRABelementIds[lev][et];
     iint N = mesh->N[e];
+
+    // for all face nodes of all elements
     for (iint f=0;f<mesh->Nfaces;f++){
-      // load element and face number of neighbour
-      iint eP = mesh->EToE[e*mesh->Nfaces+f];
-      iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      iint NP = mesh->N[eP]; 
-      
-      if (eP<0 || fP<0) NP = N; //boundary
-
-      for(iint n=0;n<mesh->Nfp[NP];++n){
-        iint id  = e*mesh->Nfaces*mesh->NfpMax + f*mesh->NfpMax + n;
-        iint idP = mesh->vmapP[id];
-        iint qidP = mesh->Nfields*idP;
-
-        //load qP into flux for now to save space
-        fluxu[n] = mesh->q[qidP+0];
-        fluxv[n] = mesh->q[qidP+1];
-        fluxw[n] = mesh->q[qidP+2];
-        fluxp[n] = mesh->q[qidP+3];
-      }
-      
-      if (NP < N) { 
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          fluxu_copy[f*mesh->Nfp[N] + n] = 0.0;
-          fluxv_copy[f*mesh->Nfp[N] + n] = 0.0;
-          fluxw_copy[f*mesh->Nfp[N] + n] = 0.0;
-          fluxp_copy[f*mesh->Nfp[N] + n] = 0.0;
-          for (iint m=0;m<3;m++){ //apply raise operator sparsly
-            dfloat BBRaiseVal = mesh->BBRaiseVals[N][3*n+m];
-            iint BBRaiseid = mesh->BBRaiseids[N][3*n+m];
-            fluxu_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxu[BBRaiseid];
-            fluxv_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxv[BBRaiseid];
-            fluxw_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxw[BBRaiseid];
-            fluxp_copy[f*mesh->Nfp[N] + n] += BBRaiseVal*fluxp[BBRaiseid];
-          }
-        }
-      } else if (NP > N) { 
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          fluxu_copy[f*mesh->Nfp[N] +n] = 0.0;
-          fluxv_copy[f*mesh->Nfp[N] +n] = 0.0;
-          fluxw_copy[f*mesh->Nfp[N] +n] = 0.0;
-          fluxp_copy[f*mesh->Nfp[N] +n] = 0.0;
-          for (iint m=0;m<mesh->Nfp[NP];m++){
-            iint id = n*mesh->Nfp[NP] + m;
-            fluxu_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxu[m];
-            fluxv_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxv[m];
-            fluxw_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxw[m];
-            fluxp_copy[f*mesh->Nfp[N] + n] += mesh->BBLower[N][id]*fluxp[m];
-          }
-        }
-      } else { //equal order neighbor
-        for (iint n=0;n<mesh->Nfp[N];n++){
-          //load qP into flux_copy to save space
-          fluxu_copy[f*mesh->Nfp[N] + n] = fluxu[n];
-          fluxv_copy[f*mesh->Nfp[N] + n] = fluxv[n];
-          fluxw_copy[f*mesh->Nfp[N] + n] = fluxw[n];
-          fluxp_copy[f*mesh->Nfp[N] + n] = fluxp[n];
-        }
-      }
-    }
-
-    for (iint f=0;f<mesh->Nfaces;f++){
-      // load surface geofactors for this face
-      iint  sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
-      dfloat nx = mesh->sgeo[sid+NXID];
-      dfloat ny = mesh->sgeo[sid+NYID];
-      dfloat nz = mesh->sgeo[sid+NZID];
-      dfloat sJ = mesh->sgeo[sid+SJID];
-      dfloat invJ = mesh->sgeo[sid+IJID];
-
       for(iint n=0;n<mesh->Nfp[N];++n){
+        // load surface geofactors for this face
+        iint  sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
+        dfloat nx = mesh->sgeo[sid+NXID];
+        dfloat ny = mesh->sgeo[sid+NYID];
+        dfloat nz = mesh->sgeo[sid+NZID];
+        dfloat sJ = mesh->sgeo[sid+SJID];
+        dfloat invJ = mesh->sgeo[sid+IJID];
+
         // indices of negative and positive traces of face node
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax +n;
-        iint idM = mesh->vmapM[id];
-        iint qidM = mesh->Nfields*idM;
+        iint idM = id*mesh->Nfields;
+        iint idP = mesh->mapP[id]*mesh->Nfields;
         
         // load negative trace node values of q
-        dfloat uM = mesh->q[qidM+0];
-        dfloat vM = mesh->q[qidM+1];
-        dfloat wM = mesh->q[qidM+2];
-        dfloat pM = mesh->q[qidM+3];
+        dfloat uM = mesh->fQM[idM+0];
+        dfloat vM = mesh->fQM[idM+1];
+        dfloat wM = mesh->fQM[idM+2];
+        dfloat pM = mesh->fQM[idM+3];
 
         // load positive trace node values of q
-        dfloat uP = fluxu_copy[f*mesh->Nfp[N]+n]; 
-        dfloat vP = fluxv_copy[f*mesh->Nfp[N]+n]; 
-        dfloat wP = fluxw_copy[f*mesh->Nfp[N]+n]; 
-        dfloat pP = fluxp_copy[f*mesh->Nfp[N]+n]; 
+        dfloat uP = mesh->fQP[idP+0]; 
+        dfloat vP = mesh->fQP[idP+1]; 
+        dfloat wP = mesh->fQP[idP+2]; 
+        dfloat pP = mesh->fQP[idP+3]; 
 
         // find boundary type
         iint boundaryType = mesh->EToB[e*mesh->Nfaces+f];
-        if(boundaryType>0)
+        if(boundaryType>0) {
+          iint idM = mesh->vmapM[id];
           boundaryConditions3D(boundaryType, time,
                    mesh->x[idM], mesh->y[idM], mesh->z[idM],
                    uM, vM, wM, pM,
                    &uP, &vP,&wP, &pP);
+        }
         
         // compute (q^* - q^-)
         dfloat duS = 0.5*(uP-uM) + mesh->Lambda2*(-nx*(pP-pM));
@@ -181,7 +126,7 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, dfloat time){
 
     // apply lift reduction and accumulate RHS
     for(iint n=0;n<mesh->Np[N];++n){
-      iint id = mesh->Nfields*(mesh->NpMax*e + n);
+      iint id = 3*mesh->Nfields*(mesh->NpMax*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
       
       // load RHS
       dfloat rhsqnu = mesh->rhsq[id+0];
@@ -202,7 +147,7 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, dfloat time){
       }
 
       // store incremented rhs
-      mesh->rhsq[id]   = rhsqnu;
+      mesh->rhsq[id+0] = rhsqnu;
       mesh->rhsq[id+1] = rhsqnv;
       mesh->rhsq[id+2] = rhsqnw;
       mesh->rhsq[id+3] = rhsqnp;
