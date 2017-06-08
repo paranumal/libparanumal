@@ -21,8 +21,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // sprintf(deviceConfig, "mode = Serial");  
 
   // compute samples of q at interpolation nodes
-  
-
  
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
   
@@ -194,13 +192,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   //ins->lambda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
   ins->lambda = (1.0f) / (ins->dt * ins->nu);
-  solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
+  solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
   ins->vSolver        = vSolver;  
   ins->vSolverOptions = vSolverOptions;
-
-   printf("==================PRESSURE SOLVE SETUP========================\n");
+  
+  printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, 0.0, pEToB,kernelInfoP, pSolverOptions); 
+  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pEToB,kernelInfoP, pSolverOptions); 
   ins->pSolver        = pSolver; 
   ins->pSolverOptions = pSolverOptions;
 
@@ -276,7 +274,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
  // =========================================================================== 
-  if(strstr(options, "CUBATURE")){ 
+  if(1) { // strstr(options, "CUBATURE")){ 
     printf("Compiling Advection volume kernel with cubature integration\n");
   ins->advectionCubatureVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
@@ -289,7 +287,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       "insAdvectionCubatureSurface2D",
         kernelInfo);
   }
-  else{
+  if(1) { // else{
 printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",

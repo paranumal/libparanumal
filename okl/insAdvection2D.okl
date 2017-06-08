@@ -271,7 +271,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	iint e = eo+es; // element in block
 	if(e<Nelements){
 
-	 dfloat cUx = 0, cUy = 0;
+	  dfloat cUx = 0, cUy = 0;
 
 	  for(iint i=0;i<p_Np;++i){
 	    dfloat cIni = cubInterpT[n+i*p_cubNp];
@@ -303,7 +303,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 	  dfloat df12dr = 0.f, df12ds = 0.f; 
 	  dfloat df22dr = 0.f, df22ds = 0.f; 
 	  //
-	  occaUnroll(p_Np)
+	  occaUnroll(p_cubNp)
 	    for(iint i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
@@ -348,7 +348,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 					  const dfloat * restrict Uy,
 					  dfloat * restrict NUx,
 					  dfloat * restrict NUy){
-  
+
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
@@ -359,7 +359,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     shared dfloat s_UyP[p_NblockS][p_NfacesNfp];
     shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
     shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
-    
+
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
@@ -375,7 +375,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 	    iint idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
-    
+
 	    // load negative and positive trace node values of velocity
 	    s_UxM[es][n] = Ux[idM];
 	    s_UyM[es][n] = Uy[idM];
@@ -398,7 +398,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 	  if(n<(p_Nfaces*p_intNfp)){
 
 	    const iint face = n/p_intNfp; // find face that owns this integration node
-	    
+
 	    // load surface geofactors for this face
 	    const iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	    const dfloat nx = sgeo[sid+p_NXID];
@@ -415,7 +415,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 	      const iint fm = face*p_Nfp+m;
 	      iUxM += iInm*s_UxM[es][fm];
 	      iUyM += iInm*s_UyM[es][fm];
-	      
+
 	      iUxP += iInm*s_UxP[es][fm];
 	      iUyP += iInm*s_UyP[es][fm];
 	    }
@@ -424,7 +424,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 	    // apply boundary condition
 	    // [ exact to here ]
 	    iint bc = EToB[face+p_Nfaces*e];
-	    
+
 	    if(bc>0){
 	      boundaryConditions2D(bc,
 				   time, 
@@ -445,17 +445,27 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 
 	    // evaluate "flux" terms: LLF
 	    const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
+
+#if 1
 	    s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUxP*iUxP + iUxM*iUxM) 
-					 + ny*(iUxP*iUyP + iUxM*iUyM) 
-					 + unmax*(iUxM-iUxP) ));
+					   + ny*(iUxP*iUyP + iUxM*iUyM) 
+					   + unmax*(iUxM-iUxP) ));
 	    s_iFluxNy[es][n] = sc*(.5f*(   nx*(iUyP*iUxP + iUyM*iUxM) 
-					 + ny*(iUyP*iUyP + iUyM*iUyM) 
-					 + unmax*(iUyM-iUyP) ));
+					   + ny*(iUyP*iUyP + iUyM*iUyM) 
+					   + unmax*(iUyM-iUyP) ));
+#else
+	    s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUxP*iUxP - iUxM*iUxM) 
+					   + ny*(iUxP*iUyP - iUxM*iUyM) 
+					   + unmax*(iUxM-iUxP) ));
+	    s_iFluxNy[es][n] = sc*(.5f*(   nx*(iUyP*iUxP + iUyM*iUxM) 
+					   + ny*(iUyP*iUyP - iUyM*iUyM) 
+					   + unmax*(iUyM-iUyP) ));
+#endif
 	  }
 	}
       }
     }
-    
+
     // wait for all shared memory writes of the previous inner loop to complete
     barrier(localMemFence);
 
@@ -471,16 +481,16 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 	    // prefetch volume rhs
 	    dfloat NUxn = NUx[id];
 	    dfloat NUyn = NUy[id];
-	    
+
 	    for(int m=0;m<p_intNfpNfaces;++m){
 	      // RefMassMatrix^{-1}*cInterp^t*cWeight
-	      
+
 	      const dfloat L = intLIFTT[n+m*p_Np];
-	      
+
 	      NUxn += L*s_iFluxNx[es][m];
 	      NUyn += L*s_iFluxNy[es][m];
 	    }
-	    
+
 	    NUx[id] = NUxn;
 	    NUy[id] = NUyn;
 	  }
