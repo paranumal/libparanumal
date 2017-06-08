@@ -12,27 +12,6 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 	dfloat t = tstep*ins->dt;
 
 
-  // Exctract Halo On Device
-
-	// if(mesh->totalHaloPairs>0){
-	 
- //    ins->helmholtzHaloExtractKernel(mesh->Nelements,
- //                                    mesh->totalHaloPairs,
- //                                    mesh->o_haloElementList,
- //                                    ins->o_Ux,
- //                                    ins->o_Uy,
- //                                    ins->o_Pr,
- //                                    ins->o_totHaloBuffer);
-
- //    // copy extracted halo to HOST 
- //    ins->o_totHaloBuffer.copyTo(sendBuffer);            
- //    // start halo exchange
- //    meshHaloExchangeStart(mesh,
- //                          mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
- //                          sendBuffer,
- //                          recvBuffer);
- //  	}
-
   	// Compute Volume Contribution
    ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
@@ -43,21 +22,10 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                             ins->o_rhsV);
 
 
-  //   // COMPLETE HALO EXCHANGE
-  // if(mesh->totalHaloPairs>0){
-  // // wait for halo data to arrive
-  //   meshHaloExchangeFinish(mesh);
+ 
 
-  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-  //   ins->helmholtzHaloScatterKernel(mesh->Nelements,
-  //                                   mesh->totalHaloPairs,
-  //                                   mesh->o_haloElementList,
-  //                                   ins->o_Ux,
-  //                                   ins->o_Uy,
-  //                                   ins->o_Pr,
-  //                                   ins->o_totHaloBuffer);
-  // }
+ 
 
  // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,

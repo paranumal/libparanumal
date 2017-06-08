@@ -42,15 +42,16 @@ occa::memory o_NU, o_NV, o_rhsU, o_rhsV, o_rhsP;
 occa::memory o_UO, o_NO;
 
 
-occa::memory o_velHaloBuffer, o_prHaloBuffer, o_totHaloBuffer; 
+occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
 
 
-occa::kernel helmholtzHaloExtractKernel;
-occa::kernel helmholtzHaloScatterKernel;
-occa::kernel poissonHaloExtractKernel;
-occa::kernel poissonHaloScatterKernel;
-occa::kernel updateHaloExtractKernel;
-occa::kernel updateHaloScatterKernel;
+occa::kernel totalHaloExtractKernel;
+occa::kernel totalHaloScatterKernel;
+
+occa::kernel velocityHaloExtractKernel;
+occa::kernel velocityHaloScatterKernel;
+occa::kernel pressureHaloExtractKernel;
+occa::kernel pressureHaloScatterKernel;
 
 occa::kernel advectionVolumeKernel;
 occa::kernel advectionSurfaceKernel;

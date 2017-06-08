@@ -307,10 +307,10 @@ for(iint n=0;n<mesh->Np;++n){
 
   // use rank to choose DEVICE
  // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
 
-  // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+   sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
 
 

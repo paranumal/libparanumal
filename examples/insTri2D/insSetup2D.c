@@ -10,6 +10,10 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+
+
+
   
   // use rank to choose DEVICE
   // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
@@ -29,7 +33,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->Nfields  = 1; // Each Velocity Field
   ins->ExplicitOrder = 3; // Order Nonlinear Extrapolation
   
-  mesh->Nfields = ins->NTfields;
+  mesh->Nfields = ins->Nfields;
   
   ins->mesh = mesh;  
   // compute samples of q at interpolation nodes
@@ -49,6 +53,10 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->UO     = (dfloat*) calloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields,sizeof(dfloat));
   ins->NO     = (dfloat*) calloc(mesh->Nelements*mesh->Np*(ins->ExplicitOrder-1)*ins->NVfields,sizeof(dfloat));
   
+
+
+
+
   // Hold UO in [uxn uyn ux(n-1) uy(n-1) ] format
     
   // SET SOLVER OPTIONS 
@@ -141,18 +149,19 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
    
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
+
  
   ins->NtimeSteps = ins->finalTime/ins->dt;
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =100;
+  ins->errorStep =1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   
    // specialization for Boltzmann
 
-  #if 1
 
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
@@ -188,12 +197,17 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       }
     }
   }
+
+
+
   // Use third Order Velocity Solve: full rank should converge for low orders
    printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
   ins->vSolver        = vSolver;  
   ins->vSolverOptions = vSolverOptions;
+
+  #if 1
   
   printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
@@ -202,9 +216,20 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->pSolverOptions = pSolverOptions;
 
 
+ 
+
+  
   free(vEToB);
   free(pEToB);
-  #endif
+
+
+
+
+
+
+
+
+  printf("mesh nfields %d\n", mesh->Nfields);
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -267,9 +292,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   
   // Need to be changed !!!!!
   if(mesh->totalHaloPairs){
-    ins->o_totHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
-    ins->o_velHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
-    ins->o_prHaloBuffer  = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
+    ins->o_tHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
+    ins->o_vHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
+    ins->o_pHaloBuffer  = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
   }
 
  // =========================================================================== 
@@ -341,17 +366,17 @@ printf("Compiling Advection volume kernel with collocation integration\n");
         kernelInfo);  
   
   
-  // printf("Compiling INS Helmholtz Halo Extract Kernel\n");
-  // ins->helmholtzHaloExtractKernel= 
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-  //     "insHelmholtzHaloExtract2D",
-  //       kernelInfo);
+  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
+  ins->totalHaloExtractKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insTotalHaloExtract2D",
+        kernelInfo);
 
-  //  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
-  // ins->helmholtzHaloScatterKernel= 
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-  //     "insHelmholtzHaloScatter2D",
-  //       kernelInfo);  
+   printf("Compiling INS Helmholtz Halo Extract Kernel\n");
+  ins->totalHaloScatterKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insTotalHaloScatter2D",
+        kernelInfo);  
 
 
  // ===========================================================================
@@ -372,17 +397,17 @@ printf("Compiling Advection volume kernel with collocation integration\n");
 
 
 
-  //   printf("Compiling INS Poisson Halo Extract Kernel\n");
-  // ins->poissonHaloExtractKernel= 
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-  //     "insPoissonHaloExtract2D",
-  //       kernelInfo);
+    printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->velocityHaloExtractKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insVelocityHaloExtract2D",
+        kernelInfo);
 
-  //  printf("Compiling INS PoissonHalo Extract Kernel\n");
-  // ins->poissonHaloScatterKernel= 
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-  //     "insPoissonHaloScatter2D",
-  //       kernelInfo);
+   printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->velocityHaloScatterKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insVelocityHaloScatter2D",
+        kernelInfo);
 
 
 // ===========================================================================//
@@ -406,22 +431,25 @@ printf("Compiling Advection volume kernel with collocation integration\n");
         kernelInfo);
 
 
- // printf("Compiling INS Poisson Halo Extract Kernel\n");
- //  ins->updateHaloExtractKernel= 
- //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
- //      "insUpdateHaloExtract2D",
- //        kernelInfo);
+ printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->pressureHaloExtractKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insPressureHaloExtract2D",
+        kernelInfo);
 
- //   printf("Compiling INS PoissonHalo Extract Kernel\n");
- //  ins->updateHaloScatterKernel= 
- //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
- //      "insUpdateHaloScatter2D",
- //        kernelInfo); 
+   printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->pressureHaloScatterKernel= 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+      "insPressureHaloScatter2D",
+        kernelInfo); 
 // ===========================================================================//
 
 
  // INS->mesh = mesh; // No modificatin of mesh after this point 
   ins->mesh       = mesh;
+
+
+  #endif
 
   return ins;
 

@@ -33,8 +33,8 @@ int main(int argc, char **argv){
   // int specify polynomial degree 
   int N = atoi(argv[2]);
   // set up mesh stuff
-  mesh2D *mesh = meshSetupTri2D(argv[1], N);  
-  //
+   mesh2D *mesh = meshSetupTri2D(argv[1], N);  
+  // //
   printf("Setup INS Solver: \n");   
   ins_t *ins = insSetup2D(mesh,options,velSolverOptions,prSolverOptions); 
 
