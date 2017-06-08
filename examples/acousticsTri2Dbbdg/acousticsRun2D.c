@@ -163,12 +163,14 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   //populate the trace buffer fQ
+  dfloat zero = 0.0;
   for (iint l=0; l<mesh->MRABNlevels; l++) 
     #if WADG
+    if (mesh->MRABNelements[l])
       mesh->updateKernel(mesh->MRABNelements[l],
             mesh->o_MRABelementIds[l],
-            0.0,
-            0.,0.,0.,
+            zero,
+            zero,zero,zero,
             mesh->o_cubInterpT,
             mesh->o_cubProjectT,
             mesh->o_c2,
@@ -177,11 +179,12 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
             mesh->o_q,
             mesh->o_fQ,
             mesh->MRABshiftIndex[l]);
-    #else     
+    #else
+    if (mesh->MRABNelements[l])     
       mesh->updateKernel(mesh->MRABNelements[l],
             mesh->o_MRABelementIds[l],
-            0.0,
-            0.,0.,0.,
+            zero,
+            zero,zero,zero,
             mesh->o_vmapM,
             mesh->o_rhsq,
             mesh->o_q,
@@ -221,7 +224,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
       // compute volume contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++)
-        mesh->volumeKernel(mesh->MRABNelements[l],
+        if (mesh->MRABNelements[l])
+          mesh->volumeKernel(mesh->MRABNelements[l],
               mesh->o_MRABelementIds[l],
               mesh->o_vgeo,
               mesh->o_D1ids,
@@ -243,7 +247,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) 
-        mesh->surfaceKernel(mesh->MRABNelements[l],
+        if (mesh->MRABNelements[l])
+          mesh->surfaceKernel(mesh->MRABNelements[l],
                   mesh->o_MRABelementIds[l],
                   mesh->o_sgeo,
                   mesh->o_L0vals,
@@ -290,7 +295,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       
       #if WADG
         for (iint l=0; l<lev; l++) {
-          mesh->updateKernel(mesh->MRABNelements[l],
+          if (mesh->MRABNelements[l])
+            mesh->updateKernel(mesh->MRABNelements[l],
                 mesh->o_MRABelementIds[l],
                 mesh->dt*pow(2,l),
                 a1,a2,a3,
@@ -307,7 +313,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
         }
         if (lev<mesh->MRABNlevels) 
-          mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+          if (mesh->MRABNhaloElements[lev])
+            mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
                 mesh->o_MRABhaloIds[lev],
                 mesh->dt*pow(2,lev-1),
                 b1,b2,b3,
@@ -321,7 +328,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->MRABshiftIndex[lev]);
       #else     
         for (iint l=0; l<lev; l++) {
-          mesh->updateKernel(mesh->MRABNelements[l],
+          if (mesh->MRABNelements[l])
+            mesh->updateKernel(mesh->MRABNelements[l],
                 mesh->o_MRABelementIds[l],
                 mesh->dt*pow(2,l),
                 a1,a2,a3,
@@ -336,7 +344,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         }
 
         if (lev<mesh->MRABNlevels) 
-          mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+          if (mesh->MRABNhaloElements[lev])
+            mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
                 mesh->o_MRABhaloIds[lev],
                 mesh->dt*pow(2,lev-1),
                 b1,b2,b3,
@@ -346,35 +355,42 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->o_fQ,
                 mesh->MRABshiftIndex[lev]);
       #endif
-    }
 
+    }
     // estimate maximum error
     if((tstep%mesh->errorStep)==0){
 
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
+      //mesh->o_rhsq.copyTo(mesh->rhsq);
+      //for (iint e=0;e<mesh->Nelements;e++) {
+      //  for (iint n=0;n<mesh->Np;n++) {
+      //    for (int fld=0;fld<mesh->Nfields;fld++)
+      //      mesh->q[fld+(n+mesh->Np*e)*mesh->Nfields] 
+      //        = mesh->rhsq[3*(n+e*mesh->Np)*mesh->Nfields + mesh->MRABshiftIndex[0]*mesh->Nfields + fld];
+      //  }
+      //}
 
-      //Transform to nodal basis
-      dfloat qtmp[mesh->Nfields*mesh->Np];
-      for (iint e =0;e<mesh->Nelements;e++){
-        iint id = e*mesh->Np*mesh->Nfields;
-        
-        for (iint n=0; n<mesh->Np; n++){
-          qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
-          qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
-          qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
-          mesh->q[id+n*mesh->Nfields+0] = 0.0;
-          mesh->q[id+n*mesh->Nfields+1] = 0.0;
-          mesh->q[id+n*mesh->Nfields+2] = 0.0;
-        }
-        for (iint n=0;n<mesh->Np;n++){
-          for (iint m=0; m<mesh->Np; m++){
-            mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
-            mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
-            mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
-          }
-        }
-      }
+      //dfloat qtmp[mesh->Nfields*mesh->Np];
+      //for (iint e =0;e<mesh->Nelements;e++){
+      //  iint id = e*mesh->Np*mesh->Nfields;
+      //  
+      //  for (iint n=0; n<mesh->Np; n++){
+      //    qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
+      //    qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
+      //    qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
+      //    mesh->q[id+n*mesh->Nfields+0] = 0.0;
+      //    mesh->q[id+n*mesh->Nfields+1] = 0.0;
+      //    mesh->q[id+n*mesh->Nfields+2] = 0.0;
+      //  }
+      //  for (iint n=0;n<mesh->Np;n++){
+      //    for (iint m=0; m<mesh->Np; m++){
+      //      mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
+      //      mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
+      //      mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
+      //    }
+      //  }
+      //}
 
       // do error stuff on host
       acousticsError2D(mesh, mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));

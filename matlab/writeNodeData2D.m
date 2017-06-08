@@ -76,15 +76,6 @@ for n=1:Np
     fprintf(fid, '\n');
 end
 
-FMM = MM*LIFT;
-fprintf(fid, '%% Face Mass matrix\n');
-for n=1:Np
-    for m=1:Nfp*Nfaces
-        fprintf(fid, '%17.15E ', FMM(n,m));
-    end
-    fprintf(fid, '\n');
-end
-
 %% compute equispaced nodes on equilateral triangle
 [plotR,plotS] = EquiNodes2D(N+4);
 
@@ -263,7 +254,7 @@ cubDsT*ones(Ncub,1) - iLIFT*(ns.*sJ)
 %% BB
 
 addpath('./bern')
-tol=1e-6;
+tol=1e-5;
 
 [r s] = Nodes2D(N); [r s] = xytors(r,s);
 Np = (N+1)*(N+2)/2;
@@ -507,6 +498,8 @@ for n=1:Np
     end
     fprintf(fid, '\n');
 end
+
+[r1Dq w1Dq] = JacobiGQ(0,0,N+1);
 
 %degree raise/lower operators along traces
 BBRaise = bern_basis_1D(N+1,r1Dq)\bern_basis_1D(N,r1Dq);
