@@ -4,113 +4,197 @@
 
 
 
-kernel void insHelmholtzHaloExtract2D(const iint Nelments,
+kernel void insTotalHaloExtract2D(const iint Nelments,
                              const iint NhaloElements,
 			                       const iint   * restrict haloElements,
-			                       const dfloat * restrict Ux,
-                             const dfloat * restrict Uy,
-                             const dfloat * restrict Pr,
+			                       const dfloat * restrict U,
+                             const dfloat * restrict V,
+                             const dfloat * restrict P,
 			                             dfloat * restrict haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
       for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
         const iint id    = haloElements[e];
+        const iint base = n+p_NTfields*p_Np*e;
         //
-         haloq[n + UXID + p_NTfields*p_Np*e] = Ux[n + p_Np*id];
-         haloq[n + UYID + p_NTfields*p_Np*e] = Uy[n + p_Np*id];
-         haloq[n + PRID + p_NTfields*p_Np*e] = Pr[n + p_Np*id];
+        haloq[base + 0*p_Np] = U[n + p_Np*id];
+        haloq[base + 1*p_Np] = V[n + p_Np*id];
+        haloq[base + 2*p_Np] = P[n + p_Np*id];
       }
     }
   }
 
 
 
-kernel void insHelmholtzHaloScatter2D(const iint Nelments,
+kernel void insTotalHaloScatter2D(const iint Nelments,
                              const iint NhaloElements,
                              const iint   * restrict haloElements,
-                                   dfloat * restrict Ux,
-                                   dfloat * restrict Uy,
-                                   dfloat * restrict Pr,
+                                   dfloat * restrict U,
+                                   dfloat * restrict V,
+                                   dfloat * restrict P,
                              const dfloat * restrict haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
       for(iint n=0;n<p_Np;++n;inner0){ 
         const iint id    = haloElements[e];
-         Ux[n + p_Np*(Nelments+e)] = haloq[n + UXID + p_NTfields*p_Np*e];
-         Uy[n + p_Np*(Nelments+e)] = haloq[n + UYID + p_NTfields*p_Np*e];
-         Pr[n + p_Np*(Nelments+e)] = haloq[n + PRID + p_NTfields*p_Np*e];
+         const iint base = n+p_NTfields*p_Np*e;
+         U[n + p_Np*(Nelments+e)] = haloq[base + 0*p_Np];
+         V[n + p_Np*(Nelments+e)] = haloq[base + 1*p_Np];
+         P[n + p_Np*(Nelments+e)] = haloq[base + 2*p_Np];
       }
     }
   }
 
 
-
-
-kernel void insPoissonHaloExtract2D(const iint Nelments,
+kernel void insVelocityHaloExtract2D(const iint Nelments,
                              const iint NhaloElements,
                              const iint   * restrict haloElements,
-                             const dfloat * restrict Ux,
-                             const dfloat * restrict Uy,
+                             const dfloat * restrict U,
+                             const dfloat * restrict V,
                                    dfloat * restrict haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
       for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
         const iint id    = haloElements[e];
+        const iint base = n+p_NVfields*p_Np*e;
         //
-         haloq[n + UXID + p_NTfields*p_Np*e]     = Ux[n + p_Np*id];
-         haloq[n + UYID + p_NTfields*p_Np*e]     = Uy[n + p_Np*id];
+        haloq[base + 0*p_Np] = U[n + p_Np*id];
+        haloq[base + 1*p_Np] = V[n + p_Np*id];
       }
     }
   }
 
 
 
-kernel void insPoissonHaloScatter2D(const iint Nelments,
+kernel void insVelocityHaloScatter2D(const iint Nelments,
                              const iint NhaloElements,
                              const iint   * restrict haloElements,
-                                   dfloat * restrict Ux,
-                                   dfloat * restrict Uy,
+                                   dfloat * restrict U,
+                                   dfloat * restrict V,
                              const dfloat * restrict haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
       for(iint n=0;n<p_Np;++n;inner0){ 
         const iint id    = haloElements[e];
-         Ux[n + p_Np*(Nelments+e)] = haloq[n + UXID + p_NTfields*p_Np*e];
-         Uy[n + p_Np*(Nelments+e)] = haloq[n + UYID + p_NTfields*p_Np*e];
+         const iint base = n+p_NVfields*p_Np*e;
+         U[n + p_Np*(Nelments+e)] = haloq[base + 0*p_Np];
+         V[n + p_Np*(Nelments+e)] = haloq[base + 1*p_Np];
+      }
+    }
+  }
+
+
+
+kernel void insPressureHaloExtract2D(const iint Nelments,
+                             const iint NhaloElements,
+                             const iint   * restrict haloElements,
+                             const dfloat * restrict P,
+                                   dfloat * restrict haloq){
+
+  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+      for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
+        const iint id    = haloElements[e];
+        const iint base = n+p_Np*e;
+        //
+        haloq[base + 0*p_Np] = P[n + p_Np*id];
+      }
+    }
+  }
+
+
+
+kernel void insPressureHaloScatter2D(const iint Nelments,
+                             const iint NhaloElements,
+                             const iint   * restrict haloElements,
+                                   dfloat * restrict P,
+                             const dfloat * restrict haloq){
+
+  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+      for(iint n=0;n<p_Np;++n;inner0){ 
+        const iint id    = haloElements[e];
+         const iint base = n+ p_Np*e;
+         P[n + p_Np*(Nelments+e)] = haloq[base + 0*p_Np];
+      }
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+// kernel void insPoissonHaloExtract2D(const iint Nelments,
+//                              const iint NhaloElements,
+//                              const iint   * restrict haloElements,
+//                              const dfloat * restrict Ux,
+//                              const dfloat * restrict Uy,
+//                                    dfloat * restrict haloq){
+
+//   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
+//         const iint id    = haloElements[e];
+//         //
+//          haloq[n + UXID + p_NTfields*p_Np*e]     = Ux[n + p_Np*id];
+//          haloq[n + UYID + p_NTfields*p_Np*e]     = Uy[n + p_Np*id];
+//       }
+//     }
+//   }
+
+
+
+// kernel void insPoissonHaloScatter2D(const iint Nelments,
+//                              const iint NhaloElements,
+//                              const iint   * restrict haloElements,
+//                                    dfloat * restrict Ux,
+//                                    dfloat * restrict Uy,
+//                              const dfloat * restrict haloq){
+
+//   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+//       for(iint n=0;n<p_Np;++n;inner0){ 
+//         const iint id    = haloElements[e];
+//          Ux[n + p_Np*(Nelments+e)] = haloq[n + UXID + p_NTfields*p_Np*e];
+//          Uy[n + p_Np*(Nelments+e)] = haloq[n + UYID + p_NTfields*p_Np*e];
          
-      }
-    }
-  }
+//       }
+//     }
+//   }
 
 
-kernel void insUpdateHaloExtract2D(const iint Nelments,
-                             const iint NhaloElements,
-                             const iint   * restrict haloElements,
-                             const dfloat * restrict q,
-                                   dfloat * restrict haloq){
+// kernel void insUpdateHaloExtract2D(const iint Nelments,
+//                              const iint NhaloElements,
+//                              const iint   * restrict haloElements,
+//                              const dfloat * restrict q,
+//                                    dfloat * restrict haloq){
 
-  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
-      for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
-        const iint id    = haloElements[e];
-         haloq[n + p_Np*e] = q[n + p_Np*id];
-      }
-    }
-  }
+//   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
+//         const iint id    = haloElements[e];
+//          haloq[n + p_Np*e] = q[n + p_Np*id];
+//       }
+//     }
+//   }
 
 
 
-kernel void insUpdateHaloScatter2D(const iint Nelments,
-                                  const iint NhaloElements,
-                                  const iint   * restrict haloElements,
-                                   dfloat * restrict q,
-                             const dfloat * restrict haloq){
+// kernel void insUpdateHaloScatter2D(const iint Nelments,
+//                                   const iint NhaloElements,
+//                                   const iint   * restrict haloElements,
+//                                    dfloat * restrict q,
+//                              const dfloat * restrict haloq){
 
-  for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
-      for(iint n=0;n<p_Np;++n;inner0){ 
-        const iint id    = haloElements[e];
-        q[n + p_Np*(Nelments+e)]  = haloq[n + p_Np*e];
-       //}
-      }
-    }
-  }
+//   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
+//       for(iint n=0;n<p_Np;++n;inner0){ 
+//         const iint id    = haloElements[e];
+//         q[n + p_Np*(Nelments+e)]  = haloq[n + p_Np*e];
+//        //}
+//       }
+//     }
+//   }
 

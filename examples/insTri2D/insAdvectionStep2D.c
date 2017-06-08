@@ -10,26 +10,27 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   dfloat t = tstep*ins->dt;
 
 
-  // Exctract Halo On Device
+  //Exctract Halo On Device
 
-  // if(mesh->totalHaloPairs>0){
+  if(mesh->totalHaloPairs>0){
 	 
-  //    ins->helmholtzHaloExtractKernel(mesh->Nelements,
-  //                                    mesh->totalHaloPairs,
-  //                                    mesh->o_haloElementList,
-  //                                    ins->o_Ux,
-  //                                    ins->o_Uy,
-  //                                    ins->o_Pr,
-  //                                    ins->o_totHaloBuffer);
+     ins->totalHaloExtractKernel(mesh->Nelements,
+                                 mesh->totalHaloPairs,
+                                 mesh->o_haloElementList,
+                                 ins->o_U,
+                                 ins->o_V,
+                                 ins->o_P,
+                                 ins->o_tHaloBuffer);
 
-  //    // copy extracted halo to HOST 
-  //    ins->o_totHaloBuffer.copyTo(sendBuffer);            
-  //    // start halo exchange
-  //    meshHaloExchangeStart(mesh,
-  //                          mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
-  //                          sendBuffer,
-  //                          recvBuffer);
-  //  	}
+     // copy extracted halo to HOST 
+     ins->o_tHaloBuffer.copyTo(sendBuffer);            
+    
+     // start halo exchange
+     meshHaloExchangeStart(mesh,
+                           mesh->Np*(ins->NTfields)*sizeof(dfloat), 
+                           sendBuffer,
+                           recvBuffer);
+   	}
 
   // Compute Volume Contribution
   if(strstr(options, "CUBATURE")){
@@ -56,21 +57,21 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
    
 
-  //   // COMPLETE HALO EXCHANGE
-  // if(mesh->totalHaloPairs>0){
-  // // wait for halo data to arrive
-  //   meshHaloExchangeFinish(mesh);
+    // COMPLETE HALO EXCHANGE
+  if(mesh->totalHaloPairs>0){
+  // wait for halo data to arrive
+    meshHaloExchangeFinish(mesh);
 
-  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
+    ins->o_tHaloBuffer.copyFrom(recvBuffer); 
 
-  //   ins->helmholtzHaloScatterKernel(mesh->Nelements,
-  //                                   mesh->totalHaloPairs,
-  //                                   mesh->o_haloElementList,
-  //                                   ins->o_Ux,
-  //                                   ins->o_Uy,
-  //                                   ins->o_Pr,
-  //                                   ins->o_totHaloBuffer);
-  // }
+    ins->totalHaloScatterKernel(mesh->Nelements,
+                                    mesh->totalHaloPairs,
+                                    mesh->o_haloElementList,
+                                    ins->o_U,
+                                    ins->o_V,
+                                    ins->o_P,
+                                    ins->o_tHaloBuffer);
+  }
 
   // Compute Volume Contribution
   if(strstr(options, "CUBATURE")){
