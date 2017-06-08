@@ -130,7 +130,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.1; 
+  dfloat cfl = 0.25; 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
@@ -146,7 +146,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =1;
+  ins->errorStep =100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   
@@ -189,9 +189,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     }
   }
   // Use third Order Velocity Solve: full rank should converge for low orders
-  //ins->lambda = (11./ 6.) / (ins->dt * ins->nu);
    printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (1.0f) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vEToB, kernelInfoV, vSolverOptions); 
   ins->vSolver        = vSolver;  
   ins->vSolverOptions = vSolverOptions;

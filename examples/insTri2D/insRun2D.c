@@ -26,22 +26,23 @@ void insRun2D(ins_t *ins, char *options){
 
     switch(tstep){
     case 0:
-      ins->a0 = 1.0, ins->b0 = 1.f;
+      ins->a0 = 1.f, ins->b0 = 1.f;
       ins->a1 = 0.f, ins->b1 = 0.f;
-      ins->b2 = 0.f, ins->b2 = 0.f;
+      ins->a2 = 0.f, ins->b2 = 0.f;
       ins->g0 = 1.f; 
       break;
-#if 0
+
     case 1:
-      ins->a0 =  2.0,  ins->b0  = 2.0f;
+      ins->a0 =  2.f,  ins->b0  = 2.0f;
       ins->a1 = -0.5f, ins->b1 = -1.0f;
-      ins->b2 =  0.f,  ins->b2  = 0.f;
+      ins->a2 =  0.f,  ins->b2  = 0.f;
       ins->g0 =  1.5f;
       break;
+#if 1
     case 2:
       ins->a0 =  3.f,       ins->b0  =  3.0f;
       ins->a1 = -1.5f,      ins->b1  = -3.0f;
-      ins->b2 =  1.f/3.f,   ins->b2  =  1.0f;
+      ins->a2 =  1.f/3.f,   ins->b2  =  1.0f;
       ins->g0 =  11.f/6.f; 
       break;
 #endif
@@ -56,7 +57,7 @@ void insRun2D(ins_t *ins, char *options){
     
     if(strstr(options, "REPORT")){
       if((tstep%ins->errorStep)==0){
-	insReport2D(ins, tstep,options);
+	  insReport2D(ins, tstep,options);
       }
     }
   }
