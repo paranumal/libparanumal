@@ -362,35 +362,27 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      //mesh->o_rhsq.copyTo(mesh->rhsq);
-      //for (iint e=0;e<mesh->Nelements;e++) {
-      //  for (iint n=0;n<mesh->Np;n++) {
-      //    for (int fld=0;fld<mesh->Nfields;fld++)
-      //      mesh->q[fld+(n+mesh->Np*e)*mesh->Nfields] 
-      //        = mesh->rhsq[3*(n+e*mesh->Np)*mesh->Nfields + mesh->MRABshiftIndex[0]*mesh->Nfields + fld];
-      //  }
-      //}
 
-      //dfloat qtmp[mesh->Nfields*mesh->Np];
-      //for (iint e =0;e<mesh->Nelements;e++){
-      //  iint id = e*mesh->Np*mesh->Nfields;
-      //  
-      //  for (iint n=0; n<mesh->Np; n++){
-      //    qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
-      //    qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
-      //    qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
-      //    mesh->q[id+n*mesh->Nfields+0] = 0.0;
-      //    mesh->q[id+n*mesh->Nfields+1] = 0.0;
-      //    mesh->q[id+n*mesh->Nfields+2] = 0.0;
-      //  }
-      //  for (iint n=0;n<mesh->Np;n++){
-      //    for (iint m=0; m<mesh->Np; m++){
-      //      mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
-      //      mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
-      //      mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
-      //    }
-      //  }
-      //}
+      dfloat qtmp[mesh->Nfields*mesh->Np];
+      for (iint e =0;e<mesh->Nelements;e++){
+        iint id = e*mesh->Np*mesh->Nfields;
+        
+        for (iint n=0; n<mesh->Np; n++){
+          qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
+          qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
+          qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
+          mesh->q[id+n*mesh->Nfields+0] = 0.0;
+          mesh->q[id+n*mesh->Nfields+1] = 0.0;
+          mesh->q[id+n*mesh->Nfields+2] = 0.0;
+        }
+        for (iint n=0;n<mesh->Np;n++){
+          for (iint m=0; m<mesh->Np; m++){
+            mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
+            mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
+            mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
+          }
+        }
+      }
 
       // do error stuff on host
       acousticsError2D(mesh, mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));

@@ -204,110 +204,111 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   }
 
 
-  if (N<9) { //BB data is only in dat files for N<=8
-    //-------------Berstein Bezier DG stuff added by NC--------------------// 
-    mesh->VB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*mesh->Np;++n){
-      fscanf(fp, dfloatFormat, mesh->VB+n);
-    }
-    fgets(buf, BUFSIZ, fp); 
-    
-    mesh->invVB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*mesh->Np;++n){
-      fscanf(fp, dfloatFormat, mesh->invVB+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
 
-    mesh->D0ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*4;++n){
-      fscanf(fp, iintFormat, mesh->D0ids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->D1ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*4;++n){
-      fscanf(fp, iintFormat, mesh->D1ids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->D2ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*4;++n){
-      fscanf(fp, iintFormat, mesh->D2ids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->D3ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*4;++n){
-      fscanf(fp, iintFormat, mesh->D3ids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->Dvals = (dfloat*) calloc(mesh->Np*4, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*4;++n){
-      fscanf(fp, dfloatFormat, mesh->Dvals+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->L0ids = (iint*) calloc(mesh->Nfp*7, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Nfp*7;++n){
-      fscanf(fp, iintFormat, mesh->L0ids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->L0vals = (dfloat*) calloc(mesh->Nfp*7, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Nfp*7;++n){
-      fscanf(fp, dfloatFormat, mesh->L0vals+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->max_EL_nnz = mesh->Nfp+3;
-    mesh->ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(iint));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
-      fscanf(fp, iintFormat, mesh->ELids+n);
-    }
-    fgets(buf, BUFSIZ, fp);   
-
-    mesh->ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
-      fscanf(fp, dfloatFormat, mesh->ELvals+n);
-    }
-    fgets(buf, BUFSIZ, fp); 
-
-    // BB degree raise matrix (sparse format)
-    fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseids = (iint*) calloc(mesh->Nfp*3, sizeof(iint));
-    for (int n=0;n<mesh->Nfp*3;++n){
-      fscanf(fp, iintFormat, mesh->BBRaiseids+n);
-    }
-    fgets(buf, BUFSIZ, fp); 
-
-    fgets(buf, BUFSIZ, fp); // read comment
-    mesh->BBRaiseVals = (dfloat*) calloc(mesh->Nfp*3, sizeof(dfloat));
-    for (int n=0;n<mesh->Nfp*3;++n){
-      fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
-    }
-    fgets(buf, BUFSIZ, fp); 
-
-    //BB degree lower matrix
-    fgets(buf, BUFSIZ, fp); // read comment
-    iint NfpPlusOne =  ((N+2)*(N+3))/2;
-    mesh->BBLower = (dfloat*) calloc(NfpPlusOne*mesh->Nfp, sizeof(dfloat));
-    for (int n=0;n<NfpPlusOne*mesh->Nfp;++n){
-      fscanf(fp, dfloatFormat, mesh->BBLower+n);
-    }
-    fgets(buf, BUFSIZ, fp); // read comment
+  //-------------Berstein Bezier DG stuff added by NC--------------------// 
+  mesh->VB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->VB+n);
   }
+  fgets(buf, BUFSIZ, fp); 
+  
+  mesh->invVB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->invVB+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->D0ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*4;++n){
+    fscanf(fp, iintFormat, mesh->D0ids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->D1ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*4;++n){
+    fscanf(fp, iintFormat, mesh->D1ids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->D2ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*4;++n){
+    fscanf(fp, iintFormat, mesh->D2ids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->D3ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*4;++n){
+    fscanf(fp, iintFormat, mesh->D3ids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->Dvals = (dfloat*) calloc(mesh->Np*4, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*4;++n){
+    fscanf(fp, dfloatFormat, mesh->Dvals+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->L0ids = (iint*) calloc(mesh->Nfp*7, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Nfp*7;++n){
+    fscanf(fp, iintFormat, mesh->L0ids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->L0vals = (dfloat*) calloc(mesh->Nfp*7, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Nfp*7;++n){
+    fscanf(fp, dfloatFormat, mesh->L0vals+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->max_EL_nnz = mesh->Nfp+3;
+  mesh->ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(iint));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
+    fscanf(fp, iintFormat, mesh->ELids+n);
+  }
+  fgets(buf, BUFSIZ, fp);   
+
+  mesh->ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
+    fscanf(fp, dfloatFormat, mesh->ELvals+n);
+  }
+  fgets(buf, BUFSIZ, fp); 
+
+  // BB degree raise matrix (sparse format)
+  fgets(buf, BUFSIZ, fp); // read comment
+  int Nfpp1 = (mesh->N+2)*(mesh->N+3)/2;
+  mesh->BBRaiseids = (iint*) calloc(Nfpp1*3, sizeof(iint));
+  for (int n=0;n<Nfpp1*3;++n){
+    fscanf(fp, iintFormat, mesh->BBRaiseids+n);
+  }
+  fgets(buf, BUFSIZ, fp); 
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->BBRaiseVals = (dfloat*) calloc(Nfpp1*3, sizeof(dfloat));
+  for (int n=0;n<Nfpp1*3;++n){
+    fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
+  }
+  fgets(buf, BUFSIZ, fp); 
+
+  //BB degree lower matrix
+  fgets(buf, BUFSIZ, fp); // read comment
+  iint Nfpm1 =  (mesh->N)*(mesh->N+1)/2;
+  mesh->BBLower = (dfloat*) calloc(Nfpm1*mesh->Nfp, sizeof(dfloat));
+  for (int n=0;n<Nfpm1*mesh->Nfp;++n){
+    fscanf(fp, dfloatFormat, mesh->BBLower+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
 
 #if 0
   for(int n=0;n<mesh->cubNp;++n){

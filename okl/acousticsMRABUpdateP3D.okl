@@ -116,24 +116,24 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
           }
         } else if (NP < p_N) { 
           if (id < p_Nfpm1) {
-            s_unp[f*p_Nfpm1+id] = 0.0;
-            s_vnp[f*p_Nfpm1+id] = 0.0;
-            s_wnp[f*p_Nfpm1+id] = 0.0;
-            s_pnp[f*p_Nfpm1+id] = 0.0;
+            s_unp[f*p_Nfpp1+id] = 0.0;
+            s_vnp[f*p_Nfpp1+id] = 0.0;
+            s_wnp[f*p_Nfpp1+id] = 0.0;
+            s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
             for (iint m=0;m<p_Nfp;m++){
-              s_unp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
-              s_vnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
-              s_wnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
-              s_pnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
+              s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
+              s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
+              s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
+              s_pnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
             }
 
             //write positive trace
             const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
-            fQP[qid+0] = s_unp[f*p_Nfpm1+id];
-            fQP[qid+1] = s_vnp[f*p_Nfpm1+id];
-            fQP[qid+2] = s_wnp[f*p_Nfpm1+id];
-            fQP[qid+3] = s_pnp[f*p_Nfpm1+id];
+            fQP[qid+0] = s_unp[f*p_Nfpp1+id];
+            fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
+            fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
+            fQP[qid+3] = s_pnp[f*p_Nfpp1+id];
           }
         } else { //equal order neighbor
           //write positive trace
@@ -258,24 +258,24 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
           }
         } else if (NP < p_N) { 
           if (id < p_Nfpm1) {
-            s_unp[f*p_Nfpm1+id] = 0.0;
-            s_vnp[f*p_Nfpm1+id] = 0.0;
-            s_wnp[f*p_Nfpm1+id] = 0.0;
-            s_pnp[f*p_Nfpm1+id] = 0.0;
+            s_unp[f*p_Nfpp1+id] = 0.0;
+            s_vnp[f*p_Nfpp1+id] = 0.0;
+            s_wnp[f*p_Nfpp1+id] = 0.0;
+            s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
             for (iint m=0;m<p_Nfp;m++){
-              s_unp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
-              s_vnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
-              s_wnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
-              s_pnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
+              s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
+              s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
+              s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
+              s_pnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
             }
 
             //write positive trace
             const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
-            fQP[qid+0] = s_unp[f*p_Nfpm1+id];
-            fQP[qid+1] = s_vnp[f*p_Nfpm1+id];
-            fQP[qid+2] = s_wnp[f*p_Nfpm1+id];
-            fQP[qid+3] = s_pnp[f*p_Nfpm1+id];
+            fQP[qid+0] = s_unp[f*p_Nfpp1+id];
+            fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
+            fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
+            fQP[qid+3] = s_pnp[f*p_Nfpp1+id];
           }
         } else { //equal order neighbor
           //write positive trace
@@ -475,24 +475,24 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
           }
         } else if (NP < p_N) { 
           if (id < p_Nfpm1) {
-            s_unp[f*p_Nfpm1+id] = 0.0;
-            s_vnp[f*p_Nfpm1+id] = 0.0;
-            s_wnp[f*p_Nfpm1+id] = 0.0;
-            s_pnp[f*p_Nfpm1+id] = 0.0;
+            s_unp[f*p_Nfpp1+id] = 0.0;
+            s_vnp[f*p_Nfpp1+id] = 0.0;
+            s_wnp[f*p_Nfpp1+id] = 0.0;
+            s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
             for (iint m=0;m<p_Nfp;m++){
-              s_unp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
-              s_vnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
-              s_wnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
-              s_pnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
+              s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
+              s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
+              s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
+              s_pnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
             }
 
             //write positive trace
             const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
-            fQP[qid+0] = s_unp[f*p_Nfpm1+id];
-            fQP[qid+1] = s_vnp[f*p_Nfpm1+id];
-            fQP[qid+2] = s_wnp[f*p_Nfpm1+id];
-            fQP[qid+3] = s_pnp[f*p_Nfpm1+id];
+            fQP[qid+0] = s_unp[f*p_Nfpp1+id];
+            fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
+            fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
+            fQP[qid+3] = s_pnp[f*p_Nfpp1+id];
           }
         } else { //equal order neighbor
           //write positive trace
@@ -681,24 +681,24 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
           }
         } else if (NP < p_N) { 
           if (id < p_Nfpm1) {
-            s_unp[f*p_Nfpm1+id] = 0.0;
-            s_vnp[f*p_Nfpm1+id] = 0.0;
-            s_wnp[f*p_Nfpm1+id] = 0.0;
-            s_pnp[f*p_Nfpm1+id] = 0.0;
+            s_unp[f*p_Nfpp1+id] = 0.0;
+            s_vnp[f*p_Nfpp1+id] = 0.0;
+            s_wnp[f*p_Nfpp1+id] = 0.0;
+            s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
             for (iint m=0;m<p_Nfp;m++){
-              s_unp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
-              s_vnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
-              s_wnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
-              s_pnp[f*p_Nfpm1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
+              s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
+              s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
+              s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
+              s_pnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_pn[f*p_Nfp + m];
             }
 
             //write positive trace
             const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
-            fQP[qid+0] = s_unp[f*p_Nfpm1+id];
-            fQP[qid+1] = s_vnp[f*p_Nfpm1+id];
-            fQP[qid+2] = s_wnp[f*p_Nfpm1+id];
-            fQP[qid+3] = s_pnp[f*p_Nfpm1+id];
+            fQP[qid+0] = s_unp[f*p_Nfpp1+id];
+            fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
+            fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
+            fQP[qid+3] = s_pnp[f*p_Nfpp1+id];
           }
         } else { //equal order neighbor
           //write positive trace

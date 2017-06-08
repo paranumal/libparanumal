@@ -237,10 +237,12 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
-    mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+    if (mesh->MRABNelements[lev])
+      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
-    mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
-         mesh->MRABelementIds[lev]);
+    if (mesh->MRABNhaloElements[lev])
+      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+         mesh->MRABhaloIds[lev]);
   }
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
