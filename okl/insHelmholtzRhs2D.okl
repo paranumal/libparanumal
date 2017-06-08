@@ -39,23 +39,33 @@ void boundaryConditionsIpdg2D(const iint bc,
     *vyB = 0.f;
   }
   if(bc==2){ // Inflow 
+    #if 0	     
     *uB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
     *vB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-
+    #else
+    *uB = y*(4.5f-y)/(2.25f*2.25f);
+    *vB = 0;
+    #endif
     *uxB = 0.f; 
     *uyB = 0.f; 
     *vxB = 0.f;
     *vyB = 0.f; 
   }
   if(bc==3){ // Outflow 
-    // do nothing 
+     // do nothing 
     *uB = 0.f; 
     *vB = 0.f; 
-
+     #if 0
     *uxB = -lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
     *uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
     *vxB =  lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI);
     *vyB =  lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
+    #else
+    *uxB = 0.f; 
+    *uyB = 0.f; 
+    *vxB = 0.f;
+    *vyB = 0.f;
+    #endif
    
   }
 }
