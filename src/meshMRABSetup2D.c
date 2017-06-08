@@ -39,7 +39,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //compute the level of each element
   mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
-  iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+  iint *MRABsendBuffer;
   for(iint lev=0; lev<mesh->MRABNlevels; lev++){             
     dfloat dtlev = dtGmin*pow(2,lev);   
     for(iint e=0;e<mesh->Nelements;++e){
@@ -49,6 +49,9 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
   }
 
   //enforce one level difference between neighbours
+  if (mesh->totalHaloPairs) 
+    MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+  
   for (iint lev=0; lev < mesh->MRABNlevels; lev++){
     if (mesh->totalHaloPairs) 
       meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
@@ -73,6 +76,8 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
   int localNlevels = mesh->MRABNlevels;
   MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
   mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
+
+  printf("MRABNlevels %d \n", mesh->MRABNlevels);
 
   //now we need to perform a weighted repartitioning of the mesh to optimize MRAB
   if (size>1) {

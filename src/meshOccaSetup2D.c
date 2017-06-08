@@ -29,12 +29,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     }
   }
 
-  dfloat *FMMT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
-      FMMT[n+m*mesh->Np] = mesh->FMM[n*mesh->Nfp*mesh->Nfaces+m];
-    }
-  }
   // build volume cubature matrix transposes
   iint cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
   dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
@@ -248,10 +242,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_MM =
       mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 			  mesh->MM);
-
-    mesh->o_FMMT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-      FMMT);  
     
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),

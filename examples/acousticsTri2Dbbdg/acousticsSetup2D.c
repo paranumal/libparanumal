@@ -48,7 +48,7 @@ void acousticsSetup2D(mesh2D *mesh){
   }
 
   //use dt on each element to setup MRAB
-  int maxLevels = 10;
+  int maxLevels = 100;
   meshMRABSetup2D(mesh,EtoDT,maxLevels);
 
 
@@ -172,7 +172,7 @@ void acousticsSetup2D(mesh2D *mesh){
   #endif
 
   // errorStep
-  mesh->errorStep = 10;
+  mesh->errorStep = 100;
 
   if (rank==0) {
     printf("hmin = %g\n", hmin);
@@ -188,13 +188,13 @@ void acousticsSetup2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
   // generic occa device set up
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  //reallocate rhsq for MRAB
   mesh->o_rhsq.free();
   mesh->o_rhsq =
     mesh->device.malloc(3*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
@@ -216,10 +216,12 @@ void acousticsSetup2D(mesh2D *mesh){
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
-    mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+    if (mesh->MRABNelements[lev])
+      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
-    mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
-         mesh->MRABelementIds[lev]);
+    if (mesh->MRABNhaloElements[lev])
+      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+         mesh->MRABhaloIds[lev]);
   }
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -234,7 +236,7 @@ void acousticsSetup2D(mesh2D *mesh){
   int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_Lambda2", mesh->Lambda2);
 
 
   mesh->volumeKernel =

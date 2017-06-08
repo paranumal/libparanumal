@@ -68,7 +68,6 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   
   fgets(buf, BUFSIZ, fp); // read comment
-
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
     fscanf(fp, iintFormat, mesh->faceNodes+n);
