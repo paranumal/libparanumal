@@ -12,25 +12,24 @@ solver_t *solver = ins->pSolver;
 dfloat t = tstep*ins->dt + ins->dt;
 
 
-//Exctract Halo On Device
+if(mesh->totalHaloPairs>0){
+   
+     ins->velocityHaloExtractKernel(mesh->Nelements,
+                                 mesh->totalHaloPairs,
+                                 mesh->o_haloElementList,
+                                 ins->o_U,
+                                 ins->o_V,
+                                 ins->o_vHaloBuffer);
 
-	// if(mesh->totalHaloPairs>0){
-	 
- //    ins->poissonHaloExtractKernel(mesh->Nelements,
- //                           mesh->totalHaloPairs,
- //                           mesh->o_haloElementList,
- //                           ins->o_Ux,
- //                           ins->o_Uy,
- //                           ins->o_velHaloBuffer);
-
- //    // copy extracted halo to HOST 
- //    ins->o_velHaloBuffer.copyTo(sendBuffer);            
- //    // start halo exchange
- //    meshHaloExchangeStart(mesh,
- //                          mesh->Np*ins->NVfields*sizeof(dfloat), 
- //                          sendBuffer,
- //                          recvBuffer);
- //  	}
+     // copy extracted halo to HOST 
+     ins->o_vHaloBuffer.copyTo(sendBuffer);            
+    
+     // start halo exchange
+     meshHaloExchangeStart(mesh,
+                           mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                           sendBuffer,
+                           recvBuffer);
+    }
 
 
 
@@ -44,20 +43,20 @@ dfloat t = tstep*ins->dt + ins->dt;
                                  ins->o_rhsP);
 
 
-  //   // COMPLETE HALO EXCHANGE
-  // if(mesh->totalHaloPairs>0){
-  // // wait for halo data to arrive
-  //   meshHaloExchangeFinish(mesh);
+     // COMPLETE HALO EXCHANGE
+  if(mesh->totalHaloPairs>0){
+  // wait for halo data to arrive
+    meshHaloExchangeFinish(mesh);
 
-  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
+    ins->o_vHaloBuffer.copyFrom(recvBuffer); 
 
-  //   ins->poissonHaloScatterKernel(mesh->Nelements,
-  //                                 mesh->totalHaloPairs,
-  //                                 mesh->o_haloElementList,
-  //                                 ins->o_Ux,
-  //                                 ins->o_Uy,
-  //                                 ins->o_velHaloBuffer);
-  // }
+    ins->velocityHaloScatterKernel(mesh->Nelements,
+                                    mesh->totalHaloPairs,
+                                    mesh->o_haloElementList,
+                                    ins->o_U,
+                                    ins->o_V,
+                                    ins->o_vHaloBuffer);
+  }
 
 
    //computes div u^(n+1) surface term
@@ -87,31 +86,33 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 
 
+  #if 0 // No time dependent BC
+  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                mesh->o_sgeo,
+                                mesh->o_vgeo,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_LIFTT,
+                                mesh->o_MM,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                mesh->o_EToB,
+                                t,
+                                ins->dt,
+                                ins->tau,
+                                mesh->o_x,
+                                mesh->o_y,
+                                ins->o_P,
+                                ins->o_rhsP
+                                );
 
-  // ins->poissonRhsIpdgBCKernel(mesh->Nelements,
-  //                               mesh->o_sgeo,
-  //                               mesh->o_vgeo,
-  //                               mesh->o_DrT,
-  //                               mesh->o_DsT,
-  //                               mesh->o_FMMT,
-  //                               mesh->o_vmapM,
-  //                               mesh->o_vmapP,
-  //                               mesh->o_EToB,
-  //                               t,
-  //                               ins->dt,
-  //                               ins->tau,
-  //                               mesh->o_x,
-  //                               mesh->o_y,
-  //                               ins->o_Pr,
-  //                               ins->o_rhsPr
-  //                               );
+
+  #endif
 
 
 
-// dfloat *Pr2    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
 
-// ins->o_rhsPr.copyTo(ins->Pr);
-//o_PrI.copyFrom(Pr2);
+printf("Solving for P \n");
 ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);
 
    

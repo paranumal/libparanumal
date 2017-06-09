@@ -3,7 +3,7 @@
 #include <math.h>
 #include <mpi.h>
 #include "mesh2D.h"
-#include "ellipticTri2D.h"
+#include "ellipticQuad2D.h"
 
 #define UXID 0
 #define UYID 1
@@ -11,7 +11,7 @@
 
 typedef struct {
 
-mesh_t *mesh;
+mesh_t   *mesh;
 solver_t *vSolver;
 solver_t *pSolver;
 
@@ -42,16 +42,15 @@ occa::memory o_NU, o_NV, o_rhsU, o_rhsV, o_rhsP;
 occa::memory o_UO, o_NO;
 
 
-occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
+occa::memory o_velHaloBuffer, o_prHaloBuffer, o_totHaloBuffer; 
 
 
-occa::kernel totalHaloExtractKernel;
-occa::kernel totalHaloScatterKernel;
-
-occa::kernel velocityHaloExtractKernel;
-occa::kernel velocityHaloScatterKernel;
-occa::kernel pressureHaloExtractKernel;
-occa::kernel pressureHaloScatterKernel;
+occa::kernel helmholtzHaloExtractKernel;
+occa::kernel helmholtzHaloScatterKernel;
+occa::kernel poissonHaloExtractKernel;
+occa::kernel poissonHaloScatterKernel;
+occa::kernel updateHaloExtractKernel;
+occa::kernel updateHaloScatterKernel;
 
 occa::kernel advectionVolumeKernel;
 occa::kernel advectionSurfaceKernel;
@@ -70,13 +69,15 @@ occa::kernel helmholtzRhsIpdgBCKernel;
 occa::kernel poissonRhsForcingKernel;
 occa::kernel poissonRhsIpdgBCKernel;
 
+// occa::kernel updateVolumeKernel;
+// occa::kernel updateSurfaceKernel;
 occa::kernel updateUpdateKernel;
 
   
 }ins_t;
 
 
-ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions);
+ins_t *insSetupQuad2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 

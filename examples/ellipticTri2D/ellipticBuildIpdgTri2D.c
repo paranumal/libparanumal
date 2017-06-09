@@ -10,7 +10,7 @@ typedef struct{
 
 } nonZero_t;
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -22,10 +22,18 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
 		rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
   for(iint r=0;r<size;++r){
-    rankStarts[r+1] = rankStarts[r]+(rankNelements[r])*mesh->Np;
+    rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   
   /* do a halo exchange of local node numbers */
+  iint *globalIds = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
+  for (iint e =0;e<mesh->Nelements;e++) 
+    globalIds[e] = e + rankStarts[rankM];
+  if (mesh->totalHaloPairs) {
+    iint *idSendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements);
+    free(idSendBuffer);
+  }
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
@@ -33,7 +41,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
-  dfloat tau = 2; // hackery
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -139,7 +146,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
 	                        +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv; 
+        dfloat penalty = tau*hinv; // tau*(mesh->N+1)*(mesh->N+1)*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
 
@@ -185,8 +192,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
             // remote info
             iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
             if (rankP<0) rankP = rankM;
-            (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-            (*A)[nnz].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
+            (*A)[nnz].row = n + globalIds[eM]*mesh->Np;
+            (*A)[nnz].col = m + globalIds[eP]*mesh->Np;
             (*A)[nnz].val = AnmP;
             (*A)[nnz].ownerRank = rankM;
             ++nnz;
@@ -200,8 +207,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat lambda, iint *EToB, nonZero_t *
         dfloat Anm = BM[m+n*mesh->Np];
 
         if(fabs(Anm)>tol){
-          (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-          (*A)[nnz].col = m + eM*mesh->Np + rankStarts[rankM]; // this is wrong
+          (*A)[nnz].row = n + globalIds[eM]*mesh->Np;
+          (*A)[nnz].col = m + globalIds[eM]*mesh->Np;
           (*A)[nnz].val = Anm;
           (*A)[nnz].ownerRank = rankM;
           ++nnz;

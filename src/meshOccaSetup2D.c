@@ -242,7 +242,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_MM =
       mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 			  mesh->MM);
-    
+
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
 			  mesh->vgeo);

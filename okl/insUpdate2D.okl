@@ -33,7 +33,11 @@ void boundaryConditionsRhs2D(const iint bc,
    //*prB = prM; // Do nothing
   }
   if(bc==3){ // Outflow 
-  	 dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lamda*x));
+  	 #if 0	     
+    dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lamda*x));
+    #else
+    dfloat prbc = 0;
+     #endif
   	 *prB = 2.f*prbc - prM;   //Dirichlet for pressure
   }
 }
@@ -59,6 +63,7 @@ kernel void insUpdateUpdate2D(const iint Nelements,
        V[id] -= dt/g0 * rhsV[id]; 
        // Get Pressure from Pressure Increament
        Pr[id] += PrI[id]; 
+       
 		}
 	}
 }

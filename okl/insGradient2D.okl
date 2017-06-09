@@ -37,8 +37,11 @@ void boundaryConditions2D(const iint bc,
     *prB = prM; // Neumann for Pressure // do nothing
   }
   if(bc==3){ // Outflow 
-    
+   #if 0 
    dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
+   #else
+   dfloat prbc = 0.f; 
+   #endif
    *prB = 2.0f* prbc - prM ; //Dirichlet for pressure in strong form: 2*pr_D-prM
   }
 }

@@ -12,6 +12,27 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 	dfloat t = tstep*ins->dt;
 
 
+  // Exctract Halo On Device
+
+	// if(mesh->totalHaloPairs>0){
+	 
+ //    ins->helmholtzHaloExtractKernel(mesh->Nelements,
+ //                                    mesh->totalHaloPairs,
+ //                                    mesh->o_haloElementList,
+ //                                    ins->o_Ux,
+ //                                    ins->o_Uy,
+ //                                    ins->o_Pr,
+ //                                    ins->o_totHaloBuffer);
+
+ //    // copy extracted halo to HOST 
+ //    ins->o_totHaloBuffer.copyTo(sendBuffer);            
+ //    // start halo exchange
+ //    meshHaloExchangeStart(mesh,
+ //                          mesh->Np*(ins->NTfields)*sizeof(dfloat), // pressure also 
+ //                          sendBuffer,
+ //                          recvBuffer);
+ //  	}
+
   	// Compute Volume Contribution
    ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
@@ -22,10 +43,21 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                             ins->o_rhsV);
 
 
- 
+  //   // COMPLETE HALO EXCHANGE
+  // if(mesh->totalHaloPairs>0){
+  // // wait for halo data to arrive
+  //   meshHaloExchangeFinish(mesh);
 
+  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
- 
+  //   ins->helmholtzHaloScatterKernel(mesh->Nelements,
+  //                                   mesh->totalHaloPairs,
+  //                                   mesh->o_haloElementList,
+  //                                   ins->o_Ux,
+  //                                   ins->o_Uy,
+  //                                   ins->o_Pr,
+  //                                   ins->o_totHaloBuffer);
+  // }
 
  // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
@@ -44,28 +76,33 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                               ins->o_rhsV);
 
 
- iint stokesSteps = 10;
-  dfloat sc = (tstep>=stokesSteps) ? 1: 0; // switch off advection for first steps
 
-  // compute all forcing i.e. f^(n+1) - grad(Pr)
+
+
+
+
+
+
+
+ // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->helmholtzRhsForcingKernel(mesh->Nelements,
-         mesh->o_vgeo,
-         mesh->o_MM,
-         ins->dt, 
-         ins->a0,
-         ins->a1,
-         ins->a2,
-         sc*ins->b0,
-         sc*ins->b1,
-         sc*ins->b2,
-         ins->o_U,
-         ins->o_V,
-         ins->o_UO,
-         ins->o_NU,
-         ins->o_NV,
-         ins->o_NO,
-         ins->o_rhsU,
-         ins->o_rhsV);
+                              mesh->o_vgeo,
+                              mesh->o_MM,
+                              ins->dt,	
+                              ins->a0,
+                              ins->a1,
+                              ins->a2,
+                              ins->b0,
+                              ins->b1,
+                              ins->b2,
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_UO,
+                              ins->o_NU,
+                              ins->o_NV,
+                              ins->o_NO,
+                              ins->o_rhsU,
+                              ins->o_rhsV);
 
 
 
