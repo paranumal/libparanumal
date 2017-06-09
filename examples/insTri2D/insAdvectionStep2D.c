@@ -6,20 +6,17 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			char   * options){
 
   mesh2D *mesh = ins->mesh; 
-
   dfloat t = tstep*ins->dt;
 
-
   //Exctract Halo On Device
-
   if(mesh->totalHaloPairs>0){
-	 
      ins->totalHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
                                  ins->o_U,
                                  ins->o_V,
                                  ins->o_P,
+                                 ins->index,
                                  ins->o_tHaloBuffer);
 
      // copy extracted halo to HOST 
@@ -30,7 +27,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                            mesh->Np*(ins->NTfields)*sizeof(dfloat), 
                            sendBuffer,
                            recvBuffer);
-   	}
+  }
 
   // Compute Volume Contribution
   if(strstr(options, "CUBATURE")){
@@ -43,8 +40,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				       ins->o_V,
 				       ins->o_NU,
 				       ins->o_NV);
-  }
-  else{
+  } else {
     ins->advectionVolumeKernel(mesh->Nelements,
 			       mesh->o_vgeo,
 			       mesh->o_DrT,
@@ -55,15 +51,24 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			       ins->o_NV);
   }
 
-   
+  // Compute Volume Contribution
+  ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            ins->b0,
+                            ins->b1,
+                            ins->b2,
+                            ins->o_P,  
+                            ins->o_Px,
+                            ins->o_Py);
 
-    // COMPLETE HALO EXCHANGE
+  // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
+
     meshHaloExchangeFinish(mesh);
 
     ins->o_tHaloBuffer.copyFrom(recvBuffer); 
-
     ins->totalHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
                                     mesh->o_haloElementList,
@@ -73,9 +78,8 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                     ins->o_tHaloBuffer);
   }
 
-  // Compute Volume Contribution
+
   if(strstr(options, "CUBATURE")){
-    // Compute Surface Conribution
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
 					mesh->o_sgeo,
 					mesh->o_intInterpT,
@@ -90,9 +94,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 					ins->o_V,
 					ins->o_NU,
 					ins->o_NV);
-  }
-  else{
-    // Compute Surface Conribution
+  } else {
     ins->advectionSurfaceKernel(mesh->Nelements,
 				mesh->o_sgeo,
 				mesh->o_LIFTT,
@@ -108,9 +110,21 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				ins->o_NV);
   }
 
-
-
-
-
- 
+  // Compute Surface Conribution
+  ins->gradientSurfaceKernel(mesh->Nelements,
+                            mesh->o_sgeo,
+                            mesh->o_LIFTT,
+                            mesh->o_vmapM,
+                            mesh->o_vmapP,
+                            mesh->o_EToB,
+                            mesh->o_x,
+                            mesh->o_y,
+                            t,
+                            ins->dt, 
+                            ins->b0,
+                            ins->b1,
+                            ins->b2,
+                            ins->o_P,
+                            ins->o_Px,
+                            ins->o_Py);
 }

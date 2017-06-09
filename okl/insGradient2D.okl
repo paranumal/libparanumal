@@ -20,12 +20,10 @@
 
 // Gradient only applies to Pressure and Pressure Incremament
 // Boundary Conditions are implemented in strong form
-
 void boundaryConditions2D(const iint bc,
-			              const dfloat  t, const dfloat  x, const dfloat  y,
-			              const dfloat  nx, const dfloat  ny,
-                        const dfloat prM,
-                        dfloat * restrict prB){
+			                  const dfloat  t, const dfloat  x, const dfloat  y,
+			                  const dfloat  nx, const dfloat  ny,
+                        const dfloat prM, dfloat * restrict prB){
 	dfloat nu   = 1.0f/40.0f;
   dfloat lambda = 1.f/(2.f * nu) - occaSqrt( 1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 

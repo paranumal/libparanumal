@@ -6,12 +6,10 @@ void insRun2D(ins_t *ins, char *options){
   // Write Initial Data
   insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
-
   iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
   dfloat *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
   
-  //
   iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
   dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
   dfloat *vRecvBuffer = (dfloat*) malloc(vHaloBytes);
@@ -57,13 +55,12 @@ void insRun2D(ins_t *ins, char *options){
     
     if(strstr(options, "REPORT")){
       if((tstep%ins->errorStep)==0){
-	  insReport2D(ins, tstep,options);
+	      insReport2D(ins, tstep,options);
       }
     }
   }
   
-  
- //  // // For Final Time
+  // For Final Time
   insReport2D(ins, ins->NtimeSteps,options);
 
   // Deallocate Halo MPI storage
@@ -73,8 +70,6 @@ void insRun2D(ins_t *ins, char *options){
   free(vRecvBuffer);
   free(pSendBuffer);
   free(pRecvBuffer);
-  //
-
 }
 
 
