@@ -47,23 +47,21 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerToc(mesh->device,"gradientKernel");
     occaTimerTic(mesh->device,"ipdgKernel");
     
-    // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         solver->o_EToB,
-         mesh->o_DrT,
-         mesh->o_DsT,
-         mesh->o_LIFTT,
-         mesh->o_MM,
-         solver->o_grad,
-         o_Aq);
-
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       solver->tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       solver->o_EToB,
+		       mesh->o_DrT,
+		       mesh->o_DsT,
+		       mesh->o_LIFTT,
+		       mesh->o_MM,
+		       solver->o_grad,
+		       o_Aq);
+    
     occaTimerToc(mesh->device,"ipdgKernel");
   }
 
@@ -116,21 +114,20 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     occaTimerTic(mesh->device,"ipdgKernel");
     
     // TW NOTE WAS 2 !
-    dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1); // 1/h factor built into kernel 
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         solver->o_EToB,
-         mesh->o_DrT,
-         mesh->o_DsT,
-         mesh->o_LIFTT,
-         mesh->o_MM,
-         solver->o_grad,
-         o_Aq);
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       solver->tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       solver->o_EToB,
+		       mesh->o_DrT,
+		       mesh->o_DsT,
+		       mesh->o_LIFTT,
+		       mesh->o_MM,
+		       solver->o_grad,
+		       o_Aq);
 
     occaTimerToc(mesh->device,"ipdgKernel");
   }
@@ -330,7 +327,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
+  const dfloat tol = 1e-8;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -383,7 +380,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
   
-  do{
+  while(rdotr0>(tol*tol)){
     
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options); 
@@ -449,7 +446,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     ++Niter;
     
-  }while(rdotr0>(tol*tol));
+  }
 
   occaTimerToc(mesh->device,"PCG");
 

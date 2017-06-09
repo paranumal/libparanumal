@@ -11,23 +11,23 @@ dfloat t = tstep*ins->dt + ins->dt;
 
 //Exctract Halo On Device
 
-if(mesh->totalHaloPairs>0){
-   
-     ins->pressureHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 ins->o_PI,
-                                 ins->o_pHaloBuffer);
+	// if(mesh->totalHaloPairs>0){
+	 
+ //    ins->updateHaloExtractKernel(mesh->Nelements,
+ //                                 mesh->totalHaloPairs,
+ //                                 mesh->o_haloElementList,
+ //                                 ins->o_PrI,
+ //                                 ins->o_prHaloBuffer);
 
-     // copy extracted halo to HOST 
-     ins->o_pHaloBuffer.copyTo(sendBuffer);            
-    
-     // start halo exchange
-     meshHaloExchangeStart(mesh,
-                           mesh->Np*sizeof(dfloat), 
-                           sendBuffer,
-                           recvBuffer);
-    }
+ //    // copy extracted halo to HOST 
+ //    ins->o_prHaloBuffer.copyTo(sendBuffer);            
+   
+ //    // start halo exchange
+ //    meshHaloExchangeStart(mesh,
+ //                          mesh->Np*sizeof(dfloat), 
+ //                          sendBuffer,
+ //                          recvBuffer);
+ //  	}
 
 
 
@@ -41,22 +41,19 @@ if(mesh->totalHaloPairs>0){
                             ins->o_rhsV);
 
 
+  //   // COMPLETE HALO EXCHANGE
+  // if(mesh->totalHaloPairs>0){
+  // // wait for halo data to arrive
+  //   meshHaloExchangeFinish(mesh);
 
-     // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
-    meshHaloExchangeFinish(mesh);
+  //   mesh->o_haloBuffer.copyFrom(recvBuffer); 
 
-    ins->o_pHaloBuffer.copyFrom(recvBuffer); 
-
-    ins->pressureHaloScatterKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    mesh->o_haloElementList,
-                                    ins->o_PI,
-                                    ins->o_pHaloBuffer);
-  }
-
-
+  //   ins->updateHaloScatterKernel(mesh->Nelements,
+  //                                 mesh->totalHaloPairs,
+  //                                 mesh->o_haloElementList,
+  //                                 ins->o_PrI,
+  //                                 ins->o_prHaloBuffer);
+  // }
 
 
   // Compute Surface Conribution

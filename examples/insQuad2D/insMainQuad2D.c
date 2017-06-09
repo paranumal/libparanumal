@@ -10,21 +10,17 @@ int main(int argc, char **argv){
 
   // start up MPI
   MPI_Init(&argc, &argv);
-
-
   // SET OPTIONS
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN  
 
   char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN");
-  //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-    strdup("type=VELOCITY solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
-
+   strdup("type=VELOCITY solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI"); 
   char *prSolverOptions = 
-    strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
+   strdup("type=PRESSURE solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
 
   if(argc!=3){
     printf("usage: ./main meshes/cavityH005.msh N\n");
@@ -33,13 +29,13 @@ int main(int argc, char **argv){
   // int specify polynomial degree 
   int N = atoi(argv[2]);
   // set up mesh stuff
-   mesh2D *mesh = meshSetupTri2D(argv[1], N);  
-  // //
+  mesh2D *mesh = meshSetupQuad2D(argv[1], N);  
+  //
   printf("Setup INS Solver: \n");   
-  ins_t *ins = insSetup2D(mesh,options,velSolverOptions,prSolverOptions); 
+  ins_t *ins = insSetupQuad2D(mesh,options,velSolverOptions,prSolverOptions); 
 
-  printf("OCCA Run: \n");  
-  insRun2D(ins,options); 
+  // printf("OCCA Run: \n");  
+  //insRun2D(ins,options); 
   
 
   // close down MPI

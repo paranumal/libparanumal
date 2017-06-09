@@ -19,7 +19,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *EToB,
                       occa::kernelInfo &kernelInfo, const char *options){
 
   iint rank;
@@ -34,6 +34,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
+  solver->tau = tau;
+  
   solver->mesh = mesh;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -66,6 +68,25 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   solver->type = strdup(dfloatString);
 
   solver->Nblock = Nblock;
+
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    iint Nlocal = mesh->Nelements*mesh->Np;
+    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
 
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
@@ -160,7 +181,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, lambda, solver->EToB, options);
+  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, solver->EToB, options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   solver->precon->preconKernel = 
@@ -204,25 +225,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat lambda, iint *EToB,
   
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");                                           
-
-  //fill geometric factors in halo
-  if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Nelements*mesh->Np;
-    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
-    
-    // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
-    
-    meshHaloExchange(mesh,
-         mesh->Nvgeo*sizeof(dfloat),
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
-    
-    mesh->o_vgeo =
-      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-  }
 
   //set matrix free function pointers
   if (strstr(options,"MATRIXFREE")) { 

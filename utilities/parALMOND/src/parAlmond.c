@@ -95,7 +95,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
     meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
   } else {
-    o_x.copyFrom(parAlmond->levels[0]->o_x);
+    parAlmond->levels[0]->o_x.copyTo(o_x);
   }
 }
 
