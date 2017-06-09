@@ -5,34 +5,31 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer, 
 				        char   * options){
 
-mesh2D *mesh = ins->mesh; 
+  mesh2D *mesh = ins->mesh; 
+  dfloat t = tstep*ins->dt + ins->dt;
 
-dfloat t = tstep*ins->dt + ins->dt;
-
-//Exctract Halo On Device
-
-if(mesh->totalHaloPairs>0){
+  if(mesh->totalHaloPairs>0){
    
-     ins->pressureHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 ins->o_PI,
-                                 ins->o_pHaloBuffer);
+    ins->pressureHaloExtractKernel(mesh->Nelements,
+                               mesh->totalHaloPairs,
+                               mesh->o_haloElementList,
+                               ins->o_PI,
+                               ins->o_pHaloBuffer);
 
-     // copy extracted halo to HOST 
-     ins->o_pHaloBuffer.copyTo(sendBuffer);            
-    
-     // start halo exchange
-     meshHaloExchangeStart(mesh,
-                           mesh->Np*sizeof(dfloat), 
-                           sendBuffer,
-                           recvBuffer);
-    }
+    // copy extracted halo to HOST 
+    ins->o_pHaloBuffer.copyTo(sendBuffer);            
+
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                         mesh->Np*sizeof(dfloat), 
+                         sendBuffer,
+                         recvBuffer);
+  }
 
 
 
-    // Compute Volume Contribution
-   ins->gradientVolumeKernel(mesh->Nelements,
+  // Compute Volume Contribution
+  ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
                             mesh->o_DsT,
@@ -40,24 +37,17 @@ if(mesh->totalHaloPairs>0){
                             ins->o_rhsU,
                             ins->o_rhsV);
 
-
-
-     // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
+  if(mesh->totalHaloPairs>0){    
     meshHaloExchangeFinish(mesh);
 
     ins->o_pHaloBuffer.copyFrom(recvBuffer); 
-
+    
     ins->pressureHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
                                     mesh->o_haloElementList,
                                     ins->o_PI,
                                     ins->o_pHaloBuffer);
   }
-
-
-
 
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
@@ -75,8 +65,6 @@ if(mesh->totalHaloPairs>0){
                               ins->o_rhsU,
                               ins->o_rhsV);
 
-
-
    //computes div u^(n+1) surface term
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,  
@@ -86,8 +74,5 @@ if(mesh->totalHaloPairs>0){
                               ins->o_P,
                               ins->o_PI,
                               ins->o_rhsU,
-                              ins->o_rhsV);
-
-
-   
+                              ins->o_rhsV);   
 }
