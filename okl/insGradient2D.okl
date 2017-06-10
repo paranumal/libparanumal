@@ -1,113 +1,82 @@
-#define RXID 0  
-#define RYID 1  
-#define SXID 2  
-#define SYID 3
-//
-#define UXID 0
-#define UYID 1
-#define PRID 2
-
-#define PRS 0
-#define PRI 1
-/* offsets for nx, ny, sJ, 1/J */
-#define NXID 0  
-#define NYID 1  
-#define SJID 2  
-#define IJID 3  
-#define WSJID 4
-#define IHID 5
-
 
 // Gradient only applies to Pressure and Pressure Incremament
 // Boundary Conditions are implemented in strong form
 void boundaryConditions2D(const iint bc,
 			                  const dfloat  t, const dfloat  x, const dfloat  y,
 			                  const dfloat  nx, const dfloat  ny,
-                        const dfloat prM, dfloat * restrict prB){
+                        const dfloat pM, dfloat * restrict pB){
 	dfloat nu   = 1.0f/40.0f;
   dfloat lambda = 1.f/(2.f * nu) - occaSqrt( 1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
   if(bc==1){ // Wall 
-    *prB = prM ; // Neumann for Pressure // do nothing
-  }
-  if(bc==2){ // Inflow
-  	//
-    *prB = prM; // Neumann for Pressure // do nothing
-  }
-  if(bc==3){ // Outflow 
+    *pB = pM; // Neumann for Pressure // do nothing
+  } else if(bc==2){ // Inflow
+    *pB = pM; // Neumann for Pressure // do nothing
+  } else if(bc==3){ // Outflow 
    #if 0 
-   dfloat prbc = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
+   *pB = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
    #else
-   dfloat prbc = 0.f; 
+   *pB = 0.f; 
    #endif
-   *prB = 2.0f* prbc - prM ; //Dirichlet for pressure in strong form: 2*pr_D-prM
   }
 }
-
-
-
-
 
 // Compute Gradient in Strong Form
 kernel void insGradientVolume2D(const iint Nelements,
 																const dfloat * restrict vgeo,
 																const dfloat * restrict DrT,
 																const dfloat * restrict DsT,
-																const dfloat * restrict U,
+                                const iint  offset,
+                                const dfloat * restrict U,
 															        dfloat * restrict Ux, 
 																		  dfloat * restrict Uy){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  
-  // for all elements
-   shared dfloat s_U[p_NblockV][p_Np];
+    // for all elements
+    shared dfloat s_U[p_NblockV][p_Np];
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
-          s_U[es][n]  = U[n + e*p_Np];
+          s_U[es][n]  = U[n + (e+offset)*p_Np];
 				}
       }
     }
 
-     // Make sure all node data is loaded into shared
+    // Make sure all node data is loaded into shared
     barrier(localMemFence);
-
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	
-			iint e = eo+es; // element in block
-			if(e<Nelements){	  
-			  // prefetch geometric factors (constant on triangle)
-			  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-			  const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-			  const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-			  const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	      //
-				dfloat dudr  = 0.f, duds  = 0.f;
-				occaUnroll(p_Np)
-				for(iint i=0;i<p_Np;++i){
-					const dfloat Drni = DrT[n+i*p_Np];
-					const dfloat Dsni = DsT[n+i*p_Np];
-					//
-					dudr  += Drni*s_U[es][i];
-					duds  += Dsni*s_U[es][i];
-				}
-				
-				const iint id = e*p_Np+n;
-				Ux[id] = drdx*dudr + dsdx*duds;				     
-				Uy[id] = drdy*dudr + dsdy*duds;
-	 
-	}
+  	
+  			iint e = eo+es; // element in block
+  			if(e<Nelements){	  
+  			  // prefetch geometric factors (constant on triangle)
+  			  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+  			  const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+  			  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+  			  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+  				dfloat dudr  = 0.f, duds  = 0.f;
+  				occaUnroll(p_Np)
+  				for(iint i=0;i<p_Np;++i){
+  					const dfloat Drni = DrT[n+i*p_Np];
+  					const dfloat Dsni = DsT[n+i*p_Np];
+
+  					dudr  += Drni*s_U[es][i];
+  					duds  += Dsni*s_U[es][i];
+  				}
+  				
+  				const iint id = (e+offset)*p_Np+n;
+  				Ux[id] = drdx*dudr + dsdx*duds;				     
+  				Uy[id] = drdy*dudr + dsdy*duds;
+	      }
       }
     }
- }
+  }
 }
 
-
-
-//
 kernel void insGradientSurface2D(const iint Nelements,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
@@ -118,65 +87,72 @@ kernel void insGradientSurface2D(const iint Nelements,
 				     const dfloat * restrict y,
 				     const dfloat time,
 				     const dfloat dt,
-				     const iint solverID, 
-				     const dfloat * restrict U,
-				           dfloat * restrict Ux,
-				           dfloat * restrict Uy){
+             const dfloat a0,
+             const dfloat a1,
+             const dfloat a2, 
+             const int solverID,
+             const iint offset,
+             const dfloat * restrict P,
+				           dfloat * restrict Px,
+				           dfloat * restrict Py){
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    //
-    shared dfloat s_fluxUx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxUy[p_NblockS][p_Nfp*p_Nfaces];
 
-     // for all face nodes of all elements
+    shared dfloat s_fluxPx[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxPy[p_NblockS][p_Nfp*p_Nfaces];
+
+    // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	    iint e = eo + es;
-	     if(e<Nelements){
-	      if(n<p_Nfp*p_Nfaces){
-		    // find face that owns this node
-		    iint face = n/p_Nfp;
-		    // load surface geofactors for this face
-		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-		    dfloat nx   = sgeo[sid+NXID];
-		    dfloat ny   = sgeo[sid+NYID];
-		    dfloat sJ   = sgeo[sid+SJID];
-		    dfloat invJ = sgeo[sid+IJID];
-		   
-		    // indices of negative and positive traces of face node
-		    iint id  = e*p_Nfp*p_Nfaces + n;
-		    iint idM = vmapM[id];
-		    iint idP = vmapP[id];
+	      iint e = eo + es;
+	      if(e<Nelements){
+  	      if(n<p_Nfp*p_Nfaces){
+    		    // find face that owns this node
+    		    iint face = n/p_Nfp;
+    		    // load surface geofactors for this face
+    		    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+    		    dfloat nx   = sgeo[sid+p_NXID];
+    		    dfloat ny   = sgeo[sid+p_NYID];
+    		    dfloat sJ   = sgeo[sid+p_SJID];
+    		    dfloat invJ = sgeo[sid+p_IJID];
+    		   
+    		    // indices of negative and positive traces of face node
+    		    iint id  = e*p_Nfp*p_Nfaces + n;
+    		    iint idM = vmapM[id]+p_Np*offset;
+    		    iint idP = vmapP[id]+p_Np*offset;
 
-		   if(idP<0) idP = idM; // 
-		  // load negative and positive trace node values of U
-			   dfloat  um = U[idM], up = U[idP];
+    		    if(idP<0) idP = idM; 
+    			  dfloat  PM = P[idM], PP = P[idP];
 
-		    // apply boundary condition
-		    iint bc = EToB[face+p_Nfaces*e];
-		    if(bc>0){
-		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, um, &up); 
+    		    // apply boundary condition
+    		    iint bc = EToB[face+p_Nfaces*e];
+    		    if(bc>0){
+    		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP); 
 
-          if(solverID == PRI){
-          	// implement later 
-          	dfloat upo =0.f;
-          	boundaryConditions2D(bc, time-dt, x[idM], y[idM], nx, ny, um, &upo);
-          	up -= upo; 
-		      }
-		    }
+              //TODO fix this later. On a Neumann BC for pressure this is wrong. 
+              //  Need the boundary values from the previous pressure steps. 
+              if((solverID == 1)&&(bc==3)){ //compute BC on pressure increment
+              	dfloat PPm0, PPm1, PPm2;  //hard coded for 3 stages 
+              	boundaryConditions2D(bc, time-1*dt, x[idM], y[idM], nx, ny, PM, &PPm0);
+                boundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PM, &PPm1);
+                boundaryConditions2D(bc, time-3*dt, x[idM], y[idM], nx, ny, PM, &PPm2);
+              	PP = PP - a0*PPm0 - a1*PPm1 -a2*PPm2; 
+    		      }
 
-        // evaluate "flux" terms: LLF
-        const dfloat sc = invJ * sJ ; 
-        // Centered flux for pr p*-p = 0.5(up-um) // Central Flux
-        s_fluxUx[es][n]  = sc*(.5f*nx*(up-um));
-        s_fluxUy[es][n]  = sc*(.5f*ny*(up-um));
-       	 }
-    		}
-			}
-		}
+              PP = 2.f*PP - PM; //Strong form BCs
+    		    }
+
+            // evaluate "flux" terms: LLF
+            const dfloat sc = invJ * sJ ; 
+            // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
+            s_fluxUx[es][n]  = sc*(.5f*nx*(PP-PM));
+            s_fluxUy[es][n]  = sc*(.5f*ny*(PP-PM));
+          }
+        }
+    	}
+    }
     
-   
     // wait for all flux functions are written to shared 
     barrier(localMemFence);
 
@@ -184,27 +160,25 @@ kernel void insGradientSurface2D(const iint Nelements,
     for(iint es=0;es<p_NblockS;++es;inner1){
 			for(iint n=0;n<p_maxNodes;++n;inner0){
 				iint e = eo + es;
-					if(e<Nelements){
-						if(n<p_Np){
-							iint id = e*p_Np + n;
-							dfloat ux  = Ux[id];
-							dfloat uy  = Uy[id];
-							// Lift
-							occaUnroll(p_NfacesNfp)
-							for(int m=0;m<p_Nfaces*p_Nfp;++m){
-								dfloat L = LIFTT[n+m*p_Np];
-								ux   += L*s_fluxUx[es][m];
-								uy   += L*s_fluxUy[es][m];
-					}
-					//  rhsu = grad(p) // Note that multiplied with M^-1
-					Ux[id] = ux;
-					Uy[id] = uy;
+				if(e<Nelements){
+					if(n<p_Np){
+						iint id = (e+offset)*p_Np + n;
+						dfloat ux  = Ux[id];
+						dfloat uy  = Uy[id];
+						// Lift
+						occaUnroll(p_NfacesNfp)
+						for(int m=0;m<p_Nfaces*p_Nfp;++m){
+							dfloat L = LIFTT[n+m*p_Np];
+							ux += L*s_fluxUx[es][m];
+							uy += L*s_fluxUy[es][m];
+				    }
+  					//  rhsu = grad(p) // Note that multiplied with M^-1
+  					Ux[id] = ux;
+  					Uy[id] = uy;
 				  }
-				}
+		    }
       }
     }
   }
-
-
 }
 

@@ -8,15 +8,18 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   mesh2D *mesh = ins->mesh; 
   dfloat t = tstep*ins->dt;
 
+  // field offset at this step
+  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){
      ins->totalHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
+                                 offset,
                                  ins->o_U,
                                  ins->o_V,
                                  ins->o_P,
-                                 ins->index,
                                  ins->o_tHaloBuffer);
 
      // copy extracted halo to HOST 
@@ -36,8 +39,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				       mesh->o_cubDrWT,
 				       mesh->o_cubDsWT,
 				       mesh->o_cubInterpT,
-				       ins->o_U,
-				       ins->o_V,
+               offset,
+               ins->o_U,
+               ins->o_V,
 				       ins->o_NU,
 				       ins->o_NV);
   } else {
@@ -45,8 +49,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			       mesh->o_vgeo,
 			       mesh->o_DrT,
 			       mesh->o_DsT,
-			       ins->o_U,
-			       ins->o_V,
+             offset,
+             ins->o_U,
+             ins->o_V,
 			       ins->o_NU,
 			       ins->o_NV);
   }
@@ -55,11 +60,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
-                            mesh->o_DsT,
-                            ins->b0,
-                            ins->b1,
-                            ins->b2,
-                            ins->o_P,  
+                            mesh->o_DsT,          
+                            offset,  
+                            ins->o_P,
                             ins->o_Px,
                             ins->o_Py);
 
@@ -72,6 +75,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->totalHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
                                     mesh->o_haloElementList,
+                                    offset,
                                     ins->o_U,
                                     ins->o_V,
                                     ins->o_P,
@@ -90,8 +94,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 					t,
 					mesh->o_intx,
 					mesh->o_inty,
-					ins->o_U,
-					ins->o_V,
+          offset,
+          ins->o_U,
+          ins->o_V,
 					ins->o_NU,
 					ins->o_NV);
   } else {
@@ -104,8 +109,9 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				t,
 				mesh->o_x,
 				mesh->o_y,
-				ins->o_U,
-				ins->o_V,
+        offset,
+        ins->o_U,
+        ins->o_V,
 				ins->o_NU,
 				ins->o_NV);
   }
@@ -124,6 +130,8 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                             ins->b0,
                             ins->b1,
                             ins->b2,
+                            offset,
+                            0, // Normal pressure BCs
                             ins->o_P,
                             ins->o_Px,
                             ins->o_Py);
