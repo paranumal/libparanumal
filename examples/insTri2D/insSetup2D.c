@@ -74,17 +74,25 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];    
-    #if 0
+#if 0
       dfloat lamda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;  
       //
       ins->U[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y);
       ins->V[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
       ins->P[id] = 0.5*(1.0- exp(2.*lamda*x));
-    #else
+#endif
+      
+#if 0
       ins->U[id] = y*(4.5f-y)/(2.25f*2.25f);
       ins->V[id] = 0;
       ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
-     #endif
+#endif
+
+#if 1
+      ins->U[id] = 1;
+      ins->V[id] = 0;
+      ins->P[id] = 0;
+#endif
     }
   }
 
