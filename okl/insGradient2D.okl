@@ -27,19 +27,19 @@ kernel void insGradientVolume2D(const iint Nelements,
 																const dfloat * restrict DrT,
 																const dfloat * restrict DsT,
                                 const iint  offset,
-                                const dfloat * restrict U,
-															        dfloat * restrict Ux, 
-																		  dfloat * restrict Uy){
+                                const dfloat * restrict P,
+															        dfloat * restrict Px, 
+																		  dfloat * restrict Py){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  
     // for all elements
-    shared dfloat s_U[p_NblockV][p_Np];
+    shared dfloat s_P[p_NblockV][p_Np];
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 				iint e = eo+es; // element in block
 				if(e<Nelements){ 
-          s_U[es][n]  = U[n + (e+offset)*p_Np];
+          s_P[es][n]  = P[n + (e+offset)*p_Np];
 				}
       }
     }
@@ -58,19 +58,19 @@ kernel void insGradientVolume2D(const iint Nelements,
   			  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
   			  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-  				dfloat dudr  = 0.f, duds  = 0.f;
+  				dfloat dpdr  = 0.f, dpds  = 0.f;
   				occaUnroll(p_Np)
   				for(iint i=0;i<p_Np;++i){
   					const dfloat Drni = DrT[n+i*p_Np];
   					const dfloat Dsni = DsT[n+i*p_Np];
 
-  					dudr  += Drni*s_U[es][i];
-  					duds  += Dsni*s_U[es][i];
+  					dpdr  += Drni*s_P[es][i];
+  					dpds  += Dsni*s_P[es][i];
   				}
   				
   				const iint id = (e+offset)*p_Np+n;
-  				Ux[id] = drdx*dudr + dsdx*duds;				     
-  				Uy[id] = drdy*dudr + dsdy*duds;
+  				Px[id] = drdx*dpdr + dsdx*dpds;				     
+  				Py[id] = drdy*dpdr + dsdy*dpds;
 	      }
       }
     }
@@ -90,8 +90,8 @@ kernel void insGradientSurface2D(const iint Nelements,
              const dfloat a0,
              const dfloat a1,
              const dfloat a2, 
-             const int solverID,
              const iint offset,
+             const int solverID,
              const dfloat * restrict P,
 				           dfloat * restrict Px,
 				           dfloat * restrict Py){
@@ -128,6 +128,7 @@ kernel void insGradientSurface2D(const iint Nelements,
     		    // apply boundary condition
     		    iint bc = EToB[face+p_Nfaces*e];
     		    if(bc>0){
+              idM = vmapM[id];
     		      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP); 
 
               //TODO fix this later. On a Neumann BC for pressure this is wrong. 
@@ -146,8 +147,8 @@ kernel void insGradientSurface2D(const iint Nelements,
             // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ; 
             // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
-            s_fluxUx[es][n]  = sc*(.5f*nx*(PP-PM));
-            s_fluxUy[es][n]  = sc*(.5f*ny*(PP-PM));
+            s_fluxPx[es][n]  = sc*(.5f*nx*(PP-PM));
+            s_fluxPy[es][n]  = sc*(.5f*ny*(PP-PM));
           }
         }
     	}
@@ -163,18 +164,18 @@ kernel void insGradientSurface2D(const iint Nelements,
 				if(e<Nelements){
 					if(n<p_Np){
 						iint id = (e+offset)*p_Np + n;
-						dfloat ux  = Ux[id];
-						dfloat uy  = Uy[id];
+						dfloat px  = Px[id];
+						dfloat py  = Py[id];
 						// Lift
 						occaUnroll(p_NfacesNfp)
 						for(int m=0;m<p_Nfaces*p_Nfp;++m){
 							dfloat L = LIFTT[n+m*p_Np];
-							ux += L*s_fluxUx[es][m];
-							uy += L*s_fluxUy[es][m];
+							px += L*s_fluxPx[es][m];
+							py += L*s_fluxPy[es][m];
 				    }
   					//  rhsu = grad(p) // Note that multiplied with M^-1
-  					Ux[id] = ux;
-  					Uy[id] = uy;
+  					Px[id] = px;
+  					Py[id] = py;
 				  }
 		    }
       }
