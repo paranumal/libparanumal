@@ -157,8 +157,10 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 
       	    // apply boundary condition
       	    iint bc = EToB[face+p_Nfaces*e];
-      	    if(bc>0)
+      	    if(bc>0){
+              idM = vmapM[id];
       	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+            }
 
       	    // Find max normal velocity on the face
       	    dfloat unM   = occaFabs(nx*uM + ny*vM);
@@ -299,8 +301,8 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 
       	  // Update
       	  const iint id = (e+offset)*p_Np+n;
-      	  NU[id] = -nux; // note  change in sign
-      	  NV[id] = -nuy;		  
+      	  NU[id] = -nu; // note  change in sign
+      	  NV[id] = -nv;		  
       	}
       }
     }
@@ -318,9 +320,9 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 					  const dfloat time,
 					  const dfloat * restrict intx, // integration nodes
 					  const dfloat * restrict inty,
-					  const dfloat * restrict U,
-					  const dfloat * restrict V,
             const iint offset,
+            const dfloat * restrict U,
+            const dfloat * restrict V,
 					  dfloat * restrict NU,
 					  dfloat * restrict NV){
 

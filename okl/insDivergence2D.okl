@@ -148,8 +148,10 @@ kernel void insDivergenceSurface2D(const iint Nelements,
       		   
       	    // apply boundary condition
       	    iint bc = EToB[face+p_Nfaces*e];
-      	    if(bc>0)
+      	    if(bc>0) {
+              idM = vmapM[id];
       	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);
+            }
 
       	    const dfloat sc = invJ * sJ ; 
       	    s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM)); 

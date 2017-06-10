@@ -1,8 +1,3 @@
-#define UXID 0
-#define UYID 1
-#define PRID 2
-
-
 
 kernel void insTotalHaloExtract2D(const iint Nelments,
                                   const iint NhaloElements,
@@ -11,7 +6,7 @@ kernel void insTotalHaloExtract2D(const iint Nelments,
                                   const dfloat * restrict U,
                                   const dfloat * restrict V,
                                   const dfloat * restrict P,
-			                                  dfloat * restrict haloq){
+			                                  dfloat *haloq){
 
   for(iint e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
@@ -95,7 +90,7 @@ kernel void insPressureHaloExtract2D(const iint Nelments,
       const iint id   = haloElements[e];
       const iint base = p_Np*e;
 
-      haloq[n = base + 0*p_Np] = P[n + p_Np*id];
+      haloq[n + base + 0*p_Np] = P[n + p_Np*id];
     }
   }
 }

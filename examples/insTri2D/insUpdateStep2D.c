@@ -8,7 +8,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
   mesh2D *mesh = ins->mesh; 
   dfloat t = tstep*ins->dt + ins->dt;
 
-  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  iint offset = mesh->Nelements+mesh->totalHaloPairs;
 
   if(mesh->totalHaloPairs>0){
    
@@ -86,4 +86,5 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_P);
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
+  printf("index = %d\n",ins->index );
 }

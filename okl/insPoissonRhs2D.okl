@@ -64,16 +64,16 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
       	iint e = eo+es; // element in block
       	if(e<Nelements){	
       	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];  
-      	  dfloat rhs = 0.f; 
+      	  dfloat rhsn = 0.f; 
       	  
           occaUnroll(p_Np)
     	    for(iint i=0;i<p_Np;++i){
     	      const dfloat M = MM[n+i*p_Np];
-    	      rhs += M*s_rhs[es][i];	
+    	      rhsn += M*s_rhs[es][i];	
     	    }
       	  
           const iint id = e*p_Np+n;
-      	  rhs[id] = -J*g0*rhs/dt; 
+      	  rhs[id] = -J*g0*rhsn/dt; 
       	}
       }
     }
@@ -151,7 +151,6 @@ for(int e=0;e<Nelements;++e;outer0){
       	const dfloat drdy = vgeo[gid + p_RYID];
       	const dfloat dsdx = vgeo[gid + p_SXID];
       	const dfloat dsdy = vgeo[gid + p_SYID];
-      	int r_bcsum = 0;
 
       	dfloat Lnxdp = 0;
       	dfloat Lnydp = 0;
