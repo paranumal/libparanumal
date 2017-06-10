@@ -9,10 +9,13 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   solver_t *solver = ins->pSolver;
   dfloat t = tstep*ins->dt + ins->dt;
 
+  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                mesh->totalHaloPairs,
                                mesh->o_haloElementList,
+                               offset,
                                ins->o_U,
                                ins->o_V,
                                ins->o_vHaloBuffer);
@@ -32,6 +35,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                              mesh->o_vgeo,
                              mesh->o_DrT,
                              mesh->o_DsT,
+                             offset,
                              ins->o_U, 
                              ins->o_V, 
                              ins->o_rhsP);
@@ -44,6 +48,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
+                                  offset,
                                   ins->o_U,
                                   ins->o_V,
                                   ins->o_vHaloBuffer);
@@ -60,6 +65,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               t,
                               mesh->o_x,
                               mesh->o_y,
+                              offset,
                               ins->o_U,
                               ins->o_V,
                               ins->o_rhsP);
@@ -88,9 +94,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->tau,
                                 mesh->o_x,
                                 mesh->o_y,
-                                ins->o_P,
-                                ins->o_rhsP
-                                );
+                                ins->o_rhsP);
   #endif
 
   printf("Solving for P \n");
