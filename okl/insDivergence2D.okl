@@ -6,9 +6,9 @@ void boundaryConditions2D(const iint bc,
 			                    dfloat * restrict uB, dfloat * restrict vB){
 
   if(bc==1){ // Wall 
-  	dfloat ubc= 0.f;
+    dfloat ubc= 0.f;
     dfloat vbc= 0.f; 
-
+    
     *uB = 2.f*ubc-uM; 
     *vB = 2.f*vbc-vM; 
   } else if(bc==2){ // Inflow
@@ -29,10 +29,12 @@ void boundaryConditions2D(const iint bc,
     *uB = 2.f*ubc-uM; 
     *vB = 2.f*vbc-vM; 
   } else if(bc==3){ // Outflow 
-  	dfloat ubc = uM;
-  	dfloat vbc = vM;
-  	// dfloat ubc = -lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
-    // dfloat vbc =  lambda*(0.5f*lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+#if 0
+    dfloat ubc = -lambda*occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y);
+    dfloat vbc =  lambda*(0.5f*lambda/OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
+#endif
+    dfloat ubc = uM;
+    dfloat vbc = vM;
 
     *uB = 2.f*ubc-uM; 
     *vB = 2.f*vbc-vM; 
@@ -45,12 +47,13 @@ kernel void insDivergenceVolume2D(const iint Nelements,
 				  const dfloat * restrict vgeo,
 				  const dfloat * restrict DrT,
 				  const dfloat * restrict DsT,
-          const iint offset,
+				  const iint offset,
 				  const dfloat * restrict U,
 				  const dfloat * restrict V,
 				  dfloat * restrict divU){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
     shared dfloat s_U[p_NblockV][p_Np];
     shared dfloat s_V[p_NblockV][p_Np];
   
@@ -178,8 +181,8 @@ kernel void insDivergenceSurface2D(const iint Nelements,
       	    
       	    occaUnroll(p_NfacesNfp)
     	      for(int m=0;m<p_Nfaces*p_Nfp;++m){
-    		      dfloat L = LIFTT[n+m*p_Np];
-    		      divu += L*s_fluxU[es][m];
+		dfloat L = LIFTT[n+m*p_Np];
+		divu += L*s_fluxU[es][m];
     	      }
       	    // Update
       	    divU[id] = divu; 
