@@ -28,7 +28,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                          recvBuffer);
   }
 
-  // Compute Volume Contribution
+  // Compute Volume Contribution of gradient of pressure gradient
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
@@ -50,7 +50,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                     ins->o_pHaloBuffer);
   }
 
-  // Compute Surface Conribution
+  // Compute Surface Contribution of gradient of pressure increment
   ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
@@ -70,6 +70,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_PIx,
                               ins->o_PIy);
 
+  // U <= U - dt/g0 * d(pressure increment)/dx
+  // V <= V - dt/g0 * d(pressure increment)/dy
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,  
                               ins->g0,
