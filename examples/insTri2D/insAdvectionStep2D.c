@@ -2,10 +2,10 @@
 
 // complete a time step using LSERK4
 void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
-			dfloat * sendBuffer, dfloat * recvBuffer, 
+			dfloat * sendBuffer, dfloat * recvBuffer,
 			char   * options){
 
-  mesh2D *mesh = ins->mesh; 
+  mesh2D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt;
 
   // field offset at this step
@@ -22,12 +22,12 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				ins->o_P,
 				ins->o_tHaloBuffer);
 
-    // copy extracted halo to HOST 
-    ins->o_tHaloBuffer.copyTo(sendBuffer);            
-    
+    // copy extracted halo to HOST
+    ins->o_tHaloBuffer.copyTo(sendBuffer);
+
     // start halo exchange
     meshHaloExchangeStart(mesh,
-			  mesh->Np*(ins->NTfields)*sizeof(dfloat), 
+			  mesh->Np*(ins->NTfields)*sizeof(dfloat),
 			  sendBuffer,
 			  recvBuffer);
   }
@@ -60,8 +60,8 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
-                            mesh->o_DsT,          
-                            offset,  
+                            mesh->o_DsT,
+                            offset,
                             ins->o_P,
                             ins->o_Px,
                             ins->o_Py);
@@ -71,7 +71,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
     meshHaloExchangeFinish(mesh);
 
-    ins->o_tHaloBuffer.copyFrom(recvBuffer); 
+    ins->o_tHaloBuffer.copyFrom(recvBuffer);
     ins->totalHaloScatterKernel(mesh->Nelements,
 				mesh->totalHaloPairs,
 				mesh->o_haloElementList,
@@ -126,12 +126,14 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			     mesh->o_x,
 			     mesh->o_y,
 			     t,
-			     ins->dt, 
+			     ins->dt,
 			     ins->a0,
 			     ins->a1,
 			     ins->a2,
-			     offset,
+           ins->index,
+			     mesh->Nelements+mesh->totalHaloPairs,
 			     0, // Normal pressure BCs
+           ins->o_PI, //not used
 			     ins->o_P,
 			     ins->o_Px,
 			     ins->o_Py);

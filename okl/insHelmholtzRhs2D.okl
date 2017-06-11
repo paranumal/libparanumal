@@ -1,9 +1,4 @@
 
-#define TUN1ID 0
-#define TVN1ID 1
-#define TUN2ID 2
-#define TVN2ID 3
-
 void boundaryConditionsIpdg2D(const iint bc,
 			      const dfloat  t, const dfloat  x, const dfloat  y,
 			      const dfloat  nx,   const dfloat  ny,
@@ -77,12 +72,11 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				     const dfloat * restrict NV,
              const dfloat * restrict Px,
              const dfloat * restrict Py,
-				     dfloat * restrict rhsU, // grad(Pr)
-				     dfloat * restrict rhsV){
+				     dfloat * restrict rhsU, 
+             dfloat * restrict rhsV){
   
-  //Low storage Runge Kutta time step update
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){ 
-    // 	// Hold Flux Vector on Shared, use symmetry f21 = f12
+
     shared dfloat s_rhsU[p_NblockV][p_Np];
     shared dfloat s_rhsV[p_NblockV][p_Np];
    
@@ -123,7 +117,7 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
           const dfloat Pym1 = Py[id1];
           const dfloat Pym2 = Py[id2];
 
-      	  // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*u_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
+      	  // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
           s_rhsU[es][n]  = J*p_inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*p_idt 
                                      - (a0*Pxm0+a1*Pxm1+a2*Pxm2) 
                                      - (a0*NUm0+a1*NUm1+a2*NUm2)*sc);

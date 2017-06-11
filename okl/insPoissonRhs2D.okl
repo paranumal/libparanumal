@@ -3,29 +3,29 @@
 void boundaryConditions2D(const iint bc,
 			      const dfloat  t, const dfloat dt, const dfloat  x, const dfloat  y,
 			      const dfloat  nx,   const dfloat  ny,
-			      dfloat * restrict pB, 
-			      dfloat * restrict pxB, 
+			      dfloat * restrict pB,
+			      dfloat * restrict pxB,
 			      dfloat * restrict pyB){
-  if((bc==1)||(bc==4)){ // Wall/Slip 
-    *pB = 0.f; 
-   
-    *pxB = 0.f; 
-    *pyB = 0.f; 
-  }
-  if(bc==2){ // Inflow 
-    *pB  = 0.f; 
+  if((bc==1)||(bc==4)){ // Wall/Slip
+    *pB = 0.f;
 
-    *pxB = 0.f; 
+    *pxB = 0.f;
+    *pyB = 0.f;
+  }
+  if(bc==2){ // Inflow
+    *pB  = 0.f;
+
+    *pxB = 0.f;
     *pyB = 0.f;
 #if 0
     //Definition of Neuman data for Pressure
     dfloat nu   = 1.0f/40.0f;
      dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-     *pxB =-lambda*occaExp(2.0f*lambda*x); 
+     *pxB =-lambda*occaExp(2.0f*lambda*x);
      *pyB = 0.f;
 #endif
   }
-  if(bc==3){ // Outflow 
+  if(bc==3){ // Outflow
     // do nothing
 #if 0
     dfloat nu   = 1.0f/40.0f;
@@ -33,9 +33,9 @@ void boundaryConditions2D(const iint bc,
     *pB = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
 #endif
     *pB = 0.f;
-    
+
     *pxB = 0.f;
-    *pyB = 0.f;   
+    *pyB = 0.f;
   }
 }
 
@@ -46,7 +46,7 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
 				   const dfloat dt,
 				   const dfloat g0,
 				   dfloat * restrict rhs){
-  
+
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_rhs[p_NblockV][p_Np];
@@ -54,9 +54,9 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; // element in block
-      	if(e<Nelements){ 
+      	if(e<Nelements){
       	  const iint id = e*p_Np+n;
-      	  s_rhs[es][n] = rhs[id]; 
+      	  s_rhs[es][n] = rhs[id];
       	}
       }
     }
@@ -67,18 +67,18 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; // element in block
-      	if(e<Nelements){	
-      	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];  
-      	  dfloat rhsn = 0.f; 
-      	  
+      	if(e<Nelements){
+      	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+      	  dfloat rhsn = 0.f;
+
           occaUnroll(p_Np)
     	    for(iint i=0;i<p_Np;++i){
     	      const dfloat M = MM[n+i*p_Np];
-    	      rhsn += M*s_rhs[es][i];	
+    	      rhsn += M*s_rhs[es][i];
     	    }
-      	  
+
           const iint id = e*p_Np+n;
-      	  rhs[id] = -J*g0*rhsn/dt; 
+      	  rhs[id] = -J*g0*rhsn/dt;
       	}
       }
     }
@@ -92,12 +92,12 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
 				    const dfloat * restrict DrT,
 				    const dfloat * restrict DsT,
 				    const dfloat * restrict LIFTT,
-				    const dfloat * restrict MM, 
+				    const dfloat * restrict MM,
 				    const iint   * restrict vmapM,
 				    const iint   * restrict vmapP,
 				    const iint   * restrict EToB,
 				    const dfloat time,
-				    const dfloat dt, 
+				    const dfloat dt,
 				    const dfloat tau,
 				    const dfloat * restrict x,
 				    const dfloat * restrict y,
@@ -118,13 +118,13 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
       	const iint id  = n + e*p_Nfaces*p_Nfp;
-      	idM = vmapM[id];					
-     
+      	idM = vmapM[id];
+
       	const iint face = n/p_Nfp;
 
       	dfloat4 gradpP;
       	gradpP.x = 0.f; gradpP.y = 0.f; gradpP.w = 0.f;
-      	
+
       	// load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
       	nx   = sgeo[sid+p_NXID];
@@ -135,20 +135,20 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0)
-	  boundaryConditions2D(bc, time,dt, x[idM], y[idM], nx, ny, 
+	  boundaryConditions2D(bc, time,dt, x[idM], y[idM], nx, ny,
 			       &gradpP.w, &gradpP.x, &gradpP.y);
-	
+
       	const dfloat dp = gradpP.w;
       	s_nxdp[n] = sJ*invJ*nx*dp;
       	s_nydp[n] = sJ*invJ*ny*dp;
-	
+
       	s_lappflux[n] = sJ*invJ*(-nx*(gradpP.x)-ny*(gradpP.y)
 				 -tau*hinv*dp);
       }
     }
-    
+
     barrier(localMemFence);
-    
+
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
@@ -157,59 +157,59 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
       	const dfloat drdy = vgeo[gid + p_RYID];
       	const dfloat dsdx = vgeo[gid + p_SXID];
       	const dfloat dsdy = vgeo[gid + p_SYID];
-	
+
       	dfloat Lnxdp = 0;
       	dfloat Lnydp = 0;
-      	
+
       	occaUnroll(p_NfacesNfp)
     	  for(iint i=0;i<p_NfacesNfp;++i){
     	    Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
     	    Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
     	  }
-      	
+
       	dfloat dpdx = Lnxdp;
       	dfloat dpdy = Lnydp;
       	s_dpdx[n] = drdx*dpdx + drdy*dpdy; // abuse of notation
       	s_dpdy[n] = dsdx*dpdx + dsdy*dpdy;
-	
+
       	s_Lnxdp[n] = Lnxdp;
       	s_Lnydp[n] = Lnydp;
       }
     }
-    
+
     barrier(localMemFence);
-    
+
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
 	iint id = idM%p_Np;
 	s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]);
       }
-      
+
       if(n<p_Np){
       	dfloat lapr = 0, laps = 0;
-      	
+
       	occaUnroll(p_Np)
 	  for(int i=0;i<p_Np;++i){
 	    lapr += DrT[n+i*p_Np]*s_dpdx[i];
 	    laps += DsT[n+i*p_Np]*s_dpdy[i];
 	  }
-	
+
 	s_lapp[n] = -(lapr+laps);
       }
     }
-    
+
     barrier(localMemFence);
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
       	dfloat lap = 0;
-      	
+
       	// lift remaining surface terms
       	occaUnroll(p_NfacesNfp)
     	  for(int i=0;i<p_NfacesNfp;++i){
     	    lap += LIFTT[n+i*p_Np]*s_lappflux[i];
-    	  }			
-	
+    	  }
+
 	s_lapp[n] += lap;
       }
     }
@@ -217,18 +217,18 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
     barrier(localMemFence);
 
     for(int n=0;n<p_maxNodes;++n;inner0){
-      
+
       if(n<p_Np){
       	const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-      				
+
       	dfloat Mlapp = 0;
-      	
+
       	// multiply by mass matrix
       	occaUnroll(p_Np)
     	  for(int i=0;i<p_Np;++i){
     	    Mlapp += MM[n+i*p_Np]*s_lapp[i];
     	  }
-    			
+
       	const iint id = e*p_Np+n;
       	rhsP[id] -=  J*Mlapp;
       }
