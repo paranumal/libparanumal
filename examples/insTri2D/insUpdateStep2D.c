@@ -63,9 +63,11 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->dt,
                               ins->a0,
                               ins->a1,
-                              ins->a2,                          
-                              0, //no offset
+                              ins->a2,   
+                              ins->index,                       
+                              offset,
                               1, // pressure increment BCs
+                              ins->o_P,
                               ins->o_PI,
                               ins->o_PIx,
                               ins->o_PIy);
@@ -88,5 +90,4 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_P);
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
-  printf("index = %d\n",ins->index );
 }

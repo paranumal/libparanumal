@@ -6,7 +6,7 @@
 #include "ins2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void insPlotVTU2D(ins_t *ins, char *fileNameBase){
+void insPlotVTU2D(ins_t *ins, char *fileName){
 
   mesh2D *mesh = ins->mesh;
   
@@ -14,8 +14,6 @@ void insPlotVTU2D(ins_t *ins, char *fileNameBase){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   FILE *fp;
-  char fileName[BUFSIZ];
-  sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
   
   fp = fopen(fileName, "w");
 

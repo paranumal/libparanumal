@@ -9,7 +9,11 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   solver_t *solver = ins->pSolver;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  //hard coded for 3 stages.
+  //The result of the helmholtz solve is stored in the next index
+  int index1 = (ins->index+1)%3;
+
+  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
