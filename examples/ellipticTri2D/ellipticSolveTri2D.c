@@ -375,7 +375,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   iint Niter = 0;
-  dfloat alpha, beta;
+  dfloat alpha, beta, pAp = 0;
   
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
@@ -386,7 +386,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options); 
    
     // dot(p,A*p)
-    dfloat pAp =  ellipticWeightedInnerProduct(solver, solver->o_invDegree,o_p, o_Ap, options);
+    pAp =  ellipticWeightedInnerProduct(solver, solver->o_invDegree,o_p, o_Ap, options);
     
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -441,13 +441,13 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
     
-    if(rank==0)
-      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-
     ++Niter;
     
   }
 
+  if(rank==0)
+    printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+  
   occaTimerToc(mesh->device,"PCG");
 
   occa::printTimer();

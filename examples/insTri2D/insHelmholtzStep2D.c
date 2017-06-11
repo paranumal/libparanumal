@@ -2,18 +2,18 @@
 
 // complete a time step using LSERK4
 void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
-				               dfloat * sendBuffer, dfloat * recvBuffer, 
-                       char   * options){
-
-	mesh2D *mesh = ins->mesh; 
+			dfloat * sendBuffer, dfloat * recvBuffer, 
+			char   * options){
+  
+  mesh2D *mesh = ins->mesh; 
   solver_t *solver = ins->vSolver; 
-	dfloat t = tstep*ins->dt;
-
+  dfloat t = tstep*ins->dt;
+  
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
 
-  iint stokesSteps = 10;
+  iint stokesSteps = 100;
   dfloat sc = (tstep>=stokesSteps) ? 1: 0; // switch off advection for first steps
-
+  
   // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->helmholtzRhsForcingKernel(mesh->Nelements,
                                  mesh->o_vgeo,

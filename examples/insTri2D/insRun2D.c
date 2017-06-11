@@ -21,7 +21,7 @@ void insRun2D(ins_t *ins, char *options){
 
   occa::initTimer(mesh->device);
   
-  for(iint tstep=0;tstep<10;++tstep){
+  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
 
     switch(tstep){
     case 0:
@@ -30,7 +30,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 = 0.f, ins->a2 = 0.f;
       ins->g0 = 1.f; 
       break;
-
+#if 1
     case 1:
       ins->b0 =  2.f,  ins->a0  = 2.0f;
       ins->b1 = -0.5f, ins->a1 = -1.0f;
@@ -44,6 +44,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f;
       ins->g0 =  11.f/6.f; 
       break;
+#endif
     }
     
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
