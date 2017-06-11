@@ -14,6 +14,7 @@ void insError2D(ins_t *ins, dfloat time,char *options){
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
+	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         maxU = mymax(maxU, fabs(ins->U[id]));
         minU = mymin(minU, fabs(ins->U[id]));
         //
