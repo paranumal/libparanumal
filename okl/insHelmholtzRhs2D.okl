@@ -64,6 +64,9 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				     const dfloat b0,
 				     const dfloat b1,
 				     const dfloat b2,
+				     const dfloat c0,
+				     const dfloat c1,
+				     const dfloat c2,
              const iint index,
              const iint offset,
              const dfloat * restrict U,
@@ -119,10 +122,10 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 
       	  // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
           s_rhsU[es][n]  = J*p_inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*p_idt 
-                                     - (a0*Pxm0+a1*Pxm1+a2*Pxm2) 
+                                     - (c0*Pxm0+c1*Pxm1+c2*Pxm2) 
                                      - (a0*NUm0+a1*NUm1+a2*NUm2)*sc);
           s_rhsV[es][n]  = J*p_inu*( + (b0*Vm0 +b1*Vm1 +b2*Vm2 )*p_idt 
-                                     - (a0*Pym0+a1*Pym1+a2*Pym2) 
+                                     - (c0*Pym0+c1*Pym1+c2*Pym2) 
                                      - (a0*NVm0+a1*NVm1+a2*NVm2)*sc); 
       	}
       }
