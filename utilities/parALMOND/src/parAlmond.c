@@ -33,6 +33,8 @@ void * parAlmondSetup(mesh_t *mesh,
     vAvals[n] = Avals[n];
   }
   vRowStarts[cnt2] = nnz;
+
+  printf("globalRows = %d\n", numGlobalRows);
   
   csr *A = newCSR(numGlobalRows, numGlobalRows, nnz, 
                         vRowStarts, vAj, vAvals);
@@ -72,8 +74,8 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   //if the rhs has already been gather scattered, weight the gathered rhs
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
     meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
-    parAlmond->mesh->dotMultiplyKernel(parAlmond->hgs->Ngather,parAlmond->hgs->o_invDegree,
-                          parAlmond->levels[0]->o_rhs, parAlmond->levels[0]->o_rhs);
+    dotStar(parAlmond, parAlmond->hgs->Ngather,
+            parAlmond->hgs->o_invDegree, parAlmond->levels[0]->o_rhs);
   } else {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
