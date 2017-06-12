@@ -25,23 +25,25 @@ void insRun2D(ins_t *ins, char *options){
 
     switch(tstep){
     case 0:
-      ins->b0 = 1.f, ins->a0 = 1.f;
-      ins->b1 = 0.f, ins->a1 = 0.f;
-      ins->b2 = 0.f, ins->a2 = 0.f;
+      ins->b0 = 1.f, ins->a0 = 1.f, ins->c0 = 1.0f;
+      ins->b1 = 0.f, ins->a1 = 0.f, ins->c1 = 0.0f;
+      ins->b2 = 0.f, ins->a2 = 0.f, ins->c2 = 0.0f;
       ins->g0 = 1.f;
       break;
+
     case 1:
-      ins->b0 =  2.f,  ins->a0  = 2.0f;
-      ins->b1 = -0.5f, ins->a1 = -1.0f;
-      ins->b2 =  0.f,  ins->a2  = 0.f;
+      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f; 
+      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f;
+      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
       break;
-    //case 2:
-    //  ins->b0 =  3.f,       ins->a0  =  3.0f;
-    //  ins->b1 = -1.5f,      ins->a1  = -3.0f;
-    //  ins->b2 =  1.f/3.f,   ins->a2  =  1.0f;
-    //  ins->g0 =  11.f/6.f;
-    //  break;
+
+    case 2:
+      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
+      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 = 0.0f;
+      ins->g0 =  11.f/6.f;
+      break;
     }
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);

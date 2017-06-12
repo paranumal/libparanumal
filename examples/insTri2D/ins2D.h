@@ -32,7 +32,7 @@ typedef struct {
   iint   errorStep; 
 
 
-  dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
+  dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
   dfloat *rhsU, *rhsV, *rhsP;
   dfloat *U, *V, *P; 
 
