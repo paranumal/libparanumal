@@ -77,6 +77,7 @@ typedef struct {
 
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
+  occa::kernel poissonPenaltyKernel;
 
   occa::kernel updateUpdateKernel;
 

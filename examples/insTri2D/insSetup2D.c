@@ -345,6 +345,12 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       "insPoissonRhsIpdgBC2D",
         kernelInfo);
 
+  printf("Compiling Poisson penalty surface kernel\n");
+  ins->poissonPenaltyKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
+      "insPoissonPenalty2D",
+        kernelInfo);
+
   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->velocityHaloExtractKernel= 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
