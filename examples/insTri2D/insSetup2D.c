@@ -62,7 +62,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->finalTime = 10;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); 
+  ins->tau       = 4.f*(mesh->N+1)*(mesh->N+1); 
   
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ; 
@@ -145,7 +145,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep = 100;
+  ins->errorStep = 1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   

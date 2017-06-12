@@ -8,8 +8,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
   mesh2D *mesh = ins->mesh; 
   dfloat t = tstep*ins->dt + ins->dt;
 
-  iint offset = mesh->Nelements+mesh->totalHaloPairs;
-
+  iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+  
   if(mesh->totalHaloPairs>0){
    
     ins->pressureHaloExtractKernel(mesh->Nelements,
