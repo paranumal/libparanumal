@@ -245,60 +245,65 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
     }
   }
 
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
-  
-  // count how many non-zeros to send to each process
-  for(iint n=0;n<nnz;++n)
-    AsendCounts[(*A)[n].ownerRank] += sizeof(nonZero_t);
-  
-  // sort by row ordering
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  
-  // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
-  
-  // find send and recv offsets for gather
-  nnz = 0;
-  for(iint r=0;r<size;++r){
-    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
-    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    nnz += ArecvCounts[r]/sizeof(nonZero_t);
+  if(!forceSymmetry){
+    *nnzA = nnz;
   }
-  
-  nonZero_t *newA = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
-  
-  // determine number to receive
-  MPI_Alltoallv(*A, AsendCounts, AsendOffsets, MPI_CHAR,
-		newA, ArecvCounts, ArecvOffsets, MPI_CHAR,
-		MPI_COMM_WORLD);
-
-  free(*A);
-
-  *A = newA;
-  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(*A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  
-  // compress duplicates
-  int cnt = 0;
-  for(iint n=1;n<nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  else{
+    iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+    iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+    iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+    iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+    
+    // count how many non-zeros to send to each process
+    for(iint n=0;n<nnz;++n)
+      AsendCounts[(*A)[n].ownerRank] += sizeof(nonZero_t);
+    
+    // sort by row ordering
+    qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+    
+    // find how many nodes to expect (should use sparse version)
+    MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+    
+    // find send and recv offsets for gather
+    nnz = 0;
+    for(iint r=0;r<size;++r){
+      AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+      ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+      nnz += ArecvCounts[r]/sizeof(nonZero_t);
     }
-    else{
-      ++cnt;
-      (*A)[cnt] = (*A)[n];
+    
+    nonZero_t *newA = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+    
+    // determine number to receive
+    MPI_Alltoallv(*A, AsendCounts, AsendOffsets, MPI_CHAR,
+		  newA, ArecvCounts, ArecvOffsets, MPI_CHAR,
+		  MPI_COMM_WORLD);
+    
+    free(*A);
+    
+    *A = newA;
+    // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+    qsort(*A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+    
+    // compress duplicates
+    int cnt = 0;
+    for(iint n=1;n<nnz;++n){
+      if((*A)[n].row == (*A)[cnt].row &&
+	 (*A)[n].col == (*A)[cnt].col){
+	(*A)[cnt].val += (*A)[n].val;
+      }
+      else{
+	++cnt;
+	(*A)[cnt] = (*A)[n];
+      }
     }
+    *nnzA = cnt+1;
+    
+    free(AsendCounts);
+    free(ArecvCounts);
+    free(AsendOffsets);
+    free(ArecvOffsets);
   }
-  *nnzA = cnt+1;
-  
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
   
   free(BM);  free(MS);
   free(DrTMS); free(DsTMS);  
