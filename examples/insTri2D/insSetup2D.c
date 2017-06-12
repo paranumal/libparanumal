@@ -12,11 +12,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
-  // sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  // sprintf(deviceConfig, "mode = Serial");  
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
   
@@ -30,14 +30,22 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->mesh = mesh;  
   int Nstages = 3; 
   // compute samples of q at interpolation nodes
-  ins->U     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->V     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->P     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*ins->Nfields,sizeof(dfloat));  
+  ins->U     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->V     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->P     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
 
-  ins->rhsU  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->rhsV  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
-  ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np*ins->Nfields,sizeof(dfloat));
+  //rhs storage
+  ins->rhsU  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
     
+  //additional field storage (could reduce in the future)
+  ins->NU     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->NV     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Px     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Py     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+
   // SET SOLVER OPTIONS 
   // Initial Conditions, Flow Properties 
   printf("Starting initial conditions for INS2D\n");
@@ -45,16 +53,16 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ; 
   dfloat uy   = 0.0  ; 
   dfloat pr   = 0.0  ;   
-  dfloat nu   = 1.0/40.0;  // kinematic viscosity,
+  dfloat nu   = 1e-3; 1.0/40.0;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
   
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
   
   // Fill up required fileds
-  ins->finalTime = 0.01;
+  ins->finalTime = 10;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); 
+  ins->tau       = 4.f*(mesh->N+1)*(mesh->N+1); 
   
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ; 
@@ -66,17 +74,25 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];    
-    #if 0
+#if 0
       dfloat lamda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;  
       //
       ins->U[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y);
       ins->V[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
       ins->P[id] = 0.5*(1.0- exp(2.*lamda*x));
-    #else
+#endif
+      
+#if 0
       ins->U[id] = y*(4.5f-y)/(2.25f*2.25f);
       ins->V[id] = 0;
       ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
-     #endif
+#endif
+
+#if 1
+      ins->U[id] = 1;
+      ins->V[id] = 0;
+      ins->P[id] = 0;
+#endif
     }
   }
 
@@ -113,7 +129,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.25; 
+  dfloat cfl = 0.125; 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
@@ -129,7 +145,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->dt         = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =1;
+  ins->errorStep = 10;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
   
@@ -208,21 +224,32 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
   // MEMORY ALLOCATION
-  ins->o_U  =    
-    mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->U);
-  ins->o_V  =    
-    mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*ins->Nfields*sizeof(dfloat), ins->V);  
-  ins->o_P =    
-    mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),  ins->P);  
+  ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
+  ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);  
+  ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);  
 
   ins->o_rhsU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
   ins->o_rhsV  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
   ins->o_rhsP  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsP); 
+ 
+  ins->o_NU = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->NU);
+  ins->o_NV = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->NV);
+  ins->o_Px = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Px);
+  ins->o_Py = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Py);
+  ins->o_PI = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+  ins->o_PIx = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+  ins->o_PIy = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   
+  //storage for helmholtz solves. Fix this later
+  ins->o_UH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+  ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+
+
+
   if(mesh->totalHaloPairs){
     ins->o_tHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
     ins->o_vHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
-    ins->o_pHaloBuffer  = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
+    ins->o_pHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
   }
 
   ins->mesh = mesh;
