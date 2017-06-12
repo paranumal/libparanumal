@@ -22,7 +22,7 @@ int main(int argc, char **argv){
     strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
 
   char *prSolverOptions = 
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=FULLALMOND"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
 
   if(argc!=3){
     printf("usage: ./main meshes/cavityH005.msh N\n");

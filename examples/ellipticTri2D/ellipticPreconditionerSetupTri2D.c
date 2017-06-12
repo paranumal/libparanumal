@@ -34,8 +34,8 @@ int parallelCompareRowColumn(const void *a, const void *b);
 
 extern "C"
 {
-  void dgetrf_ (int *, int *, dfloat *, int *, int *, int *);
-  void dgetri_ (int *, dfloat *, int *, int *, dfloat *, int *, int *);
+  void dgetrf_ (int *, int *, double *, int *, int *, int *);
+  void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
 }
 
 
@@ -330,10 +330,11 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
   else if (strstr(options, "BLOCKJACOBI")){
     
     // compute inverse mass matrix
-    dfloat *MMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
     iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
     int lwork = mesh->Np*mesh->Np;
-    dfloat *work = (dfloat*) calloc(lwork, sizeof(dfloat));
+    double *work = (double*) calloc(lwork, sizeof(double));
     iint info;
     for(iint n=0;n<mesh->Np*mesh->Np;++n){
       MMinv[n] = mesh->MM[n];
@@ -343,10 +344,14 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
     if(info) 
       printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
+
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      dfMMinv[n] = MMinv[n];
+    }
     
-    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), MMinv);
+    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
     
-    free(MMinv); free(ipiv); free(work);
+    free(MMinv); free(ipiv); free(work); free(dfMMinv);
   }
   
     

@@ -67,6 +67,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   }
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  
+  int forceSymmetry = (strstr(options, "FORCESYMMETRY")) ? 1:0;
+  dfloat scale = 1;
+  if(forceSymmetry){
+    scale = 0.5;
+    nnzLocalBound *= 2;
+  }
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
@@ -75,7 +82,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
   // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-12;
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -210,15 +217,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
 
             for (iint i=0;i<mesh->Nfp;i++) {
               BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-		                              +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] +=
+		+0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+		+0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
-              AnmP += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-		                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+              AnmP +=
+		+0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
+		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
@@ -226,9 +235,18 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
           if(fabs(AnmP)>tol){
             sendNonZeros[nnz].row = globalIds[eM*mesh->Np + n];
             sendNonZeros[nnz].col = globalIds[eP*mesh->Np + m];
-            sendNonZeros[nnz].val = AnmP;
+            sendNonZeros[nnz].val = scale*AnmP;
             sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
             ++nnz;
+	    
+	    if(forceSymmetry){
+	      sendNonZeros[nnz].row = globalIds[eP*mesh->Np + m];
+              sendNonZeros[nnz].col = globalIds[eM*mesh->Np + n];
+              sendNonZeros[nnz].val = scale*AnmP;
+              sendNonZeros[nnz].ownerRank = globalOwners[eP*mesh->Np + m];
+	      ++nnz;
+	    }
+	    
           }
         }
       }
@@ -241,9 +259,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
         if(fabs(Anm)>tol){
           sendNonZeros[nnz].row = globalIds[eM*mesh->Np+n];
           sendNonZeros[nnz].col = globalIds[eM*mesh->Np+m];
-          sendNonZeros[nnz].val = Anm;
+          sendNonZeros[nnz].val = scale*Anm;
           sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
           ++nnz;
+
+	  if(forceSymmetry){
+	    sendNonZeros[nnz].row = globalIds[eM*mesh->Np+m];
+	    sendNonZeros[nnz].col = globalIds[eM*mesh->Np+n];
+            sendNonZeros[nnz].val = scale*Anm;
+            sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + m];
+	    ++nnz;
+	  }
         }
       } 
     }

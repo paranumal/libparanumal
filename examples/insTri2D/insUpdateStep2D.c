@@ -8,6 +8,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
   mesh2D *mesh = ins->mesh; 
   dfloat t = tstep*ins->dt + ins->dt;
 
+  iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+  
   if(mesh->totalHaloPairs>0){
    
     ins->pressureHaloExtractKernel(mesh->Nelements,
@@ -26,16 +28,15 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                          recvBuffer);
   }
 
-
-
-  // Compute Volume Contribution
+  // Compute Volume Contribution of gradient of pressure gradient
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
-                            mesh->o_DsT,
-                            ins->o_PI,  
-                            ins->o_rhsU,
-                            ins->o_rhsV);
+                            mesh->o_DsT,                
+                            0,  //no offset
+                            ins->o_PI,
+                            ins->o_PIx,
+                            ins->o_PIy);
 
   if(mesh->totalHaloPairs>0){    
     meshHaloExchangeFinish(mesh);
@@ -49,7 +50,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                     ins->o_pHaloBuffer);
   }
 
-  // Compute Surface Conribution
+  // Compute Surface Contribution of gradient of pressure increment
   ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
@@ -60,19 +61,36 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               mesh->o_y,
                               t,
                               ins->dt,
-                              ins->PIID,
+                              ins->a0,
+                              ins->a1,
+                              ins->a2,   
+                              ins->index,                       
+                              offset,
+                              1, // pressure increment BCs
+                              ins->o_P,
                               ins->o_PI,
-                              ins->o_rhsU,
-                              ins->o_rhsV);
+                              ins->o_PIx,
+                              ins->o_PIy);
 
-   //computes div u^(n+1) surface term
+  // U <= U - dt/g0 * d(pressure increment)/dx
+  // V <= V - dt/g0 * d(pressure increment)/dy
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,  
                               ins->g0,
+                              ins->a0,
+                              ins->a1,
+                              ins->a2,
+			  ins->c0,
+                              ins->c1,
+                              ins->c2,
+                              ins->o_PI,
+                              ins->o_PIx,
+                              ins->o_PIy,  
+                              ins->index,
+                              offset,
                               ins->o_U,
                               ins->o_V,
-                              ins->o_P,
-                              ins->o_PI,
-                              ins->o_rhsU,
-                              ins->o_rhsV);   
+                              ins->o_P);
+
+  ins->index = (ins->index+1)%3; //hard coded for 3 stages
 }

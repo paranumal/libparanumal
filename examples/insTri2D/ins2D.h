@@ -32,13 +32,24 @@ typedef struct {
   iint   errorStep; 
 
 
-  dfloat a0, a1, a2, b0, b1, b2, g0, tau; 
+  dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
   dfloat *rhsU, *rhsV, *rhsP;
   dfloat *U, *V, *P; 
+
+  dfloat *NU, *NV;
+  dfloat *Px, *Py;
+  dfloat *PI;
+
   dfloat g[2];      // gravitational Acceleration
 
   occa::memory o_U, o_V, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsP; 
+
+  occa::memory o_NU, o_NV;
+  occa::memory o_Px, o_Py;
+
+  occa::memory o_UH, o_VH;
+  occa::memory o_PI, o_PIx, o_PIy;
 
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
 
