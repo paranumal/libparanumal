@@ -124,6 +124,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
   *nnz = cnt+1;
 
+  free(sendNonZeros);
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
