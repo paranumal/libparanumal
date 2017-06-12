@@ -11,14 +11,10 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
 
-  iint stokesSteps = 100;
-  dfloat sc = (tstep>=stokesSteps) ? 1: 0; // switch off advection for first steps
-  
   // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->helmholtzRhsForcingKernel(mesh->Nelements,
                                  mesh->o_vgeo,
                                  mesh->o_MM,
-                                 sc,
                                  ins->a0,
                                  ins->a1,
                                  ins->a2,

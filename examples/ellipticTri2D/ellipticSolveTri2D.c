@@ -327,7 +327,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-9;
+  const dfloat tol = 1e-8;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -441,8 +441,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
 
-    //    if(rank==0)
-    //      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+    if(rank==0)
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
     
     ++Niter;
     
@@ -454,8 +454,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   occaTimerToc(mesh->device,"PCG");
 
   occa::printTimer();
-
-  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
 
   return Niter;
 }
