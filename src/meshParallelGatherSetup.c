@@ -203,9 +203,6 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   hgs->o_gatherLocalIds = mesh->device.malloc(NownedTotal*sizeof(iint),hgs->gatherLocalIds);
   hgs->o_invDegree = mesh->device.malloc(hgs->Ngather*sizeof(dfloat),hgs->invDegree);
 
-  printf("Ngather = %d\n", hgs->Ngather);
-
-
   iint tmpSize = mymax(Nlocal,NownedTotal);
   void *tmpBuffer = calloc(tmpSize,sizeof(dfloat));
   hgs->o_gatherTmp = mesh->device.malloc(tmpSize*sizeof(dfloat),tmpBuffer);
