@@ -140,6 +140,7 @@ kernel void insGradientSurface2D(const iint Nelements,
               idM = vmapM[id];
               boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
 
+#if 0
               //TODO fix this later. On a Neumann BC for pressure this is wrong.
               //  Need the boundary values from the previous pressure steps.
               // Note: Or is it? Tried changing it and didnt help
@@ -159,7 +160,8 @@ kernel void insGradientSurface2D(const iint Nelements,
                 boundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PMm1, &PPm1);
                 boundaryConditions2D(bc, time-3*dt, x[idM], y[idM], nx, ny, PMm2, &PPm2);
                 PP = PP - a0*PPm0 - a1*PPm1 - a2*PPm2;
-              }
+	      }
+#endif
               PP = 2.f*PP - PM; //Strong form BCs
             }
 

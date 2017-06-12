@@ -10,6 +10,8 @@ typedef struct{
 
 } nonZero_t;
 
+int parallelCompareRowColumn(const void *a, const void *b);
+
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, const char *options){
 
   iint size, rankM;
@@ -36,11 +38,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   }
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
-
+  int forceSymmetry = (strstr(options, "FORCESYMMETRY")) ? 1:0;
+  dfloat scale = 1;
+  if(forceSymmetry){
+    scale = 0.5;
+    nnzLocalBound *= 2;
+  }
+  
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
   // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-12;
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -175,15 +183,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
 
             for (iint i=0;i<mesh->Nfp;i++) {
               BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-		                              +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] +=
+		+0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+		+0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
-              AnmP += +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-		                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+              AnmP +=
+		+0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
+		+0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
@@ -192,11 +202,21 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
             // remote info
             iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
             if (rankP<0) rankP = rankM;
+
             (*A)[nnz].row = n + globalIds[eM]*mesh->Np;
             (*A)[nnz].col = m + globalIds[eP]*mesh->Np;
-            (*A)[nnz].val = AnmP;
+            (*A)[nnz].val = scale*AnmP;
             (*A)[nnz].ownerRank = rankM;
             ++nnz;
+	    
+	    if(forceSymmetry){
+	      (*A)[nnz].row = m + globalIds[eP]*mesh->Np;
+	      (*A)[nnz].col = n + globalIds[eM]*mesh->Np;
+	      (*A)[nnz].val = scale*AnmP;
+	      (*A)[nnz].ownerRank = rankP;
+	      ++nnz;
+	    }
+	    
           }
         }
       }
@@ -209,18 +229,76 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
         if(fabs(Anm)>tol){
           (*A)[nnz].row = n + globalIds[eM]*mesh->Np;
           (*A)[nnz].col = m + globalIds[eM]*mesh->Np;
-          (*A)[nnz].val = Anm;
+          (*A)[nnz].val = scale*Anm;
           (*A)[nnz].ownerRank = rankM;
           ++nnz;
+
+	  if(forceSymmetry){
+	    (*A)[nnz].row = m + globalIds[eM]*mesh->Np;
+	    (*A)[nnz].col = n + globalIds[eM]*mesh->Np;
+	    (*A)[nnz].val = scale*Anm;
+	    (*A)[nnz].ownerRank = rankM;
+	    ++nnz;
+	  }
         }
       } 
     }
   }
 
-  // free up unused storage
-  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
   
-  *nnzA = nnz;
+  // count how many non-zeros to send to each process
+  for(iint n=0;n<nnz;++n)
+    AsendCounts[(*A)[n].ownerRank] += sizeof(nonZero_t);
+  
+  // sort by row ordering
+  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  
+  // find send and recv offsets for gather
+  nnz = 0;
+  for(iint r=0;r<size;++r){
+    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+    nnz += ArecvCounts[r]/sizeof(nonZero_t);
+  }
+  
+  nonZero_t *newA = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+  
+  // determine number to receive
+  MPI_Alltoallv(*A, AsendCounts, AsendOffsets, MPI_CHAR,
+		newA, ArecvCounts, ArecvOffsets, MPI_CHAR,
+		MPI_COMM_WORLD);
+
+  free(*A);
+
+  *A = newA;
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort(*A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  
+  // compress duplicates
+  int cnt = 0;
+  for(iint n=1;n<nnz;++n){
+    if((*A)[n].row == (*A)[cnt].row &&
+       (*A)[n].col == (*A)[cnt].col){
+      (*A)[cnt].val += (*A)[n].val;
+    }
+    else{
+      ++cnt;
+      (*A)[cnt] = (*A)[n];
+    }
+  }
+  *nnzA = cnt+1;
+  
+  free(AsendCounts);
+  free(ArecvCounts);
+  free(AsendOffsets);
+  free(ArecvOffsets);
   
   free(BM);  free(MS);
   free(DrTMS); free(DsTMS);  
