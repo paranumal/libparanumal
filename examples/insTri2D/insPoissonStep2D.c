@@ -82,7 +82,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->g0,
                               ins->o_rhsP);
 
-  #if 1
+#if 1
   //add penalty from jumps in previous pressure
   ins->poissonPenaltyKernel(mesh->Nelements,
                                 mesh->o_sgeo,
@@ -108,6 +108,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
+  
   #if 0 // No time dependent BC
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_sgeo,

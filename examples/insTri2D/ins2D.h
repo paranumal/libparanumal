@@ -78,13 +78,13 @@ typedef struct {
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
   occa::kernel poissonPenaltyKernel;
-
+  
   occa::kernel updateUpdateKernel;
 
 }ins_t;
 
 
-ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions);
+ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 
