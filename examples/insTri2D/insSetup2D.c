@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSolverOptions){
+ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSolverOptions, char *boundaryHeaderFileName){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -193,8 +193,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   free(vEToB);
   free(pEToB);
 
-  printf("mesh nfields %d\n", mesh->Nfields);
-
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
@@ -223,6 +221,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
+  printf("mesh nfields %d\n", mesh->Nfields);
+  kernelInfo.addIncludeDefine(boundaryHeaderFileName);
+  
   // MEMORY ALLOCATION
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);  
@@ -350,7 +351,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
       "insPoissonPenalty2D",
         kernelInfo);
-
+  
   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->velocityHaloExtractKernel= 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",

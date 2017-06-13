@@ -1,58 +1,4 @@
 
-void boundaryConditionsIpdg2D(const iint bc,
-			      const dfloat  t, const dfloat  x, const dfloat  y,
-			      const dfloat  nx,   const dfloat  ny,
-			      dfloat * restrict uB, dfloat * restrict uxB, dfloat * restrict uyB,
-			      dfloat * restrict vB, dfloat * restrict vxB, dfloat * restrict vyB){
-  if((bc==1)||(bc==4)){ // Wall/Slip 
-    *uB = 0.f; 
-    *vB = 0.f;
-
-    *uxB = 0.f; 
-    *uyB = 0.f; 
-    *vxB = 0.f;
-    *vyB = 0.f;
-  } else if(bc==2){ // Inflow 
-#if 0
-    dfloat nu   = 1.0f/40.0f;
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-    
-    *uB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
-    *vB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-#endif
-#if 0
-    *uB = y*(4.5f-y)/(2.25f*2.25f);
-    *vB = 0;
-#endif
-#if 1
-    *uB = 1;
-    *vB = 0;
-#endif
-    *uxB = 0.f; 
-    *uyB = 0.f; 
-    *vxB = 0.f;
-    *vyB = 0.f; 
-  } else if(bc==3){ // Outflow 
-     // do nothing 
-    *uB = 0.f; 
-    *vB = 0.f; 
-#if 0
-    dfloat nu   = 1.0f/40.0f;
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-    
-    *uxB = -lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-    *uyB = 2.f*OCCA_PI*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-    *vxB =  lambda*lambda*occaExp(lambda*x)*occaSin(2*OCCA_PI*y)/(2*OCCA_PI);
-    *vyB =  lambda*occaExp(lambda*x)*occaCos(2*OCCA_PI*y);
-#else
-    *uxB = 0.f; 
-    *uyB = 0.f; 
-    *vxB = 0.f;
-    *vyB = 0.f;
-    #endif
-  }
-}
-
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
 kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				     const dfloat * restrict vgeo,
@@ -217,10 +163,8 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	hinv = sgeo[sid+p_IHID];
 
         int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) boundaryConditionsIpdg2D(bc, t, x[idM], y[idM], nx, ny, 
-					  &graduP.w, &graduP.x, &graduP.y,
-					  &gradvP.w, &gradvP.x, &gradvP.y);
-
+        if(bc>0) insHelmholtzBoundaryConditionsIpdg2D(bc, t, x[idM], y[idM], nx, ny, &graduP.w, &graduP.x, &graduP.y, &gradvP.w, &gradvP.x, &gradvP.y);
+					  	     
       	const dfloat du = graduP.w;
       	const dfloat dv = gradvP.w;
       	const dfloat half = 1f;

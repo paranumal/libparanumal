@@ -1,45 +1,12 @@
 
-// Weakly Impose Nonlinear term BCs
-void boundaryConditions2D(const iint bc,
-                  			  const dfloat  t, 
-                  			  const dfloat  x,	const dfloat  y,
-                  			  const dfloat  nx, const dfloat  ny,
-                  			  const dfloat  uM,
-                  			  const dfloat  vM,
-                  			  dfloat * restrict uB, 
-                  			  dfloat * restrict vB){
-  if(bc==1){ // Wall 
-    *uB = 0.f; 
-    *vB = 0.f;
-  } else if(bc==2){ // Inflow
-#if 0
-    dfloat nu   = 1.0f/40.0f;
-    dfloat lambda = 1.f/(2.f * nu) - sqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-    
-    *uB = 1.0f - occaExp(lambda*x)*occaCos(2.f*OCCA_PI*y) ; 
-    *vB = 0.5f*lambda/(OCCA_PI)*occaExp(lambda*x)*occaSin(2.f*OCCA_PI*y);
-#endif
-#if 0
-    *uB = y*(4.5f-y)/(2.25f*2.25f);
-    *vB = 0.f;
-#endif
-    *uB = 1.f;
-    *vB = 0.f;
-  } else if(bc==3){ // Outflow 
-    // do nothing 
-    *uB = uM;
-    *vB = vM;
-  }
-}
-
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insAdvectionVolume2D(const iint Nelements,
 				 const dfloat * restrict vgeo,
 				 const dfloat * restrict DrT,
 				 const dfloat * restrict DsT,
-         const iint offset,
-         const dfloat * restrict U,
-         const dfloat * restrict V,
+				 const iint offset,
+				 const dfloat * restrict U,
+				 const dfloat * restrict V,
 				 dfloat * restrict NU,
 				 dfloat * restrict NV){
 
@@ -98,10 +65,10 @@ kernel void insAdvectionVolume2D(const iint Nelements,
 
       	  // NU = del(u1xu1)/ dx + del(u1xu2)/dy
       	  dfloat nu = drdx*df11dr + dsdx*df11ds 
-      	            + drdy*df12dr + dsdy*df12ds;
+	    + drdy*df12dr + dsdy*df12ds;
       	  // NV = del(u2xu1)/ dx + del(u2xu2)/dy
       	  dfloat nv = drdx*df12dr + dsdx*df12ds 
-      	            + drdy*df22dr + dsdy*df22ds;
+	    + drdy*df22dr + dsdy*df22ds;
 
       	  // Update
       	  const iint id = (e+offset)*p_Np+n;
@@ -114,19 +81,19 @@ kernel void insAdvectionVolume2D(const iint Nelements,
 }
 
 kernel void insAdvectionSurface2D(const iint Nelements,
-                        				  const dfloat * restrict sgeo,
-                        				  const dfloat * restrict LIFTT,
-                        				  const iint   * restrict vmapM,
-                        				  const iint   * restrict vmapP,
-                        				  const iint   * restrict EToB,
-                        				  const dfloat time,
-                        				  const dfloat * restrict x,
-                        				  const dfloat * restrict y,
+				  const dfloat * restrict sgeo,
+				  const dfloat * restrict LIFTT,
+				  const iint   * restrict vmapM,
+				  const iint   * restrict vmapP,
+				  const iint   * restrict EToB,
+				  const dfloat time,
+				  const dfloat * restrict x,
+				  const dfloat * restrict y,
                                   const iint offset,
                                   const dfloat * restrict U,
                                   const dfloat * restrict V,
-                        				  dfloat * restrict NU,
-                        				  dfloat * restrict NV){
+				  dfloat * restrict NU,
+				  dfloat * restrict NV){
 
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -162,7 +129,7 @@ kernel void insAdvectionSurface2D(const iint Nelements,
       	    iint bc = EToB[face+p_Nfaces*e];
       	    if(bc>0){
               idM = vmapM[id];
-      	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+      	      insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
             }
 
       	    // Find max normal velocity on the face
@@ -198,10 +165,10 @@ kernel void insAdvectionSurface2D(const iint Nelements,
       	    // Lift
       	    occaUnroll(p_NfacesNfp)
       	      for(int m=0;m<p_Nfaces*p_Nfp;++m){
-            		dfloat L = LIFTT[n+m*p_Np];
+		dfloat L = LIFTT[n+m*p_Np];
 
-            		rhsnu  += L*s_fluxNx[es][m];
-            		rhsnv  += L*s_fluxNy[es][m];
+		rhsnu  += L*s_fluxNx[es][m];
+		rhsnv  += L*s_fluxNy[es][m];
       	      }
 
       	    NU[id] = rhsnu;
@@ -220,9 +187,9 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 					 const dfloat * restrict cubDrWT,
 					 const dfloat * restrict cubDsWT,
 					 const dfloat * restrict cubInterpT,
-           const iint offset,
-           const dfloat * restrict U,
-           const dfloat * restrict V,
+					 const iint offset,
+					 const dfloat * restrict U,
+					 const dfloat * restrict V,
 					 dfloat * restrict NU,
 					 dfloat * restrict NV){
 
@@ -323,9 +290,9 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 					  const dfloat time,
 					  const dfloat * restrict intx, // integration nodes
 					  const dfloat * restrict inty,
-            const iint offset,
-            const dfloat * restrict U,
-            const dfloat * restrict V,
+					  const iint offset,
+					  const dfloat * restrict U,
+					  const dfloat * restrict V,
 					  dfloat * restrict NU,
 					  dfloat * restrict NV){
 
@@ -400,16 +367,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
       	    iint bc = EToB[face+p_Nfaces*e];
 
       	    if(bc>0){
-      	      boundaryConditions2D(bc,
-      				   time, 
-      				   intx[n+e*p_Nfaces*p_intNfp], 
-      				   inty[n+e*p_Nfaces*p_intNfp], 
-      				   nx,
-      				   ny,
-      				   iUM,
-      				   iVM,
-      				   &iUP,
-      				   &iVP);
+      	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUM,iVM, &iUP, &iVP);
       	    }
 
       	    // Find max normal velocity on the face

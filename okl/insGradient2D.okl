@@ -1,28 +1,3 @@
-
-// Gradient only applies to Pressure and Pressure Incremament
-// Boundary Conditions are implemented in strong form
-void boundaryConditions2D(const iint bc,
-        const dfloat  t, const dfloat  x, const dfloat  y,
-        const dfloat  nx, const dfloat  ny,
-        const dfloat pM, dfloat * restrict pB){
-
-  if(bc==1){ // Wall
-    *pB = pM; // Neumann for Pressure // do nothing
-  } else if(bc==2){ // Inflow
-    *pB = pM; // Neumann for Pressure // do nothing
-  } else if(bc==3){ // Outflow
-#if 0
-    dfloat nu   = 1.0f/40.0f;
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt( 1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-
-    *pB = 0.5f*(1.0f - occaExp(2.0f*lambda*x));
-#else
-    *pB = 0.f;
-#endif
-  }
-  //(*pB) = 2.f*(*pB) - pM; //Strong form BCs
-}
-
 // Compute Gradient in Strong Form
 kernel void insGradientVolume2D(const iint Nelements,
         const dfloat * restrict vgeo,
@@ -138,7 +113,7 @@ kernel void insGradientSurface2D(const iint Nelements,
             iint bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               idM = vmapM[id];
-              boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
+              insGradientBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
 
 #if 0
               //TODO fix this later. On a Neumann BC for pressure this is wrong.
@@ -156,9 +131,9 @@ kernel void insGradientSurface2D(const iint Nelements,
                 PMm1 = POld[idM+p_Np*index1*offset];
                 PMm2 = POld[idM+p_Np*index2*offset];
 
-                boundaryConditions2D(bc, time-1*dt, x[idM], y[idM], nx, ny, PMm0, &PPm0);
-                boundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PMm1, &PPm1);
-                boundaryConditions2D(bc, time-3*dt, x[idM], y[idM], nx, ny, PMm2, &PPm2);
+                insGradientBoundaryConditions2D(bc, time-1*dt, x[idM], y[idM], nx, ny, PMm0, &PPm0);
+                insGradientBoundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PMm1, &PPm1);
+                insGradientBoundaryConditions2D(bc, time-3*dt, x[idM], y[idM], nx, ny, PMm2, &PPm2);
                 PP = PP - a0*PPm0 - a1*PPm1 - a2*PPm2;
 	      }
 #endif
