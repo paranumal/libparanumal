@@ -23,8 +23,8 @@ void insRun2D(ins_t *ins, char *options){
 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
 
-#if 1
-    // ok it seems (with IPDG+PROJECT)
+#if 0
+    // ok it seems 
     if(tstep<100){
       // no advection, first order in time
       ins->b0 = 1.f, ins->a0 = 0.f, ins->c0 = 0.0f; // (1,1,1)
