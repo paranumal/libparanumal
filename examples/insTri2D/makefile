@@ -45,6 +45,7 @@ insPlotVTU2D.o \
 insError2D.o \
 insReport2D.o \
 insAdvectionStep2D.o \
+insAdvectionSubCycleStep2D.o \
 insHelmholtzStep2D.o \
 insPoissonStep2D.o \
 insUpdateStep2D.o \

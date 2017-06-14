@@ -19,9 +19,15 @@ void insRun2D(ins_t *ins, char *options){
   dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
   dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 
+  // Set subscycling 
+  iint subcycling =0;
+  if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
+    
+
   occa::initTimer(mesh->device);
 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  //for(iint tstep=0;tstep<1;++tstep){
 
 #if 0
     // ok it seems 
@@ -67,28 +73,28 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 = 0.f, ins->a2 = 0.f, ins->c2 = 0.0f;
       ins->g0 = 1.f;
     }
-    else if(tstep<200){
+    else if(tstep<110){
       // advection, first order in time, no increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 0.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.f;      
     }
-    else if(tstep<300){
+    else if(tstep<120){
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 0.0f;  // 2
       ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else if(tstep<400){
+    else if(tstep<130){
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
       ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else if(tstep<500){
+    else if(tstep<140){
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
       ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
@@ -107,7 +113,16 @@ void insRun2D(ins_t *ins, char *options){
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
 
-    insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+    switch(subcycling){
+      case 1:
+        insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
+      break;
+
+      case 0:
+       insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+      break;
+    }
+
     insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
     insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);

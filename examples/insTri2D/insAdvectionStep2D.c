@@ -133,7 +133,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
            ins->index,
 			     mesh->Nelements+mesh->totalHaloPairs,
 			     0, // Normal pressure BCs
-           ins->o_PI, //not used
+					ins->o_PI, //not used
 			     ins->o_P,
 			     ins->o_Px,
 			     ins->o_Py);
