@@ -12,7 +12,7 @@ typedef struct{
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA, 
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA,
                       hgs_t **hgs, iint *globalStarts, const char *options){
 
   iint size, rankM;
@@ -27,15 +27,15 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
   if (strstr(options,"PROJECT")) {
-    // Create a contiguous numbering system, starting from the element-vertex connectivity  
+    // Create a contiguous numbering system, starting from the element-vertex connectivity
     for (iint n=0;n<Nnum;n++) {
-      iint id = mesh->gatherLocalIds[n]; 
+      iint id = mesh->gatherLocalIds[n];
       globalIds[id] = mesh->gatherBaseIds[n];
     }
 
     // squeeze node numbering
     meshParallelConsecutiveGlobalNumbering(Nnum, globalIds, globalOwners, globalStarts);
-    
+
     //use the ordering to define a gather+scatter for assembly
     *hgs = meshParallelGatherSetup(mesh, Nnum, globalIds, globalOwners);
 
@@ -67,7 +67,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   }
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
-  
+
   int forceSymmetry = (strstr(options, "FORCESYMMETRY")) ? 1:0;
   dfloat scale = 1;
   if(forceSymmetry){
@@ -97,10 +97,10 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Nfp;m++) {
   dfloat MSnm = 0;
-      
-  for (iint i=0;i<mesh->Np;i++) 
+
+  for (iint i=0;i<mesh->Np;i++)
     MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
-    
+
   MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]  = MSnm;
       }
     }
@@ -115,9 +115,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
         DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         for (iint m=0;m<mesh->Np;m++) {
-          DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] 
+          DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
             += mesh->Dr[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
-          DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] 
+          DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
             += mesh->Ds[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
         }
       }
@@ -129,7 +129,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
 
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
-    
+
     iint gbase = eM*mesh->Nggeo;
     dfloat Grr = mesh->ggeo[gbase+G00ID];
     dfloat Grs = mesh->ggeo[gbase+G01ID];
@@ -138,7 +138,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
 
     /* start with stiffness matrix  */
     for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){ 
+      for(iint m=0;m<mesh->Np;++m){
         BM[m+n*mesh->Np]  = J*lambda*mesh->MM[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grr*mesh->Srr[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grs*mesh->Srs[m+n*mesh->Np];
@@ -169,7 +169,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
         dfloat drdyP = mesh->vgeo[vbaseP+RYID];
         dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
         dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
-      
+
         // extract trace nodes
         for (iint i=0;i<mesh->Nfp;i++) {
           // double check vol geometric factors are in halo storage of vgeo
@@ -181,14 +181,14 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
           if (vidM == m) qmM[i] =1;
           qmP[i] =0;
           if (vidP == m) qmP[i] =1;
-          
+
           ndotgradqmM[i] = (nx*drdx+ny*drdy)*mesh->Dr[m+vidM*mesh->Np]
                           +(nx*dsdx+ny*dsdy)*mesh->Ds[m+vidM*mesh->Np];
           ndotgradqmP[i] = (nx*drdxP+ny*drdyP)*mesh->Dr[m+vidP*mesh->Np]
                           +(nx*dsdxP+ny*dsdyP)*mesh->Ds[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*hinv; // tau*(mesh->N+1)*(mesh->N+1)*hinv; 
+        dfloat penalty = tau*hinv; // tau*(mesh->N+1)*(mesh->N+1)*hinv;
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
 
@@ -196,7 +196,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
           for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+                                -0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
             BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
           }
 
@@ -219,7 +219,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
               BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
               BM[m+n*mesh->Np] +=
                   +0.5*qSgn*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                  +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+                  +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
@@ -227,7 +227,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP +=
                   +0.5*sJ*(nx*drdx+ny*drdy)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+                  +0.5*sJ*(nx*dsdx+ny*dsdy)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i];
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
@@ -238,7 +238,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
             sendNonZeros[nnz].val = scale*AnmP;
             sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
             ++nnz;
-      
+
             if(forceSymmetry){
               sendNonZeros[nnz].row = globalIds[eP*mesh->Np + m];
               sendNonZeros[nnz].col = globalIds[eM*mesh->Np + n];
@@ -249,7 +249,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
           }
         }
       }
-    }    
+    }
 
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
@@ -270,7 +270,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
             ++nnz;
           }
         }
-      } 
+      }
     }
   }
 
@@ -293,7 +293,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   }
 
   *A = (nonZero_t*) calloc(*nnzA, sizeof(nonZero_t));
-  
+
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
     (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,
@@ -325,7 +325,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
   free(ArecvOffsets);
 
   free(BM);  free(MS);
-  free(DrTMS); free(DsTMS);  
+  free(DrTMS); free(DsTMS);
 
   free(qmM); free(qmP);
   free(ndotgradqmM); free(ndotgradqmP);

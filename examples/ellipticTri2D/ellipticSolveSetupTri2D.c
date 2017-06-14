@@ -7,16 +7,16 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
     deg[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
-  
+
   o_deg.copyFrom(deg);
-  
+
   ellipticParallelGatherScatterTri2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
-  
+
   o_deg.copyTo(deg);
 
   mesh->device.finish();
   o_deg.free();
-  
+
 }
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *EToB,
@@ -31,11 +31,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
-  
+
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->tau = tau;
-  
+
   solver->mesh = mesh;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -56,7 +56,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
 
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
-  
+
   // use this for OAS precon pairwise halo exchange
   solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
   solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
@@ -74,16 +74,16 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     iint Nlocal = mesh->Nelements*mesh->Np;
     iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
-    
+
     // import geometric factors from halo elements
     mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
-    
+
     meshHaloExchange(mesh,
          mesh->Nvgeo*sizeof(dfloat),
          mesh->vgeo,
          vgeoSendBuffer,
          mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
-    
+
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
@@ -93,11 +93,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nmax", Nmax); 
+  kernelInfo.addDefine("p_Nmax", Nmax);
 
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
-  
+
+  //add standard boundary functions
+  char *boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+  kernelInfo.addIncludeDefine(boundaryHeaderFileName);
+
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
@@ -142,7 +146,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
-  
+
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
@@ -153,13 +157,13 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 					 "dotMultiply",
 					 kernelInfo);
 
-  solver->dotDivideKernel = 
+  solver->dotDivideKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
-  solver->gradientKernel = 
+  solver->gradientKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
 				       "ellipticGradientTri2D",
 					 kernelInfo);
@@ -168,7 +172,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
 				       "ellipticAxIpdgTri2D",
-				       kernelInfo);  
+				       kernelInfo);
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
@@ -176,7 +180,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 					       mesh->Np*mesh->Nelements,
 					       sizeof(dfloat),
 					       mesh->gatherLocalIds,
-					       mesh->gatherBaseIds, 
+					       mesh->gatherBaseIds,
 					       mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
@@ -184,11 +188,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, solver->EToB, options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  solver->precon->preconKernel = 
+  solver->precon->preconKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
 				       "ellipticOasPreconTri2D",
 				       kernelInfo);
-  
+
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
 				       "ellipticFooTri2D",
@@ -209,29 +213,29 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
 				       "ellipticBlockJacobiPreconTri2D",
 				       kernelInfo);
-  
+
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
   solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
-  
+
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
   for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
     invDegree[n] = 1./degree[n];
   }
-  
+
   solver->o_invDegree.copyFrom(invDegree);
-  occaTimerToc(mesh->device,"DegreeVectorSetup");                                           
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
 
   //set matrix free function pointers
-  if (strstr(options,"MATRIXFREE")) { 
+  if (strstr(options,"MATRIXFREE")) {
     //set matrix free A in parAlmond
     void **args = (void **) calloc(2,sizeof(void *));
     dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
-    
+
     *vlambda = lambda;
 
     args[0] = (void *) solver;
