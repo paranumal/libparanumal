@@ -59,11 +59,16 @@ if(mesh->totalHaloPairs>0){
 }
 
 
+
+
+
 // Solve Stokes Problem if Nonlinear solver is deactivated
 dfloat activate_advection = 0.f; 
 if(ins->a0){activate_advection  = 1.f; }
 
+const iint voffset = 0;   // Velocity halo offset for substepping exchange
 
+// printf("-------------------------------------------------------------------------\n");
 iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
@@ -77,28 +82,29 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
    // LSERK4 stages
   for(iint rk=0;rk<mesh->Nrk;++rk){
     // intermediate stage time
-    dfloat t = time +  ins->sdt*mesh->rkc[rk];  
-    // HaloStart
+    dfloat t = time +  ins->sdt*mesh->rkc[rk]; 
+
     if(mesh->totalHaloPairs>0){
+ 
+    ins->velocityHaloExtractKernel(mesh->Nelements,
+                               mesh->totalHaloPairs,
+                               mesh->o_haloElementList,
+                               voffset, // 0 offset
+                               ins->o_Ud,
+                               ins->o_Vd,
+                               ins->o_vHaloBuffer);
 
-      ins->velocityHaloExtractKernel(mesh->Nelements,
-                                     mesh->totalHaloPairs,
-                                     mesh->o_haloElementList,
-                                     ins->o_Ud,
-                                     ins->o_Vd,
-                                     ins->o_vHaloBuffer);
+    // copy extracted halo to HOST 
+    ins->o_vHaloBuffer.copyTo(sendBuffer);            
+  
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                          mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                          sendBuffer,
+                          recvBuffer);
+  }
 
-      // copy extracted halo to HOST 
-      ins->o_vHaloBuffer.copyTo(sendBuffer);            
-
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-                            mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                            sendBuffer,
-                            recvBuffer);
-    }
-
-
+  
     // Compute Volume Contribution
     if(strstr(options, "CUBATURE")){
 
@@ -129,22 +135,21 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
 
     }
 
-    // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-  // wait for halo data to arrive
+
+    if(mesh->totalHaloPairs>0){
+  
     meshHaloExchangeFinish(mesh);
 
     ins->o_vHaloBuffer.copyFrom(recvBuffer); 
 
     ins->velocityHaloScatterKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    mesh->o_haloElementList,
-                                    ins->o_Ud,
-                                    ins->o_Vd,
-                                    ins->o_vHaloBuffer);
+                                mesh->totalHaloPairs,
+                                mesh->o_haloElementList,
+                                voffset, //0 offset
+                                ins->o_Ud,
+                                ins->o_Vd,
+                                ins->o_vHaloBuffer);
   }
-
-
 
 
   // Compute Volume Contribution
@@ -201,7 +206,7 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
   }
 
 
-
+//printf("Extrapolating Velocity to %d \n", ststep+1);
 // Extrapolate Velocity
 iint offset1 = mesh->Nelements+mesh->totalHaloPairs;
 ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
@@ -220,7 +225,7 @@ ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
 
 
 
-  //copy into next stage's storage
+  //copy into next time level storage 
   iint index1 = (ins->index+1)%3;
   ins->o_Ud.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
   ins->o_Vd.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
@@ -243,7 +248,7 @@ ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
            ins->a2,
            ins->index,
            mesh->Nelements+mesh->totalHaloPairs,
-           0, // Normal pressure BCs
+           0, 
            ins->o_PI, //not used
            ins->o_P,
            ins->o_Px,
