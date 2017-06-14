@@ -13,8 +13,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   // use rank to choose DEVICE
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
@@ -182,48 +182,33 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
   //add boundary data to kernel info
-  kernelInfo.addIncludeDefine(boundaryHeaderFileName);
+  kernelInfo.addInclude(boundaryHeaderFileName);
 
   occa::kernelInfo kernelInfoV  = kernelInfo;
   occa::kernelInfo kernelInfoP  = kernelInfo;
 
   printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
-  // SetUp Boundary Conditions Flags for Elliptic Solve
-  iint *vEToB = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
-  iint *pEToB = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
-      const iint id = f + mesh->Nfaces*e;
-      const iint bc = mesh->EToB[id];
-
-      if(bc==1 || bc == 2) {// Wall or Inflow
-       vEToB[id] = 1;  // Drichlet for Velocity
-       pEToB[id] = 2;  // Neumann for Pressure
-      }
-
-      if(bc==3) {// OutFlow
-       vEToB[id] = 2; // Neumann for Velocity
-       pEToB[id] = 1; // Dirichlet for Pressure
-      }
-    }
-  }
+  // SetUp Boundary Flags types for Elliptic Solve
+  int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-   printf("==================VELOCITY SOLVE SETUP=========================\n");
+  printf("==================VELOCITY SOLVE SETUP=========================\n");
   ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vEToB, kernelInfoV, vSolverOptions);
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
+  kernelInfoV.addInclude(boundaryHeaderFileName);
+  solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
   ins->vSolver        = vSolver;
   ins->vSolverOptions = vSolverOptions;
 
   printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pEToB,kernelInfoP, pSolverOptions);
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insPressureEllipticBC2D.h");
+  kernelInfoP.addInclude(boundaryHeaderFileName);
+  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-
-  free(vEToB);
-  free(pEToB);
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
