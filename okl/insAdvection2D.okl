@@ -65,10 +65,10 @@ kernel void insAdvectionVolume2D(const iint Nelements,
 
       	  // NU = del(u1xu1)/ dx + del(u1xu2)/dy
       	  dfloat nu = drdx*df11dr + dsdx*df11ds 
-	    + drdy*df12dr + dsdy*df12ds;
+	                 + drdy*df12dr + dsdy*df12ds;
       	  // NV = del(u2xu1)/ dx + del(u2xu2)/dy
       	  dfloat nv = drdx*df12dr + dsdx*df12ds 
-	    + drdy*df22dr + dsdy*df22ds;
+	                  + drdy*df22dr + dsdy*df22ds;
 
       	  // Update
       	  const iint id = (e+offset)*p_Np+n;
@@ -89,9 +89,9 @@ kernel void insAdvectionSurface2D(const iint Nelements,
 				  const dfloat time,
 				  const dfloat * restrict x,
 				  const dfloat * restrict y,
-                                  const iint offset,
-                                  const dfloat * restrict U,
-                                  const dfloat * restrict V,
+          const iint offset,
+          const dfloat * restrict U,
+          const dfloat * restrict V,
 				  dfloat * restrict NU,
 				  dfloat * restrict NV){
 
