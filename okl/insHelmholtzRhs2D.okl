@@ -244,9 +244,9 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
      
       	const iint face = n/p_Nfp;
 
-      	dfloat4 graduP, gradvP;
-      	graduP.x = 0.f; graduP.y = 0.f; graduP.w = 0.f;
-      	gradvP.x = 0.f; gradvP.y = 0.f; gradvP.w = 0.f;
+
+	dfloat dudxP=0, dudyP=0, uP=0;
+	dfloat dvdxP=0, dvdyP=0, vP=0;
       	
       	// load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
@@ -257,21 +257,19 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	hinv = sgeo[sid+p_IHID];
 
         int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) insHelmholtzBoundaryConditionsIpdg2D(bc, t, x[idM], y[idM], nx, ny, &graduP.w, &graduP.x, &graduP.y, &gradvP.w, &gradvP.x, &gradvP.y);
+        if(bc>0) insHelmholtzBoundaryConditionsIpdg2D(bc, t, x[idM], y[idM], nx, ny, &uP, &dudxP, &dudyP, &vP, &dvdxP, &dvdyP);
 					  	     
-      	const dfloat du = graduP.w;
-      	const dfloat dv = gradvP.w;
-      	const dfloat half = 1f;
+      	const dfloat du = uP;
+      	const dfloat dv = vP;
+      	const dfloat hlf = 1f;
       	
-      	s_nxdu[n] = half*sJ*invJ*nx*du;
-      	s_nydu[n] = half*sJ*invJ*ny*du;
-      	s_nxdv[n] = half*sJ*invJ*nx*dv;
-	      s_nydv[n] = half*sJ*invJ*ny*dv;
-
-      	s_lapuflux[n] = half*sJ*invJ*(-nx*(graduP.x)-ny*(graduP.y)
-				               -tau*hinv*du);
-      	s_lapvflux[n] = half*sJ*invJ*(-nx*(gradvP.x)-ny*(gradvP.y)
-				               -tau*hinv*dv);
+      	s_nxdu[n] = hlf*sJ*invJ*nx*du;
+      	s_nydu[n] = hlf*sJ*invJ*ny*du;
+      	s_nxdv[n] = hlf*sJ*invJ*nx*dv;
+	s_nydv[n] = hlf*sJ*invJ*ny*dv;
+	
+	s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+      	s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
       }
     }
 
