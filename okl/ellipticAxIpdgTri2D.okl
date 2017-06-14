@@ -1,49 +1,22 @@
 
-void boundaryConditions2D(const int bc, 
-                          const dfloat qxM, 
-                          const dfloat qyM, 
-                          const dfloat qM, 
-                          dfloat * restrict qxP, 
-                          dfloat * restrict qyP, 
-                          dfloat * restrict qP) {
-
-  if(bc==1){ // Dirichlet
-    *qP  = -qM;
-    *qxP =  qxM;
-    *qyP =  qyM;
-  } else if (bc==2){ // Neumann 
-    *qP  =  qM;
-    *qxP = -qxM;
-    *qyP = -qyM;
-  } else { //Neumann for now
-    *qP  =  qM; 
-    *qxP = -qxM;
-    *qyP = -qyM;
-  }
-}
-
-// increments gradients of pressure with pseudo-gradients at faces and 
-// increments rhs with pseudo-gradient/penalty terms at faces (need to double check scaling with tau)
-
 // sgeo stores dfloat4s with nx,ny,nz,(sJ/J)*(w1*w2*w3/(ws1*ws2))
-
 // nx,ny,nz,sJ,invJ - need WsJ
- 
+
 kernel void ellipticAxIpdgTri2D(const int Nelements,
-				const iint * restrict vmapM,
-				const iint * restrict vmapP,
-				const dfloat lambda,
-				const dfloat tau,
-				const dfloat * restrict vgeo,
-				const dfloat * restrict sgeo,
-        const iint   * restrict EToB,
-				const dfloat * restrict DrT,
-				const dfloat * restrict DsT,
-				const dfloat * restrict LIFTT,
-				const dfloat * restrict MM,
-				const dfloat4 * restrict gradq,
-				      dfloat  * restrict Aq){
-  
+                                const iint * restrict vmapM,
+                                const iint * restrict vmapP,
+                                const dfloat lambda,
+                                const dfloat tau,
+                                const dfloat * restrict vgeo,
+                                const dfloat * restrict sgeo,
+                                const iint   * restrict EToB,
+                                const dfloat * restrict DrT,
+                                const dfloat * restrict DsT,
+                                const dfloat * restrict LIFTT,
+                                const dfloat * restrict MM,
+                                const dfloat4 * restrict gradq,
+                                      dfloat  * restrict Aq){
+
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
     shared  dfloat s_dqdy[p_Np];
@@ -55,51 +28,51 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
     shared  dfloat s_Lnydq[p_Np];
     exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
-    
+
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-      	// assume that this stores (qx, qy, qz, q) as dfloat4
-      	const dfloat4 gradqn = gradq[e*p_Np+n];
-      	
-      	s_dqdx[n] = gradqn.x;
-      	s_dqdy[n] = gradqn.y;
-      	s_lapq[n] = lambda*gradqn.w;
+        // assume that this stores (qx, qy, qz, q) as dfloat4
+        const dfloat4 gradqn = gradq[e*p_Np+n];
+
+        s_dqdx[n] = gradqn.x;
+        s_dqdy[n] = gradqn.y;
+        s_lapq[n] = lambda*gradqn.w;
       }
 
       if(n<p_NfacesNfp){
-      	const iint id  = n + e*p_Nfaces*p_Nfp;
-      	idM = vmapM[id];					
-      	const iint idP = vmapP[id];					
-      	// find face that owns this node
-      	const iint face = n/p_Nfp;
+        const iint id  = n + e*p_Nfaces*p_Nfp;
+        idM = vmapM[id];
+        const iint idP = vmapP[id];
+        // find face that owns this node
+        const iint face = n/p_Nfp;
 
-      	dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
-      	dfloat4 gradqP = gradq[idP];					
-      	
-      	// load surface geofactors for this face
-      	iint sid = p_Nsgeo*(e*p_Nfaces+face);
-      	nx = sgeo[sid+p_NXID];
-      	ny = sgeo[sid+p_NYID];
-      	sJ = sgeo[sid+p_SJID];
-      	invJ = sgeo[sid+p_IJID];
-      	hinv = sgeo[sid+p_IHID];
+        dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
+        dfloat4 gradqP = gradq[idP];
 
-	// needed to avoid passing pointer to vector value
-	dfloat dpdxP = gradqP.x, dpdyP = gradqP.y, pP = gradqP.w;
+        // load surface geofactors for this face
+        iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        nx   = sgeo[sid+p_NXID];
+        ny   = sgeo[sid+p_NYID];
+        sJ   = sgeo[sid+p_SJID];
+        invJ = sgeo[sid+p_IJID];
+        hinv = sgeo[sid+p_IHID];
 
         iint bc = EToB[face+p_Nfaces*e];
-        if(bc>0) boundaryConditions2D(bc, gradqM.x, gradqM.y, gradqM.w, &dpdxP, &dpdyP, &pP);
+        if(bc>0) {
+          ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
+          gradqP = 2*gradqP - gradqM;
+        }
 
-      	const dfloat dq = pP - gradqM.w;
-      	const dfloat hlf = 0.5f;
-      	
-      	s_nxdq[n] = hlf*sJ*invJ*nx*dq;
-      	s_nydq[n] = hlf*sJ*invJ*ny*dq;
+        const dfloat dq = gradqP.w - gradqM.w;
+        const dfloat hlf = 0.5f;
 
-      	s_lapflux[n] = hlf*sJ*invJ*(-nx*(dpdxP-gradqM.x)
-      				     -ny*(dpdyP-gradqM.y)
-      				     -tau*hinv*dq);
+        s_nxdq[n] = hlf*sJ*invJ*nx*dq;
+        s_nydq[n] = hlf*sJ*invJ*ny*dq;
+
+        s_lapflux[n] = hlf*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
+                                    -ny*(gradqP.y-gradqM.y)
+                                    -tau*hinv*dq);
       }
     }
 
@@ -109,28 +82,28 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-	const int gid = e*p_Nvgeo;
-	const dfloat drdx = vgeo[gid + p_RXID];
-	const dfloat drdy = vgeo[gid + p_RYID];
-	const dfloat dsdx = vgeo[gid + p_SXID];
-	const dfloat dsdy = vgeo[gid + p_SYID];
-	
-	dfloat Lnxdq = 0;
-	dfloat Lnydq = 0;
-	
-	occaUnroll(p_NfacesNfp)
-	  for(iint i=0;i<p_NfacesNfp;++i){
-	    Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
-	    Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
-	  }
+        const int gid = e*p_Nvgeo;
+        const dfloat drdx = vgeo[gid + p_RXID];
+        const dfloat drdy = vgeo[gid + p_RYID];
+        const dfloat dsdx = vgeo[gid + p_SXID];
+        const dfloat dsdy = vgeo[gid + p_SYID];
 
-	dfloat dqdx = s_dqdx[n] + Lnxdq;
-	dfloat dqdy = s_dqdy[n] + Lnydq;
-	s_dqdx[n] = drdx*dqdx + drdy*dqdy; // abuse of notation
-	s_dqdy[n] = dsdx*dqdx + dsdy*dqdy;
+        dfloat Lnxdq = 0;
+        dfloat Lnydq = 0;
 
-	s_Lnxdq[n] = Lnxdq;
-	s_Lnydq[n] = Lnydq;
+        occaUnroll(p_NfacesNfp)
+          for(iint i=0;i<p_NfacesNfp;++i){
+            Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
+            Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
+          }
+
+        dfloat dqdx = s_dqdx[n] + Lnxdq;
+        dfloat dqdy = s_dqdy[n] + Lnydq;
+        s_dqdx[n] = drdx*dqdx + drdy*dqdy; // abuse of notation
+        s_dqdy[n] = dsdx*dqdx + dsdy*dqdy;
+
+        s_Lnxdq[n] = Lnxdq;
+        s_Lnydq[n] = Lnydq;
       }
     }
 
@@ -138,56 +111,56 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-	iint id = idM%p_Np;
-	s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
+        iint id = idM%p_Np;
+        s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
 
       if(n<p_Np){
-	dfloat lapr = 0, laps = 0;
+        dfloat lapr = 0, laps = 0;
 
-	occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
-	    lapr += DrT[n+i*p_Np]*s_dqdx[i];
-	    laps += DsT[n+i*p_Np]*s_dqdy[i];
-	  }
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            lapr += DrT[n+i*p_Np]*s_dqdx[i];
+            laps += DsT[n+i*p_Np]*s_dqdy[i];
+          }
 
-	s_lapq[n] -= (lapr+laps);
+        s_lapq[n] -= (lapr+laps);
       }
-      
-    }
-    
-    barrier(localMemFence);
 
-    for(int n=0;n<p_Nmax;++n;inner0){
-      if(n<p_Np){
-	dfloat lap = 0;
-	
-	// lift remaining surface terms
-	occaUnroll(p_NfacesNfp)
-	  for(int i=0;i<p_NfacesNfp;++i){
-	    lap += LIFTT[n+i*p_Np]*s_lapflux[i];
-	  }
-	
-	s_lapq[n] += lap;
-      }
     }
 
     barrier(localMemFence);
 
     for(int n=0;n<p_Nmax;++n;inner0){
-      
       if(n<p_Np){
-	const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-	
-	dfloat Mlapq = 0;
+        dfloat lap = 0;
 
-	// multiply by mass matrix
-	occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
-	    Mlapq += MM[n+i*p_Np]*s_lapq[i];
-	  }
-	
-	Aq[n+e*p_Np] = J*Mlapq;
+        // lift remaining surface terms
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            lap += LIFTT[n+i*p_Np]*s_lapflux[i];
+          }
+
+        s_lapq[n] += lap;
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_Nmax;++n;inner0){
+
+      if(n<p_Np){
+        const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+        dfloat Mlapq = 0;
+
+        // multiply by mass matrix
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            Mlapq += MM[n+i*p_Np]*s_lapq[i];
+          }
+
+        Aq[n+e*p_Np] = J*Mlapq;
       }
     }
   }
