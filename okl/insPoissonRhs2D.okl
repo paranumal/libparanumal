@@ -81,8 +81,7 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
 
       	const iint face = n/p_Nfp;
 
-      	dfloat4 gradpP;
-      	gradpP.x = 0.f; gradpP.y = 0.f; gradpP.w = 0.f;
+	dfloat dpdxP=0, dpdyP=0, pP=0;
 
       	// load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
@@ -94,14 +93,13 @@ kernel void insPoissonRhsIpdgBC2D(  const iint Nelements,
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0)
-	  insPoissonBoundaryConditions2D(bc, time,dt, x[idM], y[idM], nx, ny, &gradpP.w, &gradpP.x, &gradpP.y);
+	  insPoissonBoundaryConditions2D(bc, time,dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);
 	
-      	const dfloat dp = gradpP.w;
+      	const dfloat dp = pP;
       	s_nxdp[n] = sJ*invJ*nx*dp;
       	s_nydp[n] = sJ*invJ*ny*dp;
 
-      	s_lappflux[n] = sJ*invJ*(-nx*(gradpP.x)-ny*(gradpP.y)
-				 -tau*hinv*dp);
+      	s_lappflux[n] = sJ*invJ*(-nx*(dpdxP)-ny*(dpdyP) -tau*hinv*dp);
       }
     }
 
