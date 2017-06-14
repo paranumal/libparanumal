@@ -85,17 +85,20 @@ kernel void ellipticAxIpdgTri2D(const int Nelements,
       	invJ = sgeo[sid+p_IJID];
       	hinv = sgeo[sid+p_IHID];
 
+	// needed to avoid passing pointer to vector value
+	dfloat dpdxP = gradqP.x, dpdyP = gradqP.y, pP = gradqP.w;
+
         iint bc = EToB[face+p_Nfaces*e];
-        if(bc>0) boundaryConditions2D(bc, gradqM.x, gradqM.y, gradqM.w, &gradqP.x, &gradqP.y, &gradqP.w);
+        if(bc>0) boundaryConditions2D(bc, gradqM.x, gradqM.y, gradqM.w, &dpdxP, &dpdyP, &pP);
 
-      	const dfloat dq = gradqP.w - gradqM.w;
-      	const dfloat half = 0.5f;
+      	const dfloat dq = pP - gradqM.w;
+      	const dfloat hlf = 0.5f;
       	
-      	s_nxdq[n] = half*sJ*invJ*nx*dq;
-      	s_nydq[n] = half*sJ*invJ*ny*dq;
+      	s_nxdq[n] = hlf*sJ*invJ*nx*dq;
+      	s_nydq[n] = hlf*sJ*invJ*ny*dq;
 
-      	s_lapflux[n] = half*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
-      				     -ny*(gradqP.y-gradqM.y)
+      	s_lapflux[n] = hlf*sJ*invJ*(-nx*(dpdxP-gradqM.x)
+      				     -ny*(dpdyP-gradqM.y)
       				     -tau*hinv*dq);
       }
     }

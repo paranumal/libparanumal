@@ -94,13 +94,15 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else if(tstep<140){
+    //   else if(tstep<140){
+    else{
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
       ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
+#if 0
     else{
       // not ok 
       ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
@@ -108,7 +110,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
       ins->g0 =  11.f/6.f;
     }
-
+#endif
 #endif
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);

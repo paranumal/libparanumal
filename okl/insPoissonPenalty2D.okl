@@ -71,9 +71,9 @@ kernel void insPoissonPenalty2D(const int Nelements,
         const dfloat PP = c0*PPm0 + c1*PPm1 + c2*PPm2;
 
         const dfloat dq = PP - PM;
-        const dfloat half = 0.5f;
+        const dfloat hlf = 0.5f;
         
-        s_lapflux[n] = -half*sJ*invJ*tau*hinv*dq;
+        s_lapflux[n] = -hlf*sJ*invJ*tau*hinv*dq;
       }
     }
 
