@@ -79,7 +79,6 @@ typedef struct {
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
 
-  iint *EToB;
   dfloat *sendBuffer, *recvBuffer;
 
   occa::memory o_p; // search direction
@@ -95,6 +94,7 @@ typedef struct {
 
 
   occa::kernel AxKernel;
+  occa::kernel rhsBCKernel;
   occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
@@ -104,7 +104,7 @@ typedef struct {
 
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
-  
+  occa::kernel rhsBCIpdgKernel;
 }solver_t;
 
 void ellipticRunTri2D(mesh2D *mesh);
@@ -124,7 +124,7 @@ void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *EToB, const char *options);
+precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
@@ -136,4 +136,4 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *EToB, occa::kernelInfo &kernelInfo, const char *options);
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options);
