@@ -59,13 +59,16 @@ if(mesh->totalHaloPairs>0){
 }
 
 
+
+
+
 // Solve Stokes Problem if Nonlinear solver is deactivated
 dfloat activate_advection = 0.f; 
 if(ins->a0){activate_advection  = 1.f; }
 
 const iint voffset = 0;   // Velocity halo offset for substepping exchange
 
-
+// printf("-------------------------------------------------------------------------\n");
 iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
@@ -86,7 +89,7 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                mesh->totalHaloPairs,
                                mesh->o_haloElementList,
-                               voffset,
+                               voffset, // 0 offset
                                ins->o_Ud,
                                ins->o_Vd,
                                ins->o_vHaloBuffer);
@@ -142,7 +145,7 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
-                                voffset,
+                                voffset, //0 offset
                                 ins->o_Ud,
                                 ins->o_Vd,
                                 ins->o_vHaloBuffer);
@@ -203,7 +206,7 @@ for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
   }
 
 
-
+//printf("Extrapolating Velocity to %d \n", ststep+1);
 // Extrapolate Velocity
 iint offset1 = mesh->Nelements+mesh->totalHaloPairs;
 ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
