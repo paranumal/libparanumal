@@ -1,7 +1,7 @@
 /* Dirichlet 1, Neumann 2, Robin 3 (defaulted to Neumann for now) */
 #define ellipticBoundaryConditions2D(bc,t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
   {                 \
-    if     (bc==1) ellipticDiricletCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB) \
+    if     (bc==1) ellipticDirichletCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB) \
     else if(bc==2) ellipticNeumannCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
     else           ellipticNeumannCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
   }
