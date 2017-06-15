@@ -505,6 +505,9 @@ for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
 
 
+
+
+
 kernel void insSubCycleRKUpdate2D(const iint Nelements,
 																		const dfloat sc, 
 																		const dfloat dt,	
@@ -525,9 +528,10 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
 
       dfloat resu = resU[id];
       dfloat resv = resV[id];
-
-      dfloat rhsu = sc*rhsU[id];
-      dfloat rhsv = sc*rhsV[id];
+      
+      // No that advection volume solves for N(u) not -N(u)
+      dfloat rhsu = -sc*rhsU[id];
+      dfloat rhsv = -sc*rhsV[id];
 
       dfloat u = U[id];
       dfloat v = V[id];
