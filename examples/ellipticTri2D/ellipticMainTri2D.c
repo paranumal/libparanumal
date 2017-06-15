@@ -23,7 +23,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE preconditioner=OAS,PROJECT,GLOBALALMOND,UBERGRID method=IPDG coarse=COARSEGRID");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG,PROJECT preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
 
   // set up mesh stuff
@@ -35,7 +35,9 @@ int main(int argc, char **argv){
   dfloat lambda = 1;
   //dfloat lambda = 0;
 
-  dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1);
+  // set up
+  occa::kernelInfo kernelInfo;
+  ellipticSetupTri2D(mesh, kernelInfo);
 
   // capture header file
   char *boundaryHeaderFileName;
@@ -43,15 +45,18 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/homogeneous2D.h"); // default
   else
     boundaryHeaderFileName = strdup(argv[3]);
-
-  // set up
-  occa::kernelInfo kernelInfo;
-  ellipticSetupTri2D(mesh, kernelInfo);
-
   //add user defined boundary data
-  kernelInfo.addIncludeDefine(boundaryHeaderFileName);
+  kernelInfo.addInclude(boundaryHeaderFileName);
 
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, mesh->EToB, kernelInfo, options);
+  //add standard boundary functions
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
+  // Boundary Type translation. Just default from the mesh file. 
+  int BCType[3] = {0,1,2};
+
+  dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -82,6 +87,26 @@ int main(int argc, char **argv){
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
+
+  //add boundary condition contribution to rhs
+  if (strstr(options,"IPDG")) {
+    dfloat zero = 0.f;
+    solver->rhsBCIpdgKernel(mesh->Nelements,
+                           mesh->o_vmapM,
+                           mesh->o_vmapP,
+                           solver->tau,
+                           zero,
+                           mesh->o_x,
+                           mesh->o_y,
+                           mesh->o_vgeo,
+                           mesh->o_sgeo,
+                           mesh->o_EToB,
+                           mesh->o_DrT,
+                           mesh->o_DsT,
+                           mesh->o_LIFTT,
+                           mesh->o_MM,
+                           o_r);
+  }
 
   ellipticSolveTri2D(solver, lambda, o_r, o_x, options);
 

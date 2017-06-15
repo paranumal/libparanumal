@@ -12,7 +12,7 @@ typedef struct{
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB, nonZero_t **A, iint *nnzA,
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
                       hgs_t **hgs, iint *globalStarts, const char *options){
 
   iint size, rankM;
@@ -203,11 +203,12 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *EToB,
           dfloat AnmP = 0;
           if (eP < 0) {
             int qSgn, gradqSgn;
-            int bc = EToB[fM+mesh->Nfaces*eM];
-            if(bc==1){ // Dirichlet
+            int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+            iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+            if(bcType==1){ // Dirichlet
               qSgn     = -1;
               gradqSgn =  1;
-            } else if (bc==2){ // Neumann
+            } else if (bcType==2){ // Neumann
               qSgn     =  1;
               gradqSgn = -1;
             } else { // Neumann for now

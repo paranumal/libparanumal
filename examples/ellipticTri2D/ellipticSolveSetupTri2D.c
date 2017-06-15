@@ -19,7 +19,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 
 }
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *EToB,
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options){
 
   iint rank;
@@ -61,10 +61,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
   solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
 
-  solver->EToB = (iint *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(iint));
-  memcpy(solver->EToB,EToB,mesh->Nelements*mesh->Nfaces*sizeof(iint));
-  solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),solver->EToB);
-
   solver->type = strdup(dfloatString);
 
   solver->Nblock = Nblock;
@@ -97,10 +93,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
-
-  //add standard boundary functions
-  char *boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
-  kernelInfo.addIncludeDefine(boundaryHeaderFileName);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
@@ -162,17 +154,20 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 					 "dotDivide",
 					 kernelInfo);
 
-
   solver->gradientKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
 				       "ellipticGradientTri2D",
 					 kernelInfo);
 
-
   solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
 				       "ellipticAxIpdgTri2D",
 				       kernelInfo);
+
+  solver->rhsBCIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
+               "ellipticRhsBCIpdgTri2D",
+               kernelInfo);
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
@@ -185,7 +180,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, solver->EToB, options);
+  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, BCType,  options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   solver->precon->preconKernel =
