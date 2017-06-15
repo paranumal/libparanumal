@@ -12,11 +12,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
  // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");  
+  //  sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -28,7 +28,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   mesh->Nfields = ins->Nfields;
 
   ins->mesh = mesh;
-  int Nstages = 3;
+  int Nstages = 4;
   // compute samples of q at interpolation nodes
   ins->U     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->V     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -49,14 +49,14 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   if(strstr(options,"SUBCYCLING")){
 
-  ins->Nsubsteps = 10;
+    ins->Nsubsteps = 2;
 
   ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Ue   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Ve   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-  ins->resU = (dfloat*) calloc((mesh->Nelements)*mesh->Np,sizeof(dfloat));
-  ins->resV = (dfloat*) calloc((mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->resU = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
   }
 
@@ -68,13 +68,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 20*1e-3;   // kinematic viscosity,
+  dfloat nu   = 1e-3;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 5.;
+  ins->finalTime = 100.;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.f*(mesh->N+1)*(mesh->N+1);
@@ -144,7 +144,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.125;
+  dfloat cfl = .5;
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -174,7 +174,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep = 100;
+  ins->errorStep = 400;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -266,12 +266,10 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   if(strstr(options,"SUBCYCLING")){
   // Note that resU and resV can be replaced with already introduced buffer
-  ins->o_Vd   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat));
-  ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat));
-  ins->o_Ud   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat));
-  ins->o_Ve   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat));
-  ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat));
-  ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat));
+  ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
+  ins->o_Ve   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ve);
+  ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
+  ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
 
   printf("Compiling SubCycle Advection volume kernel \n");
@@ -312,11 +310,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     "insSubCycleExt2D",
       kernelInfo);
 
-  printf("Compiling Helmholtz volume update kernel\n");
-  ins->helmholtzSubCycleRhsForcingKernel=
-  mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-    "insHelmholtzSubCycleRhsForcing2D",
-      kernelInfo);
   }
 
 

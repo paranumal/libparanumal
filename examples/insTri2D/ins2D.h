@@ -51,14 +51,6 @@ typedef struct {
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
-  occa::kernel helmholtzSubCycleRhsForcingKernel;
-
-
-
-
-
-
-
 
   occa::memory o_U, o_V, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsP; 
