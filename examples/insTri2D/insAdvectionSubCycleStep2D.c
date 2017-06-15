@@ -198,20 +198,21 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 	const dfloat t1 = tstep*ins->dt, t2 = (tstep-1)*ins->dt, t3 = (tstep-2)*ins->dt;
 	
 	// construct interpolating lagrange polynomial
+	dfloat c0 = 0, c1 = 0, c2 = 0;
 #if 0
-	const dfloat c0 = 1;
-	const dfloat c1 = 0;
-	const dfloat c2 = 0;
-#endif
-#if 1
-	const dfloat c0 = (t-t2)/(t1-t2);
-	const dfloat c1 = (t-t1)/(t2-t1);
-	const dfloat c2 = 0;
+	c0 = 1;
+	c1 = 0;
+	c2 = 0;
 #endif
 #if 0
-	const dfloat c0 = (t-t2)*(t-t3)/((t1-t2)*(t1-t3)); 
-	const dfloat c1 = (t-t1)*(t-t3)/((t2-t1)*(t2-t3));
-	const dfloat c2 = (t-t1)*(t-t2)/((t3-t1)*(t3-t2));
+	c0 = (t-t2)/(t1-t2);
+	c1 = (t-t1)/(t2-t1);
+	c2 = 0;
+#endif
+#if 0
+	c0 = (t-t2)*(t-t3)/((t1-t2)*(t1-t3)); 
+	c1 = (t-t1)*(t-t3)/((t2-t1)*(t2-t3));
+	c2 = (t-t1)*(t-t2)/((t3-t1)*(t3-t2));
 #endif
 	
 	iint offset0 = ((ins->index+0)%3)*Ntotal;

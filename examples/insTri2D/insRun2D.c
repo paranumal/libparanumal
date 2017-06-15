@@ -101,7 +101,7 @@ void insRun2D(ins_t *ins, char *options){
     else{
       // not ok 
       ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = -1.0f;
+      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  -1.0f;
       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
       ins->g0 =  11.f/6.f;
     }
