@@ -67,8 +67,10 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   // calculate plot vorticity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"VorticityDivergence\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
   dfloat *curlU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *divU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
       dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
@@ -85,24 +87,29 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
       dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
       dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
 
+      dfloat dUdx = rx*dUdr + sx*dUds;
       dfloat dUdy = ry*dUdr + sy*dUds;
       dfloat dVdx = rx*dVdr + sx*dVds;
+      dfloat dVdy = ry*dVdr + sy*dVds;
       
       curlU[n] = dVdx-dUdy;
+      divU[n] = dUdx+dVdy;
     }
     
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotCurlUn = 0;
+      dfloat plotDivUn = 0;
       for(iint m=0;m<mesh->Np;++m){
         plotCurlUn += mesh->plotInterp[n*mesh->Np+m]*curlU[m];
+        plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m];	
       }
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", plotCurlUn);
+      fprintf(fp, "%g %g\n", plotCurlUn, plotDivUn);
     }
   }
   fprintf(fp, "       </DataArray>\n");
   free(curlU);
-
+  free(divU);
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
