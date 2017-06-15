@@ -46,10 +46,9 @@ typedef struct {
   dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
-  occa::kernel subCycleVolumeKernel, subCycleCubatureVolumeKernel ;
+  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
-  //occa::kernel subStepCopyKernel;
   occa::kernel subCycleExtKernel;
 
   occa::kernel helmholtzSubCycleRhsForcingKernel;

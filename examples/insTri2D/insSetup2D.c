@@ -14,9 +14,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // use rank to choose DEVICE
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+ // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");  
+  sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -74,7 +74,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 2.;
+  ins->finalTime = 5.;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.f*(mesh->N+1)*(mesh->N+1);
@@ -174,7 +174,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep = 400;
+  ins->errorStep = 100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
