@@ -94,7 +94,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
   ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-  if(activate_advection)
+  if(activate_advection){
     for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
       dfloat time = tstep*ins->dt + ststep*ins->sdt;    
       // LSERK4 stages
@@ -203,18 +203,16 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 	const dfloat c1 = 0;
 	const dfloat c2 = 0;
 #endif
-#if 0
+#if 1
 	const dfloat c0 = (t-t2)/(t1-t2);
 	const dfloat c1 = (t-t1)/(t2-t1);
 	const dfloat c2 = 0;
 #endif
-#if 1
+#if 0
 	const dfloat c0 = (t-t2)*(t-t3)/((t1-t2)*(t1-t3)); 
 	const dfloat c1 = (t-t1)*(t-t3)/((t2-t1)*(t2-t3));
 	const dfloat c2 = (t-t1)*(t-t2)/((t3-t1)*(t3-t2));
 #endif
-	
-
 	
 	iint offset0 = ((ins->index+0)%3)*Ntotal;
 	iint offset1 = ((ins->index+2)%3)*Ntotal;
@@ -241,7 +239,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
       
       }
     }
-
+  }
 
 
   // Now Compute N(Ue) Term

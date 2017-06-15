@@ -97,6 +97,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
       }
+#if 1
     else{
       // not ok 
       ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
@@ -104,6 +105,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
       ins->g0 =  11.f/6.f;
     }
+#endif
 #endif
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
