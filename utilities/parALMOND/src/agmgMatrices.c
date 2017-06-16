@@ -1,48 +1,125 @@
 #include "parAlmond.h"
 
 
-csr * newCSR(iint Nrows, iint Ncols, iint nnz,
-      iint *rowStarts, iint *cols, dfloat *coefs){
+csr * newCSR(iint N, iint* globalRowStarts,
+            iint diagNNZ,   iint *diagRowStarts,
+            iint *diagCols, dfloat *diagCoefs,
+            iint offdNNZ,   iint *offdRowStarts,
+            iint *offdCols, dfloat *offdCoefs){
 
   csr *A = (csr *) calloc(1,sizeof(csr));
 
-  A->Nrows = Nrows;
-  A->Ncols = Ncols;
-  A->nnz   = nnz;
+  A->Nrows = N;
+  A->Ncols = N;
 
-  A->rowStarts = (iint *) calloc(A->Nrows+1,sizeof(iint));
-  A->cols      = (iint *) calloc(A->nnz, sizeof(iint));
-  A->coefs     = (dfloat *) calloc(A->nnz, sizeof(dfloat));
+  A->diagNNZ   = diagNNZ;
+  A->offdNNZ   = offdNNZ;
 
+  if (N) {
+    A->diagRowStarts = (iint *)   calloc(N+1,sizeof(iint));
+    A->offdRowStarts = (iint *)   calloc(N+1,sizeof(iint));
+  }
+  if (diagNNZ) {
+    A->diagCols  = (iint *)   calloc(diagNNZ, sizeof(iint));
+    A->diagCoefs = (dfloat *) calloc(diagNNZ, sizeof(dfloat));
+  }
+  if (offdNNZ) {
+    A->offdCols  = (iint *)   calloc(offdNNZ,sizeof(iint));
+    A->offdCoefs = (dfloat *) calloc(offdNNZ, sizeof(dfloat));
+  }
 
-  for (iint i=0; i<Nrows; i++) {
-    iint start = rowStarts[i];
-    A->rowStarts[i] = start; 
-    iint cnt = 1;
-    for (iint j=rowStarts[i]; j<rowStarts[i+1]; j++) {
-      if (cols[j] == i) { //diagonal entry
-        A->cols[start] = cols[j];
-        A->coefs[start] = coefs[j];
-      } else {
-        A->cols[start+cnt] = cols[j];
-        A->coefs[start+cnt] = coefs[j];
+  //copy input data into struct
+  if (diagNNZ) {
+    for (iint i=0; i<N; i++) {
+      iint start = diagRowStarts[i];
+      A->diagRowStarts[i] = start;
+      iint cnt = 1;
+      for (iint j=diagRowStarts[i]; j<diagRowStarts[i+1]; j++) {
+        if (diagCols[j] == i) { //move diagonal to first entry
+          A->diagCols[start] = diagCols[j];
+          A->diagCoefs[start] = diagCoefs[j];
+        } else {
+          A->diagCols[start+cnt] = diagCols[j];
+          A->diagCoefs[start+cnt] = diagCoefs[j];
+          cnt++;
+        }
+      }
+    }
+    A->diagRowStarts[N] = diagRowStarts[N];
+  }
+  if (offdNNZ) {
+    for (iint i=0; i<N; i++) {
+      iint start = offdRowStarts[i];
+      A->offdRowStarts[i] = start;
+      iint cnt = 0;
+      for (iint j=offdRowStarts[i]; j<offdRowStarts[i+1]; j++) {
+        A->offdCols[start+cnt]  = offdCols[j];
+        A->offdCoefs[start+cnt] = offdCoefs[j];
         cnt++;
       }
     }
-  }
-  A->rowStarts[Nrows] = rowStarts[Nrows];
+    A->offdRowStarts[N] = offdRowStarts[N];
 
-  A->NsendTotal = 0;
-  A->NrecvTotal = 0;
-  A->NHalo = 0;
+    //we now need to reorder the x vector for the halo, and shift the column indices
+    iint *col = (iint *) calloc(A->offdNNZ,sizeof(iint));
+    for (iint n=0;n<offdNNZ;n++)
+      col[n] = offdCols[n]; //copy non-local column global ids
+
+    //sort by global index
+    std::sort(col,col+offdNNZ);
+
+    //count unique non-local column ids
+    A->Nhalo = 0;
+    for (iint n=1;n<offdNNZ;n++)
+      if (col[n]!=col[n-1])  col[++A->Nhalo] = col[n];
+    A->Nhalo++; //number of unique columns
+
+    A->Ncols += A->NHalo;
+
+    //save global column ids in colMap
+    A->offdColMap    = (iint *)   calloc(A->Nhalo, sizeof(iint));
+    for (iint n=0; n<A->Nhalo; n++)
+      A->offdColMap[n] = col[n];
+    free(col);
+
+    //shift the column indices to local indexing
+    for (iint n=0;n<offdNNZ;n++) {
+      iint gcol = offdCols[n];
+      for (iint m=0;m<A->Nhalo;m++) {
+        if (gcol == A->offdColMap[m])
+          A->offdCols[n] = m;
+      }
+    }
+  }
+
+  csrHaloSetup(A,globalRowStarts);
 
   return A;
 }
 
 void freeCSR(csr *A) {
-  free(A->rowStarts);
-  free(A->cols);
-  free(A->coefs);
+  if (A->diagNNZ) {
+    free(A->diagRowStarts);
+    free(A->diagCols);
+    free(A->diagCoefs);
+  }
+  if (A->offdNNZ) {
+    free(A->offdRowStarts);
+    free(A->offdCols);
+    free(A->offdCoefs);
+  }
+  if (A->Nhalo) {
+    free(A->offdColMap);
+  }
+  free(A->globalRowStarts);
+  free(A->haloSendRequests);
+  free(A->haloRecvRequests);
+  free(A->NsendPairs);
+  free(A->NrecvPairs);
+  if (A->NsendTotal) {
+    free(A->sendBuffer);
+    free(A->haloElementList);
+  }
 
   free(A);
 }
@@ -69,7 +146,7 @@ dcsr *newDCSR(parAlmond_t *parAlmond, csr *B){
       diagInv[i] = 1.0/B->coefs[B->rowStarts[i]];
     A->o_diagInv = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
     A->o_temp1 = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
-    free(diagInv); 
+    free(diagInv);
   }
 
   A->NsendTotal = B->NsendTotal;
@@ -81,16 +158,16 @@ dcsr *newDCSR(parAlmond_t *parAlmond, csr *B){
   A->NrecvTotal = B->NrecvTotal;
   A->NsendTotal = B->NsendTotal;
   A->haloElementList = B->haloElementList;
-  if (A->NsendTotal) 
+  if (A->NsendTotal)
     A->o_haloElementList = parAlmond->device.malloc(A->NsendTotal*sizeof(iint),A->haloElementList);
   A->NsendPairs = B->NsendPairs;
   A->NrecvPairs = B->NrecvPairs;
   A->NsendMessages = B->NsendMessages;
   A->NrecvMessages = B->NrecvMessages;
   A->sendBuffer = B->sendBuffer;
-  if (A->NrecvTotal) 
+  if (A->NrecvTotal)
     A->recvBuffer = (dfloat*) malloc(A->NrecvTotal*sizeof(dfloat));
-  if (A->NsendTotal) 
+  if (A->NsendTotal)
     A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
 
   A->haloSendRequests = B->haloSendRequests;
@@ -229,7 +306,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     A->E->o_coefs = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
     free(Ecols); free(Ecoefs);
   }
-  
+
   if(A->C->nnz){
     A->C->o_offsets = parAlmond->device.malloc((csrA->Nrows+1)*sizeof(iint), Coffsets);
     A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(iint), Ccols);
@@ -278,7 +355,7 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
     dfloat result = 0.0;
     for(iint jj=Jstart; jj<Jend; jj++)
       result += (A->coefs[jj]*x[A->cols[jj]]);
-    
+
     y[i] = alpha*result + beta*y[i];
   }
   occa::toc("csr axpy");
@@ -309,7 +386,7 @@ void axpy(parAlmond_t *parAlmond, dcsr *A, dfloat alpha, occa::memory o_x, dfloa
   occaTimerTic(parAlmond->device,"dcsr axpy");
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
-    
+
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
   }
@@ -329,7 +406,7 @@ void axpy(parAlmond_t *parAlmond, dcsr *A, dfloat alpha, occa::memory o_x, dfloa
   }
 
   parAlmond->agg_interpolateKernel(A->Nrows, A->o_cols, A->o_coefs, o_x, o_y);
-  //parAlmond->dcsrAXPYKernel(A->Nrows, alpha,beta, A->o_rowStarts, 
+  //parAlmond->dcsrAXPYKernel(A->Nrows, alpha,beta, A->o_rowStarts,
   //                                A->o_cols, A->o_coefs, o_x, o_y);
   occaTimerToc(parAlmond->device,"dcsr axpy");
 }
@@ -339,7 +416,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
   occaTimerTic(parAlmond->device,"hyb axpy");
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
-  
+
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
   }
@@ -374,7 +451,7 @@ void zeqaxpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x,
   occaTimerTic(parAlmond->device,"hyb zeqaxpy");
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
-  
+
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
   }
@@ -406,18 +483,18 @@ void axpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, dfloat
 
   if(A->Nrows){
     occaTimerTic(parAlmond->device,"ell axpy");
-    parAlmond->ellAXPYKernel(A->Nrows, A->nnzPerRow, A->strideLength, 
+    parAlmond->ellAXPYKernel(A->Nrows, A->nnzPerRow, A->strideLength,
                           alpha, beta, A->o_cols, A->o_coefs, o_x, o_y);
     occaTimerToc(parAlmond->device,"ell axpy");
   }
 }
 
-void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, 
+void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x,
             dfloat beta, occa::memory o_y,  occa::memory o_z) {
 
   if(A->Nrows){
     occaTimerTic(parAlmond->device,"ell zeqaxpy");
-    parAlmond->ellZeqAXPYKernel(A->Nrows, A->nnzPerRow, A->strideLength, 
+    parAlmond->ellZeqAXPYKernel(A->Nrows, A->nnzPerRow, A->strideLength,
                           alpha, beta, A->o_cols, A->o_coefs, o_x, o_y, o_z);
     occaTimerToc(parAlmond->device,"ell zeqaxpy");
   }
@@ -433,11 +510,11 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
   }
 }
 
-void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, 
+void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta,
               occa::memory o_y, occa::memory o_z) {
 
   occaTimerTic(parAlmond->device,"matfree zeqaxpy");
-  
+
   //matrix free A action, temp1 = Ax
   parAlmondMatrixFreeAX(parAlmond, o_x, A->o_temp1);
 
@@ -491,7 +568,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
 
 void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_zero) {
-  
+
   occa::tic("csr smoothDampedJacobi");
   if(x_is_zero){
 #pragma omp parallel for
@@ -546,7 +623,7 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
 
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
-  
+
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
   }
@@ -566,7 +643,7 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
 
   occaTimerTic(parAlmond->device,"ellJacobi1");
   if (A->Nrows)
-    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
                             A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(parAlmond->device,"ellJacobi1");
 
@@ -597,7 +674,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
 
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
-  
+
     //copy from device
     A->o_haloBuffer.copyTo(A->sendBuffer);
   }
@@ -617,7 +694,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
 
   occaTimerTic(parAlmond->device,"ellJacobi1");
   if (A->Nrows)
-    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength, 
+    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
                               A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
   occaTimerToc(parAlmond->device,"ellJacobi1");
 
@@ -675,7 +752,7 @@ void matFreeSmoothDampedJacobi(parAlmond_t *parAlmond, hyb* A, occa::memory o_r,
   occaTimerToc(parAlmond->device,"matfree smoothDampedJacobi");
 }
 
-// set up halo infomation for inter-processor MPI 
+// set up halo infomation for inter-processor MPI
 // exchange of trace nodes
 void csrHaloSetup(csr *A, iint *globalColStarts){
 
@@ -687,17 +764,17 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   // non-blocking MPI isend/irecv requests (used in meshHaloExchange)
   A->haloSendRequests = calloc(size, sizeof(MPI_Request));
   A->haloRecvRequests = calloc(size, sizeof(MPI_Request));
-  
+
   // count number of halo element nodes to swap
   A->NrecvTotal = 0;
-  A->NsendPairs = (iint*) calloc(size, sizeof(int));
-  A->NrecvPairs = (iint*) calloc(size, sizeof(int));
-  for(iint n=A->numLocalIds;n<A->Ncols;++n){ //for just the halo
-    iint id = A->colMap[n]; // global index
+  A->NsendPairs = (iint*) calloc(size, sizeof(iint));
+  A->NrecvPairs = (iint*) calloc(size, sizeof(iint));
+  for(iint n=0;n<A->Nhalo;++n){ //for just the halo
+    iint id = A->offdColMap[n]; // global index
     for (iint r=0;r<size;r++) { //find owner's rank
       if (globalColStarts[r]-1<id && id < globalColStarts[r+1]) {
         A->NrecvTotal++;
-        A->NrecvPairs[r]++;  
+        A->NrecvPairs[r]++;
       }
     }
   }
@@ -708,7 +785,8 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   for (iint r=0;r<size;r++)
     A->NsendTotal += A->NsendPairs[r];
 
-  A->haloElementList = (iint *) calloc(A->NsendTotal,sizeof(iint));
+  if (A->NsendTotal)
+    A->haloElementList = (iint *) calloc(A->NsendTotal,sizeof(iint));
 
   // count number of MPI messages in halo exchange
   A->NsendMessages = 0;
@@ -722,7 +800,7 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
 
   //exchange the needed ids
   iint tag = 999;
-  iint recvOffset = A->numLocalIds;
+  iint recvOffset = 0;
   iint sendOffset = 0;
   iint sendMessage = 0, recvMessage = 0;
   for(iint r=0;r<size;++r){
@@ -733,7 +811,7 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
       ++sendMessage;
     }
     if(A->NrecvPairs[r]){
-      MPI_Isend(A->colMap+recvOffset, A->NrecvPairs[r], MPI_IINT, r, tag,
+      MPI_Isend(A->offdColMap+recvOffset, A->NrecvPairs[r], MPI_IINT, r, tag,
           MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
       recvOffset += A->NrecvPairs[r];
       ++recvMessage;
@@ -743,10 +821,10 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   // Wait for all sent messages to have left and received messages to have arrived
   MPI_Status *sendStatus = (MPI_Status*) calloc(A->NsendMessages, sizeof(MPI_Status));
   MPI_Status *recvStatus = (MPI_Status*) calloc(A->NrecvMessages, sizeof(MPI_Status));
-  
+
   MPI_Waitall(A->NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
   MPI_Waitall(A->NsendMessages, (MPI_Request*)A->haloSendRequests, sendStatus);
-  
+
   free(recvStatus);
   free(sendStatus);
 
@@ -754,20 +832,21 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   for (iint n=0;n<A->NsendTotal;n++)
     A->haloElementList[n] -= globalColStarts[rank];
 
-  A->sendBuffer = (dfloat *) calloc(A->NsendTotal,sizeof(dfloat));    
+  if (A->NsendTotal)
+    A->sendBuffer = (dfloat *) calloc(A->NsendTotal,sizeof(dfloat));
+
+  A->totalHaloPairs = A->NsendTotal+A->NrecvTotal;
 }
 
-void csrHaloExchange(csr *A, 
+void csrHaloExchange(csr *A,
                     size_t Nbytes,         // message size per element
-                    void *sourceBuffer,  
+                    void *sourceBuffer,
                     void *sendBuffer,    // temporary buffer
                     void *recvBuffer) {
   // MPI info
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  // count outgoing and incoming meshes
   iint tag = 999;
 
   // copy data from outgoing elements into temporary send buffer
@@ -812,7 +891,7 @@ void csrHaloExchange(csr *A,
     MPI_Waitall(A->NrecvMessages, (MPI_Request*)A->haloRecvRequests, recvStatus);
     free(recvStatus);
   }
-} 
+}
 
 void dcsrHaloExchangeStart(dcsr *A, size_t Nbytes, void *sendBuffer, void *recvBuffer) {
   // MPI info
