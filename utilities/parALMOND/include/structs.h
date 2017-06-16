@@ -3,23 +3,32 @@ typedef struct csr_t {
 
   iint Nrows;
   iint Ncols;
-  iint nnz;
 
-  iint *rowStarts;
-  iint *cols;
-  dfloat *coefs;
+  //global partition
+
+
+  //local
+  iint diagNNZ;
+  iint   *diagRowStarts;
+  iint   *diagCols;
+  dfloat *diagCoefs;
+
+  //non-local
+  iint offdNNZ;
+  iint   *offdRowStarts;
+  iint   *offdCols;
+  iint   *offdColMap;
+  dfloat *offdCoefs;
 
   // MPI halo exchange info
-  iint  numLocalIds;
   iint  NHalo;
-  iint *colMap;
   iint  NrecvTotal;  // number of elements to be sent in halo exchange
   iint  NsendTotal;
   iint *haloElementList; // sorted list of elements to be sent in halo exchange
   iint *NsendPairs;      // number of elements worth of data to send
   iint *NrecvPairs;      // number of elements worth of data to recv
-  iint  NsendMessages;   // number of messages to send 
-  iint  NrecvMessages;   // number of messages to recv 
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat *sendBuffer;
 
   void *haloSendRequests;
@@ -75,8 +84,8 @@ typedef struct hyb_t {
   occa::memory o_haloElementList;
   iint *NsendPairs;      // number of elements worth of data to send
   iint *NrecvPairs;      // number of elements worth of data to recv
-  iint  NsendMessages;   // number of messages to send 
-  iint  NrecvMessages;   // number of messages to recv 
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat   *sendBuffer;
   dfloat   *recvBuffer;
   occa::memory o_haloBuffer;
@@ -84,7 +93,7 @@ typedef struct hyb_t {
   void *haloSendRequests;
   void *haloRecvRequests;
 
-} hyb; 
+} hyb;
 
 
 typedef struct dcsr_t {
@@ -110,8 +119,8 @@ typedef struct dcsr_t {
   occa::memory o_haloElementList;
   iint *NsendPairs;      // number of elements worth of data to send
   iint *NrecvPairs;      // number of elements worth of data to recv
-  iint  NsendMessages;   // number of messages to send 
-  iint  NrecvMessages;   // number of messages to recv 
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat   *sendBuffer;
   dfloat   *recvBuffer;
   occa::memory o_haloBuffer;
