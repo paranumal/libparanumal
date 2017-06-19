@@ -636,21 +636,6 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   return FineToCoarse;
 }
 
-struct key_value_pair1{
-  long key;
-  long value;
-};
-
-int compare_key1(const void *a, const void *b){
-  struct key_value_pair1 *pa = (struct key_value_pair1 *) a;
-  struct key_value_pair1 *pb = (struct key_value_pair1 *) b;
-
-  if (pa->key < pb->key) return -1;
-  if (pa->key > pb->key) return +1;
-
-  return 0;
-};
-
 typedef struct {
 
   iint fineId;
@@ -1189,13 +1174,177 @@ csr * transpose(agmgLevel* level, csr *A
   return At;
 }
 
+typedef struct {
+
+  iint coarseId;
+  dfloat coef;
+
+} pEntry_t;
+
+typedef struct {
+
+  iint I;
+  iint J;
+  dfloat coef;
+
+} rapEntry_t;
+
+int compareRAPEntries(const void *a, const void *b){
+  rapEntry_t *pa = (rapEntry_t *) a;
+  rapEntry_t *pb = (rapEntry_t *) b;
+
+  if (pa->I < pb->I) return -1;
+  if (pa->I > pb->I) return +1;
+
+  if (pa->J < pb->J) return -1;
+  if (pa->J > pb->J) return +1;
+
+  return 0;
+};
+
 csr *galerkinProd(agmgLevel *level){
 
-  iint numAggs = level->numAggss; //local number of aggregates
+  // MPI info
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   csr *A = level->A;
   csr *P = level->P;
   csr *R = level->R;
+
+  iint *globalAggStarts = level->globalAggStarts;
+  iint *globalRowStarts = level->globalRowStarts;
+
+  iint globalAggOffset = globalAggStarts[rank];
+
+  //The galerkin product can be computed as
+  // (RAP)_IJ = sum_{i in Agg_I} sum_{j in Agg_j} P_iI A_ij P_jJ
+  // Since each row of P has only one entry, we can share the ncessary
+  // P entries, form the products, and send them to their destination rank
+
+  iint N = A->Nrows;
+  iint M = A->Ncols;
+
+  pEntry_t *PEntries;
+  if (M) PEntries = (pEntry_t *) calloc(M,sizeof(pEntry_t));
+
+  //record the entries of P that this rank has
+  for (iint i=0;i<N;i++) {
+    for (iint j=P->diagRowStarts[i];j<P->diagRowStarts[i+1];j++) {
+      iint id = P->diagCols[j];
+      PEntries[i].coarseId = P->diagCols[j] + globalAggOffset; //global ID
+      PEntries[i].coef = P->diagCoefs[j];
+    }
+  }
+  for (iint i=0;i<N;i++) {
+    for (iint j=P->offdRowStarts[i];j<P->offdRowStarts[i+1];j++) {
+      iint id = P->offdCols[j];
+      PEntries[i].coarseId = P->offdColMap[P->offdCols[j]]; //global ID
+      PEntries[i].coef = P->offdCoefs[j];
+    }
+  }
+
+  pEntry_t *entrySendBuffer;
+  if (A->NsendTotal)
+    entrySendBuffer = (pEntry_t *) calloc(A->NsendTotal,sizeof(pEntry_t));
+
+  //fill in the entires of P needed in the halo
+  crsHaloExchange(A, sizeof(pEntry_t), PEntries, entrySendBuffer, PEntries);
+  if (A->NsendTotal) free(entrySendBuffer);
+
+  rapEntry_t *RAPEntries;
+  iint totalNNZ = A->diagNNZ+A->offdNNZ;
+  if (totalNNZ)
+    RAPEntries = (rapEntry_t *) calloc(totalNNZ,sizeof(rapEntry_t));
+
+  //for the RAP products
+  iint cnt =0;
+  for (iint i=0;i<N;n++) {
+    for (iint j=A->diagRowStarts[i];j<A->diagRowStarts[i+1];j++) {
+      iint col  = A->diagCols[j];
+      iint coef = A->diagCoefs[j]
+
+      RAPEntries[cnt].I = PEntries[i].coarseId;
+      RAPEntries[cnt].J = PEntries[col].coarseId;
+      RAPEntries[cnt].coef = PEntries[i].coef*coef*PEntries[col].coef;
+      cnt++;
+    }
+  }
+  for (iint i=0;i<N;n++) {
+    for (iint j=A->offdRowStarts[i];j<A->offdRowStarts[i+1];j++) {
+      iint col  = A->offdCols[j];
+      iint coef = A->offdCoefs[j]
+
+      RAPEntries[cnt].I = PEntries[i].coarseId;
+      RAPEntries[cnt].J = PEntries[col].coarseId;
+      RAPEntries[cnt].coef = PEntries[i].coef*coef*PEntries[col].coef;
+      cnt++
+    }
+  }
+  if (M) free(PEntries);
+
+  //sort entries by the coarse row and col
+  qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
+
+  iint *sendCounts = (iint *) calloc(size,sizeof(iint));
+  iint *recvCounts = (iint *) calloc(size,sizeof(iint));
+  iint *sendOffsets = (iint *) calloc(size+1,sizeof(iint));
+  iint *recvOffsets = (iint *) calloc(size+1,sizeof(iint));
+
+  for(iint i=0;i<totalNNZ;++n) {
+    iint id = RAPEntries[i].I;
+    for (iint r=0;r<size;r++) {
+      if (globalAggStarts[r]-1<id && id < globalAggStarts[r+1]) {
+        sendCounts[r] += sizeof(rapEntry_t);
+    }
+  }
+
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // find send and recv offsets for gather
+  iint recvNtotal = 0;
+  for(iint r=0;r<size;++r){
+    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
+    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
+    recvNtotal += recvCounts[r]/sizeof(rapEntry_t);
+  }
+  rapEntry_t *recvRAPEntries = (rapEntry_t *) calloc(recvNtotal,sizeof(rapEntry_t));
+
+  MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,
+                recvRAPEntries, recvCounts, recvOffsets, MPI_CHAR,
+                MPI_COMM_WORLD);
+  if (totalNNZ) free(RAPEntries);
+  free(sendCounts); free(recvCounts);
+  free(sendOffsets); free(recvOffsets);
+
+  //sort entries by the coarse row and col
+  qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
+
+  //count total number of nonzeros;
+  iint nnz =0;
+  if (recvNtotal) nnz++;
+  for (iint i=1;i<recvNtotal;i++)
+    if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
+          (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) nnz++
+
+  if (nnz)
+    RAPEntries = (rapEntry_t *) calloc(nnz,sizeof(rapEntry_t));
+
+  //compress nonzeros
+  nnz = 0;
+  if (recvNtotal) RAPEntries[nnz] = recvRAPEntries[nnz++];
+  for (iint i=1;i<recvNtotal;i++) {
+    if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
+          (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) {
+      RAPEntries[++nnz] = recvRAPEntries[i];
+    } else {
+      RAPEntries[nnz].coef += recvRAPEntries[i].coef;
+    }
+  }
+
+  iint numAggs = level->numAggs; //local number of aggregates
 
   csr *RAP = (csr*) calloc(1,sizeof(csr));
 
@@ -1203,76 +1352,110 @@ csr *galerkinProd(agmgLevel *level){
   RAP->Ncols = numAggs;
 
   RAP->diagRowStarts = (iint *) calloc(numAggs+1, sizeof(iint));
+  RAP->offdRowStarts = (iint *) calloc(numAggs+1, sizeof(iint));
 
-  dfloat *diagDummyCoefs = (dfloat*) calloc(A->diagNNZ,sizeof(dfloat));
-  for (iint i=0; i<A->diagNNZ;i++) //copy A coefs
-    diagDummyCoefs[i] = A->diagCoefs[i];
 
-  long base = numAggs+1;
-  struct key_value_pair1 *pair = (struct key_value_pair1 *)
-                  calloc(A->nnz,sizeof(struct key_value_pair1));
-
-  for(iint i=0; i<A->Nrows; i++){
-    for(iint jj=A->rowStarts[i]; jj<A->rowStarts[i+1]; jj++){
-      iint j = A->cols[jj];
-
-      diagDummyCoefs[jj] *= (P->coefs[i] * P->coefs[j]);
-
-      iint I = P->cols[i];
-      iint J = P->cols[j];
-
-      pair[jj].value = jj;
-
-      if (I == J)
-        pair[jj].key = ((long)I) * base;
-      else
-        pair[jj].key = ((long)I) * base + ((long) (J+1));
-
+  for (iint n=0;n<nnz;n++) {
+    iint row = RAPEntries[n].I - globalAggOffset;
+    if ((RAPEntries[n].J > globalAggStarts[rank]-1)&&
+          (RAPEntries[n].J < globalAggStarts[rank+1])) {
+      RAP->diagRowStarts[row]++;
+    } else {
+      RAP->offdRowStarts[row]++;
     }
   }
-
-  qsort(pair, A->nnz, sizeof(struct key_value_pair1), compare_key1);
-
-  iint nnz = 1;
-  for(iint i=1; i<A->nnz; i++)
-    if(pair[i].key > pair[i-1].key) nnz++;
-
-  RAP->nnz = nnz;
-
-  RAP->cols  = (iint *) calloc(nnz, sizeof(iint));
-  RAP->coefs = (dfloat *) calloc(nnz, sizeof(dfloat));
-
-  iint count = 0;
-  RAP->coefs[count] = dummyCoefs[pair[0].value];
-  RAP->cols[count] = 0; // This assumes that first entry is diagonal
-  RAP->rowStarts[1]++;
-  for(iint i=1; i<A->nnz; i++){
-    iint id = pair[i].value;
-
-    if(pair[i].key == pair[i-1].key)
-      RAP->coefs[count] += dummyCoefs[id];
-    else {
-      RAP->coefs[count+1] = dummyCoefs[id];
-
-      iint J = pair[i].key % base;
-      iint I = pair[i].key / base;
-      J = (J==0) ? I : J-1;
-
-      RAP->cols[count+1] = J;
-      RAP->rowStarts[I+1]++;
-
-      count++;
-    }
-  }
-  free(dummyCoefs);
 
   // cumulative sum
-  for(iint i=1; i<=numAggs; i++)
-    RAP->rowStarts[i] += RAP->rowStarts[i-1];
+  for(iint i=0; i<numAggs; i++) {
+    RAP->diagRowStarts[i+1] += RAP->diagRowStarts[i];
+    RAP->offdRowStarts[i+1] += RAP->offdRowStarts[i];
+  }
+  RAP->diagNNZ = RAP->diagRowStarts[numAggs];
+  RAP->offdNNZ = RAP->offdRowStarts[numAggs];
 
-  //MPI comms
-  RAP->NrecvTotal =0;
-  RAP->NsendTotal =0;
+  iint *diagCols;
+  dfloat *diagCoefs;
+  if (RAP->diagNNZ) {
+    RAP->diagCols  = (iint *)   calloc(RAP->diagNNZ, sizeof(iint));
+    RAP->diagCoefs = (dfloat *) calloc(RAP->diagNNZ, sizeof(dfloat));
+    diagCols  = (iint *)   calloc(RAP->diagNNZ, sizeof(iint));
+    diagCoefs = (dfloat *) calloc(RAP->diagNNZ, sizeof(dfloat));
+  }
+  if (RAP->offdNNZ) {
+    RAP->offdCols  = (iint *)   calloc(RAP->offdNNZ,sizeof(iint));
+    RAP->offdCoefs = (dfloat *) calloc(RAP->offdNNZ, sizeof(dfloat));
+  }
+
+  for (iint n=0;n<nnz;n++) {
+    iint row = RAPEntries[n].I - globalAggOffset;
+    if ((RAPEntries[n].J > globalAggStarts[rank]-1)&&
+          (RAPEntries[n].J < globalAggStarts[rank+1])) {
+      diagCols[diagCnt]  = RAPEntries[n].J - globalAggOffset;
+      diagCoefs[diagCnt] = RAPEntries[n].coef;
+      diagCnt++;
+    } else {
+      RAP->offdCols[offdCnt]  = RAPEntries[n].J;
+      RAP->offdCoefs[offdCnt] = RAPEntries[n].coef;
+      offdCnt++;
+    }
+  }
+
+  if (nnz) free(RAPEntries);
+
+  //move diagonal entries first
+  for (iint i=0;i<RAP->Nrows;i++) {
+    iint start = diagRowStarts[i];
+    iint cnt = 1;
+    for (iint j=RAP->diagRowStarts[i]; j<RAP->diagRowStarts[i+1]; j++) {
+      if (diagCols[j] == i) { //move diagonal to first entry
+        RAP->diagCols[start] = diagCols[j];
+        RAP->diagCoefs[start] = diagCoefs[j];
+      } else {
+        RAP->diagCols[start+cnt] = diagCols[j];
+        RAP->diagCoefs[start+cnt] = diagCoefs[j];
+        cnt++;
+      }
+    }
+  }
+  if (RAP->diagNNZ) {
+    free(diagCols);
+    free(diagCoefs);
+  }
+
+  if (RAP->offdNNZ) {
+    //we now need to reorder the x vector for the halo, and shift the column indices
+    iint *col = (iint *) calloc(RAP->offdNNZ,sizeof(iint));
+    for (iint n=0;n<RAP->offdNNZ;n++)
+      col[n] = RAP->offdCols[n]; //copy non-local column global ids
+
+    //sort by global index
+    std::sort(col,col+RAP->offdNNZ);
+
+    //count unique non-local column ids
+    RAP->Nhalo = 0;
+    for (iint n=1;n<offdNNZ;n++)
+      if (col[n]!=col[n-1])  col[++RAP->Nhalo] = col[n];
+    RAP->Nhalo++; //number of unique columns
+
+    RAP->Ncols += RAP->NHalo;
+
+    //save global column ids in colMap
+    RAP->offdColMap    = (iint *)   calloc(RAP->Nhalo, sizeof(iint));
+    for (iint n=0; n<RAP->Nhalo; n++)
+      RAP->offdColMap[n] = col[n];
+    free(col);
+
+    //shift the column indices to local indexing
+    for (iint n=0;n<offdNNZ;n++) {
+      iint gcol = offdCols[n];
+      for (iint m=0;m<RAP->Nhalo;m++) {
+        if (gcol == RAP->offdColMap[m])
+          RAP->offdCols[n] = m;
+      }
+    }
+  }
+
+  csrHaloSetup(RAP,globalAggStarts);
 
   return RAP;
 }
