@@ -5,7 +5,7 @@ typedef struct{
   iint localId;
   iint baseId;
   iint haloFlag;
-  
+
 } preconGatherInfo_t;
 
 int parallelCompareBaseId(const void *a, const void *b){
@@ -29,7 +29,7 @@ typedef struct{
 
 }nonZero_t;
 
-// compare on global indices 
+// compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b);
 
 extern "C"
@@ -39,10 +39,10 @@ extern "C"
 }
 
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA, 
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
                               hgs_t **hgs, iint *globalStarts, const char *options);
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, 
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
 precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
@@ -80,7 +80,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
         localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
       }
     }
-    
+
     if(Nhalo){
       // send buffer for outgoing halo
       iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
@@ -92,8 +92,8 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
   		     sendBuffer,
   		     localNums+Nlocal);
     }
-    
-    preconGatherInfo_t *preconGatherInfoDg = 
+
+    preconGatherInfo_t *preconGatherInfoDg =
       (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
   				 sizeof(preconGatherInfo_t));
 
@@ -124,7 +124,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
         for(iint n=0;n<mesh->Nfp;++n){
   	iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
   	iint idP = mesh->vmapP[id];
-  	
+
   	// local numbers
   	iint pidM = e*NpP + mesh->faceNodes[f*mesh->Nfp+n];
   	iint pidP = e*NpP + mesh->Np + f*mesh->Nfp+n;
@@ -141,7 +141,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     // sort by rank then base index
     qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t),
   	parallelCompareBaseId);
-      
+
     // do not gather-scatter nodes labelled zero
     int skip = 0;
 
@@ -159,7 +159,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
       gatherBaseIdsDg[n]   = preconGatherInfoDg[n+skip].baseId;
       gatherHaloFlagsDg[n] = preconGatherInfoDg[n+skip].haloFlag;
     }
-    
+
     // make preconBaseIds => preconNumbering
     precon->ogsDg = meshParallelGatherScatterSetup(mesh,
   						 NlocalDg,
@@ -167,13 +167,13 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
   						 gatherLocalIdsDg,
   						 gatherBaseIdsDg,
   						 gatherHaloFlagsDg);
-    
+
     // build degree vector
     iint NtotalDGP = NpP*mesh->Nelements;
     dfloat *invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
     dfloat *degree    = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
     precon->o_invDegreeDGP = mesh->device.malloc(NtotalDGP*sizeof(dfloat), invDegree);
-    
+
     for(iint n=0;n<NtotalDGP;++n)
       degree[n] = 1;
 
@@ -187,7 +187,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
       if(degree[n] == 0) printf("WARNING!!!!\n");
       invDegree[n] = 1./degree[n];
     }
-    
+
     precon->o_invDegreeDGP.copyFrom(invDegree);
     free(degree);
     free(invDegree);
@@ -209,9 +209,9 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     precon->o_oasForwardDgT = mesh->device.malloc(NpP*NpP*sizeof(dfloat), oasForwardDgT);
     precon->o_oasBackDgT    = mesh->device.malloc(NpP*NpP*sizeof(dfloat), oasBackDgT);
 
-    
+
     /// ---------------------------------------------------------------------------
-    
+
     // hack estimate for Jacobian scaling
 
     dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
@@ -220,13 +220,13 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
       // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
       // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
-      
+
       dfloat J = mesh->vgeo[e*mesh->Nvgeo + JID];
       dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
       dfloat sx = mesh->vgeo[e*mesh->Nvgeo + SXID];
       dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
       dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
-      
+
       //metric tensor on this element
       dfloat grr = rx*rx+ry*ry;
       dfloat grs = rx*sx+ry*sy;
@@ -235,7 +235,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
       //eigenvalues of the metric
       dfloat eigG1 = 0.5*(grr + gss) - 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
       dfloat eigG2 = 0.5*(grr + gss) + 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
-      
+
       //TODO Average? Min/Max/Avg Eigenvalue? What works best for the scaling?
       dfloat Jhinv2 = J*(eigG1+eigG2);
       //dfloat Jhinv2 = J*mymax(eigG1,eigG2);
@@ -243,11 +243,11 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
       for(iint n=0;n<NpP;++n){
         iint pid = n + e*NpP;
-  	
+
         diagInvOpDg[pid] = 1./(J*lambda + Jhinv2*mesh->oasDiagOpDg[n]);
       }
     }
-    
+
     precon->o_oasDiagInvOpDg =
       mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
@@ -271,18 +271,18 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
         globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
       ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,&hgs,globalStarts, options);
-    
+
       qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
     } else if (strstr(options,"CONTINUOUS")) {
-      
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
-    }    
 
+      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+    }
+/*
     //collect global assembled matrix
     iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
     iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-    MPI_Allgather(&nnz, 1, MPI_IINT, 
+    MPI_Allgather(&nnz, 1, MPI_IINT,
                   globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
     globalnnzOffset[0] = 0;
     for (iint n=0;n<size;n++)
@@ -298,9 +298,9 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     }
     nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                   globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-    
+
     iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
     iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
     dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
@@ -310,15 +310,23 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
       globalCols[n] = globalNonZero[n].col;
       globalVals[n] = globalNonZero[n].val;
     }
+*/
+    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
+    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
+    dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    precon->parAlmond = parAlmondSetup(mesh, 
-                                   Nnum, 
-                                   globalStarts, 
-                                   globalnnzTotal,      
-                                   globalRows,        
-                                   globalCols,        
-                                   globalVals,
-                                   0,             // 0 if no null space
+    for (iint n=0;n<nnz;n++) {
+      Rows[n] = A[n].row;
+      Cols[n] = A[n].col;
+      Vals[n] = A[n].val;
+    }
+
+    precon->parAlmond = parAlmondSetup(mesh,
+                                   globalStarts,
+                                   nnz,
+                                   Rows,
+                                   Cols,
+                                   Vals,
                                    hgs,
                                    options);       //rhs will be passed gather-scattered
 
@@ -328,7 +336,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   }
   else if (strstr(options, "BLOCKJACOBI")){
-    
+
     // compute inverse mass matrix
     dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
     double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
@@ -342,18 +350,18 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
     dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
     dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
-    if(info) 
+    if(info)
       printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
 
     for(iint n=0;n<mesh->Np*mesh->Np;++n){
       dfMMinv[n] = MMinv[n];
     }
-    
+
     precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
-    
+
     free(MMinv); free(ipiv); free(work); free(dfMMinv);
   }
-  
-    
+
+
   return precon;
 }

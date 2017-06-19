@@ -17,100 +17,6 @@ void interpolate(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_x, occ
   axpy(parAlmond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
 }
 
-void allocate(agmgLevel *level){
-  if(level->A->Nrows){
-    iint m = level->A->Nrows;
-    iint n = level->A->Ncols;
-
-    level->x    = (dfloat *) calloc(n, sizeof(dfloat));
-    level->rhs  = (dfloat *) calloc(m, sizeof(dfloat));
-    level->res  = (dfloat *) calloc(n, sizeof(dfloat));
-  }
-}
-
-csr* distribute(csr *A, iint *globalRowStarts, iint *globalColStarts) {
-  iint rank,size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size );
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank );
-
-  csr *localA = (csr *) calloc(1,sizeof(csr));
-
-  iint rowStart = globalRowStarts[rank];
-  iint rowEnd   = globalRowStarts[rank+1];
-  iint colStart = globalColStarts[rank];
-  iint colEnd   = globalColStarts[rank+1];
-
-  localA->Nrows = rowEnd-rowStart;
-  localA->numLocalIds = colEnd-colStart;
-  localA->nnz   = A->rowStarts[rowEnd]-A->rowStarts[rowStart];
-  localA->rowStarts = (iint *) calloc(rowEnd-rowStart+1,sizeof(iint));
-  localA->cols      = (iint *) calloc(localA->nnz,sizeof(iint));
-  localA->coefs     = (dfloat *) calloc(localA->nnz,sizeof(dfloat));
-
-  //copy the slice of the global matrix
-  for (iint n=0;n<localA->Nrows+1;n++)
-    localA->rowStarts[n] = A->rowStarts[rowStart+n]-A->rowStarts[rowStart];
-
-  for (iint n=0;n<localA->nnz;n++) {
-    localA->cols[n]  = A->cols[A->rowStarts[rowStart]+n];
-    localA->coefs[n] = A->coefs[A->rowStarts[rowStart]+n];
-  }
-
-  //we now need to reorder the x vector for the halo, and shift the column indices
-  if (localA->nnz) {
-    iint *col = (iint *) calloc(localA->nnz,sizeof(iint)); //list of global column ids for every nonzero
-    for (iint n=0;n<localA->nnz;n++)
-      col[n] = localA->cols[n]; //grab global ids
-
-    //sort by global index
-    std::sort(col,col+localA->nnz);
-
-    //compress
-    iint numcol = 0;
-    for (iint n=1;n<localA->nnz;n++)
-      if (col[n]!=col[numcol])
-        col[++numcol] = col[n];
-    numcol++; //number of unique columns
-
-    iint NHalo = 0;
-    for (iint n=0;n<numcol;n++)
-      if ( (col[n] < colStart) || (col[n] > colEnd-1)) NHalo++; //number of halo columns
-
-    localA->NHalo = NHalo;
-    localA->Ncols = localA->numLocalIds + NHalo;
-
-    localA->colMap = (iint*) calloc(localA->Ncols,sizeof(iint));
-
-    for (iint n=0; n < localA->numLocalIds;n++)
-      localA->colMap[n] = n + colStart;
-
-    iint cnt = localA->numLocalIds;
-    for (iint n=0; n<numcol;n++)
-      if ((col[n]<colStart) || (col[n]>colEnd-1))
-        localA->colMap[cnt++] = col[n];
-
-    free(col);
-
-    //shift the column indices to local indexing
-    for (iint n=0;n<localA->nnz;n++) {
-      iint gcol = localA->cols[n];
-      if ((gcol > colStart-1) && (gcol < colEnd)) {//local column
-        localA->cols[n] -= colStart;
-      } else {
-        for (iint m = localA->numLocalIds;m<localA->Ncols;m++)
-          if (gcol == localA->colMap[m])
-            localA->cols[n] = m;
-      }
-    }
-  }
-
-  csrHaloSetup(localA, globalColStarts);
-
-  return localA;
-}
-
-
-
 void setup_smoother(agmgLevel *level, SmoothType s){
 
   level->stype = s;
@@ -127,7 +33,7 @@ void setup_smoother(agmgLevel *level, SmoothType s){
     if(level->A->Nrows)	{
       invD = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
       for (iint i=0;i<level->A->Nrows;i++)
-        invD[i] = 1.0/level->A->coefs[level->A->rowStarts[i]];
+        invD[i] = 1.0/level->A->diagCoefs[level->A->diagRowStarts[i]];
 
       rho = rhoDinvA(level->A, invD);
 

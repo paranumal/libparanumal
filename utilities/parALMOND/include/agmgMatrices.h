@@ -1,7 +1,7 @@
 
 //creators
-csr * newCSR(iint Nrows, iint Ncolumns, iint nnz,
-      iint *rowStarts, iint *cols, dfloat *vals);
+csr * newCSRfromCOO(iint N, iint* globalRowStarts,
+            iint NNZ,   iint *Ai, iint *Aj, dfloat *Avals);
 void freeCSR(csr *A);
 dcsr *newDCSR(parAlmond_t *parAlmond, csr *B);
 hyb * newHYB(parAlmond_t *parAlmond, csr *csrA);
@@ -20,12 +20,12 @@ void zeqaxpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x,
 
 void axpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y);
 
-void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x, 
+void zeqaxpy(parAlmond_t *parAlmond, ell *A, dfloat alpha, occa::memory o_x,
             dfloat beta, occa::memory o_y,  occa::memory o_z);
 
 void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::memory o_y);
 
-void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, 
+void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta,
               occa::memory o_y, occa::memory o_z);
 
 //smoothing
