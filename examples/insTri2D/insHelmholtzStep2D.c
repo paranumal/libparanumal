@@ -11,9 +11,12 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
 
+  iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
+  
   if(strstr(options,"SUBCYCLING")){
      // compute all forcing i.e. f^(n+1) - grad(Pr)
     ins->helmholtzRhsForcingKernel(mesh->Nelements,
+				   rhsPackingMode,
                                    mesh->o_vgeo,
                                    mesh->o_MM,
                                    ins->a0,
@@ -57,6 +60,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   else{
     // compute all forcing i.e. f^(n+1) - grad(Pr)
     ins->helmholtzRhsForcingKernel(mesh->Nelements,
+				   rhsPackingMode,
                                    mesh->o_vgeo,
                                    mesh->o_MM,
                                    ins->a0,
@@ -81,6 +85,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   }
   
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
+				rhsPackingMode,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
@@ -98,18 +103,39 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                 ins->o_rhsV);
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  iint Ntotal = offset*mesh->Np;
-  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-  ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  if(rhsPackingMode==0){
+    iint Ntotal = offset*mesh->Np;
+    ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+    ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+    
+    printf("Solving for Ux \n");
+    ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+    
+    printf("Solving for Uy \n");
+    ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    
+    //copy into next stage's storage
+    int index1 = (ins->index+1)%3; //hard coded for 3 stages
+    ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+    ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+  }else{
 
-  printf("Solving for Ux \n");
-  ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+    printf("Solving for Ux and Uy \n");
+    pcg( ?, ?, ?, ins->o_rhsU, ins->o_rhsV, ?); // rhs in rhsU, solution in rhsV
 
-  printf("Solving for Uy \n");
-  ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    iint Ntotal = mesh->Np*mesh->Nelements;
+    dfloat *tmp = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
+    ins->o_rhsV.copyTo(tmp);
+    for(iint n=0;n<Ntotal;++n){
+      ins->U[n] = tmp[2*n+0];
+      ins->V[n] = tmp[2*n+1];
+    }
 
-  //copy into next stage's storage
-  int index1 = (ins->index+1)%3; //hard coded for 3 stages
-  ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-  ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+    //copy into next stage's storage
+    int index1 = (ins->index+1)%3; //hard coded for 3 stages
+    ins->o_U.copyFrom(ins->U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+    ins->o_V.copyFrom(ins->V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+    free(tmp);
+  }
+  
 }

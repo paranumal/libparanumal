@@ -1,6 +1,7 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
 kernel void insHelmholtzRhsForcing2D(const iint Nelements,
+				     const iint rhsPackingMode,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict MM,
 				     const dfloat a0,
@@ -27,7 +28,8 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 
     shared dfloat s_rhsU[p_NblockV][p_Np];
     shared dfloat s_rhsV[p_NblockV][p_Np];
-   
+    exclusive dfloat Um0, Vm0;
+    
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; // element in block
@@ -44,10 +46,10 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
       	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
       	  
           //U 
-      	  const dfloat Um0  = U[id0];
+      	  Um0  = U[id0];
           const dfloat Um1  = U[id1];
           const dfloat Um2  = U[id2];
-          const dfloat Vm0  = V[id0];
+          Vm0  = V[id0];
           const dfloat Vm1  = V[id1];
           const dfloat Vm2  = V[id2];
       	  // NU 
@@ -92,9 +94,17 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
     	      rhsv  += M*s_rhsV[es][i];
     	    }
       	  // Update
-      	  const iint id = e*p_Np+n;
-      	  rhsU[id] = rhsu;
-      	  rhsV[id] = rhsv; 	 
+	  if(!rhsPackingMode){
+	    const iint id = e*p_Np+n;
+	    rhsU[id] = rhsu;
+	    rhsV[id] = rhsv;
+	  }else{
+	    const iint id = 2*(e*p_Np+n);
+	    rhsU[id+0] = rhsu;
+	    rhsU[id+1] = rhsv;
+	    rhsV[id+0] = Um0;
+	    rhsV[id+1] = Vm0;
+	  }
       	}
       }
     }
@@ -102,102 +112,8 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 }
 
 
-// Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insHelmholtzSubCycleRhsForcing2D(const iint Nelements,
-             const dfloat * restrict vgeo,
-             const dfloat * restrict MM,
-             const dfloat b0,
-             const dfloat b1,
-             const dfloat b2,
-             const dfloat c0,
-             const dfloat c1,
-             const dfloat c2,
-             const iint index,
-             const iint offset,
-             const dfloat * restrict U,
-             const dfloat * restrict V,
-             const dfloat * restrict Px,
-             const dfloat * restrict Py,
-             dfloat * restrict rhsU, 
-             dfloat * restrict rhsV){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){ 
-
-    shared dfloat s_rhsU[p_NblockV][p_Np];
-    shared dfloat s_rhsV[p_NblockV][p_Np];
-   
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        iint e = eo+es; // element in block
-        if(e<Nelements){ 
-          //hard coded for 3 stages
-          const int index0 = (index+0)%3;
-          const int index1 = (index+2)%3; //back one step 
-          const int index2 = (index+1)%3; //back two steps
-
-          const iint id0   = n + p_Np*(e+index0*offset);
-          const iint id1   = n + p_Np*(e+index1*offset);
-          const iint id2   = n + p_Np*(e+index2*offset);
-          
-          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-          
-          // NU 
-          const dfloat Um0 = U[id2];
-          const dfloat Um1 = U[id0];
-          const dfloat Um2 = U[id1];
-          
-          const dfloat Vm0 = V[id2];
-          const dfloat Vm1 = V[id0];
-          const dfloat Vm2 = V[id1];
-          // gradP 
-          const dfloat Pxm0 = Px[id0];
-          const dfloat Pxm1 = Px[id1];
-          const dfloat Pxm2 = Px[id2];
-          const dfloat Pym0 = Py[id0];
-          const dfloat Pym1 = Py[id1];
-          const dfloat Pym2 = Py[id2];
-
-          // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
-          s_rhsU[es][n]  = J*p_inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*p_idt 
-                                     - (c0*Pxm0+c1*Pxm1+c2*Pxm2));
-
-          s_rhsV[es][n]  = J*p_inu*( + (b0*Vm0 +b1*Vm1 +b2*Vm2 )*p_idt 
-                                     - (c0*Pym0+c1*Pym1+c2*Pym2));
-
-        }
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        iint e = eo+es; // element in block
-        if(e<Nelements){    
-          // Multiplay with Mass Matrix
-          dfloat rhsu = 0.f, rhsv = 0.f; 
-          occaUnroll(p_Np)      
-          for(iint i=0;i<p_Np;++i){
-            const dfloat M = MM[n+i*p_Np];
-            rhsu  += M*s_rhsU[es][i];
-            rhsv  += M*s_rhsV[es][i];
-          }
-          // Update
-          const iint id = e*p_Np+n;
-          rhsU[id] = rhsu;
-          rhsV[id] = rhsv;   
-        }
-      }
-    }
-  }
-}
-
-
-
-
-
 kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
+				    const iint rhsPackingMode,
 				    const iint * restrict vmapM,
 				    const iint * restrict vmapP,
 				    const dfloat tau,
@@ -376,10 +292,17 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
     	    Mlapu += MM[n+i*p_Np]*s_lapu[i];
     	    Mlapv += MM[n+i*p_Np]*s_lapv[i];
     	  }
-      			
-      	const iint id = e*p_Np+n;
+
+	if(!rhsPackingMode){
+	  const iint id = e*p_Np+n;
     	  rhsU[id] -=  J*Mlapu;
     	  rhsV[id] -=  J*Mlapv;
+	}
+	else{
+	  const iint id = e*p_Np+n;
+    	  rhsU[2*id+0] -=  J*Mlapu;
+    	  rhsU[2*id+1] -=  J*Mlapv;
+	}
       }
     }
   }
