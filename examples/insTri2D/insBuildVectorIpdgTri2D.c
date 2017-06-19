@@ -1,14 +1,5 @@
 
-#include "ellipticTri2D.h"
-
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
+#include "ins2D.h"
 
 iint addNonZero(nonZero_t *nonZeros, iint nnz, iint row, iint col, iint owner, dfloat val){
   
