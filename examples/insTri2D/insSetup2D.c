@@ -461,6 +461,50 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat sigma = 100;
 
   insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, options);
+
+  //collect global assembled matrix
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
+  MPI_Allgather(&nnz, 1, MPI_IINT, 
+                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
+  globalnnzOffset[0] = 0;
+  for (iint n=0;n<size;n++)
+    globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
+
+  iint globalnnzTotal = globalnnzOffset[size];
+
+  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
+  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
+    globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
+  }
+  nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
+
+  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+                globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+  
+  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
+
+  for (iint n=0;n<globalnnzTotal;n++) {
+    globalRows[n] = globalNonZero[n].row;
+    globalCols[n] = globalNonZero[n].col;
+    globalVals[n] = globalNonZero[n].val;
+  }
+
+  ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
+  ins->precon->parAlmond = parAlmondSetup(mesh, 
+                                 mesh->Np*mesh->Nelements, 
+                                 globalStarts, 
+                                 globalnnzTotal,      
+                                 globalRows,        
+                                 globalCols,        
+                                 globalVals,
+                                 0,             // 0 if no null space
+                                 hgs,
+                                 options);       //rhs will be passed gather-scattered
   
   return ins;
 }

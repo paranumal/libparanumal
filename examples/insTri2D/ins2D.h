@@ -16,6 +16,7 @@ typedef struct {
   solver_t *pSolver;
 
   char *pSolverOptions, *vSolverOptions; 	
+  precon_t *precon;
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu;
