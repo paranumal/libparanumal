@@ -12,11 +12,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //  sprintf(deviceConfig, "mode = Serial");  
+  sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 

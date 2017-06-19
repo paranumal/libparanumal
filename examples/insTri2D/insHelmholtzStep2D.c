@@ -123,12 +123,13 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     printf("Solving for Ux and Uy \n");
     parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
 
-    iint Ntotal = mesh->Np*mesh->Nelements;
+    iint Ntotal = mesh->Np*offset;
     dfloat *tmp  = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
     dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
     dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
     
     ins->o_rhsV.copyTo(tmp);
+
     for(iint n=0;n<Ntotal;++n){
       tmpU[n] = tmp[2*n+0];
       tmpV[n] = tmp[2*n+1];
@@ -137,8 +138,9 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
     
-    ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*(mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat),0);
-    ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*(mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat),0);
+    ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+    ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+
     free(tmp);
     free(tmpU);
     free(tmpV);
