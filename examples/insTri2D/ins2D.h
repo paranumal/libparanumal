@@ -93,6 +93,16 @@ typedef struct {
 
 }ins_t;
 
+typedef struct{
+
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+} nonZero_t;
+
+
 
 ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
 
@@ -121,4 +131,5 @@ void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,
 void insAdvectionSubCycleStep2D(ins_t *solver, iint tstep,
                      dfloat * tsendBuffer, dfloat *trecvBuffer, 
                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
+
 

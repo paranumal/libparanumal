@@ -450,6 +450,18 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 				       kernelInfo);
   // ===========================================================================//
 
+  void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
+			       iint *BCType, nonZero_t **A, iint *nnzA,
+			       hgs_t **hgs, iint *globalStarts, const char *options);
+
+  nonZero_t *A;
+  iint nnz;
+  hgs_t *hgs;
+  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+  dfloat sigma = 100;
+
+  insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, options);
+  
   return ins;
 }
 
