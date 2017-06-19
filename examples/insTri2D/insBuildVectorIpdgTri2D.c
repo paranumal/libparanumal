@@ -212,10 +212,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
 	  dfloat MSfnm = sJ*MSf[n*mesh->Np+m];
-	  SxxM[mM+nM*mesh->Np] += 0.5*MSfnm*nx*nx*(1+bcD)*penalty;
-	  SxyM[mM+nM*mesh->Np] += 0.5*MSfnm*nx*ny*(1+bcD)*penalty;
-	  SyxM[mM+nM*mesh->Np] += 0.5*MSfnm*ny*nx*(1+bcD)*penalty;
-	  SyyM[mM+nM*mesh->Np] += 0.5*MSfnm*ny*ny*(1+bcD)*penalty;
+	  SxxM[nM*mesh->Np+mM] += 0.5*nx*nx*(1+bcD)*penalty*MSfnm;
+	  SxyM[nM*mesh->Np+mM] += 0.5*nx*ny*(1+bcD)*penalty*MSfnm;
+	  SyxM[nM*mesh->Np+mM] += 0.5*ny*nx*(1+bcD)*penalty*MSfnm;
+	  SyyM[nM*mesh->Np+mM] += 0.5*ny*ny*(1+bcD)*penalty*MSfnm;
 
 	  // neighbor penalty term
 	  if(eP>=0){
@@ -223,10 +223,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    iint mP  = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
 
 	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
-	    SxxP[mP+nM*mesh->Np] += -0.5*MSfnm*nx*nx*penalty;
-	    SxyP[mP+nM*mesh->Np] += -0.5*MSfnm*nx*ny*penalty;
-	    SyxP[mP+nM*mesh->Np] += -0.5*MSfnm*ny*nx*penalty;
-	    SyyP[mP+nM*mesh->Np] += -0.5*MSfnm*ny*ny*penalty;
+	    SxxP[nM*mesh->Np+mP] += -0.5*nx*nx*penalty*MSfnm;
+	    SxyP[nM*mesh->Np+mP] += -0.5*nx*ny*penalty*MSfnm;
+	    SyxP[nM*mesh->Np+mP] += -0.5*ny*nx*penalty*MSfnm;
+	    SyyP[nM*mesh->Np+mP] += -0.5*ny*ny*penalty*MSfnm;
 	  }
 	}
       }
@@ -249,10 +249,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 
 	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
-	    SxxM[id] += -0.5*MSfni*nx*(1+bcN)*DxMim;
-	    SxyM[id] += -0.5*MSfni*nx*(1+bcN)*DyMim;
-	    SyxM[id] += -0.5*MSfni*ny*(1+bcN)*DxMim;
-	    SyyM[id] += -0.5*MSfni*ny*(1+bcN)*DyMim;
+	    SxxM[id] += -0.5*nx*(1+bcN)*MSfni*DxMim;
+	    SxyM[id] += -0.5*nx*(1+bcN)*MSfni*DyMim;
+	    SyxM[id] += -0.5*ny*(1+bcN)*MSfni*DxMim;
+	    SyyM[id] += -0.5*ny*(1+bcN)*MSfni*DyMim;
 
 	    // OP11 = OP11 + (- Dn1'*mmE );
 	    SxxM[id] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
@@ -268,10 +268,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	      dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
 	      
 	      //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
-	      SxxP[id] += -0.5*MSfni*nx*DxPim;
-	      SxyP[id] += -0.5*MSfni*nx*DyPim;
-	      SyxP[id] += -0.5*MSfni*ny*DxPim;
-	      SyyP[id] += -0.5*MSfni*ny*DyPim;
+	      SxxP[id] += -0.5*nx*MSfni*DxPim;
+	      SxyP[id] += -0.5*nx*MSfni*DyPim;
+	      SyxP[id] += -0.5*ny*MSfni*DxPim;
+	      SyyP[id] += -0.5*ny*MSfni*DyPim;
 	      
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
 	      SxxP[id] +=  +0.5*nx*DxMin*MSfim;
