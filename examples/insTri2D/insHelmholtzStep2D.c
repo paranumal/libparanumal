@@ -124,18 +124,24 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
 
     iint Ntotal = mesh->Np*mesh->Nelements;
-    dfloat *tmp = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
+    dfloat *tmp  = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
+    dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    
     ins->o_rhsV.copyTo(tmp);
     for(iint n=0;n<Ntotal;++n){
-      ins->U[n] = tmp[2*n+0];
-      ins->V[n] = tmp[2*n+1];
+      tmpU[n] = tmp[2*n+0];
+      tmpV[n] = tmp[2*n+1];
     }
 
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
-    ins->o_U.copyFrom(ins->U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-    ins->o_V.copyFrom(ins->V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+    
+    ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*(mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat),0);
+    ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*(mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat),0);
     free(tmp);
+    free(tmpU);
+    free(tmpV);
   }
   
 }
