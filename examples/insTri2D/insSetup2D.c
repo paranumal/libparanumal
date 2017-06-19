@@ -460,7 +460,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   dfloat sigma = 100;
 
-  insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, options);
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+  for(iint r=0;r<size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
+  
+  insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
 
   //collect global assembled matrix
   iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
@@ -496,15 +500,15 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
   ins->precon->parAlmond = parAlmondSetup(mesh, 
-                                 mesh->Np*mesh->Nelements, 
-                                 globalStarts, 
-                                 globalnnzTotal,      
-                                 globalRows,        
-                                 globalCols,        
-                                 globalVals,
-                                 0,             // 0 if no null space
-                                 hgs,
-                                 options);       //rhs will be passed gather-scattered
+					  2*mesh->Np*mesh->Nelements, 
+					  globalStarts, 
+					  globalnnzTotal,      
+					  globalRows,        
+					  globalCols,        
+					  globalVals,
+					  0,             // 0 if no null space
+					  hgs,
+					  vSolverOptions);       //rhs will be passed gather-scattered
   
   return ins;
 }
