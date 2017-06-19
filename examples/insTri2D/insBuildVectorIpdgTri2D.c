@@ -190,7 +190,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	bcD = -1;
 	bcN = 1;
       }
-
+      
       // reset eP
       eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
@@ -213,7 +213,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	  // neighbor penalty term
 	  if(eP>=0){
 	    iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
-	    iint mP  = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+	    iint mP  = mesh->vmapP[idM]%mesh->Np; 
 
 	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
 	    SxxP[nM*mesh->Np+mP] += -0.5*nx*nx*penalty*MSfnm;
@@ -223,55 +223,30 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	  }
 	}
       }
-
+    
       // now add differential surface terms
-      for(iint n=0;n<mesh->Np;++n){
-	for(iint m=0;m<mesh->Np;++m){
-	  iint id = n*mesh->Np+m;
-	  
-	  for(iint i=0;i<mesh->Nfp;++i){
-	    
-	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
-	    
-	    dfloat MSfni = sJ*MSf[n*mesh->Np+iM]; // surface Jacobian built in
-	    dfloat MSfim = sJ*MSf[iM*mesh->Np+m];
-
-	    dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m];
-	    dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
-	    dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
-	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
-
-	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
-	    SxxM[id] += -0.5*nx*(1+bcN)*MSfni*DxMim;
-	    SxyM[id] += -0.5*nx*(1+bcN)*MSfni*DyMim;
-	    SyxM[id] += -0.5*ny*(1+bcN)*MSfni*DxMim;
-	    SyyM[id] += -0.5*ny*(1+bcN)*MSfni*DyMim;
-
-	    // OP11 = OP11 + (- Dn1'*mmE );
-	    SxxM[id] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
-	    SxyM[id] +=  -0.5*nx*(1+bcD)*DyMin*MSfim;
-	    SyxM[id] +=  -0.5*ny*(1+bcD)*DxMin*MSfim;
-	    SyyM[id] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;	    
-	  }
-	}
-      }
-
       for(iint n=0;n<mesh->Nfp;++n){
 	for(iint m=0;m<mesh->Np;++m){
-	  iint id = n*mesh->Np+m;
 	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
-	  if(eP>=0){
+	  
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+	    iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	      
+	    dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 	    
-	    for(iint i=0;i<mesh->Nfp;++i){
-	      iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
-	      iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
-	      
-	      dfloat MSfni = sJ*MSf[nM*mesh->Np+iM]; // surface Jacobian built in
-	      dfloat MSfim = sJ*MSf[iM*mesh->Np+m];
-	      
-	      dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
-	      dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
-	      
+	    dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m];
+	    dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
+	    dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
+	    dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
+
+	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
+	    SxxM[nM*mesh->Np+m] += -0.5*nx*(1+bcN)*MSfni*DxMim;
+	    SxyM[nM*mesh->Np+m] += -0.5*nx*(1+bcN)*MSfni*DyMim;
+	    SyxM[nM*mesh->Np+m] += -0.5*ny*(1+bcN)*MSfni*DxMim;
+	    SyyM[nM*mesh->Np+m] += -0.5*ny*(1+bcN)*MSfni*DyMim;
+	    
+	    if(eP>=0){
 	      //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
 	      SxxP[nM*mesh->Np+m] += -0.5*nx*MSfni*DxPim;
 	      SxyP[nM*mesh->Np+m] += -0.5*nx*MSfni*DyPim;
@@ -281,57 +256,60 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	  }
 	}
       }
-      
-      if(eP>=0){
-	for(iint n=0;n<mesh->Np;++n){
-	  for(iint m=0;m<mesh->Nfp;++m){
-	    iint id = n*mesh->Np+m;
-	    iint mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
-	    for(iint i=0;i<mesh->Nfp;++i){
-	      iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
-	      iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
-	      
-	      dfloat MSfni = sJ*MSf[n*mesh->Np+iM]; // surface Jacobian built in
-	      dfloat MSfim = sJ*MSf[iM*mesh->Np+mP];
+    
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+	  iint mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	  
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];	
 
-	      dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
-	      dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
-	      
+	    dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
+	    
+	    dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
+	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+	  
+	    // OP11 = OP11 + (- Dn1'*mmE );
+	    SxxM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
+	    SxyM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*DyMin*MSfim;
+	    SyxM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*DxMin*MSfim;
+	    SyyM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;
+
+	    if(eP>=0){
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
-	      SxxP[n*mesh->Np+iP] +=  +0.5*nx*DxMin*MSfim;
-	      SyxP[n*mesh->Np+iP] +=  +0.5*nx*DyMin*MSfim;
-	      SxyP[n*mesh->Np+iP] +=  +0.5*ny*DxMin*MSfim;
-	      SyyP[n*mesh->Np+iP] +=  +0.5*ny*DyMin*MSfim;
+	      SxxP[n*mesh->Np+mP] +=  +0.5*nx*DxMin*MSfim;
+	      SyxP[n*mesh->Np+mP] +=  +0.5*nx*DyMin*MSfim;
+	      SxyP[n*mesh->Np+mP] +=  +0.5*ny*DxMin*MSfim;
+	      SyyP[n*mesh->Np+mP] +=  +0.5*ny*DyMin*MSfim;
 	    }
 	  }
 	}
       }
 
-      if(eP>=0){
-	// store non-zeros for off diagonal block
-	for(iint n=0;n<mesh->Np;++n){
-	  for(iint m=0;m<mesh->Np;++m){
-	    iint id = n*mesh->Np+m;
-
-	    // completed  positive trace for this node
-	    dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
-	    dfloat S12nmP = sigma*(SxyP[id]);
-	    dfloat S21nmP = sigma*(SyxP[id]);
-	    dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
-	    
-	    iint row = 2*globalIds[n + eP*mesh->Np];
-	    iint col = 2*globalIds[m + eP*mesh->Np];
-	    iint owner = globalOwners[n + eP*mesh->Np];
-	    
-	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nmP);
-	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
-	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nmP);
-	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+1, owner, S22nmP);
-	    
-	  }
+      // store non-zeros for off diagonal block
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->Np;++m){
+	  iint id = n*mesh->Np+m;
+	  
+	  // completed  positive trace for this node
+	  dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
+	  dfloat S12nmP = sigma*(SxyP[id]);
+	  dfloat S21nmP = sigma*(SyxP[id]);
+	  dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
+	  
+	  iint row = 2*globalIds[n + eP*mesh->Np];
+	  iint col = 2*globalIds[m + eP*mesh->Np];
+	  iint owner = globalOwners[n + eP*mesh->Np];
+	  
+	  nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nmP);
+	  nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
+	  nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nmP);
+	  nnz = addNonZero(sendNonZeros, nnz, row+1, col+1, owner, S22nmP);
+	  
 	}
       }
-
+      
       free(SxxP); free(SxyP); free(SyxP); free(SyyP);
     }
     
@@ -343,11 +321,11 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	dfloat S12nm = sigma*(SxyM[id]);
 	dfloat S21nm = sigma*(SyxM[id]);
 	dfloat S22nm = BM[id] + SxxM[id] + SyyM[id] + sigma*SyyM[id]; // diagonal block + laplacian + penalty
-
+	
 	iint row = 2*globalIds[n + eM*mesh->Np];
 	iint col = 2*globalIds[m + eM*mesh->Np];
 	iint owner = globalOwners[n + eM*mesh->Np];
-
+	
 	nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nm);
 	nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nm);
 	nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nm);
@@ -355,7 +333,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       }
     }
   }
-
+  
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
   iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
