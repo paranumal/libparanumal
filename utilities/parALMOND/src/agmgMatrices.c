@@ -1,16 +1,60 @@
 #include "parAlmond.h"
 
+csr * newCSRfromCOO(iint N, iint* globalRowStarts,
+            iint nnz, iint *Ai, iint *Aj, dfloat *Avals){
 
-csr * newCSR(iint N, iint* globalRowStarts,
-            iint diagNNZ,   iint *diagRowStarts,
-            iint *diagCols, dfloat *diagCoefs,
-            iint offdNNZ,   iint *offdRowStarts,
-            iint *offdCols, dfloat *offdCoefs){
+  iint size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   csr *A = (csr *) calloc(1,sizeof(csr));
 
   A->Nrows = N;
   A->Ncols = N;
+
+  A->NlocalCols = N;
+
+  iint globalOffset = globalRowStarts[rank];
+
+  //first, count number of local, and non-local non-zeros
+  iint diagNNZ=0;
+  iint offdNNZ=0;
+  for (iint n=0;n<nnz;n++) {
+    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1)) offdNNZ++;
+    else diagNNZ++;
+  }
+
+  iint   *diagAi, *diagAj;
+  iint   *offdAi, *offdAj;
+  dfloat *diagAvals, *offdAvals;
+
+  if (diagNNZ) {
+    diagAi        = (iint *)   calloc(diagNNZ, sizeof(iint));
+    diagAj        = (iint *)   calloc(diagNNZ, sizeof(iint));
+    diagAvals     = (dfloat *) calloc(diagNNZ, sizeof(dfloat));
+  }
+  if (offdNNZ) {
+    offdAi        = (iint *)   calloc(offdNNZ, sizeof(iint));
+    offdAj        = (iint *)   calloc(offdNNZ, sizeof(iint));
+    offdAvals     = (dfloat *) calloc(offdNNZ, sizeof(dfloat));
+  }
+
+  //split into local and non-local COO matrices
+  diagNNZ =0;
+  offdNNZ =0;
+  for (iint n=0;n<nnz;n++) {
+    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1)) {
+      offdAi[offdNNZ] = Ai[n] - globalOffset; //local index
+      offdAj[offdNNZ] = Aj[n];                //global index
+      offdAvals[offdNNZ] = Avals[n];
+      offdNNZ++;
+    } else {
+      diagAi[diagNNZ] = Ai[n] - globalOffset; //local index
+      diagAj[diagNNZ] = Aj[n] - globalOffset; //local index
+      diagAvals[diagNNZ] = Avals[n];
+      diagNNZ++;
+    }
+  }
 
   A->diagNNZ   = diagNNZ;
   A->offdNNZ   = offdNNZ;
@@ -28,68 +72,96 @@ csr * newCSR(iint N, iint* globalRowStarts,
     A->offdCoefs = (dfloat *) calloc(offdNNZ, sizeof(dfloat));
   }
 
+  // Convert to csr storage, assumes orginal matrix was presorted by rows
+  for(iint n=0;n<diagNNZ;++n) {
+    iint row = diagAi[n];
+    A->diagRowStarts[row+1]++;
+  }
+  for(iint n=0;n<offdNNZ;++n) {
+    iint row = offdAi[n];
+    A->offdRowStarts[row+1]++;
+  }
+  //cumulative sum
+  for (iint i=0;i<A->Nrows;i++) {
+    A->diagRowStarts[i+1] += A->diagRowStarts[i];
+    A->offdRowStarts[i+1] += A->offdRowStarts[i];
+  }
+
   //copy input data into struct
   if (diagNNZ) {
     for (iint i=0; i<N; i++) {
-      iint start = diagRowStarts[i];
-      A->diagRowStarts[i] = start;
+      iint start = A->diagRowStarts[i];
       iint cnt = 1;
-      for (iint j=diagRowStarts[i]; j<diagRowStarts[i+1]; j++) {
-        if (diagCols[j] == i) { //move diagonal to first entry
-          A->diagCols[start] = diagCols[j];
-          A->diagCoefs[start] = diagCoefs[j];
+      for (iint j=A->diagRowStarts[i]; j<A->diagRowStarts[i+1]; j++) {
+        if (diagAj[j] == i) { //move diagonal to first entry
+          A->diagCols[start]  = diagAj[j];
+          A->diagCoefs[start] = diagAvals[j];
         } else {
-          A->diagCols[start+cnt] = diagCols[j];
-          A->diagCoefs[start+cnt] = diagCoefs[j];
+          A->diagCols[start+cnt]  = diagAj[j];
+          A->diagCoefs[start+cnt] = diagAvals[j];
           cnt++;
         }
       }
     }
-    A->diagRowStarts[N] = diagRowStarts[N];
   }
+
+  //record global indexing of columns
+  A->colMap = (iint *)   calloc(A->Ncols, sizeof(iint));
+  for (iint i=0;i<A->Ncols;i++)
+    A->colMap[i] = i + globalOffset;
+
   if (offdNNZ) {
     for (iint i=0; i<N; i++) {
-      iint start = offdRowStarts[i];
-      A->offdRowStarts[i] = start;
+      iint start = A->offdRowStarts[i];
       iint cnt = 0;
-      for (iint j=offdRowStarts[i]; j<offdRowStarts[i+1]; j++) {
-        A->offdCols[start+cnt]  = offdCols[j];
-        A->offdCoefs[start+cnt] = offdCoefs[j];
+      for (iint j=A->offdRowStarts[i]; j<A->offdRowStarts[i+1]; j++) {
+        A->offdCols[start+cnt]  = offdAj[j];
+        A->offdCoefs[start+cnt] = offdAvals[j];
         cnt++;
       }
     }
-    A->offdRowStarts[N] = offdRowStarts[N];
 
     //we now need to reorder the x vector for the halo, and shift the column indices
     iint *col = (iint *) calloc(A->offdNNZ,sizeof(iint));
     for (iint n=0;n<offdNNZ;n++)
-      col[n] = offdCols[n]; //copy non-local column global ids
+      col[n] = A->offdCols[n]; //copy non-local column global ids
 
     //sort by global index
     std::sort(col,col+offdNNZ);
 
     //count unique non-local column ids
-    A->Nhalo = 0;
+    A->NHalo = 0;
     for (iint n=1;n<offdNNZ;n++)
-      if (col[n]!=col[n-1])  col[++A->Nhalo] = col[n];
-    A->Nhalo++; //number of unique columns
+      if (col[n]!=col[n-1])  col[++A->NHalo] = col[n];
+    A->NHalo++; //number of unique columns
 
     A->Ncols += A->NHalo;
 
     //save global column ids in colMap
-    A->offdColMap    = (iint *)   calloc(A->Nhalo, sizeof(iint));
-    for (iint n=0; n<A->Nhalo; n++)
-      A->offdColMap[n] = col[n];
+    A->colMap    = (iint *) realloc(A->colMap, A->Ncols*sizeof(iint));
+    for (iint n=0; n<A->NHalo; n++)
+      A->colMap[n+A->NlocalCols] = col[n];
     free(col);
 
     //shift the column indices to local indexing
     for (iint n=0;n<offdNNZ;n++) {
-      iint gcol = offdCols[n];
-      for (iint m=0;m<A->Nhalo;m++) {
-        if (gcol == A->offdColMap[m])
+      iint gcol = A->offdCols[n];
+      for (iint m=A->NlocalCols;m<A->Ncols;m++) {
+        if (gcol == A->colMap[m])
           A->offdCols[n] = m;
       }
     }
+  }
+
+  if (diagNNZ) {
+    free(diagAi);
+    free(diagAj);
+    free(diagAvals);
+  }
+  if (offdNNZ) {
+    free(offdAi);
+    free(offdAj);
+    free(offdAvals);
   }
 
   csrHaloSetup(A,globalRowStarts);
@@ -108,10 +180,9 @@ void freeCSR(csr *A) {
     free(A->offdCols);
     free(A->offdCoefs);
   }
-  if (A->Nhalo) {
-    free(A->offdColMap);
+  if (A->Ncols) {
+    free(A->colMap);
   }
-  free(A->globalRowStarts);
   free(A->haloSendRequests);
   free(A->haloRecvRequests);
   free(A->NsendPairs);
@@ -124,26 +195,33 @@ void freeCSR(csr *A) {
   free(A);
 }
 
+//create a device version of a csr matrix
 dcsr *newDCSR(parAlmond_t *parAlmond, csr *B){
 
   dcsr *A = (dcsr *) calloc(1,sizeof(dcsr));
 
   A->Nrows  = B->Nrows;
   A->Ncols  = B->Ncols;
-  A->nnz    = B->nnz;
+
+  A->NlocalCols = B->NlocalCols;
 
   //copy to device
-  if(B->nnz){
-    A->o_rowStarts = parAlmond->device.malloc((A->Nrows+1)*sizeof(iint), B->rowStarts);
-    A->o_cols      = parAlmond->device.malloc(A->nnz*sizeof(iint), B->cols);
-    A->o_coefs     = parAlmond->device.malloc(A->nnz*sizeof(dfloat), B->coefs);
+  if(B->diagNNZ){
+    A->o_diagRowStarts = parAlmond->device.malloc((A->Nrows+1)*sizeof(iint), B->diagRowStarts);
+    A->o_diagCols      = parAlmond->device.malloc(A->diagNNZ*sizeof(iint),   B->diagCols);
+    A->o_diagCoefs     = parAlmond->device.malloc(A->diagNNZ*sizeof(dfloat), B->diagCoefs);
+  }
+  if(B->offdNNZ){
+    A->o_offdRowStarts = parAlmond->device.malloc((A->Nrows+1)*sizeof(iint), B->offdRowStarts);
+    A->o_offdCols      = parAlmond->device.malloc(A->offdNNZ*sizeof(iint),   B->offdCols);
+    A->o_offdCoefs     = parAlmond->device.malloc(A->offdNNZ*sizeof(dfloat), B->offdCoefs);
   }
 
   if(B->Nrows) {
     dfloat *diagInv = (dfloat *) calloc(A->Nrows, sizeof(dfloat));
 
     for(iint i=0; i<B->Nrows; i++)
-      diagInv[i] = 1.0/B->coefs[B->rowStarts[i]];
+      diagInv[i] = 1.0/B->diagCoefs[B->diagRowStarts[i]];
     A->o_diagInv = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
     A->o_temp1 = parAlmond->device.malloc(A->Nrows*sizeof(dfloat), diagInv);
     free(diagInv);
@@ -152,9 +230,7 @@ dcsr *newDCSR(parAlmond_t *parAlmond, csr *B){
   A->NsendTotal = B->NsendTotal;
   A->NrecvTotal = B->NrecvTotal;
 
-  A->numLocalIds = B->numLocalIds;
   A->NHalo = B->NHalo;
-  A->colMap = B->colMap;
   A->NrecvTotal = B->NrecvTotal;
   A->NsendTotal = B->NsendTotal;
   A->haloElementList = B->haloElementList;
@@ -191,12 +267,12 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
 
   for(iint i=0; i<csrA->Nrows; i++)
-    diagInv[i] = 1.0/csrA->coefs[csrA->rowStarts[i]];
+    diagInv[i] = 1.0/csrA->diagCoefs[csrA->diagRowStarts[i]];
 
   iint maxNnzPerRow = 0;
   iint minNnzPerRow = csrA->Ncols;
   for(iint i=0; i<csrA->Nrows; i++) {
-    iint rowNnz = csrA->rowStarts[i+1] - csrA->rowStarts[i];
+    iint rowNnz = csrA->diagRowStarts[i+1] - csrA->diagRowStarts[i];
     rowCounters[i] = rowNnz;
 
     maxNnzPerRow = (rowNnz > maxNnzPerRow) ? rowNnz : maxNnzPerRow;
@@ -221,7 +297,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   iint nnz = 0;
   for(iint i=0; i<numBins; i++){
     nnz += bins[i] * (i+minNnzPerRow);
-    if(nnz > 2.0*csrA->nnz/3.0){
+    if(nnz > 2.0*csrA->diagNNZ/3.0){
       nnzPerRow = i+minNnzPerRow;
       break;
     }
@@ -247,7 +323,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   for(iint i=0; i< csrA->Nrows; i++)
     if(rowCounters[i] > nnzPerRow) nnzC += (rowCounters[i] - nnzPerRow);
 
-  A->E->actualNNZ  = csrA->nnz - nnzC;
+  A->E->actualNNZ  = csrA->diagNNZ - nnzC;
 
   A->C = (coo *) calloc(1, sizeof(coo));
 
@@ -267,24 +343,24 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   nnzC = 0;
   for(iint i=0; i<csrA->Nrows; i++){
-    iint Jstart = csrA->rowStarts[i];
-    iint Jend   = csrA->rowStarts[i+1];
+    iint Jstart = csrA->diagRowStarts[i];
+    iint Jend   = csrA->diagRowStarts[i+1];
     iint rowNnz = Jend - Jstart;
 
     // store only min of nnzPerRow and rowNnz
     iint maxNnz = (nnzPerRow >= rowNnz) ? rowNnz : nnzPerRow;
 
     for(iint c=0; c<maxNnz; c++){
-      Ecols [i+c*A->E->strideLength]  = csrA->cols[Jstart+c];
-      Ecoefs[i+c*A->E->strideLength]  = csrA->coefs[Jstart+c];
+      Ecols [i+c*A->E->strideLength]  = csrA->diagCols[Jstart+c];
+      Ecoefs[i+c*A->E->strideLength]  = csrA->diagCoefs[Jstart+c];
     }
 
     // store the remaining in coo format
     if(rowNnz > nnzPerRow){
       for(iint c=nnzPerRow; c<rowNnz; c++){
         Coffsets[i+1]++;
-        Ccols[nnzC]   = csrA->cols[Jstart+c];
-        Ccoefs[nnzC]  = csrA->coefs[Jstart+c];
+        Ccols[nnzC]   = csrA->diagCols[Jstart+c];
+        Ccoefs[nnzC]  = csrA->diagCoefs[Jstart+c];
         nnzC++;
       }
     }
@@ -320,9 +396,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->NsendTotal = csrA->NsendTotal;
   A->NrecvTotal = csrA->NrecvTotal;
 
-  A->numLocalIds = csrA->numLocalIds;
   A->NHalo = csrA->NHalo;
-  A->colMap = csrA->colMap;
   A->NrecvTotal = csrA->NrecvTotal;
   A->NsendTotal = csrA->NsendTotal;
   A->haloElementList = csrA->haloElementList;
@@ -345,16 +419,16 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 
   occa::tic("csr axpy");
-  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
   // y[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
-    const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
+    const iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
 
     dfloat result = 0.0;
     for(iint jj=Jstart; jj<Jend; jj++)
-      result += (A->coefs[jj]*x[A->cols[jj]]);
+      result += (A->diagCoefs[jj]*x[A->diagCols[jj]]);
 
     y[i] = alpha*result + beta*y[i];
   }
@@ -364,17 +438,17 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z) {
 
   occa::tic("csr zeqaxpy");
-  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
-    const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
+    const iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
 
     dfloat result = 0.0;
 
     for(iint jj=Jstart; jj<Jend; jj++)
-      result += A->coefs[jj]*x[A->cols[jj]];
+      result += A->diagCoefs[jj]*x[A->diagCols[jj]];
 
     z[i] = alpha*result + beta*y[i];
   }
@@ -402,11 +476,11 @@ void axpy(parAlmond_t *parAlmond, dcsr *A, dfloat alpha, occa::memory o_x, dfloa
   if(A->NrecvTotal) {
     //copy back to device
     o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
-                  A->numLocalIds*sizeof(dfloat));
+                  A->NlocalCols*sizeof(dfloat));
   }
 
-  parAlmond->agg_interpolateKernel(A->Nrows, A->o_cols, A->o_coefs, o_x, o_y);
-  //parAlmond->dcsrAXPYKernel(A->Nrows, alpha,beta, A->o_rowStarts,
+  parAlmond->agg_interpolateKernel(A->Nrows, A->o_diagCols, A->o_diagCoefs, o_x, o_y);
+  //parAlmond->dcsrAXPYKernel(A->Nrows, alpha,beta, A->o_diagRowStarts,
   //                                A->o_cols, A->o_coefs, o_x, o_y);
   occaTimerToc(parAlmond->device,"dcsr axpy");
 }
@@ -431,7 +505,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
 
   if (A->NrecvTotal) {
     //copy back to device
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
   }
 
   // y <-- alpha*E*x+beta*y
@@ -466,7 +540,7 @@ void zeqaxpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x,
 
   if (A->NrecvTotal) {
     //copy back to device
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
   }
 
   // z <-- alpha*E*x+ beta*y
@@ -531,14 +605,14 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
   if(x_is_zero){
     #pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
-      dfloat invD = 1.0/A->coefs[A->rowStarts[i]];
+      dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
       x[i] = invD*r[i];
     }
     occa::toc("csr smoothJacobi");
     return;
   }
 
-  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
   dfloat y[A->Nrows]; //TODO get rid of this stack alloc
 
@@ -546,14 +620,14 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
 
-    const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
+    const iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
 
     iint jj = Jstart;
 
-    const dfloat invD = 1./A->coefs[jj++];
+    const dfloat invD = 1./A->diagCoefs[jj++];
 
     for(; jj<Jend; jj++)
-      result -= A->coefs[jj]*x[A->cols[jj]];
+      result -= A->diagCoefs[jj]*x[A->diagCols[jj]];
 
     y[i] = invD*result;
   }
@@ -573,14 +647,14 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
   if(x_is_zero){
 #pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
-      dfloat invD = 1.0/A->coefs[A->rowStarts[i]];
+      dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
       x[i] = alpha*invD*r[i];
     }
     occa::toc("csr smoothDampedJacobi");
     return;
   }
 
-  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->numLocalIds);
+  csrHaloExchange(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
   // x = (1-alpha)*x + alpha*inv(D) * (b-R*x) where R = A-D
   dfloat y[A->Nrows];
@@ -591,14 +665,14 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
 
-    const iint Jstart = A->rowStarts[i], Jend = A->rowStarts[i+1];
+    const iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
 
     iint jj = Jstart;
 
-    const dfloat invD = 1./A->coefs[jj++];
+    const dfloat invD = 1./A->diagCoefs[jj++];
 
     for(; jj<Jend; jj++)
-      result -= A->coefs[jj]*x[A->cols[jj]];
+      result -= A->diagCoefs[jj]*x[A->diagCols[jj]];
 
     y[i] = oneMalpha*x[i] + alpha*invD*result;
   }
@@ -638,7 +712,7 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
 
   if (A->NrecvTotal) {
     //copy back to device
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
   }
 
   occaTimerTic(parAlmond->device,"ellJacobi1");
@@ -689,7 +763,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
 
   if (A->NrecvTotal) {
     //copy back to device
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->numLocalIds*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
   }
 
   occaTimerTic(parAlmond->device,"ellJacobi1");
@@ -769,8 +843,8 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
   A->NrecvTotal = 0;
   A->NsendPairs = (iint*) calloc(size, sizeof(iint));
   A->NrecvPairs = (iint*) calloc(size, sizeof(iint));
-  for(iint n=0;n<A->Nhalo;++n){ //for just the halo
-    iint id = A->offdColMap[n]; // global index
+  for(iint n=A->NlocalCols;n<A->Ncols;++n){ //for just the halo
+    iint id = A->colMap[n]; // global index
     for (iint r=0;r<size;r++) { //find owner's rank
       if (globalColStarts[r]-1<id && id < globalColStarts[r+1]) {
         A->NrecvTotal++;
@@ -800,7 +874,7 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
 
   //exchange the needed ids
   iint tag = 999;
-  iint recvOffset = 0;
+  iint recvOffset = A->NlocalCols;
   iint sendOffset = 0;
   iint sendMessage = 0, recvMessage = 0;
   for(iint r=0;r<size;++r){
@@ -811,7 +885,7 @@ void csrHaloSetup(csr *A, iint *globalColStarts){
       ++sendMessage;
     }
     if(A->NrecvPairs[r]){
-      MPI_Isend(A->offdColMap+recvOffset, A->NrecvPairs[r], MPI_IINT, r, tag,
+      MPI_Isend(A->colMap+recvOffset, A->NrecvPairs[r], MPI_IINT, r, tag,
           MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
       recvOffset += A->NrecvPairs[r];
       ++recvMessage;

@@ -71,7 +71,6 @@ void * parAlmondSetup(mesh_t *mesh, //mesh data
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
        iint* Aj,                    //--
        dfloat* Avals,               //--
-       iint   nullSpace,            // null space flag
        hgs_t *hgs,                  // gs op for problem assembly (to be removed in future)
        const char* options)
 {
@@ -80,69 +79,8 @@ void * parAlmondSetup(mesh_t *mesh, //mesh data
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
-  iint globalOffset = globalRowStarts[rank];
-  iint numGlobalRows = globalRowStarts[size];
 
-  //count number of local, and non-local non-zeros
-  iint diag_nnz=0;
-  iint offd_nnz=0;
-  for (iint n=0;n<nnz;n++) {
-    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+numLocalRows-1)) offd_nnz++;
-    else diag_nnz++;
-  }
-
-  iint   *diagRowStarts, *diagAi, *diagAj;
-  iint   *offdRowStarts, *offdAi, *offdAj;
-  dfloat *diagAvals, *offdAvals;
-
-  if (diag_nnz) {
-    diagRowStarts = (iint *)   calloc(numLocalRows+1, sizeof(iint));
-    diagAi        = (iint *)   calloc(diag_nnz, sizeof(iint));
-    diagAj        = (iint *)   calloc(diag_nnz, sizeof(iint));
-    diagAvals     = (dfloat *) calloc(diag_nnz, sizeof(dfloat));
-  }
-  if (offd_nnz) {
-    offdRowStarts = (iint *)   calloc(numLocalRows+1, sizeof(iint));
-    offdAi        = (iint *)   calloc(offd_nnz, sizeof(iint));
-    offdAj        = (iint *)   calloc(offd_nnz, sizeof(iint));
-    offdAvals     = (dfloat *) calloc(offd_nnz, sizeof(dfloat));
-  }
-
-  //split into local and non-local COO matrices
-  diag_nnz =0;
-  offd_nnz =0;
-  for (iint n=0;n<nnz;n++) {
-    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+numLocalRows-1)) {
-      offdAi[offd_nnz] = Ai[n] - globalOffset; //local index
-      offdAj[offd_nnz] = Aj[n];                //global index
-      offdAvals[offd_nnz] = Avals[n];
-      offd_nnz++;
-    } else {
-      diagAi[diag_nnz] = Ai[n] - globalOffset; //local index
-      diagAj[diag_nnz] = Aj[n] - globalOffset; //local index
-      diagAvals[diag_nnz] = Avals[n];
-      diag_nnz++;
-    }
-  }
-
-  // Convert to csr storage, assumes orginal matrix was presorted by rows
-  iint cnt =0; //row start counter
-  for(iint n=0;n<diag_nnz;++n)
-    if(cnt==0 || (diagAi[n]!=diagAi[n-1]))
-      diagRowStarts[cnt++] = n;
-  diagRowStarts[cnt] = diag_nnz;
-
-  cnt =0; //row start counter
-  for(iint n=0;n<offd_nnz;++n)
-    if(cnt==0 || (offdAi[n]!=offdAi[n-1]))
-      offdRowStarts[cnt++] = n;
-  offdRowStarts[cnt] = offd_nnz;
-
-  csr *A = newCSR(numLocalRows, globalRowStarts,
-                  diag_nnz, diagRowStarts, diagAj, diagAvals,
-                  offd_nnz, offdRowStarts, offdAj, offdAvals);
-  free(diagRowStarts); free(diagAi); free(diagAj); free(diagAvals);
-  free(offdRowStarts); free(offdAi); free(offdAj); free(offdAvals);
+  csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
 
   //populate null space vector
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
