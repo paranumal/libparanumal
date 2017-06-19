@@ -121,7 +121,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   }else{
 
     printf("Solving for Ux and Uy \n");
-    pcg( ?, ?, ?, ins->o_rhsU, ins->o_rhsV, ?); // rhs in rhsU, solution in rhsV
+    parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
 
     iint Ntotal = mesh->Np*mesh->Nelements;
     dfloat *tmp = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
