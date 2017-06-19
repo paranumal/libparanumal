@@ -172,10 +172,12 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       
       int bcD, bcN;
       int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-      iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+      iint bcType = 0;
+
+      if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
       // this needs to be double checked (and the code where these are used)
-      if(bcType==0){
+      if(bcType<=0){
 	bcD = 0;
 	bcN = 0;
       }else if(bcType==1){ // Dirichlet
@@ -250,19 +252,50 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    SxyM[id] +=  -0.5*nx*(1+bcD)*DyMin*MSfim;
 	    SyxM[id] +=  -0.5*ny*(1+bcD)*DxMin*MSfim;
 	    SyyM[id] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;	    
+	  }
+	}
+      }
+
+      for(iint n=0;n<mesh->Nfp;++n){
+	for(iint m=0;m<mesh->Np;++m){
+	  iint id = n*mesh->Np+m;
+	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
+	  if(eP>=0){
 	    
-	    if(eP>=0){
-	      iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
-	      iint iP  = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+	    for(iint i=0;i<mesh->Nfp;++i){
+	      iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+	      iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	      
+	      dfloat MSfni = sJ*MSf[nM*mesh->Np+iM]; // surface Jacobian built in
+	      dfloat MSfim = sJ*MSf[iM*mesh->Np+m];
 	      
 	      dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
 	      dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
 	      
 	      //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
-	      SxxP[id] += -0.5*nx*MSfni*DxPim;
-	      SxyP[id] += -0.5*nx*MSfni*DyPim;
-	      SyxP[id] += -0.5*ny*MSfni*DxPim;
-	      SyyP[id] += -0.5*ny*MSfni*DyPim;
+	      SxxP[nM*mesh->Np+m] += -0.5*nx*MSfni*DxPim;
+	      SxyP[nM*mesh->Np+m] += -0.5*nx*MSfni*DyPim;
+	      SyxP[nM*mesh->Np+m] += -0.5*ny*MSfni*DxPim;
+	      SyyP[nM*mesh->Np+m] += -0.5*ny*MSfni*DyPim;
+	    }
+	  }
+	}
+      }
+      
+      if(eP>=0){
+	for(iint n=0;n<mesh->Np;++n){
+	  for(iint m=0;m<mesh->Nfp;++m){
+	    iint id = n*mesh->Np+m;
+	    iint mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	    for(iint i=0;i<mesh->Nfp;++i){
+	      iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+	      iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	      
+	      dfloat MSfni = sJ*MSf[n*mesh->Np+iM]; // surface Jacobian built in
+	      dfloat MSfim = sJ*MSf[iM*mesh->Np+mP];
+
+	      dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
+	      dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 	      
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
 	      SxxP[n*mesh->Np+iP] +=  +0.5*nx*DxMin*MSfim;
