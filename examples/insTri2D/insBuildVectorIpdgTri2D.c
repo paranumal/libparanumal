@@ -172,23 +172,23 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
       dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
       
-      int qSgn, gradqSgn;
+      int bcD, bcN;
       int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
       iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
       // this needs to be double checked (and the code where these are used)
       if(bcType==0){
-	qSgn     = 1;
-	gradqSgn = 1;
+	bcD = 0;
+	bcN = 0;
       }else if(bcType==1){ // Dirichlet
-	qSgn     = -1;
-	gradqSgn =  1;
+	bcD = 1;
+	bcN = -1;
       } else if (bcType==2){ // Neumann
-	qSgn     =  1;
-	gradqSgn = -1;
+	bcD = -1;
+	bcN = 1;
       } else { // Neumann for now
-	qSgn     =  1;
-	gradqSgn = -1;
+	bcD = -1;
+	bcN = 1;
       }
 
       // reset eP
@@ -231,16 +231,16 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 
 	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
-	    SxxM[m+n*mesh->Np] += -0.5*MSfni*nx*(1+gradqSgn)*DxMim;
-	    SxyM[m+n*mesh->Np] += -0.5*MSfni*nx*(1+gradqSgn)*DyMim;
-	    SyxM[m+n*mesh->Np] += -0.5*MSfni*ny*(1+gradqSgn)*DxMim;
-	    SyyM[m+n*mesh->Np] += -0.5*MSfni*ny*(1+gradqSgn)*DyMim;
+	    SxxM[m+n*mesh->Np] += -0.5*MSfni*nx*(1+bcN)*DxMim;
+	    SxyM[m+n*mesh->Np] += -0.5*MSfni*nx*(1+bcN)*DyMim;
+	    SyxM[m+n*mesh->Np] += -0.5*MSfni*ny*(1+bcN)*DxMim;
+	    SyyM[m+n*mesh->Np] += -0.5*MSfni*ny*(1+bcN)*DyMim;
 
 	    // OP11 = OP11 + (- Dn1'*mmE );
-	    SxxM[m+n*mesh->Np] +=  -0.5*nx*(1-qSgn)*DxMin*MSfim;
-	    SxyM[m+n*mesh->Np] +=  -0.5*nx*(1-qSgn)*DyMin*MSfim;
-	    SyxM[m+n*mesh->Np] +=  -0.5*ny*(1-qSgn)*DxMin*MSfim;
-	    SyyM[m+n*mesh->Np] +=  -0.5*ny*(1-qSgn)*DyMin*MSfim;	    
+	    SxxM[m+n*mesh->Np] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
+	    SxyM[m+n*mesh->Np] +=  -0.5*nx*(1+bcD)*DyMin*MSfim;
+	    SyxM[m+n*mesh->Np] +=  -0.5*ny*(1+bcD)*DxMin*MSfim;
+	    SyyM[m+n*mesh->Np] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;	    
 	    
 	    if(eP>=0){
 	      iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
