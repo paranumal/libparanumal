@@ -265,10 +265,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	      SyyP[id] += -0.5*ny*MSfni*DyPim;
 	      
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
-	      SxxP[nM*mesh->Np+iP] +=  +0.5*nx*DxMin*MSfim;
-	      SyxP[nM*mesh->Np+iP] +=  +0.5*nx*DyMin*MSfim;
-	      SxyP[nM*mesh->Np+iP] +=  +0.5*ny*DxMin*MSfim;
-	      SyyP[nM*mesh->Np+iP] +=  +0.5*ny*DyMin*MSfim;
+	      SxxP[n*mesh->Np+iP] +=  +0.5*nx*DxMin*MSfim;
+	      SyxP[n*mesh->Np+iP] +=  +0.5*nx*DyMin*MSfim;
+	      SxyP[n*mesh->Np+iP] +=  +0.5*ny*DxMin*MSfim;
+	      SyyP[n*mesh->Np+iP] +=  +0.5*ny*DyMin*MSfim;
 	    }
 	  }
 	}
