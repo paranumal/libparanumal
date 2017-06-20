@@ -102,6 +102,7 @@ void * parAlmondSetup(mesh_t *mesh, //mesh data
   parAlmond->o_Ax = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
 
   sync_setup_on_device(parAlmond, mesh->device);
+  parAlmondReport(parAlmond);
   return (void *) parAlmond;
 }
 
