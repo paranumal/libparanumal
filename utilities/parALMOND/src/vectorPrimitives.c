@@ -118,20 +118,20 @@ dfloat maxEntry(iint n, dfloat *a){
 }
 
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
-  parAlmond->scaleVectorKernel(N, alpha, o_a);
+  if (N) parAlmond->scaleVectorKernel(N, alpha, o_a);
 }
 
 void setVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
-  parAlmond->setVectorKernel(N, alpha, o_a);
+  if (N) parAlmond->setVectorKernel(N, alpha, o_a);
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
-  parAlmond->simpleDotStarKernel(N, o_a, o_b);
+  if (N) parAlmond->simpleDotStarKernel(N, o_a, o_b);
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c){
-  parAlmond->dotStarKernel(N, alpha, beta, o_a, o_b, o_c);
+  if (N) parAlmond->dotStarKernel(N, alpha, beta, o_a, o_b, o_c);
 }
 
 #define RDIMX 32
