@@ -3,7 +3,7 @@
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
             iint NNZ,   iint *Ai, iint *Aj, dfloat *Avals);
 void freeCSR(csr *A);
-dcsr *newDCSR(parAlmond_t *parAlmond, csr *B);
+dcoo *newDCOO(parAlmond_t *parAlmond, csr *B);
 hyb * newHYB(parAlmond_t *parAlmond, csr *csrA);
 
 
@@ -11,7 +11,7 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y);
 
 void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z);
 
-void axpy(parAlmond_t *parAlmond, dcsr *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y);
+void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y);
 
 void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y);
 
@@ -42,7 +42,9 @@ void matFreeSmoothDampedJacobi(parAlmond_t *parAlmond, hyb* A, occa::memory o_r,
 //halo exchange
 void csrHaloSetup(csr *A, iint *globalColStarts);
 void csrHaloExchange(csr *A, size_t Nbytes, void *sourceBuffer, void *sendBuffer, void *recvBuffer);
-void dcsrHaloExchangeStart(dcsr *A, size_t Nbytes, void *sendBuffer, void *recvBuffer);
-void dcsrHaloExchangeFinish(dcsr *A);
+void csrHaloExchangeStart(csr *A, size_t Nbytes, void *sourceBuffer, void *sendBuffer, void *recvBuffer);
+void csrHaloExchangeFinish(csr *A);
+void dcooHaloExchangeStart(dcoo *A, size_t Nbytes, void *sendBuffer, void *recvBuffer);
+void dcooHaloExchangeFinish(dcoo *A);
 void hybHaloExchangeStart(hyb *A, size_t Nbytes, void *sendBuffer, void *recvBuffer);
 void hybHaloExchangeFinish(hyb *A);

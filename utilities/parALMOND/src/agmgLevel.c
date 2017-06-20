@@ -82,67 +82,90 @@ static void eig(const int Nrows, double *A, double *WR,
 
 dfloat rhoDinvA(csr *A, dfloat *invD){
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const iint N = A->Nrows;
+  const iint M = A->Ncols;
 
   int k = 10;
 
-  if(k > m)
-    k = m;
+  iint Ntotal;
+  MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+
+  if(k > Ntotal)
+    k = Ntotal;
 
   // do an arnoldi
 
   // allocate memory for Hessenberg matrix
-  double *H = new double [k*k];
+  double *H = (double *) calloc(k*k,sizeof(double));
   for(int i=0; i<k*k; i++)
     H[i] = 0.;
 
   // allocate memory for basis
   dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
-  dfloat *Vx = (dfloat *) calloc(n, sizeof(dfloat));
+  dfloat *Vx = (dfloat *) calloc(M, sizeof(dfloat));
 
   for(int i=0; i<=k; i++)
-    V[i] = (dfloat *) calloc(m, sizeof(dfloat));
+    V[i] = (dfloat *) calloc(N, sizeof(dfloat));
 
   // generate a random vector for initial basis vector
-  randomize(m, Vx);
+  for (iint i=0;i<N;i++)
+    Vx[i] = (dfloat) drand48();
 
-  dfloat norm_vo = norm(m, Vx);
-  scaleVector(m, Vx, 1./norm_vo);
+  dfloat norm_vo = 0.;
+  for (iint i=0;i<N;i++)
+    norm_vo += Vx[i]*Vx[i];
 
-  for (iint i=0;i<m;i++)
+  dfloat gNorm_vo;
+  MPI_Allreduce(&norm_vo, &gNorm_vo, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  gNorm_vo = sqrt(gNorm_vo);
+
+  for (iint i=0;i<N;i++)
+    Vx[i] /= gNorm_vo;
+
+  for (iint i=0;i<N;i++)
     V[0][i] = Vx[i];
 
   for(int j=0; j<k; j++){
 
-    for (iint i=0;i<m;i++)
+    for (iint i=0;i<N;i++)
       Vx[i] = V[j][i];
 
     // v[j+1] = invD*(A*v[j])
     axpy(A, 1.0, Vx, 0., V[j+1]);
 
-    dotStar(m, invD, V[j+1]);
+    dotStar(N, invD, V[j+1]);
 
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      dfloat hij = innerProd(m, V[i], V[j+1]);
+      dfloat hij = innerProd(N, V[i], V[j+1]);
+      dfloat ghij;
+      MPI_Allreduce(&hij, &ghij, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
       // v[j+1] = v[j+1] - hij*v[i]
-      vectorAdd(m,-hij, V[i], 1.0, V[j+1]);
+      vectorAdd(N,-ghij, V[i], 1.0, V[j+1]);
 
-      H[i + j*k] = (double) hij;
+      H[i + j*k] = (double) ghij;
     }
 
     if(j+1 < k){
-      H[j+1+ j*k] = (double) norm(m,V[j+1]);
 
-      scaleVector(m,V[j+1], 1./H[j+1 + j*k]);
+      dfloat norm_vj = 0.;
+      for (iint i=0;i<N;i++)
+        norm_vj += V[j+1][i]*V[j+1][i];
+
+      dfloat gNorm_vj;
+      MPI_Allreduce(&norm_vj, &gNorm_vj, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      gNorm_vj = sqrt(gNorm_vj);
+
+      H[j+1+ j*k] = (double) gNorm_vj;
+
+      scaleVector(N,V[j+1], 1./H[j+1 + j*k]);
     }
   }
 
-  double *WR = new double[k];
-  double *WI = new double[k];
+  double *WR = (double *) calloc(k,sizeof(double));
+  double *WI = (double *) calloc(k,sizeof(double));
 
   eig(k, H, WR, WI);
 
@@ -156,9 +179,9 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
     }
   }
 
-  delete [] H;
-  delete [] WR;
-  delete [] WI;
+  free(H);
+  free(WR);
+  free(WI);
 
   // free memory
   for(int i=0; i<=k; i++){

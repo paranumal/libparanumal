@@ -159,6 +159,8 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   // restrict the residual to next level
   restrict(parAlmond, parAlmond->levels[k], parAlmond->levels[k]->o_res, parAlmond->levels[k+1]->o_rhs);
 
+  parAlmond->levels[k+1]->o_rhs.copyTo(parAlmond->levels[k+1]->rhs);
+
   if(k+1 < parAlmond->numLevels - 1){
     if(k>2) {
       device_vcycle(parAlmond,k+1);

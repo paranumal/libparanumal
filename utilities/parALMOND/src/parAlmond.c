@@ -16,6 +16,10 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 
   device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
+
+  //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
+  //kcycle(parAlmond, 0);
+  //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
 /*
   iint M = parAlmond->levels[0]->Nrows;
   occa::memory o_x0 = parAlmond->device.malloc(M*sizeof(dfloat));

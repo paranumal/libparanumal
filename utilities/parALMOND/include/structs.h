@@ -18,6 +18,9 @@ typedef struct csr_t {
   iint   *offdCols;
   dfloat *offdCoefs;
 
+  //storage for smoothing
+  dfloat *scratch;
+
   iint   *colMap;
 
   // MPI halo exchange info
@@ -107,18 +110,15 @@ typedef struct dcsr_t {
 
   //local
   iint diagNNZ;
-  occa::memory o_diagRowStarts;
+  occa::memory o_diagRows;
   occa::memory o_diagCols;
   occa::memory o_diagCoefs;
 
   //non-local
   iint offdNNZ;
-  occa::memory o_offdRowStarts;
+  occa::memory o_offdRows;
   occa::memory o_offdCols;
   occa::memory o_offdCoefs;
-
-  occa::memory o_diagInv;
-  occa::memory o_temp1;
 
   // MPI halo exchange info
   iint  NHalo;
@@ -139,7 +139,7 @@ typedef struct dcsr_t {
   void *haloSendRequests;
   void *haloRecvRequests;
 
-} dcsr;
+} dcoo;
 
 typedef struct agmgLevel_t {
   iint Nrows;
@@ -153,7 +153,7 @@ typedef struct agmgLevel_t {
   iint *globalAggStarts; //global partitioning of coarse level
 
   hyb  *deviceA;
-  dcsr  *dcsrP;
+  dcoo  *dcsrP;
   hyb  *deviceR;
 
   dfloat *nullA;
