@@ -4,6 +4,7 @@
 // y = y + P*x,  (Px is used to represent y in the kernel)
 
 kernel void agg_interpolate(const iint   n,
+          const iint *restrict P_rows,
           const iint *restrict P_cols,
           const dfloat *restrict P_coefs,
           const dfloat *restrict x,
@@ -12,6 +13,6 @@ kernel void agg_interpolate(const iint   n,
   for(iint i=0;i<n;++i;tile(256)){
     // 3 co-alesced access and 1 random access
     if(i<n)
-      Px[i] += (P_coefs[i]*x[P_cols[i]]);
+      Px[P_rows[i]] += (P_coefs[i]*x[P_cols[i]]);
   }
 }

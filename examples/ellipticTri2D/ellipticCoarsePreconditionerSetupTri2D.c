@@ -9,12 +9,12 @@ typedef struct{
 
 }nonZero_t;
 
-// compare on global indices 
+// compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b){
 
   nonZero_t *fa = (nonZero_t*) a;
   nonZero_t *fb = (nonZero_t*) b;
-  
+
   if(fa->row < fb->row) return -1;
   if(fa->row > fb->row) return +1;
 
@@ -47,13 +47,13 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
-  
+
   //use the ordering to define a gather+scatter for assembly
   hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
   // temporary
   precon->o_ztmp = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
-  
+
   // ------------------------------------------------------------------------------------
   // 2. Build coarse grid element basis functions
 
@@ -61,10 +61,10 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
 
-  for(iint n=0;n<mesh->Np;++n){   
+  for(iint n=0;n<mesh->Np;++n){
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
-    
+
     V1[0*mesh->Np+n] = -0.5*(rn+sn);
     V1[1*mesh->Np+n] = +0.5*(1.+rn);
     V1[2*mesh->Np+n] = +0.5*(1.+sn);
@@ -72,7 +72,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     Vr1[0*mesh->Np+n] = 0.5*(-1);
     Vr1[1*mesh->Np+n] = 0.5*(+1);
     Vr1[2*mesh->Np+n] = 0;
-      
+
     Vs1[0*mesh->Np+n] = 0.5*(-1);
     Vs1[1*mesh->Np+n] = 0;
     Vs1[2*mesh->Np+n] = 0.5*(+1);
@@ -93,17 +93,17 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
-    
+
   iint cnt = 0;
 
   dfloat *cV1  = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
   dfloat *cVr1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
   dfloat *cVs1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
 
-  for(iint n=0;n<mesh->cubNp;++n){   
+  for(iint n=0;n<mesh->cubNp;++n){
     dfloat rn = mesh->cubr[n];
     dfloat sn = mesh->cubs[n];
-    
+
     cV1[0*mesh->cubNp+n] = -0.5*(rn+sn);
     cV1[1*mesh->cubNp+n] = +0.5*(1.+rn);
     cV1[2*mesh->cubNp+n] = +0.5*(1.+sn);
@@ -111,7 +111,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     cVr1[0*mesh->cubNp+n] = 0.5*(-1);
     cVr1[1*mesh->cubNp+n] = 0.5*(+1);
     cVr1[2*mesh->cubNp+n] = 0;
-      
+
     cVs1[0*mesh->cubNp+n] = 0.5*(-1);
     cVs1[1*mesh->cubNp+n] = 0;
     cVs1[2*mesh->cubNp+n] = 0.5*(+1);
@@ -125,7 +125,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
       Ssr1[n][m] = 0;
       Sss1[n][m] = 0;
       MM1[n][m] = 0;
-      
+
       for(iint i=0;i<mesh->cubNp;++i){
       	iint idn = n*mesh->cubNp+i;
       	iint idm = m*mesh->cubNp+i;
@@ -137,9 +137,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
       	MM1[n][m] += cw*(cV1[idn]*cV1[idm]);
       }
     }
-  }	
+  }
 
-  
+
   printf("Building coarse matrix system\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -151,7 +151,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
       	dfloat ry = mesh->vgeo[e*mesh->Nvgeo + RYID];
       	dfloat sy = mesh->vgeo[e*mesh->Nvgeo + SYID];
       	dfloat J  = mesh->vgeo[e*mesh->Nvgeo +  JID];
-      	
+
       	Snm  = J*(rx*rx+ry*ry)*Srr1[n][m];
       	Snm += J*(rx*sx+ry*sy)*Srs1[n][m];
         Snm += J*(sx*rx+sy*ry)*Ssr1[n][m];
@@ -169,7 +169,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
         	sendNonZeros[cnt].row = globalNumbering[e*mesh->Nverts+n];
         	sendNonZeros[cnt].col = globalNumbering[e*mesh->Nverts+m];
         	sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Nverts+n];
-        	
+
         	++cnt;
         }
       }
@@ -182,7 +182,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
-  
+
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
 
@@ -195,7 +195,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   }
 
   nonZero_t *recvNonZeros = (nonZero_t*) calloc(recvNtotal, sizeof(nonZero_t));
-  
+
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
 		recvNonZeros, ArecvCounts, ArecvOffsets, MPI_CHAR,
@@ -221,17 +221,17 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
   iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
   dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
-  
+
   for (iint n=0;n<recvNtotal;n++) {
     recvRows[n] = recvNonZeros[n].row;
     recvCols[n] = recvNonZeros[n].col;
     recvVals[n] = recvNonZeros[n].val;
   }
-  
+
   //collect global assembled matrix
   iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
   iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
+  MPI_Allgather(&recvNtotal, 1, MPI_IINT,
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
   for (iint n=0;n<size;n++)
@@ -247,9 +247,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   }
   nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-  MPI_Allgatherv(recvNonZeros, recvNtotal*sizeof(nonZero_t), MPI_CHAR, 
+  MPI_Allgatherv(recvNonZeros, recvNtotal*sizeof(nonZero_t), MPI_CHAR,
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-  
+
 
   iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
   iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
@@ -262,7 +262,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     globalVals[n] = globalNonZero[n].val;
   }
 
-  
+
   printf("Done building coarse matrix system\n");
   if(strstr(options, "XXT")){
     precon->xxt = xxtSetup(Nnum,
@@ -277,15 +277,13 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   }
 
   if(strstr(options, "ALMOND")){
- 
+
     precon->parAlmond = parAlmondSetup(mesh,
-         Nnum, 
          globalStarts,
-         recvNtotal,      
-         recvRows,        
-         recvCols,       
+         recvNtotal,
+         recvRows,
+         recvCols,
          recvVals,
-         0, // 0 if no null space
          hgs,
          options); //rhs will be passed gather-scattered
   }
@@ -294,7 +292,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
   precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-  
+
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);

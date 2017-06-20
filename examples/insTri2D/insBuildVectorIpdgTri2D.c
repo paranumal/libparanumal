@@ -1,14 +1,5 @@
 
-#include "ellipticTri2D.h"
-
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
+#include "ins2D.h"
 
 iint addNonZero(nonZero_t *nonZeros, iint nnz, iint row, iint col, iint owner, dfloat val){
   
@@ -88,46 +79,26 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
-  dfloat *qmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *qmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *dldxM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *dldxP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *dldyM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *dldyP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-
   // surface mass matrices MS = MM*LIFT
-  dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
+  dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
   for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Np;n++) {
+    for (iint n=0;n<mesh->Nfp;n++) {
+      iint fn = mesh->faceNodes[f*mesh->Nfp+n];
+
       for (iint m=0;m<mesh->Nfp;m++) {
+	iint fm = mesh->faceNodes[f*mesh->Nfp+m];
 	dfloat MSnm = 0;
 
-	for (iint i=0;i<mesh->Np;i++)
-	  MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
-
-	MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]  = MSnm;
+	for (iint i=0;i<mesh->Np;i++){
+	  MSnm += mesh->MM[fn+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
+	}
+	
+	MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Nfp]  = MSnm;
       }
     }
   }
 
-  // DrT*MS, DsT*MS
-  dfloat *DrTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  dfloat *DsTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint i=0;i<mesh->Nfp;i++) {
-        DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        for (iint m=0;m<mesh->Np;m++) {
-          DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
-            += mesh->Dr[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
-          DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
-            += mesh->Ds[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
-        }
-      }
-    }
-  }
-
+  
   // reset non-zero counter
   int nnz = 0;
 
@@ -151,131 +122,182 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
     /* start with stiffness matrix  */
     for(iint n=0;n<mesh->Np;++n){
       for(iint m=0;m<mesh->Np;++m){
-        BM[m+n*mesh->Np]  = J*lambda*mesh->MM[m+n*mesh->Np];
-        SxxM[m+n*mesh->Np]  = J*drdx*drdx*mesh->Srr[m+n*mesh->Np];
-        SxxM[m+n*mesh->Np] += J*drdx*dsdx*mesh->Srs[m+n*mesh->Np];
-        SxxM[m+n*mesh->Np] += J*dsdx*drdx*mesh->Ssr[m+n*mesh->Np];
-        SxxM[m+n*mesh->Np] += J*dsdx*dsdx*mesh->Sss[m+n*mesh->Np];
+        BM[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
+        SxxM[n*mesh->Np+m]  = J*drdx*drdx*mesh->Srr[n*mesh->Np+m];
+        SxxM[n*mesh->Np+m] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+m];
+        SxxM[n*mesh->Np+m] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+m];
+        SxxM[n*mesh->Np+m] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+m];
 			       	      
-	SxyM[m+n*mesh->Np]  = J*drdx*drdy*mesh->Srr[m+n*mesh->Np];
-        SxyM[m+n*mesh->Np] += J*drdx*dsdy*mesh->Srs[m+n*mesh->Np];
-        SxyM[m+n*mesh->Np] += J*dsdx*drdy*mesh->Ssr[m+n*mesh->Np];
-        SxyM[m+n*mesh->Np] += J*dsdx*dsdy*mesh->Sss[m+n*mesh->Np];
+	SxyM[n*mesh->Np+m]  = J*drdx*drdy*mesh->Srr[n*mesh->Np+m];
+        SxyM[n*mesh->Np+m] += J*drdx*dsdy*mesh->Srs[n*mesh->Np+m];
+        SxyM[n*mesh->Np+m] += J*dsdx*drdy*mesh->Ssr[n*mesh->Np+m];
+        SxyM[n*mesh->Np+m] += J*dsdx*dsdy*mesh->Sss[n*mesh->Np+m];
 			       	      
-	SyxM[m+n*mesh->Np]  = J*drdy*drdx*mesh->Srr[m+n*mesh->Np];
-	SyxM[m+n*mesh->Np] += J*drdy*dsdx*mesh->Srs[m+n*mesh->Np];
-        SyxM[m+n*mesh->Np] += J*dsdy*drdx*mesh->Ssr[m+n*mesh->Np];
-        SyxM[m+n*mesh->Np] += J*dsdy*dsdx*mesh->Sss[m+n*mesh->Np];
-			       	      
-	SyyM[m+n*mesh->Np]  = J*drdy*drdy*mesh->Srr[m+n*mesh->Np];
-	SyyM[m+n*mesh->Np] += J*drdy*dsdy*mesh->Srs[m+n*mesh->Np];
-        SyyM[m+n*mesh->Np] += J*dsdy*drdy*mesh->Ssr[m+n*mesh->Np];
-        SyyM[m+n*mesh->Np] += J*dsdy*dsdy*mesh->Sss[m+n*mesh->Np];
+	SyxM[n*mesh->Np+m]  = J*drdy*drdx*mesh->Srr[n*mesh->Np+m];
+	SyxM[n*mesh->Np+m] += J*drdy*dsdx*mesh->Srs[n*mesh->Np+m];
+        SyxM[n*mesh->Np+m] += J*dsdy*drdx*mesh->Ssr[n*mesh->Np+m];
+        SyxM[n*mesh->Np+m] += J*dsdy*dsdx*mesh->Sss[n*mesh->Np+m];
+	
+	SyyM[n*mesh->Np+m]  = J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
+	SyyM[n*mesh->Np+m] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
+        SyyM[n*mesh->Np+m] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
+        SyyM[n*mesh->Np+m] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
       }
     }
 
-    for (iint m=0;m<mesh->Np;m++) {
-      for (iint fM=0;fM<mesh->Nfaces;fM++) {
-        // load surface geofactors for this face
-        iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
-        dfloat nx = mesh->sgeo[sid+NXID];
-        dfloat ny = mesh->sgeo[sid+NYID];
-        dfloat sJ = mesh->sgeo[sid+SJID];
-        dfloat hinv = mesh->sgeo[sid+IHID];
+   
+    for (iint fM=0;fM<mesh->Nfaces;fM++) {
+      
+      dfloat *SxxP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+      dfloat *SxyP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+      dfloat *SyxP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+      dfloat *SyyP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+      
+      // load surface geofactors for this face
+      iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+      dfloat nx = mesh->sgeo[sid+NXID];
+      dfloat ny = mesh->sgeo[sid+NYID];
+      dfloat sJ = mesh->sgeo[sid+SJID];
+      dfloat hinv = mesh->sgeo[sid+IHID];
+      dfloat penalty = tau*hinv; 
+      
+      iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      if (eP < 0) eP = eM;
+      
+      iint vbaseP = eP*mesh->Nvgeo;
+      dfloat drdxP = mesh->vgeo[vbaseP+RXID];
+      dfloat drdyP = mesh->vgeo[vbaseP+RYID];
+      dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
+      dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
+      
+      int bcD, bcN;
+      int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+      iint bcType = 0;
 
-        iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
-        if (eP < 0) eP = eM;
+      if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
-        iint vbaseP = eP*mesh->Nvgeo;
-        dfloat drdxP = mesh->vgeo[vbaseP+RXID];
-        dfloat drdyP = mesh->vgeo[vbaseP+RYID];
-        dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
-        dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
+      // this needs to be double checked (and the code where these are used)
+      if(bcType<=0){
+	bcD = 0;
+	bcN = 0;
+      }else if(bcType==1){ // Dirichlet
+	bcD = 1;
+	bcN = -1;
+      } else if (bcType==2){ // Neumann
+	bcD = -1;
+	bcN = 1;
+      } else { // Neumann for now
+	bcD = -1;
+	bcN = 1;
+      }
+      
+      // reset eP
+      eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
-	int qSgn, gradqSgn;
-	int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-	iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+      // mass matrix for this face
+      dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
-	if(bcType==0){
-	  qSgn     = 1;
-	  gradqSgn = 1;
-	}else if(bcType==1){ // Dirichlet
-	  qSgn     = -1;
-	  gradqSgn =  1;
-	} else if (bcType==2){ // Neumann
-	  qSgn     =  1;
-	  gradqSgn = -1;
-	} else { // Neumann for now
-	  qSgn     =  1;
-	  gradqSgn = -1;
+      // penalty term just involves face nodes
+      for(iint n=0;n<mesh->Nfp;++n){
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
+	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+
+	  // OP11 = OP11 + 0.5*( gtau*mmE )
+	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
+	  SxxM[nM*mesh->Np+mM] += 0.5*nx*nx*(1+bcD)*penalty*MSfnm;
+	  SxyM[nM*mesh->Np+mM] += 0.5*nx*ny*(1+bcD)*penalty*MSfnm;
+	  SyxM[nM*mesh->Np+mM] += 0.5*ny*nx*(1+bcD)*penalty*MSfnm;
+	  SyyM[nM*mesh->Np+mM] += 0.5*ny*ny*(1+bcD)*penalty*MSfnm;
+
+	  // neighbor penalty term
+	  if(eP>=0){
+	    iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
+	    iint mP  = mesh->vmapP[idM]%mesh->Np; 
+
+	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
+	    SxxP[nM*mesh->Np+mP] += -0.5*nx*nx*penalty*MSfnm;
+	    SxyP[nM*mesh->Np+mP] += -0.5*nx*ny*penalty*MSfnm;
+	    SyxP[nM*mesh->Np+mP] += -0.5*ny*nx*penalty*MSfnm;
+	    SyyP[nM*mesh->Np+mP] += -0.5*ny*ny*penalty*MSfnm;
+	  }
 	}
-	
-        // extract trace nodes
-        for (iint i=0;i<mesh->Nfp;i++) {
-          // double check vol geometric factors are in halo storage of vgeo
-          iint idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-          iint vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
-          iint vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-
-	  // this needs work
-          qmM[i] =0;
-          if (vidM == m) qmM[i] =1;
-          qmP[i] =0;
-          if (vidP == m) qmP[i] =1;
+      }
+    
+      // now add differential surface terms
+      for(iint n=0;n<mesh->Nfp;++n){
+	for(iint m=0;m<mesh->Np;++m){
+	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
 	  
-          dldxM[i] = drdx*mesh->Dr[m+vidM*mesh->Np]+dsdx*mesh->Ds[m+vidM*mesh->Np];
-	  dldyM[i] = drdy*mesh->Dr[m+vidM*mesh->Np]+dsdy*mesh->Ds[m+vidM*mesh->Np];
-          dldxP[i] = drdxP*mesh->Dr[m+vidP*mesh->Np]+dsdxP*mesh->Ds[m+vidP*mesh->Np];
-	  dldyP[i] = drdyP*mesh->Dr[m+vidP*mesh->Np]+dsdyP*mesh->Ds[m+vidP*mesh->Np];
-        }
-
-        dfloat penalty = tau*hinv; 
-        eP = mesh->EToE[eM*mesh->Nfaces+fM];
-	
-        for (iint n=0;n<mesh->Np;n++) {
-	  dfloat SPnm = 0, SxxPnm = 0, SxyPnm = 0, SyxPnm = 0, SyyPnm = 0;
-          for (iint i=0;i<mesh->Nfp;i++) {
-	    dfloat MSni = MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np];
-
-	    dfloat dlndrMSni = DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np];
-	    dfloat dlndsMSni = DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np];
-	    
-	    dfloat dlndxMSni = drdx*dlndrMSni + dsdx*dlndsMSni;
-	    dfloat dlndyMSni = drdy*dlndrMSni + dsdy*dlndsMSni;
-
-	    dfloat dlndxPSni = drdxP*dlndrMSni + dsdxP*dlndsMSni;
-	    dfloat dlndyPSni = drdyP*dlndrMSni + dsdyP*dlndsMSni;
-
-	    // penalties on jumps of all derivatives
-	    SxxM[m+n*mesh->Np] += -0.5*sJ*MSni*nx*((1+gradqSgn)*dldxM[i]-(1-qSgn)*penalty*nx*qmM[i]);
-	    SxyM[m+n*mesh->Np] += -0.5*sJ*MSni*nx*((1+gradqSgn)*dldyM[i]-(1-qSgn)*penalty*ny*qmM[i]);
-	    SyxM[m+n*mesh->Np] += -0.5*sJ*MSni*ny*((1+gradqSgn)*dldxM[i]-(1-qSgn)*penalty*nx*qmM[i]);
-	    SyyM[m+n*mesh->Np] += -0.5*sJ*MSni*ny*((1+gradqSgn)*dldyM[i]-(1-qSgn)*penalty*ny*qmM[i]);
-	    
-            SxxM[m+n*mesh->Np] +=  -0.5*(1-qSgn)*sJ*nx*dlndxMSni*qmM[i];
-	    SxyM[m+n*mesh->Np] +=  -0.5*(1-qSgn)*sJ*nx*dlndyMSni*qmM[i];
-	    SyxM[m+n*mesh->Np] +=  -0.5*(1-qSgn)*sJ*ny*dlndxMSni*qmM[i];
-            SyyM[m+n*mesh->Np] +=  -0.5*(1-qSgn)*sJ*ny*dlndyMSni*qmM[i];
-	    
-	    if(eP>=0) { // when there is a neighbor
-	      SxxPnm += -0.5*sJ*MSni*nx*(dldxP[i]+penalty*nx*qmP[i]);
-	      SxyPnm += -0.5*sJ*MSni*nx*(dldyP[i]+penalty*ny*qmP[i]);
-	      SyxPnm += -0.5*sJ*MSni*ny*(dldxP[i]+penalty*nx*qmP[i]);
-	      SyyPnm += -0.5*sJ*MSni*ny*(dldyP[i]+penalty*ny*qmP[i]);
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+	    iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
 	      
-	      SxxPnm +=  +0.5*sJ*nx*dlndxMSni*qmP[i];
-	      SyxPnm +=  +0.5*sJ*nx*dlndyMSni*qmP[i];
-	      SxyPnm +=  +0.5*sJ*ny*dlndxMSni*qmP[i];
-	      SyyPnm +=  +0.5*sJ*ny*dlndyMSni*qmP[i];
+	    dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
+	    
+	    dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m];
+	    dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
+	    dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
+	    dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
+
+	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
+	    SxxM[nM*mesh->Np+m] += -0.5*nx*(1+bcN)*MSfni*DxMim;
+	    SxyM[nM*mesh->Np+m] += -0.5*nx*(1+bcN)*MSfni*DyMim;
+	    SyxM[nM*mesh->Np+m] += -0.5*ny*(1+bcN)*MSfni*DxMim;
+	    SyyM[nM*mesh->Np+m] += -0.5*ny*(1+bcN)*MSfni*DyMim;
+	    
+	    if(eP>=0){
+	      //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
+	      SxxP[nM*mesh->Np+m] += -0.5*nx*MSfni*DxPim;
+	      SxyP[nM*mesh->Np+m] += -0.5*nx*MSfni*DyPim;
+	      SyxP[nM*mesh->Np+m] += -0.5*ny*MSfni*DxPim;
+	      SyyP[nM*mesh->Np+m] += -0.5*ny*MSfni*DyPim;
 	    }
 	  }
+	}
+      }
+    
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+	  iint mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	  
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];	
 
-	  if(eP>=0){
+	    dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
+	    
+	    dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
+	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+	  
+	    // OP11 = OP11 + (- Dn1'*mmE );
+	    SxxM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
+	    SxyM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*DyMin*MSfim;
+	    SyxM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*DxMin*MSfim;
+	    SyyM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;
+
+	    if(eP>=0){
+	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
+	      SxxP[n*mesh->Np+mP] +=  +0.5*nx*DxMin*MSfim;
+	      SyxP[n*mesh->Np+mP] +=  +0.5*nx*DyMin*MSfim;
+	      SxyP[n*mesh->Np+mP] +=  +0.5*ny*DxMin*MSfim;
+	      SyyP[n*mesh->Np+mP] +=  +0.5*ny*DyMin*MSfim;
+	    }
+	  }
+	}
+      }
+
+      // store non-zeros for off diagonal block
+      if(eP>=0){
+	for(iint n=0;n<mesh->Np;++n){
+	  for(iint m=0;m<mesh->Np;++m){
+	    iint id = n*mesh->Np+m;
+	    
 	    // completed  positive trace for this node
-	    dfloat S11nmP = SxxPnm + SyyPnm + sigma*(SxxPnm);
-	    dfloat S12nmP = sigma*(SxyPnm);
-	    dfloat S21nmP = sigma*(SyxPnm);
-	    dfloat S22nmP = SxxPnm + SyyPnm + sigma*(SyyPnm);
+	    dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
+	    dfloat S12nmP = sigma*(SxyP[id]);
+	    dfloat S21nmP = sigma*(SyxP[id]);
+	    dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
 	    
 	    iint row = 2*globalIds[n + eP*mesh->Np];
 	    iint col = 2*globalIds[m + eP*mesh->Np];
@@ -285,23 +307,27 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
 	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nmP);
 	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+1, owner, S22nmP);
+	    
 	  }
 	}
       }
+      
+      free(SxxP); free(SxyP); free(SyxP); free(SyyP);
     }
     
+    // store non-zeros for diagonal block
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
-	iint id = m+n*mesh->Np;
+	iint id = n*mesh->Np+m;
 	dfloat S11nm = BM[id] + SxxM[id] + SyyM[id] + sigma*SxxM[id]; // diagonal block + laplacian + penalty
 	dfloat S12nm = sigma*(SxyM[id]);
 	dfloat S21nm = sigma*(SyxM[id]);
 	dfloat S22nm = BM[id] + SxxM[id] + SyyM[id] + sigma*SyyM[id]; // diagonal block + laplacian + penalty
-
+	
 	iint row = 2*globalIds[n + eM*mesh->Np];
 	iint col = 2*globalIds[m + eM*mesh->Np];
 	iint owner = globalOwners[n + eM*mesh->Np];
-
+	
 	nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nm);
 	nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nm);
 	nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nm);
@@ -309,7 +335,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       }
     }
   }
-
+  
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
   iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
@@ -365,10 +391,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
   free(AsendOffsets);
   free(ArecvOffsets);
 
-  free(BM);  free(MS);
-  free(DrTMS); free(DsTMS);
+  free(BM);
+  free(MS);
 
-  free(qmM); free(qmP);
-  free(dldxM); free(dldyM);
-  free(dldxP); free(dldyP);
 }
