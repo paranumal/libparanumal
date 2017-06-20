@@ -1435,8 +1435,11 @@ csr *galerkinProd(agmgLevel *level){
 
   rapEntry_t *RAPEntries;
   iint totalNNZ = A->diagNNZ+A->offdNNZ;
-  if (totalNNZ)
+  if (totalNNZ) {
     RAPEntries = (rapEntry_t *) calloc(totalNNZ,sizeof(rapEntry_t));
+  } else {
+    RAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t)); //MPI_AlltoAll doesnt like null pointers 
+  }
 
   //for the RAP products
   cnt =0;
@@ -1465,9 +1468,8 @@ csr *galerkinProd(agmgLevel *level){
   if (M) free(PEntries);
 
   //sort entries by the coarse row and col
-  qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
-
-
+  if (totalNNZ)
+    qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
 
   iint *sendCounts = (iint *) calloc(size,sizeof(iint));
   iint *recvCounts = (iint *) calloc(size,sizeof(iint));
@@ -1492,12 +1494,17 @@ csr *galerkinProd(agmgLevel *level){
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
     recvNtotal += recvCounts[r]/sizeof(rapEntry_t);
   }
-  rapEntry_t *recvRAPEntries = (rapEntry_t *) calloc(recvNtotal,sizeof(rapEntry_t));
+  rapEntry_t *recvRAPEntries;
+  if (recvNtotal) {
+    recvRAPEntries = (rapEntry_t *) calloc(recvNtotal,sizeof(rapEntry_t));
+  } else {
+    recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers 
+  }
 
   MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,
                 recvRAPEntries, recvCounts, recvOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
-  if (totalNNZ) free(RAPEntries);
+  free(RAPEntries);
   free(sendCounts); free(recvCounts);
   free(sendOffsets); free(recvOffsets);
 
