@@ -244,7 +244,7 @@ void ellipticPreconditioner2D(solver_t *solver,
 			 o_r,
 			 o_zP);
     ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
-    mesh->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
     occaTimerToc(mesh->device,"OASpreconKernel");
 
     // extract block interiors on DEVICE
@@ -285,6 +285,69 @@ void ellipticPreconditioner2D(solver_t *solver,
       ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
       occaTimerToc(mesh->device,"coarseGrid");
     }
+
+    //project weighting
+    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
+    //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
+    //}
+  } else if(strstr(options, "OMS")){
+    //L2 project weighting
+    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
+    //  ellipticParallelGatherScatterTri2D(mesh,ogs,o_r,o_r,dfloatString,"add");
+    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
+    //}
+
+    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+
+    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+
+    occaTimerTic(mesh->device,"OMSpreconKernel"); //smoothing
+    precon->preconKernel(mesh->Nelements,
+       mesh->o_vmapP,
+       precon->o_oasForwardDgT,
+       precon->o_oasDiagInvOpDg,
+       precon->o_oasBackDgT,
+       o_r,
+       o_zP);
+    ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    occaTimerToc(mesh->device,"OASpreconKernel");
+
+    // extract block interiors on DEVICE
+    occaTimerTic(mesh->device,"restrictKernel");
+    precon->restrictKernel(mesh->Nelements, o_zP, o_z);
+    occaTimerToc(mesh->device,"restrictKernel");
+
+
+    // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
+    occaTimerTic(mesh->device,"coarsenKernel");
+    precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
+    occaTimerToc(mesh->device,"coarsenKernel");
+
+    // solve coarse problem using xxt
+    if(strstr(options, "XXT")){
+      precon->o_r1.copyTo(precon->r1);
+      occaTimerTic(mesh->device,"xxtSolve");
+      xxtSolve(precon->z1, precon->xxt,precon->r1);
+      occaTimerToc(mesh->device,"xxtSolve");
+      precon->o_z1.copyFrom(precon->z1);
+    }
+
+    if(strstr(options,"ALMOND")){
+      occaTimerTic(mesh->device,"ALMOND");
+      parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
+      occaTimerToc(mesh->device,"ALMOND");
+    }
+
+    // prolongate from P1 to PN
+    occaTimerTic(mesh->device,"prolongateKernel");
+    precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+    occaTimerToc(mesh->device,"prolongateKernel");
+
+    // increment z
+    dfloat one = 1.;
+    ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
 
     //project weighting
     //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
