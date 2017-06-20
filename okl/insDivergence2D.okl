@@ -113,7 +113,10 @@ kernel void insDivergenceSurface2D(const iint Nelements,
       	    iint bc = EToB[face+p_Nfaces*e];
       	    if(bc>0) {
               idM = vmapM[id];
-	      insDivergenceBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);
+	            insDivergenceBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);
+              // Use strong form of the BCs
+              uP = 2.f*uP-uM;        
+              vP = 2.f*vP-vM;         
             }
 	    
       	    const dfloat sc = invJ * sJ ; 
