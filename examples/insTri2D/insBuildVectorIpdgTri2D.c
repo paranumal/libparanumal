@@ -288,25 +288,27 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       }
 
       // store non-zeros for off diagonal block
-      for(iint n=0;n<mesh->Np;++n){
-	for(iint m=0;m<mesh->Np;++m){
-	  iint id = n*mesh->Np+m;
-	  
-	  // completed  positive trace for this node
-	  dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
-	  dfloat S12nmP = sigma*(SxyP[id]);
-	  dfloat S21nmP = sigma*(SyxP[id]);
-	  dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
-	  
-	  iint row = 2*globalIds[n + eP*mesh->Np];
-	  iint col = 2*globalIds[m + eP*mesh->Np];
-	  iint owner = globalOwners[n + eP*mesh->Np];
-	  
-	  nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nmP);
-	  nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
-	  nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nmP);
-	  nnz = addNonZero(sendNonZeros, nnz, row+1, col+1, owner, S22nmP);
-	  
+      if(eP>=0){
+	for(iint n=0;n<mesh->Np;++n){
+	  for(iint m=0;m<mesh->Np;++m){
+	    iint id = n*mesh->Np+m;
+	    
+	    // completed  positive trace for this node
+	    dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
+	    dfloat S12nmP = sigma*(SxyP[id]);
+	    dfloat S21nmP = sigma*(SyxP[id]);
+	    dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
+	    
+	    iint row = 2*globalIds[n + eP*mesh->Np];
+	    iint col = 2*globalIds[m + eP*mesh->Np];
+	    iint owner = globalOwners[n + eP*mesh->Np];
+	    
+	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nmP);
+	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
+	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+1, owner, S12nmP);
+	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+1, owner, S22nmP);
+	    
+	  }
 	}
       }
       
