@@ -18,23 +18,14 @@
 #define insDivergenceBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
   {									\
     if(bc==1){								\
-      double ubc= 0.f;							\
-      double vbc= 0.f;							\
-      									\
-      *(uB) = 2.f*ubc-uM;						\
-      *(vB) = 2.f*vbc-vM;						\
+      *(uB)= 0.f;							\
+      *(vB)= 0.f;							\
     } else if(bc==2){							\
-      double ubc = 1.0f;						\
-      double vbc = 0.0f;						\
-									\
-      *(uB) = 2.f*ubc-uM;						\
-      *(vB) = 2.f*vbc-vM;						\
+      *(uB) = 1.0f;						\
+      *(vB) = 0.0f;						\
     } else if(bc==3){							\
-      double ubc = uM;							\
-      double vbc = vM;							\
-									\
-      *(uB) = 2.f*ubc-uM;						\
-      *(vB) = 2.f*vbc-vM;						\
+      *(uB) = uM;							\
+      *(vB) = vM;							\
     }									\
   }
 

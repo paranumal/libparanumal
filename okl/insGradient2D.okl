@@ -137,6 +137,14 @@ kernel void insGradientSurface2D(const iint Nelements,
                 PP = PP - a0*PPm0 - a1*PPm1 - a2*PPm2;
 	      }
 #endif
+          if(solverID){
+            dfloat PPo = 0.f;
+            dfloat to  = time-dt;
+            insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
+            PP = PP-PPo;
+
+            }
+
               PP = 2.f*PP - PM; //Strong form BCs
             }
 
