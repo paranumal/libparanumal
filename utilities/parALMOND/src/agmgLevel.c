@@ -96,7 +96,6 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
   MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
   if(k > Ntotal)
     k = Ntotal;
-  printf("rank %d, N %d,Ntotal %d, k %d\n", rank, N, Ntotal, k);
 
   // do an arnoldi
 
