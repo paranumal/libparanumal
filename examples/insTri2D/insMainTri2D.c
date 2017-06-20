@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN  
-  char *options = strdup("out=REPORT+VTU, adv=CUBATURE, SUBCYCLING disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("out=REPORT+VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN VECTORHELMHOLTZ"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 

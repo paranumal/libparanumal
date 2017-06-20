@@ -12,11 +12,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //  sprintf(deviceConfig, "mode = Serial");  
+  sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -35,8 +35,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->P     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
   //rhs storage
-  ins->rhsU  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  ins->rhsV  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsU  = (dfloat*) calloc(2*mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc(2*mesh->Nelements*mesh->Np,sizeof(dfloat));
   ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
   //additional field storage (could reduce in the future)
@@ -254,8 +254,8 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);
   ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
 
-  ins->o_rhsU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
-  ins->o_rhsV  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
+  ins->o_rhsU  = mesh->device.malloc(2*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
+  ins->o_rhsV  = mesh->device.malloc(2*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
   ins->o_rhsP  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsP);
 
   ins->o_NU = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->NU);
@@ -457,6 +457,66 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 				       kernelInfo);
   // ===========================================================================//
 
+  void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
+			       iint *BCType, nonZero_t **A, iint *nnzA,
+			       hgs_t **hgs, iint *globalStarts, const char *options);
+
+  nonZero_t *A;
+  iint nnz;
+  hgs_t *hgs;
+  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+  dfloat sigma = 100;
+
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+  for(iint r=0;r<size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
+  
+  insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
+
+  //collect global assembled matrix
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
+  MPI_Allgather(&nnz, 1, MPI_IINT, 
+                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
+  globalnnzOffset[0] = 0;
+  for (iint n=0;n<size;n++)
+    globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
+
+  iint globalnnzTotal = globalnnzOffset[size];
+
+  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
+  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
+    globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
+    globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
+  }
+  nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
+
+  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+                globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+  
+  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
+
+  for (iint n=0;n<globalnnzTotal;n++) {
+    globalRows[n] = globalNonZero[n].row;
+    globalCols[n] = globalNonZero[n].col;
+    globalVals[n] = globalNonZero[n].val;
+  }
+
+  ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
+  ins->precon->parAlmond = parAlmondSetup(mesh, 
+					  2*mesh->Np*mesh->Nelements, 
+					  globalStarts, 
+					  globalnnzTotal,      
+					  globalRows,        
+					  globalCols,        
+					  globalVals,
+					  0,             // 0 if no null space
+					  hgs,
+					  vSolverOptions);       //rhs will be passed gather-scattered
+  
   return ins;
 }
 
