@@ -80,7 +80,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
   // surface mass matrices MS = MM*LIFT
-  dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
   for (iint f=0;f<mesh->Nfaces;f++) {
     for (iint n=0;n<mesh->Nfp;n++) {
       iint fn = mesh->faceNodes[f*mesh->Nfp+n];
@@ -93,7 +93,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	  MSnm += mesh->MM[fn+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
 	}
 	
-	MS[fm+fn*mesh->Np + f*mesh->Np*mesh->Np]  = MSnm;
+	MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Nfp]  = MSnm;
       }
     }
   }
@@ -195,7 +195,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
       // mass matrix for this face
-      dfloat *MSf = MS+fM*mesh->Np*mesh->Np;
+      dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
       // penalty term just involves face nodes
       for(iint n=0;n<mesh->Nfp;++n){
@@ -204,7 +204,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
-	  dfloat MSfnm = sJ*MSf[n*mesh->Np+m];
+	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 	  SxxM[nM*mesh->Np+mM] += 0.5*nx*nx*(1+bcD)*penalty*MSfnm;
 	  SxyM[nM*mesh->Np+mM] += 0.5*nx*ny*(1+bcD)*penalty*MSfnm;
 	  SyxM[nM*mesh->Np+mM] += 0.5*ny*nx*(1+bcD)*penalty*MSfnm;
