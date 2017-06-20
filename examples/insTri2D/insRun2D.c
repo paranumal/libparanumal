@@ -183,9 +183,9 @@ void insRun2D(ins_t *ins, char *options){
       dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-ins->nu*8.0*M_PI*M_PI*t);
       //
       id += offset;
-      uerr = mymax(uerr, fabs(uex- ins->U[id]));
-      verr = mymax(verr, fabs(vex- ins->V[id]));
-      perr = mymax(perr, fabs(pex- ins->P[id]));
+      uerr = mymax(uerr, fabs(uex - ins->U[id]));
+      verr = mymax(verr, fabs(vex - ins->V[id]));
+      perr = mymax(perr, fabs(pex - ins->P[id]));
 
       ins->U[id] = fabs(uex- ins->U[id]);
       ins->V[id] = fabs(vex- ins->V[id]);
@@ -210,12 +210,10 @@ void insRun2D(ins_t *ins, char *options){
     }
 
    
-
+   // Write Error to last file
   ins->o_U.copyFrom(ins->U);
   ins->o_V.copyFrom(ins->V);  
   ins->o_P.copyFrom(ins->P);
-
-     // For Final Time
   insReport2D(ins, ins->NtimeSteps+2,options);
   #endif
 

@@ -5,7 +5,6 @@ void insReport2D(ins_t *ins, iint tstep, char *options){
   dfloat t = (tstep+1)*ins->dt;
   
   // copy data back to host
-  
   ins->o_U.copyTo(ins->U);
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);

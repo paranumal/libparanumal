@@ -16,7 +16,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   if(strstr(options,"SUBCYCLING")){
      // compute all forcing i.e. f^(n+1) - grad(Pr)
     ins->helmholtzRhsForcingKernel(mesh->Nelements,
-				   rhsPackingMode,
+				                          rhsPackingMode,
                                    mesh->o_vgeo,
                                    mesh->o_MM,
                                    ins->a0,
@@ -42,7 +42,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   else{
     // compute all forcing i.e. f^(n+1) - grad(Pr)
     ins->helmholtzRhsForcingKernel(mesh->Nelements,
-				   rhsPackingMode,
+				                          rhsPackingMode,
                                    mesh->o_vgeo,
                                    mesh->o_MM,
                                    ins->a0,
