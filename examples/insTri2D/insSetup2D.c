@@ -248,7 +248,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
   printf("mesh nfields %d\n", mesh->Nfields);
-
   // MEMORY ALLOCATION
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);
@@ -507,13 +506,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
   ins->precon->parAlmond = parAlmondSetup(mesh, 
-					  2*mesh->Np*mesh->Nelements, 
 					  globalStarts, 
 					  globalnnzTotal,      
 					  globalRows,        
 					  globalCols,        
 					  globalVals,
-					  0,             // 0 if no null space
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
   

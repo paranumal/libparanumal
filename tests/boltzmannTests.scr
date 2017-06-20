@@ -1,0 +1,316 @@
+
+cd ..;
+
+
+cd  examples/boltzmannTri2D; 
+
+make clean;
+
+make TEST=1 TIME_METHOD=SAAB CUBATURE_USE=0 -j; 
+
+cd ../../;
+
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+# cd  examples/boltzmannTri2D; 
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=LSERK CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+
+# cd  examples/boltzmannTri2D; 
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=SARK54 CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+# cd  examples/boltzmannTri2D; 
+# make clean;
+
+# make TEST=1 TIME_METHOD=LSERK3 CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+# cd  examples/boltzmannTri2D; 
+# make clean;
+
+# make TEST=1 TIME_METHOD=SARK33 CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 1 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 2 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 3 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 4 1
+# ./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh 5 1
+
+
+
+
+
+
+
+# cd  examples/boltzmannTri2D; 
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=LSERK CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..8}
+# do
+# 	for i in {1..10}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+# for N in {1..8}
+# do
+# 	for i in {1..10}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+# cd  examples/boltzmannTri2D; 
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=SARK CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..8}
+# do
+# 	for i in {1..10}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+# for N in {1..8}
+# do
+# 	for i in {1..10}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+
+
+
+# cd  examples/boltzmannTri2D; 
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=LSERK CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+
+
+
+# cd  examples/boltzmannTri2D;
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=SAAB CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+# cd  examples/boltzmannTri2D;
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=LSIMEX CUBATURE_USE=0 -j; 
+
+# ccd ../../;
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+
+# cd  examples/boltzmannTri2D;
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=MRAB CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+# cd  examples/boltzmannTri2D;
+
+# make clean;
+
+# make TEST=1 TIME_METHOD=SARK CUBATURE_USE=0 -j; 
+
+# cd ../../;
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteC.msh $N $f
+# 	done
+# done
+
+
+
+# for N in {1..5}
+# do
+# 	for i in {1..200}
+# 	do
+# 	    f=$i/10
+# 		echo item: $f and Order: $N
+# 		./examples/boltzmannTri2D/boltzmannSplitPmlMain2D ./meshes/boltzmannCoutteM.msh $N $f
+# 	done
+# done
+
+
+
+
+
