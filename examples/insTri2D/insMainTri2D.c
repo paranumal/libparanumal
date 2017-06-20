@@ -15,14 +15,14 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN  
-  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION  disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("out=REPORT+VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN VECTORHELMHOLTZ"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
   
   char *velSolverOptions = 
-    strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
+    strdup("solver=PCG method=IPDG preconditioner=FULLALMOND");
 
   char *prSolverOptions = 
-    strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
+    strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,MATRIXFREE"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
 
   if(argc!=3 && argc!=4){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
