@@ -205,7 +205,7 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
       if (M) parAlmond->levels[i]->o_vkp1 = parAlmond->device.malloc(M*sizeof(dfloat),parAlmond->levels[i]->rhs);
     }
   }
-
+printf("TEST\n");
   //buffer for innerproducts in kcycle
   parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat));
 
@@ -245,10 +245,10 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     iint Nrows = parAlmond->levels[lev]->Nrows;
 
     int active = (Nrows>0) ? 1:0;
-    iint totalActive;
+    iint totalActive=0;
     MPI_Allreduce(&active, &totalActive, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
 
-    iint minNrows, maxNrows, totalNrows;
+    iint minNrows=0, maxNrows=0, totalNrows=0;
     dfloat avgNrows;
     MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
@@ -256,7 +256,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     avgNrows = (dfloat) totalNrows/totalActive;
 
     iint nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
-    iint minNnz, maxNnz, totalNnz;
+    iint minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
     MPI_Allreduce(&nnz, &minNnz, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nnz, &maxNnz, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
@@ -264,7 +264,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     avgNnz = (dfloat) totalNnz/totalActive;
 
     dfloat nnzPerRow = (dfloat) nnz/Nrows;
-    dfloat minNnzPerRow, maxNnzPerRow, avgNnzPerRow;
+    dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
     MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -1511,16 +1511,15 @@ csr *galerkinProd(agmgLevel *level){
 
   //compress nonzeros
   nnz = 0;
-  if (recvNtotal) RAPEntries[0] = recvRAPEntries[0];
+  if (recvNtotal) RAPEntries[nnz++] = recvRAPEntries[0];
   for (iint i=1;i<recvNtotal;i++) {
     if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
           (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) {
-      RAPEntries[++nnz] = recvRAPEntries[i];
+      RAPEntries[nnz++] = recvRAPEntries[i];
     } else {
-      RAPEntries[nnz].coef += recvRAPEntries[i].coef;
+      RAPEntries[nnz-1].coef += recvRAPEntries[i].coef;
     }
   }
-  nnz++;
 
   iint numAggs = globalAggStarts[rank+1]-globalAggStarts[rank]; //local number of aggregates
 

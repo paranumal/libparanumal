@@ -118,8 +118,8 @@ void pcg(parAlmond_t *parAlmond,
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const iint n = A->Nrows;
+  const iint m = A->Ncols;
 
   parAlmond->ktype = PCG;
 
