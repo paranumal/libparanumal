@@ -97,8 +97,6 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
 
   // allocate memory for Hessenberg matrix
   double *H = (double *) calloc(k*k,sizeof(double));
-  for(int i=0; i<k*k; i++)
-    H[i] = 0.;
 
   // allocate memory for basis
   dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
@@ -115,7 +113,7 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
   for (iint i=0;i<N;i++)
     norm_vo += Vx[i]*Vx[i];
 
-  dfloat gNorm_vo;
+  dfloat gNorm_vo = 0;
   MPI_Allreduce(&norm_vo, &gNorm_vo, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
   gNorm_vo = sqrt(gNorm_vo);
 
@@ -139,7 +137,7 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
       dfloat hij = innerProd(N, V[i], V[j+1]);
-      dfloat ghij;
+      dfloat ghij = 0;
       MPI_Allreduce(&hij, &ghij, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
       // v[j+1] = v[j+1] - hij*v[i]
