@@ -49,6 +49,7 @@ insAdvectionSubCycleStep2D.o \
 insHelmholtzStep2D.o \
 insPoissonStep2D.o \
 insUpdateStep2D.o \
+insBuildVectorIpdgTri2D.o \
 ../ellipticTri2D/ellipticSetupTri2D.o \
 ../ellipticTri2D/ellipticPreconditionerSetupTri2D.o\
 ../ellipticTri2D/ellipticCoarsePreconditionerSetupTri2D.o\

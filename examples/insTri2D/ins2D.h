@@ -16,6 +16,7 @@ typedef struct {
   solver_t *pSolver;
 
   char *pSolverOptions, *vSolverOptions; 	
+  precon_t *precon;
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu;
@@ -46,19 +47,10 @@ typedef struct {
   dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
-  occa::kernel subCycleVolumeKernel, subCycleCubatureVolumeKernel ;
+  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
-  //occa::kernel subStepCopyKernel;
   occa::kernel subCycleExtKernel;
-
-  occa::kernel helmholtzSubCycleRhsForcingKernel;
-
-
-
-
-
-
 
 
   occa::memory o_U, o_V, o_P;
@@ -102,6 +94,16 @@ typedef struct {
 
 }ins_t;
 
+typedef struct{
+
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+} nonZero_t;
+
+
 
 ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
 
@@ -130,4 +132,5 @@ void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,
 void insAdvectionSubCycleStep2D(ins_t *solver, iint tstep,
                      dfloat * tsendBuffer, dfloat *trecvBuffer, 
                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
+
 
