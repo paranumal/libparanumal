@@ -14,7 +14,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // use rank to choose DEVICE
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   sprintf(deviceConfig, "mode = Serial");  
 
@@ -49,7 +49,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   if(strstr(options,"SUBCYCLING")){
 
-    ins->Nsubsteps = 3;
+    ins->Nsubsteps = 1; //was 3
 
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -68,16 +68,16 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 1e-3;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 100.;
+  ins->finalTime = 1.;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 4.f*(mesh->N+1)*(mesh->N+1);
+  ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -104,6 +104,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 #endif
 
 #if 1
+      ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
+      ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
+      ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-nu*8.f*M_PI*M_PI*0.0);
+#endif
+
+
+#if 0
       ins->U[id] = 1;
       ins->V[id] = 0;
       ins->P[id] = 0;
@@ -174,7 +181,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep = 400;
+  ins->errorStep =1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -195,7 +202,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
@@ -241,7 +248,6 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
   printf("mesh nfields %d\n", mesh->Nfields);
-
   // MEMORY ALLOCATION
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);
@@ -500,13 +506,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
   ins->precon->parAlmond = parAlmondSetup(mesh, 
-					  2*mesh->Np*mesh->Nelements, 
 					  globalStarts, 
 					  globalnnzTotal,      
 					  globalRows,        
 					  globalCols,        
 					  globalVals,
-					  0,             // 0 if no null space
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
   
