@@ -65,6 +65,7 @@ typedef struct {
 
 parAlmond_t *agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
 void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev);
+void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 
 void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memory &o_Ax);
