@@ -12,8 +12,8 @@ void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA);
 
 
 parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
+  
   iint rank, size;
-
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -77,7 +77,9 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
+      printf("TEST ENTER rank %d level %d N %d\n", rank, lev+1, coarseA->Nrows);
       setup_smoother(levels[lev+1],DAMPED_JACOBI);
+      printf("TEST EXIT rank %d level %d N %d\n", rank, lev+1, coarseA->Nrows);
       break;
     }
     lev++;
@@ -205,7 +207,7 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
       if (M) parAlmond->levels[i]->o_vkp1 = parAlmond->device.malloc(M*sizeof(dfloat),parAlmond->levels[i]->rhs);
     }
   }
-printf("TEST\n");
+
   //buffer for innerproducts in kcycle
   parAlmond->o_rho  = parAlmond->device.malloc(3*sizeof(dfloat));
 
@@ -250,25 +252,32 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
     iint minNrows=0, maxNrows=0, totalNrows=0;
     dfloat avgNrows;
-    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
     avgNrows = (dfloat) totalNrows/totalActive;
+    
+    if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
+    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
 
     iint nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
     iint minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
-    MPI_Allreduce(&nnz, &minNnz, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nnz, &maxNnz, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&nnz, &totalNnz, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
     avgNnz = (dfloat) totalNnz/totalActive;
 
-    dfloat nnzPerRow = (dfloat) nnz/Nrows;
+    if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
+    MPI_Allreduce(&nnz, &minNnz, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+
+    Nrows = parAlmond->levels[lev]->Nrows;
+    dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
     dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-    MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
     avgNnzPerRow /= totalActive;
+    
+    if (Nrows==0) nnzPerRow = maxNnzPerRow;
+    MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
     if (rank==0){
       printf(" %3d |        %4d  |   %10.2f  |   %10.2f  |   %10.2f  |\n",

@@ -30,15 +30,16 @@ void setup_smoother(agmgLevel *level, SmoothType s){
     dfloat rho=0;
 
     dfloat *invD;
-    if(level->A->Nrows)	{
+    if(level->A->Nrows)	
       invD = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
-      for (iint i=0;i<level->A->Nrows;i++)
-        invD[i] = 1.0/level->A->diagCoefs[level->A->diagRowStarts[i]];
 
-      rho = rhoDinvA(level->A, invD);
+    for (iint i=0;i<level->A->Nrows;i++)
+      invD[i] = 1.0/level->A->diagCoefs[level->A->diagRowStarts[i]];
 
+    rho = rhoDinvA(level->A, invD);
+
+    if(level->A->Nrows)
       free(invD);
-    }
 
     level->smoother_params = (dfloat *) calloc(1,sizeof(dfloat));
 
@@ -87,11 +88,15 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
 
   int k = 10;
 
-  iint Ntotal;
-  MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  iint rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  iint Ntotal=0;
+  MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
   if(k > Ntotal)
     k = Ntotal;
+  printf("rank %d, N %d,Ntotal %d, k %d\n", rank, N, Ntotal, k);
 
   // do an arnoldi
 
