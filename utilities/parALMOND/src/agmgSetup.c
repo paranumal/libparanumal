@@ -77,9 +77,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      printf("TEST ENTER rank %d level %d N %d\n", rank, lev+1, coarseA->Nrows);
       setup_smoother(levels[lev+1],DAMPED_JACOBI);
-      printf("TEST EXIT rank %d level %d N %d\n", rank, lev+1, coarseA->Nrows);
       break;
     }
     lev++;
