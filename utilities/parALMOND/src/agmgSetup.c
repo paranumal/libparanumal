@@ -225,6 +225,65 @@ void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev){
   }
 }
 
+void parAlmondReport(parAlmond_t *parAlmond) {
+
+
+  iint rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if(rank==0) {
+    printf("------------------ParAlmond Report-----------------------------------\n");
+    printf("---------------------------------------------------------------------\n");
+    printf("level| active ranks |   dimension   |  nnzs         |  nnz/row      |\n");
+    printf("     |              | (min,max,avg) | (min,max,avg) | (min,max,avg) |\n");
+    printf("---------------------------------------------------------------------\n");
+  }
+
+  for(int lev=0; lev<parAlmond->numLevels; lev++){
+    
+    iint Nrows = parAlmond->levels[lev]->Nrows;
+
+    int active = (Nrows>0) ? 1:0;
+    iint totalActive;
+    MPI_Allreduce(&active, &totalActive, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+
+    iint minNrows, maxNrows, totalNrows;
+    dfloat avgNrows;
+    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    avgNrows = (dfloat) totalNrows/totalActive;
+
+    iint nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
+    iint minNnz, maxNnz, totalNnz;
+    dfloat avgNnz;
+    MPI_Allreduce(&nnz, &minNnz, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &maxNnz, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &totalNnz, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    avgNnz = (dfloat) totalNnz/totalActive;
+
+    dfloat nnzPerRow = (dfloat) nnz/Nrows;
+    dfloat minNnzPerRow, maxNnzPerRow, avgNnzPerRow;
+    MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    avgNnzPerRow /= totalActive;
+
+    if (rank==0){
+      printf(" %3d |        %4d  |   %10.2f  |   %10.2f  |   %10.2f  |\n",
+        lev, totalActive, (dfloat)minNrows, (dfloat)minNnz, minNnzPerRow);
+      printf("     |              |   %10.2f  |   %10.2f  |   %10.2f  |\n",
+        (dfloat)maxNrows, (dfloat)maxNnz, maxNnzPerRow);
+      printf("     |              |   %10.2f  |   %10.2f  |   %10.2f  |\n",
+        avgNrows, avgNnz, avgNnzPerRow);
+    }
+  }
+  if(rank==0) 
+    printf("---------------------------------------------------------------------\n");
+}
+
+
 //create coarsened problem
 void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA){
 
