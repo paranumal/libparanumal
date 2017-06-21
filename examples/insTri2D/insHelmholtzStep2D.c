@@ -67,7 +67,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   }
   
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-				rhsPackingMode,
+				                        rhsPackingMode,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,

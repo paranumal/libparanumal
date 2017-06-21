@@ -109,7 +109,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   
-  #if 1 // No time dependent BC
+  #if 0 // No time dependent BC
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
