@@ -186,12 +186,12 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	bcN = 0;
       }else if(bcType==1){ // Dirichlet
 	bcD = 1;
-	bcN = -1;
+	bcN = 0;
       } else if (bcType==2){ // Neumann
-	bcD = -1;
+	bcD = 0;
 	bcN = 1;
       } else { // Neumann for now
-	bcD = -1;
+	bcD = 0;
 	bcN = 1;
       }
       
@@ -201,7 +201,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       // mass matrix for this face
       dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
-#if 1
       // penalty term just involves face nodes
       for(iint n=0;n<mesh->Nfp;++n){
 	for(iint m=0;m<mesh->Nfp;++m){
@@ -210,7 +209,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
 	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
-	  SM[nM*mesh->Np+mM] += 0.5*(1+bcD)*penalty*MSfnm;
+	  SM[nM*mesh->Np+mM] += 0.5*(1-bcN)*(1+bcD)*penalty*MSfnm;
 
 	  // neighbor penalty term
 	  if(eP>=0){
@@ -222,9 +221,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  }
 	}
       }
-#endif
-      
-#if 1
+
       // now add differential surface terms
       for(iint n=0;n<mesh->Nfp;++n){
 	for(iint m=0;m<mesh->Np;++m){
@@ -240,8 +237,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	    dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
 
 	    // OP11 = OP11 + 0.5*( - mmE*Dn1)	    
-	    SM[nM*mesh->Np+m] += -0.5*nx*(1+bcN)*MSfni*DxMim;
-	    SM[nM*mesh->Np+m] += -0.5*ny*(1+bcN)*MSfni*DyMim;
+	    SM[nM*mesh->Np+m] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+	    SM[nM*mesh->Np+m] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
 	    
 	    if(eP>=0){
 
@@ -270,8 +267,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 	  
 	    // OP11 = OP11 + (- Dn1'*mmE );
-	    SM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcN)*DxMin*MSfim;
-	    SM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcN)*DyMin*MSfim;
+	    SM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+	    SM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
 
 	    if(eP>=0){
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
@@ -281,7 +278,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  }
 	}
       }
-#endif
+
       // store non-zeros for off diagonal block
       if(eP>=0){
 
