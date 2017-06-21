@@ -57,7 +57,8 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  if(strstr(options, "OAS")){
+  if(strstr(options, "OAS")||strstr(options, "OMS")){
+    //set up the fine problem smoothing
 
     // build gather-scatter
     iint NpP = mesh->Np + mesh->Nfaces*mesh->Nfp;
@@ -65,7 +66,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     // build gather-scatter for overlapping patches
     iint *allNelements = (iint*) calloc(size, sizeof(iint));
     MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-  		allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+                allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
 
     // offsets
     iint *startElement = (iint*) calloc(size, sizeof(iint));
@@ -87,15 +88,15 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
       // exchange node numbers with neighbors
       meshHaloExchange(mesh,
-  		     mesh->Np*sizeof(iint),
-  		     localNums,
-  		     sendBuffer,
-  		     localNums+Nlocal);
+                     mesh->Np*sizeof(iint),
+                     localNums,
+                     sendBuffer,
+                     localNums+Nlocal);
     }
 
     preconGatherInfo_t *preconGatherInfoDg =
       (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
-  				 sizeof(preconGatherInfo_t));
+                                 sizeof(preconGatherInfo_t));
 
     // set local ids
     for(iint n=0;n<mesh->Nelements*NpP;++n)
@@ -122,25 +123,25 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
         iint bc = mesh->EToB[e*mesh->Nfaces+f];
 
         for(iint n=0;n<mesh->Nfp;++n){
-  	iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
-  	iint idP = mesh->vmapP[id];
+        iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+        iint idP = mesh->vmapP[id];
 
-  	// local numbers
-  	iint pidM = e*NpP + mesh->faceNodes[f*mesh->Nfp+n];
-  	iint pidP = e*NpP + mesh->Np + f*mesh->Nfp+n;
-  	preconGatherInfoDg[pidP].baseId = localNums[idP];
+        // local numbers
+        iint pidM = e*NpP + mesh->faceNodes[f*mesh->Nfp+n];
+        iint pidP = e*NpP + mesh->Np + f*mesh->Nfp+n;
+        preconGatherInfoDg[pidP].baseId = localNums[idP];
 
-  	if(rP!=-1){
-  	  preconGatherInfoDg[pidM].haloFlag = 1;
-  	  preconGatherInfoDg[pidP].haloFlag = 1;
-  	}
+        if(rP!=-1){
+          preconGatherInfoDg[pidM].haloFlag = 1;
+          preconGatherInfoDg[pidP].haloFlag = 1;
+        }
         }
       }
     }
 
     // sort by rank then base index
     qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t),
-  	parallelCompareBaseId);
+        parallelCompareBaseId);
 
     // do not gather-scatter nodes labelled zero
     int skip = 0;
@@ -162,11 +163,11 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
     // make preconBaseIds => preconNumbering
     precon->ogsDg = meshParallelGatherScatterSetup(mesh,
-  						 NlocalDg,
-  						 sizeof(dfloat),
-  						 gatherLocalIdsDg,
-  						 gatherBaseIdsDg,
-  						 gatherHaloFlagsDg);
+                                                 NlocalDg,
+                                                 sizeof(dfloat),
+                                                 gatherLocalIdsDg,
+                                                 gatherBaseIdsDg,
+                                                 gatherHaloFlagsDg);
 
     // build degree vector
     iint NtotalDGP = NpP*mesh->Nelements;
@@ -253,7 +254,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
     // coarse grid preconditioner (only continous elements)
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
-    ellipticCoarsePreconditionerSetupTri2D(mesh, precon, lambda, options);
+    ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType, options);
     occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
 
   } else if(strstr(options, "FULLALMOND")){
@@ -278,39 +279,7 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
-/*
-    //collect global assembled matrix
-    iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
-    iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-    MPI_Allgather(&nnz, 1, MPI_IINT,
-                  globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
-    globalnnzOffset[0] = 0;
-    for (iint n=0;n<size;n++)
-      globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
 
-    iint globalnnzTotal = globalnnzOffset[size];
-
-    iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
-    iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
-    for (iint n=0;n<size;n++){
-      globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
-      globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
-    }
-    nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
-
-    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
-                  globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-
-    iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
-    iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
-    dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
-
-    for (iint n=0;n<globalnnzTotal;n++) {
-      globalRows[n] = globalNonZero[n].row;
-      globalCols[n] = globalNonZero[n].col;
-      globalVals[n] = globalNonZero[n].val;
-    }
-*/
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
@@ -328,12 +297,9 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
                                    Cols,
                                    Vals,
                                    hgs,
-                                   options);       //rhs will be passed gather-scattered
+                                   options);  
 
-    precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-    precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-    precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-    precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
+    free(A); free(Rows); free(Cols); free(Vals);
   }
   else if (strstr(options, "BLOCKJACOBI")){
 
