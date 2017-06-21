@@ -1,5 +1,15 @@
 
-#include "ins2D.h"
+#include "ellipticTri2D.h"
+
+typedef struct{
+
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+} nonZero_t;
+
 
 iint addNonZero(nonZero_t *nonZeros, iint nnz, iint row, iint col, iint owner, dfloat val){
   
@@ -20,7 +30,7 @@ iint addNonZero(nonZero_t *nonZeros, iint nnz, iint row, iint col, iint owner, d
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-			    dfloat tau, dfloat sigma,
+			    dfloat tau, dfloat lambda,
 			    iint *BCType, nonZero_t **A, iint *nnzA,
 			    hgs_t **hgs, iint *globalStarts, const char *options){
   
@@ -90,7 +100,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 
   // drop tolerance for entries in sparse storage
 
-  dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
@@ -136,14 +146,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
         SM[n*mesh->Np+m] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+m];
         SM[n*mesh->Np+m] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+m];
 			       	      
-	SM[n*mesh->Np+m]  = J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
+	SM[n*mesh->Np+m] += J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
 	SM[n*mesh->Np+m] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
         SM[n*mesh->Np+m] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
         SM[n*mesh->Np+m] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
       }
     }
 
-   
     for (iint fM=0;fM<mesh->Nfaces;fM++) {
       
       dfloat *SP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -192,12 +201,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       // mass matrix for this face
       dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
+#if 1
       // penalty term just involves face nodes
       for(iint n=0;n<mesh->Nfp;++n){
 	for(iint m=0;m<mesh->Nfp;++m){
 	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
 	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
-
+	  
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
 	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 	  SM[nM*mesh->Np+mM] += 0.5*(1+bcD)*penalty*MSfnm;
@@ -208,11 +218,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	    iint mP  = mesh->vmapP[idM]%mesh->Np; 
 
 	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
-	    SP[nM*mesh->Np+mP] += -0.5*npenalty*MSfnm;
+	    SP[nM*mesh->Np+mP] += -0.5*penalty*MSfnm;
 	  }
 	}
       }
-    
+#endif
+      
+#if 1
       // now add differential surface terms
       for(iint n=0;n<mesh->Nfp;++n){
 	for(iint m=0;m<mesh->Np;++m){
@@ -243,7 +255,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  }
 	}
       }
-      
+
       for(iint n=0;n<mesh->Np;++n){
 	for(iint m=0;m<mesh->Nfp;++m){
 	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
@@ -258,8 +270,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	    dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 	  
 	    // OP11 = OP11 + (- Dn1'*mmE );
-	    SM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*DxMin*MSfim;
-	    SM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*DyMin*MSfim;
+	    SM[n*mesh->Np+mM] +=  -0.5*nx*(1+bcN)*DxMin*MSfim;
+	    SM[n*mesh->Np+mM] +=  -0.5*ny*(1+bcN)*DyMin*MSfim;
 
 	    if(eP>=0){
 	      //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
@@ -269,7 +281,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  }
 	}
       }
-
+#endif
       // store non-zeros for off diagonal block
       if(eP>=0){
 
@@ -282,16 +294,16 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	      }
 	    }
 	    
-	    iint row = globalIds[j + eP*basisNp];
+	    iint row = globalIds[j + eM*basisNp];
 	    iint col = globalIds[i + eP*basisNp];
-	    iint owner = globalOwners[j + eP*basisNp];
+	    iint owner = globalOwners[j + eM*basisNp];
 	    
 	    nnz = addNonZero(sendNonZeros, nnz, row, col, owner, val);
 	    
 	  }
 	}
       }
-      
+
       free(SP); 
     }
 
@@ -301,7 +313,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	dfloat val = 0;
 	for(iint n=0;n<mesh->Np;++n){
 	  for(iint m=0;m<mesh->Np;++m){
-	    val += basis[n*mesh->Np+j]*SP[n*mesh->Np+m]*basis[m*mesh->Np+i];
+	    val += basis[n*mesh->Np+j]*SM[n*mesh->Np+m]*basis[m*mesh->Np+i];
 	  }
 	}
 	
@@ -362,6 +374,18 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   }
   *nnzA = nnz+1;
 
+  FILE *fp = fopen("checkMatrix.m", "w");
+  fprintf(fp, "spA = [ \n");
+  for(iint n=0;n<*nnzA;++n){
+    fprintf(fp, "%d %d %lg;\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
+  }
+  fprintf(fp,"];\n");
+  fprintf(fp,"A = spconvert(spA);\n");
+  fprintf(fp,"A = full(A);\n");
+
+  fprintf(fp,"error = max(max(A-transpose(A)))\n");
+  fclose(fp);
+    
   free(globalIds);
   free(globalOwners);
   free(sendNonZeros);
@@ -370,7 +394,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   free(AsendOffsets);
   free(ArecvOffsets);
 
-  free(BM);
+  free(SM);
   free(MS);
 
 }
