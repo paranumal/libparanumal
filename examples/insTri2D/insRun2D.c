@@ -178,9 +178,18 @@ void insRun2D(ins_t *ins, char *options){
       dfloat x  = mesh->x[id];
       dfloat y  = mesh->y[id];
       //
+      #if 0
       dfloat uex = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat vex =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-ins->nu*8.0*M_PI*M_PI*t);
+      #else
+      dfloat lambda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;
+      dfloat uex = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+      dfloat vex =  lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+      dfloat pex = 0.5*(1.0- exp(2.*lambda*x));
+      #endif
+
+
       //
       id += offset;
       uerr = mymax(uerr, fabs(uex - ins->U[id]));

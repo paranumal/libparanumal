@@ -68,7 +68,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.025;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -89,12 +89,12 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-#if 0
-      dfloat lamda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;
+#if 1
+      dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       //
-      ins->U[id] = 1.0 - exp(lamda*x)*cos(2.*M_PI*y);
-      ins->V[id] = lamda/(2.*M_PI)*exp(lamda*x)*sin(2.*M_PI*y);
-      ins->P[id] = 0.5*(1.0- exp(2.*lamda*x));
+      ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+      ins->V[id] = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+      ins->P[id] = 0.5*(1.0- exp(2.*lambda*x));
 #endif
 
 #if 0
@@ -103,7 +103,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
 #endif
 
-#if 1
+#if 0
       ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
       ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
       ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-nu*8.f*M_PI*M_PI*0.0);
@@ -202,7 +202,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
