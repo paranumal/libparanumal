@@ -100,8 +100,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 
   // drop tolerance for entries in sparse storage
 
-  dfloat *SM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
   for (iint f=0;f<mesh->Nfaces;f++) {
@@ -109,7 +107,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       iint fn = mesh->faceNodes[f*mesh->Nfp+n];
       
       for (iint m=0;m<mesh->Nfp;m++) {
-	iint fm = mesh->faceNodes[f*mesh->Nfp+m];
 	dfloat MSnm = 0;
 	
 	for (iint i=0;i<mesh->Np;i++){
@@ -117,7 +114,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	}
 	
 	MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Nfp]  = MSnm;
+	printf("%g ", MSnm);
       }
+      printf("\n");
     }
   }
   
@@ -126,6 +125,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   int nnz = 0;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+
+  dfloat *SM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
@@ -174,23 +175,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
       dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
       
-      int bcD, bcN;
+      int bcD = 0, bcN =0;
       int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
       iint bcType = 0;
 
       if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
       // this needs to be double checked (and the code where these are used)
-      if(bcType<=0){
-	bcD = 0;
-	bcN = 0;
-      }else if(bcType==1){ // Dirichlet
+      if(bcType==1){ // Dirichlet
 	bcD = 1;
 	bcN = 0;
-      } else if (bcType==2){ // Neumann
-	bcD = 0;
-	bcN = 1;
-      } else { // Neumann for now
+      } else if(bcType==2){ // Neumann
 	bcD = 0;
 	bcN = 1;
       }
@@ -209,13 +204,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
 	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
-	  SM[nM*mesh->Np+mM] += 0.5*(1-bcN)*(1+bcD)*penalty*MSfnm;
-
+	  SM[nM*mesh->Np+mM] += 0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
+	  
 	  // neighbor penalty term
 	  if(eP>=0){
-	    iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
+	    iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
 	    iint mP  = mesh->vmapP[idM]%mesh->Np; 
-
+	    
 	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
 	    SP[nM*mesh->Np+mP] += -0.5*penalty*MSfnm;
 	  }
@@ -279,9 +274,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	}
       }
 
+
       // store non-zeros for off diagonal block
       if(eP>=0){
-
 	for(iint j=0;j<basisNp;++j){
 	  for(iint i=0;i<basisNp;++i){
 	    dfloat val = 0;
@@ -303,7 +298,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 
       free(SP); 
     }
-
     // store non-zeros for diagonal block
     for(iint j=0;j<basisNp;++j){
       for(iint i=0;i<basisNp;++i){
@@ -371,7 +365,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   }
   *nnzA = nnz+1;
 
-  FILE *fp = fopen("checkMatrix.m", "w");
+  FILE *fp = fopen("checkGeneralMatrix.m", "w");
   fprintf(fp, "spA = [ \n");
   for(iint n=0;n<*nnzA;++n){
     fprintf(fp, "%d %d %lg;\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
