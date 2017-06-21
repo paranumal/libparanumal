@@ -10,13 +10,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+
   // use rank to choose DEVICE
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");  
+  sprintf(deviceConfig, "mode = Serial");
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -68,7 +68,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.025;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -89,7 +89,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-#if 1
+#if 0
       dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       //
       ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -103,9 +103,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
 #endif
 
-#if 0
+#if 1
       ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
-      ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
+      ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0);
       ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-nu*8.f*M_PI*M_PI*0.0);
 #endif
 
@@ -217,7 +217,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
 
- 
+
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -469,13 +469,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
   for(iint r=0;r<size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
-  
+
   insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
 
   //collect global assembled matrix
   iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
   iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&nnz, 1, MPI_IINT, 
+  MPI_Allgather(&nnz, 1, MPI_IINT,
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
   for (iint n=0;n<size;n++)
@@ -491,9 +491,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
   nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-  
+
   iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
   iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
   dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
@@ -505,15 +505,15 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
-  ins->precon->parAlmond = parAlmondSetup(mesh, 
-					  globalStarts, 
-					  globalnnzTotal,      
-					  globalRows,        
-					  globalCols,        
+  ins->precon->parAlmond = parAlmondSetup(mesh,
+					  globalStarts,
+					  globalnnzTotal,
+					  globalRows,
+					  globalCols,
 					  globalVals,
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
-  
+
   return ins;
 }
 

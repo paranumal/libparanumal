@@ -86,11 +86,11 @@
     if(bc==2){								\
       *(pB)  = 0.f;							\
 									\
-      *(pxB) =  0.f; \
-      *(pyB) =  0.f; \
+      *(pxB) = 0.f; \
+      *(pyB) = 0.f; \
     }									\
     if(bc==3){								\
-      *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*(occaExp(-nu*8.f*OCCA_PI*OCCA_PI*t)-occaExp(-nu*8.f*OCCA_PI*OCCA_PI*(t-dt))); \
+      *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-nu*8.f*OCCA_PI*OCCA_PI*t); \
 									\
       *(pxB) = 0.f;							\
       *(pyB) = 0.f;							\
