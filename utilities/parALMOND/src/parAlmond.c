@@ -14,16 +14,16 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  //device_kcycle(parAlmond, 0);
+  device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
 
-  dfloat *rhs = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
-  dfloat *x = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
-  parAlmond->levels[0]->o_rhs.copyTo(rhs);  
-  pcg(parAlmond,rhs,x,100,1e-10);
-  parAlmond->levels[0]->o_x.copyFrom(x);  
-  free(rhs);
-  free(x);
+  //dfloat *rhs = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
+  //dfloat *x = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
+  //parAlmond->levels[0]->o_rhs.copyTo(rhs);  
+  //pcg(parAlmond,rhs,x,100,1e-10);
+  //parAlmond->levels[0]->o_x.copyFrom(x);  
+  //free(rhs);
+  //free(x);
 
   //scatter the result
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {

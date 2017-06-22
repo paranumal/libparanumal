@@ -61,7 +61,7 @@ for k1=1:K
     hinv = max(Fscale( 1 + (f1-1)*Nfp, k1), Fscale( 1 + (f2-1)*Nfp, k2));    
 
     % Set penalty scaling
-    gtau = 2*(N+1)*(N+1)*hinv; 
+    gtau = (N)*(N+2-1)*hinv; 
 
     % Determine type of face
     switch(BCType(k1,f1))
