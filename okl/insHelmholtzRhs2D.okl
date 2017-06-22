@@ -186,9 +186,9 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	s_nxdu[n] = hlf*sJ*invJ*nx*du;
       	s_nydu[n] = hlf*sJ*invJ*ny*du;
       	s_nxdv[n] = hlf*sJ*invJ*nx*dv;
-       s_nydv[n] = hlf*sJ*invJ*ny*dv;
+        s_nydv[n] = hlf*sJ*invJ*ny*dv;
 	
-	   s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+	      s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
       	s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
       }
     }

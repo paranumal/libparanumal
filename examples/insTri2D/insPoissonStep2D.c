@@ -107,23 +107,31 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  
-  // ins->o_rhsP.copyTo(ins->rhsP);
-  // ins->o_U.copyTo(ins->U);
+  #if 0
+  ins->o_rhsP.copyTo(ins->rhsP);
+  dfloat maxp = 0; 
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = e*mesh->Np + n;
+      maxp = mymax(maxp, fabs(ins->rhsP[id])); 
+      const iint id2 = id+ index1*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
-  // dfloat maxp = 0; 
-  // for(iint e=0;e<mesh->Nelements;++e){
-  //   for(iint n=0;n<mesh->Np;++n){
-  //     const iint id = e*mesh->Np + n;
-  //     maxp = mymax(maxp, fabs(ins->rhsP[id]));
-  //     ins->rhsP[id] = 0.0; 
-  //   }
-  // }
+      ins->P[id2] = ins->rhsP[id];
+      ins->rhsP[id] = 1e-10;
 
-  // printf("Max Pressure Rhs / dt: %g\n", maxp);
-  // ins->o_rhsP.copyFrom(ins->rhsP);
+    }
+  }
 
-  #if 0 // No time dependent BC
+  printf("Divergence of intermediate Velocity: %.5e \n",maxp);
+
+ // // Just for case give exact zero divergence
+  //ins->o_rhsP.copyFrom(ins->rhsP);
+    
+  // int Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  // ins->o_rhsP.copyTo(ins->P,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+  #endif
+
+  #if 1 // No time dependent BC
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
@@ -144,5 +152,5 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
 
   printf("Not Solving for P \n");
-  //ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);   
+  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);   
 }

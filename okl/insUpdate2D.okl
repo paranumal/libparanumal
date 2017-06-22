@@ -35,7 +35,7 @@ kernel void insUpdateUpdate2D(const iint Nelements,
       V[id2] = V[id2] - dt/g0 * PIy[id];
 
       // Get Pressure from Pressure Increament
-      P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];
+       P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];
 		}
 	}
 }
