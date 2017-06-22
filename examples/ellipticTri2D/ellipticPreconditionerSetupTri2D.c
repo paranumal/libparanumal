@@ -237,10 +237,22 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
       dfloat eigG1 = 0.5*(grr + gss) - 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
       dfloat eigG2 = 0.5*(grr + gss) + 0.5*sqrt((grr-gss)*(grr-gss) + 4*grs*grs);
 
+      //hinv scaling?
+      dfloat invhMin = 1e9;
+      dfloat invhMax = 0;
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint base = e*mesh->Nfaces + f;
+        //invh = mymax(mesh->sgeo[base*mesh->Nsgeo+IHID],invh);
+        invhMax =  mymax(mesh->sgeo[base*mesh->Nsgeo + SJID],invhMax);
+        invhMin =  mymin(mesh->sgeo[base*mesh->Nsgeo + SJID],invhMin);
+      }
+      dfloat invh = invhMax/invhMin +invhMin/invhMax;
+
       //TODO Average? Min/Max/Avg Eigenvalue? What works best for the scaling?
-      dfloat Jhinv2 = J*(eigG1+eigG2);
-      //dfloat Jhinv2 = J*mymax(eigG1,eigG2);
+      //dfloat Jhinv2 = J*(eigG1+eigG2);
+      dfloat Jhinv2 = (2*mesh->N+1)*J*mymax(eigG1,eigG2);
       //dfloat Jhinv2 = J*mymin(eigG1,eigG2);
+      //dfloat Jhinv2 = mesh->N*invh;
 
       for(iint n=0;n<NpP;++n){
         iint pid = n + e*NpP;

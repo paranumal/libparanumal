@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
   //dfloat lambda = 0;
 
   // set up
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file. 
   int BCType[3] = {0,1,2};
 
-  dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1);
+  dfloat tau = (mesh->N)*(mesh->N+2-1);
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
