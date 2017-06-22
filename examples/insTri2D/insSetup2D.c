@@ -217,7 +217,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
 
- 
+
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -469,13 +469,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
   for(iint r=0;r<size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
-  
+
   insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
 
   //collect global assembled matrix
   iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
   iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&nnz, 1, MPI_IINT, 
+  MPI_Allgather(&nnz, 1, MPI_IINT,
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
   for (iint n=0;n<size;n++)
@@ -491,9 +491,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
   nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-  
+
   iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
   iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
   dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
@@ -505,15 +505,15 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
-  ins->precon->parAlmond = parAlmondSetup(mesh, 
-					  globalStarts, 
-					  globalnnzTotal,      
-					  globalRows,        
-					  globalCols,        
+  ins->precon->parAlmond = parAlmondSetup(mesh,
+					  globalStarts,
+					  globalnnzTotal,
+					  globalRows,
+					  globalCols,
 					  globalVals,
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
-  
+
   return ins;
 }
 

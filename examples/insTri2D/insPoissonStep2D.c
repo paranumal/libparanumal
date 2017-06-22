@@ -2,13 +2,14 @@
 
 // complete a time step using LSERK4
 void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer, 
+				       dfloat * sendBuffer, dfloat * recvBuffer,
 				        char   * options){
 
-  mesh2D *mesh = ins->mesh; 
+  mesh2D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
   dfloat t = tstep*ins->dt + ins->dt;
 
+  //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
 
@@ -24,11 +25,11 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                ins->o_vHaloBuffer);
 
     // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(sendBuffer);            
+    ins->o_vHaloBuffer.copyTo(sendBuffer);           
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-                         mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                         mesh->Np*(ins->NVfields)*sizeof(dfloat),
                          sendBuffer,
                          recvBuffer);
   }
@@ -39,8 +40,8 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                              mesh->o_DrT,
                              mesh->o_DsT,
                              offset,
-                             ins->o_U, 
-                             ins->o_V, 
+                             ins->o_U,
+                             ins->o_V,
                              ins->o_rhsP);
 
   if(mesh->totalHaloPairs>0){
@@ -150,7 +151,6 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-
-  printf("Not Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);   
+  printf("Solving for P \n");
+  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
 }
