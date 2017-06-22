@@ -44,6 +44,7 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
   }
 }
 
+
 // Actually solves for Pr increamnet not presssure
 kernel void insPoissonRhsIpdgBC2D(const int Nelements,
             const iint * restrict vmapM,
@@ -92,7 +93,7 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
         hinv = sgeo[sid+p_IHID];
 
         int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) {
+        if(bc>0) { // To use with non-pressure incremament version change later
           insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);
         }         
         const dfloat dp = pP;

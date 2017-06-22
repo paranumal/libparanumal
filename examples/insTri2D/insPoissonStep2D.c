@@ -9,7 +9,6 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   solver_t *solver = ins->pSolver;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
 
@@ -109,6 +108,21 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   
+  // ins->o_rhsP.copyTo(ins->rhsP);
+  // ins->o_U.copyTo(ins->U);
+
+  // dfloat maxp = 0; 
+  // for(iint e=0;e<mesh->Nelements;++e){
+  //   for(iint n=0;n<mesh->Np;++n){
+  //     const iint id = e*mesh->Np + n;
+  //     maxp = mymax(maxp, fabs(ins->rhsP[id]));
+  //     ins->rhsP[id] = 0.0; 
+  //   }
+  // }
+
+  // printf("Max Pressure Rhs / dt: %g\n", maxp);
+  // ins->o_rhsP.copyFrom(ins->rhsP);
+
   #if 0 // No time dependent BC
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
@@ -126,9 +140,9 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 ins->o_rhsP);
-
   #endif
 
-  printf("Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);   
+
+  printf("Not Solving for P \n");
+  //ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);   
 }
