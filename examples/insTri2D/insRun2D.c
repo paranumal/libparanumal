@@ -19,10 +19,10 @@ void insRun2D(ins_t *ins, char *options){
   dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
   dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 
-  // Set subscycling 
+  // Set subscycling
   iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
-    
+   
 
   occa::initTimer(mesh->device);
 
@@ -108,8 +108,8 @@ void insRun2D(ins_t *ins, char *options){
 // #endif
 
   
-     if(tstep<1){
-      //advection, first order in time, no increment
+    // if(tstep<1){
+       //advection, first order in time, no increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
@@ -141,6 +141,7 @@ void insRun2D(ins_t *ins, char *options){
       case 1:
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
       break;
+
       case 0:
        insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
       break;
@@ -149,7 +150,6 @@ void insRun2D(ins_t *ins, char *options){
     insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
     insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
-   
 
     printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){
