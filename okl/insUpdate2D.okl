@@ -30,12 +30,12 @@ kernel void insUpdateUpdate2D(const iint Nelements,
       const iint id1 = n + (e+index1*offset)*p_Np;
       const iint id2 = n + (e+index2*offset)*p_Np;
 
-      // Update Velocity u = u - dt/g0 * grad(Pr)
+      // // Update Velocity u = u - dt/g0 * grad(Pr)
       U[id2] = U[id2] - dt/g0 * PIx[id];
       V[id2] = V[id2] - dt/g0 * PIy[id];
 
       // Get Pressure from Pressure Increament
-      P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];
+       P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];
 		}
 	}
 }
