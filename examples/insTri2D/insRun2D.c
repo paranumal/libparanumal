@@ -169,7 +169,7 @@ void insRun2D(ins_t *ins, char *options){
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);
 
-  dfloat t  = ins->NtimeSteps*ins->dt; 
+  dfloat t  = ins->finalTime; 
   dfloat uerr = 0 , verr= 0 , perr = 0; 
   const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
    for(iint e=0;e<mesh->Nelements;++e){

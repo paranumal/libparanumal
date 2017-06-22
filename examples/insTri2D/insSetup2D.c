@@ -74,7 +74,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.5;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
@@ -151,7 +151,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -181,7 +181,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep =100;
+  ins->errorStep =400;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
