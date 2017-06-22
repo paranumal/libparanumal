@@ -108,7 +108,7 @@ void insRun2D(ins_t *ins, char *options){
 // #endif
 
   
-    // if(tstep<1){
+    if(tstep<1){
        //advection, first order in time, no increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
