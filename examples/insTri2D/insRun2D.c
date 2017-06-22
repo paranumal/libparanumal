@@ -26,8 +26,8 @@ void insRun2D(ins_t *ins, char *options){
 
   occa::initTimer(mesh->device);
 
-  //for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-  for(iint tstep=0;tstep<10;++tstep){
+  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  //for(iint tstep=0;tstep<1000;++tstep){
   
   #if 0
     // ok it seems 
@@ -145,6 +145,7 @@ void insRun2D(ins_t *ins, char *options){
        insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
       break;
     }
+
     insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
     insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
@@ -168,7 +169,7 @@ void insRun2D(ins_t *ins, char *options){
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);
 
-  dfloat t  = 10*ins->dt; 
+  dfloat t  = ins->NtimeSteps*ins->dt; 
   dfloat uerr = 0 , verr= 0 , perr = 0; 
   const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
    for(iint e=0;e<mesh->Nelements;++e){
@@ -177,7 +178,7 @@ void insRun2D(ins_t *ins, char *options){
       dfloat x  = mesh->x[id];
       dfloat y  = mesh->y[id];
       //
-      #if 0
+      #if 1
       dfloat uex = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat vex =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-ins->nu*8.0*M_PI*M_PI*t);
