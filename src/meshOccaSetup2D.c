@@ -161,7 +161,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       	  ix += Inm*xm;
       	  iy += Inm*ym;
       	}
-        //printf("%.15e %.15e\n",ix,iy);
       	iint id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
       	mesh->intx[id] = ix;
       	mesh->inty[id] = iy;

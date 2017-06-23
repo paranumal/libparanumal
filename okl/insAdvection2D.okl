@@ -136,23 +136,12 @@ kernel void insAdvectionSurface2D(const iint Nelements,
       	    dfloat unM   = occaFabs(nx*uM + ny*vM);
       	    dfloat unP   = occaFabs(nx*uP + ny*vP);    
       	    dfloat unMax = (unM > unP) ? unM : unP;
-
-
-            
              // evaluate "flux" terms: LLF
-            const dfloat sc = invJ * sJ ; 
-            s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP + uM*uM) 
-                                      + ny*(uP*vP + uM*vM)  
-                                      + unMax*(uM-uP) ));
-            s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP + vM*uM) 
-                                      + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
-
-      	    // // evaluate "flux" terms: LLF
-      	    // const dfloat sc = invJ * sJ ; 
-      	    // s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP - uM*uM) 
-      					// + ny*(uP*vP - uM*vM) 	+ unMax*(uM-uP) ));
-      	    // s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP - vM*uM) 
-      					// + ny*(vP*vP - vM*vM)	+ unMax*(vM-vP) ));
+      	    const dfloat sc = invJ * sJ ; 
+      	    s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP - uM*uM) 
+      					+ ny*(uP*vP - uM*vM) 	+ unMax*(uM-uP) ));
+      	    s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP - vM*uM) 
+      					+ ny*(vP*vP - vM*vM)	+ unMax*(vM-vP) ));
       	  }
       	}
       }
@@ -175,10 +164,10 @@ kernel void insAdvectionSurface2D(const iint Nelements,
       	    // Lift
       	    occaUnroll(p_NfacesNfp)
       	      for(int m=0;m<p_Nfaces*p_Nfp;++m){
-		dfloat L = LIFTT[n+m*p_Np];
+            		dfloat L = LIFTT[n+m*p_Np];
 
-		rhsnu  += L*s_fluxNx[es][m];
-		rhsnv  += L*s_fluxNy[es][m];
+            		rhsnu  += L*s_fluxNx[es][m];
+            		rhsnv  += L*s_fluxNy[es][m];
       	      }
 
       	    NU[id] = rhsnu;
@@ -376,8 +365,6 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 
 
       	    if(bc>0){
-              // intx[n+e*p_Nfaces*p_intNfp]
-              // inty[n+e*p_Nfaces*p_intNfp]
               dfloat xb = -0.5f;
               dfloat yb = 0.0f; 
       	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny, iUM,iVM, &iUP, &iVP);
