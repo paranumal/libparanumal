@@ -6,15 +6,16 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 				  const dfloat * restrict q,
 				  dfloat * restrict Pq){  
 
-#define p_Npatch (p_Nfaces+1)
+#define p_patchNelements (p_Nfaces+1)
+#define p_patchNp (p_Np*(p_Nfaces+1))
   
   // assume one patch per outer iteration (tune later)
   for(iint e=0;e<Nelements;++;outer0){
     
-    shared dfloat s_q[p_Npatch*p_Np];
+    shared dfloat s_q[p_patchNp];
 
     // loop over elements in sub-patch e and load q
-    for(iint es=0;es<p_Npatch;++es;inner1){
+    for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
 	const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
 	const iint id = n + es*p_Np;	
@@ -30,16 +31,16 @@ kernel void ellipticPatchSolver2D(const int Nelements,
     barrier(localMemFence);
 
     // loop over elements/nodes in patch and do local smooth
-    for(iint es=0;es<p_Npatch;++es;inner1){
+    for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
 	const iint id = n + es*p_Np; // node offset in patch
-	const iint offset = e*p_Npatch*p_Np*p_Npatch*p_Np; // patch matrices offset
+	const iint offset = e*p_patchNp*p_patchNp; // patch matrices offset
 
 	dfloat Pqn = 0.f;
 
 	occaUnroll(p_Np)
-	  for(iint m=0;m<p_Np*p_Npatch;++m){
-	    Pqn += P[offset + m*p_Np*Npatch + id]*s_q[id];
+	  for(iint m=0;m<p_patchNp;++m){
+	    Pqn += P[offset + m*p_patchNp + id]*s_q[id];
 	  }
 	
 	const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
