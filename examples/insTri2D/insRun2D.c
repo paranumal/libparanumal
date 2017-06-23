@@ -27,8 +27,7 @@ void insRun2D(ins_t *ins, char *options){
   occa::initTimer(mesh->device);
 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-  //for(iint tstep=0;tstep<1000;++tstep){
-  
+  // for(iint tstep=0;tstep<10;++tstep){
   #if 0
     // ok it seems 
     if(tstep<100){
@@ -178,7 +177,7 @@ void insRun2D(ins_t *ins, char *options){
       dfloat x  = mesh->x[id];
       dfloat y  = mesh->y[id];
       //
-      #if 1
+      #if 0
       dfloat uex = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat vex =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*t);
       dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-ins->nu*8.0*M_PI*M_PI*t);
