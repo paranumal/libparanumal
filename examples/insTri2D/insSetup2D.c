@@ -67,13 +67,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.025;   // kinematic viscosity,
+  dfloat nu   = 0.001;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 100.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
@@ -88,7 +88,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-#if 1
+#if 0
       dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       //
       ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -109,7 +109,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 #endif
 
 
-#if 0
+#if 1
       ins->U[id] = 1;
       ins->V[id] = 0;
       ins->P[id] = 0;
@@ -179,7 +179,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep =500;
+  ins->errorStep =100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
