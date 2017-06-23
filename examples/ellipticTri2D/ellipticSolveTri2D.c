@@ -490,7 +490,11 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if(rdotr1 < tol*tol) break;
+    if(rdotr1 < tol*tol) {
+      rdotr0 = rdotr1;
+      Niter++;
+      break;
+    }
 
     occaTimerTic(mesh->device,"Preconditioner");
     if(strstr(options,"PCG")){
