@@ -26,9 +26,8 @@ void insRun2D(ins_t *ins, char *options){
 
   occa::initTimer(mesh->device);
 
-  //for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-  for(iint tstep=0;tstep<10;++tstep){
-  
+  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  // for(iint tstep=0;tstep<10;++tstep){
   #if 0
     // ok it seems 
     if(tstep<100){

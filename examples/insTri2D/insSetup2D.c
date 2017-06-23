@@ -73,7 +73,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.5;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
@@ -179,7 +179,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
 
   // errorStep
-  ins->errorStep =1;
+  ins->errorStep =500;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
