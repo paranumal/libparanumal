@@ -1,0 +1,53 @@
+
+// experimental overlapping patch solver 
+kernel void ellipticPatchSolver2D(const int Nelements,
+				  const dfloat * restrict P,
+				  const iint   * restrict EToE,
+				  const dfloat * restrict q,
+				  dfloat * restrict Pq){  
+
+#define p_Npatch (p_Nfaces+1)
+  
+  // assume one patch per outer iteration (tune later)
+  for(iint e=0;e<Nelements;++;outer0){
+    
+    shared dfloat s_q[p_Npatch*p_Np];
+
+    // loop over elements in sub-patch e and load q
+    for(iint es=0;es<p_Npatch;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+	const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
+	const iint id = n + es*p_Np;	
+
+	s_q[id] = 0.f;
+	if(eP>=0){
+	  s_q[id] = q[eP*p_Np+n];
+	}
+      }
+    }
+  
+    // barrier to make sure patch q has loaded
+    barrier(localMemFence);
+
+    // loop over elements/nodes in patch and do local smooth
+    for(iint es=0;es<p_Npatch;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+	const iint id = n + es*p_Np; // node offset in patch
+	const iint offset = e*p_Npatch*p_Np*p_Npatch*p_Np; // patch matrices offset
+
+	dfloat Pqn = 0.f;
+
+	occaUnroll(p_Np)
+	  for(iint m=0;m<p_Np*p_Npatch;++m){
+	    Pqn += P[offset + m*p_Np*Npatch + id]*s_q[id];
+	  }
+	
+	const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
+	
+	// gambles on rare collisions and FP64 atomics (must zero Pq first)
+	// also need to do halo exchanges and further accumulate ?
+	occaAtomicAdd((Pq+eP*p_Np+n), Pqn); 
+      }
+    }
+  }
+}
