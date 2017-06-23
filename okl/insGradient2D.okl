@@ -64,9 +64,9 @@ kernel void insGradientSurface2D(const iint Nelements,
          const dfloat * restrict y,
          const dfloat time,
          const dfloat dt,
-         const dfloat a0,
-         const dfloat a1,
-         const dfloat a2,
+         const dfloat c0,
+         const dfloat c1,
+         const dfloat c2,
          const int index,
          const iint offset,
          const int solverID,
@@ -138,10 +138,10 @@ kernel void insGradientSurface2D(const iint Nelements,
 	      }
 #endif
           if(solverID==1){ // Pressure Increament Gradient
-              dfloat PPo = 0.f;
-              dfloat to  = time-dt;
-              insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
-              PP = PP-PPo;
+              //dfloat PPo = 0.f;
+              //dfloat to  = time-dt;
+              //insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
+              //PP = PP-c0*PPo;
               PP = PM;
             }
 
