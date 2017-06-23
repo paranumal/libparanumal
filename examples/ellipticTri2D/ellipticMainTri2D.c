@@ -80,7 +80,7 @@ int main(int argc, char **argv){
       }
       iint id = n+e*mesh->Np;
 
-      r[id] = 0;//-rhs*J;
+      r[id] = -rhs*J;
       x[id] = 0;
       mesh->q[id] = nrhs[n];
     }
