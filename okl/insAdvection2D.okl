@@ -137,12 +137,22 @@ kernel void insAdvectionSurface2D(const iint Nelements,
       	    dfloat unP   = occaFabs(nx*uP + ny*vP);    
       	    dfloat unMax = (unM > unP) ? unM : unP;
 
-      	    // evaluate "flux" terms: LLF
-      	    const dfloat sc = invJ * sJ ; 
-      	    s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP - uM*uM) 
-      					+ ny*(uP*vP - uM*vM) 	+ unMax*(uM-uP) ));
-      	    s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP - vM*uM) 
-      					+ ny*(vP*vP - vM*vM)	+ unMax*(vM-vP) ));
+
+            
+             // evaluate "flux" terms: LLF
+            const dfloat sc = invJ * sJ ; 
+            s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP + uM*uM) 
+                                      + ny*(uP*vP + uM*vM)  
+                                      + unMax*(uM-uP) ));
+            s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP + vM*uM) 
+                                      + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
+
+      	    // // evaluate "flux" terms: LLF
+      	    // const dfloat sc = invJ * sJ ; 
+      	    // s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP - uM*uM) 
+      					// + ny*(uP*vP - uM*vM) 	+ unMax*(uM-uP) ));
+      	    // s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP - vM*uM) 
+      					// + ny*(vP*vP - vM*vM)	+ unMax*(vM-vP) ));
       	  }
       	}
       }
@@ -203,13 +213,15 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
     shared dfloat s_cF22[p_NblockV][p_cubNp];
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
+      for(iint n=0;n<p_maxNodesVolume;++n;inner0){      // for all nodes in this element
       	iint e = eo+es; // element in block
-      	if(e<Nelements && n<p_Np){ 
-      	  const iint id = (e+offset)*p_Np+n;
-      	  s_U[es][n] = U[id];
-      	  s_V[es][n] = V[id];
-      	}
+      	if(e<Nelements){
+          if(n<p_Np){ 
+        	  const iint id = (e+offset)*p_Np+n;
+        	  s_U[es][n] = U[id];
+        	  s_V[es][n] = V[id];
+      	 }
+        } 
       }
     }
 
@@ -217,28 +229,29 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
+      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; // element in block
-      	if(e<Nelements){
-      	  dfloat cU = 0, cV = 0;
-      	  for(iint i=0;i<p_Np;++i){
-      	    dfloat cIni = cubInterpT[n+i*p_cubNp];
-      	    cU += cIni*s_U[es][i];
-      	    cV += cIni*s_V[es][i];
-      	  }
+      	if(e<Nelements && n<p_cubNp){
+        	  dfloat cU = 0, cV = 0;
+            occaUnroll(p_Np)
+        	  for(iint i=0;i<p_Np;++i){
+        	    dfloat cIni = cubInterpT[n+i*p_cubNp];
+        	    cU += cIni*s_U[es][i];
+        	    cV += cIni*s_V[es][i];
+        	  }
 
       	  s_cF11[es][n] = cU*cU;
       	  s_cF12[es][n] = cU*cV;
       	  s_cF22[es][n] = cV*cV;
-      	}
+      	 }
       }
     }
 
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_cubNp;++n;inner0){    	
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; 
       	if(e<Nelements && n<p_Np){	  
       	  // prefetch geometric factors (constant on triangle)
@@ -311,23 +324,19 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
       	iint e = eo + es;
-      	if(e<Nelements){
-      	  if(n<(p_Nfaces*p_Nfp)){
-      	    // indices of negative and positive traces of face node
-      	    const iint id  = e*p_Nfp*p_Nfaces + n;
+      	if(e<Nelements && n<(p_Nfaces*p_Nfp)){
+    	    const iint id  = e*p_Nfp*p_Nfaces + n;
+          iint idM = vmapM[id]+offset*p_Np;
+          iint idP = vmapP[id]+offset*p_Np;
 
-      	    iint idM = vmapM[id]+p_Np*offset;
-      	    iint idP = vmapP[id]+p_Np*offset;
+    	    if(idP<0) idP = idM;
 
-      	    if(idP<0) idP = idM;
-
-      	    // load negative and positive trace node values of velocity
-      	    s_UM[es][n] = U[idM];
-      	    s_VM[es][n] = V[idM];
-      	    s_UP[es][n] = U[idP];
-      	    s_VP[es][n] = V[idP];
-      	  }
-      	}
+    	    // load negative and positive trace node values of velocity
+    	    s_UM[es][n] = U[idM];
+    	    s_VM[es][n] = V[idM];
+    	    s_UP[es][n] = U[idP];
+    	    s_VP[es][n] = V[idP];
+  	  }
       }
     }
 
@@ -337,8 +346,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
       	iint e = eo + es;
-      	if(e<Nelements){
-      	  if(n<(p_Nfaces*p_intNfp)){
+      	if(e<Nelements && n<(p_Nfaces*p_intNfp)){
       	    const iint face = n/p_intNfp; // find face that owns this integration node
 
       	    // load surface geofactors for this face
@@ -352,6 +360,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
       	    dfloat iUP = 0.f, iVP = 0.f;
 
       	    // local block interpolation (face nodes to integration nodes)
+            occaUnroll(p_Nfp)
       	    for(iint m=0;m<p_Nfp;++m){
       	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
       	      const iint fm = face*p_Nfp+m;
@@ -363,11 +372,15 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
       	    }
 
       	    // apply boundary condition
-      	    // [ exact to here ]
       	    iint bc = EToB[face+p_Nfaces*e];
 
+
       	    if(bc>0){
-      	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUM,iVM, &iUP, &iVP);
+              // intx[n+e*p_Nfaces*p_intNfp]
+              // inty[n+e*p_Nfaces*p_intNfp]
+              dfloat xb = -0.5f;
+              dfloat yb = 0.0f; 
+      	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny, iUM,iVM, &iUP, &iVP);
       	    }
 
       	    // Find max normal velocity on the face
@@ -384,7 +397,6 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
       					   + ny*(iVP*iVP + iVM*iVM) 
       					   + unMax*(iVM-iVP) ));
       	  }
-      	}
       }
     }
 
@@ -395,14 +407,13 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
       	const iint e = eo + es;
-      	if(e<Nelements){
-      	  if(n<p_Np){
+      	if(e<Nelements && n<p_Np ){
       	    iint id = n + p_Np*(e+offset);
       	    // prefetch volume rhs
       	    dfloat NUn = NU[id];
       	    dfloat NVn = NV[id];
-
-      	    for(int m=0;m<p_intNfpNfaces;++m){
+            occaUnroll(p_intNfp*p_Nfaces)
+      	    for(int m=0;m<(p_intNfp*p_Nfaces);++m){
       	      // RefMassMatrix^{-1}*cInterp^t*cWeight
       	      const dfloat L = intLIFTT[n+m*p_Np];
 
@@ -413,7 +424,6 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
       	    NU[id] = NUn;
       	    NV[id] = NVn;
       	  }
-      	}
       }
     }
   }

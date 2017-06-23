@@ -152,5 +152,5 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   printf("Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
+  //ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
 }
