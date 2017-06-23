@@ -93,7 +93,7 @@
       *(pyB) =  0.f; \
     }									\
     if(bc==3){								\
-      *(pB) = 0.f;\
+      *(pB) =  0.5f*(1.f- occaExp(2.f*lambda*x));\
 									\
       *(pxB) = 0.f;							\
       *(pyB) = 0.f;							\
