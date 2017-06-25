@@ -22,8 +22,10 @@ int main(int argc, char **argv){
   // method can be IPDG
   char *options =
     //strdup("solver=PCG method=IPDG preconditioner=OAS coarse=COARSEGRID,ALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG,PROJECT preconditioner=OAS,ALMOND,UBERGRID coarse=COARSEGRID");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,ALMOND coarse=COARSEGRID");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
 
   // set up mesh stuff
@@ -32,7 +34,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
   //dfloat lambda = 0;
 
   // set up
@@ -55,7 +57,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file. 
   int BCType[3] = {0,1,2};
 
-  dfloat tau = 2.f*(mesh->N+1)*(mesh->N+1);
+  dfloat tau = (mesh->N)*(mesh->N+2-1);
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
@@ -69,7 +71,7 @@ int main(int argc, char **argv){
     for(iint n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
-      nrhs[n] = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
+      nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -119,10 +121,11 @@ int main(int argc, char **argv){
       iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);
+      dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
+      mesh->q[id] -= exact;
     }
   }
 

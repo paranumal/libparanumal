@@ -243,7 +243,9 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
   }
 
 
-  // Now Compute N(Ue) Term
+  // Now Compute N(Ue) Term in n+1
+
+   dfloat tn1 = (tstep+1)*ins->dt;
 
   if(mesh->totalHaloPairs>0){
 
@@ -315,7 +317,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 					mesh->o_vmapM,
 					mesh->o_vmapP,
 					mesh->o_EToB,
-					t,
+					tn1,
 					mesh->o_intx,
 					mesh->o_inty,
 					voffset, // 0
@@ -330,7 +332,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 				mesh->o_vmapM,
 				mesh->o_vmapP,
 				mesh->o_EToB,
-				t,
+				tn1,
 				mesh->o_x,
 				mesh->o_y,
 				voffset, // 0

@@ -256,6 +256,81 @@ void ellipticPreconditioner2D(solver_t *solver,
       mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
       ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     }
+  } else if(strstr(options, "OMS")){
+    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+
+    //smooth the fine problem z = Sr 
+    occaTimerTic(mesh->device,"OMSpreconKernel"); //smoothing
+    precon->preconKernel(mesh->Nelements,
+       mesh->o_vmapP,
+       precon->o_oasForwardDgT,
+       precon->o_oasDiagInvOpDg,
+       precon->o_oasBackDgT,
+       o_r,
+       o_zP);
+    //add up the patch solutions and weight them
+    ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    occaTimerToc(mesh->device,"OMSpreconKernel");
+
+    // extract the degrees of freedom 
+    occaTimerTic(mesh->device,"restrictKernel");
+    precon->restrictKernel(mesh->Nelements, o_zP, o_z);
+    occaTimerToc(mesh->device,"restrictKernel");
+
+    dfloat one = 1.; dfloat mone = -1.;
+    if(strstr(options, "COARSEGRID")){ 
+      occaTimerTic(mesh->device,"coarseGrid");
+      //res = r-Az
+      ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
+      ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
+
+      // restrict to coarse problem
+      occaTimerTic(mesh->device,"coarsenKernel");
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, solver->o_res, precon->o_r1);
+      occaTimerToc(mesh->device,"coarsenKernel");
+
+      occaTimerTic(mesh->device,"ALMOND");
+      parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
+      occaTimerToc(mesh->device,"ALMOND");
+
+      // prolongate back to fine problem 
+      occaTimerTic(mesh->device,"prolongateKernel");
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
+      occaTimerToc(mesh->device,"prolongateKernel");
+      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);  
+    }
+
+    //do another fine smoothing
+    //res = r-Az
+    ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
+    ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
+
+    ellipticStartHaloExchange2D(mesh, solver->o_res, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, solver->o_res, recvBuffer);
+
+    //smooth the fine problem z = z + S(r-Az)
+    occaTimerTic(mesh->device,"OMSpreconKernel"); //smoothing
+    precon->preconKernel(mesh->Nelements,
+       mesh->o_vmapP,
+       precon->o_oasForwardDgT,
+       precon->o_oasDiagInvOpDg,
+       precon->o_oasBackDgT,
+       solver->o_res,
+       o_zP);
+    //add up the patch solutions and weight them
+    ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    occaTimerToc(mesh->device,"OMSpreconKernel");
+
+    // extract the degrees of freedom 
+    occaTimerTic(mesh->device,"restrictKernel");
+    precon->restrictKernel(mesh->Nelements, o_zP, solver->o_res);
+    occaTimerToc(mesh->device,"restrictKernel");
+
+    ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
+
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
@@ -284,7 +359,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
+  const dfloat tol = 1e-8;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -310,6 +385,15 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
+  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  dfloat rdotz0 = 0;
+  iint Niter = 0;
+  //sanity check
+  if (rdotr0<=(tol*tol)) {
+    printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
+    return 0; 
+  }
+
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){
 
@@ -327,19 +411,16 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
 
   // dot(r,r)
-  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
   dfloat rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  iint Niter = 0;
+
   dfloat alpha, beta;
 
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
-  do{
-    //diagnostic(Ntotal, o_p, "o_p");
-    
+  while(rdotr0>(tol*tol)){   
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options); 
 
@@ -364,7 +445,11 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
     
-    if(rdotr1 < tol*tol) break;
+    if(rdotr1 < tol*tol) {
+      rdotr0 = rdotr1;
+      Niter++;
+      break;
+    }
 
     occaTimerTic(mesh->device,"Preconditioner");
     if(strstr(options,"PCG")){
@@ -401,18 +486,19 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
     
-    if(rank==0)
+    if((rank==0)&&(strstr(options,"VERBOSE")))
       printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
     ++Niter;
     
-  }while(rdotr0>(tol*tol));
+  }
+
+  if(rank==0)
+    printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
   occaTimerToc(mesh->device,"PCG");
   
   occa::printTimer();
-
-  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
 
   return Niter;
   

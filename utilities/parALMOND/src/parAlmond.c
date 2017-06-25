@@ -16,17 +16,15 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 
   device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
-/*
-  iint M = parAlmond->levels[0]->Nrows;
-  occa::memory o_x0 = parAlmond->device.malloc(M*sizeof(dfloat));
-  occa::memory o_r0 = parAlmond->device.malloc(M*sizeof(dfloat));
 
-  o_r0.copyFrom(parAlmond->levels[0]->o_rhs);
-  pcg(parAlmond,parAlmond->levels[0]->o_rhs,parAlmond->levels[0]->o_x,100,1e-7);
-  parAlmond->levels[0]->o_x.copyFrom(o_x0);
-  o_r0.free();
-  o_x0.free();
-*/
+  //dfloat *rhs = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
+  //dfloat *x = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
+  //parAlmond->levels[0]->o_rhs.copyTo(rhs);  
+  //pcg(parAlmond,rhs,x,100,1e-10);
+  //parAlmond->levels[0]->o_x.copyFrom(x);  
+  //free(rhs);
+  //free(x);
+
   //scatter the result
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
     meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);

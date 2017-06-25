@@ -21,8 +21,8 @@
       *(uB)= 0.f;							\
       *(vB)= 0.f;							\
     } else if(bc==2){							\
-      *(uB) = 1.0f;						\
-      *(vB) = 0.0f;						\
+      *(uB) = 1.0f;							\
+      *(vB) = 0.0f;							\
     } else if(bc==3){							\
       *(uB) = uM;							\
       *(vB) = vM;							\
@@ -95,3 +95,12 @@
       *(pyB) = 0.f;							\
     }									\
   }
+
+
+// Initial conditions 
+#define insFlowField2D(t,x,y,u,v,p)		\
+  {						\
+    *(u) = 1.0f;				\
+    *(v) = 0.0f;				\
+    *(p) = 0.0f;				\
+  }						

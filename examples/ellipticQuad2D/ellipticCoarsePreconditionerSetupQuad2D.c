@@ -25,6 +25,12 @@ int parallelCompareRowColumn(const void *a, const void *b){
 
 }
 
+void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
+                              hgs_t **hgs, iint *globalStarts, const char *options);
+
+void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
+                              hgs_t **hgs, iint *globalStarts, const char* options);
+
 
 void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options){
 

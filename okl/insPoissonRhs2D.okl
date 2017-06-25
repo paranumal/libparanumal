@@ -5,7 +5,7 @@ kernel void insPoissonRhsForcing2D(const iint Nelements,
 				   const dfloat dt,
 				   const dfloat g0,
 				   dfloat * restrict rhs){
-  
+
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_rhs[p_NblockV][p_Np];
@@ -93,14 +93,19 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
+          dfloat pPm1, dpdxPm1, dpdyPm1;
           insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);
-        }         
+          insPoissonBoundaryConditions2D(bc,time-dt, dt, x[idM], y[idM], nx, ny, &pPm1, &dpdxPm1, &dpdyPm1);
+          pP = pP - pPm1;
+          dpdxP = dpdxP - dpdxPm1;
+          dpdyP = dpdyP - dpdyPm1;
+        }
         const dfloat dp = pP;
-        const dfloat hlf = 1f;
-        
+        const dfloat hlf = 1.0f;
+
         s_nxdp[n] = hlf*sJ*invJ*nx*dp;
         s_nydp[n] = hlf*sJ*invJ*ny*dp;
-  
+
         s_lappflux[n] = hlf*sJ*invJ*(-nx*(dpdxP)-ny*(dpdyP) -tau*hinv*dp);
       }
     }
@@ -118,13 +123,13 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
 
         dfloat Lnxdp = 0;
         dfloat Lnydp = 0;
-              
+
         occaUnroll(p_NfacesNfp)
           for(iint i=0;i<p_NfacesNfp;++i){
             Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
             Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
           }
-    
+
         dfloat dpdx = Lnxdp;
         dfloat dpdy = Lnydp;
 
@@ -155,19 +160,19 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
 
         s_lapp[n] = -(lapr+laps);
       }
-      
+
     }
-    
+
     barrier(localMemFence);
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        dfloat lap = 0;   
+        dfloat lap = 0;
         // lift remaining surface terms
         occaUnroll(p_NfacesNfp)
         for(int i=0;i<p_NfacesNfp;++i){
           lap += LIFTT[n+i*p_Np]*s_lappflux[i];
-        }         
+        }
         s_lapp[n] += lap;
       }
     }
@@ -177,7 +182,7 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-              
+
         dfloat Mlapp = 0;
 
         // multiply by mass matrix
@@ -185,7 +190,7 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
         for(int i=0;i<p_Np;++i){
           Mlapp += MM[n+i*p_Np]*s_lapp[i];
         }
-            
+
         const iint id = e*p_Np+n;
         rhsP[id] -=  J*Mlapp;
       }
