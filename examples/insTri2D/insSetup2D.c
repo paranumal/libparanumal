@@ -12,11 +12,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
   //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");  
+  //sprintf(deviceConfig, "mode = Serial");  
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -59,8 +59,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
   }
-
-
+ 
   // SET SOLVER OPTIONS
   // Initial Conditions, Flow Properties
   printf("Starting initial conditions for INS2D\n");
@@ -68,13 +67,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.025;   // kinematic viscosity,
+  dfloat nu   = 0.001;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.;
+  ins->finalTime = 100.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
@@ -89,7 +88,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-#if 1
+#if 0
       dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       //
       ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -110,7 +109,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 #endif
 
 
-#if 0
+#if 1
       ins->U[id] = 1;
       ins->V[id] = 0;
       ins->P[id] = 0;
@@ -151,7 +150,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -176,12 +175,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   else{
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt   = ins->finalTime/ins->NtimeSteps;
-
   }
 
 
   // errorStep
-  ins->errorStep =1;
+  ins->errorStep =100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -217,7 +215,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
 
- 
+
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -469,13 +467,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
   for(iint r=0;r<size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
-  
+
   insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
 
   //collect global assembled matrix
   iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
   iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&nnz, 1, MPI_IINT, 
+  MPI_Allgather(&nnz, 1, MPI_IINT,
                 globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
   for (iint n=0;n<size;n++)
@@ -491,9 +489,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
   nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-  
+
   iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
   iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
   dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
@@ -505,15 +503,15 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   }
 
   ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
-  ins->precon->parAlmond = parAlmondSetup(mesh, 
-					  globalStarts, 
-					  globalnnzTotal,      
-					  globalRows,        
-					  globalCols,        
+  ins->precon->parAlmond = parAlmondSetup(mesh,
+					  globalStarts,
+					  globalnnzTotal,
+					  globalRows,
+					  globalCols,
 					  globalVals,
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
-  
+
   return ins;
 }
 
