@@ -11,8 +11,8 @@ typedef struct{
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {  
-  
+void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
+
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -24,7 +24,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
   for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n]; 
+    iint id = mesh->gatherLocalIds[n];
     globalNumbering[id] = mesh->gatherBaseIds[n];
   }
 
@@ -41,7 +41,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
   iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
-    
+
   //Build unassembed non-zeros
   printf("Building full matrix system\n");
   iint cnt =0;
@@ -52,7 +52,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
           for (iint mx=0;mx<mesh->Nq;mx++) {
             iint id;
             dfloat val = 0.;
-            
+
             if (ny==my) {
               for (iint k=0;k<mesh->Nq;k++) {
                 id = k+ny*mesh->Nq;
@@ -61,7 +61,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
                 val += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
               }
             }
-            
+
             id = mx+ny*mesh->Nq;
             dfloat Grs = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
             val += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
@@ -78,13 +78,13 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
                 val += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
               }
             }
-            
+
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*mesh->Nq;
               dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
               val += JW*lambda;
             }
-            
+
             dfloat nonZeroThreshold = 1e-7;
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
@@ -106,7 +106,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
-  
+
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
 
@@ -119,7 +119,7 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
   }
 
   *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
-  
+
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
     (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,
@@ -143,7 +143,6 @@ void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, i
   *nnz = cnt+1;
 
   free(globalNumbering); free(globalOwners);
-  free(rows); free(cols); free(vals);
   free(sendNonZeros);
 
   free(AsendCounts);

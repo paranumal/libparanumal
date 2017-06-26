@@ -51,7 +51,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
-  solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat));
+  solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
