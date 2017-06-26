@@ -44,7 +44,6 @@ typedef struct {
   void *almond;
 
   occa::memory o_coarseInvDegree;
-  occa::memory o_ztmp;
 
   iint coarseNp;
   iint coarseTotal;
@@ -84,6 +83,7 @@ typedef struct {
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
   occa::memory o_zP; // extended OAS preconditioner patch solution
+  occa::memory o_res;
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
@@ -130,7 +130,7 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, iint* BCType, const char *options);
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
