@@ -58,9 +58,11 @@ void pcg(parAlmond_t *parAlmond,
     // di = M^{-1}*r
     for (iint k=0;k<m;k++) 
       parAlmond->levels[0]->rhs[k] = r[k];
+    //vcycle(parAlmond,0);
     kcycle(parAlmond,0);
     for (iint k=0;k<m;k++)
       di[k] = parAlmond->levels[0]->x[k];
+      //di[k] = r[k];
 
     // rho = di'*r
     rhoLocal = innerProd(m, di, r);
@@ -100,7 +102,7 @@ void pcg(parAlmond_t *parAlmond,
 
     resvec[i] = globalRes;
 
-    //printf("iter = %d, globalRes = %g\n",i, globalRes);
+    printf("iter = %d, globalRes = %g\n",i, globalRes);
 
     if(globalRes < tol){ //*globalNB){
       flag = 0;

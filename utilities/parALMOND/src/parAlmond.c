@@ -20,7 +20,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   //dfloat *rhs = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
   //dfloat *x = (dfloat *) calloc(parAlmond->levels[0]->Ncols,sizeof(dfloat));
   //parAlmond->levels[0]->o_rhs.copyTo(rhs);  
-  //pcg(parAlmond,rhs,x,100,1e-10);
+  //pcg(parAlmond,rhs,x,1000,1e-10);
   //parAlmond->levels[0]->o_x.copyFrom(x);  
   //free(rhs);
   //free(x);

@@ -396,7 +396,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-8;
+  const dfloat tol = 1e-6;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -484,7 +484,6 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
-      Niter++;
       break;
     }
 

@@ -24,7 +24,7 @@ int main(int argc, char **argv){
   // opt: coarse=COARSEGRID with XXT or AMG
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,ALMOND coarse=COARSEGRID");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = (mesh->N)*(mesh->N+2-1);
+  dfloat tau = (mesh->N+1)*(mesh->N+1);
   solver_t *solver = ellipticSolveSetupQuad2D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);

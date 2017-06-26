@@ -75,7 +75,7 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
   // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
+  dfloat tol = 0.;
 
   // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
   dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -187,7 +187,7 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
             dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP;
             dfloat lmP = B[idmP];
             
-            dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;     
+            dfloat penalty = tau*hinv;     
 
             Anm += -0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
             Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
@@ -218,7 +218,6 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
               AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
             }
           }
-          
           if(fabs(AnmP)>tol){
             // remote info
             iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
@@ -227,9 +226,8 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
             sendNonZeros[nnz].val = AnmP;
             sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
             ++nnz;
-          }
+          } 
         }
-        
         if(fabs(Anm)>tol){
           // local block
           sendNonZeros[nnz].row = globalIds[eM*mesh->Np+n];
@@ -283,6 +281,65 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
     }
   }
   *nnzA = nnz+1;
+
+#if 0
+  FILE *fp = fopen("checkGeneralMatrix.m", "w");
+  fprintf(fp, "spA = [ \n");
+  for(iint n=0;n<*nnzA;++n){
+    fprintf(fp, "%d %d %lg;\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
+  }
+  fprintf(fp,"];\n");
+  fprintf(fp,"A = spconvert(spA);\n");
+  fprintf(fp,"A = full(A);\n");
+
+  fprintf(fp,"error = max(max(A-transpose(A)))\n");
+  fclose(fp);
+
+  fp = fopen("checkGeneralMatrix2.m", "w");
+  fprintf(fp, "spA2 = [ \n");
+  iint cnt =0;
+  dfloat *x = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      //zero x
+      for (iint m=0;m<mesh->Np*mesh->Nelements;m++) x[m] = 0;
+
+      x[n+e*mesh->Np] = 1;
+
+      solver->o_z.copyFrom(x);
+
+      // need start/end elements then can split into two parts
+      iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
+      solver->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, solver->o_z, solver->o_grad);
+
+      solver->ipdgKernel(mesh->Nelements,
+           mesh->o_vmapM,
+           mesh->o_vmapP,
+           lambda,
+           solver->tau,
+           mesh->o_vgeo,
+           mesh->o_sgeo,
+           mesh->o_EToB,
+           mesh->o_D,
+           solver->o_grad,
+           solver->o_Ax);
+
+      solver->o_Ax.copyTo(x);      
+      for (iint m=0;m<mesh->Np*mesh->Nelements;m++) {
+        if (x[m] != 0) {
+          fprintf(fp, "%d %d %lg;\n", m+1, n+e*mesh->Np+1, x[m]);    
+          cnt++;
+        }   
+      }
+    }
+  }
+  fprintf(fp,"];\n");
+  fprintf(fp,"A2 = spconvert(spA2);\n");
+  fprintf(fp,"A2 = full(A2);\n");
+
+  fprintf(fp,"error = max(max(A2-transpose(A2)))\n");
+  fclose(fp);
+#endif
 
   free(globalIds);
   free(globalOwners);

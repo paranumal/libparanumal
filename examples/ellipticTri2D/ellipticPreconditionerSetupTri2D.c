@@ -264,6 +264,15 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     precon->o_oasDiagInvOpDg =
       mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
+
+
+//    if (strstr(options."PATCHSOLVE")) {
+//      //initialize the full inverse operators on each 4 element patch
+//      
+//    }
+//
+
+
     // coarse grid preconditioner (only continous elements)
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType, options);

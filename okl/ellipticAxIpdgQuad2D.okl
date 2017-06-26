@@ -5,7 +5,7 @@
 
 // nx,ny,nz,sJ,invJ - need WsJ
 
-#define surfaceTerms(sk,f,i, j)                                         \
+#define surfaceTerms(sk,face,i, j)                                         \
   {                                                                     \
   const iint  idM = vmapM[sk];                                          \
   const iint  idP = vmapP[sk];                                          \
@@ -18,11 +18,10 @@
   const dfloat4 gradqM = gradq[idM];                                    \
   dfloat4 gradqP = gradq[idP];                                          \
                                                                         \
-  iint bc = EToB[f+p_Nfaces*e];                                         \
+  iint bc = EToB[face+p_Nfaces*e];                                         \
   if(bc>0) {                                                            \
-    ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y,           \
-                                gradqP.w, gradqP.x, gradqP.y);          \
-    gradqP = 2*gradqP - gradqM;                                         \
+    ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y,gradqP.w, gradqP.x, gradqP.y);          \
+    gradqP = 2.f*gradqP - gradqM;                                         \
   }                                                                     \
                                                                         \
   dfloat dq = gradqP.w - gradqM.w;                                      \

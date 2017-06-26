@@ -66,7 +66,7 @@ void ellipticErrorQuad2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterQuad2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 				     const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint* BCType, const char *options);
+
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
@@ -124,6 +124,8 @@ typedef struct {
 
 void ellipticOperator2D(solver_t *solver, dfloat lambda,
       occa::memory &o_q, occa::memory &o_Aq, const char *options);
+
+precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint* BCType, const char *options);
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
