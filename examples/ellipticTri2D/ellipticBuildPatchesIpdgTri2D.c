@@ -195,7 +195,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 
     for (iint fM=0;fM<mesh->Nfaces;fM++) {
 
-      dfloat *SP = blocksA + fM*mesh->Np*mesh->Np + eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+      dfloat *SP = blocksA + (fM+1)*mesh->Np*mesh->Np + eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
       
       // load surface geofactors for this face
       iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
@@ -415,34 +415,53 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
     for(iint n=0;n<patchNp;++n){
       patchA[n+patchNp*n] = 1; // make sure diagonal is at least identity
     }
+    
+    // diagonal block
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){
+	iint id = n*patchNp + m;
+	iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
+	patchA[id] = blocksA[offset + n*mesh->Np+m];
+      }
+    }
+    
     // load diagonal blocks
-    for(iint es=0;es<mesh->Nfaces+1;++es){
-      iint eP = (es==0) ? eM : mesh->EToE[eM*mesh->Nfaces+es-1];
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint eP = mesh->EToE[eM*mesh->Nfaces+f];
       if(eP>=0){
         for(iint n=0;n<mesh->Np;++n){
           for(iint m=0;m<mesh->Np;++m){
-            iint id = (es*mesh->Np+n)*patchNp + (es*mesh->Np+m);
+            iint id = ((f+1)*mesh->Np+n)*patchNp + ((f+1)*mesh->Np+m);
             iint offset = eP*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
             patchA[id] = blocksA[offset + n*mesh->Np+m];
           }
         }
       }
     }
-
+    
     // load off diagonal blocks ( rely on symmetry )
-    for(iint es=0;es<mesh->Nfaces+1;++es){
+    for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Np;++n){
         for(iint m=0;m<mesh->Np;++m){
-          iint id = n*patchNp + (es*mesh->Np+m);
-          iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np + es*mesh->Np*mesh->Np;
+          iint id = n*patchNp + ((f+1)*mesh->Np+m);
+          iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np + (f+1)*mesh->Np*mesh->Np;
           patchA[id] = blocksA[offset + n*mesh->Np+m];
 
-          iint idT = n + (es*mesh->Np+m)*patchNp;
+          iint idT = n + ((f+1)*mesh->Np+m)*patchNp;
           patchA[idT] = blocksA[offset + n*mesh->Np+m];
         }
       }
     }
-    
+    printf("------------------\n");
+    for(iint n=0;n<patchNp;++n){
+      for(iint m=0;m<patchNp;++m){
+	if(fabs(patchA[n*patchNp+m])>1e-10)
+	  printf("x");
+	else
+    	  printf("o");
+      }
+      printf("\n");
+    }
     // in place inverse (patchA points into patchesInvA[0])
     matrixInverse(patchNp, patchA);
   }
