@@ -303,7 +303,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
-      Niter++;
       break;
     }
 

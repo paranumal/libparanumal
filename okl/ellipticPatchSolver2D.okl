@@ -47,8 +47,10 @@ kernel void ellipticPatchSolver2D(const int Nelements,
         
         // gambles on rare collisions and FP64 atomics (must zero Pq first)
         // also need to do halo exchanges and further accumulate ?
-        if (eP >-1)
-          occaAtomicAdd((invAPq+eP*p_Np+n), invAPqn); 
+        //if (eP >-1)
+        //  occaAtomicAdd((invAPq+eP*p_Np+n), invAPqn); 
+        if (eP == e)
+          invAPq[n+e*p_Np] = invAPqn;
       }
     }
   }
