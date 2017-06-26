@@ -151,6 +151,7 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
   //sanity check
   if (rdotr0<=(tol*tol)) {
     parAlmond->levels[0]->o_x.copyFrom(o_x);
+    printf("Almond PCG iter %d, res = %g\n", 0, sqrt(rdotr0));
     o_x.free(); o_p.free(); o_Ap.free();
     return; 
   }
@@ -231,6 +232,8 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
 
   //copy result back to parAlmond's x storage
   parAlmond->levels[0]->o_x.copyFrom(o_x);
+
+  printf("Almond PCG iter %d, res = %g\n", Niter, sqrt(rdotr0));
 
   o_x.free(); o_p.free(); o_Ap.free();
 }

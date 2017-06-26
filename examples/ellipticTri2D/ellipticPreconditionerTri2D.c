@@ -151,8 +151,8 @@ void ellipticPreconditioner2D(solver_t *solver,
     ellipticEndHaloExchange2D(mesh, solver->o_res, recvBuffer);
     
     //smooth the fine problem z = z + S(r-Az)
-    ellipticPatchSmootherTri2D(solver,solver->o_res,solver->o_res,options);
-    ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
+    ellipticPatchSmootherTri2D(solver,solver->o_res,solver->o_Sres,options);
+    ellipticScaledAdd(solver, one, solver->o_Sres, one, o_z);
 
   } else if (strstr(options, "FULLALMOND")) {
 

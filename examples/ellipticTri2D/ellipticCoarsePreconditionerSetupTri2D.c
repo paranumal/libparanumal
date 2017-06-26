@@ -292,12 +292,9 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
   iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(iint));
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
-  if (strstr(options,"PROJECT")) {
+  if (strstr(options,"PROJECT")||strstr(options,"PRECONC0")) {
     // Create a contiguous numbering system, starting from the element-vertex connectivity
-    for (iint n=0;n<Nnum;n++) {
-      iint id = mesh->gatherLocalIds[n];
-      globalIds[id] = mesh->gatherBaseIds[n];
-    }
+    memcpy(globalIds, mesh->EToV, Nnum*sizeof(iint));
 
     // squeeze node numbering
     meshParallelConsecutiveGlobalNumbering(Nnum, globalIds, globalOwners, globalStarts);
