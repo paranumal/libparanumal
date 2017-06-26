@@ -5,7 +5,7 @@
 
 // nx,ny,nz,sJ,invJ - need WsJ
 
-#define surfaceTerms(sk,f,i, j)                                         \
+#define surfaceTerms(sk,face,i, j)                                         \
   {                                                                     \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -13,14 +13,12 @@
   const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
                                                                         \
   dfloat dqdxP, dqdyP, qP;                                              \
-  dqdxP=0.0; dqdyP=0.0; qP=0.0;                                         \
+  dqdxP=0.f; dqdyP=0.f; qP=0.f;                                         \
                                                                         \
-  const int bc = EToB[f+p_Nfaces*e];                                    \
+  const int bc = EToB[face+p_Nfaces*e];                                    \
   if(bc>0) {                                                            \
     const iint  idM = vmapM[sk];                                        \
-    ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny,         \
-                                  0.0, 0.0, 0.0,                        \
-                                  qP, dqdxP, dqdyP);                    \
+    ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP); \
   }                                                                     \
                                                                         \
   dfloat dq = qP;                                                       \
