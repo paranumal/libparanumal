@@ -87,6 +87,7 @@ typedef struct {
   occa::memory o_z; // preconditioner solution
   occa::memory o_zP; // extended OAS preconditioner patch solution
   occa::memory o_res;
+  occa::memory o_Sres;
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary

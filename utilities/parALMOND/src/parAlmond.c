@@ -6,7 +6,8 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 
   //gather the global problem
   //if the rhs has already been gather scattered, weight the gathered rhs
-  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
+  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")
+      ||strstr(parAlmond->options,"PRECONC0")) {
     meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
     dotStar(parAlmond, parAlmond->hgs->Ngather,
             parAlmond->hgs->o_invDegree, parAlmond->levels[0]->o_rhs);
@@ -26,7 +27,8 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);  
 
   //scatter the result
-  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
+  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")
+      ||strstr(parAlmond->options,"PRECONC0")) {
     meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
   } else {
     parAlmond->levels[0]->o_x.copyTo(o_x);
