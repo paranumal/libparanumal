@@ -241,12 +241,12 @@ void ellipticPreconditioner2D(solver_t *solver,
       }
 
       occaTimerTic(mesh->device,"prolongateKernel");
-      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
       occaTimerToc(mesh->device,"prolongateKernel");
 
       // do we have to DG gatherscatter here
       dfloat one = 1.;
-      ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
+      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
       occaTimerToc(mesh->device,"coarseGrid");
     }
 
