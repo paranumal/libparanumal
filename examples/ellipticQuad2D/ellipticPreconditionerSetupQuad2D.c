@@ -5,7 +5,7 @@ typedef struct{
   iint localId;
   iint baseId;
   iint haloFlag;
-  
+
 } preconGatherInfo_t;
 
 int parallelCompareBaseId(const void *a, const void *b){
@@ -29,14 +29,16 @@ typedef struct{
 
 }nonZero_t;
 
-// compare on global indices 
+// compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options);
+void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint* BCType,
+                            nonZero_t **A, iint *nnzA, hgs_t **hgs, iint *globalStarts, const char *options);
 
-void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
+void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda,
+                            nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
 
-precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lambda, const char *options){
+precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint* BCType, const char *options){
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -48,7 +50,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  if (strstr(options,"OAS")) {
+  if (strstr(options,"OAS")||strstr(options, "OMS")) {
     // offsets to extract second layer
     iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
     offset[0] = +mesh->Nq;
@@ -72,10 +74,10 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
     for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
     for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
-    
+
     iint *vmapMP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
     iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
-    
+
     // take node info from positive trace and put in overlap region on parallel gather info
     for(iint e=0;e<mesh->Nelements;++e){
 
@@ -97,7 +99,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     }
 
     // -------------------------------------------------------------------------------------------
-    
+
     // space for gather base indices with halo
     preconGatherInfo_t *gatherInfo =
       (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
@@ -112,7 +114,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     if(Nhalo){
       // send buffer for outgoing halo
       preconGatherInfo_t *sendBuffer = (preconGatherInfo_t*) calloc(Nhalo, sizeof(preconGatherInfo_t));
-      
+
       meshHaloExchange(mesh,
   		     mesh->Np*sizeof(preconGatherInfo_t),
   		     gatherInfo,
@@ -122,7 +124,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     // now create padded version
 
     // now find info about halo nodes
-    preconGatherInfo_t *preconGatherInfo = 
+    preconGatherInfo_t *preconGatherInfo =
       (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
 
     // push to non-overlap nodes
@@ -146,7 +148,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
         iint idM = mesh->vmapM[id];
         iint idP = vmapPP[id];
         iint idMP = e*NpP + faceNodesPrecon[n];
-  	    
+
         preconGatherInfo[idMP] = gatherInfo[idP];
 
   #if 1
@@ -158,14 +160,14 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   #endif
       }
     }
-    
+
     // reset local ids
     for(iint n=0;n<mesh->Nelements*NpP;++n)
       preconGatherInfo[n].localId = n;
 
     // sort by rank then base index
     qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
-    
+
     // do not gather-scatter nodes labelled zero
     iint skip = 0;
     while(preconGatherInfo[skip].baseId==0 && skip<NpP*mesh->Nelements){
@@ -196,7 +198,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     dfloat *invDegree = (dfloat*) calloc(NtotalP, sizeof(dfloat));
     dfloat *degree    = (dfloat*) calloc(NtotalP, sizeof(dfloat));
     precon->o_invDegreeP = mesh->device.malloc(NtotalP*sizeof(dfloat), invDegree);
-    
+
     for(iint n=0;n<NtotalP;++n)
       degree[n] = 1;
 
@@ -210,7 +212,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       if(degree[n] == 0) printf("WARNING!!!!\n");
       invDegree[n] = 1./degree[n];
     }
-    
+
     precon->o_invDegreeP.copyFrom(invDegree);
     free(degree);
     free(invDegree);
@@ -234,7 +236,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
         localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
       }
     }
-    
+
     if(Nhalo){
       // send buffer for outgoing halo
       iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
@@ -246,8 +248,8 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   		     sendBuffer,
   		     localNums+Nlocal);
     }
-    
-    preconGatherInfo_t *preconGatherInfoDg = 
+
+    preconGatherInfo_t *preconGatherInfoDg =
       (preconGatherInfo_t*) calloc(NpP*mesh->Nelements,
   				 sizeof(preconGatherInfo_t));
 
@@ -280,9 +282,9 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
         for(iint n=0;n<mesh->Nfp;++n){
   	iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
   	iint idP = mesh->vmapP[id];
-  	
+
   	// local numbers
-  	iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f]; 
+  	iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f];
   	iint pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
   	preconGatherInfoDg[pidP].baseId = localNums[idP];
 
@@ -297,7 +299,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     // sort by rank then base index
     qsort(preconGatherInfoDg, NpP*mesh->Nelements, sizeof(preconGatherInfo_t),
   	parallelCompareBaseId);
-      
+
     // do not gather-scatter nodes labelled zero
     skip = 0;
 
@@ -323,13 +325,13 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
   						 gatherLocalIdsDg,
   						 gatherBaseIdsDg,
   						 gatherHaloFlagsDg);
-      
+
     // build degree vector
     iint NtotalDGP = NpP*mesh->Nelements;
     invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
     degree    = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
     precon->o_invDegreeDGP = mesh->device.malloc(NtotalDGP*sizeof(dfloat), invDegree);
-    
+
     for(iint n=0;n<NtotalDGP;++n)
       degree[n] = 1;
 
@@ -343,13 +345,13 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       if(degree[n] == 0) printf("WARNING!!!!\n");
       invDegree[n] = 1./degree[n];
     }
-    
+
     precon->o_invDegreeDGP.copyFrom(invDegree);
     free(degree);
     free(invDegree);
 
     // -------------------------------------------------------------------------------------------
-    
+
     precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
     precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
 
@@ -359,9 +361,9 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
     precon->o_oasForwardDg = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForwardDg);
     precon->o_oasBackDg    = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasBackDg);
-    
+
     /// ---------------------------------------------------------------------------
-    
+
     // hack estimate for Jacobian scaling
 
     dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
@@ -370,7 +372,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
       // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
       // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
-      
+
       dfloat Jhrinv2 = 0, Jhsinv2 = 0, J = 0;
       for(iint n=0;n<mesh->Np;++n){
 
@@ -386,7 +388,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       for(iint j=0;j<NqP;++j){
         for(iint i=0;i<NqP;++i){
   	iint pid = i + j*NqP + e*NpP;
-  	
+
   	  diagInvOp[pid] =
   	    1./(J*lambda +
   		Jhrinv2*mesh->oasDiagOp[i] +
@@ -400,7 +402,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
         }
       }
     }
-    
+
     precon->o_oasDiagInvOp = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOp);
     precon->o_oasDiagInvOpDg = mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
@@ -409,12 +411,12 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
     iint Ntotal = mesh->Np*mesh->Nelements;
     dfloat *diagA = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  				   
+
     for(iint e=0;e<mesh->Nelements;++e){
       iint cnt = 0;
       for(iint j=0;j<mesh->Nq;++j){
         for(iint i=0;i<mesh->Nq;++i){
-  	
+
   	dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo+ cnt + mesh->Np*GWJID];
   	// (D_{ii}^2 + D_{jj}^2 + lambda)*w_i*w_j*w_k*J_{ijke}
   	diagA[e*mesh->Np+cnt] = (pow(mesh->D[i*mesh->Nq+i],2) +
@@ -434,7 +436,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
 
     // coarse grid preconditioner (only continous elements)
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
-    ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, lambda, options);
+    ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, tau, lambda, BCType, options);
     occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
 
   } else if (strstr(options,"FULLALMOND")) {
@@ -451,19 +453,19 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       for(iint r=0;r<size;++r)
         globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
-      ellipticBuildIpdgQuad2D(mesh, lambda, &A, &nnz,options);
-    
+      ellipticBuildIpdgQuad2D(mesh, tau, lambda, BCType, &A, &nnz, &hgs,globalStarts, options);
+
       qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
     } else if (strstr(options,"CONTINUOUS")) {
-      
+
       ellipticBuildContinuousQuad2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
 
     //collect global assembled matrix
     iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
     iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-    MPI_Allgather(&nnz, 1, MPI_IINT, 
+    MPI_Allgather(&nnz, 1, MPI_IINT,
                   globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
     globalnnzOffset[0] = 0;
     for (iint n=0;n<size;n++)
@@ -479,9 +481,9 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     }
     nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
 
-    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
+    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                   globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-    
+
 
     iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
     iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
@@ -494,14 +496,12 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
       globalVals[n] = globalNonZero[n].val;
     }
 
-    precon->parAlmond = parAlmondSetup(mesh, 
-                                   Nnum, 
-                                   globalStarts, 
-                                   globalnnzTotal,      
-                                   globalRows,        
-                                   globalCols,        
-                                   globalVals,    
-                                   0,             // 0 if no null space
+    precon->parAlmond = parAlmondSetup(mesh,
+                                   globalStarts,
+                                   globalnnzTotal,
+                                   globalRows,
+                                   globalCols,
+                                   globalVals,
                                    hgs,
                                    options);
 
@@ -509,7 +509,7 @@ precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat lam
     precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
     precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-  } 
+  }
 
   return precon;
 }

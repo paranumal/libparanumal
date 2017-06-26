@@ -191,11 +191,13 @@ void pcg(parAlmond_t *parAlmond,
     resvec[i] = innerProd(parAlmond, m, o_r, o_r);
     resvec[i] = sqrt(resvec[i]);
 
+    printf("Almond PCG iter %d, res = %g\n", i, resvec[i]);
+
     //      di_previous = di;
     o_di_previous.copyFrom(o_di);
     rho_previous = rho;
 
-    if(resvec[i] < tol*nb){
+    if(resvec[i] < tol){
       flag = 0;
       break;
     }

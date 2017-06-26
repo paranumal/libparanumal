@@ -244,7 +244,7 @@ void ellipticPreconditioner2D(solver_t *solver,
 			 o_r,
 			 o_zP);
     ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
-    mesh->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
     occaTimerToc(mesh->device,"OASpreconKernel");
 
     // extract block interiors on DEVICE
@@ -277,12 +277,12 @@ void ellipticPreconditioner2D(solver_t *solver,
 
       // prolongate from P1 to PN
       occaTimerTic(mesh->device,"prolongateKernel");
-      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, precon->o_ztmp);
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
       occaTimerToc(mesh->device,"prolongateKernel");
 
       // increment z
       dfloat one = 1.;
-      ellipticScaledAdd(solver, one, precon->o_ztmp, one, o_z);
+      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
       occaTimerToc(mesh->device,"coarseGrid");
     }
 
@@ -291,6 +291,84 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
     //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     //}
+  } else if(strstr(options, "OMS")){
+    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+#if 1
+    //smooth the fine problem z = Sr 
+    occaTimerTic(mesh->device,"OMSpreconKernel"); //smoothing
+    precon->preconKernel(mesh->Nelements,
+       mesh->o_vmapP,
+       precon->o_oasForwardDgT,
+       precon->o_oasDiagInvOpDg,
+       precon->o_oasBackDgT,
+       o_r,
+       o_zP);
+    //add up the patch solutions and weight them
+    ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    occaTimerToc(mesh->device,"OMSpreconKernel");
+
+    // extract the degrees of freedom 
+    occaTimerTic(mesh->device,"restrictKernel");
+    precon->restrictKernel(mesh->Nelements, o_zP, o_z);
+    occaTimerToc(mesh->device,"restrictKernel");
+#else
+    o_z.copyFrom(o_r);
+#endif
+
+    dfloat one = 1.; dfloat mone = -1.;
+    if(strstr(options, "COARSEGRID")){ 
+      occaTimerTic(mesh->device,"coarseGrid");
+      //res = r-Az
+      ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
+      ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
+
+      // restrict to coarse problem
+      occaTimerTic(mesh->device,"coarsenKernel");
+      precon->coarsenKernel(mesh->Nelements, precon->o_V1, solver->o_res, precon->o_r1);
+      occaTimerToc(mesh->device,"coarsenKernel");
+
+      occaTimerTic(mesh->device,"ALMOND");
+      parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
+      occaTimerToc(mesh->device,"ALMOND");
+
+      // prolongate back to fine problem 
+      occaTimerTic(mesh->device,"prolongateKernel");
+      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
+      occaTimerToc(mesh->device,"prolongateKernel");
+      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);  
+    }
+
+    //do another fine smoothing
+    //res = r-Az
+    ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
+    ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
+
+    ellipticStartHaloExchange2D(mesh, solver->o_res, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(mesh, solver->o_res, recvBuffer);
+#if 1
+    //smooth the fine problem z = z + S(r-Az)
+    occaTimerTic(mesh->device,"OMSpreconKernel"); //smoothing
+    precon->preconKernel(mesh->Nelements,
+       mesh->o_vmapP,
+       precon->o_oasForwardDgT,
+       precon->o_oasDiagInvOpDg,
+       precon->o_oasBackDgT,
+       solver->o_res,
+       o_zP);
+    //add up the patch solutions and weight them
+    ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+    solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
+    occaTimerToc(mesh->device,"OMSpreconKernel");
+
+    // extract the degrees of freedom 
+    occaTimerTic(mesh->device,"restrictKernel");
+    precon->restrictKernel(mesh->Nelements, o_zP, solver->o_res);
+    occaTimerToc(mesh->device,"restrictKernel");
+#endif
+
+    ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
   } else if (strstr(options, "FULLALMOND")) {
 
     occaTimerTic(mesh->device,"parALMOND");
@@ -412,7 +490,11 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if(rdotr1 < tol*tol) break;
+    if(rdotr1 < tol*tol) {
+      rdotr0 = rdotr1;
+      Niter++;
+      break;
+    }
 
     occaTimerTic(mesh->device,"Preconditioner");
     if(strstr(options,"PCG")){
@@ -464,4 +546,5 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   occa::printTimer();
 
   return Niter;
+
 }
