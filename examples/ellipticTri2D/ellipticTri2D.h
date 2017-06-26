@@ -31,9 +31,12 @@ typedef struct {
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;  
 
+  occa::kernel patchSolverKernel;
+
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
+  occa::memory o_invAP;
 
   // coarse grid basis for preconditioning
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
@@ -133,6 +136,8 @@ void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, iint* BCType, const char *options);
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
+
+void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 

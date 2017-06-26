@@ -249,7 +249,7 @@ typedef struct {
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
 
-  occa::memory o_EToB, o_x, o_y, o_z;
+  occa::memory o_EToE, o_EToB, o_x, o_y, o_z;
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;

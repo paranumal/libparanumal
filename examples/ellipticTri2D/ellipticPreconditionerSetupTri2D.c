@@ -45,6 +45,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
+void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda,
+                                   iint *BCType, nonZero_t **A, iint *nnzA,
+                                   hgs_t **hgs, iint *globalStarts,
+                                   dfloat **patchesInvA,
+                                   const char *options);
+
 precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
 
   iint rank, size;
@@ -266,12 +273,26 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
 
 
 
-//    if (strstr(options."PATCHSOLVE")) {
-//      //initialize the full inverse operators on each 4 element patch
-//      
-//    }
-//
+    if (strstr(options,"PATCHSOLVE")) {
+      iint nnz;
+      nonZero_t *A;
+      dfloat *invAP;
+      hgs_t *hgs;
 
+      iint Nnum = mesh->Np*mesh->Nelements;
+      iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+
+      //initialize the full inverse operators on each 4 element patch
+      ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
+                                   BCType, &A, &nnz, &hgs, globalStarts,
+                                   &invAP, options);   
+
+      precon->o_invAP 
+        = mesh->device.malloc(mesh->Nelements*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1)*mesh->Np*sizeof(dfloat),
+          invAP);
+
+      mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+    }
 
     // coarse grid preconditioner (only continous elements)
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
