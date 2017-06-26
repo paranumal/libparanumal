@@ -17,11 +17,9 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
   occa::memory &o_zP  = solver->o_zP;
 
   if (strstr(options,"PATCHSOLVE")) {
+    dfloat *zeros = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    o_Sr.copyFrom(zeros);
     occaTimerTic(mesh->device,"PatchSolveKernel");
-    printf("size = %d, entries = %d\n", precon->o_invAP.bytes()/sizeof(dfloat), mesh->Nelements*mesh->Np*mesh->Np*(mesh->Nfaces+1)*(mesh->Nfaces+1));
-    printf("size = %d, entries = %d\n", mesh->o_EToE.bytes()/sizeof(iint), mesh->Nelements*mesh->Nfaces);
-    printf("size = %d, entries = %d\n", o_r.bytes()/sizeof(dfloat),mesh->Nelements*mesh->Np);
-    printf("size = %d, entries = %d\n", o_Sr.bytes()/sizeof(dfloat),mesh->Nelements*mesh->Np);
     precon->patchSolverKernel(mesh->Nelements,
                               precon->o_invAP,
                               mesh->o_EToE,

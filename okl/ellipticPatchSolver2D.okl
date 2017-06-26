@@ -10,7 +10,7 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 
   
   // assume one patch per outer iteration (tune later)
-  for(iint e=0;e<Nelements;++;outer0){
+  for(iint e=0;e<Nelements;++e;outer0){
     
     shared dfloat s_q[p_patchNp];
 
