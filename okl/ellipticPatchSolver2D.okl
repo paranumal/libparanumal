@@ -40,7 +40,7 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 
         occaUnroll(p_patchNp)
           for(iint m=0;m<p_patchNp;++m){
-            invAPqn += invAP[offset + m*p_patchNp + id]*s_q[id];
+            invAPqn += invAP[offset + m*p_patchNp + id]*s_q[m];
           }
         
         const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
