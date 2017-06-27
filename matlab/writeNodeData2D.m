@@ -641,6 +641,8 @@ shiftIds
 
 A = full(A)
 
+condA = cond(A)
+
 spy(abs(A)>1e-10);
 
 invA = inv(A);
