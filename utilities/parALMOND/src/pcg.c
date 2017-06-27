@@ -125,14 +125,14 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const iint n = A->Nrows;
-  const iint m = A->Ncols;
+  const iint m = A->Nrows;
+  const iint n = A->Ncols;
 
   parAlmond->ktype = PCG;
 
   // use parAlmond's buffers
-  occa::memory o_r = parAlmond->levels[0]->o_rhs;
-  occa::memory o_z = parAlmond->levels[0]->o_x;
+  occa::memory &o_r = parAlmond->levels[0]->o_rhs;
+  occa::memory &o_z = parAlmond->levels[0]->o_x;
 
   // initial residual
   dfloat rdotr0Local = innerProd(parAlmond, m, o_r, o_r);
@@ -141,9 +141,9 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
 
   occa::memory o_x, o_p, o_Ap;
 
-  o_x  = parAlmond->device.malloc(m*sizeof(dfloat));
-  o_Ap = parAlmond->device.malloc(m*sizeof(dfloat));
-  o_p  = parAlmond->device.malloc(m*sizeof(dfloat));
+  o_x  = parAlmond->device.malloc(n*sizeof(dfloat));
+  o_Ap = parAlmond->device.malloc(n*sizeof(dfloat));
+  o_p  = parAlmond->device.malloc(n*sizeof(dfloat));
 
   //    x = 0;
   setVector(parAlmond, m, o_x, 0.0);
@@ -189,7 +189,7 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
 
 
     dfloat rdotr1Local = innerProd(parAlmond, m, o_r, o_r);
-    rdotr1 = 0;
+    rdotr1 = 0.;
     MPI_Allreduce(&rdotr1Local,&rdotr1,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
     if(rdotr1 < tol*tol) {

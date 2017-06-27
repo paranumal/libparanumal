@@ -67,19 +67,22 @@ for k1=1:K
     switch(BCType(k1,f1))
       case {Dirichlet}
         % Dirichlet boundary face variational terms
-	OP11 = OP11 + ( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM);
+        OP11 = OP11 + ( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM);
 
       case {Neuman}
         % Do nothing
+      case {3}
+        % special case for unconnected internal face
+        OP11 = OP11 + 0.5*( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM );
       otherwise
-	% Interior face variational terms for stiffness matrix
-	OP11 = OP11 + 0.5*( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM );
+        % Interior face variational terms for stiffness matrix
+        OP11 = OP11 + 0.5*( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM );
 
-	OP12 =      - 0.5*( gVM'*gw*gtau*gVP + gVM'*gw*gDnP - gDnM'*gw*gVP );
+        OP12 =      - 0.5*( gVM'*gw*gtau*gVP + gVM'*gw*gDnP - gDnM'*gw*gVP );
 
         % Store self-neighbor interaction term in global stiffness matrix
         OP(entries(:), :) = [rows1(:), cols2(:), OP12(:)];
-	entries = entries + Np*Np;
+        entries = entries + Np*Np;
     end 
   end   
 
