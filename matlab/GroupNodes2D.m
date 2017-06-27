@@ -1,5 +1,5 @@
 
-function [r,s] = GroupNodes2D(N)
+function [r,s,allIds] = GroupNodes2D(N)
 
   [r0,s0] = Nodes2D(N);
   Np = length(r0);
@@ -20,7 +20,7 @@ function [r,s] = GroupNodes2D(N)
   [mind1,ids1] = min(d1,[], 1);
   [mind2,ids2] = min(d2,[], 1);
 
-  allIds = [1:Np; ids1; ids2]
+  allIds = [1:Np; ids1; ids2];
 
   mask = zeros(Np,1);
 

@@ -349,7 +349,19 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp); // read comment
 
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->rmapP = (iint*) calloc(mesh->Np*mesh->Nfaces, sizeof(iint));
+  for(int n=0;n<mesh->Np*mesh->Nfaces;++n){
+    fscanf(fp, iintFormat, mesh->rmapP+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
   
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->invAP = (dfloat*) calloc(mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1), sizeof(dfloat));
+  for(int n=0;n<mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1);++n){
+    fscanf(fp, dfloatFormat, mesh->invAP+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
   
 #if 0
   printf("Dr: \n");

@@ -176,6 +176,9 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
                                                  gatherBaseIdsDg,
                                                  gatherHaloFlagsDg);
 
+    //correction for full patch
+    NpP = mesh->NpP;
+
     // build degree vector
     iint NtotalDGP = NpP*mesh->Nelements;
     dfloat *invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
@@ -271,8 +274,6 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
     precon->o_oasDiagInvOpDg =
       mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
-
-
     if (strstr(options,"PATCHSOLVE")) {
       iint nnz;
       nonZero_t *A;
@@ -292,6 +293,20 @@ precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau,
           invAP);
 
       mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+    }
+    if (strstr(options,"APPROXPATCH")) {
+      
+      precon->o_invAP 
+        = mesh->device.malloc((mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1)*mesh->Np*sizeof(dfloat),
+          mesh->invAP);      
+
+      mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+
+      //rotated node ids of neighbouring element
+      mesh->o_rmapP = 
+        mesh->device.malloc(mesh->Np*mesh->Nfaces*sizeof(iint),mesh->rmapP);
+
+      mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);    
     }
 
     // coarse grid preconditioner (only continous elements)
