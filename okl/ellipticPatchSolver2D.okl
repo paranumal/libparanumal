@@ -130,10 +130,10 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
 	    //	    occaUnroll(p_patchNp)
 	    occaUnroll(p_Np)
 	      for(iint m=0;m<p_Np;++m){
-		res1 += s_invAP[offset + m*p_patchNp]*sq[e-eo][m];
-		res2 += s_invAP[offset + (m+p_Np)*p_patchNp]*sq[e-eo][m+p_Np];
-		res3 += s_invAP[offset + (m+2*p_Np)*p_patchNp]*sq[e-eo][m+2*p_Np];
-		res4 += s_invAP[offset + (m+3*p_Np)*p_patchNp]*sq[e-eo][m+3*p_Np];
+		res1 += s_invAP[offset + m*p_patchNp]*s_q[e-eo][m];
+		res2 += s_invAP[offset + (m+p_Np)*p_patchNp]*s_q[e-eo][m+p_Np];
+		res3 += s_invAP[offset + (m+2*p_Np)*p_patchNp]*s_q[e-eo][m+2*p_Np];
+		res4 += s_invAP[offset + (m+3*p_Np)*p_patchNp]*s_q[e-eo][m+3*p_Np];
 	      }
 	    
 	    const dfloat sc = 2.0/(3.*p_N+4.);
