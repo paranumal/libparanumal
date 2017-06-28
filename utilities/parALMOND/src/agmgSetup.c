@@ -20,7 +20,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
   // approximate Nrows at coarsest level
-  const iint gCoarseSize = 10;
+  const iint gCoarseSize = 100;
 
   double seed = (double) rank;
   srand48(seed);
@@ -103,19 +103,11 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     levels[n]->A->scratch = (dfloat *) calloc(M,sizeof(dfloat));
   }
 
-/*
   //set up base solver using xxt
   if (strstr(options,"UBERGRID")) {
+    iint* coarseOffsets = levels[numLevels-1]->globalRowStarts;
+    csr *coarseA = levels[numLevels-1]->A;
     iint N = levels[numLevels-1]->Nrows;
-
-    iint* coarseN       = (iint *) calloc(size,sizeof(iint));
-    iint* coarseOffsets = (iint *) calloc(size+1,sizeof(iint));
-
-    MPI_Allgather(&N, 1, MPI_IINT, coarseN, 1, MPI_IINT, MPI_COMM_WORLD);
-
-    coarseOffsets[0] = 0;
-    for (iint r=0;r<size;r++)
-      coarseOffsets[r+1] = coarseOffsets[r] + coarseN[r];
 
     iint coarseTotal = coarseOffsets[size];
     iint coarseOffset = coarseOffsets[rank];
@@ -124,31 +116,37 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     for (iint n=0;n<coarseTotal;n++)
       globalNumbering[n] = n;
 
-    iint nnz = levels[numLevels-1]->A->nnz;
+    iint totalNNZ = coarseA->diagNNZ+coarseA->offdNNZ;
     iint *rows;
     iint *cols;
     dfloat *vals;
-    if (nnz) {
-      rows = (iint *) calloc(nnz,sizeof(iint));
-      cols = (iint *) calloc(nnz,sizeof(iint));
-      vals = (dfloat *) calloc(nnz,sizeof(dfloat));
+    if (totalNNZ) {
+      rows = (iint *) calloc(totalNNZ,sizeof(iint));
+      cols = (iint *) calloc(totalNNZ,sizeof(iint));
+      vals = (dfloat *) calloc(totalNNZ,sizeof(dfloat));
     }
 
     //populate A matrix
+    int cnt = 0;
     for (iint n=0;n<N;n++) {
-      for (iint m=levels[numLevels-1]->A->rowStarts[n];
-               m<levels[numLevels-1]->A->rowStarts[n+1];m++) {
-        rows[m]  = n + parAlmond->coarseOffset;
-        iint col = levels[numLevels-1]->A->cols[m];
-        cols[m]  = levels[numLevels-1]->A->colMap[col];
-        vals[m]  = levels[numLevels-1]->A->coefs[m];
+      for (iint m=coarseA->diagRowStarts[n];m<coarseA->diagRowStarts[n+1];m++) {
+        rows[cnt] = n + coarseOffset;
+        cols[cnt] = coarseA->diagCols[m] + coarseOffset;
+        vals[cnt] = coarseA->diagCoefs[m];
+        cnt++;
+      }
+      for (iint m=coarseA->offdRowStarts[n];m<coarseA->offdRowStarts[n+1];m++) {
+        rows[cnt] = n + coarseOffset;
+        cols[cnt] = coarseA->colMap[coarseA->offdCols[m]];
+        vals[cnt] = coarseA->offdCoefs[m];
+        cnt++;
       }
     }
 
     // need to create numbering for really coarse grid on each process for xxt
     parAlmond->Acoarse = xxtSetup(coarseTotal,
                                   globalNumbering,
-                                  nnz,
+                                  totalNNZ,
                                   rows,
                                   cols,
                                   vals,
@@ -162,10 +160,8 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
     parAlmond->xCoarse   = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
     parAlmond->rhsCoarse = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
 
-    free(coarseN);
-    free(coarseOffsets);
     free(globalNumbering);
-    if (nnz) {
+    if (totalNNZ) {
       free(rows);
       free(cols);
       free(vals);
@@ -173,7 +169,7 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
 
     printf("Done UberCoarse setup\n");
   }
-*/
+
   parAlmond->levels = levels;
   parAlmond->numLevels = numLevels;
 

@@ -31,9 +31,14 @@ typedef struct {
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;  
 
+  occa::kernel patchSolverKernel;
+  occa::kernel approxPatchSolverKernel;
+
   ogs_t *ogsP, *ogsDg;
+  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
+  occa::memory o_invAP;
 
   // coarse grid basis for preconditioning
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
@@ -44,7 +49,6 @@ typedef struct {
   void *almond;
 
   occa::memory o_coarseInvDegree;
-  occa::memory o_ztmp;
 
   iint coarseNp;
   iint coarseTotal;
@@ -84,6 +88,8 @@ typedef struct {
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
   occa::memory o_zP; // extended OAS preconditioner patch solution
+  occa::memory o_res;
+  occa::memory o_Sres;
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
@@ -124,15 +130,17 @@ void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options);
+precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, iint* BCType, const char *options);
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
+
+void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 

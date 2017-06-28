@@ -76,7 +76,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 4.*(mesh->N+1)*(mesh->N+1);
+  ins->tau       = (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -454,7 +454,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 				       "insPressureHaloScatter2D",
 				       kernelInfo);
   // ===========================================================================//
-
+#if 0
   void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
 			       iint *BCType, nonZero_t **A, iint *nnzA,
 			       hgs_t **hgs, iint *globalStarts, const char *options);
@@ -512,7 +512,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 					  globalVals,
 					  hgs,
 					  vSolverOptions);       //rhs will be passed gather-scattered
-
+#endif
   return ins;
 }
 

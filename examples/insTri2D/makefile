@@ -54,12 +54,14 @@ insBuildVectorIpdgTri2D.o \
 ../ellipticTri2D/ellipticSetupTri2D.o \
 ../ellipticTri2D/ellipticPreconditionerSetupTri2D.o\
 ../ellipticTri2D/ellipticCoarsePreconditionerSetupTri2D.o\
+../ellipticTri2D/ellipticPreconditionerTri2D.o\
 ../ellipticTri2D/ellipticSolveTri2D.o\
 ../ellipticTri2D/ellipticSolveSetupTri2D.o\
 ../ellipticTri2D/ellipticHaloExchange2D.o\
 ../ellipticTri2D/ellipticParallelGatherScatterTri2D.o \
 ../ellipticTri2D/ellipticBuildIpdgTri2D.o \
-../ellipticTri2D/ellipticBuildContinuousTri2D.o 
+../ellipticTri2D/ellipticBuildContinuousTri2D.o \
+../ellipticTri2D/ellipticBuildPatchesIpdgTri2D.o 
 
 # library objects
 LOBJS = \

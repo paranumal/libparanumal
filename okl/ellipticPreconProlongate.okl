@@ -31,7 +31,7 @@ kernel void ellipticPreconProlongate(const iint Nelements,
         iint t = n + es*p_Np;
         
         if(t<p_Nverts*p_NblockV)
-          if(eo*p_Nverts + t<Nelements*p_Nverts)
+          if((eo*p_Nverts + t)<Nelements*p_Nverts)
             s_q1[0][t] = q1[eo*p_Nverts+t];
 
         while(t<p_Np*p_Nverts){
