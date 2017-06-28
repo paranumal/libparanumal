@@ -36,6 +36,14 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
                               o_zP);
     meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
     occaTimerToc(mesh->device,"PatchSolveKernel");
+  } else if (strstr(options,"LOCALPATCH")) {
+    occaTimerTic(mesh->device,"PatchSolveKernel");
+    precon->localPatchSolverKernel(mesh->Nelements,
+                              precon->o_invAP,
+                              mesh->o_EToE,
+                              o_r,
+                              o_Sr);
+    occaTimerToc(mesh->device,"PatchSolveKernel");
   } else {
     occaTimerTic(mesh->device,"PatchSmoothKernel");
     precon->preconKernel(mesh->Nelements,
