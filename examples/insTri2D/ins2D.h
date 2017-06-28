@@ -113,6 +113,7 @@ void insRun2D(ins_t *solver, char *options);
 void insPlotVTU2D(ins_t *solver, char *fileNameBase);
 void insReport2D(ins_t *solver, iint tstep, char *options);
 void insError2D(ins_t *solver, dfloat time, char *options);
+void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
 void insAdvectionStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);

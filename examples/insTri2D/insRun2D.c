@@ -22,11 +22,45 @@ void insRun2D(ins_t *ins, char *options){
   // Set subscycling
   iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
-   
+
+
+#if 1
+  dfloat t = 0.0;
+  iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+  for(iint i=0;i<2;++i){
+
+    for(iint e=0;e<mesh->Nelements;++e){
+      for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
+      dfloat t = 0;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      const int index2 = (ins->index+1)%3; 
+      const iint id2 = n + (e+index2*offset)*mesh->Np;
+
+      ins->U[id2] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*t); 
+      ins->V[id2] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*t); 
+      ins->P[id2] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*t);
+    }
+  }
+  
+  t += ins->dt;
+  // next time
+  ins->index = (ins->index+1)%3;
+
+  }
+
+  ins->o_U.copyFrom(ins->U);
+  ins->o_V.copyFrom(ins->V);
+  ins->o_P.copyFrom(ins->P);
+
+#endif
+
 
   occa::initTimer(mesh->device);
 
-  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(iint tstep=2;tstep<ins->NtimeSteps;++tstep){
   // for(iint tstep=0;tstep<10;++tstep){
   #if 0
     // ok it seems 
@@ -66,69 +100,78 @@ void insRun2D(ins_t *ins, char *options){
     }
 #else
 
-    if(tstep<100){
-      // no advection, first order in time
-      ins->b0 = 1.f, ins->a0 = 0.f, ins->c0 = 0.0f; // (1,1,1)
-      ins->b1 = 0.f, ins->a1 = 0.f, ins->c1 = 0.0f;
-      ins->b2 = 0.f, ins->a2 = 0.f, ins->c2 = 0.0f;
-      ins->g0 = 1.f;
-    }
-    #if 0
-    else if(tstep<150){
-      // advection, first order in time, no increment
-      ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.f;      
-    }
-    #endif
-    else if(tstep<200){
-      // advection, second order in time, no increment
-      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.5f;
-    }
-    else if(tstep<250){
-      // not ok 
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  1.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  0.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-      }
-#if 1
-    else{
-      // not ok 
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  -1.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-    }
-#endif
+//     if(tstep<100){
+//       // no advection, first order in time
+//       ins->b0 = 1.f, ins->a0 = 0.f, ins->c0 = 0.0f; // (1,1,1)
+//       ins->b1 = 0.f, ins->a1 = 0.f, ins->c1 = 0.0f;
+//       ins->b2 = 0.f, ins->a2 = 0.f, ins->c2 = 0.0f;
+//       ins->g0 = 1.f;
+//     }
+//     #if 0
+//     else if(tstep<150){
+//       // advection, first order in time, no increment
+//       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
+//       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
+//       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
+//       ins->g0 =  1.f;      
+//     }
+//     #endif
+//     else if(tstep<200){
+//       // advection, second order in time, no increment
+//       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
+//       ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
+//       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
+//       ins->g0 =  1.5f;
+//     }
+//     else if(tstep<250){
+//       // not ok 
+//       ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  1.0f;
+//       ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  0.0f;
+//       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+//       ins->g0 =  11.f/6.f;
+//       }
+// #if 1
+//     else{
+//       // not ok 
+//       ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
+//       ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  -1.0f;
+//       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+//       ins->g0 =  11.f/6.f;
+//     }
+// #endif
 
-//    if(tstep<1){
-//       //advection, first order in time, no increment
-//      ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
-//      ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
-//      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-//      ins->g0 =  1.f;      
-//    }
-//    else{ 
-//     // if(tstep<2){
-//     // advection, second order in time, no increment
-//      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
-//      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
-//      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-//      ins->g0 =  1.5f;
-//    }
-//
-//    // else{
-//    //   // 
-//    //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  1.0f;
-//    //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  0.0f;
-//    //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-//    //   ins->g0 =  11.f/6.f;
-//    // }
+   // if(tstep<1){
+   //    //advection, first order in time, no increment
+   //   ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
+   //   ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
+   //   ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
+   //   ins->g0 =  1.f;      
+   // }
+   // else 
+   //  //if(tstep<2)
+   // {
+    // advection, second order in time, no increment
+     ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
+     ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
+     ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
+     ins->g0 =  1.5f;
+   // }
+   //  else if(tstep<3)
+   //    {
+   // //   // 
+   //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  1.0f;
+   //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 =  0.0f;
+   //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+   //   ins->g0 =  11.f/6.f;
+   // }
+   // else{
+   //   // 
+     // ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 =  2.0f;
+     // ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = -1.0f;
+     // ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+     // ins->g0 =  11.f/6.f;
+   // }
+
 
 
 #endif
@@ -160,6 +203,10 @@ void insRun2D(ins_t *ins, char *options){
 
    // For Final Time
   insReport2D(ins, ins->NtimeSteps+1,options);
+
+
+
+  insErrorNorms2D(ins, ins->finalTime, options);
   
   // Compute the Error and Write To a File
   #if 0
@@ -169,6 +216,9 @@ void insRun2D(ins_t *ins, char *options){
 
   dfloat t  = ins->finalTime; 
   dfloat uerr = 0 , verr= 0 , perr = 0; 
+  dfloat l2uerr = 0 , l2verr= 0 , l2perr = 0; 
+  
+
   const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
    for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -187,12 +237,18 @@ void insRun2D(ins_t *ins, char *options){
       dfloat pex = 0.5*(1.0- exp(2.*lambda*x));
       #endif
 
-
-      //
       id += offset;
-      uerr = mymax(uerr, fabs(uex - ins->U[id]));
-      verr = mymax(verr, fabs(vex - ins->V[id]));
-      perr = mymax(perr, fabs(pex - ins->P[id]));
+      dfloat difu = fabs(uex - ins->U[id]);
+      dfloat difv = fabs(vex - ins->V[id]);
+      dfloat difp = fabs(pex - ins->P[id]);
+
+      uerr = mymax(uerr, difu);
+      verr = mymax(verr, difv);
+      perr = mymax(perr, difp);
+      //
+      l2uerr+= difu*difu;
+      l2verr+= difv*difv;
+      l2perr+= difp*difp;
 
       ins->U[id] = fabs(uex- ins->U[id]);
       ins->V[id] = fabs(vex- ins->V[id]);
@@ -200,11 +256,20 @@ void insRun2D(ins_t *ins, char *options){
       }
     }
 
+    l2uerr = sqrt(l2uerr);
+    l2verr = sqrt(l2verr);
+    l2perr = sqrt(l2perr);
+
   // compute maximum over all processes
     dfloat guerr, gverr, gperr;
+    dfloat l2guerr, l2gverr, l2gperr;
     MPI_Allreduce(&uerr, &guerr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&verr, &gverr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&perr, &gperr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    //
+    MPI_Allreduce(&l2uerr, &l2guerr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&l2verr, &l2gverr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&l2perr, &l2gperr, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -213,7 +278,7 @@ void insRun2D(ins_t *ins, char *options){
       sprintf(fname, "VortexConvergenceTest.txt");
       FILE *fp;
       fp = fopen(fname, "a");
-      fprintf(fp,"%d %.5e %.5e %.5e\n", mesh->N, guerr, gverr, gperr);
+      fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e\n", mesh->N, guerr, gverr, gperr, l2guerr, l2gverr, l2gperr);
     }
 
    
