@@ -294,7 +294,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  // setVector(m, parAlmond->levels[k]->x,  0.0);
+  setVector(m, parAlmond->levels[k]->x,  0.0);
 
   smooth(parAlmond->levels[k], parAlmond->levels[k]->rhs, parAlmond->levels[k]->x, true);
 
@@ -353,7 +353,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  //  setVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
+  setVector(parAlmond, m, parAlmond->levels[k]->o_x, 0.0);
 
   if ((k==0)&&strstr(parAlmond->options,"MATRIXFREE")){
     matFreeSmooth(parAlmond, parAlmond->levels[k], parAlmond->levels[k]->o_rhs, parAlmond->levels[k]->o_x, true);

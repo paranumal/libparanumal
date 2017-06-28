@@ -558,11 +558,11 @@ end
 %% elliptic patch problem
 K = 4;
 
-VX = [-1,+1,-1,+1,+1,-3];
-VY = [-1,-1,+1,-3,+1,+1];
+%VX = [-1,+1,-1,+1,+1,-3];
+%VY = [-1,-1,+1,-3,+1,+1];
 
-%VX = [-1,1,0,0,2,-2];
-%VY = [0,0,sqrt(3),-sqrt(3),sqrt(3),sqrt(3)];
+VX = [-1,1,0,0,2,-2];
+VY = [0,0,sqrt(3),-sqrt(3),sqrt(3),sqrt(3)];
 
 EToV = [1,2,3;
 	2,1,4;
@@ -570,12 +570,11 @@ EToV = [1,2,3;
 	1,3,6];
 
 BCType = [0,0,0;
-	  0,0,0;
-	  0,0,0;
-	  0,0,0];
+	  0,3,3;
+	  0,3,3;
+	  0,3,3]; %3 is a special flag for unconnected internal edge
 
 StartUp2D;
-
 
 % choose order to integrate exactly
 Nint = ceil(2*N/2);
@@ -593,16 +592,15 @@ gauss = GaussFaceMesh2D(NGauss);
 
 %% hack since we know W&B face 1 nodes are first
 vmapP = reshape(vmapP, Nfp*Nfaces, K);
-idsP = vmapP(:,1)
+idsP = vmapP(:,1);
 subind = [(1:Np)';idsP];
 
-subA = full(A(subind,subind))
+subA = full(A(subind,subind));
 subM = full(M(subind,subind));
 
-spy(abs(subA)>1e-10);
-condSubA = cond(subA);
+condSubA = cond(subA)
 
-[B,d] = eig(subA, subM)
+[B,d] = eig(subA, subM);
 
 %% A = S + lambda*M 
 %%   = M*(M\S + lambda*I) 
@@ -637,6 +635,31 @@ for n=1:NpP
   fprintf(fid, '\n');
 end
 
+[rG,sG,shiftIds] = GroupNodes2D(N);
 
+shiftIds
+
+A = full(A)
+
+condA = cond(A)
+
+spy(abs(A)>1e-10);
+
+invA = inv(A);
+
+fprintf(fid, '%% rotated local ids \n');
+for n=[1,3,2]
+  for m=1:Np
+	fprintf(fid, '%d ', shiftIds(n,m)-1);
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% patch inverse matrix \n');
+for n=1:size(A,1)
+  for m=1:size(A,1)
+	fprintf(fid, '%17.15E ', invA(n,m));
+  end
+  fprintf(fid, '\n');
+end
 
 fclose(fid)

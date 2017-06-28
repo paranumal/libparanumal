@@ -79,7 +79,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k);
 void gmres(parAlmond_t *parAlmond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
 void gmres(parAlmond_t *parAlmond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
 
-void pcg(parAlmond_t *parAlmond, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
-void pcg(parAlmond_t *parAlmond, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
+void pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
+void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
 
 #endif

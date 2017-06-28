@@ -7,19 +7,19 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
     deg[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
-  
+
   o_deg.copyFrom(deg);
-  
+
   ellipticParallelGatherScatterQuad2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
-  
+
   o_deg.copyTo(deg);
 
   mesh->device.finish();
   o_deg.free();
-  
+
 }
 
-solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options) {
+solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint* BCType, occa::kernelInfo &kernelInfo, const char *options) {
 
 	iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -30,8 +30,10 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
-  
+
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
+
+  solver->tau = tau;
 
   solver->mesh = mesh;
 
@@ -43,32 +45,52 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   solver->Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   solver->grad = (dfloat*) calloc(Nall*4, sizeof(dfloat));
-	
+
   // need to rename o_r, o_x to avoid confusion
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->r);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
+  solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
   solver->o_grad= mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
-  
+
   solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
   solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
- 
+
   solver->Nblock = Nblock;
+
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    iint Nlocal = mesh->Np*mesh->Nelements;
+    iint Nhalo = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
+
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
+
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + Nlocal*mesh->Nvgeo);
+
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
 
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nmax", Nmax); 
+  kernelInfo.addDefine("p_Nmax", Nmax);
 
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
-  
+
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
@@ -95,52 +117,57 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 				       kernelInfo);
 
 
-  mesh->AxKernel =
+  solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxQuad2D.okl",
 				       "ellipticAxQuad2D_e0",
 				       kernelInfo);
 
-  mesh->weightedInnerProduct1Kernel =
+  solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
-  mesh->weightedInnerProduct2Kernel =
+  solver->weightedInnerProduct2Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
-  mesh->innerProductKernel =
+  solver->innerProductKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
-  
-  mesh->scaledAddKernel =
+
+  solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
-  mesh->dotMultiplyKernel =
+  solver->dotMultiplyKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
-  mesh->dotDivideKernel = 
+  solver->dotDivideKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
-  mesh->gradientKernel = 
+  solver->gradientKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientQuad2D.okl",
 				       "ellipticGradientQuad2D",
 					 kernelInfo);
 
 
-  mesh->ipdgKernel =
+  solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgQuad2D.okl",
 				       "ellipticAxIpdgQuad2D",
-				       kernelInfo);  
+				       kernelInfo);
+
+  solver->rhsBCIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgQuad2D.okl",
+               "ellipticRhsBCIpdgQuad2D",
+               kernelInfo);
 
   occaTimerTic(mesh->device,"GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
@@ -148,19 +175,19 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
 					mesh->Np*mesh->Nelements,
 					sizeof(dfloat),
 					mesh->gatherLocalIds,
-					mesh->gatherBaseIds, 
+					mesh->gatherBaseIds,
 					mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupQuad2D(mesh, solver->ogs, lambda, options);
+  solver->precon = ellipticPreconditionerSetupQuad2D(mesh, solver->ogs, tau, lambda, BCType,options);
 
-  
-  solver->precon->preconKernel = 
+
+  solver->precon->preconKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconQuad2D.okl",
 				       "ellipticOasPreconQuad2D",
 				       kernelInfo);
-  
+
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictQuad2D.okl",
 				       "ellipticFooQuad2D",
@@ -184,39 +211,21 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
   solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
-  
+
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
   for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
     invDegree[n] = 1./degree[n];
   }
-  
+
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
-  //fill geometric factors in halo
-  if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Np*mesh->Nelements;
-    iint Nhalo = mesh->totalHaloPairs*mesh->Np;
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
-    
-    // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
-    
-    meshHaloExchange(mesh,
-         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + Nlocal*mesh->Nvgeo);
-    
-    mesh->o_vgeo =
-      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-  }
+
 
   // build weights for continuous SEM L2 project --->
   dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
       dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
@@ -231,16 +240,16 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat lambda, occa::kernelInfo
   ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
-  mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
+  solver->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
 
   free(localMM); o_MM.free(); o_localMM.free();
 
   //set matrix free function pointers
-  if (strstr(options,"MATRIXFREE")) { 
+  if (strstr(options,"MATRIXFREE")) {
     //set matrix free A in parAlmond
     void **args = (void **) calloc(2,sizeof(void *));
     dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
-    
+
     *vlambda = lambda;
 
     args[0] = (void *) solver;

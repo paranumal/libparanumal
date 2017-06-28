@@ -51,6 +51,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
+  solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
+  solver->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
@@ -93,6 +95,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+  kernelInfo.addDefine("p_NblockP", NblockP);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
@@ -180,7 +185,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, BCType,  options);
+  solver->precon = ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   solver->precon->preconKernel =
@@ -208,6 +213,16 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
 				       "ellipticBlockJacobiPreconTri2D",
 				       kernelInfo);
+
+  solver->precon->patchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticPatchSolver2D",
+               kernelInfo);
+
+  solver->precon->approxPatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxPatchSolver2D",
+               kernelInfo);
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
