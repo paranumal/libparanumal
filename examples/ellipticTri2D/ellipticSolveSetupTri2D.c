@@ -96,6 +96,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
 
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+  kernelInfo.addDefine("p_NblockP", NblockP);
+
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
