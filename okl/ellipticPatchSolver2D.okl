@@ -199,6 +199,43 @@ kernel void ellipticPatchSolver2D(const int Nelements,
   }
 }
 
+
+// experimental overlapping patch solver 
+kernel void ellipticLocalPatchSolver2D(const int Nelements,
+				       const dfloat * restrict invAP,
+				       const iint   * restrict EToE,
+				       const dfloat * restrict q,
+				       dfloat * restrict invAPq){  
+
+  // assume one patch per outer iteration (tune later)
+  for(iint e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_q[p_Np];
+    
+    // loop over elements in sub-patch e and load q
+    for(iint n=0;n<p_Np;++n;inner0){
+      s_q[n] = q[n];
+    }
+
+    barrier(localMemFence);
+    
+    // loop over elements/nodes in patch and do local smooth 
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint offset = e*p_Np*p_Np + n; // patch matrices offset
+      
+      dfloat res = 0.f;
+      occaUnroll(p_Np)
+	for(iint m=0;m<p_Np;++m){
+	  res += invAP[offset + m*p_Np]*s_q[m];
+	}
+      
+      const dfloat sc = 0.25;
+      
+      invAPq[p_Np*e+n] = sc*res;
+    }
+  }
+}
+
 #if 0
 // experimental overlapping patch solver 
 kernel void ellipticPatchSolver2D(const int Nelements,
