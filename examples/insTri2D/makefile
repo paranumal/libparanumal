@@ -43,6 +43,7 @@ insRun2D.o \
 insMakePeriodic2D.o \
 insPlotVTU2D.o \
 insError2D.o \
+insErrorNorms2D.o \
 insReport2D.o \
 insAdvectionStep2D.o \
 insAdvectionSubCycleStep2D.o \
