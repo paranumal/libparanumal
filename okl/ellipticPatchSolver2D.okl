@@ -66,7 +66,6 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
 }
 #endif
 
-#if 1
 // experimental overlapping patch solver 
 kernel void ellipticApproxPatchSolver2D(const int Nelements,
                                   const dfloat * restrict invAP,
@@ -80,49 +79,48 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     
     shared dfloat s_q[p_patchNp];
-    
-    // loop over elements in sub-patch e and load q
-    for(iint es=0;es<p_patchNelements;++es;inner1){      
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
-        const iint fP = (es==0) ? 0: EToF[e*p_Nfaces+es-1];
+    shared dfloat s_invAPq[p_patchNp];
 
-        s_q[es*p_Np + n] = 0.f;
+    // loop over elements in sub-patch e and load q
+    for(iint es=0;es<p_patchNelements;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first 
+        const iint fP = (es==0) ? 0: EToF[e*p_Nfaces+es-1];
+        s_q[es*p_Np+n] = 0.f;
         if(eP>=0){
-          const iint id = rmapP[fP*p_Np + n]; //rotate node ordering based on face number
-          s_q[es*p_Np + n] = q[eP*p_Np+id];
+          const iint id = rmapP[fP*p_Np+n];
+          s_q[es*p_Np+n] = q[eP*p_Np+id];
         }
       }
-    }  
+    }
 
     barrier(localMemFence);
-      
-    // loop over elements/nodes in patch and do local smooth
-    for(iint es=0;es<p_patchNelements;++es;inner1){      
+
+    // loop over elements/nodes in patch and do local smooth 
+    for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-        dfloat invAPqn = 0.f;
+        const iint offset = es*p_Np + n; // patch matrices offset
+        dfloat res = 0.f;
         occaUnroll(p_patchNp)
           for(iint m=0;m<p_patchNp;++m){
-            invAPqn += invAP[es*p_Np + m*p_patchNp + n]*s_q[m];
+            res += invAP[offset + m*p_patchNp]*s_q[m];
           }
- 
-        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
-        const iint fP = (es==0) ? 0: EToF[e*p_Nfaces+es-1];
+        s_invAPq[es*p_Np+n] = res;
+      }
+    }
 
-        // gambles on rare collisions and FP64 atomics (must zero Pq first)
-        // also need to do halo exchanges and further accumulate ?       
+    barrier(localMemFence);
 
-        invAPqn /= (3*p_N+4)/2.; //weird, i know
-        
-        if (eP >-1) {
-          const iint id = rmapP[fP*p_Np + n]; //rotate node ordering based on face number
-          occaAtomicAdd((invAPq+eP*p_Np+id), invAPqn);
-        }
+    for(iint es=0;es<p_patchNelements;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const dfloat sc = 2.0/(3.*p_N+4.);
+        //const dfloat sc = 0.25;
+
+        invAPq[p_patchNp*e+es*p_Np+n] = sc*s_invAPq[es*p_Np+n];
       }
     }
   }
 }
-#endif
 
 // experimental overlapping patch solver 
 kernel void ellipticPatchSolver2D(const int Nelements,
@@ -134,55 +132,44 @@ kernel void ellipticPatchSolver2D(const int Nelements,
   // assume one patch per outer iteration (tune later)
   for(iint e=0;e<Nelements;++e;outer0){
     
-    shared dfloat s_q[p_Np];
-    exclusive  dfloat invAPqn;
-    
-    for(iint n=0;n<p_Np;++n;inner0){
-      invAPqn = 0.f;
-    }
-    
-    // loop over elements in sub-patch e and load q
-    for(iint es=0;es<p_patchNelements;++es){
+    shared dfloat s_q[p_patchNp];
+    shared dfloat s_invAPq[p_patchNp];
 
-      barrier(localMemFence);
-      
+    // loop over elements in sub-patch e and load q
+    for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
-        
-        s_q[n] = 0.f;
+        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first 
+
+        s_q[es*p_Np+n] = 0.f;
         if(eP>=0){
-          s_q[n] = q[eP*p_Np+n];
+          s_q[es*p_Np+n] = q[eP*p_Np+n];
         }
       }
-      
-      barrier(localMemFence);
-      
-      // loop over elements/nodes in patch and do local smooth
+    }
+
+    barrier(localMemFence);
+
+    // loop over elements/nodes in patch and do local smooth 
+    for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-        const iint offset = e*p_patchNp*p_patchNp + es*p_Np*p_patchNp; // patch matrices offset
+        const iint offset = e*p_patchNp*p_patchNp + es*p_Np + n; // patch matrices offset
         dfloat res = 0.f;
-        occaUnroll(p_Np)
-          for(iint m=0;m<p_Np;++m){
-            res += invAP[offset + m*p_patchNp + n]*s_q[m];
+        occaUnroll(p_patchNp)
+          for(iint m=0;m<p_patchNp;++m){
+            res += invAP[offset + m*p_patchNp]*s_q[m];
           }
-        invAPqn += res;
+        s_invAPq[es*p_Np+n] = res;
       }
     }
-    
-    for(iint n=0;n<p_Np;++n;inner0){
-      // const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; load element e first
-      
-      // gambles on rare collisions and FP64 atomics (must zero Pq first)
-      // also need to do halo exchanges and further accumulate ?
-      
-#if 0
-      invAPqn *= 0.25f;
-      
-      if (eP >-1)
-          occaAtomicAdd((invAPq+eP*p_Np+n), invAPqn);
-#else
-      invAPq[n+e*p_Np] = invAPqn;
-#endif
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_patchNelements;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const dfloat sc = 0.25;
+
+        invAPq[p_patchNp*e+es*p_Np+n] = sc*s_invAPq[es*p_Np+n];
+      }
     }
   }
 }

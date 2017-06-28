@@ -17,18 +17,15 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
   occa::memory &o_zP  = solver->o_zP;
 
   if (strstr(options,"PATCHSOLVE")) {
-    dfloat *zeros = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    o_Sr.copyFrom(zeros);
     occaTimerTic(mesh->device,"PatchSolveKernel");
     precon->patchSolverKernel(mesh->Nelements,
                               precon->o_invAP,
                               mesh->o_EToE,
                               o_r,
-                              o_Sr);
+                              solver->o_zP);
+    meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
     occaTimerToc(mesh->device,"PatchSolveKernel");
   } else if (strstr(options,"APPROXPATCH")) {
-    dfloat *zeros = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    o_Sr.copyFrom(zeros);
     occaTimerTic(mesh->device,"PatchSolveKernel");
     precon->approxPatchSolverKernel(mesh->Nelements,
                               precon->o_invAP,
@@ -36,7 +33,8 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
                               mesh->o_EToF,
                               mesh->o_rmapP,
                               o_r,
-                              o_Sr);
+                              o_zP);
+    meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
     occaTimerToc(mesh->device,"PatchSolveKernel");
   } else {
     occaTimerTic(mesh->device,"PatchSmoothKernel");

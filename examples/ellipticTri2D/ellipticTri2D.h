@@ -35,6 +35,7 @@ typedef struct {
   occa::kernel approxPatchSolverKernel;
 
   ogs_t *ogsP, *ogsDg;
+  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invAP;
@@ -129,7 +130,7 @@ void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options);
+precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 

@@ -182,7 +182,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(mesh, solver->ogs, tau, lambda, BCType,  options);
+  solver->precon = ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   solver->precon->preconKernel =
