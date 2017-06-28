@@ -1,0 +1,11 @@
+cl__1 = 1;
+Point(2) = {-2, 1.73205, 0, 2};
+Point(3) = {2, 1.73205, 0, 2};
+Point(4) = {0, -1.73205, 0, 2};
+Line(1) = {2, 4};
+Line(2) = {4, 3};
+Line(3) = {3, 2};
+Line Loop(4) = {1, 2, 3};
+Plane Surface(5) = {4};
+Physical Surface("Domain", 9) = {5};
+Physical Line("Inflow", 1) = {1, 2, 3};

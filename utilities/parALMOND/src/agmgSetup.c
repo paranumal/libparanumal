@@ -20,7 +20,9 @@ parAlmond_t * agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
   // approximate Nrows at coarsest level
-  const iint gCoarseSize = 100;
+  int gCoarseSize = 10;
+  if (strstr(options,"UBERGRID"))
+    gCoarseSize = 100;
 
   double seed = (double) rank;
   srand48(seed);
