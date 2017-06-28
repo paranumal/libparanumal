@@ -21,8 +21,8 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE, BLOCKJACOBI
   // method can be IPDG
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,APPROXPATCH coarse=COARSEGRID,ALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG,PROJECT preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
