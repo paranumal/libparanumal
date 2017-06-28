@@ -113,8 +113,8 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
 
     for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-        const dfloat sc = 2.0/(3.*p_N+4.);
-        //const dfloat sc = 0.25;
+        //const dfloat sc = 2.0/(3.*p_N+4.);
+        const dfloat sc = 0.25;
 
         invAPq[p_patchNp*e+es*p_Np+n] = sc*s_invAPq[es*p_Np+n];
       }
