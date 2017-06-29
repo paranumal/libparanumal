@@ -183,11 +183,12 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       permIndex[n+2*mesh->Np] = 2*mesh->Np + mesh->rmapP[r1*mesh->Np+n];
       permIndex[n+3*mesh->Np] = 3*mesh->Np + mesh->rmapP[r2*mesh->Np+n];
     }
+#if 0
     for(iint n=0;n<patchNp;++n){
       printf("[%d] ", permIndex[n]);
     }
     printf("\n");
-    
+#endif
     for(iint n=0;n<patchNp;++n){
       for(iint m=0;m<patchNp;++m){
 	iint pn = permIndex[n];
@@ -447,6 +448,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   // a' * 0 0
   // b' 0 * 0
   // c' 0 0 *
+  int refPatches = 0;
   *patchesInvA = (dfloat*) calloc(mesh->Nelements*mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1), sizeof(dfloat));
   *localInvA = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Np, sizeof(dfloat));
   for(iint eM=0;eM<mesh->Nelements;++eM){
@@ -474,6 +476,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 	  patchA[n*patchNp+m] = permInvA[blk*patchNp*patchNp+n*patchNp+m];
 	}
       }
+      ++refPatches;
     }
     else{
       // diagonal block
@@ -528,6 +531,8 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       matrixInverse(mesh->Np, localA);
     }
   }
+
+  printf("using %d reference patches\n", refPatches);
   
 #if 0
   FILE *fp = fopen("checkGeneralMatrix.m", "w");
