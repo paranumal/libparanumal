@@ -101,7 +101,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
       }
     }
   } else {
-    if (parAlmond->Acoarse != NULL) {
+    if (parAlmond->ExactSolve != NULL) {
       //use coarse sovler
       for (iint n=0;n<parAlmond->coarseTotal;n++)
         parAlmond->rhsCoarse[n] =0.;
@@ -109,7 +109,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
       for (iint n=0;n<mCoarse;n++)
         parAlmond->rhsCoarse[n+parAlmond->coarseOffset] = parAlmond->levels[k+1]->rhs[n];
 
-      xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse);
+      xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
 
       for (iint n=0;n<mCoarse;n++)
         parAlmond->levels[k+1]->x[n] = parAlmond->xCoarse[n+parAlmond->coarseOffset];
@@ -256,13 +256,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       }
     }
   } else{
-    if (parAlmond->Acoarse != NULL) {
+    if (parAlmond->ExactSolve != NULL) {
       //use coarse sovler
       for (iint n=0;n<parAlmond->coarseTotal;n++)
         parAlmond->rhsCoarse[n] =0.;
 
       parAlmond->levels[k+1]->o_rhs.copyTo(parAlmond->rhsCoarse+parAlmond->coarseOffset);
-      xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse);
+      xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       parAlmond->levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
       setVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);
@@ -308,7 +308,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   if(k+1 < parAlmond->numLevels - 1){
     vcycle(parAlmond,k+1);
   } else{
-    if (parAlmond->Acoarse != NULL) {
+    if (parAlmond->ExactSolve != NULL) {
       //use coarse sovler
       for (iint n=0;n<parAlmond->coarseTotal;n++)
         parAlmond->rhsCoarse[n] =0.;
@@ -316,7 +316,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
       for (iint n=0;n<mCoarse;n++)
         parAlmond->rhsCoarse[n+parAlmond->coarseOffset] = parAlmond->levels[k+1]->rhs[n];
 
-      xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse);
+      xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
 
       for (iint n=0;n<mCoarse;n++)
         parAlmond->levels[k+1]->x[n] = parAlmond->xCoarse[n+parAlmond->coarseOffset];
@@ -373,13 +373,13 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   if(k+1 < parAlmond->numLevels - 1){
     device_vcycle(parAlmond, k+1);
   }else{
-    if (parAlmond->Acoarse != NULL) {
+    if (parAlmond->ExactSolve != NULL) {
       //use coarse sovler
       for (iint n=0;n<parAlmond->coarseTotal;n++)
         parAlmond->rhsCoarse[n] =0.;
 
       parAlmond->levels[k+1]->o_rhs.copyTo(parAlmond->rhsCoarse+parAlmond->coarseOffset);
-      xxtSolve(parAlmond->xCoarse, parAlmond->Acoarse, parAlmond->rhsCoarse);
+      xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       parAlmond->levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
       //      setVector(parAlmond, mCoarse, parAlmond->levels[k+1]->o_x, 0.);

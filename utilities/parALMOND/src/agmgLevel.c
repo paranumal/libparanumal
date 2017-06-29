@@ -17,7 +17,7 @@ void interpolate(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_x, occ
   axpy(parAlmond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
 }
 
-void setup_smoother(agmgLevel *level, SmoothType s){
+void setupSmoother(agmgLevel *level, SmoothType s){
 
   level->stype = s;
 
@@ -232,6 +232,75 @@ void matFreeSmooth(parAlmond_t *parAlmond, agmgLevel *level, occa::memory &o_r, 
   }
 }
 
+//set up exact solver using xxt
+void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level) {
 
+  iint rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  iint* coarseOffsets = level->globalRowStarts;
+  iint coarseTotal = coarseOffsets[size];
+  iint coarseOffset = coarseOffsets[rank];
+  
+  iint *globalNumbering = (iint *) calloc(coarseTotal,sizeof(iint));
+  for (iint n=0;n<coarseTotal;n++)
+    globalNumbering[n] = n;
+
+  csr *A = level->A;
+  iint N = level->Nrows;
+
+  iint totalNNZ = A->diagNNZ+A->offdNNZ;
+  iint *rows;
+  iint *cols;
+  dfloat *vals;
+  if (totalNNZ) {
+    rows = (iint *) calloc(totalNNZ,sizeof(iint));
+    cols = (iint *) calloc(totalNNZ,sizeof(iint));
+    vals = (dfloat *) calloc(totalNNZ,sizeof(dfloat));
+  }
+
+  //populate matrix
+  int cnt = 0;
+  for (iint n=0;n<N;n++) {
+    for (iint m=A->diagRowStarts[n];m<A->diagRowStarts[n+1];m++) {
+      rows[cnt] = n + coarseOffset;
+      cols[cnt] = A->diagCols[m] + coarseOffset;
+      vals[cnt] = A->diagCoefs[m];
+      cnt++;
+    }
+    for (iint m=A->offdRowStarts[n];m<A->offdRowStarts[n+1];m++) {
+      rows[cnt] = n + coarseOffset;
+      cols[cnt] = A->colMap[A->offdCols[m]];
+      vals[cnt] = A->offdCoefs[m];
+      cnt++;
+    }
+  }
+
+  parAlmond->ExactSolve = xxtSetup(coarseTotal,
+                                globalNumbering,
+                                totalNNZ,
+                                rows,
+                                cols,
+                                vals,
+                                0,
+                                iintString,
+                                dfloatString);
+
+  parAlmond->coarseTotal = coarseTotal;
+  parAlmond->coarseOffset = coarseOffset;
+
+  parAlmond->xCoarse   = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
+  parAlmond->rhsCoarse = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
+
+  free(globalNumbering);
+  if (totalNNZ) {
+    free(rows);
+    free(cols);
+    free(vals);
+  }
+
+  printf("Done UberCoarse setup\n");
+}
 
 

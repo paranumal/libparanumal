@@ -526,24 +526,5 @@ extern "C"
   int amg2013Free(void* A);
 }
 
-void *parAlmondSetup(mesh_t *mesh,
-       iint* rowStarts,
-       iint  nnz,
-       iint* Ai,
-       iint* Aj,
-       dfloat* Avals,
-       hgs_t *hgs,
-       const char* options);
-
-void parAlmondPrecon(occa::memory o_x,
-    void* ALMOND,
-    occa::memory o_rhs);
-
-int parAlmondFree(void* A);
-
-void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
-                        void **args);
-
-
 #endif
 
