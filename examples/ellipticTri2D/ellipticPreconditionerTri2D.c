@@ -19,6 +19,7 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
   if (strstr(options,"PATCHSOLVE")) {
     occaTimerTic(mesh->device,"PatchSolveKernel");
     precon->patchSolverKernel(mesh->Nelements,
+			      precon->o_patchesIndex,
                               precon->o_invAP,
                               mesh->o_EToE,
                               precon->o_invDegreeAP,
@@ -37,6 +38,7 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
     //                          o_r,
     //                          o_zP);
     precon->patchSolverKernel(mesh->Nelements,
+			      precon->o_patchesIndex,
                               precon->o_invAP,
                               mesh->o_EToE,
                               precon->o_invDegreeAP,

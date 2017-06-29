@@ -144,6 +144,7 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
 
 // experimental overlapping patch solver
 kernel void ellipticPatchSolver2D(const int Nelements,
+				  const iint   * restrict patchesIndex,
                                   const dfloat * restrict invAP,
                                   const iint   * restrict EToE,
                                   const dfloat * restrict invDegree,
@@ -179,18 +180,19 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 	for(iint n=0;n<p_Np;++n;inner0){
 	  if(e<Nelements){
 	    const dfloat invDeg = invDegree[e];
-	    
-	    const iint offset = e*p_patchNp*p_patchNp + es*p_Np + n; // patch matrices offset
+
+	    // patch matrices offset
+	    const iint offset = patchesIndex[e]*p_patchNp*p_patchNp + es*p_Np + n;
 	    dfloat res1 = 0.f, res2 = 0.f, res3 = 0.f, res4 = 0.f;
 	    occaUnroll(p_Np)
 	      for(iint m=0;m<p_Np;++m){
-		res1 += invAP[offset + (m)*p_patchNp ]*s_q[e-eo][m];
-		res2 += invAP[offset + (m+p_Np)*p_patchNp ]*s_q[e-eo][m+p_Np];
+		res1 += invAP[offset + (m       )*p_patchNp ]*s_q[e-eo][m];
+		res2 += invAP[offset + (m  +p_Np)*p_patchNp ]*s_q[e-eo][m+p_Np];
 		res3 += invAP[offset + (m+2*p_Np)*p_patchNp ]*s_q[e-eo][m+2*p_Np];
 		res4 += invAP[offset + (m+3*p_Np)*p_patchNp ]*s_q[e-eo][m+3*p_Np];
 	      }
 	    
-	    const dfloat sc = .4;
+	    const dfloat sc = .33;
 	    
 	    invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*(res1+res2+res3+res4);
 	  }
