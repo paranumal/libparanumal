@@ -662,4 +662,45 @@ for n=1:size(A,1)
   fprintf(fid, '\n');
 end
 
+%% degree raising interpolation
+[rP1,sP1] = Nodes2D(N+1);
+[rP1,sP1] = xytors(rP1,sP1);
+
+VP1 = Vandermonde2D(N, rP1, sP1);
+IP1 = VP1/V;
+NpP1 = length(rP1);
+
+fprintf(fid, '%% degree raising interpolation matrix\n')
+fprintf(fid, '%d %d\n', NpP1, Np);
+for n=1:NpP1
+  for m=1:Np
+    fprintf(fid, '%17.15E ', IP1(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+%% degree lowering interpolation
+if(N>1)
+[rM1,sM1] = Nodes2D(N-1);
+[rM1,sM1] = xytors(rM1,sM1);
+else
+%% hard code degree 0
+rM1 = -1/3;
+sM1 = -1/3;
+end
+
+VM1 = Vandermonde2D(N, rM1, sM1);
+IM1 = VM1/V;
+NpM1 = length(rM1);
+
+fprintf(fid, '%% degree lowering interpolation matrix\n')
+fprintf(fid, '%d %d\n', NpM1, Np);
+for n=1:NpM1
+  for m=1:Np
+    fprintf(fid, '%17.15E ', IM1(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
 fclose(fid)
