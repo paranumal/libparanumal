@@ -469,19 +469,15 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
     iint fP1 = mesh->EToF[eM*mesh->Nfaces+1];
     iint fP2 = mesh->EToF[eM*mesh->Nfaces+2];
 
+#if 1
     if(eP0>=0 && eP1>=0 && eP2>=0){
       iint blk = fP0 + mesh->Nfaces*fP1 + mesh->Nfaces*mesh->Nfaces*fP2;
-#if 0
-      for(iint n=0;n<patchNp;++n){
-	for(iint m=0;m<patchNp;++m){
-	  patchA[n*patchNp+m] = permInvA[blk*patchNp*patchNp+n*patchNp+m];
-	}
-      }
-#endif
+
       ++refPatches;
       (*patchesIndex)[eM] = blk;
     }
     else
+#endif
       {
 	dfloat *patchA = patchesInvA[0] + blkCounter*patchNp*patchNp;
 	
