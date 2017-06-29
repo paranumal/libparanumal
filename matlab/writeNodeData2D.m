@@ -569,10 +569,11 @@ EToV = [1,2,3;
 	3,2,5;
 	1,3,6];
 
+bc = Dirichlet;
 BCType = [0,0,0;
-	  0,3,3;
-	  0,3,3;
-	  0,3,3]; %3 is a special flag for unconnected internal edge
+	  0,bc,bc;
+	  0,bc,bc;
+	  0,bc,bc]; %3 is a special flag for unconnected internal edge
 
 StartUp2D;
 

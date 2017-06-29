@@ -15,9 +15,9 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  //device_kcycle(parAlmond, 0);
+  device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
-  device_pcg(parAlmond,1000,1e-8);
+  //device_pcg(parAlmond,1000,1e-8);
 
   //host versions
   //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
