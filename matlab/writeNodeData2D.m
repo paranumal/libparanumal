@@ -569,7 +569,7 @@ EToV = [1,2,3;
 	3,2,5;
 	1,3,6];
 
-bc = Dirichlet;
+	      bc = 3; %Dirichlet;
 BCType = [0,0,0;
 	  0,bc,bc;
 	  0,bc,bc;
