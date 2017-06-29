@@ -167,11 +167,21 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
     iint f1 = (blk/mesh->Nfaces)%mesh->Nfaces;
     iint f2= (blk/(mesh->Nfaces*mesh->Nfaces));
 
+#if 1
+    iint r0 = (f0==0) ? 0: mesh->Nfaces-f0;
+    iint r1 = (f1==0) ? 0: mesh->Nfaces-f1;
+    iint r2 = (f2==0) ? 0: mesh->Nfaces-f2;
+#else
+    iint r0 = f0;
+    iint r1 = f1;
+    iint r2 = f2;
+#endif
+    
     for(iint n=0;n<mesh->Np;++n){
       permIndex[n+0*mesh->Np] = 0*mesh->Np + n;
-      permIndex[n+1*mesh->Np] = 1*mesh->Np + mesh->rmapP[f0*mesh->Np+n];
-      permIndex[n+2*mesh->Np] = 2*mesh->Np + mesh->rmapP[f1*mesh->Np+n];
-      permIndex[n+3*mesh->Np] = 3*mesh->Np + mesh->rmapP[f2*mesh->Np+n];
+      permIndex[n+1*mesh->Np] = 1*mesh->Np + mesh->rmapP[r0*mesh->Np+n];
+      permIndex[n+2*mesh->Np] = 2*mesh->Np + mesh->rmapP[r1*mesh->Np+n];
+      permIndex[n+3*mesh->Np] = 3*mesh->Np + mesh->rmapP[r2*mesh->Np+n];
     }
     for(iint n=0;n<patchNp;++n){
       printf("[%d] ", permIndex[n]);

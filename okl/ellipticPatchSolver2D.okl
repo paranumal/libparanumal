@@ -189,13 +189,13 @@ kernel void ellipticPatchSolver2D(const int Nelements,
         s_invAPq[es*p_Np+n] = res;
       }
     }
-
+ 
     barrier(localMemFence);
 
     for(iint es=0;es<p_patchNelements;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
         const dfloat invDeg = invDegree[e];
-        const dfloat sc = 1.;
+        const dfloat sc = .4;
 
         invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*s_invAPq[es*p_Np+n];
       }
@@ -233,7 +233,7 @@ kernel void ellipticLocalPatchSolver2D(const int Nelements,
           res += invAP[offset + m*p_Np]*s_q[m];
         }
 
-      const dfloat sc = 1.;
+      const dfloat sc = .1;
 
       invAPq[p_Np*e+n] = sc*res;
     }
