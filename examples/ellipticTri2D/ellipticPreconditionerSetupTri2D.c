@@ -443,14 +443,15 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       Vals[n] = A[n].val;
     }
 
-    precon->parAlmond = parAlmondSetup(mesh,
-                                   globalStarts,
-                                   nnz,
-                                   Rows,
-                                   Cols,
-                                   Vals,
-                                   hgs,
-                                   options);
+    precon->parAlmond = parAlmondInit(mesh, options);
+    parAlmondAgmgSetup(precon->parAlmond,
+                   globalStarts,
+                   nnz,
+                   Rows,
+                   Cols,
+                   Vals,
+                   hgs,
+                   options);
 
     free(A); free(Rows); free(Cols); free(Vals);
   }

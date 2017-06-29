@@ -94,14 +94,15 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     Vals[n] = A[n].val;
   }
   
-  precon->parAlmond = parAlmondSetup(mesh,
-                                     globalStarts,
-                                     nnz,
-                                     Rows,
-                                     Cols,
-                                     Vals,
-                                     hgs,
-                                     options); 
+  precon->parAlmond = parAlmondInit(mesh, options);
+  parAlmondAgmgSetup(precon->parAlmond,
+                     globalStarts,
+                     nnz,
+                     Rows,
+                     Cols,
+                     Vals,
+                     hgs,
+                     options); 
 
   precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
