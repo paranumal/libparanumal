@@ -35,6 +35,63 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   }
 }
 
+parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
+  
+  parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
+
+  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels. 
+  parAlmond->device = mesh->device;
+
+  parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
+  parAlmond->numLevels = 0;
+  parAlmond->ktype = PCG;
+}
+
+
+void * parAlmondAgmgSetup(parAlmond_t *parAlmond, 
+       iint* globalRowStarts,       //global partition
+       iint  nnz,                   //--
+       iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
+       iint* Aj,                    //--
+       dfloat* Avals,               //--
+       hgs_t *hgs,                  // gs op for problem assembly (to be removed in future?)
+       const char* options){
+  
+  iint size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
+
+  csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
+
+  //populate null space vector
+  dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
+  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1;
+
+  agmgSetup(parAlmond,A, nullA, globalRowStarts, options);
+
+  parAlmond->hgs = hgs;
+
+  mesh_t *mesh = parAlmond->mesh;
+
+  //buffers for matrix-free action
+  parAlmond->o_x = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
+  parAlmond->o_Ax = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
+
+  sync_setup_on_device(parAlmond);
+
+  if (strstr(options, "VERBOSE")) 
+    parAlmondReport(parAlmond);
+  
+  return (void *) parAlmond;
+}
+
+//TODO code this
+int parAlmondFree(void* A) {
+  return 0;
+}
+
 void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memory &o_Ax){
 
   mesh_t* mesh = parAlmond->mesh;
@@ -63,46 +120,4 @@ void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory 
   parAlmond->MatFreeAx = MatFreeAx;
   parAlmond->MatFreeArgs = args;
 
-}
-
-void * parAlmondSetup(mesh_t *mesh, //mesh data
-       iint* globalRowStarts,       //global partition
-       iint  nnz,                   //--
-       iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
-       iint* Aj,                    //--
-       dfloat* Avals,               //--
-       hgs_t *hgs,                  // gs op for problem assembly (to be removed in future)
-       const char* options)
-{
-  iint size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
-
-  csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
-
-  //populate null space vector
-  dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1;
-
-  parAlmond_t *parAlmond = agmgSetup(A, nullA, globalRowStarts, options);
-
-  parAlmond->mesh = mesh;
-  parAlmond->hgs = hgs;
-  parAlmond->options = options;
-  parAlmond->ktype = PCG;
-
-  //buffers for matrix-free action
-  parAlmond->o_x = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
-  parAlmond->o_Ax = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
-
-  sync_setup_on_device(parAlmond, mesh->device);
-  parAlmondReport(parAlmond);
-  return (void *) parAlmond;
-}
-
-//TODO code this
-int parAlmondFree(void* A) {
-  return 0;
 }

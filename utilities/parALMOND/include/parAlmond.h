@@ -28,7 +28,7 @@ typedef struct {
   void **MatFreeArgs;
 
 	//Coarse xxt solver
-	void *Acoarse;
+	void *ExactSolve;
 	iint coarseTotal;
 	iint coarseOffset;
   dfloat *xCoarse, *rhsCoarse;
@@ -63,8 +63,28 @@ typedef struct {
 #include "vectorPrimitives.h"
 
 
-parAlmond_t *agmgSetup(csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
-void sync_setup_on_device(parAlmond_t *parAlmond, occa::device dev);
+parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options);
+
+void *parAlmondAgmgSetup(parAlmond_t *parAlmond,
+       iint* rowStarts,
+       iint  nnz,
+       iint* Ai,
+       iint* Aj,
+       dfloat* Avals,
+       hgs_t *hgs,
+       const char* options);
+
+void parAlmondPrecon(occa::memory o_x,
+    void* ALMOND,
+    occa::memory o_rhs);
+
+int parAlmondFree(void* A);
+
+void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
+                        void **args);
+
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
+void sync_setup_on_device(parAlmond_t *parAlmond);
 void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 
