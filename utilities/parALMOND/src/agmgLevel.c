@@ -1,21 +1,54 @@
 #include "parAlmond.h"
 
-//TODO do we really need these functions? just replace their calls
-void restrict(agmgLevel *level, dfloat *r, dfloat *Rr){
+// parAlmond's function call-backs
+void agmgCoarsen(void **args, dfloat *r, dfloat *Rr){
+  agmgLevel *level = (agmgLevel *) args[1];
+  
   axpy(level->R, 1.0, r, 0.0, Rr);
 }
 
-void restrict(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_r, occa::memory o_Rr){
-  axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
-}
-
-void interpolate(agmgLevel *level, dfloat *x, dfloat *Px){
+void agmgProlongate(void **args, dfloat *x, dfloat *Px){
+  agmgLevel *level = (agmgLevel *) args[1];
+  
   axpy(level->P, 1.0, x, 1.0, Px);
 }
 
-void interpolate(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_x, occa::memory o_Px){
+void agmgSmooth(void **args, dfloat *rhs, dfloat *x, bool x_is_zero){
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  if(level->stype == JACOBI){
+    smoothJacobi(level->A, rhs, x, x_is_zero);
+  } else if(level->stype == DAMPED_JACOBI){
+    smoothDampedJacobi(level->A, rhs, x, level->smoother_params[0], x_is_zero);
+  }
+}
+
+void device_agmgCoarsen(void **args, occa::memory o_r, occa::memory o_Rr){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
+}
+
+void device_agmgProlongate(void **args, occa::memory o_x, occa::memory o_Px){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  agmgLevel *level = (agmgLevel *) args[1];
+  
   axpy(parAlmond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
 }
+
+void device_agmgSmooth(void **args, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  if(level->stype == JACOBI){
+    smoothJacobi(parAlmond, level->deviceA, o_rhs, o_x, x_is_zero);
+  } else if(level->stype == DAMPED_JACOBI){
+    smoothDampedJacobi(parAlmond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
+  }
+}
+
+dfloat rhoDinvA(csr *A, dfloat *invD);
 
 void setupSmoother(agmgLevel *level, SmoothType s){
 
@@ -191,45 +224,6 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
   }
 
   return rho;
-}
-
-
-void smooth(agmgLevel *level, dfloat *rhs, dfloat *x, bool x_is_zero){
-  if(level->stype == JACOBI){
-    smoothJacobi(level->A, rhs, x, x_is_zero);
-    return;
-  }
-
-  if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(level->A, rhs, x, level->smoother_params[0], x_is_zero);
-    return;
-  }
-}
-
-
-void smooth(parAlmond_t *parAlmond, agmgLevel *level, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
-
-  if(level->stype == JACOBI){
-    smoothJacobi(parAlmond, level->deviceA, o_rhs, o_x, x_is_zero);
-    return;
-  }
-
-  if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(parAlmond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
-    return;
-  }
-}
-
-void matFreeSmooth(parAlmond_t *parAlmond, agmgLevel *level, occa::memory &o_r, occa::memory &o_x, bool x_is_zero) {
-  if(level->stype == JACOBI){
-    matFreeSmoothJacobi(parAlmond, level->deviceA, o_r, o_x, x_is_zero);
-    return;
-  }
-
-  if(level->stype == DAMPED_JACOBI){
-    matFreeSmoothDampedJacobi(parAlmond, level->deviceA, o_r, o_x, level->smoother_params[0], x_is_zero);
-    return;
-  }
 }
 
 //set up exact solver using xxt
