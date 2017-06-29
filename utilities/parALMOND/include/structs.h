@@ -145,12 +145,30 @@ typedef struct agmgLevel_t {
   iint Nrows;
   iint Ncols;
 
+  iint *globalRowStarts; //global partitioning of fine level
+  iint *globalAggStarts; //global partitioning of coarse level
+
+  void **AxArgs;
+  void **smootherArgs;
+  void **coarsenArgs;
+  void **prolongateArgs;
+
+  //operator call-backs
+  void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax);
+  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
+  void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
+  void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px);
+
+  //host versions
+  void (*Ax)(void **args, dfloat *x, dfloat *Ax);
+  void (*smooth)(void **args, dfloat *r, dfloat *x, bool x_is_zero);
+  void (*coarsen)(void **args, dfloat *x, dfloat *Rx);
+  void (*prolongate)(void **args, dfloat *x, dfloat *Px);
+
+  //agmg operators
   csr *A;
   csr *P;
   csr *R;
-
-  iint *globalRowStarts; //global partitioning of fine level
-  iint *globalAggStarts; //global partitioning of coarse level
 
   hyb  *deviceA;
   dcoo  *dcsrP;
