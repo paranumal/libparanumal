@@ -67,7 +67,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
-                                   dfloat **patchesInvA, dfloat **localInvA,                            
+                                   iint **patchesIndex, dfloat **patchesInvA, dfloat **localInvA,                            
                                    const char *options){
   
   iint size, rankM;
@@ -150,17 +150,20 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
         }
         
         MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Nfp]  = MSnm;
-        printf("%g ", MSnm);
+	//        printf("%g ", MSnm);
       }
-      printf("\n");
+      //      printf("\n");
     }
   }
 
   iint blockCount = 0;
   iint patchNp = mesh->Np*(mesh->Nfaces+1);
   iint Nperm = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces;
-  dfloat *permInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
+  //  dfloat *permInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
   iint *permIndex = (iint*) calloc(patchNp, sizeof(dfloat));
+  *patchesInvA = (dfloat*) calloc((Nperm+mesh->Nelements)*patchNp*patchNp, sizeof(dfloat));
+
+  int blkCounter = 0;
   
   for(iint blk=0;blk<Nperm;++blk){
     iint f0 = blk%mesh->Nfaces;
@@ -189,18 +192,20 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
     }
     printf("\n");
 #endif
+
     for(iint n=0;n<patchNp;++n){
       for(iint m=0;m<patchNp;++m){
 	iint pn = permIndex[n];
 	iint pm = permIndex[m];
-	permInvA[blk*patchNp*patchNp + n*patchNp + m] = mesh->invAP[pn*patchNp+pm]; // maybe need to switch map
+	(*patchesInvA)[blkCounter*patchNp*patchNp + n*patchNp + m] = mesh->invAP[pn*patchNp+pm]; // maybe need to switch map
       }
     }
+    ++blkCounter;
   }
   
   // reset non-zero counter
   int nnz = 0;
-
+  
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
   // TW: ONLY NON-MPI FOR THE MOMENT
@@ -449,17 +454,12 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   // b' 0 * 0
   // c' 0 0 *
   int refPatches = 0;
-  *patchesInvA = (dfloat*) calloc(mesh->Nelements*mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1), sizeof(dfloat));
+
+  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
   *localInvA = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Np, sizeof(dfloat));
+
   for(iint eM=0;eM<mesh->Nelements;++eM){
-    dfloat *patchA = patchesInvA[0] + eM*patchNp*patchNp;
     dfloat *localA = localInvA[0] + eM*mesh->Np*mesh->Np;
-    for(iint n=0;n<patchNp;++n){
-      patchA[n+patchNp*n] = 1; // make sure diagonal is at least identity
-    }
-    for(iint n=0;n<mesh->Np;++n){
-      localA[n+mesh->Np*n] = 1; // make sure diagonal is at least identity
-    }
 
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
@@ -469,72 +469,85 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
     iint fP1 = mesh->EToF[eM*mesh->Nfaces+1];
     iint fP2 = mesh->EToF[eM*mesh->Nfaces+2];
 
-#if 1
     if(eP0>=0 && eP1>=0 && eP2>=0){
       iint blk = fP0 + mesh->Nfaces*fP1 + mesh->Nfaces*mesh->Nfaces*fP2;
+#if 0
       for(iint n=0;n<patchNp;++n){
 	for(iint m=0;m<patchNp;++m){
 	  patchA[n*patchNp+m] = permInvA[blk*patchNp*patchNp+n*patchNp+m];
 	}
       }
+#endif
       ++refPatches;
+      (*patchesIndex)[eM] = blk;
     }
     else
-#endif
       {
-      // diagonal block
-      for(iint n=0;n<mesh->Np;++n){
-	for(iint m=0;m<mesh->Np;++m){
-	  iint id = n*patchNp + m;
-	  iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
-	  patchA[id] = blocksA[offset + n*mesh->Np+m];
-	  localA[n*mesh->Np+m] = blocksA[offset + n*mesh->Np+m];
+	dfloat *patchA = patchesInvA[0] + blkCounter*patchNp*patchNp;
+	
+	for(iint n=0;n<patchNp;++n){
+	  patchA[n+patchNp*n] = 1; // make sure diagonal is at least identity
 	}
-      }
-      
-      // load diagonal blocks
-      for(iint f=0;f<mesh->Nfaces;++f){
-	iint eP = mesh->EToE[eM*mesh->Nfaces+f];
-	if(eP>=0){
-	  for(iint n=0;n<mesh->Np;++n){
-	    for(iint m=0;m<mesh->Np;++m){
-	      iint id = ((f+1)*mesh->Np+n)*patchNp + ((f+1)*mesh->Np+m);
-	      iint offset = eP*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
-	      patchA[id] = blocksA[offset + n*mesh->Np+m];
+	for(iint n=0;n<mesh->Np;++n){
+	  localA[n+mesh->Np*n] = 1; // make sure diagonal is at least identity
+	}
+	
+	// diagonal block
+	for(iint n=0;n<mesh->Np;++n){
+	  for(iint m=0;m<mesh->Np;++m){
+	    iint id = n*patchNp + m;
+	    iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
+	    patchA[id] = blocksA[offset + n*mesh->Np+m];
+	    localA[n*mesh->Np+m] = blocksA[offset + n*mesh->Np+m];
+	  }
+	}
+	
+	// load diagonal blocks
+	for(iint f=0;f<mesh->Nfaces;++f){
+	  iint eP = mesh->EToE[eM*mesh->Nfaces+f];
+	  if(eP>=0){
+	    for(iint n=0;n<mesh->Np;++n){
+	      for(iint m=0;m<mesh->Np;++m){
+		iint id = ((f+1)*mesh->Np+n)*patchNp + ((f+1)*mesh->Np+m);
+		iint offset = eP*(mesh->Nfaces+1)*mesh->Np*mesh->Np;
+		patchA[id] = blocksA[offset + n*mesh->Np+m];
+	      }
 	    }
 	  }
 	}
-      }
-      
-      // load off diagonal blocks ( rely on symmetry )
-      for(iint f=0;f<mesh->Nfaces;++f){
-	for(iint n=0;n<mesh->Np;++n){
-	  for(iint m=0;m<mesh->Np;++m){
-	    iint id = n*patchNp + ((f+1)*mesh->Np+m);
-	    iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np + (f+1)*mesh->Np*mesh->Np;
-	    patchA[id] = blocksA[offset + n*mesh->Np+m];
-	    
-	    iint idT = n + ((f+1)*mesh->Np+m)*patchNp;
-	    patchA[idT] = blocksA[offset + n*mesh->Np+m];
+	
+	// load off diagonal blocks ( rely on symmetry )
+	for(iint f=0;f<mesh->Nfaces;++f){
+	  for(iint n=0;n<mesh->Np;++n){
+	    for(iint m=0;m<mesh->Np;++m){
+	      iint id = n*patchNp + ((f+1)*mesh->Np+m);
+	      iint offset = eM*(mesh->Nfaces+1)*mesh->Np*mesh->Np + (f+1)*mesh->Np*mesh->Np;
+	      patchA[id] = blocksA[offset + n*mesh->Np+m];
+	      
+	      iint idT = n + ((f+1)*mesh->Np+m)*patchNp;
+	      patchA[idT] = blocksA[offset + n*mesh->Np+m];
+	    }
 	  }
 	}
+	//    printf("------------------\n");
+	//    for(iint n=0;n<patchNp;++n){
+	//      for(iint m=0;m<patchNp;++m){
+	//	if(fabs(patchA[n*patchNp+m])>1e-10)
+	//	  printf("x");
+	//	else
+	//    	  printf("o");
+	//      }
+	//      printf("\n");
+	//    }
+	// in place inverse (patchA points into patchesInvA[0])
+	matrixInverse(patchNp, patchA);
+	matrixInverse(mesh->Np, localA);
+	
+	(*patchesIndex)[eM] = blkCounter;
+	++blkCounter;
       }
-//    printf("------------------\n");
-//    for(iint n=0;n<patchNp;++n){
-//      for(iint m=0;m<patchNp;++m){
-//	if(fabs(patchA[n*patchNp+m])>1e-10)
-//	  printf("x");
-//	else
-//    	  printf("o");
-//      }
-//      printf("\n");
-//    }
-    // in place inverse (patchA points into patchesInvA[0])
-      matrixInverse(patchNp, patchA);
-      matrixInverse(mesh->Np, localA);
-    }
   }
-
+  
   printf("using %d reference patches\n", refPatches);
   
 #if 0

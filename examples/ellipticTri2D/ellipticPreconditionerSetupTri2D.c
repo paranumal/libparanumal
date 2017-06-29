@@ -49,7 +49,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
-                                   dfloat **patchesInvA, dfloat **localA,
+                                   iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
                                    const char *options);
 
 precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
@@ -282,6 +282,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       nonZero_t *A;
       dfloat *invAP;
       dfloat *localInvA;
+      iint *patchesIndex;
       hgs_t *hgs;
 
       NpP = mesh->Np*(mesh->Nfaces+1);
@@ -289,11 +290,14 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
       //initialize the full inverse operators on each 4 element patch
       ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
-                                   BCType, &A, &nnz, &hgs, globalStarts,
-                                   &invAP, &localInvA, options);
+				    BCType, &A, &nnz, &hgs, globalStarts,
+				    &patchesIndex, &invAP, &localInvA, options);
 
+      iint Npatches = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces+mesh->Nelements; // TW: HACK FOR THE MOMENT
+      
       if (strstr(options,"PATCHSOLVE")) {
-        precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
+        precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
+	precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
       } else if (strstr(options,"APPROXPATCH")) {
         for (iint e =0;e<mesh->Nelements;e++) {
           //check if this is a boudary element
@@ -310,7 +314,8 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
         //set reference patch inverse
         //precon->o_invAP = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->invAP);
-        precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
+	// TW: HACK FOR THE MOMENT (FIX LATER)
+        precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
 
         //rotated node ids of neighbouring element
         mesh->o_rmapP = mesh->device.malloc(mesh->Np*mesh->Nfaces*sizeof(iint),mesh->rmapP);
@@ -318,8 +323,8 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       } else if (strstr(options,"LOCALPATCH")) {
         //initialize the full inverse operators on each 4 element patch
         ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
-                                   BCType, &A, &nnz, &hgs, globalStarts,
-                                   &invAP, &localInvA, options);
+				      BCType, &A, &nnz, &hgs, globalStarts,
+				      &patchesIndex, &invAP, &localInvA, options);
 
         precon->o_invAP = mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Np*sizeof(dfloat),localInvA);
       }
