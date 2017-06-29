@@ -6,7 +6,7 @@
 #include "mesh2D.h"
 
 // block size for reduction (hard coded)
-#define blockSize 256 
+#define blockSize 256
 
 typedef struct {
 
@@ -24,12 +24,12 @@ typedef struct {
 
   occa::memory o_oasForwardDgT;
   occa::memory o_oasBackDgT;
-  
+
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
 
   occa::kernel coarsenKernel;
-  occa::kernel prolongateKernel;  
+  occa::kernel prolongateKernel;
 
   occa::kernel patchSolverKernel;
   occa::kernel approxPatchSolverKernel;
@@ -40,6 +40,7 @@ typedef struct {
 
   occa::memory o_diagA;
   occa::memory o_invAP;
+  occa::memory o_invDegreeAP;
 
   // coarse grid basis for preconditioning
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
@@ -61,7 +62,7 @@ typedef struct {
 
   // block Jacobi precon
   occa::memory o_invMM;
-  occa::kernel blockJacobiKernel;  
+  occa::kernel blockJacobiKernel;
 } precon_t;
 
 
@@ -80,7 +81,7 @@ typedef struct {
   iint Nblock;
 
   dfloat tau;
-  
+
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
 

@@ -15,16 +15,16 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  device_kcycle(parAlmond, 0);
+  //device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
-  //device_pcg(parAlmond,1000,1e-8);
+  device_pcg(parAlmond,1000,1e-8);
 
   //host versions
-  //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);  
+  //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
   //kcycle(parAlmond,0);
   //vcycle(parAlmond,0);
   //pcg(parAlmond,1000,1e-8);
-  //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);  
+  //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
 
   //scatter the result
   if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")

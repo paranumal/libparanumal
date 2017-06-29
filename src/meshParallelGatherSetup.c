@@ -11,10 +11,10 @@ typedef struct {
   iint localId;
   iint globalId;
   iint ownerRank;
-  
+
 }parallelNode_t;
 
-// compare on global owners 
+// compare on global owners
 int parallelCompareOwnersAndGlobalId(const void *a, const void *b){
 
   parallelNode_t *fa = (parallelNode_t*) a;
@@ -22,6 +22,9 @@ int parallelCompareOwnersAndGlobalId(const void *a, const void *b){
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (fb->globalId<0) return -1; //move negative indices to end
+  if (fa->globalId<0) return 1;
 
   if ((fa->ownerRank==rank)&&(fb->ownerRank!=rank)) return -1;
   if ((fa->ownerRank!=rank)&&(fb->ownerRank==rank)) return  1;
@@ -32,10 +35,10 @@ int parallelCompareOwnersAndGlobalId(const void *a, const void *b){
   if(fa->globalId < fb->globalId) return -1;
   if(fa->globalId > fb->globalId) return +1;
 
-  return 0;  
+  return 0;
 }
 
-// compare on global indices 
+// compare on global indices
 int parallelCompareGlobalId(const void *a, const void *b){
 
   parallelNode_t *fa = (parallelNode_t*) a;
@@ -44,11 +47,9 @@ int parallelCompareGlobalId(const void *a, const void *b){
   if(fa->globalId < fb->globalId) return -1;
   if(fa->globalId > fb->globalId) return +1;
 
-  return 0;  
+  return 0;
 }
 
-// assume nodes locally sorted by rank then global index
-// assume gather and scatter are the same sets
 hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
 				      iint Nlocal,     // number of local nodes
 				      iint *globalNumbering,  // global index of nodes
@@ -57,10 +58,8 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   iint rank,size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
-  hgs_t *hgs = (hgs_t*) calloc(1, sizeof(hgs_t));
 
-  hgs->Nlocal = Nlocal;
+  hgs_t *hgs = (hgs_t*) calloc(1, sizeof(hgs_t));
 
   parallelNode_t *nodes = (parallelNode_t *) calloc(Nlocal,sizeof(parallelNode_t));
 
@@ -74,6 +73,14 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   //sort by owning rank
   qsort(nodes, Nlocal, sizeof(parallelNode_t), parallelCompareOwnersAndGlobalId);
 
+  //count number of entries to gather (negative global ids are ignored)
+  hgs->Nlocal = 0;
+  for (iint n=0;n<Nlocal;n++) {
+    if (nodes[n].globalId<0) break;
+    hgs->Nlocal++;
+  }
+  Nlocal = hgs->Nlocal;
+
   //record this ordering
   hgs->sortIds = (iint *) calloc(Nlocal,sizeof(iint));
   for (iint n=0;n<Nlocal;n++)
@@ -81,7 +88,7 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
 
   //count how many nodes we're sending
   hgs->Nsend = (iint *) calloc(size,sizeof(iint));
-  for (iint n=0;n<Nlocal;n++)    
+  for (iint n=0;n<Nlocal;n++)
     hgs->Nsend[nodes[n].ownerRank]++;
 
   //share how many nodes we're sending
@@ -146,12 +153,12 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   // Wait for all sent messages to have left and received messages to have arrived
   MPI_Status *sendStatus = (MPI_Status*) calloc(sendMessage, sizeof(MPI_Status));
   MPI_Status *recvStatus = (MPI_Status*) calloc(recvMessage, sizeof(MPI_Status));
-  
+
   MPI_Waitall(recvMessage, (MPI_Request*)hgs->haloRecvRequests, recvStatus);
   MPI_Waitall(sendMessage, (MPI_Request*)hgs->haloSendRequests, sendStatus);
-  
+
   free(recvStatus);
-  free(sendStatus);   
+  free(sendStatus);
 
   free(nodes);
 
@@ -189,12 +196,12 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   //make offsets from running total of counts
   for (iint n=1;n<hgs->Ngather+1;n++)
     hgs->gatherOffsets[n] += hgs->gatherOffsets[n-1];
-  
+
   //finally, record the new local index of each node to gather
   hgs->gatherLocalIds = (iint *) calloc(NownedTotal,sizeof(iint));
-  for (iint n=0;n<NownedTotal;n++) 
+  for (iint n=0;n<NownedTotal;n++)
     hgs->gatherLocalIds[n] = newNodes[n].localId;
-  
+
   free(newNodes);
 
   //allocate device storage buffers
