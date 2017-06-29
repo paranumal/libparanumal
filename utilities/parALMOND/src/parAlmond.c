@@ -35,20 +35,23 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   }
 }
 
-parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
+void *parAlmondInit(mesh_t *mesh, const char* options) {
   
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
   parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels. 
   parAlmond->device = mesh->device;
+  parAlmond->options = options;
 
   parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
   parAlmond->numLevels = 0;
   parAlmond->ktype = PCG;
+
+  return (void *) parAlmond;
 }
 
 
-void * parAlmondAgmgSetup(parAlmond_t *parAlmond, 
+void parAlmondAgmgSetup(void *Almond, 
        iint* globalRowStarts,       //global partition
        iint  nnz,                   //--
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
@@ -60,6 +63,8 @@ void * parAlmondAgmgSetup(parAlmond_t *parAlmond,
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  parAlmond_t *parAlmond = (parAlmond_t *) Almond;
 
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
@@ -83,8 +88,6 @@ void * parAlmondAgmgSetup(parAlmond_t *parAlmond,
 
   if (strstr(options, "VERBOSE")) 
     parAlmondReport(parAlmond);
-  
-  return (void *) parAlmond;
 }
 
 //TODO code this

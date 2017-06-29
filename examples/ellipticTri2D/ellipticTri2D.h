@@ -4,7 +4,6 @@
 #include <string.h>
 #include "mpi.h"
 #include "mesh2D.h"
-#include "parAlmond.h"
 
 // block size for reduction (hard coded)
 #define blockSize 256
