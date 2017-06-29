@@ -10,7 +10,7 @@ void ellipticBuildAmgLevelsTri2D(solver_t *solver){
   int Nlevels = mesh->N;
   mesh2D **meshLevels = (mesh2D**) calloc(Nlevels, sizeof(mesh2D*));
 
-  for(int level=Nlevels-1;level>=0;--level){ // hard coded for all degrees at the moment
+  for(int level=Nlevels-1;level>=1;--level){ // hard coded for all degrees at the moment
 
     // hard code degree for this level
     iint levelN = level; 
