@@ -158,10 +158,11 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
 
   iint blockCount = 0;
   iint patchNp = mesh->Np*(mesh->Nfaces+1);
-  dfloat *permInvA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));
+  iint Nperm = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces;
+  dfloat *permInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
   iint *permIndex = (iint*) calloc(patchNp, sizeof(dfloat));
   
-  for(iint blk=0;blk<mesh->Nfaces*mesh->Nfaces*mesh->Nfaces;++blk){
+  for(iint blk=0;blk<Nperm;++blk){
     iint f0 = blk%mesh->Nfaces;
     iint f1 = (blk/mesh->Nfaces)%mesh->Nfaces;
     iint f2= (blk/(mesh->Nfaces*mesh->Nfaces));
@@ -172,9 +173,13 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
       permIndex[n+2*mesh->Np] = 2*mesh->Np + mesh->rmapP[f1*mesh->Np+n];
       permIndex[n+3*mesh->Np] = 3*mesh->Np + mesh->rmapP[f2*mesh->Np+n];
     }
+    for(iint n=0;n<patchNp;++n){
+      printf("[%d] ", permIndex[n]);
+    }
+    printf("\n");
     
     for(iint n=0;n<patchNp;++n){
-      for(iint m=0;m<mesh->Np;++n){
+      for(iint m=0;m<patchNp;++m){
 	iint pn = permIndex[n];
 	iint pm = permIndex[m];
 	permInvA[blk*patchNp*patchNp + n*patchNp + m] = mesh->invAP[pn*patchNp+pm]; // maybe need to switch map
