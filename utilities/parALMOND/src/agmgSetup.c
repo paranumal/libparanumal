@@ -3,16 +3,16 @@
 csr *strong_graph(csr *A, dfloat threshold);
 bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i);
 iint *form_aggregates(agmgLevel *level, csr *C);
-void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA);
 void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse);
-csr *galerkinProd(agmgLevel *level);
-csr * transpose(agmgLevel* level, csr *A, iint *globalRowStarts, iint *globalColStarts);
-void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA);
+csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA);
+csr *transpose(agmgLevel* level, csr *A, iint *globalRowStarts, iint *globalColStarts);
+csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA);
 
 
 
 void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
-  
+
   iint rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -36,9 +36,25 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //copy A matrix and null vector
   levels[lev]->A = A;
   levels[lev]->nullA = nullA;
+  levels[lev]->deviceA = newHYB(parAlmond, levels[lev]->A);
+
+  SmoothType s = DAMPED_JACOBI;
+  setupSmoother(levels[lev], s);
 
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
+
+  //set operator callback
+  void **args = (void **) calloc(2,sizeof(void*));
+  args[0] = (void *) parAlmond;
+  args[1] = (void *) levels[lev+1];
+
+  levels[lev]->AxArgs = args;
+  levels[lev]->smootherArgs = args;
+  levels[lev]->Ax = agmgAx;
+  levels[lev]->smooth = agmgSmooth;
+  levels[lev]->device_Ax = device_agmgAx;
+  levels[lev]->device_smooth = device_agmgSmooth;
 
   //copy global partiton
   levels[lev]->globalRowStarts = (iint *) calloc(size+1,sizeof(iint));
@@ -52,7 +68,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    if (strstr(options,"UBERGRID")) 
+    if (strstr(options,"UBERGRID"))
       setupExactSolve(parAlmond, levels[lev]);
     else
       setupSmoother(levels[lev],DAMPED_JACOBI);
@@ -60,110 +76,93 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     done = true;
   }
 
-  while(!done){
 
+  while(!done){
     // create coarse MG level
-    csr *coarseA = (csr *) calloc(1,sizeof(csr));
+    levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
     dfloat *nullCoarseA;
 
-    coarsen(levels[lev], &coarseA, &nullCoarseA);
+    coarsenAgmgLevel(levels[lev], &(levels[lev+1]->A), &(levels[lev+1]->P),
+                                  &(levels[lev+1]->R), &nullCoarseA);
 
-    SmoothType s = DAMPED_JACOBI;
-    setupSmoother(levels[lev], s);
-
-    //set dimensions of this level (max among the A,P,R ops)
-    levels[lev]->Nrows = levels[lev]->A->Nrows;
+    //set dimensions of the fine level (max among the A,R ops)
     levels[lev]->Ncols = mymax(levels[lev]->Ncols, levels[lev]->R->Ncols);
 
     numNewLevels++;
 
-    levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
-    levels[lev+1]->A = coarseA;
     levels[lev+1]->nullA = nullCoarseA;
-    levels[lev+1]->Nrows = coarseA->Nrows;
-    levels[lev+1]->Ncols = mymax(coarseA->Ncols, levels[lev]->P->Ncols);
+    levels[lev+1]->Nrows = levels[lev+1]->A->Nrows;
+    levels[lev+1]->Ncols = mymax(levels[lev+1]->A->Ncols, levels[lev]->P->Ncols);
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
+    levels[lev+1]->deviceA = newHYB (parAlmond, levels[lev+1]->A);
+    levels[lev+1]->deviceR = newHYB (parAlmond, levels[lev+1]->R);
+    levels[lev+1]->dcsrP   = newDCOO(parAlmond, levels[lev+1]->P);
 
-    const iint localCoarseDim = coarseA->Nrows;
+    SmoothType s = DAMPED_JACOBI;
+    setupSmoother(levels[lev+1], s);
+
+    //set operator callback
+    void **args = (void **) calloc(2,sizeof(void*));
+    args[0] = (void *) parAlmond;
+    args[1] = (void *) levels[lev+1];
+
+    levels[lev+1]->AxArgs = args;
+    levels[lev+1]->coarsenArgs = args;
+    levels[lev+1]->prolongateArgs = args;
+    levels[lev+1]->smootherArgs = args;
+
+    levels[lev+1]->Ax = agmgAx;
+    levels[lev+1]->coarsen = agmgCoarsen;
+    levels[lev+1]->prolongate = agmgProlongate;
+    levels[lev+1]->smooth = agmgSmooth;
+
+    levels[lev+1]->device_Ax = device_agmgAx;
+    levels[lev+1]->device_coarsen = device_agmgCoarsen;
+    levels[lev+1]->device_prolongate = device_agmgProlongate;
+    levels[lev+1]->device_smooth = device_agmgSmooth;
+
+    const iint localCoarseDim = levels[lev+1]->A->Nrows;
     iint globalCoarseSize;
     MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      if (strstr(options,"UBERGRID")) 
+      if (strstr(options,"UBERGRID"))
         setupExactSolve(parAlmond, levels[lev+1]);
-      else
-        setupSmoother(levels[lev+1],DAMPED_JACOBI);
       break;
     }
+
     globalSize = globalCoarseSize;
     lev++;
   }
 
   parAlmond->numLevels += numNewLevels;
 
+  occa::device device = parAlmond->device;
+
   //allocate vectors required
-  for (int n=numLevels;n<numLevels+numNewLevels;n++) {
-    iint M = levels[n]->Nrows;
-    iint N = levels[n]->Ncols;
+  for (int n=0;n<parAlmond->numLevels;n++) {
+    iint N = levels[n]->Nrows;
+    iint M = levels[n]->Ncols;
 
     if ((n>0)&&(n<parAlmond->numLevels-1)) { //kcycle vectors
-      levels[n]->ckp1 = (dfloat *) calloc(N,sizeof(dfloat));
-      levels[n]->vkp1 = (dfloat *) calloc(M,sizeof(dfloat));
-      levels[n]->wkp1 = (dfloat *) calloc(M,sizeof(dfloat));
+      if (M) levels[n]->ckp1 = (dfloat *) calloc(M,sizeof(dfloat));
+      if (N) levels[n]->vkp1 = (dfloat *) calloc(N,sizeof(dfloat));
+      if (N) levels[n]->wkp1 = (dfloat *) calloc(N,sizeof(dfloat));
+
+      if (M) levels[n]->o_ckp1 = device.malloc(M*sizeof(dfloat),levels[n]->ckp1);
+      if (N) levels[n]->o_vkp1 = device.malloc(N*sizeof(dfloat),levels[n]->vkp1);
+      if (N) levels[n]->o_wkp1 = device.malloc(N*sizeof(dfloat),levels[n]->wkp1);
     }
-    levels[n]->x    = (dfloat *) calloc(N,sizeof(dfloat));
-    levels[n]->rhs  = (dfloat *) calloc(M,sizeof(dfloat));
-    levels[n]->res  = (dfloat *) calloc(N,sizeof(dfloat));
+    if (M) levels[n]->x    = (dfloat *) calloc(M,sizeof(dfloat));
+    if (M) levels[n]->res  = (dfloat *) calloc(M,sizeof(dfloat));
+    if (N) levels[n]->rhs  = (dfloat *) calloc(N,sizeof(dfloat));
+
+    if (M) levels[n]->o_x   = device.malloc(M*sizeof(dfloat),levels[n]->x);
+    if (M) levels[n]->o_res = device.malloc(M*sizeof(dfloat),levels[n]->res);
+    if (N) levels[n]->o_rhs = device.malloc(N*sizeof(dfloat),levels[n]->rhs);
 
     //temp storage for smoothing
     levels[n]->A->scratch = (dfloat *) calloc(M,sizeof(dfloat));
-  }
-}
-
-void sync_setup_on_device(parAlmond_t *parAlmond){
-  //set occa device pointer
-  buildAlmondKernels(parAlmond);
-  
-  agmgLevel **levels = parAlmond->levels;
-  occa::device device = parAlmond->device;
-
-  for(int i=0; i<parAlmond->numLevels; i++){
-    iint N = levels[i]->Ncols;
-    iint M = levels[i]->Nrows;
-
-    levels[i]->deviceA = newHYB(parAlmond, levels[i]->A);
-    if (i < parAlmond->numLevels-1) {
-      levels[i]->dcsrP   = newDCOO(parAlmond, levels[i]->P);
-      levels[i]->deviceR = newHYB(parAlmond, levels[i]->R);
-    }
-
-    if (N) levels[i]->o_x   = device.malloc(N*sizeof(dfloat),levels[i]->x);
-    if (N) levels[i]->o_res = device.malloc(N*sizeof(dfloat),levels[i]->x);
-    if (M) levels[i]->o_rhs = device.malloc(M*sizeof(dfloat),levels[i]->rhs);
-
-    if(i > 0){
-      if (N) levels[i]->o_ckp1 = device.malloc(N*sizeof(dfloat),levels[i]->x);
-      if (M) levels[i]->o_wkp1 = device.malloc(M*sizeof(dfloat),levels[i]->rhs);
-      if (M) levels[i]->o_vkp1 = device.malloc(M*sizeof(dfloat),levels[i]->rhs);
-    }
-  }
-
-  //buffer for innerproducts in kcycle
-  parAlmond->o_rho  = device.malloc(3*sizeof(dfloat));
-
-  //if using matrix-free A action, free unnecessary buffers
-  if (strstr(parAlmond->options,"MATRIXFREE")) {
-    levels[0]->deviceA->E->o_cols.free();
-    levels[0]->deviceA->E->o_coefs.free();
-    if (levels[0]->deviceA->C->nnz) {
-      levels[0]->deviceA->C->o_offsets.free();
-      levels[0]->deviceA->C->o_cols.free();
-      levels[0]->deviceA->C->o_coefs.free();
-    }
-    if(levels[0]->deviceA->NsendTotal) {
-      levels[0]->deviceA->o_haloElementList.free();
-      levels[0]->deviceA->o_haloBuffer.free();
-    }
   }
 }
 
@@ -182,7 +181,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
   }
 
   for(int lev=0; lev<parAlmond->numLevels; lev++){
-    
+
     iint Nrows = parAlmond->levels[lev]->Nrows;
 
     int active = (Nrows>0) ? 1:0;
@@ -194,7 +193,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
     avgNrows = (dfloat) totalNrows/totalActive;
-    
+
     if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
     MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
 
@@ -214,7 +213,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
     avgNnzPerRow /= totalActive;
-    
+
     if (Nrows==0) nnzPerRow = maxNnzPerRow;
     MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
@@ -227,13 +226,13 @@ void parAlmondReport(parAlmond_t *parAlmond) {
         avgNrows, avgNnz, avgNnzPerRow);
     }
   }
-  if(rank==0) 
+  if(rank==0)
     printf("---------------------------------------------------------------------\n");
 }
 
 
 //create coarsened problem
-void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA){
+void coarsen(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA){
 
   // establish the graph of strong connections
   level->threshold = 0.5;
@@ -244,9 +243,9 @@ void coarsen(agmgLevel *level, csr **coarseA, dfloat **nullCoarseA){
 
   //find_aggregate_owners(level,FineToCoarse);
 
-  construct_interpolator(level, FineToCoarse, nullCoarseA);
-
-  *coarseA = galerkinProd(level);
+  *P = construct_interpolator(level, FineToCoarse, nullCoarseA);
+  *R = transpose(level, *P, level->globalRowStarts, level->globalAggStarts);
+  *coarseA = galerkinProd(level, *R, level->A, *P);
 }
 
 csr * strong_graph(csr *A, dfloat threshold){
@@ -883,7 +882,7 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
 }
 
 
-void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA){
+csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA){
   // MPI info
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -1060,10 +1059,9 @@ void construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   for(iint i=0; i<P->offdNNZ; i++)
     P->offdCoefs[i] /= (*nullCoarseA)[P->offdCols[i]];
 
-  level->R = transpose(level, P, level->globalRowStarts, globalAggStarts);
-  level->P = P;
-
   if (P->NsendTotal) free(recvNnzSum);
+
+  return P;
 }
 
 typedef struct {
@@ -1324,16 +1322,12 @@ int compareRAPEntries(const void *a, const void *b){
   return 0;
 };
 
-csr *galerkinProd(agmgLevel *level){
+csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   // MPI info
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  csr *A = level->A;
-  csr *P = level->P;
-  csr *R = level->R;
 
   iint *globalAggStarts = level->globalAggStarts;
   iint *globalRowStarts = level->globalRowStarts;
@@ -1379,7 +1373,7 @@ csr *galerkinProd(agmgLevel *level){
   if (totalNNZ) {
     RAPEntries = (rapEntry_t *) calloc(totalNNZ,sizeof(rapEntry_t));
   } else {
-    RAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t)); //MPI_AlltoAll doesnt like null pointers 
+    RAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t)); //MPI_AlltoAll doesnt like null pointers
   }
 
   //for the RAP products
@@ -1439,7 +1433,7 @@ csr *galerkinProd(agmgLevel *level){
   if (recvNtotal) {
     recvRAPEntries = (rapEntry_t *) calloc(recvNtotal,sizeof(rapEntry_t));
   } else {
-    recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers 
+    recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers
   }
 
   MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,

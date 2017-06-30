@@ -154,10 +154,10 @@ typedef struct agmgLevel_t {
   void **prolongateArgs;
 
   //operator call-backs
-  void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax);
-  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
-  void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
-  void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px);
+  void (*device_Ax)(void **args, occa::memory o_x, occa::memory o_Ax);
+  void (*device_smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
+  void (*device_coarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
+  void (*device_prolongate)(void **args, occa::memory o_x, occa::memory o_Px);
 
   //host versions
   void (*Ax)(void **args, dfloat *x, dfloat *Ax);

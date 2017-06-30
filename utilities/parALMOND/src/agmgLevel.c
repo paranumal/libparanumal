@@ -1,15 +1,21 @@
 #include "parAlmond.h"
 
 // parAlmond's function call-backs
+void agmgAx(void **args, dfloat *x, dfloat *Ax){
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  axpy(level->A, 1.0, x, 0.0, Ax);
+}
+
 void agmgCoarsen(void **args, dfloat *r, dfloat *Rr){
   agmgLevel *level = (agmgLevel *) args[1];
-  
+
   axpy(level->R, 1.0, r, 0.0, Rr);
 }
 
 void agmgProlongate(void **args, dfloat *x, dfloat *Px){
   agmgLevel *level = (agmgLevel *) args[1];
-  
+
   axpy(level->P, 1.0, x, 1.0, Px);
 }
 
@@ -23,6 +29,13 @@ void agmgSmooth(void **args, dfloat *rhs, dfloat *x, bool x_is_zero){
   }
 }
 
+void device_agmgAx(void **args, occa::memory o_x, occa::memory o_Ax){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  axpy(parAlmond,level->deviceA, 1.0, o_x, 0.0, o_Ax);
+}
+
 void device_agmgCoarsen(void **args, occa::memory o_r, occa::memory o_Rr){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
@@ -33,8 +46,8 @@ void device_agmgCoarsen(void **args, occa::memory o_r, occa::memory o_Rr){
 void device_agmgProlongate(void **args, occa::memory o_x, occa::memory o_Px){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
-  
-  axpy(parAlmond, level->dcsrP, 1.0, o_x, 0.0, o_Px);
+
+  axpy(parAlmond, level->dcsrP, 1.0, o_x, 1.0, o_Px);
 }
 
 void device_agmgSmooth(void **args, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
@@ -63,7 +76,7 @@ void setupSmoother(agmgLevel *level, SmoothType s){
     dfloat rho=0;
 
     dfloat *invD;
-    if(level->A->Nrows)	
+    if(level->A->Nrows)
       invD = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
 
     for (iint i=0;i<level->A->Nrows;i++)
@@ -236,7 +249,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level) {
   iint* coarseOffsets = level->globalRowStarts;
   iint coarseTotal = coarseOffsets[size];
   iint coarseOffset = coarseOffsets[rank];
-  
+
   iint *globalNumbering = (iint *) calloc(coarseTotal,sizeof(iint));
   for (iint n=0;n<coarseTotal;n++)
     globalNumbering[n] = n;

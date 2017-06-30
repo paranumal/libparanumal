@@ -1,7 +1,7 @@
 #include "parAlmond.h"
 
 void kcycle(parAlmond_t *parAlmond, int k){
-  
+
   agmgLevel **levels = levels;
 
   iint m = levels[k]->Nrows;
@@ -18,7 +18,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
 
   levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x, true);
 
-  // res = r - A*x 
+  // res = r - A*x
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
   vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
@@ -143,14 +143,14 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   // zero out x
   //setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
-  levels[k]->smooth(levels->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
+  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 
   // res = rhs - A*x
-  levels[k]->Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
+  levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
   // coarsen the residual to next level
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
 
 
   if(k+1 < parAlmond->numLevels - 1){
@@ -166,7 +166,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
         levels[k+1]->o_ckp1.copyFrom(levels[k+1]->o_x);
 
       // v = A*c
-      levels[k+1]->Ax(levels[k+1]->AxArgs,levels[k+1]->o_ckp1,levels[k+1]->o_vkp1);
+      levels[k+1]->device_Ax(levels[k+1]->AxArgs,levels[k+1]->o_ckp1,levels[k+1]->o_vkp1);
 
       dfloat rhoLocal[3], rhoGlobal[3];
       dfloat rho1, alpha1, norm_rkp1;
@@ -205,7 +205,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
         device_kcycle(parAlmond,k+1);
 
         // w = A*x
-        levels[k+1]->Ax(levels[k+1]->AxArgs,levels[k+1]->o_x,levels[k+1]->o_wkp1);
+        levels[k+1]->device_Ax(levels[k+1]->AxArgs,levels[k+1]->o_x,levels[k+1]->o_wkp1);
 
         dfloat gamma, beta, alpha2;
 
@@ -254,13 +254,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
-      levels[k+1]->smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
+      levels[k+1]->device_smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
     }
   }
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
 
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, false);
+  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, false);
 
   occaTimerToc(parAlmond->device,name);
 }
@@ -281,14 +281,14 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   // zero out x
   setVector(m, levels[k]->x,  0.0);
 
-  levels[k]->smooth(levels->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
+  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x, true);
 
   // res = rhs - A*x
-  levels[k]->Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
-  vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
+  levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
+  vectorAdd(parAlmond, m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
   // coarsen the residual to next level
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
 
   if(k+1 < parAlmond->numLevels - 1){
     vcycle(parAlmond,k+1);
@@ -337,16 +337,16 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  setVector(parAlmond, m, levels[k]->o_x, 0.0);
+  //setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
-  levels[k]->smooth(levels->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
+  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 
   // res = rhs - A*x
-  levels[k]->Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
+  levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
   // coarsen the residual to next level
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
 
   if(k+1 < parAlmond->numLevels - 1){
     device_vcycle(parAlmond, k+1);
@@ -360,13 +360,13 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
-      levels[k+1]->smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
+      levels[k+1]->device_smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
     }
   }
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
 
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x,false);
-  
+  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x,false);
+
   occaTimerToc(parAlmond->device,name);
 }
