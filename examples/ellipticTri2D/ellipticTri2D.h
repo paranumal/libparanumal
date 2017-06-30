@@ -34,7 +34,8 @@ typedef struct {
   occa::kernel patchSolverKernel;
   occa::kernel approxPatchSolverKernel;
   occa::kernel localPatchSolverKernel;
-
+  occa::kernel patchGatherKernel;
+  
   ogs_t *ogsP, *ogsDg;
   hgs_t *hgsP, *hgsDg;
 

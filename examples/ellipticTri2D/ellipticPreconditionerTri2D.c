@@ -25,7 +25,12 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
                               precon->o_invDegreeAP,
                               o_r,
                               solver->o_zP);
+
+#if 0
     meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
+#else
+    solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, solver->o_zP, o_Sr);
+#endif
     occaTimerToc(mesh->device,"PatchSolveKernel");
   } else if (strstr(options,"APPROXPATCH")) {
     occaTimerTic(mesh->device,"PatchSolveKernel");
