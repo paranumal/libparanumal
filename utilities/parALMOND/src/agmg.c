@@ -2,7 +2,7 @@
 
 void kcycle(parAlmond_t *parAlmond, int k){
 
-  agmgLevel **levels = levels;
+  agmgLevel **levels = parAlmond->levels;
 
   iint m = levels[k]->Nrows;
   iint n = levels[k]->Ncols;
@@ -129,7 +129,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
 
 void device_kcycle(parAlmond_t *parAlmond, int k){
 
-  agmgLevel **levels = levels;
+  agmgLevel **levels = parAlmond->levels;
 
   iint m = levels[k]->Nrows;
   iint n = levels[k]->Ncols;
@@ -269,7 +269,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
 void vcycle(parAlmond_t *parAlmond, int k) {
 
-  agmgLevel **levels = levels;
+  agmgLevel **levels = parAlmond->levels;
 
   const iint m = levels[k]->Nrows;
   const iint mCoarse = levels[k+1]->Nrows;
@@ -319,7 +319,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
 
 void device_vcycle(parAlmond_t *parAlmond, int k){
 
-  agmgLevel **levels = levels;
+  agmgLevel **levels = parAlmond->levels;
 
   const iint m = levels[k]->Nrows;
   const iint mCoarse = levels[k+1]->Nrows;

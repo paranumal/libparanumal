@@ -18,9 +18,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // approximate Nrows at coarsest level
-  int gCoarseSize = 10;
-  if (strstr(options,"UBERGRID"))
-    gCoarseSize = 100;
+  int gCoarseSize = 100;
 
   double seed = (double) rank;
   srand48(seed);
@@ -47,7 +45,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //set operator callback
   void **args = (void **) calloc(2,sizeof(void*));
   args[0] = (void *) parAlmond;
-  args[1] = (void *) levels[lev+1];
+  args[1] = (void *) levels[lev];
 
   levels[lev]->AxArgs = args;
   levels[lev]->smootherArgs = args;
@@ -68,11 +66,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    if (strstr(options,"UBERGRID"))
-      setupExactSolve(parAlmond, levels[lev]);
-    else
-      setupSmoother(levels[lev],DAMPED_JACOBI);
-
+    setupExactSolve(parAlmond, levels[lev]);
     done = true;
   }
 
@@ -86,13 +80,13 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
                                   &(levels[lev+1]->R), &nullCoarseA);
 
     //set dimensions of the fine level (max among the A,R ops)
-    levels[lev]->Ncols = mymax(levels[lev]->Ncols, levels[lev]->R->Ncols);
+    levels[lev]->Ncols = mymax(levels[lev]->Ncols, levels[lev+1]->R->Ncols);
 
     numNewLevels++;
 
     levels[lev+1]->nullA = nullCoarseA;
     levels[lev+1]->Nrows = levels[lev+1]->A->Nrows;
-    levels[lev+1]->Ncols = mymax(levels[lev+1]->A->Ncols, levels[lev]->P->Ncols);
+    levels[lev+1]->Ncols = mymax(levels[lev+1]->A->Ncols, levels[lev+1]->P->Ncols);
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
     levels[lev+1]->deviceA = newHYB (parAlmond, levels[lev+1]->A);
     levels[lev+1]->deviceR = newHYB (parAlmond, levels[lev+1]->R);
@@ -126,8 +120,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      if (strstr(options,"UBERGRID"))
-        setupExactSolve(parAlmond, levels[lev+1]);
+      setupExactSolve(parAlmond, levels[lev+1]);
       break;
     }
 
@@ -162,7 +155,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     if (N) levels[n]->o_rhs = device.malloc(N*sizeof(dfloat),levels[n]->rhs);
 
     //temp storage for smoothing
-    levels[n]->A->scratch = (dfloat *) calloc(M,sizeof(dfloat));
+    if (M) levels[n]->A->scratch = (dfloat *) calloc(M,sizeof(dfloat));
   }
 }
 
@@ -232,7 +225,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
 
 //create coarsened problem
-void coarsen(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA){
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA){
 
   // establish the graph of strong connections
   level->threshold = 0.5;
