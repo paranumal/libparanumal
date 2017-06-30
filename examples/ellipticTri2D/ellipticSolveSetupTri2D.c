@@ -245,19 +245,5 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
-  //set matrix free function pointers
-  if (strstr(options,"MATRIXFREE")) {
-    //set matrix free A in parAlmond
-    void **args = (void **) calloc(2,sizeof(void *));
-    dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
-
-    *vlambda = lambda;
-
-    args[0] = (void *) solver;
-    args[1] = (void *) vlambda;
-
-    parAlmondSetMatFreeAX(solver->precon->parAlmond,ellipticMatrixFreeAx,args);
-  }
-
   return solver;
 }
