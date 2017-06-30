@@ -36,10 +36,10 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 }
 
 void *parAlmondInit(mesh_t *mesh, const char* options) {
-  
+
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
-  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels. 
+  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels.
   parAlmond->device = mesh->device;
   parAlmond->options = options;
 
@@ -47,11 +47,16 @@ void *parAlmondInit(mesh_t *mesh, const char* options) {
   parAlmond->numLevels = 0;
   parAlmond->ktype = PCG;
 
+  buildAlmondKernels(parAlmond);
+
+  //buffer for innerproducts in kcycle
+  parAlmond->o_rho  = mesh->device.malloc(3*sizeof(dfloat));
+
   return (void *) parAlmond;
 }
 
 
-void parAlmondAgmgSetup(void *Almond, 
+void parAlmondAgmgSetup(void *Almond,
        iint* globalRowStarts,       //global partition
        iint  nnz,                   //--
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
@@ -59,7 +64,7 @@ void parAlmondAgmgSetup(void *Almond,
        dfloat* Avals,               //--
        hgs_t *hgs,                  // gs op for problem assembly (to be removed in future?)
        const char* options){
-  
+
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -86,7 +91,7 @@ void parAlmondAgmgSetup(void *Almond,
 
   sync_setup_on_device(parAlmond);
 
-  if (strstr(options, "VERBOSE")) 
+  if (strstr(options, "VERBOSE"))
     parAlmondReport(parAlmond);
 }
 
