@@ -49,7 +49,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
-                                   iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
+                                   iint *Npatches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
                                    const char *options);
 
 precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
@@ -287,13 +287,14 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
       NpP = mesh->Np*(mesh->Nfaces+1);
       iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-
+      iint Npatches=0;
+      
       //initialize the full inverse operators on each 4 element patch
       ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
 				    BCType, &A, &nnz, &hgs, globalStarts,
-				    &patchesIndex, &invAP, &localInvA, options);
+				    &Npatches, &patchesIndex, &invAP, &localInvA, options);
 
-      iint Npatches = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces+mesh->Nelements; // TW: HACK FOR THE MOMENT
+      //      iint Npatches = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces+mesh->Nelements; // TW: HACK FOR THE MOMENT
       
       if (strstr(options,"PATCHSOLVE")) {
         precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -325,7 +326,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
         //initialize the full inverse operators on each 4 element patch
         ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
 				      BCType, &A, &nnz, &hgs, globalStarts,
-				      &patchesIndex, &invAP, &localInvA, options);
+				      &Npatches, &patchesIndex, &invAP, &localInvA, options);
 
         precon->o_invAP = mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Np*sizeof(dfloat),localInvA);
       }

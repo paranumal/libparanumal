@@ -192,12 +192,10 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 		res4 += invAP[offset + (m+3*p_Np)*p_patchNp ]*s_q[e-eo][m+3*p_Np];
 	      }
 	    
-//	    const dfloat sc = .66/p_N;
-//	    const dfloat sc = 2.5/(2*p_N+1);
 	    const dfloat sc = 1./(1.+.33*p_N);
 	    
+	    //	    invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*(res1+res2+res3+res4);
 	    invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*(res1+res2+res3+res4);
-//	    invAPq[p_patchNp*e+es*p_Np+n] = sc*(res1+res2+res3+res4);
 	  }
 	}
       }

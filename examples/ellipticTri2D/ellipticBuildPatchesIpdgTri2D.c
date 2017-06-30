@@ -67,7 +67,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
-                                   iint **patchesIndex, dfloat **patchesInvA, dfloat **localInvA,                            
+                                   iint *Npatches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localInvA,                            
                                    const char *options){
   
   iint size, rankM;
@@ -159,11 +159,27 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   iint blockCount = 0;
   iint patchNp = mesh->Np*(mesh->Nfaces+1);
   iint Nperm = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces;
+
+  // count number of patches
+  *Npatches = Nperm;
+
+  for(iint eM=0;eM<mesh->Nelements;++eM){
+    iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    iint eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+
+    if(eP0<0 || eP1<0 || eP2<0){
+      ++(*Npatches);
+    }
+  }
+  
   //  dfloat *permInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
   iint *permIndex = (iint*) calloc(patchNp, sizeof(dfloat));
-  *patchesInvA = (dfloat*) calloc((Nperm+mesh->Nelements)*patchNp*patchNp, sizeof(dfloat));
+  *patchesInvA = (dfloat*) calloc((*Npatches)*patchNp*patchNp, sizeof(dfloat));
 
   int blkCounter = 0;
+
+
   
   for(iint blk=0;blk<Nperm;++blk){
     iint f0 = blk%mesh->Nfaces;
