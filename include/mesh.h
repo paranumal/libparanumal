@@ -255,7 +255,7 @@ typedef struct {
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
 
-  occa::memory o_rmapP; 
+  occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
 
@@ -542,10 +542,14 @@ void parAlmondPrecon(occa::memory o_x,
     void* ALMOND,
     occa::memory o_rhs);
 
-int parAlmondFree(void* A);
+void parAlmondAddDeviceLevel(void *Almond, iint Nrows, iint Ncols,
+        void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
+        void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
+        void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
+        void **smootherArgs,  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero));
 
-void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
-                        void **args);
+
+int parAlmondFree(void* A);
 
 #endif
 

@@ -3,7 +3,7 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = 
+CXXFLAGS =
 
 include ${OCCA_DIR}/scripts/makefile
 
@@ -20,7 +20,7 @@ LD	= mpic++
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
 		 	-I../../utilities/parALMOND/include
 
-# link flags to be used 
+# link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L../../utilities/parALMOND -lparALMOND
 
@@ -31,7 +31,7 @@ LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
 
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c 
+.SUFFIXES: .c
 
 # rule for .c files
 .c.o:
@@ -49,8 +49,7 @@ ellipticHaloExchange2D.o\
 ellipticParallelGatherScatterTri2D.o \
 ellipticBuildIpdgTri2D.o \
 ellipticBuildContinuousTri2D.o \
-ellipticBuildPatchesIpdgTri2D.o \
-ellipticBuildAmgLevelsTri2D.o
+ellipticBuildPatchesIpdgTri2D.o
 
 # library objects
 LOBJS = \
@@ -96,14 +95,14 @@ ellipticMainTri2D:$(AOBJS) $(LOBJS) ellipticMainTri2D.o gslibInterface
 
 gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
+	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
-ellipticMainSplitPml2D:$(POBJS) $(LOBJS) 
-	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
+ellipticMainSplitPml2D:$(POBJS) $(LOBJS)
+	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml2D $(POBJS) $(LOBJS) $(paths) $(LIBS)
 
 test2D: $(LOBJS) $(AOBJS) testMainTri2D.o
-	$(LD)  $(LDFLAGS)  -o testMain2D testMainTri2D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
+	$(LD)  $(LDFLAGS)  -o testMain2D testMainTri2D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 # what to do if user types "make clean"
 clean :

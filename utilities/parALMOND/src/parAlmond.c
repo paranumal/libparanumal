@@ -15,9 +15,9 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  //device_kcycle(parAlmond, 0);
+  device_kcycle(parAlmond, 0);
   //device_vcycle(parAlmond, 0);
-  device_pcg(parAlmond,1000,1e-8);
+  //device_pcg(parAlmond,1000,1e-8);
 
   //host versions
   //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
@@ -36,10 +36,10 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 }
 
 void *parAlmondInit(mesh_t *mesh, const char* options) {
-  
+
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
-  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels. 
+  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels.
   parAlmond->device = mesh->device;
   parAlmond->options = options;
 
@@ -47,11 +47,48 @@ void *parAlmondInit(mesh_t *mesh, const char* options) {
   parAlmond->numLevels = 0;
   parAlmond->ktype = PCG;
 
+  buildAlmondKernels(parAlmond);
+
+  //buffer for innerproducts in kcycle
+  parAlmond->o_rho  = mesh->device.malloc(3*sizeof(dfloat));
+
   return (void *) parAlmond;
 }
 
+void parAlmondAddDeviceLevel(void *Almond, iint Nrows, iint Ncols,
+        void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
+        void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
+        void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
+        void **smootherArgs,  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero)) {
 
-void parAlmondAgmgSetup(void *Almond, 
+  parAlmond_t *parAlmond = (parAlmond_t *) Almond;
+  agmgLevel **levels = parAlmond->levels;
+
+  int lev = parAlmond->numLevels;
+
+  levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+
+  levels[lev]->Nrows = Nrows;
+  levels[lev]->Ncols = Ncols;
+
+  levels[lev]->AxArgs = AxArgs;
+  levels[lev]->device_Ax = Ax;
+
+  levels[lev]->smootherArgs = smootherArgs;
+  levels[lev]->device_smooth = smooth;
+
+  if (lev > 0) { //if adding the first level, ignore the coarsen/prologagtion
+    levels[lev]->coarsenArgs = coarsenArgs;
+    levels[lev]->device_coarsen = coarsen;
+
+    levels[lev]->prolongateArgs = prolongateArgs;
+    levels[lev]->device_prolongate = prolongate;
+  }
+
+  parAlmond->numLevels++;
+}
+
+void parAlmondAgmgSetup(void *Almond,
        iint* globalRowStarts,       //global partition
        iint  nnz,                   //--
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
@@ -59,7 +96,7 @@ void parAlmondAgmgSetup(void *Almond,
        dfloat* Avals,               //--
        hgs_t *hgs,                  // gs op for problem assembly (to be removed in future?)
        const char* options){
-  
+
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -84,16 +121,19 @@ void parAlmondAgmgSetup(void *Almond,
   parAlmond->o_x = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
   parAlmond->o_Ax = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
 
-  sync_setup_on_device(parAlmond);
-
-  if (strstr(options, "VERBOSE")) 
+  if (strstr(options, "VERBOSE"))
     parAlmondReport(parAlmond);
 }
+
+
+
 
 //TODO code this
 int parAlmondFree(void* A) {
   return 0;
 }
+
+
 
 void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memory &o_Ax){
 
