@@ -298,6 +298,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       if (strstr(options,"PATCHSOLVE")) {
         precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
 	precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+	mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
       } else if (strstr(options,"APPROXPATCH")) {
         for (iint e =0;e<mesh->Nelements;e++) {
           //check if this is a boudary element
