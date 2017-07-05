@@ -1,4 +1,4 @@
-#ifndef PARALMOND_H 
+#ifndef PARALMOND_H
 #define PARALMOND_H 1
 
 #include "mesh.h"
@@ -24,7 +24,7 @@ typedef struct {
   hgs_t *hgs;
   const char* options;
 
-  //Matrix Free args 
+  //Matrix Free args
   void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options);
   void **MatFreeArgs;
 
@@ -40,15 +40,15 @@ typedef struct {
   occa::memory o_Ax;
   occa::memory o_rho;
 
-  occa::kernel ellAXPYKernel; 
+  occa::kernel ellAXPYKernel;
   occa::kernel ellZeqAXPYKernel;
   occa::kernel ellJacobiKernel;
-  occa::kernel cooAXKernel; 
+  occa::kernel cooAXKernel;
   occa::kernel scaleVectorKernel;
   occa::kernel vectorAddKernel;
-  occa::kernel vectorAddKernel2; 
+  occa::kernel vectorAddKernel2;
   occa::kernel setVectorKernel;
-  occa::kernel dotStarKernel; 
+  occa::kernel dotStarKernel;
   occa::kernel simpleDotStarKernel;
   occa::kernel haloExtract;
   occa::kernel agg_interpolateKernel;
@@ -63,8 +63,7 @@ typedef struct {
 #include "agmgMatrices.h"
 #include "vectorPrimitives.h"
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
-void sync_setup_on_device(parAlmond_t *parAlmond);
+void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
 void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 

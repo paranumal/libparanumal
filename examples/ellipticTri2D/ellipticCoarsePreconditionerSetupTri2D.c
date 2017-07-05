@@ -31,7 +31,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
 void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, 
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options){
 
@@ -50,9 +50,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
 
-    *V1[0*mesh->Np+n] = -0.5*(rn+sn);
-    *V1[1*mesh->Np+n] = +0.5*(1.+rn);
-    *V1[2*mesh->Np+n] = +0.5*(1.+sn);
+    (*V1)[0*mesh->Np+n] = -0.5*(rn+sn);
+    (*V1)[1*mesh->Np+n] = +0.5*(1.+rn);
+    (*V1)[2*mesh->Np+n] = +0.5*(1.+sn);
 
     Vr1[0*mesh->Np+n] = 0.5*(-1);
     Vr1[1*mesh->Np+n] = 0.5*(+1);
@@ -62,7 +62,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     Vs1[1*mesh->Np+n] = 0;
     Vs1[2*mesh->Np+n] = 0.5*(+1);
   }
-  
+
   //precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
   //precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
 
@@ -94,7 +94,7 @@ void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t *
   iint Nnum = mesh->Nverts*mesh->Nelements;
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  
+
   // use original vertex numbering
   memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
 
@@ -310,7 +310,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     V[1*mesh->Np+n] = +0.5*(1.+rn);
     V[2*mesh->Np+n] = +0.5*(1.+sn);
   }
-  
+
   iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
@@ -393,9 +393,9 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     dfloat dsdy = mesh->vgeo[vbase+SYID];
 
     //zero out BP
-    for (iint fM=0;fM<mesh->Nfaces;fM++) 
-      for (iint n=0;n<mesh->Np;n++) 
-        for (iint m=0;m<mesh->Np;m++) 
+    for (iint fM=0;fM<mesh->Nfaces;fM++)
+      for (iint n=0;n<mesh->Np;n++)
+        for (iint m=0;m<mesh->Np;m++)
           BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np] = 0;
 
     for (iint m=0;m<mesh->Np;m++) {
@@ -491,7 +491,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
         for (int i=0;i<mesh->Nverts;i++) {
           dfloat AnmP = 0;
           for (iint m=0;m<mesh->Np;m++) {
-            for (iint n=0;n<mesh->Np;n++) {        
+            for (iint n=0;n<mesh->Np;n++) {
               AnmP += V[n+i*mesh->Np]*BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np]*V[m+j*mesh->Np];
             }
           }
@@ -510,7 +510,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
       for (int i=0;i<mesh->Nverts;i++) {
         dfloat Anm = 0;
         for (iint m=0;m<mesh->Np;m++) {
-          for (iint n=0;n<mesh->Np;n++) {        
+          for (iint n=0;n<mesh->Np;n++) {
             Anm += V[n+i*mesh->Np]*BM[m+n*mesh->Np]*V[m+j*mesh->Np];
           }
         }

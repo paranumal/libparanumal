@@ -90,6 +90,13 @@ void setupSmoother(agmgLevel *level, SmoothType s){
     level->smoother_params = (dfloat *) calloc(1,sizeof(dfloat));
 
     level->smoother_params[0] = (4./3.)/rho;
+
+    printf("weight = %g \n", level->smoother_params[0]);
+
+    //temp storage for smoothing
+    if (level->Nrows)
+      level->A->scratch = (dfloat *) calloc(level->A->Ncols,sizeof(dfloat));
+
     return;
   }
 }

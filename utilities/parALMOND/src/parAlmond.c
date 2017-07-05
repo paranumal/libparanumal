@@ -79,18 +79,15 @@ void parAlmondAddDeviceLevel(void *Almond, iint lev, iint Nrows, iint Ncols,
   levels[lev]->smootherArgs = smootherArgs;
   levels[lev]->device_smooth = smooth;
 
-  if (lev > 0) { //if adding the first level, ignore the coarsen/prologagtion
-    levels[lev]->coarsenArgs = coarsenArgs;
-    levels[lev]->device_coarsen = coarsen;
+  levels[lev]->coarsenArgs = coarsenArgs;
+  levels[lev]->device_coarsen = coarsen;
 
-    levels[lev]->prolongateArgs = prolongateArgs;
-    levels[lev]->device_prolongate = prolongate;
-  }
-
-  parAlmond->numLevels++;
+  levels[lev]->prolongateArgs = prolongateArgs;
+  levels[lev]->device_prolongate = prolongate;
 }
 
 void parAlmondAgmgSetup(void *Almond,
+       int level,
        iint* globalRowStarts,       //global partition
        iint  nnz,                   //--
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
@@ -113,7 +110,7 @@ void parAlmondAgmgSetup(void *Almond,
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
   for (iint i=0;i<numLocalRows;i++) nullA[i] = 1;
 
-  agmgSetup(parAlmond,A, nullA, globalRowStarts, options);
+  agmgSetup(parAlmond,level,A, nullA, globalRowStarts, options);
 
   parAlmond->hgs = hgs;
 

@@ -35,7 +35,7 @@ typedef struct {
   occa::kernel approxPatchSolverKernel;
   occa::kernel localPatchSolverKernel;
   occa::kernel patchGatherKernel;
-  
+
   ogs_t *ogsP, *ogsDg;
   hgs_t *hgsP, *hgsDg;
 
@@ -44,7 +44,7 @@ typedef struct {
   occa::memory o_invAP;
   occa::memory o_invDegreeAP;
   occa::memory o_patchesIndex;
-  
+
   // coarse grid basis for preconditioning
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
   occa::memory o_r1, o_z1;

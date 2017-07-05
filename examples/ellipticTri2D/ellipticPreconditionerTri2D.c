@@ -145,7 +145,8 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
     //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     //}
-  } else if(strstr(options, "OMS")){
+#if 0
+  } else if(){
     ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
 
@@ -186,8 +187,8 @@ void ellipticPreconditioner2D(solver_t *solver,
     //smooth the fine problem z = z + S(r-Az)
     ellipticPatchSmootherTri2D(solver,solver->o_res,solver->o_Sres,options);
     ellipticScaledAdd(solver, one, solver->o_Sres, one, o_z);
-
-  } else if (strstr(options, "FULLALMOND")) {
+#endif
+  } else if (strstr(options, "FULLALMOND")||strstr(options, "OMS")) {
 
     occaTimerTic(mesh->device,"parALMOND");
     parAlmondPrecon(o_z, precon->parAlmond, o_r);
