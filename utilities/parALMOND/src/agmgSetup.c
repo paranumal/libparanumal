@@ -190,7 +190,12 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
     MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
 
-    iint nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
+    
+    iint nnz;
+    if (parAlmond->levels[lev]->A)
+      nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
+    else 
+      nnz =0;
     iint minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
     MPI_Allreduce(&nnz, &maxNnz, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
