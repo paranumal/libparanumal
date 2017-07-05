@@ -542,7 +542,7 @@ void parAlmondPrecon(occa::memory o_x,
     void* ALMOND,
     occa::memory o_rhs);
 
-void parAlmondAddDeviceLevel(void *Almond, iint Nrows, iint Ncols,
+void parAlmondAddDeviceLevel(void *Almond, int lev, iint Nrows, iint Ncols,
         void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
         void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
         void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),

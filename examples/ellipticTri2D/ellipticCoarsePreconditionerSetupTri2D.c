@@ -31,21 +31,18 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
 void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, iint *BCType, const char *options){
+void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, 
+                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
+                                   hgs_t **hgs, iint *globalStarts, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint nnz;
-  nonZero_t *A;
-  hgs_t *hgs;
-
   iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
-  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
 
   // 2. Build coarse grid element basis functions
-  dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+  *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
 
@@ -53,9 +50,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
 
-    V1[0*mesh->Np+n] = -0.5*(rn+sn);
-    V1[1*mesh->Np+n] = +0.5*(1.+rn);
-    V1[2*mesh->Np+n] = +0.5*(1.+sn);
+    *V1[0*mesh->Np+n] = -0.5*(rn+sn);
+    *V1[1*mesh->Np+n] = +0.5*(1.+rn);
+    *V1[2*mesh->Np+n] = +0.5*(1.+sn);
 
     Vr1[0*mesh->Np+n] = 0.5*(-1);
     Vr1[1*mesh->Np+n] = 0.5*(+1);
@@ -65,9 +62,9 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     Vs1[1*mesh->Np+n] = 0;
     Vs1[2*mesh->Np+n] = 0.5*(+1);
   }
-  precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
-  precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
-  precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
+  
+  //precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
+  //precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
 
   //build coarse grid A
   if (strstr(options,"IPDG")) {
@@ -75,41 +72,14 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     for(iint r=0;r<size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Nverts;
 
-    ellipticBuildCoarseIpdgTri2D(mesh,tau,lambda,BCType,&A,&nnz,&hgs,globalStarts,options);
+    ellipticBuildCoarseIpdgTri2D(mesh,tau,lambda,BCType,A,nnzA,hgs,globalStarts,options);
 
-    qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+    qsort(*A, *nnzA, sizeof(nonZero_t), parallelCompareRowColumn);
 
   } else if (strstr(options,"CONTINUOUS")) {
 
-    ellipticBuildCoarseContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts,options);
+    ellipticBuildCoarseContinuousTri2D(mesh,lambda,A,nnzA,hgs,globalStarts,options);
   }
-
-  iint *Rows = (iint *) calloc(nnz, sizeof(iint));
-  iint *Cols = (iint *) calloc(nnz, sizeof(iint));
-  dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
-
-  for (iint n=0;n<nnz;n++) {
-    Rows[n] = A[n].row;
-    Cols[n] = A[n].col;
-    Vals[n] = A[n].val;
-  }
-  
-  precon->parAlmond = parAlmondInit(mesh, options);
-  parAlmondAgmgSetup(precon->parAlmond,
-                     globalStarts,
-                     nnz,
-                     Rows,
-                     Cols,
-                     Vals,
-                     hgs,
-                     options); 
-
-  precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-  precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-  precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-  precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-
-  free(A); free(Rows); free(Cols); free(Vals);
 }
 
 

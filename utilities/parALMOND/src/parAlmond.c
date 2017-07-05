@@ -55,7 +55,7 @@ void *parAlmondInit(mesh_t *mesh, const char* options) {
   return (void *) parAlmond;
 }
 
-void parAlmondAddDeviceLevel(void *Almond, iint Nrows, iint Ncols,
+void parAlmondAddDeviceLevel(void *Almond, iint lev, iint Nrows, iint Ncols,
         void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
         void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
         void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
@@ -64,9 +64,11 @@ void parAlmondAddDeviceLevel(void *Almond, iint Nrows, iint Ncols,
   parAlmond_t *parAlmond = (parAlmond_t *) Almond;
   agmgLevel **levels = parAlmond->levels;
 
-  int lev = parAlmond->numLevels;
+  if (lev > parAlmond->numLevels-1)
+    parAlmond->numLevels = lev+1;
 
-  levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+  if (!levels[lev])
+    levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
 
   levels[lev]->Nrows = Nrows;
   levels[lev]->Ncols = Ncols;

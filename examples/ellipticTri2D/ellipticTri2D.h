@@ -40,6 +40,7 @@ typedef struct {
   hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
+  occa::memory o_invDiagA;
   occa::memory o_invAP;
   occa::memory o_invDegreeAP;
   occa::memory o_patchesIndex;
@@ -139,8 +140,6 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
-
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda, iint* BCType, const char *options);
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
