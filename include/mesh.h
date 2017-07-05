@@ -530,6 +530,7 @@ extern "C"
 void *parAlmondInit(mesh_t *mesh, const char* options);
 
 void parAlmondAgmgSetup(void* ALMOND,
+       int level,
        iint* rowStarts,
        iint  nnz,
        iint* Ai,

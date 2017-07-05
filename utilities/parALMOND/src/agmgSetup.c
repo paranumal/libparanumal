@@ -11,7 +11,7 @@ void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat 
 
 
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
+void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
 
   iint rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -25,11 +25,10 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
 
   agmgLevel **levels = parAlmond->levels;
 
-  int numLevels = parAlmond->numLevels;
-  int lev = parAlmond->numLevels;
-  int numNewLevels = 1;
-
-  levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+  if (!levels[lev]) {
+    levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+    parAlmond->numLevels++;
+  }
 
   //copy A matrix and null vector
   levels[lev]->A = A;
@@ -82,7 +81,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     //set dimensions of the fine level (max among the A,R ops)
     levels[lev]->Ncols = mymax(levels[lev]->Ncols, levels[lev+1]->R->Ncols);
 
-    numNewLevels++;
+    parAlmond->numLevels++;
 
     levels[lev+1]->nullA = nullCoarseA;
     levels[lev+1]->Nrows = levels[lev+1]->A->Nrows;
@@ -128,11 +127,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     lev++;
   }
 
-  parAlmond->numLevels += numNewLevels;
-
-  occa::device device = parAlmond->device;
-
   //allocate vectors required
+  occa::device device = parAlmond->device;
   for (int n=0;n<parAlmond->numLevels;n++) {
     iint N = levels[n]->Nrows;
     iint M = levels[n]->Ncols;
@@ -153,9 +149,6 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     if (M) levels[n]->o_x   = device.malloc(M*sizeof(dfloat),levels[n]->x);
     if (M) levels[n]->o_res = device.malloc(M*sizeof(dfloat),levels[n]->res);
     if (N) levels[n]->o_rhs = device.malloc(N*sizeof(dfloat),levels[n]->rhs);
-
-    //temp storage for smoothing
-    if (M) levels[n]->A->scratch = (dfloat *) calloc(M,sizeof(dfloat));
   }
 }
 
@@ -190,11 +183,11 @@ void parAlmondReport(parAlmond_t *parAlmond) {
     if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
     MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
 
-    
+
     iint nnz;
     if (parAlmond->levels[lev]->A)
       nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
-    else 
+    else
       nnz =0;
     iint minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
