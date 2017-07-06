@@ -18,7 +18,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 0.5;
+  mesh->finalTime = 1.2;
   dfloat cfl = .4; // depends on the stability region size
 
   // set penalty parameter
@@ -224,17 +224,8 @@ void acousticsSetup2D(mesh2D *mesh){
          mesh->MRABhaloIds[lev]);
   }
 
-  //count the pml elements
-  mesh->pmlNelements=0;
-  for (iint e=0;e<mesh->Nelements;e++) {
-    int type = mesh->elementInfo[e];
-    if ((type==100)||(type==200)||(type==300))
-      mesh->pmlNelements++;
-  }
-
-  //set up the pml
-  if (mesh->pmlNelements)
-    acousticsPmlSetup2D(mesh);
+  //set up pml
+  acousticsPmlSetup2D(mesh);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);

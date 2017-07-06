@@ -36,8 +36,14 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       }     
 
       // compute volume contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++)
+      for (iint l=0;l<lev;l++) {
         acousticsVolume2Dbbdg(mesh,l);
+        #if WADG
+          acousticsPml2D(mesh,l);
+        #else
+          acousticsPml2D(mesh,l);
+        #endif
+      }
 
       if(mesh->totalHaloPairs>0){
         // wait for halo data to arrive
@@ -89,6 +95,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
         }
       #else     
         for (iint l=0; l<lev; l++) {
+          acousticsMRABpmlUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
           acousticsMRABUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
