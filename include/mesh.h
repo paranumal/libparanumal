@@ -45,6 +45,8 @@ typedef struct {
   iint *EToP; // element-to-partition/process connectivity
   iint *EToB; // element-to-boundary condition type
 
+  int *elementInfo; //type of element
+
   // boundary faces
   iint NboundaryFaces; // number of boundary faces
   iint *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
@@ -255,7 +257,7 @@ typedef struct {
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
 
-  occa::memory o_rmapP; 
+  occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
 
