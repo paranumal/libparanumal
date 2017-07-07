@@ -20,7 +20,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
-    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+    //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+    mesh->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
 
@@ -64,7 +65,8 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
-    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+    //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
+    mesh->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
 
