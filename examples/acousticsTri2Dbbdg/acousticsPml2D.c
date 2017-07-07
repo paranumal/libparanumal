@@ -147,12 +147,12 @@ void acousticsPml2D_wadg(mesh2D *mesh, int lev){
 
       cubrhsu[n] = -(sigmax-sigmay)*u[n] - sigmay*(sigmay-sigmax)*utilde[n]; // uhat
       cubrhsv[n] = -(sigmay-sigmax)*v[n] - sigmax*(sigmax-sigmay)*vtilde[n]; // vhat
-      cubrhsp[n] = -(sigmax+sigmay)*p[n]/c2 - sigmax*sigmay*ptilde[n]; // p
+      cubrhsp[n] = -(sigmax+sigmay)*p[n]/c2 - sigmax*sigmay*ptilde[n]/c2; // p
 
       // update for u~,v~, p~
       cubrhsutilde[n] = u[n]-sigmay*utilde[n]; // du~/dt = -sigmay*u~  + uhat
       cubrhsvtilde[n] = v[n]-sigmax*vtilde[n]; // dv~/dt = -sigmax*v~  + vhat
-      cubrhsptilde[n] = c2*p[n];                  // dp~/dt = p
+      cubrhsptilde[n] = p[n];                  // dp~/dt = p
     }
 
     //Project down and store

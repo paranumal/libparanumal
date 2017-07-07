@@ -3,7 +3,7 @@
 void acousticsPmlSetup2D(mesh2D *mesh){
 
   //constant pml absorption coefficient
-  dfloat xsigma = 4000, ysigma = 4000;
+  dfloat xsigma = 40, ysigma = 40;
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -23,10 +23,22 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
     mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
 
-    //find the bounding box of the interior domain
+    //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
     dfloat ymin = 1e9, ymax =-1e9;
+    dfloat pmlxmin = 1e9, pmlxmax =-1e9;
+    dfloat pmlymin = 1e9, pmlymax =-1e9;
     for (iint e=0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Nverts;n++) {
+        dfloat x = mesh->EX[e*mesh->Nverts+n];
+        dfloat y = mesh->EY[e*mesh->Nverts+n];
+        
+        pmlxmin = (pmlxmin > x) ? x : pmlxmin;
+        pmlymin = (pmlymin > y) ? y : pmlymin;
+        pmlxmax = (pmlxmax < x) ? x : pmlxmax;
+        pmlymax = (pmlymax < y) ? y : pmlymax;
+      }
+
       //skip pml elements
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)) continue;
@@ -41,6 +53,11 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         ymax = (ymax < y) ? y : ymax;
       }
     }
+
+    dfloat xmaxScale = pow(pmlxmax-xmax,2);
+    dfloat xminScale = pow(pmlxmin-xmin,2);
+    dfloat ymaxScale = pow(pmlymax-ymax,2);
+    dfloat yminScale = pow(pmlymin-ymin,2);
 
     //set up the damping factor
     iint cnt = 0;
@@ -72,23 +89,23 @@ void acousticsPmlSetup2D(mesh2D *mesh){
 
               if (type==100) { //X Pml
                 if(x>xmax)
-                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmax,2);
+                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmax,2)/xmaxScale;
                 if(x<xmin)
-                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmin,2);
+                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmin,2)/xminScale;
               } else if (type==200) { //Y Pml
                 if(y>ymax)
-                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymax,2);
+                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymax,2)/ymaxScale;
                 if(y<ymin)
-                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymin,2);
+                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymin,2)/yminScale;
               } else if (type==300) { //XY Pml
                 if(x>xmax)
-                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmax,2);
+                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmax,2)/xmaxScale;
                 if(x<xmin)
-                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmin,2);
+                  mesh->pmlSigmaX[mesh->cubNp*cnt + n] = xsigma*pow(x-xmin,2)/xminScale;
                 if(y>ymax)
-                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymax,2);
+                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymax,2)/ymaxScale;
                 if(y<ymin)
-                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymin,2);
+                  mesh->pmlSigmaY[mesh->cubNp*cnt + n] = ysigma*pow(y-ymin,2)/yminScale;
               }
             }
             cnt++;
