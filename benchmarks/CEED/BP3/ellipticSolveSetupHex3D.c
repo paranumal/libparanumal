@@ -121,7 +121,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   mesh->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
-               "ellipticAxHex3D_e2",
+               "ellipticAxHex3D_e3",
                kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
