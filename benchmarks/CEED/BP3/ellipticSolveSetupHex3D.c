@@ -63,20 +63,20 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   iint gNp = gNq*gNq*gNq;
   dfloat *gD = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
   dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
-  dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements, sizeof(dfloat));
+  dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
 
   for(iint n=0;n<gNq*mesh->Nq;++n){
     gD[n] = drand48();
     gI[n] = drand48();
   }
 
-  for(iint n=0;gNp*mesh->Nelements;++n){
+  for(iint n=0;n<gNp*mesh->Nelements*mesh->Nggeo;++n){
     gggeo[n] = drand48();
   }
   
   solver->o_gD = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gD);
   solver->o_gI = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gI);
-  solver->o_gggeo = mesh->device.malloc(gNp*mesh->Nelements*sizeof(dfloat), gggeo);
+  solver->o_gggeo = mesh->device.malloc(mesh->Nggeo*gNp*mesh->Nelements*sizeof(dfloat), gggeo);
   // BP3 specific stuff ends here 
 
 				   
