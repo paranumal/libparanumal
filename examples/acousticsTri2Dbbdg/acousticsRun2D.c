@@ -39,7 +39,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       for (iint l=0;l<lev;l++) {
         acousticsVolume2Dbbdg(mesh,l);
         #if WADG
-          acousticsPml2D(mesh,l);
+          acousticsPml2D_wadg(mesh,l);
         #else
           acousticsPml2D(mesh,l);
         #endif
@@ -56,6 +56,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         acousticsSurface2Dbbdg(mesh,l,t);
+        //acousticsPmlSurface2Dbbdg(mesh,l,t);
       }
       
       dfloat a1, a2, a3;
@@ -88,6 +89,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       
       #if WADG
         for (iint l=0; l<lev; l++) {
+          acousticsMRABpmlUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
           acousticsMRABUpdate2D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {

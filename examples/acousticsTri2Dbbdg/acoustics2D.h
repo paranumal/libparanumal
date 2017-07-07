@@ -26,6 +26,8 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t);
 void acousticsPmlSetup2D(mesh2D *mesh);
 void acousticsPml2D(mesh2D *mesh, int lev);
 void acousticsPml2D_wadg(mesh2D *mesh, int lev);
+void acousticsPmlVolume2Dbbdg(mesh2D *mesh, iint lev);
+void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t);
 void acousticsMRABpmlUpdate2D(mesh2D *mesh, dfloat a1, dfloat a2, dfloat a3, iint lev, dfloat dt);
 
 void acousticsError2D(mesh2D *mesh, dfloat time);
