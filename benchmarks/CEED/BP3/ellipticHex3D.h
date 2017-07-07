@@ -46,6 +46,7 @@ typedef struct {
   occa::memory *o_B, o_tmp2;
   void *xxt2;
   void *parAlmond;
+
   
 } precon_t;
 
@@ -98,6 +99,13 @@ typedef struct {
 
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
+
+  // integration storage for BP3
+  int gNq;
+  occa::memory o_gggeo; // Jacobian matrix at integration nodes
+  occa::memory o_gI;    // interpolate from GLL to integration nodes
+  occa::memory o_gD;    // differentiate and interpolate from GLL to integration nodes
+
   
 }solver_t;
 
