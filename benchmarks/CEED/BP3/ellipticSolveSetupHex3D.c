@@ -58,11 +58,34 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   solver->Nblock = Nblock;
 
+  // BP3 specific stuff starts here
+  iint gNq = mesh->Nq+1;
+  iint gNp = gNq*gNq*gNq;
+  dfloat *gD = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
+  dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
+  dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements, sizeof(dfloat));
+
+  for(iint n=0;n<gNq*mesh->Nq;++n){
+    gD[n] = drand48();
+    gI[n] = drand48();
+  }
+
+  for(iint n=0;gNp*mesh->Nelements;++n){
+    gggeo[n] = drand48();
+  }
+  
+  solver->o_gD = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gD);
+  solver->o_gI = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gI);
+  solver->o_gggeo = mesh->device.malloc(gNp*mesh->Nelements*sizeof(dfloat), gggeo);
+  // BP3 specific stuff ends here 
+
+				   
+				   
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-  
+
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax); 
 
@@ -98,7 +121,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   mesh->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
-               "ellipticAxHex3D_e1",
+               "ellipticAxHex3D_e2",
                kernelInfo);
 
   mesh->weightedInnerProduct1Kernel =
@@ -209,6 +232,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   free(localMM); o_MM.free(); o_localMM.free();
 
-
+  
   return solver;
 }
