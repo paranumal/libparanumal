@@ -227,6 +227,9 @@ void acousticsSetup2D(mesh2D *mesh){
   //set up pml
   acousticsPmlSetup2D(mesh);
 
+  //set up source injection
+  acousticsSourceSetup2D(mesh);
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
 
