@@ -33,6 +33,29 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
 
     //this element contains the source point
     sourceId = e;
+
+    //find the node which is closest to the source point and use the c2 from that node
+    int minId = 0
+    dfloat dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));    
+    for(iint n=0;n<mesh->cubNp;++n){
+      // cubature node coordinates
+      dfloat rn = mesh->cubr[n];
+      dfloat sn = mesh->cubs[n];
+
+      /* physical coordinate of interpolation node */
+      dfloat x = -0.5*(rn+sn)*x1 + 0.5*(1+rn)*x2 + 0.5*(1+sn)*x3;
+      dfloat y = -0.5*(rn+sn)*y1 + 0.5*(1+rn)*y2 + 0.5*(1+sn)*y3;
+
+      dfloat dist2 = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
+
+      if (dist2 < dist) {
+        dist = dist2;
+        minId = n;
+      }
+    }
+
+    sourceC2 = mesh->c2[n+ e*mesh->cubNp];
+
     break;
   }
 
@@ -40,6 +63,7 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
   iint sourceV1, sourceV2, sourceV3;
   mesh->MRABsourceNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
   mesh->MRABsourceElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABsourceIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
   if (sourceId > -1) {
     sourceV1 = mesh->EToV[sourceId*mesh->Nverts+0];
     sourceV2 = mesh->EToV[sourceId*mesh->Nverts+1];
@@ -53,14 +77,17 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
       }
     }
 
+    iint cnt =0;
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->sourceNelements[lev]) {
-        mesh->MRABsourceElementIds = (iint *) calloc(mesh->MRABsourceNelements[lev],sizeof(init));
+        mesh->MRABsourceIds[lev] = (iint *) calloc(mesh->MRABsourceNelements[lev],sizeof(init));
+        mesh->MRABsourceElementIds[lev] = (iint *) calloc(mesh->MRABsourceNelements[lev],sizeof(init));
         mesh->MRABsourceNelements[lev]=0;
         for (iint e=0;e<mesh->Nelements;e++) {
           for (int n=0;n<mesh->Nverts) {
             V = mesh->EToV[e*mesh->Nverts+n];
             if ((V==sourceV1)||(V==sourceV2)||(V==sourceV3)) {
+              mesh->MRABsourceIds[lev][mesh->MRABsourceNelements[lev]] = cnt++;
               mesh->MRABsourceElementIds[lev][mesh->MRABsourceNelements[lev]++] = e;
             }
           }
