@@ -25,7 +25,7 @@ typedef struct {
 
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;  
-  
+
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
@@ -106,6 +106,14 @@ typedef struct {
   occa::memory o_gI;    // interpolate from GLL to integration nodes
   occa::memory o_gD;    // differentiate and interpolate from GLL to integration nodes
 
+  occa::kernel AxKernel;
+  occa::kernel gradientKernel;
+  occa::kernel partialGradientKernel;
+  occa::kernel ipdgKernel;
+  
+  occa::stream defaultStream;
+  occa::stream dataStream;
+  
   
 }solver_t;
 
@@ -117,3 +125,14 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, iint maxIterations, const char *options);
 
 solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options);
+
+
+void ellipticStartHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+
+void ellipticInterimHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+
+void ellipticEndHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *recvBuffer);
+
+void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
+
+
