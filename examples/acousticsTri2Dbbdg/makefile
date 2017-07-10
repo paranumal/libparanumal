@@ -46,9 +46,7 @@ acousticsPml2D.o \
 acousticsPmlSurface2D.o \
 acousticsPmlUpdate2D.o \
 acousticsPmlVolume2D.o \
-acousticsSourceSetup2D.o \
-acousticsSourceVolume2D.o \
-acousticsSourceUpdate2D.o
+acousticsSourceSetup2D.o 
 
 # library objects
 LOBJS = \

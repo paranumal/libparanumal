@@ -10,7 +10,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
 
   //populate the trace buffer fQ
   for (iint l=0;l<mesh->MRABNlevels;l++)
-    acousticsMRABUpdate2D(mesh, 0., 0., 0., l, 0.);
+    acousticsMRABUpdate2D(mesh, 0., 0., 0., l, 0., 0.);
 
 
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
@@ -26,7 +26,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       if(mesh->totalHaloPairs>0){
         // extract halo node data
         meshHaloExtract(mesh, mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
-              mesh->fQ, sendBuffer);
+              mesh->fQP, sendBuffer);
 
         // start halo exchange
         meshHaloExchangeStart(mesh,
@@ -43,7 +43,6 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
         #else
           acousticsPml2D(mesh,l);
         #endif
-        acousticsSourceVolume2Dbbdg(mesh,l);
       }
 
       if(mesh->totalHaloPairs>0){
@@ -51,13 +50,12 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
         meshHaloExchangeFinish(mesh);
 
         // copy data to halo zone of q
-        memcpy(mesh->fQ+mesh->Nfp*mesh->Nfields*mesh->Nelements*mesh->Nfaces, recvBuffer, haloBytes);
+        memcpy(mesh->fQP+mesh->Nfp*mesh->Nfields*mesh->Nelements*mesh->Nfaces, recvBuffer, haloBytes);
       }
 
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         acousticsSurface2Dbbdg(mesh,l,t);
-        //acousticsPmlSurface2Dbbdg(mesh,l,t);
       }
 
       dfloat a1, a2, a3;
@@ -91,20 +89,18 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       #if WADG
         for (iint l=0; l<lev; l++) {
           acousticsMRABpmlUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
-          acousticsSourceUpdate2D(mesh,l,t);
-          acousticsMRABUpdate2D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABUpdate2D_wadg(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
-          acousticsMRABUpdateTrace2D_wadg(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABUpdateTrace2D_wadg(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #else
         for (iint l=0; l<lev; l++) {
           acousticsMRABpmlUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
-          acousticsSourceUpdate2D(mesh,l,t);
-          acousticsMRABUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABUpdate2D(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
-          acousticsMRABUpdateTrace2D(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABUpdateTrace2D(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #endif
     }
@@ -189,7 +185,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
             mesh->o_vmapM,
             mesh->o_rhsq,
             mesh->o_q,
-            mesh->o_fQ,
+            mesh->o_fQM,
+            mesh->o_fQP,
             mesh->MRABshiftIndex[l]);
     #else
     if (mesh->MRABNelements[l])
@@ -200,7 +197,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
             mesh->o_vmapM,
             mesh->o_rhsq,
             mesh->o_q,
-            mesh->o_fQ,
+            mesh->o_fQM,
+            mesh->o_fQP,
             mesh->MRABshiftIndex[l]);
     #endif
 
@@ -221,7 +219,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         mesh->haloExtractKernel(mesh->totalHaloPairs,
                     Nentries,
                     mesh->o_haloElementList,
-                    mesh->o_fQ,
+                    mesh->o_fQP,
                     mesh->o_haloBuffer);
 
         // copy extracted halo to HOST
@@ -254,7 +252,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
         // copy halo data to DEVICE
         size_t offset = mesh->Nfaces*mesh->Nfp*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        mesh->o_fQ.copyFrom(recvBuffer, haloBytes, offset);
+        mesh->o_fQP.copyFrom(recvBuffer, haloBytes, offset);
       }
 
       // compute surface contribution to DG acoustics RHS
@@ -273,7 +271,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                   mesh->o_x,
                   mesh->o_y,
                   mesh->o_q,
-                  mesh->o_fQ,
+                  mesh->o_fQM,
+                  mesh->o_fQP,
                   mesh->o_rhsq,
                   mesh->MRABshiftIndex[l]);
 
@@ -318,7 +317,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->o_vmapM,
                 mesh->o_rhsq,
                 mesh->o_q,
-                mesh->o_fQ,
+                mesh->o_fQM,
+                mesh->o_fQP,
                 mesh->MRABshiftIndex[l]);
 
           //rotate index
@@ -336,7 +336,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->o_vmapM,
                 mesh->o_rhsq,
                 mesh->o_q,
-                mesh->o_fQ,
+                mesh->o_fQM,
+                mesh->o_fQP,
                 mesh->MRABshiftIndex[lev]);
       #else
         for (iint l=0; l<lev; l++) {
@@ -348,7 +349,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->o_vmapM,
                 mesh->o_rhsq,
                 mesh->o_q,
-                mesh->o_fQ,
+                mesh->o_fQM,
+                mesh->o_fQP,
                 mesh->MRABshiftIndex[l]);
 
           //rotate index
@@ -364,7 +366,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                 mesh->o_vmapM,
                 mesh->o_rhsq,
                 mesh->o_q,
-                mesh->o_fQ,
+                mesh->o_fQM,
+                mesh->o_fQP,
                 mesh->MRABshiftIndex[lev]);
       #endif
 
