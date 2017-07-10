@@ -147,6 +147,12 @@ typedef struct {
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
+  //source injection
+  dfloat *sourceq;
+  dfloat sourceX0, sourceY0, sourceT0, sourceC2, sourceFreq;
+  iint sourceNelements, *MRABsourceNelements;
+  iint **MRABsourceElementIds, **MRABsourceIds;
+
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes

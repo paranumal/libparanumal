@@ -18,18 +18,18 @@ LD	= mpic++
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -D DHOLMES='"${CURDIR}/../.."'
 
-# link flags to be used 
+# link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags)
 
 # libraries to be linked in
 LIBS	=  $(links)
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c 
+.SUFFIXES: .c
 
 # rule for .c files
 .c.o:
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
+	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 
 # list of objects to be compiled
 AOBJS    = \
@@ -45,7 +45,10 @@ acousticsPmlSetup2D.o \
 acousticsPml2D.o \
 acousticsPmlSurface2D.o \
 acousticsPmlUpdate2D.o \
-acousticsPmlVolume2D.o 
+acousticsPmlVolume2D.o \
+acousticsSourceSetup2D.o \
+acousticsSourceVolume2D.o \
+acousticsSourceUpdate2D.o
 
 # library objects
 LOBJS = \
