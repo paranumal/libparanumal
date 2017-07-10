@@ -12,6 +12,34 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   occa::initTimer(mesh->device);
 
+
+  // find elements that have all neighbors on this process
+  iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+
+  iint Ninterior = 0, NnotInterior = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint flag = 0;
+    for(iint f=0;f<mesh->Nfaces;++f)
+      if(mesh->EToP[e*mesh->Nfaces+f]!=-1)
+	      flag = 1;
+    if(!flag)
+      internalElementIds[Ninterior++] = e;
+    else
+      notInternalElementIds[NnotInterior++] = e;
+  }
+
+  printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
+  
+  mesh->NinternalElements = Ninterior;
+  mesh->NnotInternalElements = NnotInterior;
+  if(Ninterior)
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
+  
+  if(NnotInterior>0)
+    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(iint), notInternalElementIds);
+
+  
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
@@ -323,10 +351,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = 1024/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = 1024/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);  
