@@ -124,7 +124,7 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
         if (eP >-1) flagP = patchFlag[eP];
 
         //if neighbour is in the source patch, flag it in EToB
-        if (flagP==0) mesh->EToB[e*mesh->Nfaces+f] = -11;
+        if (flagP==1) mesh->EToB[e*mesh->Nfaces+f] = -11;
       }
     }
   }
