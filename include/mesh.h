@@ -45,6 +45,8 @@ typedef struct {
   iint *EToP; // element-to-partition/process connectivity
   iint *EToB; // element-to-boundary condition type
 
+  int *elementInfo; //type of element
+
   // boundary faces
   iint NboundaryFaces; // number of boundary faces
   iint *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
@@ -145,6 +147,12 @@ typedef struct {
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
+  //source injection
+  dfloat *sourceq;
+  dfloat sourceX0, sourceY0, sourceT0, sourceC2, sourceFreq;
+  iint sourceNelements, *MRABsourceNelements;
+  iint **MRABsourceElementIds, **MRABsourceIds;
+
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
@@ -180,6 +188,8 @@ typedef struct {
   iint *MRABNelements, *MRABNhaloElements;
   iint **MRABelementIds, **MRABhaloIds;
   iint *MRABshiftIndex;
+
+  iint *MRABpmlNelements, **MRABpmlElementIds, **MRABpmlIds;
 
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann;
@@ -255,7 +265,7 @@ typedef struct {
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
 
-  occa::memory o_rmapP; 
+  occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
 
@@ -269,6 +279,8 @@ typedef struct {
   //MRAB element lists
   occa::memory *o_MRABelementIds;
   occa::memory *o_MRABhaloIds;
+  occa::memory *o_MRABpmlElementIds;
+  occa::memory *o_MRABpmlIds;
 
   // DG halo exchange info
   occa::memory o_haloElementList;
@@ -314,6 +326,7 @@ typedef struct {
 
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY;
+  occa::memory o_pmlrhsq;
 
   occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
