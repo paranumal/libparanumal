@@ -17,32 +17,66 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
+    // should not be hard coded
+    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
 
     iint offset = 0;
     
     ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
     solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
-    
+
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
+
+#if 1
+    if(mesh->NinternalElements)
+      solver->partialIpdgKernel(mesh->NinternalElements,
+				mesh->o_internalElementIds,
+				mesh->o_vmapM,
+				mesh->o_vmapP,
+				lambda,
+				tau,
+				mesh->o_vgeo,
+				mesh->o_sgeo,
+				mesh->o_D,
+				solver->o_grad,
+				o_Aq);
+#endif
     
     ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
 
-    offset = mesh->Nelements;
-    solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    if(mesh->totalHaloPairs){
+      offset = mesh->Nelements;
+      solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    }
 
-    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
+#if 1
+    if(mesh->NnotInternalElements)
+      solver->partialIpdgKernel(mesh->NnotInternalElements,
+				mesh->o_notInternalElementIds,
+				mesh->o_vmapM,
+				mesh->o_vmapP,
+				lambda,
+				tau,
+				mesh->o_vgeo,
+				mesh->o_sgeo,
+				mesh->o_D,
+				solver->o_grad,
+				o_Aq);
+#else
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         mesh->o_D,
-         solver->o_grad,
-         o_Aq);
-        
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       mesh->o_D,
+		       solver->o_grad,
+		       o_Aq);
+#endif
+    
+    
   }
 
   if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
@@ -68,31 +102,64 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
+    // tau should not be hard coded
+    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
+    
     iint offset = 0;
     
     ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
     solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
-    
+
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
-    
+
+#if 1
+    if(mesh->NinternalElements)
+      solver->partialIpdgKernel(mesh->NinternalElements,
+				mesh->o_internalElementIds,
+				mesh->o_vmapM,
+				mesh->o_vmapP,
+				lambda,
+				tau,
+				mesh->o_vgeo,
+				mesh->o_sgeo,
+				mesh->o_D,
+				solver->o_grad,
+				o_Aq);
+#endif
+   
     ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
 
-    offset = mesh->Nelements;
-    solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    if(mesh->totalHaloPairs){
+      offset = mesh->Nelements;      
+      solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    }
 
-    dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
+#if 1
+    if(mesh->NnotInternalElements)
+      solver->partialIpdgKernel(mesh->NnotInternalElements,
+				mesh->o_notInternalElementIds,
+				mesh->o_vmapM,
+				mesh->o_vmapP,
+				lambda,
+				tau,
+				mesh->o_vgeo,
+				mesh->o_sgeo,
+				mesh->o_D,
+				solver->o_grad,
+				o_Aq);
+#else
     solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         mesh->o_D,
-         solver->o_grad,
-         o_Aq);
-        
+		       mesh->o_vmapM,
+		       mesh->o_vmapP,
+		       lambda,
+		       tau,
+		       mesh->o_vgeo,
+		       mesh->o_sgeo,
+		       mesh->o_D,
+		       solver->o_grad,
+		       o_Aq);
+#endif
   }
 }
 

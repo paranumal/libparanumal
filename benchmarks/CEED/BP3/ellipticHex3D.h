@@ -106,10 +106,12 @@ typedef struct {
   occa::memory o_gI;    // interpolate from GLL to integration nodes
   occa::memory o_gD;    // differentiate and interpolate from GLL to integration nodes
 
-  occa::kernel AxKernel;
+  occa::kernel AxKernel;  
   occa::kernel gradientKernel;
   occa::kernel partialGradientKernel;
+
   occa::kernel ipdgKernel;
+  occa::kernel partialIpdgKernel;
   
   occa::stream defaultStream;
   occa::stream dataStream;
