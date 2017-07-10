@@ -6,8 +6,8 @@
 
 #include "mesh2D.h"
 
-/* 
-   purpose: read gmsh triangle mesh 
+/*
+   purpose: read gmsh triangle mesh
 */
 mesh2D* meshParallelReaderTri2D(char *fileName){
 
@@ -27,7 +27,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   mesh->NfaceVertices = 2;
 
   /* vertices on each face */
-  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}}; 
+  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}};
 
   mesh->faceVertices =
     (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
@@ -60,7 +60,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat, VX+n, VY+n);
   }
-  
+
   /* look for section with Element node data */
   do{
     fgets(buf, BUFSIZ, fp);
@@ -91,14 +91,16 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   int NtrianglesLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  int start = rank*chunk + mymin(rank, remainder); 
+  int start = rank*chunk + mymin(rank, remainder);
   int end = start + NtrianglesLocal-1;
-  
+
   /* allocate space for Element node index data */
 
-  mesh->EToV 
-    = (iint*) calloc(NtrianglesLocal*mesh->Nverts, 
+  mesh->EToV
+    = (iint*) calloc(NtrianglesLocal*mesh->Nverts,
 		     sizeof(iint));
+  mesh->elementInfo
+    = (int*) calloc(NtrianglesLocal,sizeof(int));
 
   /* scan through file looking for triangle elements */
   int cnt=0, bcnt=0;
@@ -110,7 +112,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d%d%*d %d%d", 
+      sscanf(buf, "%*d%*d %*d%d%*d %d%d",
 	     mesh->boundaryInfo+bcnt*3, &v1, &v2);
       mesh->boundaryInfo[bcnt*3+1] = v1-1;
       mesh->boundaryInfo[bcnt*3+2] = v2-1;
@@ -118,8 +120,8 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
     }
     if(elementType==2){  // triangle
       if(start<=Ntriangles && Ntriangles<=end){
-	sscanf(buf, "%*d%*d%*d%*d%*d %d%d%d", 
-	       &v1, &v2, &v3);
+	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d",
+	      mesh->elementInfo+cnt, &v1, &v2, &v3);
 
 	// check orientation
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1];
@@ -131,7 +133,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 	  v2 = v3tmp;
 	  //	  printf("unwarping element\n");
 	}
-	
+
 	/* read vertex triplet for trianngle */
 	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
 	mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
@@ -167,4 +169,4 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   return mesh;
 
 }
-  
+
