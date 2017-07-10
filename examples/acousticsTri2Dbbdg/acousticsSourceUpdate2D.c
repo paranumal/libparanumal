@@ -60,14 +60,10 @@ dfloat intRiker(dfloat t, dfloat f) {
   return t*exp(-M_PI*M_PI*f*f*t*t);
 }
 
-void acousticsRikerPulse2D(mesh2D *mesh, dfloat x, dfloat y, dfloat t, dfloat *u, dfloat *v, dfloat *p) {
+void acousticsRikerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+                           dfloat *u, dfloat *v, dfloat *p) {
 
-  dfloat x0 = mesh->sourceX0;
-  dfloat y0 = mesh->sourceY0;
-  dfloat t0 = mesh->sourceT0;
-  dfloat f = mesh->sourceFreq;
-
-  dfloat c = sqrt(mesh->sourceC2);
+  
 
   //radial distance
   dfloat r = sqrt((x-x0)*(x-x0)+(y-y0)*(y-y0));

@@ -269,7 +269,10 @@ V1Dq = bern_basis_1D(N,r1Dq);
 V = Vandermonde2D(N,r,s);
 [VB Vr Vs V1 V2 V3] = bern_basis_tri(N,r,s);
 VB1D = bern_basis_1D(N,r1D);
-invVB = inv(VB);
+
+inv(VB1D)
+
+invVB = inv(VB)
 
 %% write VDM for conversion
 
