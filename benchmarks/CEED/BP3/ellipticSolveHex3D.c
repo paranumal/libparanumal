@@ -1,13 +1,6 @@
 #include "ellipticHex3D.h"
 
 
-void ellipticStartHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-
-void ellipticEndHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-
-void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
-
-
 void ellipticOperator3D(solver_t *solver, dfloat lambda,
       occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
@@ -21,19 +14,25 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    mesh->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
 
-    ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+    iint offset = 0;
     
-    ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
+    ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
-    mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    
+    ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
+
+    offset = mesh->Nelements;
+    solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
-    mesh->ipdgKernel(mesh->Nelements,
+    solver->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,
          lambda,
@@ -66,19 +65,24 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    mesh->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
   }
   else{
-
-    ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+    iint offset = 0;
     
-    ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
+    ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
-    mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
+    
+    ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
+    
+    ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
+
+    offset = mesh->Nelements;
+    solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
-    mesh->ipdgKernel(mesh->Nelements,
+    solver->ipdgKernel(mesh->Nelements,
          mesh->o_vmapM,
          mesh->o_vmapP,
          lambda,
@@ -222,8 +226,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   iint Niter = 0;
   dfloat alpha, beta, pAp;
     
-  if(rank==0)
-    printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
+  //  if(rank==0)
+  //    printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
   while(rdotr0>(tol*tol) && Niter<maxIterations){
     // A*p
@@ -285,8 +289,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
 
-    if(rank==0)
-      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+    //    if(rank==0)
+    //      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
     
     ++Niter;
   };
@@ -299,13 +303,13 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   double gElapsed;
   MPI_Allreduce(&elapsed, &gElapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   
-  if(rank==0)
-    printf("elapsed = %g iter=%05d pAp = %g norm(r) = %g\n",
-	   gElapsed, Niter, pAp, sqrt(rdotr0));
+  //  if(rank==0)
+  //    printf("elapsed = %g iter=%05d pAp = %g norm(r) = %g\n",
+  //	   gElapsed, Niter, pAp, sqrt(rdotr0));
 
   occa::printTimer();
 
-  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
+  //  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
 
   return Niter;
 }

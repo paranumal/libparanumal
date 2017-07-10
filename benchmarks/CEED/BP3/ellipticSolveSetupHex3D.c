@@ -52,10 +52,29 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
-
-  solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-  solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-
+  
+  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  
+#if 0
+  solver->sendBuffer = (dfloat*) calloc(Nbytes/sizeof(dfloat), sizeof(dfloat));
+  solver->recvBuffer = (dfloat*) calloc(Nbytes/sizeof(dfloat), sizeof(dfloat));
+#else
+  solver->defaultStream = mesh->device.getStream();
+  solver->dataStream = mesh->device.createStream();
+  mesh->device.setStream(solver->dataStream);
+  
+  if(Nbytes>0){
+    occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+    occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+    
+    solver->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
+    solver->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+  }else{
+    solver->sendBuffer = NULL;
+    solver->recvBuffer = NULL;
+  }
+  mesh->device.setStream(solver->defaultStream);
+#endif
   solver->Nblock = Nblock;
 
   // BP3 specific stuff starts here
@@ -118,8 +137,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "put",
                kernelInfo);
 
-
-  mesh->AxKernel =
+  solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
                "ellipticAxHex3D_e3",
                kernelInfo);
@@ -154,13 +172,18 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
            "dotDivide",
            kernelInfo);
 
-  mesh->gradientKernel = 
+  solver->gradientKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
-               "ellipticGradientHex3D",
-           kernelInfo);
+				       "ellipticGradientHex3D",
+				       kernelInfo);
+  
+  solver->partialGradientKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
+				       "ellipticPartialGradientHex3D",
+				       kernelInfo);
 
 
-  mesh->ipdgKernel =
+  solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
                "ellipticAxIpdgHex3D",
                kernelInfo);
