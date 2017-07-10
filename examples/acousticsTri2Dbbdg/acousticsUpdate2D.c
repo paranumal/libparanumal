@@ -1,6 +1,6 @@
 #include "mesh2D.h"
 
-void acousticsRikerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
                            dfloat *u, dfloat *v, dfloat *p);
 
 void acousticsMRABUpdate2D(mesh2D *mesh,  
@@ -44,10 +44,10 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           dfloat c = sqrt(mesh->sourceC2);
 
           int qid = mesh->Nfields*n;
-          acousticsRikerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
         }
 
-        dfloat s;
+        dfloat s = 0.f;
         if (bc==-10) s= 1.f;
         if (bc==-11) s=-1.f;
 
@@ -142,10 +142,10 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
           dfloat c = sqrt(mesh->sourceC2);
 
           int qid = mesh->Nfields*n;
-          acousticsRikerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
         }
 
-        dfloat s;
+        dfloat s = 0.f;
         if (bc==-10) s= 1.f;
         if (bc==-11) s=-1.f;
 
@@ -258,10 +258,10 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
           dfloat c = sqrt(mesh->sourceC2);
 
           int qid = mesh->Nfields*n;
-          acousticsRikerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
         }
 
-        dfloat s;
+        dfloat s = 0.f;
         if (bc==-10) s= 1.f;
         if (bc==-11) s=-1.f;
 
@@ -381,10 +381,10 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
           dfloat c = sqrt(mesh->sourceC2);
 
           int qid = mesh->Nfields*n;
-          acousticsRikerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, qtmp+qid+0, qtmp+qid+1, qtmp+qid+2);
         }
 
-        dfloat s;
+        dfloat s = 0.f;
         if (bc==-10) s= 1.f;
         if (bc==-11) s=-1.f;
 
@@ -429,23 +429,23 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
   free(qtmp);
 }
 
-//Riker pulse
-dfloat riker(dfloat t, dfloat f) {
+//Ricker pulse
+dfloat ricker(dfloat t, dfloat f) {
   return -(1-2*M_PI*M_PI*f*f*t*t)*exp(-M_PI*M_PI*f*f*t*t);
 }
 
-//integrated Riker pulse
-dfloat intRiker(dfloat t, dfloat f) {
+//integrated Ricker pulse
+dfloat intRicker(dfloat t, dfloat f) {
   return -t*exp(-M_PI*M_PI*f*f*t*t);
 }
 
-void acousticsRikerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
                            dfloat *u, dfloat *v, dfloat *p) {
 
   //radial distance
   dfloat r = sqrt(x*x+y*y);
 
-  *p = riker(t - r/c,f)/(4*M_PI*c*c*r);
-  *u = x*(intRiker(t-r/c,f)/r + riker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
-  *v = y*(intRiker(t-r/c,f)/r + riker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
+  *p = ricker(t - r/c,f)/(4*M_PI*c*c*r);
+  *u = x*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
+  *v = y*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
 }
