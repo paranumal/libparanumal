@@ -79,9 +79,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
   if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
     // parallel gather scatter
-    ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
-    //    ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
-    //ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
+    //ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+    ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
+    ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
   }
  
   occaTimerToc(mesh->device,"AxKernel");

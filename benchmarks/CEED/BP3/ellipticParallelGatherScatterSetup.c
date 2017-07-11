@@ -9,13 +9,13 @@
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
 void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-					iint Nlocal,     // number of local nodes
-					iint Nbytes,     // number of bytes per node
-					iint *gatherLocalIds,  // local index of nodes
-					iint *gatherBaseIds,   // global index of their base nodes
-					iint *gatherHaloFlags,
-					ogs_t **halo,
-					ogs_t **nonHalo){   // 1 for halo node, 0 for not
+                                        iint Nlocal,     // number of local nodes
+                                        iint Nbytes,     // number of bytes per node
+                                        iint *gatherLocalIds,  // local index of nodes
+                                        iint *gatherBaseIds,   // global index of their base nodes
+                                        iint *gatherHaloFlags,
+                                        ogs_t **halo,
+                                        ogs_t **nonHalo){   // 1 for halo node, 0 for not
   
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -56,11 +56,11 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   
   (*halo)->gatherOffsets  = (iint*) calloc((*halo)->Ngather+1, sizeof(iint));
   (*halo)->gatherLocalIds = (iint*) calloc(nHalo, sizeof(iint));
-  (*halo)->gatherBaseIds  = (iint*) calloc(nHalo, sizeof(iint));
+  (*halo)->gatherBaseIds  = (iint*) calloc((*halo)->Ngather, sizeof(iint));
 
   (*nonHalo)->gatherOffsets  = (iint*) calloc((*nonHalo)->Ngather+1, sizeof(iint)); 
   (*nonHalo)->gatherLocalIds = (iint*) calloc(nNonHalo, sizeof(iint));
-  (*nonHalo)->gatherBaseIds  = (iint*) calloc(nNonHalo, sizeof(iint));
+  (*nonHalo)->gatherBaseIds  = (iint*) calloc((*nonHalo)->Ngather, sizeof(iint));
   
   // only finds bases
   nHalo = 0;
@@ -72,19 +72,19 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
     if(test){
       // increment unique base counter and record index into shuffled list of ndoes
-      if(gatherHaloFlags[n]==1)
-	(*halo)->gatherOffsets[((*halo)->Ngather)++] = nHalo;  
+      if(gatherHaloFlags[n]==1){
+        (*halo)->gatherOffsets[(*halo)->Ngather] = nHalo;  
+        (*halo)->gatherBaseIds[(*halo)->Ngather++] = gatherBaseIds[n];
+      }
       else
-	(*nonHalo)->gatherOffsets[((*nonHalo)->Ngather)++] = nNonHalo;
+        (*nonHalo)->gatherOffsets[((*nonHalo)->Ngather)++] = nNonHalo;
     }
     
     if(gatherHaloFlags[n]==1){
       (*halo)->gatherLocalIds[nHalo] = gatherLocalIds[n];
-      (*halo)->gatherBaseIds[nHalo] = gatherBaseIds[n];
       ++nHalo;
     }else{
       (*nonHalo)->gatherLocalIds[nNonHalo] = gatherLocalIds[n];
-      (*nonHalo)->gatherBaseIds[nNonHalo] = gatherBaseIds[n];
       ++nNonHalo;
     }
   }
@@ -107,10 +107,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   // if there are non-halo nodes to gather
   if((*nonHalo)->Ngather){
 
-    (*nonHalo)->gatherTmp = (char*) calloc((*nonHalo)->Ngather*Nbytes, sizeof(char));
     (*nonHalo)->gatherGsh = NULL;
-    
-    (*nonHalo)->o_gatherTmp      = mesh->device.malloc((*nonHalo)->Ngather*Nbytes,           (*nonHalo)->gatherTmp);
+  
     (*nonHalo)->o_gatherOffsets  = mesh->device.malloc(((*nonHalo)->Ngather+1)*sizeof(iint), (*nonHalo)->gatherOffsets);
     (*nonHalo)->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(iint),                (*nonHalo)->gatherLocalIds);
   }
