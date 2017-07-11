@@ -127,7 +127,7 @@ typedef struct {
   // field info for PDE solver
   iint Nfields;
   dfloat *q;    // solution data array
-  dfloat *fQ; //solution trace array
+  dfloat *fQM, *fQP; //solution trace arrays
   dfloat *rhsq, *rhsq2, *rhsq3; // right hand side data array
   dfloat *resq; // residual data array (for LSERK time-stepping)
 
@@ -151,7 +151,7 @@ typedef struct {
   dfloat *sourceq;
   dfloat sourceX0, sourceY0, sourceT0, sourceC2, sourceFreq;
   iint sourceNelements, *MRABsourceNelements;
-  iint **MRABsourceElementIds, **MRABsourceIds;
+  iint *sourceElements;
 
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
@@ -161,6 +161,7 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
+  dfloat *invVB1D;
   iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
@@ -251,7 +252,7 @@ typedef struct {
 
   // occa stuff
   occa::device device;
-  occa::memory o_q, o_rhsq, o_resq, o_fQ;
+  occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
