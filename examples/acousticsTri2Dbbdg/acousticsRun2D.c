@@ -233,7 +233,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++)
+      for (iint l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->volumeKernel(mesh->MRABNelements[l],
               mesh->o_MRABelementIds[l],
@@ -245,6 +245,37 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
               mesh->o_q,
               mesh->o_rhsq,
               mesh->MRABshiftIndex[l]);
+
+        if (mesh->MRABpmlNelements[l])
+          #if WADG
+            mesh->pmlKernel(mesh->MRABpmlNelements[l],
+                            mesh->o_MRABpmlElementIds[l],
+                            mesh->o_MRABpmlIds[l],
+                            mesh->o_cubInterpT,
+                            mesh->o_cubProjectT,
+                            mesh->o_c2,
+                            mesh->o_pmlSigmaX,
+                            mesh->o_pmlSigmaY,
+                            mesh->o_q,
+                            mesh->o_pmlq,
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsq,
+                            mesh->MRABshiftIndex[l]);
+          #else
+            mesh->pmlKernel(mesh->MRABpmlNelements[l],
+                            mesh->o_MRABpmlElementIds[l],
+                            mesh->o_MRABpmlIds[l],
+                            mesh->o_cubInterpT,
+                            mesh->o_cubProjectT,
+                            mesh->o_pmlSigmaX,
+                            mesh->o_pmlSigmaY,
+                            mesh->o_q,
+                            mesh->o_pmlq,
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsq,
+                            mesh->MRABshiftIndex[l]);
+          #endif
+      }
 
       if(mesh->totalHaloPairs>0){
         // wait for halo data to arrive

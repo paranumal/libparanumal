@@ -70,12 +70,12 @@ void acousticsSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      //acousticsGaussianPulse2D(x, y, t,
-      //       mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      acousticsGaussianPulse2D(x, y, t,
+             mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
 
-      mesh->q[cnt+0] = 0.;
-      mesh->q[cnt+1] = 0.;
-      mesh->q[cnt+2] = 0.;
+      //mesh->q[cnt+0] = 0.;
+      //mesh->q[cnt+1] = 0.;
+      //mesh->q[cnt+2] = 0.;
 
       //mesh->q[cnt+2] = 1.;
 
@@ -169,9 +169,9 @@ void acousticsSetup2D(mesh2D *mesh){
         // smoothly varying (sinusoidal) wavespeed
         //printf("M_PI = %f\n",M_PI);
         if (y<0.f) {
-          mesh->c2[n + mesh->cubNp*e] = 0.2; //1.0 + 0.5*sin(M_PI*y);
+          mesh->c2[n + mesh->cubNp*e] = 1.0; //1.0 + 0.5*sin(M_PI*y);
         } else {
-          mesh->c2[n + mesh->cubNp*e] = 1.0;
+          mesh->c2[n + mesh->cubNp*e] = 0.2;
         }
       }
     }
@@ -243,6 +243,7 @@ void acousticsSetup2D(mesh2D *mesh){
 
   kernelInfo.addDefine("p_maxNodes", maxNodes);
   kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
+  kernelInfo.addDefine("p_pmlNfields", mesh->pmlNfields);
 
   int NblockV = 512/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -272,6 +273,14 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABTraceUpdate2D_wadg",
                kernelInfo);
+    mesh->pmlKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPml2D.okl",
+               "acousticsMRABPml2D_wadg",
+               kernelInfo);
+    mesh->pmlUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlUpdate2D_wadg",
+               kernelInfo);
   #else
     mesh->updateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
@@ -280,6 +289,14 @@ void acousticsSetup2D(mesh2D *mesh){
     mesh->traceUpdateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABTraceUpdate2D",
+               kernelInfo);
+    mesh->pmlKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPml2D.okl",
+               "acousticsMRABPml2D",
+               kernelInfo);
+    mesh->pmlUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlUpdate2D",
                kernelInfo);
   #endif
 
