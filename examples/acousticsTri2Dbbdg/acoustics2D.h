@@ -8,7 +8,7 @@
 
 
 #define USE_BERN 1
-#define WADG 0
+#define WADG 1
 
 void acousticsSetup2D(mesh2D *mesh);
 
@@ -30,7 +30,7 @@ void acousticsPmlVolume2Dbbdg(mesh2D *mesh, iint lev);
 void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t);
 void acousticsMRABpmlUpdate2D(mesh2D *mesh, dfloat a1, dfloat a2, dfloat a3, iint lev, dfloat dt);
 
-void acousticsSourceSetup2D(mesh2D *mesh);
+void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 void acousticsSourceVolume2Dbbdg(mesh2D *mesh, iint lev);
 void acousticsSourceUpdate2D(mesh2D *mesh, iint lev, dfloat t);
 
