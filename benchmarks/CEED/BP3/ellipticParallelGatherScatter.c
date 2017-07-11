@@ -1,6 +1,6 @@
 #include "ellipticHex3D.h"
 
-void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op){
+void ellipticParallelGatherScatter(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op){
 
   // use gather map for gather and scatter
   occaTimerTic(mesh->device,"meshParallelGatherScatter3D");
@@ -20,7 +20,7 @@ void ellipticHaloGatherScatter(solver_t *solver,
 
   if(halo->Ngather){
     // set stream to halo stream
-    mesh->device.setStream(solver->dataStream);
+    //    mesh->device.setStream(solver->dataStream);
     
     // gather halo nodes on DEVICE
     mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_v, halo->o_gatherTmp);
@@ -38,7 +38,7 @@ void ellipticHaloGatherScatter(solver_t *solver,
     mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_v);
 
     // revert back to default stream
-    mesh->device.setStream(solver->defaultStream);
+    //    mesh->device.setStream(solver->defaultStream);
   }
   
 }

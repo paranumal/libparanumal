@@ -10,7 +10,7 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
   o_deg.copyFrom(deg);
   
-  ellipticParallelGatherScatterHex3D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
+  ellipticParallelGatherScatter(mesh, ogs, o_deg, o_deg, dfloatString, "add");
   
   o_deg.copyTo(deg);
 
@@ -90,7 +90,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   }
 
   for(iint n=0;n<gNp*mesh->Nelements*mesh->Nggeo;++n){
-    gggeo[n] = drand48();
+    // gggeo[n] = drand48();
+    gggeo[n] = .1;
   }
   
   solver->o_gD = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gD);
@@ -270,7 +271,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
   // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
+  ellipticParallelGatherScatter(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
