@@ -31,7 +31,7 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   gsParallelGatherScatterDestroy(allGsh);
 
   // initialize gather structs
-  *halo = (ogs_t*) calloc(1, sizeof(ogs_t));
+  *halo    = (ogs_t*) calloc(1, sizeof(ogs_t));
   *nonHalo = (ogs_t*) calloc(1, sizeof(ogs_t));
   
   // ------------------------------------------------------------
@@ -39,33 +39,32 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   (*halo)->Ngather = 0;
   (*nonHalo)->Ngather = 0;
 
-  iint NhaloLocal = 0;
-  iint NnonHaloLocal = 0;
+  iint nHalo = 0;
+  iint nNonHalo = 0;
   
   for(iint n=0;n<Nlocal;++n){
     iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
-    if(gatherHaloFlags[n]==1)
+    if(gatherHaloFlags[n]==1){
       (*halo)->Ngather += test;
-    else
+      ++nHalo;
+    }
+    else{
       (*nonHalo)->Ngather += test;
-    
-    // total number of halo nodes
-    NhaloLocal += (gatherHaloFlags[n]==1);
-    NnonHaloLocal += (gatherHaloFlags[n]!=1);
+      ++nNonHalo;
+    }
   }
   
-  (*halo)->gatherOffsets    = (iint*) calloc((*halo)->Ngather+1, sizeof(iint)); 
-  (*nonHalo)->gatherOffsets = (iint*) calloc((*nonHalo)->Ngather+1, sizeof(iint)); 
+  (*halo)->gatherOffsets  = (iint*) calloc((*halo)->Ngather+1, sizeof(iint));
+  (*halo)->gatherLocalIds = (iint*) calloc(nHalo, sizeof(iint));
+  (*halo)->gatherBaseIds  = (iint*) calloc(nHalo, sizeof(iint));
 
-  (*halo)->gatherLocalIds = (iint*) calloc(NhaloLocal, sizeof(iint));
-  (*nonHalo)->gatherLocalIds = (iint*) calloc(NnonHaloLocal, sizeof(iint));
-
-  (*halo)->gatherBaseIds = (iint*) calloc(NhaloLocal, sizeof(iint));
-  (*nonHalo)->gatherBaseIds = (iint*) calloc(NnonHaloLocal, sizeof(iint));
+  (*nonHalo)->gatherOffsets  = (iint*) calloc((*nonHalo)->Ngather+1, sizeof(iint)); 
+  (*nonHalo)->gatherLocalIds = (iint*) calloc(nNonHalo, sizeof(iint));
+  (*nonHalo)->gatherBaseIds  = (iint*) calloc(nNonHalo, sizeof(iint));
   
   // only finds bases
-  iint nHalo = 0;
-  iint nNonHalo = 0;
+  nHalo = 0;
+  nNonHalo = 0;
   (*halo)->Ngather = 0; // reset counter
   (*nonHalo)->Ngather = 0; // reset counter
 
@@ -74,43 +73,46 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     if(test){
       // increment unique base counter and record index into shuffled list of ndoes
       if(gatherHaloFlags[n]==1)
-	(*halo)->gatherOffsets[(*halo)->Ngather++] = nHalo;  
+	(*halo)->gatherOffsets[((*halo)->Ngather)++] = nHalo;  
       else
-	(*nonHalo)->gatherOffsets[(*nonHalo)->Ngather++] = nNonHalo;  
+	(*nonHalo)->gatherOffsets[((*nonHalo)->Ngather)++] = nNonHalo;
     }
     
     if(gatherHaloFlags[n]==1){
-      (*halo)->gatherLocalIds[nHalo] = n;
-      (*halo)->gatherBaseIds[nHalo++] = gatherBaseIds[n];
+      (*halo)->gatherLocalIds[nHalo] = gatherLocalIds[n];
+      (*halo)->gatherBaseIds[nHalo] = gatherBaseIds[n];
+      ++nHalo;
     }else{
-      (*nonHalo)->gatherLocalIds[nNonHalo] = n;
-      (*nonHalo)->gatherBaseIds[nNonHalo++] = gatherBaseIds[n];
+      (*nonHalo)->gatherLocalIds[nNonHalo] = gatherLocalIds[n];
+      (*nonHalo)->gatherBaseIds[nNonHalo] = gatherBaseIds[n];
+      ++nNonHalo;
     }
   }
-  
-  (*halo)->gatherOffsets[(*halo)->Ngather]          = (*halo)->Ngather + 1;
-  (*nonHalo)->gatherOffsets[(*nonHalo)->Ngather] = (*nonHalo)->Ngather + 1;
-
-  (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
-  (*nonHalo)->gatherTmp = (char*) calloc((*nonHalo)->Ngather*Nbytes, sizeof(char));
-
-  (*halo)->gatherGsh = NULL;  
-  (*nonHalo)->gatherGsh = NULL;
-  
-  // allocate buffers on DEVICE
+  (*halo)->gatherOffsets[(*halo)->Ngather] = nHalo;
+  (*nonHalo)->gatherOffsets[(*nonHalo)->Ngather] = nNonHalo;
+    
+  // if there are halo nodes to gather
   if((*halo)->Ngather){
+
+    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
+    
     (*halo)->o_gatherTmp      = mesh->device.malloc((*halo)->Ngather*Nbytes,           (*halo)->gatherTmp);
     (*halo)->o_gatherOffsets  = mesh->device.malloc(((*halo)->Ngather+1)*sizeof(iint), (*halo)->gatherOffsets);
-    (*halo)->o_gatherLocalIds = mesh->device.malloc((*halo)->Ngather*sizeof(iint),     (*halo)->gatherLocalIds);
+    (*halo)->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(iint),                (*halo)->gatherLocalIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
     (*halo)->gatherGsh = gsParallelGatherScatterSetup((*halo)->Ngather, (*halo)->gatherBaseIds);
   }
 
+  // if there are non-halo nodes to gather
   if((*nonHalo)->Ngather){
+
+    (*nonHalo)->gatherTmp = (char*) calloc((*nonHalo)->Ngather*Nbytes, sizeof(char));
+    (*nonHalo)->gatherGsh = NULL;
+    
     (*nonHalo)->o_gatherTmp      = mesh->device.malloc((*nonHalo)->Ngather*Nbytes,           (*nonHalo)->gatherTmp);
     (*nonHalo)->o_gatherOffsets  = mesh->device.malloc(((*nonHalo)->Ngather+1)*sizeof(iint), (*nonHalo)->gatherOffsets);
-    (*nonHalo)->o_gatherLocalIds = mesh->device.malloc((*nonHalo)->Ngather*sizeof(iint),     (*nonHalo)->gatherLocalIds);
+    (*nonHalo)->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(iint),                (*nonHalo)->gatherLocalIds);
   }
   return;
 }

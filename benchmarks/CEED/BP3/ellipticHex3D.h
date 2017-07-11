@@ -64,8 +64,8 @@ void ellipticUpdateHex3D(mesh3D *mesh, dfloat rka, dfloat rkb);
 
 void ellipticErrorHex3D(mesh3D *mesh, dfloat time);
 
-void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
-				     const char *type, const char *op);
+void ellipticParallelGatherScatter(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+				    const char *type, const char *op);
 
 precon_t *ellipticPreconditionerSetupHex3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, const char *options);
 
@@ -83,6 +83,13 @@ typedef struct {
 
   ogs_t *ogsDg;
 
+  // C0 halo gather-scatter info
+  ogs_t *halo;
+
+  // C0 nonhalo gather-scatter info
+  ogs_t *nonHalo;
+  
+  
   iint Nblock;
   
   occa::memory o_p; // search direction
@@ -106,6 +113,14 @@ typedef struct {
   occa::memory o_gI;    // interpolate from GLL to integration nodes
   occa::memory o_gD;    // differentiate and interpolate from GLL to integration nodes
 
+  // list of elements that are needed for global gather-scatter
+  iint NglobalGatherElements;
+  occa::memory o_globalGatherElementList;
+
+  // list of elements that are not needed for global gather-scatter
+  iint NnotGlobalGatherElements;
+  occa::memory o_notGlobalGatherElementList;
+  
   occa::kernel AxKernel;  
   occa::kernel gradientKernel;
   occa::kernel partialGradientKernel;
@@ -115,6 +130,7 @@ typedef struct {
   
   occa::stream defaultStream;
   occa::stream dataStream;
+
   
   
 }solver_t;
@@ -137,4 +153,24 @@ void ellipticEndHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *recv
 
 void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
 
+void ellipticHaloGatherScatter(solver_t *solver, 
+			       ogs_t *halo, 
+			       occa::memory &o_v,
+			       const char *type,
+			       const char *op);
 
+void ellipticNonHaloGatherScatter(solver_t *solver, 
+				  ogs_t *nonHalo, 
+				  occa::memory &o_v,
+				  const char *type,
+				  const char *op);
+
+
+void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
+					iint Nlocal,     // number of local nodes
+					iint Nbytes,     // number of bytes per node
+					iint *gatherLocalIds,  // local index of nodes
+					iint *gatherBaseIds,   // global index of their base nodes
+					iint *gatherHaloFlags,
+					ogs_t **halo,
+					ogs_t **nonHalo);   // 1 for halo node, 0 for not
