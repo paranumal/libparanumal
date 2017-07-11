@@ -3,7 +3,7 @@
 void acousticsPmlSetup2D(mesh2D *mesh){
 
   //constant pml absorption coefficient
-  dfloat xsigma = 40, ysigma = 40;
+  dfloat xsigma = 80, ysigma = 80;
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -142,7 +142,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
     // assume quiescent pml
-    mesh->pmlNfields = 4;
+    mesh->pmlNfields = 3;
     mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
     mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
 

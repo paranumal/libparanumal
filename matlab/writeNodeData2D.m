@@ -274,6 +274,10 @@ inv(VB1D)
 
 invVB = inv(VB)
 
+BBMM = VB' * MM * VB
+
+cond(BBMM)
+
 %% write VDM for conversion
 
 % VB(abs(VB)<tol) = 0;

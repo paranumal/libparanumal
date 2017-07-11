@@ -398,7 +398,7 @@ typedef struct {
 
 
 
-  occa::kernel pmlKernel; // deprecated
+  occa::kernel pmlKernel; 
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;

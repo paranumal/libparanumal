@@ -50,7 +50,7 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
         dfloat s = 0.f;
         if (bc==-10) s= 1.f;
         if (bc==-11) s=-1.f;
-
+        
         //Transform incident field trace to BB modal space and add into positive trace
         for (iint n=0; n<mesh->Nfp; n++){
           dfloat sourceu = 0.0;
@@ -61,7 +61,6 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
             sourcev += mesh->invVB1D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+1];
             sourcep += mesh->invVB1D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+2];
           }
-
           //adjust positive trace values with the incident field
           iint id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
           iint qidM = mesh->Nfields*mesh->vmapM[id];
@@ -431,12 +430,12 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
 
 //Ricker pulse
 dfloat ricker(dfloat t, dfloat f) {
-  return -(1-2*M_PI*M_PI*f*f*t*t)*exp(-M_PI*M_PI*f*f*t*t);
+  return (1-2*M_PI*M_PI*f*f*t*t)*exp(-M_PI*M_PI*f*f*t*t);
 }
 
 //integrated Ricker pulse
 dfloat intRicker(dfloat t, dfloat f) {
-  return -t*exp(-M_PI*M_PI*f*f*t*t);
+  return t*exp(-M_PI*M_PI*f*f*t*t);
 }
 
 void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 

@@ -69,8 +69,9 @@ int main(int argc, char **argv){
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
   mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
   double tic = MPI_Wtime();
-  iint maxIterations = 10;
+  iint maxIterations = 30;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
 
