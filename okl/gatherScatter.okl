@@ -1,0 +1,26 @@
+
+kernel void gatherScatter(const iint Ngather,
+			  const iint * restrict gatherStarts,
+			  const iint * restrict gatherIds,
+			  dfloat * restrict q){
+  
+  for(iint g=0;g<Ngather;++g;tile(256)){
+    
+    if(g<Ngather){
+      const iint start = gatherStarts[g];
+      const iint end = gatherStarts[g+1];
+      dfloat gq = 0.f;
+
+      for(iint n=start;n<end;++n){
+      	const iint id = gatherIds[n];
+      	gq += q[id];
+      }
+
+      for(iint n=start;n<end;++n){
+	const iint id = gatherIds[n];
+	q[id] = gq;
+      }
+    }
+  }
+}
+

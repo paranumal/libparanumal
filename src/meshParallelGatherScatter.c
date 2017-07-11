@@ -13,14 +13,8 @@ void meshParallelGatherScatter(mesh_t *mesh,
 			       const char *type,
 			       const char *op){
 
-  mesh->device.finish();
-  occa::tic("gatherKernel");
-  
   // gather on DEVICE
   mesh->gatherKernel(ogs->Ngather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, o_v, ogs->o_gatherTmp);
-
-  mesh->device.finish();
-  occa::toc("gatherKernel");
 
   //  if(strcmp(type, "float")) printf("BU55ER ; type = %s\n", type);
   
@@ -41,14 +35,8 @@ void meshParallelGatherScatter(mesh_t *mesh,
     mesh->putKernel(ogs->Nhalo, ogs->o_haloTmp,ogs->o_haloLocalIds, ogs->o_gatherTmp); // v[ids] = subv
   }
 
-  mesh->device.finish();
-  occa::tic("scatterKernel");
-  
   // do scatter back to local nodes
   //  mesh->scatterKernel(ogs->Nscatter, ogs->o_scatterOffsets, ogs->o_scatterLocalIds, ogs->o_gatherTmp, o_gsv);
   mesh->scatterKernel(ogs->Ngather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, ogs->o_gatherTmp, o_gsv);
-  
-  mesh->device.finish();
-  occa::toc("scatterKernel");
   
 }

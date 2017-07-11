@@ -28,7 +28,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
-#if 1
     if(mesh->NinternalElements)
       solver->partialIpdgKernel(mesh->NinternalElements,
 				mesh->o_internalElementIds,
@@ -41,7 +40,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 				mesh->o_D,
 				solver->o_grad,
 				o_Aq);
-#endif
     
     ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
 
@@ -79,9 +77,12 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     
   }
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
     // parallel gather scatter
-    ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+    ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+    //    ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
+    //ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
+  }
  
   occaTimerToc(mesh->device,"AxKernel");
 }
@@ -113,7 +114,6 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
 
-#if 1
     if(mesh->NinternalElements)
       solver->partialIpdgKernel(mesh->NinternalElements,
 				mesh->o_internalElementIds,
@@ -126,7 +126,6 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 				mesh->o_D,
 				solver->o_grad,
 				o_Aq);
-#endif
    
     ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
 
@@ -216,10 +215,10 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
 
 void ellipticPreconditioner3D(solver_t *solver,
-            occa::memory &o_r,
-            occa::memory &o_zP,
-            occa::memory &o_z,
-            const char *options){
+			      occa::memory &o_r,
+			      occa::memory &o_zP,
+			      occa::memory &o_z,
+			      const char *options){
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
@@ -263,7 +262,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   // gather-scatter
   if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
-    ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+    ellipticParallelGatherScatter(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   // compute A*x
   ellipticOperator3D(solver, lambda, o_x, o_Ax, options);
