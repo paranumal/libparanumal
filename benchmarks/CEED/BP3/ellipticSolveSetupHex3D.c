@@ -10,7 +10,7 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
   o_deg.copyFrom(deg);
   
-  ellipticParallelGatherScatterHex3D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
+  ellipticParallelGatherScatter(mesh, ogs, o_deg, o_deg, dfloatString, "add");
   
   o_deg.copyTo(deg);
 
@@ -90,7 +90,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   }
 
   for(iint n=0;n<gNp*mesh->Nelements*mesh->Nggeo;++n){
-    gggeo[n] = drand48();
+    // gggeo[n] = drand48();
+    gggeo[n] = .1;
   }
   
   solver->o_gD = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gD);
@@ -127,6 +128,12 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "scatter",
                kernelInfo);
 
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+				       "gatherScatter",
+				       kernelInfo);
+
+  
   mesh->getKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
                "get",
@@ -197,13 +204,23 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   occaTimerTic(mesh->device,"GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
-          mesh->Np*mesh->Nelements,
-          sizeof(dfloat),
-          mesh->gatherLocalIds,
-          mesh->gatherBaseIds, 
-          mesh->gatherHaloFlags);
+					       mesh->Np*mesh->Nelements,
+					       sizeof(dfloat),
+					       mesh->gatherLocalIds,
+					       mesh->gatherBaseIds, 
+					       mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(mesh,
+				     mesh->Np*mesh->Nelements,
+				     sizeof(dfloat),
+				     mesh->gatherLocalIds,
+				     mesh->gatherBaseIds, 
+				     mesh->gatherHaloFlags,
+				     &(solver->halo),
+				     &(solver->nonHalo));
+  
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -254,13 +271,61 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
   // sum up all contributions at base nodes and scatter back
-  ellipticParallelGatherScatterHex3D(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
+  ellipticParallelGatherScatter(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
 
   mesh->o_projectL2 = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
 
   free(localMM); o_MM.free(); o_localMM.free();
 
+
+  // count elements that contribute to global C0 gather-scatter
+  iint NglobalGatherElements = 0;
+  iint NnotGlobalGatherElements = 0;
+    
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
+	++NglobalGatherElements;
+	break;
+      }
+    }
+  }
+
+  NnotGlobalGatherElements = mesh->Nelements-NglobalGatherElements;
+  
+      
+  iint *globalGatherElementList    = (iint*) calloc(NglobalGatherElements, sizeof(iint));
+  iint *notGlobalGatherElementList = (iint*) calloc(NnotGlobalGatherElements, sizeof(iint));
+
+  iint globalCount = 0;
+  iint notGlobalCount = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isGather = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
+	isGather = 1;
+	break;
+      }
+    }
+    if(isGather)
+      globalGatherElementList[globalCount++] = e;    
+    else
+      notGlobalGatherElementList[notGlobalCount++] = e;
+  }
+
+  solver->NglobalGatherElements = NglobalGatherElements;
+  solver->NnotGlobalGatherElements = NnotGlobalGatherElements;
+
+  if(NglobalGatherElements)
+    solver->o_globalGatherElementList =
+      mesh->device.malloc(NglobalGatherElements*sizeof(iint), globalGatherElementList);
+
+  if(NnotGlobalGatherElements)
+    solver->o_notGlobalGatherElementList =
+      mesh->device.malloc(NnotGlobalGatherElements*sizeof(iint), notGlobalGatherElementList);
+
+  
   
   return solver;
 }
