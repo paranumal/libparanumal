@@ -149,7 +149,13 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "ellipticAxHex3D_e3",
                kernelInfo);
 
-  mesh->weightedInnerProduct1Kernel =
+  solver->partialAxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
+				       "ellipticPartialAxHex3D_e3",
+				       kernelInfo);
+  
+
+    mesh->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
                "weightedInnerProduct1",
                kernelInfo);
@@ -280,50 +286,55 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
 
   // count elements that contribute to global C0 gather-scatter
-  iint NglobalGatherElements = 0;
-  iint NnotGlobalGatherElements = 0;
-    
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
-	++NglobalGatherElements;
-	break;
-      }
-    }
-  }
-
-  NnotGlobalGatherElements = mesh->Nelements-NglobalGatherElements;
-  
-      
-  iint *globalGatherElementList    = (iint*) calloc(NglobalGatherElements, sizeof(iint));
-  iint *notGlobalGatherElementList = (iint*) calloc(NnotGlobalGatherElements, sizeof(iint));
-
   iint globalCount = 0;
   iint notGlobalCount = 0;
+  
   for(iint e=0;e<mesh->Nelements;++e){
     iint isGather = 0;
     for(iint n=0;n<mesh->Np;++n){
       if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
 	isGather = 1;
-	break;
       }
     }
-    if(isGather)
-      globalGatherElementList[globalCount++] = e;    
-    else
-      notGlobalGatherElementList[notGlobalCount++] = e;
+    globalCount += isGather;
+    notGlobalCount += 1-isGather;
   }
 
-  solver->NglobalGatherElements = NglobalGatherElements;
-  solver->NnotGlobalGatherElements = NnotGlobalGatherElements;
+  printf("notGlobal = %d, global = %d\n", notGlobalCount, globalCount);
+      
+  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
+  iint *notGlobalGatherElementList = (iint*) calloc(notGlobalCount, sizeof(iint));
 
-  if(NglobalGatherElements)
+  globalCount = 0;
+  notGlobalCount = 0;
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isGather = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
+	isGather = 1;
+      }
+    }
+    if(isGather){
+      globalGatherElementList[globalCount++] = e;
+      //      printf("GGE[%d]=%d\n", globalCount-1, globalGatherElementList[globalCount-1]);
+    }
+    else{
+      notGlobalGatherElementList[notGlobalCount++] = e;
+      //      printf("notGGE[%d]=%d\n", notGlobalCount-1, notGlobalGatherElementList[notGlobalCount-1]);
+    }
+  }
+
+  solver->NglobalGatherElements = globalCount;
+  solver->NnotGlobalGatherElements = notGlobalCount;
+
+  if(globalCount)
     solver->o_globalGatherElementList =
-      mesh->device.malloc(NglobalGatherElements*sizeof(iint), globalGatherElementList);
+      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
 
-  if(NnotGlobalGatherElements)
+  if(notGlobalCount)
     solver->o_notGlobalGatherElementList =
-      mesh->device.malloc(NnotGlobalGatherElements*sizeof(iint), notGlobalGatherElementList);
+      mesh->device.malloc(notGlobalCount*sizeof(iint), notGlobalGatherElementList);
 
   
   

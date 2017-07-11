@@ -121,7 +121,9 @@ typedef struct {
   iint NnotGlobalGatherElements;
   occa::memory o_notGlobalGatherElementList;
   
-  occa::kernel AxKernel;  
+  occa::kernel AxKernel;
+  occa::kernel partialAxKernel;
+  
   occa::kernel gradientKernel;
   occa::kernel partialGradientKernel;
 
