@@ -8,6 +8,8 @@ typedef struct {
   iint         *gatherBaseRanks;
   iint         *gatherLocalIds;
   iint         *gatherBaseIds;
+
+  char * gatherTmp;
   
   occa::memory o_gatherOffsets;  //  start of local bases
   occa::memory o_gatherLocalIds; //  base connected nodes

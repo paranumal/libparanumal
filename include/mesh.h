@@ -367,6 +367,7 @@ typedef struct {
 
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
+  occa::kernel gatherScatterKernel;
 
   occa::kernel getKernel;
   occa::kernel putKernel;
