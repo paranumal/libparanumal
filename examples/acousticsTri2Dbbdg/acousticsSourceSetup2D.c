@@ -3,15 +3,29 @@
 void acousticsSourceSetup2D(mesh2D *mesh) {
 
   // location of source
-  dfloat x0 = 0.f; dfloat y0 = 0.2;
+  dfloat x0 = 0.f; dfloat y0 = 0.35;
+  mesh->sourceX0 = x0;
+  mesh->sourceY0 = y0;
 
-  mesh->sourceFreq = 25.0;
-  mesh->sourceT0 = -1.f;
+  // size of source injection patch
+  dfloat patchsize = 0.05;
 
+  //frequency and time shift of the riker pulse
+  mesh->sourceFreq = 10.0;
+  mesh->sourceT0 = -0.1;
+
+  //We want to collect a patch of elements around the source point and solve for 
+  //  the scattered field in that patch. We need to construct a list of these elements and
+  //  flag what faces are interfaces between the usual domain and the scattered field. 
+
+  //find all elements within a certain distance from the source point, 
+  // and find the element which contains the source point
   iint sourceId = -1;
   mesh->sourceNelements = 0;
+  mesh->MRABsourceNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
 
-  //find the element which contains this point
+  int *patchFlag = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
+
   for (iint e=0;e<mesh->Nelements;e++) {
     iint id = e*mesh->Nverts;
 
@@ -22,6 +36,17 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
     dfloat y1 = mesh->EY[id+0]; /* y-coordinates of vertices */
     dfloat y2 = mesh->EY[id+1];
     dfloat y3 = mesh->EY[id+2];
+
+    dfloat dist1 = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+    dfloat dist2 = sqrt((x2-x0)*(x2-x0) + (y2-y0)*(y2-y0));
+    dfloat dist3 = sqrt((x3-x0)*(x3-x0) + (y3-y0)*(y3-y0));
+
+    if ((dist1<=patchsize)||(dist2<=patchsize)||(dist3<=patchsize)) {
+      //this element is close to the source point
+      mesh->sourceNelements++;
+      mesh->MRABsourceNelements[mesh->MRABlevel[e]]++;
+      patchFlag[e] = 1;
+    }
 
     //find the local coordinates of (x0,y0) in this element's coordinate frame.
     // if 0<=r<=1 && 0<=s<=1 && 0<=r+s<=1 the point is in this element
@@ -37,7 +62,7 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
     //this element contains the source point
     sourceId = e;
 
-    //find the node which is closest to the source point and use the c2 from that node
+    //find the cubature node which is closest to the source point and use the c2 from that node
     int minId = 0;
     dfloat dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
     for(iint n=0;n<mesh->cubNp;++n){
@@ -62,53 +87,57 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
     #else
       mesh->sourceC2 = 1.f;
     #endif
-
-    break;
   }
 
-  mesh->sourceX0 = x0;
-  mesh->sourceY0 = y0;
+  //halo exchange the patch flag
+  if (mesh->totalHaloPairs) {
+    int *sendbuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
+    meshHaloExchange(mesh,sizeof(int),patchFlag,sendbuffer,patchFlag+mesh->Nelements);
+    free(sendbuffer);
+  }
 
-  //take the patch of elements sharing the vertices of the source element as our scatter field patch
-  iint sourceV1, sourceV2, sourceV3;
-  mesh->MRABsourceNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
-  mesh->MRABsourceElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  mesh->MRABsourceIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  if (sourceId > -1) {
-    sourceV1 = mesh->EToV[sourceId*mesh->Nverts+0];
-    sourceV2 = mesh->EToV[sourceId*mesh->Nverts+1];
-    sourceV3 = mesh->EToV[sourceId*mesh->Nverts+2];
+  //create the element list and flag interfaces 
+  mesh->sourceElements = (iint*) calloc(mesh->sourceNelements,sizeof(iint));
 
-    for (iint e=0;e<mesh->Nelements;e++) {
-      for (int n=0;n<mesh->Nverts;n++) {
-        iint V = mesh->EToV[e*mesh->Nverts+n];
-        if ((V==sourceV1)||(V==sourceV2)||(V==sourceV3))
-          mesh->sourceNelements++;
-          mesh->MRABsourceNelements[mesh->MRABlevel[e]]++;
-          continue;
+  iint cnt = 0;
+  for (iint e=0;e<mesh->Nelements;e++) {
+    if (patchFlag[e]==1) {
+      //record this element
+      mesh->sourceElements[cnt++] = e;
+
+      //this element is in the patch. Check the neighbours
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
+
+        int flagP =1;
+        if (eP >-1) flagP = patchFlag[eP];
+
+        //if neighbour isnt in the source patch, flag it in EToB
+        if (flagP==0) mesh->EToB[e*mesh->Nfaces+f] = -10;
       }
-    }
+    } else {
+      //this element isnt in the patch. Check the neighbours
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
 
-    iint cnt =0;
-    for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
-      if (mesh->MRABsourceNelements[lev]) {
-        mesh->MRABsourceIds[lev] = (iint *) calloc(mesh->MRABsourceNelements[lev],sizeof(iint));
-        mesh->MRABsourceElementIds[lev] = (iint *) calloc(mesh->MRABsourceNelements[lev],sizeof(iint));
-        mesh->MRABsourceNelements[lev]=0;
-        for (iint e=0;e<mesh->Nelements;e++) {
-          for (int n=0;n<mesh->Nverts;n++) {
-            iint V = mesh->EToV[e*mesh->Nverts+n];
-            if ((V==sourceV1)||(V==sourceV2)||(V==sourceV3)) {
-              mesh->MRABsourceIds[lev][mesh->MRABsourceNelements[lev]] = cnt++;
-              mesh->MRABsourceElementIds[lev][mesh->MRABsourceNelements[lev]++] = e;
-              continue;
-            }
-          }
-        }
+        int flagP =0;
+        if (eP >-1) flagP = patchFlag[eP];
+
+        //if neighbour is in the source patch, flag it in EToB
+        if (flagP==1) mesh->EToB[e*mesh->Nfaces+f] = -11;
       }
     }
   }
 
-  mesh->sourceq = (dfloat *) calloc(mesh->sourceNelements*mesh->Nfields*mesh->Np, sizeof(dfloat));
+  //create 1D BB modal projection from the 2D invVB
+  mesh->invVB1D = (dfloat *) calloc((mesh->N+1)*(mesh->N+1), sizeof(dfloat));
+  for (int n=0;n<mesh->N+1;n++) {
+    for (int m=0;m<mesh->N+1;m++) {
+      mesh->invVB1D[m*(mesh->N+1)+n] = mesh->invVB[m*mesh->Np+n];
+    }
+  }
 
+  printf("Source: found %d elements inside source injection patch\n", mesh->sourceNelements);
+
+  free(patchFlag);
 }

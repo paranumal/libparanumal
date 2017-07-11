@@ -18,7 +18,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 1.2;
+  mesh->finalTime = 1.;
   dfloat cfl = .4; // depends on the stability region size
 
   // set penalty parameter
@@ -57,7 +57,9 @@ void acousticsSetup2D(mesh2D *mesh){
   // compute samples of q at interpolation nodes
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
             sizeof(dfloat));
-  mesh->fQ = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+  mesh->fQM = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+            sizeof(dfloat));
+  mesh->fQP = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
             sizeof(dfloat));
   mesh->rhsq  = (dfloat *) calloc(3*mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
 
@@ -68,8 +70,12 @@ void acousticsSetup2D(mesh2D *mesh){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      acousticsGaussianPulse2D(x, y, t,
-             mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      //acousticsGaussianPulse2D(x, y, t,
+      //       mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+
+      mesh->q[cnt+0] = 0.;
+      mesh->q[cnt+1] = 0.;
+      mesh->q[cnt+2] = 0.;
 
       //mesh->q[cnt+2] = 1.;
 
@@ -208,8 +214,10 @@ void acousticsSetup2D(mesh2D *mesh){
 
   mesh->o_c2 = mesh->device.malloc(mesh->Nelements*mesh->cubNp*sizeof(dfloat),
          mesh->c2);
-  mesh->o_fQ = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
-         mesh->fQ);
+  mesh->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
+         mesh->fQM);
+  mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
+         mesh->fQP);
   mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
          mesh->mapP);
 
