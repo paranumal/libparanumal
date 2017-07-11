@@ -127,6 +127,12 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "scatter",
                kernelInfo);
 
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+				       "gatherScatter",
+				       kernelInfo);
+
+  
   mesh->getKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
                "get",
@@ -197,13 +203,23 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   occaTimerTic(mesh->device,"GatherScatterSetup");
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
-          mesh->Np*mesh->Nelements,
-          sizeof(dfloat),
-          mesh->gatherLocalIds,
-          mesh->gatherBaseIds, 
-          mesh->gatherHaloFlags);
+					       mesh->Np*mesh->Nelements,
+					       sizeof(dfloat),
+					       mesh->gatherLocalIds,
+					       mesh->gatherBaseIds, 
+					       mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(mesh,
+				     mesh->Np*mesh->Nelements,
+				     sizeof(dfloat),
+				     mesh->gatherLocalIds,
+				     mesh->gatherBaseIds, 
+				     mesh->gatherHaloFlags,
+				     &(solver->halo),
+				     &(solver->nonHalo));
+  
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
@@ -261,6 +277,54 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   free(localMM); o_MM.free(); o_localMM.free();
 
+
+  // count elements that contribute to global C0 gather-scatter
+  iint NglobalGatherElements = 0;
+  iint NnotGlobalGatherElements = 0;
+    
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
+	++NglobalGatherElements;
+	break;
+      }
+    }
+  }
+
+  NnotGlobalGatherElements = mesh->Nelements-NglobalGatherElements;
+  
+      
+  iint *globalGatherElementList    = (iint*) calloc(NglobalGatherElements, sizeof(iint));
+  iint *notGlobalGatherElementList = (iint*) calloc(NnotGlobalGatherElements, sizeof(iint));
+
+  iint globalCount = 0;
+  iint notGlobalCount = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isGather = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->gatherHaloFlags[e*mesh->Np+n]==1){
+	isGather = 1;
+	break;
+      }
+    }
+    if(isGather)
+      globalGatherElementList[globalCount++] = e;    
+    else
+      notGlobalGatherElementList[notGlobalCount++] = e;
+  }
+
+  solver->NglobalGatherElements = NglobalGatherElements;
+  solver->NnotGlobalGatherElements = NnotGlobalGatherElements;
+
+  if(NglobalGatherElements)
+    solver->o_globalGatherElementList =
+      mesh->device.malloc(NglobalGatherElements*sizeof(iint), globalGatherElementList);
+
+  if(NnotGlobalGatherElements)
+    solver->o_notGlobalGatherElementList =
+      mesh->device.malloc(NnotGlobalGatherElements*sizeof(iint), notGlobalGatherElementList);
+
+  
   
   return solver;
 }
