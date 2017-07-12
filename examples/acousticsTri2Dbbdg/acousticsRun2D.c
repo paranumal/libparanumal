@@ -38,11 +38,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // compute volume contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         acousticsVolume2Dbbdg(mesh,l);
-        #if WADG
-          acousticsPml2D_wadg(mesh,l);
-        #else
-          acousticsPml2D(mesh,l);
-        #endif
+        acousticsPmlVolume2D(mesh,l);
       }
 
       if(mesh->totalHaloPairs>0){
@@ -56,6 +52,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         acousticsSurface2Dbbdg(mesh,l,t);
+        acousticsPmlSurface2Dbbdg(mesh,l,t);
       }
 
       dfloat a1, a2, a3;
@@ -479,12 +476,19 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         }
       }
 
+      void addSourceField(mesh2D *mesh, dfloat *q, dfloat t);
+      addSourceField(mesh, mesh->q,mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));
+
       // do error stuff on host
       acousticsError2D(mesh, mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));
 
       // output field files
       iint fld = 2;
       char fileName[BUFSIZ];
+      
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      
       sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
       meshPlotVTU2D(mesh, fileName, fld);
     }
@@ -494,6 +498,37 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
   free(sendBuffer);
 }
 
+//Ricker pulse
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+                           dfloat *u, dfloat *v, dfloat *p);
 
+void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
+
+  for (iint m=0;m<mesh->sourceNelements;m++) {
+    iint e = mesh->sourceElements[m];
+
+    for (iint n=0;n<mesh->Np;n++) {
+      iint id = n + e*mesh->Np;
+      
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat x0 = mesh->sourceX0;
+      dfloat y0 = mesh->sourceY0;
+      dfloat t0 = mesh->sourceT0;
+      dfloat freq = mesh->sourceFreq;
+    
+      dfloat c = sqrt(mesh->sourceC2);
+
+      dfloat u, v, p;
+      acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, &u, &v, &p);
+
+      iint qid = mesh->Nfields*id;
+      q[qid+0] += u;
+      q[qid+1] += v;
+      q[qid+2] += p;
+    }
+  }
+}
 
 

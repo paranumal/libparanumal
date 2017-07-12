@@ -26,7 +26,14 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
-    ellipticHaloGatherScatterStart(solver, solver->halo, o_Aq, dfloatString, "add");    
+    mesh->gatherKernel(solver->halo->Ngather, solver->halo->o_gatherOffsets, solver->halo->o_gatherLocalIds, o_v, solver->halo->o_gatherTmp);
+
+    // copy partially gathered solver->halo data from DEVICE to HOST
+    solver->halo->o_gatherTmp.asyncCopyTo(solver->halo->gatherTmp);
+
+    mesh->device.setStream(solver->defaultStream);
+
+    //ellipticHaloGatherScatterStart(solver, solver->halo, o_Aq, dfloatString, "add");    
 
     mesh->device.setStream(solver->defaultStream);
     if(solver->NnotGlobalGatherElements)

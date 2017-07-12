@@ -442,7 +442,7 @@ void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c,
                            dfloat *u, dfloat *v, dfloat *p) {
 
   //radial distance
-  dfloat r = sqrt(x*x+y*y);
+  dfloat r = mymax(sqrt(x*x+y*y),1e-9);
 
   *p = ricker(t - r/c,f)/(4*M_PI*c*c*r);
   *u = x*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);

@@ -18,7 +18,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 1.5;
+  mesh->finalTime = 4.5;
   dfloat cfl = .4; // depends on the stability region size
 
   // set penalty parameter
@@ -178,7 +178,7 @@ void acousticsSetup2D(mesh2D *mesh){
   #endif
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 50;
 
   if (rank==0) {
     printf("hmin = %g\n", hmin);
