@@ -37,7 +37,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
     // C0 halo gather-scatter (on data stream)
-    {
+    if(halo->Ngather){
       mesh->device.setStream(solver->dataStream);
       mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
       
