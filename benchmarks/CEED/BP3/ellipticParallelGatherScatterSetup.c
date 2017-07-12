@@ -99,11 +99,11 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   // if there are halo nodes to gather
   if((*halo)->Ngather){
 
-    //    occa::memory o_gatherTmpPinned = mesh->device.malloc((*halo)->Ngather*Nbytes, NULL);
-    //    (*halo)->gatherTmp = (char*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
-    //    printf("host gatherTmp = %p, Nbytes = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), Nbytes, (*halo)->Ngather);
+    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc((*halo)->Ngather*Nbytes, NULL);
+    (*halo)->gatherTmp = (char*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
+    printf("host gatherTmp = %p, Nbytes = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), Nbytes, (*halo)->Ngather);
 
-    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
+    //    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
     
     (*halo)->o_gatherTmp      = mesh->device.malloc((*halo)->Ngather*Nbytes,           (*halo)->gatherTmp);
     (*halo)->o_gatherOffsets  = mesh->device.malloc(((*halo)->Ngather+1)*sizeof(iint), (*halo)->gatherOffsets);

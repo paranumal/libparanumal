@@ -19,21 +19,20 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
-
+    
     // switch to data stream
-    mesh->device.setStream(solver->dataStream);
+    //    mesh->device.setStream(solver->dataStream);
     if(solver->NglobalGatherElements)
       solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
-    mesh->device.setStream(solver->defaultStream);
+    //    mesh->device.setStream(solver->defaultStream);
     if(solver->NnotGlobalGatherElements)
       solver->partialAxKernel(solver->NnotGlobalGatherElements, solver->o_notGlobalGatherElementList,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
     ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
 
-    mesh->device.setStream(solver->dataStream);
     ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
     mesh->device.finish();
     

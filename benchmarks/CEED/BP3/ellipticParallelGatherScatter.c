@@ -19,26 +19,46 @@ void ellipticHaloGatherScatter(solver_t *solver,
   mesh3D *mesh = solver->mesh;
 
   if(halo->Ngather){
+    // rough way to make sure 
+    mesh->device.finish();
+    
     // set stream to halo stream
     //    mesh->device.setStream(solver->dataStream);
+    mesh->device.finish();
     
     // gather halo nodes on DEVICE
     mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_v, halo->o_gatherTmp);
+
+    mesh->device.finish();
     
     // copy partially gathered halo data from DEVICE to HOST
-    halo->o_gatherTmp.copyTo(halo->gatherTmp); // do I need async here (if so - need to pin gatherTmp) ?
+    halo->o_gatherTmp.asyncCopyTo(halo->gatherTmp);
+
+    mesh->device.finish();
+    
+    // wait for async copy
+    occa::streamTag tag = mesh->device.tagStream();
+    mesh->device.waitFor(tag);
     
     // gather across MPI processes then scatter back
     gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, op); // danger on hardwired type
+
+    mesh->device.finish();
     
     // copy totally gather halo data back from HOST to DEVICE
-    halo->o_gatherTmp.copyFrom(halo->gatherTmp); // do I need async here ?
+    halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp); 
+
+    mesh->device.finish();
+    
+    tag = mesh->device.tagStream();
+    mesh->device.waitFor(tag);
     
     // do scatter back to local nodes
     mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_v);
-
+    mesh->device.finish();
+    
     // revert back to default stream
-    //    mesh->device.setStream(solver->defaultStream);
+    mesh->device.setStream(solver->defaultStream);
   }
   
 }
