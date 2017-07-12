@@ -11,8 +11,8 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   dfloat patchsize = 0.1;
 
   //frequency and time shift of the riker pulse
-  mesh->sourceFreq = 10.0;
-  mesh->sourceT0 = -0.3;
+  mesh->sourceFreq = 4.0;
+  mesh->sourceT0 = -0.1;
 
   //We want to collect a patch of elements around the source point and solve for 
   //  the scattered field in that patch. We need to construct a list of these elements and

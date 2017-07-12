@@ -13,8 +13,9 @@ void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, iint fld){
 
   FILE *fp;
   char fileName[BUFSIZ];
-  sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
-  
+  //sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
+  fileName = strcpy(fileNameBase);
+
   fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
