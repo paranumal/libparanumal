@@ -54,7 +54,7 @@ void ellipticNonHaloGatherScatter(solver_t *solver,
   mesh3D *mesh = solver->mesh;
 
   // set stream to default stream
-  mesh->device.setStream(solver->defaultStream);
+  //  mesh->device.setStream(solver->defaultStream);
   
   // unified gather-scatter operation on DEVICE for non-halo nodes
   mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_v);

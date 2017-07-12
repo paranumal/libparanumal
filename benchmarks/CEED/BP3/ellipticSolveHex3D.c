@@ -14,21 +14,33 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    //    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+#if 0
+    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
-#if 1
+    ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
+#else
+
+    // switch to data stream
+    mesh->device.setStream(solver->dataStream);
     if(solver->NglobalGatherElements)
       solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-#endif
-    
-#if 1
-    if(solver->NnotGlobalGatherElements){
-      //      printf("nnotgge=%d\n", solver->NnotGlobalGatherElements);
+
+    mesh->device.setStream(solver->defaultStream);
+    if(solver->NnotGlobalGatherElements)
       solver->partialAxKernel(solver->NnotGlobalGatherElements, solver->o_notGlobalGatherElementList,
 			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-    }
+
+    ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
+
+    mesh->device.setStream(solver->dataStream);
+    ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
+    mesh->device.finish();
+    
+    mesh->device.setStream(solver->defaultStream);
+
 #endif
+
   }
   else{
     // should not be hard coded
@@ -91,13 +103,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     
   }
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT")){
-    // parallel gather scatter
-    //ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
-    ellipticHaloGatherScatter(solver, solver->halo, o_Aq, dfloatString, "add");
-    ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
-  }
- 
   occaTimerToc(mesh->device,"AxKernel");
 }
 
