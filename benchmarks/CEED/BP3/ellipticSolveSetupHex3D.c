@@ -84,6 +84,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
   dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
 
+  srand48(32);
   for(iint n=0;n<gNq*mesh->Nq;++n){
     gD[n] = drand48();
     gI[n] = drand48();
