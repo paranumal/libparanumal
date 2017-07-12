@@ -118,8 +118,8 @@ typedef struct {
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  iint NnotGlobalGatherElements;
-  occa::memory o_notGlobalGatherElementList;
+  iint NlocalGatherElements;
+  occa::memory o_localGatherElementList;
   
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
@@ -155,17 +155,11 @@ void ellipticEndHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *recv
 
 void ellipticParallelGatherScatterHex3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
 
-void ellipticHaloGatherScatterStart(solver_t *solver, 
+void ellipticHaloGatherScatter(solver_t *solver, 
 			       ogs_t *halo, 
 			       occa::memory &o_v,
 			       const char *type,
 			       const char *op);
-
-void ellipticHaloGatherScatterEnd(solver_t *solver, 
-             ogs_t *halo, 
-             occa::memory &o_v,
-             const char *type,
-             const char *op);
 
 void ellipticNonHaloGatherScatter(solver_t *solver, 
 				  ogs_t *nonHalo, 

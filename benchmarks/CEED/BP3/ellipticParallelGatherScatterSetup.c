@@ -71,10 +71,16 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   (*halo)->Ngather = 0; // reset counter
   (*nonHalo)->Ngather = 0; // reset counter
 
+#if 0
+  for(iint n=0;n<Nlocal;++n){
+    printf("rank%d: n=%d, base=%d, local=%d, halo=%d\n", rank, n, gatherBaseIds[n], gatherLocalIds[n], gatherHaloFlags[n]);
+  }
+#endif
+  
   for(iint n=0;n<Nlocal;++n){
     iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
 
-    // increment unique base counter and record index into shuffled list of ndoes
+    // increment unique base counter and record index into shuffled list of nodes
     if(gatherHaloFlags[n]==1){
       if(test){
         (*halo)->gatherOffsets[(*halo)->Ngather] = nHalo;  
