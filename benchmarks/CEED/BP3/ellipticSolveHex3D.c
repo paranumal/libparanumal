@@ -14,7 +14,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-#if 1
+#if 0
     solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
