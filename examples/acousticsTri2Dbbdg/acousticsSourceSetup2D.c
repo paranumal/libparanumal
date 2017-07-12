@@ -26,6 +26,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
 
   int *patchFlag = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
 
+  dfloat mindist = 1e9;
   for (iint e=0;e<mesh->Nelements;e++) {
     iint id = e*mesh->Nverts;
 
@@ -46,25 +47,11 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
       mesh->sourceNelements++;
       mesh->MRABsourceNelements[mesh->MRABlevel[e]]++;
       patchFlag[e] = 1;
+    } else {
+      continue;
     }
 
-    //find the local coordinates of (x0,y0) in this element's coordinate frame.
-    // if 0<=r<=1 && 0<=s<=1 && 0<=r+s<=1 the point is in this element
-    dfloat J = (x2-x1)*(y3-y1)-(y2-y1)*(x3-x1);
-
-    dfloat r = ( (y3-y1)*(x0-x1)-(x3-x1)*(y0-y1))/J;
-    dfloat s = (-(y2-y1)*(x0-x1)+(x2-x1)*(y0-y1))/J;
-
-    if ((r<0)||(r>1)) continue;
-    if ((s<0)||(s>1)) continue;
-    if (((r+s)<0)||((r+s)>1)) continue;
-
-    //this element contains the source point
-    sourceId = e;
-
     //find the cubature node which is closest to the source point and use the c2 from that node
-    int minId = 0;
-    dfloat dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
     for(iint n=0;n<mesh->cubNp;++n){
       // cubature node coordinates
       dfloat rn = mesh->cubr[n];
@@ -74,19 +61,18 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
       dfloat x = -0.5*(rn+sn)*x1 + 0.5*(1+rn)*x2 + 0.5*(1+sn)*x3;
       dfloat y = -0.5*(rn+sn)*y1 + 0.5*(1+rn)*y2 + 0.5*(1+sn)*y3;
 
-      dfloat dist2 = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
+      dfloat dist = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
 
-      if (dist2 < dist) {
-        dist = dist2;
-        minId = n;
+      if (dist < mindist) {
+        mindist = dist;
+        //record speed of sound at this point
+        #if WADG
+          mesh->sourceC2 = mesh->c2[n + e*mesh->cubNp];
+        #else
+          mesh->sourceC2 = 1.f;
+        #endif
       }
     }
-
-    #if WADG
-      mesh->sourceC2 = mesh->c2[minId + e*mesh->cubNp];
-    #else
-      mesh->sourceC2 = 1.f;
-    #endif
   }
 
   //halo exchange the patch flag

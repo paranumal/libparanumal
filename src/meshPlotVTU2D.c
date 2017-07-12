@@ -14,7 +14,7 @@ void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, iint fld){
   FILE *fp;
   char fileName[BUFSIZ];
   //sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
-  fileName = strcpy(fileNameBase);
+  strcpy(fileName, fileNameBase);
 
   fp = fopen(fileName, "w");
 

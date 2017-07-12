@@ -53,7 +53,9 @@ void acousticsSetup3D(mesh3D *mesh){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, 
         sizeof(dfloat));
-  mesh->fQ   = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+  mesh->fQM   = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+        sizeof(dfloat));
+  mesh->fQP   = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
         sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(3*mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
@@ -177,9 +179,9 @@ void acousticsSetup3D(mesh3D *mesh){
         // smoothly varying (sinusoidal) wavespeed
         //printf("M_PI = %f\n",M_PI);
         if (z<0.f) {
-          mesh->c2[n + mesh->cubNp*e] = 0.2;//1.0 + 0.5*sin(M_PI*y);
+          mesh->c2[n + mesh->cubNp*e] = 1.0;//1.0 + 0.5*sin(M_PI*y);
         } else {
-          mesh->c2[n + mesh->cubNp*e] = 1.0;
+          mesh->c2[n + mesh->cubNp*e] = 0.2;
         }
       }
     }
@@ -187,7 +189,7 @@ void acousticsSetup3D(mesh3D *mesh){
   #endif
 
   // errorStep
-  mesh->errorStep = 10;
+  mesh->errorStep = 100;
 
   if (rank==0) {
     printf("hmin = %g\n", hmin);
@@ -229,8 +231,10 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->o_c2 = mesh->device.malloc(mesh->Nelements*mesh->cubNp*sizeof(dfloat),
            mesh->c2);
 
-  mesh->o_fQ = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
-         mesh->fQ);
+  mesh->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
+         mesh->fQM);
+  mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
+         mesh->fQP);
   mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
          mesh->mapP);
 
@@ -244,6 +248,12 @@ void acousticsSetup3D(mesh3D *mesh){
       mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
          mesh->MRABhaloIds[lev]);
   }
+
+  //set up pml
+  acousticsPmlSetup3D(mesh);
+
+  //set up source injection
+  acousticsSourceSetup3D(mesh,kernelInfo);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
