@@ -169,6 +169,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
   iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+  int Nframe=0;
 
   //populate the trace buffer fQ
   dfloat zero = 0.0;
@@ -483,7 +484,9 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
       // output field files
       iint fld = 2;
-      meshPlotVTU2D(mesh, "foo", fld);
+      char fileName[BUFSIZ];
+      sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
+      meshPlotVTU2D(mesh, fileName, fld);
     }
   }
 
