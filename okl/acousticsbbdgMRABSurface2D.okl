@@ -38,7 +38,8 @@ kernel void acousticsbbdgMRABSurface2D(const iint Nelements,
            const dfloat * restrict x,
            const dfloat * restrict y,
            const dfloat * restrict q,
-           const dfloat * restrict fQ,
+           const dfloat * restrict fQM,
+           const dfloat * restrict fQP,
            dfloat       * restrict rhsq,
            const iint   rhsShift){
   
@@ -78,8 +79,8 @@ kernel void acousticsbbdgMRABSurface2D(const iint Nelements,
             const iint idP = mapP[id]*p_Nfields;
   
             // load negative and positive trace node values of q
-            const dfloat uM = fQ[idM+0], vM = fQ[idM+1], pM = fQ[idM+2];
-            dfloat uP = fQ[idP+0], vP = fQ[idP+1], pP = fQ[idP+2];
+            const dfloat uM = fQM[idM+0], vM = fQM[idM+1], pM = fQM[idM+2];
+            dfloat uP = fQP[idP+0], vP = fQP[idP+1], pP = fQP[idP+2];
 
             // apply boundary condition
             const iint bc = EToB[face+p_Nfaces*e];

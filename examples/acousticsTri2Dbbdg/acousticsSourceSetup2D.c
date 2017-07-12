@@ -1,6 +1,6 @@
 #include "acoustics2D.h"
 
-void acousticsSourceSetup2D(mesh2D *mesh) {
+void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
 
   // location of source
   dfloat x0 = 0.f; dfloat y0 = 0.35;
@@ -130,14 +130,29 @@ void acousticsSourceSetup2D(mesh2D *mesh) {
   }
 
   //create 1D BB modal projection from the 2D invVB
-  mesh->invVB1D = (dfloat *) calloc((mesh->N+1)*(mesh->N+1), sizeof(dfloat));
-  for (int n=0;n<mesh->N+1;n++) {
-    for (int m=0;m<mesh->N+1;m++) {
-      mesh->invVB1D[m*(mesh->N+1)+n] = mesh->invVB[m*mesh->Np+n];
+  mesh->invVB1D = (dfloat *) calloc(mesh->Nfp*mesh->Nfp, sizeof(dfloat));
+  dfloat *invVB1DT = (dfloat *) calloc(mesh->Nfp*mesh->Nfp, sizeof(dfloat));
+  for (int n=0;n<mesh->Nfp;n++) {
+    for (int m=0;m<mesh->Nfp;m++) {
+      mesh->invVB1D[m*mesh->Nfp+n] = mesh->invVB[m*mesh->Np+n];
+      invVB1DT[n*mesh->Nfp+m] = mesh->invVB[m*mesh->Np+n];
     }
   }
+  mesh->o_EToB.copyFrom(mesh->EToB); //update boundary flags
+  mesh->o_invVB1DT = mesh->device.malloc(mesh->Nfp*mesh->Nfp*sizeof(dfloat),invVB1DT);
+
+  kernelInfo.addDefine("p_pmlNfields", mesh->pmlNfields);
+  kernelInfo.addDefine("p_sourceX0", mesh->sourceX0);
+  kernelInfo.addDefine("p_sourceY0", mesh->sourceY0);
+  kernelInfo.addDefine("p_sourceT0", mesh->sourceT0);
+  kernelInfo.addDefine("p_sourceFreq", mesh->sourceFreq);
+  kernelInfo.addDefine("p_sourceC2", mesh->sourceC2);
+
+  char *pointSourceFileName = strdup(DHOLMES "/examples/acousticsTri2Dbbdg/rickerPulse2D.h");
+  kernelInfo.addInclude(pointSourceFileName);
 
   printf("Source: found %d elements inside source injection patch\n", mesh->sourceNelements);
 
   free(patchFlag);
+  free(invVB1DT);
 }

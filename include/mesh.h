@@ -292,6 +292,7 @@ typedef struct {
 
   // Bernstein-Bezier occa arrays
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
+  occa::memory o_invVB1DT;
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
 
