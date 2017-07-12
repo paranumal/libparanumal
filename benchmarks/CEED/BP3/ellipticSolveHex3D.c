@@ -24,47 +24,51 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
     
-    // Ax for C0 halo elements  (on data stream)
-    mesh->device.setStream(solver->dataStream);
-    if(solver->NglobalGatherElements)
-      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-
-    // Ax for C0 internal elements (on default stream)
+    // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
     mesh->device.setStream(solver->defaultStream);
-    if(solver->NlocalGatherElements)
-      solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-
+    {
+      if(solver->NglobalGatherElements)
+	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+      
+      if(halo->Ngather){
+	mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
+	
+	// avoid async copy [ otherwise we compete with the local Ax ]
+	halo->o_gatherTmp.copyTo(halo->gatherTmp);
+      }
+      
+      // Ax for C0 internal elements
+      if(solver->NlocalGatherElements){
+	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+      }
+    }
+    
     // C0 halo gather-scatter (on data stream)
     if(halo->Ngather){
-      mesh->device.setStream(solver->dataStream);
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
+      occa::streamTag tag;   
       
-      // copy partially gathered halo data from DEVICE to HOST
-      halo->o_gatherTmp.copyTo(halo->gatherTmp);
-      
-      // wait for async copy
-      occa::streamTag tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-      
-      // gather across MPI processes then scatter back
-      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); // danger on hardwired type
+      // MPI based gather scatter using libgs
+      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
       
       // copy totally gather halo data back from HOST to DEVICE
-      halo->o_gatherTmp.copyFrom(halo->gatherTmp); 
-    
+      mesh->device.setStream(solver->dataStream);
+      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp); 
+      
       // wait for async copy
+      //      occa::streamTag tag = mesh->device.tagStream();
       tag = mesh->device.tagStream();
       mesh->device.waitFor(tag);
       
       // do scatter back to local nodes
       mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
-
+      
+      // make sure the scatter has finished on the data stream
       tag = mesh->device.tagStream();
       mesh->device.waitFor(tag);
     }      
-
+    
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
     if(nonHalo->Ngather)

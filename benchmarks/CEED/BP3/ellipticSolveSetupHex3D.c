@@ -59,9 +59,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->sendBuffer = (dfloat*) calloc(Nbytes/sizeof(dfloat), sizeof(dfloat));
   solver->recvBuffer = (dfloat*) calloc(Nbytes/sizeof(dfloat), sizeof(dfloat));
 #else
-  solver->defaultStream = mesh->device.createStream();
+  solver->defaultStream = mesh->device.getStream();
   solver->dataStream = mesh->device.createStream();
-  mesh->device.setStream(solver->dataStream);
+  mesh->device.setStream(solver->defaultStream);
   
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
