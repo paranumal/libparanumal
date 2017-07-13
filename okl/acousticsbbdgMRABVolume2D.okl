@@ -1,8 +1,3 @@
-#define RXID 0  
-#define RYID 1  
-#define SXID 2  
-#define SYID 3
-
 
 kernel void acousticsbbdgMRABVolume2D(const iint Nelements,
           const iint * restrict elementIds,
@@ -46,10 +41,10 @@ kernel void acousticsbbdgMRABVolume2D(const iint Nelements,
           const iint e = elementIds[et];
 
           // prefetch geometric factors (constant on triangle)
-          const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-          const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-          const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-          const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
           // compute 'r' and 's' derivatives of (q_m) at node n
           const iint D1i1 = D1ids[n];
