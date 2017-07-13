@@ -191,10 +191,10 @@ void acousticsSetup2D(mesh2D *mesh){
   char deviceConfig[BUFSIZ];
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
-  //sprintf(deviceConfig, "mode = Serial");
+  sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -273,10 +273,14 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABTraceUpdate2D_wadg",
                kernelInfo);
-    mesh->pmlKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPml2D.okl",
-               "acousticsMRABPml2D_wadg",
-               kernelInfo);
+    mesh->pmlUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlUpdate2D_wadg",
+                 kernelInfo);
+    mesh->pmlTraceUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlTraceUpdate2D_wadg",
+                 kernelInfo);
   #else
     mesh->updateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
@@ -286,16 +290,25 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdate2D.okl",
                "acousticsMRABTraceUpdate2D",
                kernelInfo);
-    mesh->pmlKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPml2D.okl",
-               "acousticsMRABPml2D",
-               kernelInfo);
+    mesh->pmlUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlUpdate2D",
+                 kernelInfo);
+    mesh->pmlTraceUpdateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
+               "acousticsMRABPmlTraceUpdate2D",
+                 kernelInfo);
   #endif
-  mesh->pmlUpdateKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdate2D.okl",
-             "acousticsMRABPmlUpdate2D",
-               kernelInfo);
 
+  mesh->pmlVolumeKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlVolume2D.okl",
+             "acousticsbbdgMRABPmlVolume2D",
+             kernelInfo);
+  mesh->pmlSurfaceKernel = 
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlSurface2D.okl",
+             "acousticsbbdgMRABPmlSurface2D",
+             kernelInfo);
+  
   mesh->haloExtractKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
