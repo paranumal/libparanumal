@@ -61,7 +61,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 #else
   solver->defaultStream = mesh->device.getStream();
   solver->dataStream = mesh->device.createStream();
-  mesh->device.setStream(solver->dataStream);
+  mesh->device.setStream(solver->defaultStream);
   
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
@@ -84,6 +84,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
   dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
 
+  srand48(32);
   for(iint n=0;n<gNq*mesh->Nq;++n){
     gD[n] = drand48();
     gI[n] = drand48();
@@ -276,7 +277,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   free(localMM); o_MM.free(); o_localMM.free();
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
-  mesh->device.setStream(solver->dataStream);
+  //  mesh->device.setStream(solver->dataStream);
   ellipticParallelGatherScatterSetup(mesh,
 				     mesh->Np*mesh->Nelements,
 				     sizeof(dfloat),
@@ -285,27 +286,22 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				     mesh->gatherHaloFlags,
 				     &(solver->halo),
 				     &(solver->nonHalo));
-  mesh->device.setStream(solver->defaultStream);
+  //  mesh->device.setStream(solver->defaultStream);
 
   
   // count elements that contribute to global C0 gather-scatter
   iint globalCount = 0;
-  iint notGlobalCount = 0;
+  iint localCount = 0;
   iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
 
   for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    localHaloFlags[n] = -100000;
+    localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
   }
   
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    localHaloFlags[mesh->gatherLocalIds[n]] = mesh->gatherHaloFlags[n];
-  }
-  
-  // oops - not the correct layout for halo flags
   for(iint e=0;e<mesh->Nelements;++e){
     iint isHalo = 0;
     for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]==1){
+      if(localHaloFlags[e*mesh->Np+n]>0){
 	isHalo = 1;
       }
       if(localHaloFlags[e*mesh->Np+n]<0){
@@ -313,45 +309,44 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       }
     }
     globalCount += isHalo;
-    notGlobalCount += 1-isHalo;
+    localCount += 1-isHalo;
   }
   
-  printf("notGlobal = %d, global = %d\n", notGlobalCount, globalCount);
+  printf("local = %d, global = %d\n", localCount, globalCount);
   
   iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
-  iint *notGlobalGatherElementList = (iint*) calloc(notGlobalCount, sizeof(iint));
+  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
   
   globalCount = 0;
-  notGlobalCount = 0;
+  localCount = 0;
   
   for(iint e=0;e<mesh->Nelements;++e){
     iint isHalo = 0;
     for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]==1){
+      if(localHaloFlags[e*mesh->Np+n]>0){
 	isHalo = 1;
       }
     }
     if(isHalo){
       globalGatherElementList[globalCount++] = e;
-      //      printf("rank %02d: GGE[%d]=%d\n", rank, globalCount-1, globalGatherElementList[globalCount-1]);
     }
     else{
-      notGlobalGatherElementList[notGlobalCount++] = e;
-      //      printf("rank %02d: notGGE[%d]=%d\n", rank, notGlobalCount-1, notGlobalGatherElementList[notGlobalCount-1]);
+      localGatherElementList[localCount++] = e;
     }
   }
-
+  printf("local = %d, global = %d\n", localCount, globalCount);
+  
   solver->NglobalGatherElements = globalCount;
-  solver->NnotGlobalGatherElements = notGlobalCount;
+  solver->NlocalGatherElements = localCount;
 
   if(globalCount)
     solver->o_globalGatherElementList =
       mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
-
-  if(notGlobalCount)
-    solver->o_notGlobalGatherElementList =
-      mesh->device.malloc(notGlobalCount*sizeof(iint), notGlobalGatherElementList);
-
+  
+  if(localCount)
+    solver->o_localGatherElementList =
+      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+  
   free(localHaloFlags);
   
   return solver;

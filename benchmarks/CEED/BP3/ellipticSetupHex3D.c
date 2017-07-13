@@ -18,8 +18,8 @@ void ellipticSetupHex3D(mesh3D *mesh, occa::kernelInfo &kernelInfo){
 
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = 0", rank%2);
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
   void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
