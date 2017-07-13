@@ -11,8 +11,8 @@ void acousticsPmlSetup2D(mesh2D *mesh){
   mesh->MRABpmlIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
   mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABpmlhaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*)); 
-  mesh->MRABpmlhaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
+  mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*)); 
+  mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -22,24 +22,30 @@ void acousticsPmlSetup2D(mesh2D *mesh){
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)) {
         mesh->pmlNelements++;
-        mesh->MRABpmlNelements[lev]++
+        mesh->MRABpmlNelements[lev]++;
       }
     }
     for (iint m=0;m<mesh->MRABNhaloElements[lev];m++) {
       iint e = mesh->MRABhaloIds[lev][m];
       int type = mesh->elementInfo[e];
-      if ((type==100)||(type==200)||(type==300)) {
-        mesh->pmlNelements++;
-        mesh->MRABpmlNhaloElements[lev]++
-      }
+      if ((type==100)||(type==200)||(type==300)) 
+        mesh->MRABpmlNhaloElements[lev]++;
     }
   }
 
   //set up the pml
   if (mesh->pmlNelements) {
   
+    //construct a numbering of the pml elements
+    iint *pmlIds = (iint *) calloc(mesh->Nelements,sizeof(iint));
+    iint pmlcnt = 0;
+    for (iint e=0;e<mesh->Nelements;e++) {
+      int type = mesh->elementInfo[e];
+      if ((type==100)||(type==200)||(type==300))  //pml element
+        pmlIds[e] = pmlcnt++;
+    }
+
     //set up lists of pml elements and remove the pml elements from the nonpml MRAB lists
-    iint pmlId = 0;
     for (iint lev =0;lev<mesh->MRABNlevels;lev++){
       mesh->MRABpmlElementIds[lev] = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
       mesh->MRABpmlIds[lev] = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
@@ -54,7 +60,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
 
         if ((type==100)||(type==200)||(type==300)) { //pml element
           mesh->MRABpmlElementIds[lev][pmlcnt] = e;
-          mesh->MRABpmlIds[lev][pmlcnt] = pmlId++;
+          mesh->MRABpmlIds[lev][pmlcnt] = pmlIds[e];
           pmlcnt++;
         } else { //nonpml element
           mesh->MRABelementIds[lev][nonpmlcnt] = e;
@@ -62,15 +68,15 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         }   
       }
 
-      iint pmlcnt = 0;
-      iint nonpmlcnt = 0;
+      pmlcnt = 0;
+      nonpmlcnt = 0;
       for (iint m=0;m<mesh->MRABNhaloElements[lev];m++){
         iint e = mesh->MRABhaloIds[lev][m];
         int type = mesh->elementInfo[e];
 
         if ((type==100)||(type==200)||(type==300)) { //pml element
           mesh->MRABpmlHaloElementIds[lev][pmlcnt] = e;
-          mesh->MRABpmlHaloIds[lev][pmlcnt] = pmlId++;
+          mesh->MRABpmlHaloIds[lev][pmlcnt] = pmlIds[e];
           pmlcnt++;
         } else { //nonpml element
           mesh->MRABhaloIds[lev][nonpmlcnt] = e;
@@ -178,7 +184,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
-    mesh->pmlNfields = 2;
+    mesh->pmlNfields = 4;
     mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
     mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
 
@@ -203,8 +209,10 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         mesh->o_MRABpmlHaloElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
            mesh->MRABpmlHaloElementIds[lev]);
         mesh->o_MRABpmlHaloIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
-           mesh->MRABpmlhaloIds[lev]);
+           mesh->MRABpmlHaloIds[lev]);
       }
     }
+
+    free(pmlIds);
   }
 }

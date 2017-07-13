@@ -3,6 +3,12 @@
 
 void acousticsPmlVolume2Dbbdg(mesh2D *mesh, iint lev){
 
+  dfloat *cubu = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
+  dfloat *cubv = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
+
+  dfloat *cubpx = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
+  dfloat *cubpy = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
+
   // loop over elements
   for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
     iint e = mesh->MRABpmlElementIds[lev][et];
@@ -64,11 +70,61 @@ void acousticsPmlVolume2Dbbdg(mesh2D *mesh, iint lev){
       iint pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->Np + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
 
       // store acoustics rhs contributions from collocation differentiation
-      mesh->rhsq[id+0] = -dpdx;
-      mesh->rhsq[id+1] = -dpdy;
+      mesh->rhsq[rhsid+0] = -dpdx;
+      mesh->rhsq[rhsid+1] = -dpdy;
       
-      mesh->pmlrhsq[id+0] = -dudx;
-      mesh->pmlrhsq[id+1] = -dvdy;
+      mesh->pmlrhsq[pmlrhsid+0] = -dudx;
+      mesh->pmlrhsq[pmlrhsid+1] = -dvdy;
+    }
+
+    // Interpolate to cubature nodes
+    for(iint n=0;n<mesh->cubNp;++n){
+      dfloat u = 0.f;
+      dfloat v = 0.f;
+      dfloat px = 0.f;
+      dfloat py = 0.f;
+      for (iint i=0;i<mesh->Np;++i){
+        iint base = mesh->Nfields*(e*mesh->Np + i);
+        u += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+0];
+        v += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+1];
+
+        iint pmlBase = mesh->pmlNfields*(pmlId*mesh->Np+i);
+        px += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+0];
+        py += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+1];
+      }    
+
+      dfloat sigmax = mesh->pmlSigmaX[pmlId*mesh->cubNp + n];
+      dfloat sigmay = mesh->pmlSigmaY[pmlId*mesh->cubNp + n];
+
+      cubu[n] = -sigmax*u;
+      cubv[n] = -sigmay*v;
+      cubpx[n] = -sigmax*px;
+      cubpy[n] = -sigmay*py;
+    }
+
+    //Project down and store
+    for(iint n=0;n<mesh->Np;++n){
+      iint rhsid = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      iint pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->Np + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+
+      dfloat rhsu = mesh->rhsq[rhsid+0];
+      dfloat rhsv = mesh->rhsq[rhsid+1];
+      dfloat rhspx = mesh->pmlrhsq[pmlrhsid+0];
+      dfloat rhspy = mesh->pmlrhsq[pmlrhsid+1];
+      for (iint i=0;i<mesh->cubNp;++i){
+        rhsu += mesh->cubProject[n*mesh->cubNp + i] * cubu[i];
+        rhsv += mesh->cubProject[n*mesh->cubNp + i] * cubv[i];
+        rhspx += mesh->cubProject[n*mesh->cubNp + i] * cubpx[i];
+        rhspy += mesh->cubProject[n*mesh->cubNp + i] * cubpy[i];
+      }
+
+      mesh->rhsq[rhsid+0] = rhsu;
+      mesh->rhsq[rhsid+1] = rhsv;
+      mesh->pmlrhsq[pmlrhsid+0] = rhspx;
+      mesh->pmlrhsq[pmlrhsid+1] = rhspy;
     }
   }
+
+  free(cubu); free(cubv);
+  free(cubpx); free(cubpy);
 }

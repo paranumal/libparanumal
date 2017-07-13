@@ -18,7 +18,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 4.5;
+  mesh->finalTime = 2;
   dfloat cfl = .4; // depends on the stability region size
 
   // set penalty parameter
