@@ -102,8 +102,8 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
 
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(iint et=0;et<mesh->MRABNhaloElements[lev];et++){
+    iint e = mesh->MRABhaloIds[lev][et];
 
     dfloat s_q[mesh->Np*mesh->Nfields];
 
@@ -316,8 +316,8 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
   
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(iint et=0;et<mesh->MRABNhaloElements[lev];et++){
+    iint e = mesh->MRABhaloIds[lev][et];
 
     dfloat p[mesh->cubNp];
     dfloat s_q[mesh->Np*mesh->Nfields];

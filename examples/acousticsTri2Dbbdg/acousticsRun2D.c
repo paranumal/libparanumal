@@ -8,6 +8,8 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
+  int Nframe=0;
+
   //populate the trace buffer fQ
   for (iint l=0;l<mesh->MRABNlevels;l++)
     acousticsMRABUpdate2D(mesh, 0., 0., 0., l, 0., 0.);
@@ -38,7 +40,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // compute volume contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         acousticsVolume2Dbbdg(mesh,l);
-        acousticsPmlVolume2D(mesh,l);
+        acousticsPmlVolume2Dbbdg(mesh,l);
       }
 
       if(mesh->totalHaloPairs>0){
@@ -85,10 +87,11 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
 
       #if WADG
         for (iint l=0; l<lev; l++) {
-          acousticsMRABpmlUpdate2D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABpmlUpdate2D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
           acousticsMRABUpdate2D_wadg(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
+          acousticsMRABpmlUpdateTrace2D_wadg(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
           acousticsMRABUpdateTrace2D_wadg(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #else
@@ -97,6 +100,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
           acousticsMRABUpdate2D(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
+          acousticsMRABpmlUpdateTrace2D(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
           acousticsMRABUpdateTrace2D(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #endif
@@ -131,7 +135,13 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
 
       // output field files
       iint fld = 2;
-      meshPlotVTU2D(mesh, "foo", fld);
+      char fileName[BUFSIZ];
+      
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      
+      sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
+      meshPlotVTU2D(mesh, fileName, fld);
 
       //Transform to back to modal basis
       for (iint e =0;e<mesh->Nelements;e++){

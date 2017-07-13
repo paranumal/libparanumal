@@ -190,7 +190,9 @@ typedef struct {
   iint **MRABelementIds, **MRABhaloIds;
   iint *MRABshiftIndex;
 
-  iint *MRABpmlNelements, **MRABpmlElementIds, **MRABpmlIds;
+  iint *MRABpmlNelements, *MRABpmlNhaloElements;
+  iint **MRABpmlElementIds, **MRABpmlIds;
+  iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
 
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann;
@@ -282,6 +284,8 @@ typedef struct {
   occa::memory *o_MRABhaloIds;
   occa::memory *o_MRABpmlElementIds;
   occa::memory *o_MRABpmlIds;
+  occa::memory *o_MRABpmlHaloElementIds;
+  occa::memory *o_MRABpmlHaloIds;
 
   // DG halo exchange info
   occa::memory o_haloElementList;
