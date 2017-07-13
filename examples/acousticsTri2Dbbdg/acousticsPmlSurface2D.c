@@ -17,12 +17,12 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
   dfloat *fluxu_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
   dfloat *fluxv_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
   dfloat *fluxpx_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxpx_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxpy_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
   for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
     iint e = mesh->MRABpmlElementIds[lev][et];
-    iint pmlId = mesh->MRABpmlElementIds[lev][et];
+    iint pmlId = mesh->MRABpmlIds[lev][et];
     // for all face nodes of all elements
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       // find face that owns this node
@@ -60,8 +60,7 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       // compute (q^* - q^-)
       dfloat duS = 0.5f*(uP-uM) + mesh->Lambda2*(-nx)*(pP-pM);
       dfloat dvS = 0.5f*(vP-vM) + mesh->Lambda2*(-ny)*(pP-pM);
-      dfloat dpxS = 0.5f*(pP-pM) + mesh->Lambda2*(-nx*(uP-uM));
-      dfloat dpyS = 0.5f*(pP-pM) + mesh->Lambda2*(-ny*(vP-vM));
+      dfloat dpS = 0.5f*(pP-pM) + mesh->Lambda2*(-nx*(uP-uM)-ny*(vP-vM));
 
       // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
       fluxu[n] = invJ*sJ*(-nx*dpS);
