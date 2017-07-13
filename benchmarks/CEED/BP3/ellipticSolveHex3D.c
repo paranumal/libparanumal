@@ -19,36 +19,62 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
+
+    //    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    ogs_t *nonHalo = solver->nonHalo;
+    ogs_t *halo = solver->halo;
     
-    // switch to data stream
-    mesh->device.setStream(solver->dataStream);
-    if(solver->NglobalGatherElements)
-      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-
-    mesh->gatherKernel(solver->halo->Ngather, solver->halo->o_gatherOffsets, solver->halo->o_gatherLocalIds, o_v, solver->halo->o_gatherTmp);
-
-    // copy partially gathered solver->halo data from DEVICE to HOST
-    solver->halo->o_gatherTmp.asyncCopyTo(solver->halo->gatherTmp);
-
+    // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
     mesh->device.setStream(solver->defaultStream);
-
-    //ellipticHaloGatherScatterStart(solver, solver->halo, o_Aq, dfloatString, "add");    
-
-    mesh->device.setStream(solver->defaultStream);
-    if(solver->NnotGlobalGatherElements)
-      solver->partialAxKernel(solver->NnotGlobalGatherElements, solver->o_notGlobalGatherElementList,
-			      solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
-
-    ellipticNonHaloGatherScatter(solver, solver->nonHalo, o_Aq, dfloatString, "add");
-
-    ellipticHaloGatherScatterEnd(solver, solver->halo, o_Aq, dfloatString, "add");
-    mesh->device.finish();
+    {
+      if(solver->NglobalGatherElements)
+	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+      
+      if(halo->Ngather){
+	mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
+	
+	// avoid async copy [ otherwise we compete with the local Ax ]
+	halo->o_gatherTmp.copyTo(halo->gatherTmp);
+      }
+      
+      // Ax for C0 internal elements
+      if(solver->NlocalGatherElements){
+	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+      }
+    }
     
-    //mesh->device.setStream(solver->defaultStream);
-
-#endif
-
+    // C0 halo gather-scatter (on data stream)
+    if(halo->Ngather){
+      occa::streamTag tag;   
+      
+      // MPI based gather scatter using libgs
+      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
+      
+      // copy totally gather halo data back from HOST to DEVICE
+      mesh->device.setStream(solver->dataStream);
+      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp); 
+      
+      // wait for async copy
+      //      occa::streamTag tag = mesh->device.tagStream();
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+      
+      // do scatter back to local nodes
+      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
+      
+      // make sure the scatter has finished on the data stream
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+    }      
+    
+    // finalize gather using local and global contributions
+    mesh->device.setStream(solver->defaultStream);
+    if(nonHalo->Ngather)
+      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+    
+#endif    
   }
   else{
     // should not be hard coded
@@ -287,6 +313,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   
   occaTimerTic(mesh->device,"PCG");
 
+  mesh->device.setStream(solver->defaultStream);
+  
   // gather-scatter
   if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
     ellipticParallelGatherScatter(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
