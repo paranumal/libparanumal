@@ -27,6 +27,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
     mesh->device.setStream(solver->defaultStream);
     {
+
+      //      mesh->device.setStream(solver->dataStream);
       if(solver->NglobalGatherElements)
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
@@ -39,6 +41,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       }
       
       // Ax for C0 internal elements
+      mesh->device.setStream(solver->defaultStream);
       if(solver->NlocalGatherElements){
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
 				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
@@ -354,6 +357,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // A*p
     ellipticOperator3D(solver, lambda, o_p, o_Ap, options); 
 
+#if 1
     // dot(p,A*p)
     pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
 
@@ -412,7 +416,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     //    if(rank==0)
     //      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-    
+#endif    
     ++Niter;
   };
 
