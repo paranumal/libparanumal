@@ -2,7 +2,7 @@
 void boundaryConditions2D(iint bc, dfloat time, dfloat x, dfloat y,
         dfloat uM, dfloat vM, dfloat pM,
         dfloat *uP, dfloat *vP, dfloat *pP){
-  
+
   if(1){ //bc==1){
     // assert Neumann for pressure and no penetration for velocity
     *uP = -uM;
@@ -17,7 +17,7 @@ void boundaryConditions2D(iint bc, dfloat time, dfloat x, dfloat y,
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat pI = wave;
-    
+
     // scattered field wall
     *uP = -uM -2.f*uI;
     *vP = -vM -2.f*vI;
@@ -31,7 +31,7 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
            const dfloat * restrict sgeo,
            const dfloat * restrict L0vals,
            const iint   * restrict ELids,
-           const dfloat * restrict ELvals,   
+           const dfloat * restrict ELvals,
            const iint   * restrict vmapM,
            const iint   * restrict mapP,
            const iint   * restrict EToB,
@@ -45,7 +45,7 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
            dfloat       * restrict rhsq,
            dfloat       * restrict pmlrhsq,
            const iint   rhsShift){
-  
+
   // for all elements
   for(iint eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
 
@@ -59,7 +59,7 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
     shared dfloat s_fluxpx_copy[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxpy_copy[p_NblockS][p_Nfp*p_Nfaces];
 
-    // for all face nodes of all elements 
+    // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
         const iint et = eo + es;
@@ -70,19 +70,19 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
 
             // find face that owns this node
             const iint face = n/p_Nfp;
-          
+
             // load surface geofactors for this face
             const iint sid = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx = sgeo[sid+0];
-            const dfloat ny = sgeo[sid+1];
-            const dfloat sJ = sgeo[sid+2];
-            const dfloat invJ = sgeo[sid+3];
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
             const iint id  = e*p_Nfp*p_Nfaces + n;
             const iint idM = id*p_Nfields;
             const iint idP = mapP[id]*p_Nfields;
-  
+
             // load negative and positive trace node values of q
             const dfloat uM = fQM[idM+0], vM = fQM[idM+1], pM = fQM[idM+2];
             dfloat uP = fQP[idP+0], vP = fQP[idP+1], pP = fQP[idP+2];
@@ -98,17 +98,17 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
             const dfloat duS = 0.5*(uP-uM) + p_Lambda2*(-nx)*(pP-pM);
             const dfloat dvS = 0.5*(vP-vM) + p_Lambda2*(-ny)*(pP-pM);
             const dfloat dpS = 0.5*(pP-pM) + p_Lambda2*(-nx*(uP-uM)-ny*(vP-vM));
-            
+
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             s_fluxu[es][n] = invJ*sJ*(-nx*dpS);
             s_fluxv[es][n] = invJ*sJ*(-ny*dpS);
             s_fluxpx[es][n] = invJ*sJ*(-nx*duS);
-            s_fluxpy[es][n] = invJ*sJ*(-ny*dvS);  
+            s_fluxpy[es][n] = invJ*sJ*(-ny*dvS);
           }
         }
       }
     }
-    
+
     // wait for all shared memory writes of the previous inner loop to complete
     barrier(localMemFence);
 
@@ -119,14 +119,14 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
         if(et<pmlNelements){
           if(n<p_Nfp*p_Nfaces){
             const iint id = n % p_Nfp;  // warning: redundant reads
-            const dfloat L0val = L0vals[id+p_Nfp]; 
-            
+            const dfloat L0val = L0vals[id+p_Nfp];
+
             dfloat utmpflux = L0val * s_fluxu[es][n];
             dfloat vtmpflux = L0val * s_fluxv[es][n];
             dfloat pxtmpflux = L0val * s_fluxpx[es][n];
             dfloat pytmpflux = L0val * s_fluxpy[es][n];
 
-            if (id > 0){    
+            if (id > 0){
               utmpflux += L0vals[id]*s_fluxu[es][n-1]; // add previous term
               vtmpflux += L0vals[id]*s_fluxv[es][n-1]; // add previous term
               pxtmpflux += L0vals[id]*s_fluxpx[es][n-1]; // add previous term
@@ -157,14 +157,14 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
           if(n<p_Np){
             const iint e  = pmlElementIds[et];
             const iint pmlId  = pmlIds[et];
-            const iint id = 3*p_Nfields*(p_Np*e + n) + p_Nfields*rhsShift;
-            const iint pid = 3*p_pmlNfields*(p_Np*pmlId + n) + p_pmlNfields*rhsShift;
-            
+            const iint rhsId = 3*p_Nfields*(p_Np*e + n) + p_Nfields*rhsShift;
+            const iint pmlrhsId = 3*p_pmlNfields*(p_Np*pmlId + n) + p_pmlNfields*rhsShift;
+
             // load RHS
-            dfloat rhsqnu = rhsq[id+0];
-            dfloat rhsqnv = rhsq[id+1];
-            dfloat rhsqnpx = pmlrhsq[pid+0];
-            dfloat rhsqnpy = pmlrhsq[pid+1];
+            dfloat rhsqnu = rhsq[rhsId+0];
+            dfloat rhsqnv = rhsq[rhsId+1];
+            dfloat rhsqnpx = pmlrhsq[pmlrhsId+0];
+            dfloat rhsqnpy = pmlrhsq[pmlrhsId+1];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             occaUnroll(p_max_EL_nnz)
@@ -177,16 +177,15 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
               rhsqnpx += ELval * s_fluxpx_copy[es][ELid];
               rhsqnpy += ELval * s_fluxpy_copy[es][ELid];
             }
-            
+
             // store incremented rhs
-            rhsq[id+0] = rhsqnu;
-            rhsq[id+1] = rhsqnv;
-            pmlrhsq[pid+0] = rhsqnpx;
-            pmlrhsq[pid+1] = rhsqnpy;  
+            rhsq[rhsId+0] = rhsqnu;
+            rhsq[rhsId+1] = rhsqnv;
+            pmlrhsq[pmlrhsId+0] = rhsqnpx;
+            pmlrhsq[pmlrhsId+1] = rhsqnpy;
           }
         }
       }
     }
   }
 }
-    

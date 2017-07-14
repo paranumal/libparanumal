@@ -8,7 +8,7 @@
 
 
 #define USE_BERN 1
-#define WADG 0
+#define WADG 1
 
 void acousticsSetup2D(mesh2D *mesh);
 

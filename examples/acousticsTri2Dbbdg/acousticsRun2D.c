@@ -136,10 +136,10 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // output field files
       iint fld = 2;
       char fileName[BUFSIZ];
-      
+
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      
+
       sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
       meshPlotVTU2D(mesh, fileName, fld);
 
@@ -583,10 +583,10 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       // output field files
       iint fld = 2;
       char fileName[BUFSIZ];
-      
+
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      
+
       sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
       meshPlotVTU2D(mesh, fileName, fld);
     }
@@ -597,7 +597,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 }
 
 //Ricker pulse
-void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c,
                            dfloat *u, dfloat *v, dfloat *p);
 
 void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
@@ -607,7 +607,7 @@ void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
 
     for (iint n=0;n<mesh->Np;n++) {
       iint id = n + e*mesh->Np;
-      
+
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
@@ -615,7 +615,7 @@ void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
       dfloat y0 = mesh->sourceY0;
       dfloat t0 = mesh->sourceT0;
       dfloat freq = mesh->sourceFreq;
-    
+
       dfloat c = sqrt(mesh->sourceC2);
 
       dfloat u, v, p;

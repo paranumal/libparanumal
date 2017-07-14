@@ -5,7 +5,7 @@
 void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
                           dfloat uM, dfloat vM, dfloat pM,
                           dfloat *uP, dfloat *vP, dfloat *pP);
-  
+
 void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
   // temporary storage for flux terms
@@ -30,10 +30,10 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
       // load surface geofactors for this face
       iint sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
-      dfloat nx = mesh->sgeo[sid+0];
-      dfloat ny = mesh->sgeo[sid+1];
-      dfloat sJ = mesh->sgeo[sid+2];
-      dfloat invJ = mesh->sgeo[sid+3];
+      dfloat nx   = mesh->sgeo[sid+NXID];
+      dfloat ny   = mesh->sgeo[sid+NYID];
+      dfloat sJ   = mesh->sgeo[sid+SJID];
+      dfloat invJ = mesh->sgeo[sid+IJID];
 
       iint id = n + e*mesh->Nfaces*mesh->Nfp;
       iint idM = id*mesh->Nfields;
@@ -45,7 +45,7 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       dfloat pM = mesh->fQM[idM+2];
 
       // load positive trace node values of q
-      dfloat uP = mesh->fQP[idP+0]; 
+      dfloat uP = mesh->fQP[idP+0];
       dfloat vP = mesh->fQP[idP+1];
       dfloat pP = mesh->fQP[idP+2];
 
@@ -53,7 +53,7 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];
       if(boundaryType>0) {
         iint idM = mesh->vmapM[id];
-        boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM], 
+        boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM],
                               uM, vM, pM, &uP, &vP, &pP);
       }
 
@@ -71,16 +71,16 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-    
+
       iint id = n % mesh->Nfp;  // warning: redundant reads
-      dfloat L0val = mesh->L0vals[3*id+1]; 
+      dfloat L0val = mesh->L0vals[3*id+1];
 
       dfloat utmpflux = L0val * fluxu[n];
       dfloat vtmpflux = L0val * fluxv[n];
       dfloat pxtmpflux = L0val * fluxpx[n];
       dfloat pytmpflux = L0val * fluxpy[n];
 
-      if (id > 0){     
+      if (id > 0){
         utmpflux += mesh->L0vals[3*id]*fluxu[n-1]; // add previous term
         vtmpflux += mesh->L0vals[3*id]*fluxv[n-1]; // add previous term
         pxtmpflux += mesh->L0vals[3*id]*fluxpx[n-1]; // add previous term
@@ -119,12 +119,12 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
         rhsqnpx += ELval * fluxpx_copy[ELid];
         rhsqnpy += ELval * fluxpy_copy[ELid];
       }
-      
+
       // store incremented rhs
       mesh->rhsq[rhsId+0] = rhsqnu;
       mesh->rhsq[rhsId+1] = rhsqnv;
-      mesh->pmlrhsq[pmlrhsId+0] = rhsqnpx;  
-      mesh->pmlrhsq[pmlrhsId+1] = rhsqnpy;  
+      mesh->pmlrhsq[pmlrhsId+0] = rhsqnpx;
+      mesh->pmlrhsq[pmlrhsId+1] = rhsqnpy;
     }
   }
 
