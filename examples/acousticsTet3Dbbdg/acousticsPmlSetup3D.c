@@ -31,7 +31,7 @@ void acousticsPmlSetup3D(mesh3D *mesh){
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)
           ||(type==400)||(type==500)||(type==600)||(type==700))
-        mesh->MRABpmlNelements[lev]++;
+        mesh->MRABpmlNhaloElements[lev]++;
     }
   }
 

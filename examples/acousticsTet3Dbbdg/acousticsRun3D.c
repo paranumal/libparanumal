@@ -366,6 +366,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                               mesh->o_MRABpmlElementIds[l],
                               mesh->o_MRABpmlIds[l],
                               mesh->o_sgeo,
+                              mesh->o_L0ids,
                               mesh->o_L0vals,
                               mesh->o_ELids,
                               mesh->o_ELvals,

@@ -14,7 +14,7 @@ void acousticsSetup3D(mesh3D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = .5;
+  mesh->finalTime = 1;
   dfloat cfl = 0.5; // depends on the stability region size
 
   // set penalty parameter
@@ -194,7 +194,7 @@ void acousticsSetup3D(mesh3D *mesh){
   #endif
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 50;
 
   if (rank==0) {
     printf("hmin = %g\n", hmin);
@@ -210,7 +210,7 @@ void acousticsSetup3D(mesh3D *mesh){
   char deviceConfig[BUFSIZ];
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 0);
   //sprintf(deviceConfig, "mode = Serial");

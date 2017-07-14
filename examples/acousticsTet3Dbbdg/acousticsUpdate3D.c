@@ -470,8 +470,8 @@ void acousticsRickerPulse3D(dfloat x, dfloat y, dfloat z, dfloat t, dfloat f, df
   //radial distance
   dfloat r = mymax(sqrt(x*x+y*y+z*z),1e-9);
 
-  *p = ricker(t - r/c,f)/(4*M_PI*c*c*r);
-  *u = x*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
-  *v = y*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
-  *w = z*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
+  *p = ricker(t - r/c,f)/(4*M_PI*r);
+  *u = x*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*r*r);
+  *v = y*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*r*r);
+  *w = z*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*r*r);
 }

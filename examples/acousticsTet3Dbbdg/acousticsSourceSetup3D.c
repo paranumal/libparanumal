@@ -9,11 +9,11 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
   mesh->sourceZ0 = z0;
 
   // size of source injection patch
-  dfloat patchsize = 0.1;
+  dfloat patchsize = 0.2;
 
   //frequency and time shift of the riker pulse
   mesh->sourceFreq = 4.0;
-  mesh->sourceT0 = -0.1;
+  mesh->sourceT0 = -0.2;
 
   //We want to collect a patch of elements around the source point and solve for
   //  the scattered field in that patch. We need to construct a list of these elements and

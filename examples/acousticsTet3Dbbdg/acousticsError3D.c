@@ -12,7 +12,8 @@ void acousticsError3D(mesh3D *mesh, dfloat time){
       dfloat z = mesh->z[id];
 
       dfloat u,v,w,p;
-      acousticsCavitySolution3D(x, y, z, time, &u, &v, &w, &p);
+      //acousticsCavitySolution3D(x, y, z, time, &u, &v, &w, &p);
+      p = 0.f;
 
       dfloat qm = mesh->q[(e*mesh->Np+n)*mesh->Nfields+3];
 
