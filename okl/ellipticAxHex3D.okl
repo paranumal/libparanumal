@@ -1001,7 +1001,7 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 				      dfloat * restrict Aq){  
   
   for(int e=0;e<Nelements;++e;outer0){
-#if 0
+#if 1
     shared dfloat s_D[p_gNq][p_Nq];
     shared dfloat s_I[p_gNq][p_Nq];
 #endif
@@ -1010,12 +1010,12 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
     shared dfloat s_qs[p_gNq][p_gNq][p_gNq];
     shared dfloat s_qt[p_gNq][p_gNq][p_gNq];
 
-    shared dfloat s_qr2[p_gNq][p_gNq][p_gNq];
-    shared dfloat s_qs2[p_gNq][p_gNq][p_gNq];
-    shared dfloat s_qt2[p_gNq][p_gNq][p_gNq];
+    shared dfloat s_qr2[p_Nq][p_gNq][p_gNq];
+    shared dfloat s_qs2[p_Nq][p_gNq][p_gNq];
+    shared dfloat s_qt2[p_Nq][p_gNq][p_gNq];
     
     exclusive iint emap;
-    exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
+    //    exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
     
     // prefetch D and I matrices and zero register storage
     for(int c=0;c<p_gNq;++c;inner2){
@@ -1023,7 +1023,7 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	for(int a=0;a<p_gNq;++a;inner0){
 	  const int t = a + b*p_gNq + c*p_gNq*p_gNq;
 
-#if 0
+#if 1
 	  if(t<p_gNq*p_Nq){
 	    s_D[0][t] = gD[t];
 	    s_I[0][t] = gI[t];
@@ -1035,18 +1035,6 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	    s_q[0][0][t] = q[emap*p_Np + t];
 	  }
 
-	  const iint base = emap*p_Nggeo*p_gNp + c*p_gNq*p_gNq + b*p_gNq + a;
-	  
-	  r_G00 = gggeo[base+p_G00ID*p_gNp];
-	  r_G01 = gggeo[base+p_G01ID*p_gNp];
-	  r_G02 = gggeo[base+p_G02ID*p_gNp];
-	  
-	  r_G11 = gggeo[base+p_G11ID*p_gNp];
-	  r_G12 = gggeo[base+p_G12ID*p_gNp];
-	  r_G22 = gggeo[base+p_G22ID*p_gNp];
-  
-
-	  
 	}
       }
     }
@@ -1060,20 +1048,13 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	  
 	  if(c<p_Nq && b<p_Nq){
 	    dfloat resD = 0, resI = 0;
-#if 0
+
 	    occaUnroll(p_Nq)
 	      for(int i=0;i<p_Nq;++i){
 		resD += s_D[a][i]*s_q[c][b][i];
 		resI += s_I[a][i]*s_q[c][b][i];
 	      }
-#else
-	    occaUnroll(p_Nq)
-	      for(int i=0;i<p_Nq;++i){
-		const int id = a*p_Nq + i;
-		resD += gD[id]*s_q[c][b][i];
-		resI += gI[id]*s_q[c][b][i];
-	      }
-#endif
+
 	    s_qr[c][b][a] = resD;
 	    s_qs[c][b][a] = resI;
 	  }
@@ -1089,25 +1070,15 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	for(int a=0;a<p_gNq;++a;inner0){
 
 	  if(c<p_Nq){
-
 	    
 	    dfloat resID = 0, resDI = 0, resII = 0;
-#if 0
+
 	    occaUnroll(p_Nq)
 	      for(int j=0;j<p_Nq;++j){
 		resID += s_I[b][j]*s_qr[c][j][a];
-		resDI += s_D[b][j]*s_qs[c][j][a];
 		resII += s_I[b][j]*s_qs[c][j][a];
+		resDI += s_D[b][j]*s_qs[c][j][a];
 	      }
-#else
-	    occaUnroll(p_Nq)
-	      for(int j=0;j<p_Nq;++j){
-		const int id = b*p_Nq+j;
-		resID += gI[id]*s_qr[c][j][a];
-		resDI += gD[id]*s_qs[c][j][a];
-		resII += gI[id]*s_qs[c][j][a];
-	      }
-#endif
 
 	    s_qr2[c][b][a] = resID;
 	    s_qs2[c][b][a] = resDI;
@@ -1125,23 +1096,24 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	for(int a=0;a<p_gNq;++a;inner0){
 
 	  dfloat resIID = 0, resIDI = 0, resDII = 0;
-#if 0
+
 	  occaUnroll(p_Nq)
 	    for(int k=0;k<p_Nq;++k){
 	      resIID += s_I[c][k]*s_qr2[k][b][a];
 	      resIDI += s_I[c][k]*s_qs2[k][b][a];
 	      resDII += s_D[c][k]*s_qt2[k][b][a];
 	    }
-#else
-	  occaUnroll(p_Nq)
-	    for(int k=0;k<p_Nq;++k){
-	      const int id = c*p_Nq + k;
-	      resIID += gI[id]*s_qr2[k][b][a];
-	      resIDI += gI[id]*s_qs2[k][b][a];
-	      resDII += gD[id]*s_qt2[k][b][a];
-	    }
-#endif
 
+	  const iint base = emap*p_Nggeo*p_gNp + c*p_gNq*p_gNq + b*p_gNq + a;
+	  
+	  const dfloat r_G00 = gggeo[base+p_G00ID*p_gNp];
+	  const dfloat r_G01 = gggeo[base+p_G01ID*p_gNp];
+	  const dfloat r_G02 = gggeo[base+p_G02ID*p_gNp];
+	  
+	  const dfloat r_G11 = gggeo[base+p_G11ID*p_gNp];
+	  const dfloat r_G12 = gggeo[base+p_G12ID*p_gNp];
+	  const dfloat r_G22 = gggeo[base+p_G22ID*p_gNp];
+  
 	  // apply chain rule
 	  s_qr[c][b][a] = r_G00*resIID + r_G01*resIDI + r_G02*resDII;
 	  s_qs[c][b][a] = r_G01*resIID + r_G11*resIDI + r_G12*resDII;
@@ -1158,22 +1130,14 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	for(int a=0;a<p_gNq;++a;inner0){
 	  if(c<p_Nq){
 	    dfloat resr = 0, ress = 0, rest = 0;
-#if 0
+
 	    occaUnroll(p_gNq)
 	      for(int k=0;k<p_gNq;++k){
 		resr += s_I[k][c]*s_qr[k][b][a];
 		ress += s_I[k][c]*s_qs[k][b][a];
 		rest += s_D[k][c]*s_qt[k][b][a];
 	      }
-#else
-	    occaUnroll(p_gNq)
-	      for(int k=0;k<p_gNq;++k){
-		const iint id = k*p_Nq+c;
-		resr += gI[id]*s_qr[k][b][a];
-		ress += gI[id]*s_qs[k][b][a];
-		rest += gD[id]*s_qt[k][b][a];
-	      }
-#endif
+
 	    s_qr2[c][b][a] = resr;
 	    s_qs2[c][b][a] = ress;
 	    s_qt2[c][b][a] = rest;
@@ -1193,16 +1157,9 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 
 	    occaUnroll(p_gNq)
 	      for(int j=0;j<p_gNq;++j){
-#if 0
 		resr += s_I[j][b]*s_qr2[c][j][a];
-		ress += s_D[j][b]*s_qs2[c][j][a];
 		rest += s_I[j][b]*s_qt2[c][j][a];
-#else
-		const iint id = j*p_Nq+b;
-		resr += gI[id]*s_qr2[c][j][a];
-		ress += gD[id]*s_qs2[c][j][a];
-		rest += gI[id]*s_qt2[c][j][a];
-#endif
+		ress += s_D[j][b]*s_qs2[c][j][a];
 	      }
 	    s_qr[c][b][a] = resr;
 	    s_qs[c][b][a] = ress;
@@ -1223,28 +1180,23 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	    
 	    occaUnroll(p_gNq)
 	      for(int i=0;i<p_gNq;++i){
-#if 0
 		resr += s_D[i][a]*s_qr[c][b][i];
 		ress += s_I[i][a]*s_qs[c][b][i];
 		rest += s_I[i][a]*s_qt[c][b][i];
-		
-#else
-		const iint id = i*p_Nq+a;
-		resr += gD[id]*s_qr[c][b][i];
-		ress += gI[id]*s_qs[c][b][i];
-		rest += gI[id]*s_qt[c][b][i];
-#endif
 	      }
 
+#if 0
 	    s_q[0][0][a+b*p_Nq+c*p_Nq*p_Nq] = resr+ress+rest;
-
-	    //	    iint id = a+b*p_Nq+c*p_Nq*p_Nq;
-	    //	    Aq[emap*p_Np+id] = resr+ress+rest;
+#else	    
+	    iint id = a+b*p_Nq+c*p_Nq*p_Nq;
+	    Aq[emap*p_Np+id] = resr+ress+rest;
+#endif
 	  }
 	}
       }
     }
 
+#if 0
     barrier(localMemFence);
 
     for(int c=0;c<p_gNq;++c;inner2){
@@ -1254,10 +1206,11 @@ kernel void ellipticPartialAxHex3D_e4(const iint Nelements,
 	  if(t<p_Np){
 	    Aq[emap*p_Np + t] = s_q[0][0][t];
 	  }
-	}
-      }
+	} 
+      }	
     }
-
+#endif
+    
   }
 }
 	  

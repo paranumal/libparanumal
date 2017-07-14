@@ -24,7 +24,7 @@ int main(int argc, char **argv){
   // method can be CONTINUOUS or IPDG
   char *options =
     strdup("solver=PCG method=CONTINUOUS preconditioner=NONE");
-    //strdup("solver=PCG method=IPDG preconditioner=NONE");
+  //  strdup("solver=CG method=IPDG preconditioner=NONE");
 
   // set up mesh stuff
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
@@ -90,8 +90,8 @@ int main(int argc, char **argv){
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
   
   if(rank==root){
-    printf("%02d %02d %17.15lg %d %17.15E %17.15E \t [ N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)]\n",
-	   mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, globalDofs/(globalElapsed/(iterations/size)));
+    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)]\n",
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, globalDofs/(globalElapsed/(iterations/size)));
   }
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
