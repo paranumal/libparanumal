@@ -136,10 +136,10 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
       // output field files
       iint fld = 2;
       char fileName[BUFSIZ];
-      
+
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      
+
       sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
       meshPlotVTU2D(mesh, fileName, fld);
 
@@ -180,45 +180,77 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 
   //populate the trace buffer fQ
   dfloat zero = 0.0;
-  for (iint l=0; l<mesh->MRABNlevels; l++)
+  for (iint l=0; l<mesh->MRABNlevels; l++) {
     #if WADG
     if (mesh->MRABNelements[l])
       mesh->updateKernel(mesh->MRABNelements[l],
-            mesh->o_MRABelementIds[l],
-            zero,
-            zero,zero,zero,
-            mesh->o_cubInterpT,
-            mesh->o_cubProjectT,
-            mesh->o_c2,
-            zero,
-            mesh->o_x,
-            mesh->o_y,
-            mesh->o_invVB1DT,
-            mesh->o_EToB,
-            mesh->o_vmapM,
-            mesh->o_rhsq,
-            mesh->o_q,
-            mesh->o_fQM,
-            mesh->o_fQP,
-            mesh->MRABshiftIndex[l]);
+                        mesh->o_MRABelementIds[l],
+                        zero,
+                        zero,zero,zero,
+                        mesh->o_cubInterpT,
+                        mesh->o_cubProjectT,
+                        mesh->o_c2,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_invVB1DT,
+                        mesh->o_EToB,
+                        mesh->o_vmapM,
+                        mesh->o_rhsq,
+                        mesh->o_q,
+                        mesh->o_fQM,
+                        mesh->o_fQP,
+                        mesh->MRABshiftIndex[l]);
+    if (mesh->MRABpmlNelements[l])
+      mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+                            mesh->o_MRABpmlElementIds[l],
+                            mesh->o_MRABpmlIds[l],
+                            zero,
+                            zero,zero,zero,
+                            mesh->o_cubInterpT,
+                            mesh->o_cubProjectT,
+                            mesh->o_c2,
+                            mesh->o_vmapM,
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsq,
+                            mesh->o_q,
+                            mesh->o_pmlq,
+                            mesh->o_fQM,
+                            mesh->o_fQP,
+                            mesh->MRABshiftIndex[l]);
     #else
     if (mesh->MRABNelements[l])
       mesh->updateKernel(mesh->MRABNelements[l],
-            mesh->o_MRABelementIds[l],
-            zero,
-            zero,zero,zero,
-            zero,
-            mesh->o_x,
-            mesh->o_y,
-            mesh->o_invVB1DT,
-            mesh->o_EToB,
-            mesh->o_vmapM,
-            mesh->o_rhsq,
-            mesh->o_q,
-            mesh->o_fQM,
-            mesh->o_fQP,
-            mesh->MRABshiftIndex[l]);
+                        mesh->o_MRABelementIds[l],
+                        zero,
+                        zero,zero,zero,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_invVB1DT,
+                        mesh->o_EToB,
+                        mesh->o_vmapM,
+                        mesh->o_rhsq,
+                        mesh->o_q,
+                        mesh->o_fQM,
+                        mesh->o_fQP,
+                        mesh->MRABshiftIndex[l]);
+    if (mesh->MRABpmlNelements[l])
+      mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+                            mesh->o_MRABpmlElementIds[l],
+                            mesh->o_MRABpmlIds[l],
+                            zero,
+                            zero,zero,zero,
+                            mesh->o_vmapM,
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsq,
+                            mesh->o_q,
+                            mesh->o_pmlq,
+                            mesh->o_fQM,
+                            mesh->o_fQP,
+                            mesh->MRABshiftIndex[l]);
     #endif
+  }
 
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -254,45 +286,34 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       for (iint l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->volumeKernel(mesh->MRABNelements[l],
-              mesh->o_MRABelementIds[l],
-              mesh->o_vgeo,
-              mesh->o_D1ids,
-              mesh->o_D2ids,
-              mesh->o_D3ids,
-              mesh->o_Dvals,
-              mesh->o_q,
-              mesh->o_rhsq,
-              mesh->MRABshiftIndex[l]);
+                            mesh->o_MRABelementIds[l],
+                            mesh->o_vgeo,
+                            mesh->o_D1ids,
+                            mesh->o_D2ids,
+                            mesh->o_D3ids,
+                            mesh->o_Dvals,
+                            mesh->o_q,
+                            mesh->o_rhsq,
+                            mesh->MRABshiftIndex[l]);
 
         if (mesh->MRABpmlNelements[l])
-          #if WADG
-            mesh->pmlKernel(mesh->MRABpmlNelements[l],
+          mesh->pmlVolumeKernel(mesh->MRABpmlNelements[l],
                             mesh->o_MRABpmlElementIds[l],
                             mesh->o_MRABpmlIds[l],
-                            mesh->o_cubInterpT,
-                            mesh->o_cubProjectT,
-                            mesh->o_c2,
+                            mesh->o_vgeo,
+                            mesh->o_D1ids,
+                            mesh->o_D2ids,
+                            mesh->o_D3ids,
+                            mesh->o_Dvals,
                             mesh->o_pmlSigmaX,
                             mesh->o_pmlSigmaY,
+                            mesh->o_cubInterpT,
+                            mesh->o_cubProjectT,
                             mesh->o_q,
                             mesh->o_pmlq,
                             mesh->o_rhsq,
                             mesh->o_pmlrhsq,
                             mesh->MRABshiftIndex[l]);
-          #else
-            mesh->pmlKernel(mesh->MRABpmlNelements[l],
-                            mesh->o_MRABpmlElementIds[l],
-                            mesh->o_MRABpmlIds[l],
-                            mesh->o_cubInterpT,
-                            mesh->o_cubProjectT,
-                            mesh->o_pmlSigmaX,
-                            mesh->o_pmlSigmaY,
-                            mesh->o_q,
-                            mesh->o_pmlq,
-                            mesh->o_rhsq,
-                            mesh->o_pmlrhsq,
-                            mesh->MRABshiftIndex[l]);
-          #endif
       }
 
       if(mesh->totalHaloPairs>0){
@@ -305,25 +326,47 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       }
 
       // compute surface contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++)
+      for (iint l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->surfaceKernel(mesh->MRABNelements[l],
-                  mesh->o_MRABelementIds[l],
-                  mesh->o_sgeo,
-                  mesh->o_L0vals,
-                  mesh->o_ELids,
-                  mesh->o_ELvals,
-                  mesh->o_vmapM,
-                  mesh->o_mapP,
-                  mesh->o_EToB,
-                  t,
-                  mesh->o_x,
-                  mesh->o_y,
-                  mesh->o_q,
-                  mesh->o_fQM,
-                  mesh->o_fQP,
-                  mesh->o_rhsq,
-                  mesh->MRABshiftIndex[l]);
+                              mesh->o_MRABelementIds[l],
+                              mesh->o_sgeo,
+                              mesh->o_L0vals,
+                              mesh->o_ELids,
+                              mesh->o_ELvals,
+                              mesh->o_vmapM,
+                              mesh->o_mapP,
+                              mesh->o_EToB,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_q,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->o_rhsq,
+                              mesh->MRABshiftIndex[l]);
+        if (mesh->MRABpmlNelements[l])
+          mesh->pmlSurfaceKernel(mesh->MRABpmlNelements[l],
+                              mesh->o_MRABpmlElementIds[l],
+                              mesh->o_MRABpmlIds[l],
+                              mesh->o_sgeo,
+                              mesh->o_L0vals,
+                              mesh->o_ELids,
+                              mesh->o_ELvals,
+                              mesh->o_vmapM,
+                              mesh->o_mapP,
+                              mesh->o_EToB,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_q,
+                              mesh->o_pmlq,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->o_rhsq,
+                              mesh->o_pmlrhsq,
+                              mesh->MRABshiftIndex[l]);
+      }
 
       dfloat a1, a2, a3;
       dfloat b1, b2, b3;
@@ -357,107 +400,152 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         for (iint l=0; l<lev; l++) {
           if (mesh->MRABNelements[l])
             mesh->updateKernel(mesh->MRABNelements[l],
-                mesh->o_MRABelementIds[l],
-                mesh->dt*pow(2,l),
-                a1,a2,a3,
-                mesh->o_cubInterpT,
-                mesh->o_cubProjectT,
-                mesh->o_c2,
-                t,
-                mesh->o_x,
-                mesh->o_y,
-                mesh->o_invVB1DT,
-                mesh->o_EToB,
-                mesh->o_vmapM,
-                mesh->o_rhsq,
-                mesh->o_q,
-                mesh->o_fQM,
-                mesh->o_fQP,
-                mesh->MRABshiftIndex[l]);
-
+                              mesh->o_MRABelementIds[l],
+                              mesh->dt*pow(2,l),
+                              a1,a2,a3,
+                              mesh->o_cubInterpT,
+                              mesh->o_cubProjectT,
+                              mesh->o_c2,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_invVB1DT,
+                              mesh->o_EToB,
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_q,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);
           if (mesh->MRABpmlNelements[l])
             mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
-                mesh->o_MRABpmlIds[l],
-                mesh->dt*pow(2,l),
-                a1,a2,a3,
-                mesh->o_pmlrhsq,
-                mesh->o_pmlq,
-                mesh->MRABshiftIndex[l]);
+                                  mesh->o_MRABpmlElementIds[l],
+                                  mesh->o_MRABpmlIds[l],
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_cubInterpT,
+                                  mesh->o_cubProjectT,
+                                  mesh->o_c2,
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_pmlrhsq,
+                                  mesh->o_q,
+                                  mesh->o_pmlq,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);
 
           //rotate index
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
         }
-        if (lev<mesh->MRABNlevels)
+        if (lev<mesh->MRABNlevels) {
           if (mesh->MRABNhaloElements[lev])
             mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
-                mesh->o_MRABhaloIds[lev],
-                mesh->dt*pow(2,lev-1),
-                b1,b2,b3,
-                mesh->o_cubInterpT,
-                mesh->o_cubProjectT,
-                mesh->o_c2,
-                t,
-                mesh->o_x,
-                mesh->o_y,
-                mesh->o_invVB1DT,
-                mesh->o_EToB,
-                mesh->o_vmapM,
-                mesh->o_rhsq,
-                mesh->o_q,
-                mesh->o_fQM,
-                mesh->o_fQP,
-                mesh->MRABshiftIndex[lev]);
+                                    mesh->o_MRABhaloIds[lev],
+                                    mesh->dt*pow(2,lev-1),
+                                    b1,b2,b3,
+                                    mesh->o_cubInterpT,
+                                    mesh->o_cubProjectT,
+                                    mesh->o_c2,
+                                    t,
+                                    mesh->o_x,
+                                    mesh->o_y,
+                                    mesh->o_invVB1DT,
+                                    mesh->o_EToB,
+                                    mesh->o_vmapM,
+                                    mesh->o_rhsq,
+                                    mesh->o_q,
+                                    mesh->o_fQM,
+                                    mesh->o_fQP,
+                                    mesh->MRABshiftIndex[lev]);
+          if (mesh->MRABpmlNhaloElements[lev])
+            mesh->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
+                                      mesh->o_MRABpmlHaloElementIds[lev],
+                                      mesh->o_MRABpmlHaloIds[lev],
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_cubInterpT,
+                                      mesh->o_cubProjectT,
+                                      mesh->o_c2,
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_pmlrhsq,
+                                      mesh->o_q,
+                                      mesh->o_pmlq,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
+        }
       #else
         for (iint l=0; l<lev; l++) {
           if (mesh->MRABNelements[l])
             mesh->updateKernel(mesh->MRABNelements[l],
-                mesh->o_MRABelementIds[l],
-                mesh->dt*pow(2,l),
-                a1,a2,a3,
-                t,
-                mesh->o_x,
-                mesh->o_y,
-                mesh->o_invVB1DT,
-                mesh->o_EToB,
-                mesh->o_vmapM,
-                mesh->o_rhsq,
-                mesh->o_q,
-                mesh->o_fQM,
-                mesh->o_fQP,
-                mesh->MRABshiftIndex[l]);
-
+                              mesh->o_MRABelementIds[l],
+                              mesh->dt*pow(2,l),
+                              a1,a2,a3,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_invVB1DT,
+                              mesh->o_EToB,
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_q,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);
           if (mesh->MRABpmlNelements[l])
             mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
-                mesh->o_MRABpmlIds[l],
-                mesh->dt*pow(2,l),
-                a1,a2,a3,
-                mesh->o_pmlrhsq,
-                mesh->o_pmlq,
-                mesh->MRABshiftIndex[l]);
+                                  mesh->o_MRABpmlElementIds[l],
+                                  mesh->o_MRABpmlIds[l],
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_pmlrhsq,
+                                  mesh->o_q,
+                                  mesh->o_pmlq,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);
 
           //rotate index
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
         }
 
-        if (lev<mesh->MRABNlevels)
+        if (lev<mesh->MRABNlevels) {
           if (mesh->MRABNhaloElements[lev])
             mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
-                mesh->o_MRABhaloIds[lev],
-                mesh->dt*pow(2,lev-1),
-                b1,b2,b3,
-                t,
-                mesh->o_x,
-                mesh->o_y,
-                mesh->o_invVB1DT,
-                mesh->o_EToB,
-                mesh->o_vmapM,
-                mesh->o_rhsq,
-                mesh->o_q,
-                mesh->o_fQM,
-                mesh->o_fQP,
-                mesh->MRABshiftIndex[lev]);
+                                    mesh->o_MRABhaloIds[lev],
+                                    mesh->dt*pow(2,lev-1),
+                                    b1,b2,b3,
+                                    t,
+                                    mesh->o_x,
+                                    mesh->o_y,
+                                    mesh->o_invVB1DT,
+                                    mesh->o_EToB,
+                                    mesh->o_vmapM,
+                                    mesh->o_rhsq,
+                                    mesh->o_q,
+                                    mesh->o_fQM,
+                                    mesh->o_fQP,
+                                    mesh->MRABshiftIndex[lev]);
+          if (mesh->MRABpmlNhaloElements[lev])
+            mesh->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
+                                      mesh->o_MRABpmlHaloElementIds[lev],
+                                      mesh->o_MRABpmlHaloIds[lev],
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_pmlrhsq,
+                                      mesh->o_q,
+                                      mesh->o_pmlq,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
+        }
       #endif
-
     }
     // estimate maximum error
     if((tstep%mesh->errorStep)==0){
@@ -495,10 +583,10 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
       // output field files
       iint fld = 2;
       char fileName[BUFSIZ];
-      
+
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      
+
       sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
       meshPlotVTU2D(mesh, fileName, fld);
     }
@@ -509,7 +597,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
 }
 
 //Ricker pulse
-void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c,
                            dfloat *u, dfloat *v, dfloat *p);
 
 void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
@@ -519,7 +607,7 @@ void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
 
     for (iint n=0;n<mesh->Np;n++) {
       iint id = n + e*mesh->Np;
-      
+
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
@@ -527,7 +615,7 @@ void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
       dfloat y0 = mesh->sourceY0;
       dfloat t0 = mesh->sourceT0;
       dfloat freq = mesh->sourceFreq;
-    
+
       dfloat c = sqrt(mesh->sourceC2);
 
       dfloat u, v, p;

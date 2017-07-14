@@ -408,6 +408,7 @@ typedef struct {
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
+  occa::kernel pmlTraceUpdateKernel;
 
 
   // Experimental Time Steppings for Boltzmann

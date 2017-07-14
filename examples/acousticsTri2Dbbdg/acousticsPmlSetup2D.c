@@ -194,10 +194,10 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaX);
     mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaY);
 
-    mesh->o_MRABpmlElementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABpmlElementIds     = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABpmlIds            = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABpmlHaloElementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlHaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABpmlHaloIds        = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABpmlNelements[lev]) {
         mesh->o_MRABpmlElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(iint),

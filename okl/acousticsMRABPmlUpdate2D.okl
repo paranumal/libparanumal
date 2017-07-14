@@ -1,23 +1,361 @@
 
+
 kernel void acousticsMRABPmlUpdate2D(const iint pmlNelements,
+           const iint   * restrict pmlElementIds,
            const iint   * restrict pmlIds,
-           const dfloat dt, 
+           const dfloat dt,
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           const dfloat * restrict pmlrhsq,
+           dfloat * restrict q,
+           dfloat * restrict pmlq,
+           dfloat * restrict fQM,
+           dfloat * restrict fQP,
+           const iint   rhsShift){
+
+  for(iint et=0;et<pmlNelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    exclusive iint e;
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){
+      if (n < p_Np){
+        const iint pmlId = pmlIds[et];
+
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint pid = p_pmlNfields*(pmlId*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const iint pmlrhsId1 = 3*pid + ((rhsShift+0)%3)*p_pmlNfields;
+        const iint pmlrhsId2 = 3*pid + ((rhsShift+1)%3)*p_pmlNfields;
+        const iint pmlrhsId3 = 3*pid + ((rhsShift+2)%3)*p_pmlNfields;
+
+        const dfloat px = pmlq[pid+0] + dt*(a1*pmlrhsq[pmlrhsId1+0] + a2*pmlrhsq[pmlrhsId2+0] + a3*pmlrhsq[pmlrhsId3+0]);
+        const dfloat py = pmlq[pid+1] + dt*(a1*pmlrhsq[pmlrhsId1+1] + a2*pmlrhsq[pmlrhsId2+1] + a3*pmlrhsq[pmlrhsId3+1]);
+
+        s_q[p_Nfields*n+0] = q[id+0] + dt*(a1*rhsq[rhsId1+0] + a2*rhsq[rhsId2+0] + a3*rhsq[rhsId3+0]);
+        s_q[p_Nfields*n+1] = q[id+1] + dt*(a1*rhsq[rhsId1+1] + a2*rhsq[rhsId2+1] + a3*rhsq[rhsId3+1]);
+        s_q[p_Nfields*n+2] = px+py;
+
+        //write update
+        pmlq[pid+0] = px;
+        pmlq[pid+1] = py;
+        q[id+0] = s_q[p_Nfields*n+0];
+        q[id+1] = s_q[p_Nfields*n+1];
+        q[id+2] = s_q[p_Nfields*n+2];
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){
+      if (n < p_Nfp*p_Nfaces){
+        const iint iid = e*p_Nfp*p_Nfaces + n;
+        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const iint qid  = p_Nfields*iid;
+
+        fQP[qid+0] = s_q[qidM+0];
+        fQP[qid+1] = s_q[qidM+1];
+        fQP[qid+2] = s_q[qidM+2];
+        fQM[qid+0] = s_q[qidM+0];
+        fQM[qid+1] = s_q[qidM+1];
+        fQM[qid+2] = s_q[qidM+2];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABPmlTraceUpdate2D(const iint pmlNelements,
+           const iint   * restrict pmlElementIds,
+           const iint   * restrict pmlIds,
+           const dfloat dt,
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           const dfloat * restrict pmlrhsq,
+           const dfloat * restrict q,
+           const dfloat * restrict pmlq,
+           dfloat * restrict fQM,
+           dfloat * restrict fQP,
+           const iint   rhsShift){
+
+  for(iint et=0;et<pmlNelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+
+    exclusive iint e;
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){
+      if (n < p_Np){
+        e = pmlElementIds[et];
+        const iint pmlId = pmlIds[et];
+
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint pid = p_pmlNfields*(pmlId*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const iint pmlrhsId1 = 3*pid + ((rhsShift+0)%3)*p_pmlNfields;
+        const iint pmlrhsId2 = 3*pid + ((rhsShift+1)%3)*p_pmlNfields;
+        const iint pmlrhsId3 = 3*pid + ((rhsShift+2)%3)*p_pmlNfields;
+
+        const dfloat px = pmlq[pid+0] + dt*(a1*pmlrhsq[pmlrhsId1+0] + a2*pmlrhsq[pmlrhsId2+0] + a3*pmlrhsq[pmlrhsId3+0]);
+        const dfloat py = pmlq[pid+1] + dt*(a1*pmlrhsq[pmlrhsId1+1] + a2*pmlrhsq[pmlrhsId2+1] + a3*pmlrhsq[pmlrhsId3+1]);
+
+        s_q[p_Nfields*n+0] = q[id+0] + dt*(a1*rhsq[rhsId1+0] + a2*rhsq[rhsId2+0] + a3*rhsq[rhsId3+0]);
+        s_q[p_Nfields*n+1] = q[id+1] + dt*(a1*rhsq[rhsId1+1] + a2*rhsq[rhsId2+1] + a3*rhsq[rhsId3+1]);
+        s_q[p_Nfields*n+2] = px+py;
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){
+      if (n < p_Nfp*p_Nfaces){
+        const iint iid = e*p_Nfp*p_Nfaces + n;
+        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const iint qid  = p_Nfields*iid;
+
+        fQP[qid+0] = s_q[qidM+0];
+        fQP[qid+1] = s_q[qidM+1];
+        fQP[qid+2] = s_q[qidM+2];
+        fQM[qid+0] = s_q[qidM+0];
+        fQM[qid+1] = s_q[qidM+1];
+        fQM[qid+2] = s_q[qidM+2];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABPmlUpdate2D_wadg(const iint pmlNelements,
+           const iint   * restrict pmlElementIds,
+           const iint   * restrict pmlIds,
+           const dfloat dt,
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const iint   * restrict vmapM,
+           dfloat * restrict rhsq,
+           dfloat * restrict pmlrhsq,
+           dfloat * restrict q,
+           dfloat * restrict pmlq,
+           dfloat * restrict fQM,
+           dfloat * restrict fQP,
+           const iint   rhsShift){
+
+  for(iint et=0;et<pmlNelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+    shared dfloat s_p[p_cubNp];
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){
+      if (n < p_Np){
+        const iint e = pmlElementIds[et];
+        const iint pmlId = pmlIds[et];
+
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint pid = p_pmlNfields*(pmlId*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const iint pmlrhsId1 = 3*pid + ((rhsShift+0)%3)*p_pmlNfields;
+        const iint pmlrhsId2 = 3*pid + ((rhsShift+1)%3)*p_pmlNfields;
+        const iint pmlrhsId3 = 3*pid + ((rhsShift+2)%3)*p_pmlNfields;
+
+        const dfloat px = pmlq[pid+0] + dt*(a1*pmlrhsq[pmlrhsId1+0] + a2*pmlrhsq[pmlrhsId2+0] + a3*pmlrhsq[pmlrhsId3+0]);
+        const dfloat py = pmlq[pid+1] + dt*(a1*pmlrhsq[pmlrhsId1+1] + a2*pmlrhsq[pmlrhsId2+1] + a3*pmlrhsq[pmlrhsId3+1]);
+
+        s_q[p_Nfields*n+0] = q[id+0] + dt*(a1*rhsq[rhsId1+0] + a2*rhsq[rhsId2+0] + a3*rhsq[rhsId3+0]);
+        s_q[p_Nfields*n+1] = q[id+1] + dt*(a1*rhsq[rhsId1+1] + a2*rhsq[rhsId2+1] + a3*rhsq[rhsId3+1]);
+        s_q[p_Nfields*n+2] = px+py;
+
+        //write update
+        pmlq[pid+0] = px;
+        pmlq[pid+1] = py;
+        q[id+0] = s_q[p_Nfields*n+0];
+        q[id+1] = s_q[p_Nfields*n+1];
+      }
+    }
+    barrier(localMemFence);
+
+    // Interpolate p to cubature nodes
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        const iint e = pmlElementIds[et];
+        // Prefetch value of c2
+        const dfloat c2n = c2[n + e*p_cubNp];
+
+        s_p[n] = 0.f;
+        for (int i=0;i<p_Np;++i){
+          s_p[n] += cubInterp[n + i*p_cubNp] * s_q[p_Nfields*i+2];
+        }
+        // Multiply result by wavespeed c2 at cubature node
+        s_p[n] *= c2n;
+      }
+    }
+    barrier(localMemFence);
+
+    // Project result back down
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n < p_Np){
+        const iint e = pmlElementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        // Project scaled rhs down
+        dfloat c2p = 0.f;
+        for (int i=0;i<p_cubNp;++i){
+          c2p += cubProject[n + i*p_Np] * s_p[i];
+        }
+
+        s_q[p_Nfields*n+2] = c2p;
+        q[id+2] = c2p;
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = pmlElementIds[et];
+        const iint iid = e*p_Nfp*p_Nfaces + n;
+        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const iint qid  = p_Nfields*iid;
+
+        fQP[qid+0] = s_q[qidM+0];
+        fQP[qid+1] = s_q[qidM+1];
+        fQP[qid+2] = s_q[qidM+2];
+        fQM[qid+0] = s_q[qidM+0];
+        fQM[qid+1] = s_q[qidM+1];
+        fQM[qid+2] = s_q[qidM+2];
+      }
+    }
+  }
+}
+
+kernel void acousticsMRABPmlTraceUpdate2D_wadg(const iint pmlNelements,
+           const iint   * restrict pmlElementIds,
+           const iint   * restrict pmlIds,
+           const dfloat dt,
+           const dfloat a1,
+           const dfloat a2,
+           const dfloat a3,
+           const dfloat * restrict cubInterp,
+           const dfloat * restrict cubProject,
+           const dfloat * restrict c2,
+           const iint   * restrict vmapM,
+           const dfloat * restrict rhsq,
+           const dfloat * restrict pmlrhsq,
+           const dfloat * restrict q,
+           const dfloat * restrict pmlq,
+           dfloat * restrict fQM,
+           dfloat * restrict fQP,
+           const iint   rhsShift){
+
+  for(iint et=0;et<pmlNelements;++et;outer0){  // for all elements
+    shared dfloat s_q[p_Np*p_Nfields];
+    shared dfloat s_p[p_cubNp];
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){
+      if (n < p_Np){
+        const iint e = pmlElementIds[et];
+        const iint pmlId = pmlIds[et];
+
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint pid = p_pmlNfields*(pmlId*p_Np + n);
+
+        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const iint pmlrhsId1 = 3*pid + ((rhsShift+0)%3)*p_pmlNfields;
+        const iint pmlrhsId2 = 3*pid + ((rhsShift+1)%3)*p_pmlNfields;
+        const iint pmlrhsId3 = 3*pid + ((rhsShift+2)%3)*p_pmlNfields;
+
+        const dfloat px = pmlq[pid+0] + dt*(a1*pmlrhsq[pmlrhsId1+0] + a2*pmlrhsq[pmlrhsId2+0] + a3*pmlrhsq[pmlrhsId3+0]);
+        const dfloat py = pmlq[pid+1] + dt*(a1*pmlrhsq[pmlrhsId1+1] + a2*pmlrhsq[pmlrhsId2+1] + a3*pmlrhsq[pmlrhsId3+1]);
+
+        s_q[p_Nfields*n+0] = q[id+0] + dt*(a1*rhsq[rhsId1+0] + a2*rhsq[rhsId2+0] + a3*rhsq[rhsId3+0]);
+        s_q[p_Nfields*n+1] = q[id+1] + dt*(a1*rhsq[rhsId1+1] + a2*rhsq[rhsId2+1] + a3*rhsq[rhsId3+1]);
+        s_q[p_Nfields*n+2] = px+py;
+      }
+    }
+    barrier(localMemFence);
+
+    // Interpolate p to cubature nodes
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n<p_cubNp) {
+        const iint e = pmlElementIds[et];
+        // Prefetch value of c2
+        const dfloat c2n = c2[n + e*p_cubNp];
+
+        s_p[n] = 0.f;
+        for (int i=0;i<p_Np;++i){
+          s_p[n] += cubInterp[n + i*p_cubNp] * s_q[p_Nfields*i+2];
+        }
+        // Multiply result by wavespeed c2 at cubature node
+        s_p[n] *= c2n;
+      }
+    }
+    barrier(localMemFence);
+
+    // Project result back down
+    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+      if (n < p_Np){
+        // Project scaled rhs down
+        dfloat c2p = 0.f;
+        for (int i=0;i<p_cubNp;++i){
+          c2p += cubProject[n + i*p_Np] * s_p[i];
+        }
+        s_q[p_Nfields*n+2] = c2p;
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint n=0; n < p_maxCubNodes; ++n; inner0){
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = pmlElementIds[et];
+        const iint iid = e*p_Nfp*p_Nfaces + n;
+        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const iint qid  = p_Nfields*iid;
+
+        fQP[qid+0] = s_q[qidM+0];
+        fQP[qid+1] = s_q[qidM+1];
+        fQP[qid+2] = s_q[qidM+2];
+        fQM[qid+0] = s_q[qidM+0];
+        fQM[qid+1] = s_q[qidM+1];
+        fQM[qid+2] = s_q[qidM+2];
+      }
+    }
+  }
+
+}
+
+
+kernel void acousticsMRABPmlUpdate2D_v0(const iint pmlNelements,
+           const iint   * restrict pmlIds,
+           const dfloat dt,
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
            const dfloat * restrict pmlrhsq,
            dfloat * restrict pmlq,
            const iint   rhsShift){
-  
+
   for(iint et=0;et<pmlNelements;++et;outer0){  // for all elements
-    for(iint n=0; n < p_Np; ++n; inner0){  
+    for(iint n=0; n < p_Np; ++n; inner0){
       const iint pmlId = pmlIds[et];
       const iint id = p_pmlNfields*(pmlId*p_Np + n);
 
       const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_pmlNfields;
       const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_pmlNfields;
       const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_pmlNfields;
- 
+
       dfloat rhsutilde = dt*(a1*pmlrhsq[rhsId1+0] + a2*pmlrhsq[rhsId2+0] + a3*pmlrhsq[rhsId3+0]);
       dfloat rhsvtilde = dt*(a1*pmlrhsq[rhsId1+1] + a2*pmlrhsq[rhsId2+1] + a3*pmlrhsq[rhsId3+1]);
       dfloat rhsptilde = dt*(a1*pmlrhsq[rhsId1+2] + a2*pmlrhsq[rhsId2+2] + a3*pmlrhsq[rhsId3+2]);
@@ -25,7 +363,7 @@ kernel void acousticsMRABPmlUpdate2D(const iint pmlNelements,
       //write update
       pmlq[id+0] += rhsutilde;
       pmlq[id+1] += rhsvtilde;
-      pmlq[id+2] += rhsptilde; 
+      pmlq[id+2] += rhsptilde;
     }
   }
 }
