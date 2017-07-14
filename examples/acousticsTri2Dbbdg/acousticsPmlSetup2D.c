@@ -7,11 +7,11 @@ void acousticsPmlSetup2D(mesh2D *mesh){
 
   //construct element and halo lists
   mesh->MRABpmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*)); 
+  mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
   mesh->MRABpmlIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
   mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*)); 
+  mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
   mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
   //count the pml elements
@@ -28,14 +28,14 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     for (iint m=0;m<mesh->MRABNhaloElements[lev];m++) {
       iint e = mesh->MRABhaloIds[lev][m];
       int type = mesh->elementInfo[e];
-      if ((type==100)||(type==200)||(type==300)) 
+      if ((type==100)||(type==200)||(type==300))
         mesh->MRABpmlNhaloElements[lev]++;
     }
   }
 
   //set up the pml
   if (mesh->pmlNelements) {
-  
+
     //construct a numbering of the pml elements
     iint *pmlIds = (iint *) calloc(mesh->Nelements,sizeof(iint));
     iint pmlcnt = 0;
@@ -65,7 +65,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         } else { //nonpml element
           mesh->MRABelementIds[lev][nonpmlcnt] = e;
           nonpmlcnt++;
-        }   
+        }
       }
 
       pmlcnt = 0;
@@ -81,7 +81,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         } else { //nonpml element
           mesh->MRABhaloIds[lev][nonpmlcnt] = e;
           nonpmlcnt++;
-        }   
+        }
       }
 
       //resize nonpml element lists
@@ -104,7 +104,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
       for (int n=0;n<mesh->Nverts;n++) {
         dfloat x = mesh->EX[e*mesh->Nverts+n];
         dfloat y = mesh->EY[e*mesh->Nverts+n];
-        
+
         pmlxmin = (pmlxmin > x) ? x : pmlxmin;
         pmlymin = (pmlymin > y) ? y : pmlymin;
         pmlxmax = (pmlxmax < x) ? x : pmlxmax;
@@ -118,7 +118,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
       for (int n=0;n<mesh->Nverts;n++) {
         dfloat x = mesh->EX[e*mesh->Nverts+n];
         dfloat y = mesh->EY[e*mesh->Nverts+n];
-        
+
         xmin = (xmin > x) ? x : xmin;
         ymin = (ymin > y) ? y : ymin;
         xmax = (xmax < x) ? x : xmax;
@@ -184,7 +184,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
-    mesh->pmlNfields = 4;
+    mesh->pmlNfields = 2;
     mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
     mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
 

@@ -11,8 +11,10 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
   int Nframe=0;
 
   //populate the trace buffer fQ
-  for (iint l=0;l<mesh->MRABNlevels;l++)
+  for (iint l=0;l<mesh->MRABNlevels;l++) {
+    acousticsMRABpmlUpdate2D(mesh, 0., 0., 0., l, 0.);
     acousticsMRABUpdate2D(mesh, 0., 0., 0., l, 0., 0.);
+  }
 
 
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
