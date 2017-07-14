@@ -149,7 +149,7 @@ typedef struct {
 
   //source injection
   dfloat *sourceq;
-  dfloat sourceX0, sourceY0, sourceT0, sourceC2, sourceFreq;
+  dfloat sourceX0, sourceY0, sourceZ0, sourceT0, sourceC2, sourceFreq;
   iint sourceNelements, *MRABsourceNelements;
   iint *sourceElements;
 
@@ -161,7 +161,7 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
-  dfloat *invVB1D;
+  dfloat *invVB1D, *invVB2D;
   iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
@@ -211,17 +211,18 @@ typedef struct {
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
 
-    // pml stuff
+  // pml stuff
   iint    pmlNfields;
   //  iint    pmlNelements; // deprecated
   iint   *pmlElementList; // deprecated
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
+  dfloat *pmlSigmaZ;
   dfloat *pmlq;
   dfloat *pmlrhsq;
   dfloat *pmlresq;
-  //
+
 
   dfloat *invTau;
 
@@ -296,7 +297,7 @@ typedef struct {
 
   // Bernstein-Bezier occa arrays
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
-  occa::memory o_invVB1DT;
+  occa::memory o_invVB1DT, o_invVB2DT;
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
 
@@ -331,7 +332,7 @@ typedef struct {
 
 
   occa::memory o_pmlElementList;
-  occa::memory o_pmlSigmaX, o_pmlSigmaY;
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
   occa::memory o_pmlrhsq;
 
   occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
@@ -404,7 +405,7 @@ typedef struct {
 
 
 
-  occa::kernel pmlKernel; 
+  occa::kernel pmlKernel;
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
