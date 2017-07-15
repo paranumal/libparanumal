@@ -91,7 +91,7 @@ int main(int argc, char **argv){
   
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)]\n",
-	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, globalDofs/(globalElapsed/(iterations/size)));
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size));
   }
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
