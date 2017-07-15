@@ -100,15 +100,29 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_gggeo = mesh->device.malloc(mesh->Nggeo*gNp*mesh->Nelements*sizeof(dfloat), gggeo);
   // BP3 specific stuff ends here 
 
-				   
-				   
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo.addDefine("p_Nmax", maxNodes);
+
+  int NblockV = 1024/mesh->Np; // works for CUDA
+  kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockS = 1024/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+
+  int NblockG;
+  iint gNq2 = gNq*gNq;
+  if(gNq2<=32) NblockG = ( 32/gNq2 );
+  else NblockG = 1; 
+  kernelInfo.addDefine("p_NblockG", NblockG);
+  printf("NblockG = %d\n", NblockG);
+
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-
-  int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nmax", Nmax); 
 
   // this is defined in occaSetup3D?
   //int NblockV = 256/mesh->Np; // get close to 256 threads
@@ -152,7 +166,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
-				       "ellipticPartialAxHex3D_e4",
+				       "ellipticPartialAxHex3D_e3",
 				       kernelInfo);
   
 
@@ -275,6 +289,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   mesh->dotDivideKernel(Ntotal, o_localMM, o_MM, mesh->o_projectL2);
 
   free(localMM); o_MM.free(); o_localMM.free();
+
+  if(rank==0)
+    printf("starting elliptic parallel gather scatter setup\n");
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
   //  mesh->device.setStream(solver->dataStream);

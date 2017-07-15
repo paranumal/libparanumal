@@ -32,6 +32,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
 
   // tidy up
   gsParallelGatherScatterDestroy(allGsh);
+  if(rank==0)
+    printf("finished temporary GS setup\n");
 #endif
   // initialize gather structs
   *halo    = (ogs_t*) calloc(1, sizeof(ogs_t));
@@ -51,7 +53,13 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
       (*halo)->Ngather += test;
       ++nHalo;
     }
-    else{
+  }
+
+
+  for(iint n=0;n<Nlocal;++n){
+    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+    
+    if(gatherHaloFlags[n]!=1){
       (*nonHalo)->Ngather += test;
       ++nNonHalo;
     }
@@ -90,7 +98,13 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
       (*halo)->gatherLocalIds[nHalo] = gatherLocalIds[n];
       ++nHalo;
     }
-    else{
+  }
+  
+  for(iint n=0;n<Nlocal;++n){
+
+    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+    
+    if(gatherHaloFlags[n]!=1){
       if(test){
 	(*nonHalo)->gatherOffsets[(*nonHalo)->Ngather] = nNonHalo;
 	++((*nonHalo)->Ngather);
