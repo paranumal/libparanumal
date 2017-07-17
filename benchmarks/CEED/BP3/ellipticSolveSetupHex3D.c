@@ -32,9 +32,10 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   iint gNq = mesh->Nq+1;
   iint gNp = gNq*gNq*gNq;
   iint gNq2 = gNq*gNq;
-  if(gNq2<=32) NblockG = ( 32/gNq2 );
+  if(gNq2<=32) NblockG = ( 512/gNq2 );
   else NblockG = 1; 
-  
+  NblockG = 512/gNq2;
+
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
 
