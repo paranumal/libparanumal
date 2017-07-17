@@ -1,4 +1,4 @@
-#define B 256
+#define B 1024
 
 kernel void weightedInnerProduct2(const iint N,
 				  const dfloat * restrict w,
@@ -17,6 +17,14 @@ kernel void weightedInnerProduct2(const iint N,
     }
 
     barrier(localMemFence);
+#if B>512
+    for(iint t=0;t<B;++t;inner0) if(t<512) s_wxy[t] += s_wxy[t+512];
+    barrier(localMemFence);
+#endif
+#if B>256
+    for(iint t=0;t<B;++t;inner0) if(t<256) s_wxy[t] += s_wxy[t+256];
+    barrier(localMemFence);
+#endif
 
     for(iint t=0;t<B;++t;inner0) if(t<128) s_wxy[t] += s_wxy[t+128];
     barrier(localMemFence);
@@ -25,19 +33,10 @@ kernel void weightedInnerProduct2(const iint N,
     barrier(localMemFence);
 
     for(iint t=0;t<B;++t;inner0) if(t< 32) s_wxy[t] += s_wxy[t+32];
-    barrier(localMemFence);
-
     for(iint t=0;t<B;++t;inner0) if(t< 16) s_wxy[t] += s_wxy[t+16];
-    barrier(localMemFence);
-
     for(iint t=0;t<B;++t;inner0) if(t<  8) s_wxy[t] += s_wxy[t+8];
-    barrier(localMemFence);
-
     for(iint t=0;t<B;++t;inner0) if(t<  4) s_wxy[t] += s_wxy[t+4];
-    barrier(localMemFence);
-
     for(iint t=0;t<B;++t;inner0) if(t<  2) s_wxy[t] += s_wxy[t+2];
-    barrier(localMemFence);
 
     for(iint t=0;t<B;++t;inner0) if(t<  1) wxy[b] = s_wxy[0] + s_wxy[1];
   }
