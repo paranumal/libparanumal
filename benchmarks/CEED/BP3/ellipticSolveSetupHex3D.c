@@ -24,9 +24,24 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 	iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int NblockV = 1024/mesh->Np; // works for CUDA
+  int NblockS = 1024/maxNodes; // works for CUDA
+  int NblockG;
+
+  iint gNq = mesh->Nq+1;
+  iint gNp = gNq*gNq*gNq;
+  iint gNq2 = gNq*gNq;
+  if(gNq2<=32) NblockG = ( 32/gNq2 );
+  else NblockG = 1; 
+  
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  printf("Nblock = %d\n", Nblock);
+
+
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
@@ -41,6 +56,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->zP  = (dfloat*) calloc(NallP, sizeof(dfloat));
   solver->Ax  = (dfloat*) calloc(Nall, sizeof(dfloat));
   solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
+  printf("Nblkck = %d\n", Nblock);
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   solver->grad = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
   
@@ -52,7 +68,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
-  
+  solver->o_pAp  = mesh->device.malloc(sizeof(dfloat));
+
   iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   
 #if 0
@@ -78,8 +95,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->Nblock = Nblock;
 
   // BP3 specific stuff starts here
-  iint gNq = mesh->Nq+1;
-  iint gNp = gNq*gNq*gNq;
   dfloat *gD = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
   dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
   dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
@@ -102,20 +117,16 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  //  kernelInfo.addCompilerFlag("-G");
+
+
   kernelInfo.addDefine("p_maxNodes", maxNodes);
   kernelInfo.addDefine("p_Nmax", maxNodes);
 
-  int NblockV = 1024/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
-
-  int NblockS = 1024/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockG;
-  iint gNq2 = gNq*gNq;
-  if(gNq2<=32) NblockG = ( 32/gNq2 );
-  else NblockG = 1; 
   kernelInfo.addDefine("p_NblockG", NblockG);
   printf("NblockG = %d\n", NblockG);
 
@@ -123,10 +134,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-
-  // this is defined in occaSetup3D?
-  //int NblockV = 256/mesh->Np; // get close to 256 threads
-  //kernelInfo.addDefine("p_NblockV", NblockV);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
@@ -170,7 +177,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       kernelInfo);
   
 
-    mesh->weightedInnerProduct1Kernel =
+  mesh->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
                "weightedInnerProduct1",
                kernelInfo);

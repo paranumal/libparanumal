@@ -101,7 +101,8 @@ typedef struct {
   occa::memory o_grad; // temporary gradient storage (part of A*)
   occa::memory o_rtmp;
   occa::memory o_invDegree;
-  
+  occa::memory o_pAp;
+
   dfloat *sendBuffer, *recvBuffer;
 
   // HOST shadow copies
@@ -138,7 +139,7 @@ typedef struct {
 }solver_t;
 
 // block size for reduction (hard coded)
-#define blockSize 256 
+#define blockSize 256
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 

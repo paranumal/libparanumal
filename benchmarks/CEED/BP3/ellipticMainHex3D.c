@@ -23,7 +23,7 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options =
-    strdup("solver=PCG method=CONTINUOUS preconditioner=NONE");
+    strdup("solver=CG method=CONTINUOUS preconditioner=NONE");
   //  strdup("solver=CG method=IPDG preconditioner=NONE");
 
   // set up mesh stuff

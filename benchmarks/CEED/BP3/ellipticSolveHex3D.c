@@ -23,17 +23,22 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     //    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
-    
+
     // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
+    mesh->device.setStream(solver->dataStream);
+    mesh->device.finish();
     mesh->device.setStream(solver->defaultStream);
     mesh->device.finish();
-    {
 
+    dfloat zero = 0;
+    solver->o_pAp.copyFrom(&zero);
+    {
       if(solver->NglobalGatherElements){
 	//	mesh->device.setStream(solver->dataStream);
       
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_pAp);
       }
 
       if(halo->Ngather){
@@ -53,10 +58,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->defaultStream);
 
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_pAp);
       } 
-      
-
     }
 
     // C0 halo gather-scatter (on data stream)
@@ -170,8 +174,10 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
+    // BROKEN
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq,
+		     solver->o_invDegree, solver->o_pAp);
   }
   else{
     // tau should not be hard coded
@@ -255,6 +261,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
             occa::memory &o_b,
             const char *options){
 
+
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
   iint Nblock = solver->Nblock;
@@ -263,7 +270,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   occa::memory &o_tmp = solver->o_tmp;
 
   occaTimerTic(mesh->device,"weighted inner product2");
-
+  //  printf("Nblock = %d, Ntotal = %d, ratio = %lf\n", Nblock, Ntotal, ((double)Ntotal)/Nblock);
   if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
     mesh->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
@@ -277,9 +284,10 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   for(iint n=0;n<Nblock;++n){
     wab += tmp[n];
   }
-      
+
   dfloat globalwab = 0;
   MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
 
   return globalwab;
 }
@@ -372,9 +380,16 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // A*p
     ellipticOperator3D(solver, lambda, o_p, o_Ap, options); 
 
-#if 1
     // dot(p,A*p)
+    // these are only equivalent if p is continuous
+#if 0
     pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
+#else
+    dfloat localpAp = 0;
+    solver->o_pAp.copyTo(&localpAp);
+    MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+    printf("pAp = %g\n", pAp);
 
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -431,7 +446,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     //    if(rank==0)
     //      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-#endif    
+
     ++Niter;
   };
 
