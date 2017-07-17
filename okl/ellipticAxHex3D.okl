@@ -323,6 +323,12 @@ kernel void ellipticAxHex3D_e1(const iint     Nelements,
 #define optBarrier(op) barrier(op)
 #endif
 
+#if p_gNq<=3
+#define optOccaUnroll(unr) occaUnroll(unr)
+#else
+#define optOccaUnroll(unr)
+#endif
+
 /* note that the gggeo must be the geometric factors at the p_gNp integration nodes */
 kernel void ellipticAxHex3D_e2(const int Nelements,
 			       const dfloat * restrict gggeo, 
@@ -776,7 +782,7 @@ kernel void ellipticPartialAxHex3D_e3_ref(const iint Nelements,
     volatile shared dfloat s_qr[p_NblockG][p_gNq][p_gNq], s_qs[p_NblockG][p_gNq][p_gNq], s_qt[p_NblockG][p_gNq][p_gNq];
     volatile shared dfloat s_Dqr[p_NblockG][p_gNq][p_Nq], s_Iqs[p_NblockG][p_gNq][p_Nq], s_Iqt[p_NblockG][p_gNq][p_Nq];
 
-    exclusive iint emap;
+    exclusive iint emap, thread;
     exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;      
     
     // prefetch D and I matrices and zero register storage
@@ -1063,6 +1069,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
     
     // scan through k slices
 
+    //    occaUnroll(p_gNq)
     for(int k=0;k<p_gNq;++k){
 	
       optBarrier(localMemFence);
@@ -1298,7 +1305,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 #if (p_Nthreads>64)
     optBarrier(localMemFence);
     allThreads
-      if(thread+64<p_Nthreads && threads<64)
+      if(thread+64<p_Nthreads && thread<64)
 	s_red[thread] += s_red[thread+64];
 #endif
 
