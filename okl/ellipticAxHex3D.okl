@@ -770,9 +770,8 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
     volatile shared dfloat s_IT[p_Nq][p_gNq];
 #endif
     
-#if 1
-    exclusive dfloat r_lapq[p_Nq], r_q[p_Nq];
-#endif
+    exclusive dfloat r_q[p_Nq];
+    exclusive dfloat r_lapq[p_Nq];
     
     volatile shared dfloat s_Ixxq[p_NblockG][p_Nq][p_Nq],  s_Dxxq[p_NblockG][p_Nq][p_Nq];
     volatile shared dfloat s_IxDq[p_NblockG][p_Nq][p_gNq], s_IxIq[p_NblockG][p_Nq][p_gNq], s_DxIq[p_NblockG][p_Nq][p_gNq];
@@ -815,11 +814,13 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 	  int e = eo+es;
 	  if(e<Nelements){
 	    emap = elementList[e];
+#if 1
 	    if(a<p_Nq && b<p_Nq){
 	      for(int c=0;c<p_Nq;++c){
 		r_q[c] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 	      }
 	    }
+#endif
 	  }
 	  else
 	    emap = -999999;
@@ -861,7 +862,8 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 		
 		// puts more data in flight
 		for(int c=0;c<p_Nq;++c){
-		  const dfloat qcba = r_q[c]; // q[emap*p_Np+c*p_Nq2+t];
+		  const dfloat qcba = r_q[c]; 
+		  //		  const dfloat qcba = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 		  // I_{kc} q_{cba}
 #if 1
 		  Iqk += s_I[k][c]*qcba;
@@ -1041,6 +1043,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 		const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 		Aq[id] = r_lapq[c];
 		r_qAq += r_q[c]*r_lapq[c]; // should buffer q ?
+		//r_qAq += q[id]*r_lapq[c]; // should buffer q ?
 	      }
 	    }
 	  }
