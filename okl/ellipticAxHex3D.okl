@@ -1314,7 +1314,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
     allThreads  
       if(thread+16<p_Nthreads && thread<16)
 	s_red[thread] += s_red[thread+16];
-#endi
+#endif
 
 #if (p_Nthreads>8)
     allThreads

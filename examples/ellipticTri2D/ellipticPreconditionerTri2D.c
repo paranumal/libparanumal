@@ -1,7 +1,5 @@
 #include "ellipticTri2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
@@ -93,8 +91,9 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
     //}
 
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+    ellipticStartHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, o_r, recvBuffer);
 
     //patch solve
     ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
@@ -139,8 +138,9 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     //}
   } else if(strstr(options, "OMS")){
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+    ellipticStartHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, o_r, recvBuffer);
 
     //smooth the fine problem z = Sr
     ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
@@ -173,8 +173,9 @@ void ellipticPreconditioner2D(solver_t *solver,
     ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
     ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
 
-    ellipticStartHaloExchange2D(mesh, solver->o_res, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, solver->o_res, recvBuffer);
+    ellipticStartHaloExchange2D(solver, solver->o_res, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, solver->o_res, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, solver->o_res, recvBuffer);
 
     //smooth the fine problem z = z + S(r-Az)
     ellipticPatchSmootherTri2D(solver,solver->o_res,solver->o_Sres,options);

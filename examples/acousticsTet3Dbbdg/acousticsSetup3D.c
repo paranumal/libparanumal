@@ -184,9 +184,9 @@ void acousticsSetup3D(mesh3D *mesh){
         // smoothly varying (sinusoidal) wavespeed
         //printf("M_PI = %f\n",M_PI);
         if (z<0.f) {
-          mesh->c2[n + mesh->cubNp*e] = 1.0;//1.0 + 0.5*sin(M_PI*y);
+          mesh->c2[n + mesh->cubNp*e] = 1.2;//1.0 + 0.5*sin(M_PI*y);
         } else {
-          mesh->c2[n + mesh->cubNp*e] = 0.2;
+          mesh->c2[n + mesh->cubNp*e] = 1.0;
         }
       }
     }
