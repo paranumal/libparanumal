@@ -315,7 +315,6 @@ kernel void ellipticAxHex3D_e1(const iint     Nelements,
 #define p_gNq (p_Nq+1)
 #define p_gNp (p_gNq*p_gNq*p_gNq)
 #define p_Nq2 (p_Nq*p_Nq)
-#define p_NblockG 1
 
 #if ((p_NblockG*p_gNq*p_gNq)<=32)
 #define optBarrier(op) 
@@ -323,11 +322,6 @@ kernel void ellipticAxHex3D_e1(const iint     Nelements,
 #define optBarrier(op) barrier(op)
 #endif
 
-#if p_gNq<=3
-#define optOccaUnroll(unr) occaUnroll(unr)
-#else
-#define optOccaUnroll(unr)
-#endif
 
 /* note that the gggeo must be the geometric factors at the p_gNp integration nodes */
 kernel void ellipticAxHex3D_e2(const int Nelements,
@@ -1018,13 +1012,13 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
     volatile shared dfloat s_IxDq[p_NblockG][p_Nq][p_gNq], s_IxIq[p_NblockG][p_Nq][p_gNq], s_DxIq[p_NblockG][p_Nq][p_gNq];
     volatile shared dfloat s_qr[p_NblockG][p_gNq][p_gNq], s_qs[p_NblockG][p_gNq][p_gNq], s_qt[p_NblockG][p_gNq][p_gNq];
     //    volatile shared dfloat s_Dqr[p_NblockG][p_Nq][p_gNq], s_Iqs[p_NblockG][p_Nq][p_gNq], s_Iqt[p_NblockG][p_Nq][p_gNq];
-    //    volatile shared dfloat s_red[p_NblockG*p_gNq*p_gNq];
+    volatile shared dfloat s_red[p_NblockG*p_gNq*p_gNq];
     
 #if 1
 #define s_Dqr s_IxDq
 #define s_Iqs s_IxIq
 #define s_Iqt s_DxIq
-#define s_red s_qr[0][0]
+    //#define s_red s_qr[0][0]
 #endif
     
     exclusive iint emap, thread;
@@ -1310,6 +1304,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 #endif
 
 #if (p_Nthreads>32)
+    optBarrier(localMemFence);
     allThreads
       if(thread+32<p_Nthreads && thread<32) 
 	s_red[thread] += s_red[thread+32];
