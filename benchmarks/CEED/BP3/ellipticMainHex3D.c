@@ -32,7 +32,7 @@ int main(int argc, char **argv){
   precon_t *precon;
   
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   
   // set up
   occa::kernelInfo kernelInfo;
