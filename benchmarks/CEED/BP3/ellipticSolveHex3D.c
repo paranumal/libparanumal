@@ -25,11 +25,12 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     ogs_t *halo = solver->halo;
 
     // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
+#if 0
     mesh->device.setStream(solver->dataStream);
     mesh->device.finish();
     mesh->device.setStream(solver->defaultStream);
     mesh->device.finish();
-
+#endif
     dfloat zero = 0;
     solver->o_pAp.copyFrom(&zero);
     {
