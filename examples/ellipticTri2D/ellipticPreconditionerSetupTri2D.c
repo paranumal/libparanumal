@@ -432,6 +432,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
+    
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
