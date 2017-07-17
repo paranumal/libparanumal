@@ -390,7 +390,6 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     solver->o_pAp.copyTo(&localpAp);
     MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 #endif
-    printf("pAp = %g\n", pAp);
 
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
