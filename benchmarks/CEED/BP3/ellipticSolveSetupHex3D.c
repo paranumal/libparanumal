@@ -347,8 +347,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   printf("local = %d, global = %d\n", localCount, globalCount);
   
-  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
-  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
+  solver->globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
+  solver->localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
   
   globalCount = 0;
   localCount = 0;
@@ -361,10 +361,10 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       }
     }
     if(isHalo){
-      globalGatherElementList[globalCount++] = e;
+      solver->globalGatherElementList[globalCount++] = e;
     }
     else{
-      localGatherElementList[localCount++] = e;
+      solver->localGatherElementList[localCount++] = e;
     }
   }
   printf("local = %d, global = %d\n", localCount, globalCount);
@@ -374,11 +374,11 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   if(globalCount)
     solver->o_globalGatherElementList =
-      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
+      mesh->device.malloc(globalCount*sizeof(iint), solver->globalGatherElementList);
   
   if(localCount)
     solver->o_localGatherElementList =
-      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+      mesh->device.malloc(localCount*sizeof(iint), solver->localGatherElementList);
   
   free(localHaloFlags);
   

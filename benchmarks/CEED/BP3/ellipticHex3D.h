@@ -116,10 +116,12 @@ typedef struct {
 
   // list of elements that are needed for global gather-scatter
   iint NglobalGatherElements;
+  iint *globalGatherElementList;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
   iint NlocalGatherElements;
+  iint *localGatherElementList;
   occa::memory o_localGatherElementList;
   
   occa::kernel AxKernel;
