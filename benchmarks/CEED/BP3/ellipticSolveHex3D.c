@@ -64,6 +64,28 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       } 
     }
 
+    o_q.copyTo(solver->p);
+    o_Aq.copyTo(solver->Ap);
+    dfloat localpAp =0;
+    for (int m=0;m<solver->NlocalGatherElements;m++) {
+      iint e = solver->localGatherElementList[m];
+      for (iint n=0;n<mesh->Np;n++) {
+        localpAp += solver->p[e*mesh->Np+n]*solver->Ap[e*mesh->Np+n];
+      }
+    }
+    dfloat halopAp =0;
+    for (int m=0;m<solver->NglobalGatherElements;m++) {
+      iint e = solver->globalGatherElementList[m];
+      for (iint n=0;n<mesh->Np;n++) {
+        halopAp += solver->p[e*mesh->Np+n]*solver->Ap[e*mesh->Np+n];
+      }
+    }
+    iint rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    printf("rank = %d, device pAp = %g, halo pAp = %g\n", rank, localpAp, halopAp);
+
+
     // C0 halo gather-scatter (on data stream)
     if(halo->Ngather){
       occa::streamTag tag;   
