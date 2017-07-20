@@ -1,4 +1,3 @@
-#define B 256
 
 kernel void innerProduct(const iint N,
 			 const dfloat * restrict w,
@@ -6,39 +5,49 @@ kernel void innerProduct(const iint N,
 			 dfloat * restrict wx){
   
 
-  for(iint b=0;b<(N+B-1)/B;++b;outer0){
+  for(iint b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
-    volatile shared dfloat s_wx[B];
+    volatile shared dfloat s_wx[p_blockSize];
 
-    for(iint t=0;t<B;++t;inner0){
-      const iint id = t + b*B;
+    for(iint t=0;t<p_blockSize;++t;inner0){
+      const iint id = t + b*p_blockSize;
       s_wx[t] = (id<N) ? (w[id]*x[id]) : 0.f;
     }
 
     barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
+#if p_blockSize>512
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
+    barrier(localMemFence);
+#endif
+
+#if p_blockSize>256
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
+    barrier(localMemFence);
+#endif
+
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
     barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
     barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
     barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
-    barrier(localMemFence);
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
+    //    barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
-    barrier(localMemFence);
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
+    //    barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
-    barrier(localMemFence);
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
+    //    barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
-    barrier(localMemFence);
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
+    //    barrier(localMemFence);
 
-    for(iint t=0;t<B;++t;inner0) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
+    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
   }
 }
 
