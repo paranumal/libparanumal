@@ -40,6 +40,12 @@ acousticsSetup2D.o \
 acousticsSurface2D.o \
 acousticsUpdate2D.o \
 acousticsVolume2D.o \
+acousticsPmlSetup2D.o \
+acousticsPml2D.o \
+acousticsPmlVolume2D.o \
+acousticsPmlSurface2D.o \
+acousticsPmlUpdate2D.o \
+acousticsSourceSetup2D.o \
 acousticsMain2D.o \
 meshSetupTriP2D.o \
 meshConnectFaceNodesP2D.o \
