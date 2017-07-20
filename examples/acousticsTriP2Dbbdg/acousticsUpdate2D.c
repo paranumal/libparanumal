@@ -1,9 +1,14 @@
 #include "acoustics2D.h"
 
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+                           dfloat *u, dfloat *v, dfloat *p);
+
 void acousticsMRABUpdate2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
                            dfloat a3, iint lev, dfloat dt){
+
+  dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -34,10 +39,58 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
       for (iint n=0;n<mesh->Nfp[N];n++) {
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint qidM = mesh->Nfields*mesh->vmapM[id];
+        iint qid = mesh->Nfields*id;
 
         un[n] = mesh->q[qidM+0];
         vn[n] = mesh->q[qidM+1];
         pn[n] = mesh->q[qidM+2];
+
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      //check if this face is an interface of the source injection region
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      if ((bc==-10)||(bc==-11)) {
+        for (iint n=0;n<mesh->Nfp[N];n++) {
+          iint id = n + f*mesh->NfpMax + e*mesh->Nfaces*mesh->NfpMax;
+          iint idM = mesh->vmapM[id];
+          
+          //get the nodal values of the incident field along the trace
+          dfloat x = mesh->x[idM];
+          dfloat y = mesh->y[idM];
+
+          dfloat x0 = mesh->sourceX0;
+          dfloat y0 = mesh->sourceY0;
+          dfloat t0 = mesh->sourceT0;
+          dfloat freq = mesh->sourceFreq;
+        
+          dfloat c = sqrt(mesh->sourceC2);
+
+          int qid = mesh->Nfields*n;
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, sourceq+qid+0, sourceq+qid+1, sourceq+qid+2);
+        }
+
+        dfloat s = 0.f;
+        if (bc==-10) s= 1.f;
+        if (bc==-11) s=-1.f;
+        
+        //Transform incident field trace to BB modal space and add into positive trace
+        for (iint n=0; n<mesh->Nfp[N]; n++){
+          dfloat sourceu = 0.0;
+          dfloat sourcev = 0.0;
+          dfloat sourcep = 0.0;
+          for (iint m=0; m<mesh->Nfp[N]; m++){
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+          }
+          //adjust trace values with the incident field
+          un[n] += s*sourceu;
+          vn[n] += s*sourcev;
+          pn[n] += s*sourcep;
+        }
       }
 
       // load element neighbour
@@ -77,7 +130,7 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           pnp[n] = pn[n];
         }
       }
-
+   
       //write new traces to fQ
       for (iint n=0;n<mesh->Nfp[NP];n++) {
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
@@ -87,14 +140,6 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
         mesh->fQP[qid+1] = vnp[n];
         mesh->fQP[qid+2] = pnp[n];
       }
-      for (iint n=0;n<mesh->Nfp[N];n++) {
-        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        iint qid = mesh->Nfields*id;
-
-        mesh->fQM[qid+0] = un[n];
-        mesh->fQM[qid+1] = vn[n];
-        mesh->fQM[qid+2] = pn[n];
-      }
     }
   }
 
@@ -103,12 +148,15 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
 
   free(un); free(vn); free(pn);
   free(unp); free(vnp); free(pnp);
+  free(sourceq);
 }
 
 void acousticsMRABUpdateTrace2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
                            dfloat a3, iint lev, dfloat dt){
+
+  dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -143,10 +191,58 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
       for (iint n=0;n<mesh->Nfp[N];n++) {
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
+        iint qid = mesh->Nfields*id;
 
         un[n] = s_q[qidM+0];
         vn[n] = s_q[qidM+1];
         pn[n] = s_q[qidM+2];
+
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      //check if this face is an interface of the source injection region
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      if ((bc==-10)||(bc==-11)) {
+        for (iint n=0;n<mesh->Nfp[N];n++) {
+          iint id = n + f*mesh->NfpMax + e*mesh->Nfaces*mesh->NfpMax;
+          iint idM = mesh->vmapM[id];
+          
+          //get the nodal values of the incident field along the trace
+          dfloat x = mesh->x[idM];
+          dfloat y = mesh->y[idM];
+
+          dfloat x0 = mesh->sourceX0;
+          dfloat y0 = mesh->sourceY0;
+          dfloat t0 = mesh->sourceT0;
+          dfloat freq = mesh->sourceFreq;
+        
+          dfloat c = sqrt(mesh->sourceC2);
+
+          int qid = mesh->Nfields*n;
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, sourceq+qid+0, sourceq+qid+1, sourceq+qid+2);
+        }
+
+        dfloat s = 0.f;
+        if (bc==-10) s= 1.f;
+        if (bc==-11) s=-1.f;
+        
+        //Transform incident field trace to BB modal space and add into positive trace
+        for (iint n=0; n<mesh->Nfp[N]; n++){
+          dfloat sourceu = 0.0;
+          dfloat sourcev = 0.0;
+          dfloat sourcep = 0.0;
+          for (iint m=0; m<mesh->Nfp[N]; m++){
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+          }
+          //adjust trace values with the incident field
+          un[n] += s*sourceu;
+          vn[n] += s*sourcev;
+          pn[n] += s*sourcep;
+        }
       }
 
       // load element neighbour
@@ -196,20 +292,13 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
         mesh->fQP[qid+1] = vnp[n];
         mesh->fQP[qid+2] = pnp[n];
       }
-      for (iint n=0;n<mesh->Nfp[N];n++) {
-        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        iint qid = mesh->Nfields*id;
-
-        mesh->fQM[qid+0] = un[n];
-        mesh->fQM[qid+1] = vn[n];
-        mesh->fQM[qid+2] = pn[n];
-      }
     }
   }
 
   free(un); free(vn); free(pn);
   free(unp); free(vnp); free(pnp);
   free(s_q);
+  free(sourceq);
 }
 
 
@@ -218,6 +307,8 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
                            dfloat a2,
                            dfloat a3, iint lev, dfloat dt){
   
+  dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
+
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *pn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -273,10 +364,58 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
       for (iint n=0;n<mesh->Nfp[N];n++) {
         iint id = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint qidM = mesh->Nfields*mesh->vmapM[id];
+        iint qid = mesh->Nfields*id;
 
         un[n] = mesh->q[qidM+0];
         vn[n] = mesh->q[qidM+1];
         pn[n] = mesh->q[qidM+2];
+      
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      //check if this face is an interface of the source injection region
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      if ((bc==-10)||(bc==-11)) {
+        for (iint n=0;n<mesh->Nfp[N];n++) {
+          iint id = n + f*mesh->NfpMax + e*mesh->Nfaces*mesh->NfpMax;
+          iint idM = mesh->vmapM[id];
+          
+          //get the nodal values of the incident field along the trace
+          dfloat x = mesh->x[idM];
+          dfloat y = mesh->y[idM];
+
+          dfloat x0 = mesh->sourceX0;
+          dfloat y0 = mesh->sourceY0;
+          dfloat t0 = mesh->sourceT0;
+          dfloat freq = mesh->sourceFreq;
+        
+          dfloat c = sqrt(mesh->sourceC2);
+
+          int qid = mesh->Nfields*n;
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, sourceq+qid+0, sourceq+qid+1, sourceq+qid+2);
+        }
+
+        dfloat s = 0.f;
+        if (bc==-10) s= 1.f;
+        if (bc==-11) s=-1.f;
+        
+        //Transform incident field trace to BB modal space and add into positive trace
+        for (iint n=0; n<mesh->Nfp[N]; n++){
+          dfloat sourceu = 0.0;
+          dfloat sourcev = 0.0;
+          dfloat sourcep = 0.0;
+          for (iint m=0; m<mesh->Nfp[N]; m++){
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+          }
+          //adjust trace values with the incident field
+          un[n] += s*sourceu;
+          vn[n] += s*sourcev;
+          pn[n] += s*sourcep;
+        }
       }
 
       // load element neighbour
@@ -326,14 +465,6 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
         mesh->fQP[qid+1] = vnp[n];
         mesh->fQP[qid+2] = pnp[n];
       }
-      for (iint n=0;n<mesh->Nfp[N];n++) {
-        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        iint qid = mesh->Nfields*id;
-
-        mesh->fQM[qid+0] = un[n];
-        mesh->fQM[qid+1] = vn[n];
-        mesh->fQM[qid+2] = pn[n];
-      }
     }
   }
 
@@ -343,6 +474,7 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
   free(un); free(vn); free(pn);
   free(unp); free(vnp); free(pnp);
   free(p);
+  free(sourceq);
 }
 
 void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,  
@@ -350,6 +482,8 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
                            dfloat a2,
                            dfloat a3, iint lev, dfloat dt){
   
+  dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
+
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *pn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -410,10 +544,58 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
       for (iint n=0;n<mesh->Nfp[N];n++) {
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
+        iint qid = mesh->Nfields*id;
 
         un[n] = s_q[qidM+0];
         vn[n] = s_q[qidM+1];
         pn[n] = s_q[qidM+2];
+      
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      //check if this face is an interface of the source injection region
+      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      if ((bc==-10)||(bc==-11)) {
+        for (iint n=0;n<mesh->Nfp[N];n++) {
+          iint id = n + f*mesh->NfpMax + e*mesh->Nfaces*mesh->NfpMax;
+          iint idM = mesh->vmapM[id];
+          
+          //get the nodal values of the incident field along the trace
+          dfloat x = mesh->x[idM];
+          dfloat y = mesh->y[idM];
+
+          dfloat x0 = mesh->sourceX0;
+          dfloat y0 = mesh->sourceY0;
+          dfloat t0 = mesh->sourceT0;
+          dfloat freq = mesh->sourceFreq;
+        
+          dfloat c = sqrt(mesh->sourceC2);
+
+          int qid = mesh->Nfields*n;
+          acousticsRickerPulse2D(x-x0, y-y0, t+t0, freq,c, sourceq+qid+0, sourceq+qid+1, sourceq+qid+2);
+        }
+
+        dfloat s = 0.f;
+        if (bc==-10) s= 1.f;
+        if (bc==-11) s=-1.f;
+        
+        //Transform incident field trace to BB modal space and add into positive trace
+        for (iint n=0; n<mesh->Nfp[N]; n++){
+          dfloat sourceu = 0.0;
+          dfloat sourcev = 0.0;
+          dfloat sourcep = 0.0;
+          for (iint m=0; m<mesh->Nfp[N]; m++){
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+          }
+          //adjust trace values with the incident field
+          un[n] += s*sourceu;
+          vn[n] += s*sourcev;
+          pn[n] += s*sourcep;
+        }
       }
 
       // load element neighbour
@@ -463,18 +645,33 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
         mesh->fQP[qid+1] = vnp[n];
         mesh->fQP[qid+2] = pnp[n];
       }
-      for (iint n=0;n<mesh->Nfp[N];n++) {
-        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        iint qid = mesh->Nfields*id;
-
-        mesh->fQM[qid+0] = un[n];
-        mesh->fQM[qid+1] = vn[n];
-        mesh->fQM[qid+2] = pn[n];
-      }
     }
   }
 
   free(un); free(vn); free(pn);
   free(unp); free(vnp); free(pnp);
   free(s_q); free(p);
+  free(sourceq);
+}
+
+
+//Ricker pulse
+dfloat ricker(dfloat t, dfloat f) {
+  return (1-2*M_PI*M_PI*f*f*t*t)*exp(-M_PI*M_PI*f*f*t*t);
+}
+
+//integrated Ricker pulse
+dfloat intRicker(dfloat t, dfloat f) {
+  return t*exp(-M_PI*M_PI*f*f*t*t);
+}
+
+void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c, 
+                           dfloat *u, dfloat *v, dfloat *p) {
+
+  //radial distance
+  dfloat r = mymax(sqrt(x*x+y*y),1e-9);
+
+  *p = ricker(t - r/c,f)/(4*M_PI*c*c*r);
+  *u = x*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
+  *v = y*(intRicker(t-r/c,f)/r + ricker(t-r/c,f)/c)/(4*M_PI*c*c*r*r);
 }
