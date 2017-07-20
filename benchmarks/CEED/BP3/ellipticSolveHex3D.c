@@ -106,7 +106,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     iint offset = 0;
     
     ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
-
+    
     solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
@@ -383,13 +383,13 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     // dot(p,A*p)
     // these are only equivalent if p is continuous
-#if 0
-    pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
-#else
-    dfloat localpAp = 0;
-    solver->o_pAp.copyTo(&localpAp);
-    MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-#endif
+    if(strstr(options,"CONTINUOUS")){
+      dfloat localpAp = 0;
+      solver->o_pAp.copyTo(&localpAp);
+      MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    }else{
+      pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
+    }
 
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
