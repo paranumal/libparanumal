@@ -239,9 +239,9 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
     int N = mesh->N[e];
     iint pmlId = mesh->MRABpmlIds[lev][et];
 
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = mesh->Nfields*(e*mesh->Np + n);
-      iint pid = mesh->pmlNfields*(pmlId*mesh->Np + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
       iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
       iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
@@ -258,38 +258,89 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
     }
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<mesh->cubNp;++n){
+    for(iint n=0;n<mesh->cubNp[N];++n){
       cubp[n] = 0.f;
-      for (iint i=0;i<mesh->Np;++i){
-        cubp[n] += mesh->cubInterp[n*mesh->Np + i] * p[i];
+      for (iint i=0;i<mesh->Np[N];++i){
+        cubp[n] += mesh->cubInterp[N][n*mesh->Np[N] + i] * p[i];
       }
       // Multiply result by wavespeed c2 at cubature node
-      cubp[n] *= mesh->c2[n + e*mesh->cubNp];
+      cubp[n] *= mesh->c2[n + e*mesh->cubNpMax];
     }
 
     // Increment solution, project result back down
-    for(iint n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np[N];++n){
       // Project scaled rhs down
       dfloat c2p = 0.f;
-      for (iint i=0;i<mesh->cubNp;++i){
-        c2p += mesh->cubProject[n*mesh->cubNp + i] * cubp[i];
+      for (iint i=0;i<mesh->cubNp[N];++i){
+        c2p += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubp[i];
       }
-      iint id = mesh->Nfields*(e*mesh->Np + n);
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
       mesh->q[id+2] = c2p;
     }
 
-    //write new traces to fQ
-    for (iint f =0;f<mesh->Nfaces;f++) {
-      for (iint n=0;n<mesh->Nfp;n++) {
-        iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+    //project traces to proper order for neighbour
+    for (iint f=0;f<mesh->Nfaces;f++) {
+      //load local traces
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
         iint qidM = mesh->Nfields*mesh->vmapM[id];
-
         iint qid = mesh->Nfields*id;
-        // save trace node values of q
-        for (iint fld=0; fld<mesh->Nfields;fld++) {
-          mesh->fQP[qid+fld] = mesh->q[qidM+fld];
-          mesh->fQM[qid+fld] = mesh->q[qidM+fld];
+
+        un[n] = mesh->q[qidM+0];
+        vn[n] = mesh->q[qidM+1];
+        pn[n] = mesh->q[qidM+2];
+      
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      // load element neighbour
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
+      if (eP<0) eP = e; //boundary
+      iint NP = mesh->N[eP]; 
+
+      if (NP > N) { 
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = 0.0;
+          vnp[n] = 0.0;
+          pnp[n] = 0.0;
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
+          }
         }
+      } else if (NP < N) { 
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = 0.0;
+          vnp[n] = 0.0;
+          pnp[n] = 0.0;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
+          }
+        }
+      } else { //equal order neighbor
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = un[n];
+          vnp[n] = vn[n];
+          pnp[n] = pn[n];
+        }
+      }
+
+      //write new traces to fQ
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
+
+        mesh->fQP[qid+0] = unp[n];
+        mesh->fQP[qid+1] = vnp[n];
+        mesh->fQP[qid+2] = pnp[n];
       }
     }
   }
@@ -316,11 +367,12 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
 
   for(iint et=0;et<mesh->MRABpmlNhaloElements[lev];et++){
     iint e = mesh->MRABpmlHaloElementIds[lev][et];
+    int N = mesh->N[e];
     iint pmlId = mesh->MRABpmlHaloIds[lev][et];
 
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = mesh->Nfields*(e*mesh->Np + n);
-      iint pid = mesh->pmlNfields*(pmlId*mesh->Np + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
       iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
       iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
@@ -338,36 +390,87 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
     }
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<mesh->cubNp;++n){
+    for(iint n=0;n<mesh->cubNp[N];++n){
       cubp[n] = 0.f;
-      for (iint i=0;i<mesh->Np;++i){
-        cubp[n] += mesh->cubInterp[n*mesh->Np + i] * s_q[i*mesh->Nfields+2];
+      for (iint i=0;i<mesh->Np[N];++i){
+        cubp[n] += mesh->cubInterp[N][n*mesh->Np[N] + i] * s_q[i*mesh->Nfields+2];
       }
       // Multiply result by wavespeed c2 at cubature node
-      cubp[n] *= mesh->c2[n + e*mesh->cubNp];
+      cubp[n] *= mesh->c2[n + e*mesh->cubNpMax];
     }
 
     // Increment solution, project result back down
-    for(iint n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np[N];++n){
       // Project scaled rhs down
       s_q[n*mesh->Nfields+2] = 0.f;
-      for (iint i=0;i<mesh->cubNp;++i){
-        s_q[n*mesh->Nfields+2] += mesh->cubProject[n*mesh->cubNp + i] * cubp[i];
+      for (iint i=0;i<mesh->cubNp[N];++i){
+        s_q[n*mesh->Nfields+2] += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubp[i];
       }
     }
 
-    //write new traces to fQ
+    //project traces to proper order for neighbour
     for (iint f =0;f<mesh->Nfaces;f++) {
-      for (iint n=0;n<mesh->Nfp;n++) {
-        iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-        iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->Np);
+      //load local traces
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
+        iint qid = mesh->Nfields*id;
 
-        iint qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
-        // save trace node values of q
-        for (iint fld=0; fld<mesh->Nfields;fld++) {
-          mesh->fQP[qid+fld] = s_q[qidM+fld];
-          mesh->fQM[qid+fld] = s_q[qidM+fld];
+        un[n] = s_q[qidM+0];
+        vn[n] = s_q[qidM+1];
+        pn[n] = s_q[qidM+2];
+      
+        mesh->fQM[qid+0] = un[n];
+        mesh->fQM[qid+1] = vn[n];
+        mesh->fQM[qid+2] = pn[n];
+      }
+
+      // load element neighbour
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
+      if (eP<0) eP = e; //boundary
+      iint NP = mesh->N[eP]; 
+
+      if (NP > N) { 
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = 0.0;
+          vnp[n] = 0.0;
+          pnp[n] = 0.0;
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
+            dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            unp[n] += BBRaiseVal*un[BBRaiseid];
+            vnp[n] += BBRaiseVal*vn[BBRaiseid];
+            pnp[n] += BBRaiseVal*pn[BBRaiseid];
+          }
         }
+      } else if (NP < N) { 
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = 0.0;
+          vnp[n] = 0.0;
+          pnp[n] = 0.0;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
+            unp[n] += mesh->BBLower[N][id]*un[m];
+            vnp[n] += mesh->BBLower[N][id]*vn[m];
+            pnp[n] += mesh->BBLower[N][id]*pn[m];
+          }
+        }
+      } else { //equal order neighbor
+        for (iint n=0;n<mesh->Nfp[NP];n++){
+          unp[n] = un[n];
+          vnp[n] = vn[n];
+          pnp[n] = pn[n];
+        }
+      }
+
+      //write new traces to fQ
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
+
+        mesh->fQP[qid+0] = unp[n];
+        mesh->fQP[qid+1] = vnp[n];
+        mesh->fQP[qid+2] = pnp[n];
       }
     }
   }
