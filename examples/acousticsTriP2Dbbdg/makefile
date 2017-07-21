@@ -41,7 +41,6 @@ acousticsSurface2D.o \
 acousticsUpdate2D.o \
 acousticsVolume2D.o \
 acousticsPmlSetup2D.o \
-acousticsPml2D.o \
 acousticsPmlVolume2D.o \
 acousticsPmlSurface2D.o \
 acousticsPmlUpdate2D.o \

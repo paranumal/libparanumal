@@ -6,7 +6,7 @@ void acousticsRickerPulse2D(dfloat x, dfloat y, dfloat t, dfloat f, dfloat c,
 void acousticsMRABUpdate2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat t, dfloat dt){
 
   dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
@@ -82,9 +82,9 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
           dfloat sourcev = 0.0;
           dfloat sourcep = 0.0;
           for (iint m=0; m<mesh->Nfp[N]; m++){
-            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
-            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
-            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+2];
           }
           //adjust trace values with the incident field
           un[n] += s*sourceu;
@@ -154,7 +154,7 @@ void acousticsMRABUpdate2D(mesh2D *mesh,
 void acousticsMRABUpdateTrace2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat t, dfloat dt){
 
   dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
@@ -234,9 +234,9 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
           dfloat sourcev = 0.0;
           dfloat sourcep = 0.0;
           for (iint m=0; m<mesh->Nfp[N]; m++){
-            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
-            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
-            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+2];
           }
           //adjust trace values with the incident field
           un[n] += s*sourceu;
@@ -305,7 +305,7 @@ void acousticsMRABUpdateTrace2D(mesh2D *mesh,
 void acousticsMRABUpdate2D_wadg(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat t, dfloat dt){
   
   dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
@@ -407,9 +407,9 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
           dfloat sourcev = 0.0;
           dfloat sourcep = 0.0;
           for (iint m=0; m<mesh->Nfp[N]; m++){
-            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
-            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
-            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+2];
           }
           //adjust trace values with the incident field
           un[n] += s*sourceu;
@@ -480,7 +480,7 @@ void acousticsMRABUpdate2D_wadg(mesh2D *mesh,
 void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat t, dfloat dt){
   
   dfloat *sourceq = (dfloat *) calloc(mesh->Nfields*mesh->NfpMax,sizeof(dfloat));
 
@@ -587,9 +587,9 @@ void acousticsMRABUpdateTrace2D_wadg(mesh2D *mesh,
           dfloat sourcev = 0.0;
           dfloat sourcep = 0.0;
           for (iint m=0; m<mesh->Nfp[N]; m++){
-            sourceu += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+0];
-            sourcev += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+1];
-            sourcep += mesh->invVB1D[N][n*mesh->Nfp+m]*sourceq[m*mesh->Nfields+2];
+            sourceu += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+0];
+            sourcev += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+1];
+            sourcep += mesh->invVB1D[N][n*mesh->Nfp[N]+m]*sourceq[m*mesh->Nfields+2];
           }
           //adjust trace values with the incident field
           un[n] += s*sourceu;

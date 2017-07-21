@@ -323,8 +323,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                   mesh->MRABshiftIndex[l]);
           if (mesh->MRABpmlNelP[l][p])
             mesh->pmlVolumeKernel[p](mesh->MRABpmlNelP[l][p],
-                                    mesh->o_MRABpmlElIds[l][p],
-                                    mesh->o_MRABpmlIds[l][p],
+                                    mesh->o_MRABpmlElIdsP[l][p],
+                                    mesh->o_MRABpmlIdsP[l][p],
                                     mesh->o_vgeo,
                                     mesh->o_D1ids[p],
                                     mesh->o_D2ids[p],
@@ -374,8 +374,8 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                   mesh->MRABshiftIndex[l]);
           if (mesh->MRABpmlNelP[l][p])
             mesh->pmlSurfaceKernel[p](mesh->MRABpmlNelP[l][p],
-                                    mesh->o_MRABpmlElIds[l][p],
-                                    mesh->o_MRABpmlIds[l][p],
+                                    mesh->o_MRABpmlElIdsP[l][p],
+                                    mesh->o_MRABpmlIdsP[l][p],
                                     mesh->o_sgeo,
                                     mesh->o_L0vals[p],
                                     mesh->o_ELids[p],
@@ -453,7 +453,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
           if (mesh->MRABpmlNelP[l][p])
             mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
                                     mesh->o_MRABpmlElIdsP[l][p],
-                                    mesh->o_MRABpmlIds[l][p],
+                                    mesh->o_MRABpmlIdsP[l][p],
                                     mesh->o_N,
                                     mesh->dt*pow(2,l),
                                     a1,a2,a3,
@@ -503,7 +503,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                       mesh->MRABshiftIndex[lev]);
           if (mesh->MRABpmlNhaloEleP[lev][p])
             mesh->pmlTraceUpdateKernel[p](mesh->MRABpmlNhaloEleP[lev][p],
-                                      mesh->o_MRABpmlHaloElIdsP[lev][p],
+                                      mesh->o_MRABpmlHaloEleIdsP[lev][p],
                                       mesh->o_MRABpmlHaloIdsP[lev][p],
                                       mesh->o_N,
                                       mesh->dt*pow(2,lev-1),
