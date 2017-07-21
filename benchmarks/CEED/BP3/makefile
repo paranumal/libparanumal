@@ -37,11 +37,11 @@ LIBS	=  $(links) -L../../../utilities/BlasLapack -lBlasLapack
 AOBJS    = \
 ellipticSetupHex3D.o \
 ellipticSolveSetupHex3D.o \
-ellipticSolveHex3D.o \
 ellipticHaloExchange3D.o \
 ellipticParallelGatherScatter.o \
-ellipticParallelGatherScatterSetup.o 
-
+ellipticParallelGatherScatterSetup.o \
+ellipticPipelinedSolveHex3D.o 
+#ellipticSolveHex3D.o 
 # library objects
 LOBJS = \
 ../../../src/meshConnect.o \

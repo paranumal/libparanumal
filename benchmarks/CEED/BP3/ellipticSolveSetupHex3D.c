@@ -79,6 +79,10 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
   solver->o_pAp  = mesh->device.malloc(sizeof(dfloat));
 
+  solver->o_Aw  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_w    = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  solver->o_s    = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
+  
   iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   
 #if 0
