@@ -27,10 +27,10 @@ void acousticsPmlSetup2D(mesh2D *mesh){
   for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
     mesh->MRABpmlNelP[lev]      = (iint *) calloc(mesh->NMax+1,sizeof(iint));
     mesh->MRABpmlNhaloEleP[lev] = (iint *) calloc(mesh->NMax+1,sizeof(iint));
-    mesh->MRABpmlElIdsP = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
-    mesh->MRABpmlIdsP   = (iint **) calloc(mesh->NMax+1,sizeof(iint *));  
-    mesh->MRABpmlHaloEleIdsP = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
-    mesh->MRABpmlHaloIdsP    = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
+    mesh->MRABpmlElIdsP[lev] = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
+    mesh->MRABpmlIdsP[lev]   = (iint **) calloc(mesh->NMax+1,sizeof(iint *));  
+    mesh->MRABpmlHaloEleIdsP[lev] = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
+    mesh->MRABpmlHaloIdsP[lev]    = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
   }  
 
   //count the pml elements
@@ -99,13 +99,13 @@ void acousticsPmlSetup2D(mesh2D *mesh){
           mesh->MRABpmlElementIds[lev][pmlcnt] = e;
           mesh->MRABpmlIds[lev][pmlcnt] = pmlIds[e];
           pmlcnt++;
-          mesh->MRABpmlEleIdsP[lev][N][pmlPcnt[N]] = e;
+          mesh->MRABpmlElIdsP[lev][N][pmlPcnt[N]] = e;
           mesh->MRABpmlIdsP[lev][N][pmlPcnt[N]] = pmlIds[e];
           pmlPcnt[N]++;
         } else { //nonpml element
           mesh->MRABelementIds[lev][nonpmlcnt] = e;
           nonpmlcnt++;
-          mesh->MRABelIdsP[lev][N][nonpmlcnt[N]] = e;
+          mesh->MRABelIdsP[lev][N][nonpmlPcnt[N]] = e;
           nonpmlPcnt[N]++;
         }
       }
@@ -245,14 +245,14 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
     mesh->pmlNfields = 2;
-    mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-    mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+    mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields, sizeof(dfloat));
+    mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields, sizeof(dfloat));
 
     // set up PML on DEVICE
-    mesh->o_pmlq      = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlq);
-    mesh->o_pmlrhsq   = mesh->device.malloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsq);
-    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaX);
-    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaY);
+    mesh->o_pmlq      = mesh->device.malloc(mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields*sizeof(dfloat), mesh->pmlq);
+    mesh->o_pmlrhsq   = mesh->device.malloc(3*mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsq);
+    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->cubNpMax*sizeof(dfloat),mesh->pmlSigmaX);
+    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->cubNpMax*sizeof(dfloat),mesh->pmlSigmaY);
 
     mesh->o_MRABpmlElementIds     = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABpmlIds            = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));

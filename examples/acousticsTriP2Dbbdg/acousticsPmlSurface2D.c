@@ -7,15 +7,15 @@ void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
 void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
   // temporary storage for flux terms
-  dfloat *fluxu = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxv = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxpx = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxpy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxu = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxv = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxpx = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxpy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
 
-  dfloat *fluxu_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxv_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxpx_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
-  dfloat *fluxpy_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxu_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxv_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxpx_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
+  dfloat *fluxpy_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
   for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
