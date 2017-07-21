@@ -103,6 +103,12 @@ typedef struct {
   occa::memory o_invDegree;
   occa::memory o_pAp;
 
+  // pipelining CG
+  occa::memory o_Aw;
+  occa::memory o_w;
+  occa::memory o_s; 
+
+  
   dfloat *sendBuffer, *recvBuffer;
 
   // HOST shadow copies
