@@ -243,6 +243,11 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "ellipticPartialAxIpdgHex3D",
 				       kernelInfo);
 
+  solver->combinedInnerProductKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
+				       "ellipticCombinedInnerProduct",
+				       kernelInfo);
+
   occaTimerTic(mesh->device,"GatherScatterSetup");
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
