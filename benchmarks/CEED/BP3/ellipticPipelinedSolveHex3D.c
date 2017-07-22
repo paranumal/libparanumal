@@ -111,7 +111,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 #if COMMS==1    
     ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
 #endif
 
     solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
@@ -128,15 +127,15 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 				mesh->o_D,
 				solver->o_grad,
 				o_Aq);
+
+#if COMMS==1    
+    ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
+#endif
     
     if(mesh->totalHaloPairs){
       offset = mesh->Nelements;
       solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
     }
-
-#if COMMS==1    
-
-#endif
 
     if(mesh->NnotInternalElements)
       solver->partialIpdgKernel(mesh->NnotInternalElements,
@@ -285,6 +284,46 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 }
 
 
+dfloat ellipticStartCombinedInnerProduct(solver_t *solver,
+					 occa::memory &o_r,
+					 occa::memory &o_w,
+					 occa::memory &o_results,
+					 const char *options){
+  
+  mesh_t *mesh = solver->mesh;
+  dfloat *tmp = solver->tmp;
+  iint Ntotal = mesh->Nelements*mesh->Np;
+  
+  occaTimerTic(mesh->device,"weighted inner product2");
+  
+  iint degreeWeighted = (strstr(options,"CONTINUOUS")!=NULL);
+  dfloat results[2];
+  results[0] = 0;
+  results[1] = 0;
+  o_results.copyFrom(results);
+  
+  solver->combinedInnerProductKernel(Ntotal, solver->o_invDegree, o_r, o_w, o_results, degreeWeighted);
+  
+  occaTimerToc(mesh->device,"weighted inner product2");
+}
+
+
+void ellipticFinishCombinedInnerProduct(solver_t *solver,
+					occa::memory &o_results,
+					dfloat *rdotr,
+					dfloat *rdotw){
+  dfloat localResults[2];
+  dfloat globalResults[2];
+
+  o_results.copyTo(localResults);
+
+  MPI_Allreduce(localResults, globalResults, 2, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+  *rdotr = globalResults[0];
+  *rdotw = globalResults[1];
+}
+
+
 void ellipticPreconditioner3D(solver_t *solver,
 			      occa::memory &o_r,
 			      occa::memory &o_zP,
@@ -333,6 +372,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   occa::memory &o_Aw = solver->o_Aw;
   occa::memory &o_Ax = solver->o_Ax;
 
+  occa::memory o_results = mesh->device.malloc(2*sizeof(dfloat));
+  
   occa::streamTag startTag = mesh->device.tagStream();
   
   occaTimerTic(mesh->device,"PCG");
@@ -360,6 +401,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     oldgam = gam;
     
 #if COMMS==1
+#if 0
     // gamma = r.r
     gam = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
@@ -367,12 +409,19 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     
     // delta = r.w
     delta = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_w, options);
+#else
+    // gamma = r.r
+    // delta = r.w
+    ellipticStartCombinedInnerProduct(solver, o_r, o_w, o_results, options);   
+#endif
 #endif
 
     // q = A*w 
     ellipticOperator3D(solver, lambda, o_w, o_Aw, options); 
 
 #if COMMS==1
+    ellipticFinishCombinedInnerProduct(solver, o_results, &gam, &delta);
+    
     if(Niter>0){
       beta = gam/oldgam;
       alpha = gam/(delta - beta*gam/alpha);
