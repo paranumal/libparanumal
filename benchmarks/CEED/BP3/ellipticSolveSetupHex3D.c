@@ -128,9 +128,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_gggeo = mesh->device.malloc(mesh->Nggeo*gNp*mesh->Nelements*sizeof(dfloat), gggeo);
   // BP3 specific stuff ends here 
 
-  //  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-G");
 
   // generically used for blocked DEVICE reductions

@@ -43,7 +43,7 @@ void ellipticInterimHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *
     //    mesh->device.setStream(solver->dataStream);
 
     // make sure async copy finished
-    mesh->device.finish(); 
+    //    mesh->device.finish(); 
     
     // start halo exchange HOST<>HOST
     meshHaloExchangeStart(mesh,
