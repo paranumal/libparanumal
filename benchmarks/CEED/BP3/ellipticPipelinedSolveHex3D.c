@@ -1,5 +1,6 @@
 #include "ellipticHex3D.h"
 
+#define COMMS 1
 
 void ellipticOperator3D(solver_t *solver, dfloat lambda,
       occa::memory &o_q, occa::memory &o_Aq, const char *options){
@@ -48,12 +49,13 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
       }
 
+#if COMMS==1
       if(halo->Ngather){
 	//	mesh->device.setStream(solver->dataStream);
 	// avoid async copy [ otherwise we compete with the local Ax ]
 	halo->o_gatherTmp.copyTo(halo->gatherTmp);
       }      
-      
+#endif  
       // Ax for C0 internal elements
       if(solver->NlocalGatherElements){
 	//	mesh->device.setStream(solver->defaultStream);
@@ -72,13 +74,14 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       //      tag = mesh->device.tagStream();
       //      mesh->device.waitFor(tag);
 
+#if COMMS==1
       // MPI based gather scatter using libgs
       gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
       
       // copy totally gather halo data back from HOST to DEVICE
       //      mesh->device.setStream(solver->dataStream);
       halo->o_gatherTmp.copyFrom(halo->gatherTmp); 
-      
+#endif 
       // wait for async copy
       //      occa::streamTag tag = mesh->device.tagStream();
       tag = mesh->device.tagStream();
@@ -104,11 +107,13 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
 
     iint offset = 0;
-    
+
+#if COMMS==1    
     ellipticStartHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
     ellipticInterimHaloExchange3D(solver, o_q, sendBuffer, recvBuffer);
     ellipticEndHaloExchange3D(solver, o_q, recvBuffer);
-    
+#endif
+
     solver->partialGradientKernel(mesh->Nelements, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     if(mesh->NinternalElements)
@@ -129,7 +134,10 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
     }
 
-#if 1
+#if COMMS==1    
+
+#endif
+
     if(mesh->NnotInternalElements)
       solver->partialIpdgKernel(mesh->NnotInternalElements,
 				mesh->o_notInternalElementIds,
@@ -142,19 +150,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 				mesh->o_D,
 				solver->o_grad,
 				o_Aq);
-#else
-    solver->ipdgKernel(mesh->Nelements,
-		       mesh->o_vmapM,
-		       mesh->o_vmapP,
-		       lambda,
-		       tau,
-		       mesh->o_vgeo,
-		       mesh->o_sgeo,
-		       mesh->o_D,
-		       solver->o_grad,
-		       o_Aq);
-#endif
-    
     
   }
 
@@ -357,13 +352,14 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   // w = A*r
   ellipticOperator3D(solver, lambda, o_r, o_w, options);
 
-  dfloat gam, delta, alpha, beta, oldgam;
+  dfloat gam = 1, delta = 1, alpha, beta, oldgam = 1;
   iint Niter = 0;
   
   while(Niter<maxIterations){
     // save last gamma
     oldgam = gam;
     
+#if COMMS==1
     // gamma = r.r
     gam = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
@@ -371,10 +367,12 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     
     // delta = r.w
     delta = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_w, options);
-    
+#endif
+
     // q = A*w 
     ellipticOperator3D(solver, lambda, o_w, o_Aw, options); 
 
+#if COMMS==1
     if(Niter>0){
       beta = gam/oldgam;
       alpha = gam/(delta - beta*gam/alpha);
@@ -383,9 +381,12 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
       beta = 0;
       alpha = gam/delta;
     }
-
-    if(rank==0)
-      printf("iter = %05d alpha = %g, beta = %g, gam = %g\n", Niter, alpha, beta, gam);
+#else
+    beta = .1;
+    alpha = .2;
+#endif
+    //    if(rank==0)
+    //      printf("iter = %05d alpha = %g, beta = %g, gam = %g\n", Niter, alpha, beta, gam);
     
     // z <= A*w + beta*z
     ellipticScaledAdd(solver, one, o_Aw,  beta, o_z);
