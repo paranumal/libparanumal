@@ -308,17 +308,33 @@ dfloat ellipticStartCombinedInnerProduct(solver_t *solver,
 }
 
 
-void ellipticFinishCombinedInnerProduct(solver_t *solver,
-					occa::memory &o_results,
-					dfloat *rdotr,
-					dfloat *rdotw){
-  dfloat localResults[2];
-  dfloat globalResults[2];
+void ellipticIntermediateCombinedInnerProduct(solver_t *solver,
+					      occa::memory &o_results,
+					      dfloat *localResults,
+					      dfloat *globalResults,
+					      MPI_Request *request){
 
+  
   o_results.copyTo(localResults);
-
+  
+#if 0
   MPI_Allreduce(localResults, globalResults, 2, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+#else
+  MPI_Iallreduce(localResults, globalResults, 2, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD, request);
+#endif
+}
 
+
+void ellipticFinishCombinedInnerProduct(solver_t *solver,
+					dfloat *globalResults,
+					dfloat *rdotr,
+					dfloat *rdotw,
+					MPI_Request *request){
+
+
+  MPI_Status status;
+  MPI_Wait(request, &status);
+  
   *rdotr = globalResults[0];
   *rdotw = globalResults[1];
 }
@@ -395,6 +411,14 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   dfloat gam = 1, delta = 1, alpha, beta, oldgam = 1;
   iint Niter = 0;
+
+  MPI_Request *request = (MPI_Request*) calloc(1, sizeof(MPI_Request));
+
+  occa::memory o_localIpBuffer = mesh->device.mappedAlloc(2*sizeof(dfloat), NULL);
+  occa::memory o_globalIpBuffer = mesh->device.mappedAlloc(2*sizeof(dfloat), NULL);
+  
+  dfloat *localResults = (dfloat*) o_localIpBuffer.getMappedPointer();
+  dfloat *globalResults = (dfloat*) o_globalIpBuffer.getMappedPointer();
   
   while(Niter<maxIterations){
     // save last gamma
@@ -420,7 +444,13 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     ellipticOperator3D(solver, lambda, o_w, o_Aw, options); 
 
 #if COMMS==1
-    ellipticFinishCombinedInnerProduct(solver, o_results, &gam, &delta);
+    ellipticIntermediateCombinedInnerProduct(solver,
+					     o_results,
+					     localResults,
+					     globalResults,
+					     request);
+
+    ellipticFinishCombinedInnerProduct(solver, globalResults, &gam, &delta, request);
     
     if(Niter>0){
       beta = gam/oldgam;
