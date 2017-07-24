@@ -13,8 +13,9 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
 
   FILE *fp;
   char fileName[BUFSIZ];
-  sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
-  
+  //sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
+  strcpy(fileName,fileNameBase);
+
   iint NMax = mesh->NMax;
 
   fp = fopen(fileName, "w");

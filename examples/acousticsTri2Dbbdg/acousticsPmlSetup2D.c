@@ -92,8 +92,8 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     }
 
     //set up damping parameter
-    mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNpMax,sizeof(dfloat));
-    mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNpMax,sizeof(dfloat));
+    mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+    mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
 
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
@@ -185,14 +185,14 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
     mesh->pmlNfields = 2;
-    mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields, sizeof(dfloat));
-    mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields, sizeof(dfloat));
+    mesh->pmlq    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+    mesh->pmlrhsq = (dfloat*) calloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
 
     // set up PML on DEVICE
-    mesh->o_pmlq      = mesh->device.malloc(mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields*sizeof(dfloat), mesh->pmlq);
-    mesh->o_pmlrhsq   = mesh->device.malloc(3*mesh->pmlNelements*mesh->NpMax*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsq);
-    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->cubNpMax*sizeof(dfloat),mesh->pmlSigmaX);
-    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->cubNpMax*sizeof(dfloat),mesh->pmlSigmaY);
+    mesh->o_pmlq      = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlq);
+    mesh->o_pmlrhsq   = mesh->device.malloc(3*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsq);
+    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaX);
+    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),mesh->pmlSigmaY);
 
     mesh->o_MRABpmlElementIds     = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABpmlIds            = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));

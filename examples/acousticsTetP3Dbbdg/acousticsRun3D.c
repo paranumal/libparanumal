@@ -1,5 +1,6 @@
 #include "acoustics3D.h"
 
+void addSourceField(mesh3D *mesh, dfloat *q, dfloat t);
 
 void acousticsRun3Dbbdg(mesh3D *mesh){
 
@@ -13,9 +14,13 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
   // go from degree N modal space to degree NMax nodal space, but no inverse yet.
   dfloat *qtmp = (dfloat*) calloc(mesh->Nelements*mesh->NpMax*mesh->Nfields,sizeof(dfloat));
 
+  int Nframe =0;
+
   //populate the trace buffer fQ
-  for (iint l=0;l<mesh->MRABNlevels;l++)
-    acousticsMRABUpdate3D(mesh, 0., 0., 0., l, 0.);
+  for (iint l=0;l<mesh->MRABNlevels;l++) {
+    acousticsMRABpmlUpdate3D(mesh, 0., 0., 0., l, 0.);
+    acousticsMRABUpdate3D(mesh, 0., 0., 0., l, 0., 0.);
+  }
 
 
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){ 
@@ -41,8 +46,10 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       }     
 
       // compute volume contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++)
+      for (iint l=0;l<lev;l++) {
+        acousticsPmlVolume3Dbbdg(mesh,l);
         acousticsVolume3Dbbdg(mesh,l);
+      }
 
       if(mesh->totalHaloPairs>0){
         // wait for halo data to arrive
@@ -54,6 +61,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
+        acousticsPmlSurface3Dbbdg(mesh,l,t);
         acousticsSurface3Dbbdg(mesh,l,t);
       }
       
@@ -87,17 +95,21 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       
       #if WADG
         for (iint l=0; l<lev; l++) {
-          acousticsMRABUpdate3D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABpmlUpdate3D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABUpdate3D_wadg(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
-          acousticsMRABUpdateTrace3D_wadg(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABpmlUpdateTrace3D_wadg(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABUpdateTrace3D_wadg(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #else     
         for (iint l=0; l<lev; l++) {
-          acousticsMRABUpdate3D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABpmlUpdate3D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
+          acousticsMRABUpdate3D(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
         if (lev<mesh->MRABNlevels) {
-          acousticsMRABUpdateTrace3D(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABpmlUpdateTrace3D(mesh, b1, b2, b3, lev, mesh->dt*pow(2,lev-1));
+          acousticsMRABUpdateTrace3D(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #endif
     }
@@ -136,7 +148,13 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
 
       // output field files
       iint fld = 3;
-      meshPlotVTU3DP(mesh, "foo", fld);
+      char fileName[BUFSIZ];
+
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+      sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
+      meshPlotVTU3DP(mesh, fileName, fld);
       
       //Recover saved q
       for (iint e =0;e<mesh->Nelements;e++){
@@ -164,48 +182,92 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
   iint haloBytes = mesh->totalHaloPairs*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+
+  int Nframe=0;
   
   //populate the trace buffer fQ
+  dfloat zero = 0.0;
   for (iint l=0; l<mesh->MRABNlevels; l++) {
     for (iint p=1;p<=mesh->NMax;p++) {
-      if (mesh->MRABNelP[l][p]) {
       #if WADG
+      if (mesh->MRABNelP[l][p]) 
         mesh->updateKernel[p](mesh->MRABNelP[l][p],
-              mesh->o_MRABelIdsP[l][p],
-              mesh->o_N,
-              0.0,
-              0.,0.,0.,
-              mesh->o_cubInterpT[p],
-              mesh->o_cubProjectT[p],
-              mesh->o_c2,
-              mesh->o_EToE,
-              mesh->o_BBLower[p],
-              mesh->o_BBRaiseids[p],
-              mesh->o_BBRaiseVals[p],
-              mesh->o_vmapM,
-              mesh->o_rhsq,
-              mesh->o_q,
-              mesh->o_fQM,
-              mesh->o_fQP,
-              mesh->MRABshiftIndex[l]);
+                              mesh->o_MRABelIdsP[l][p],
+                              mesh->o_N,
+                              zero,
+                              zero,zero,zero,
+                              mesh->o_cubInterpT[p],
+                              mesh->o_cubProjectT[p],
+                              mesh->o_c2,
+                              mesh->o_EToE,
+                              mesh->o_BBLower[p],
+                              mesh->o_BBRaiseids[p],
+                              mesh->o_BBRaiseVals[p],
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_q,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);
+      if (mesh->MRABpmlNelP[l][p])
+        mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
+                              mesh->o_MRABpmlElIdsP[l][p],
+                              mesh->o_MRABpmlIdsP[l][p],
+                              mesh->o_N,
+                              zero,
+                              zero,zero,zero,
+                              mesh->o_cubInterpT[p],
+                              mesh->o_cubProjectT[p],
+                              mesh->o_c2,
+                              mesh->o_EToE,
+                              mesh->o_BBLower[p],
+                              mesh->o_BBRaiseids[p],
+                              mesh->o_BBRaiseVals[p],
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_pmlrhsq,
+                              mesh->o_q,
+                              mesh->o_pmlq,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);
       #else     
+      if (mesh->MRABNelP[l][p]) 
         mesh->updateKernel[p](mesh->MRABNelP[l][p],
-              mesh->o_MRABelIdsP[l][p],
-              mesh->o_N,
-              0.0,
-              0.,0.,0.,
-              mesh->o_EToE,
-              mesh->o_BBLower[p],
-              mesh->o_BBRaiseids[p],
-              mesh->o_BBRaiseVals[p],
-              mesh->o_vmapM,
-              mesh->o_rhsq,
-              mesh->o_q,
-              mesh->o_fQM,
-              mesh->o_fQP,
-              mesh->MRABshiftIndex[l]);    
+                              mesh->o_MRABelIdsP[l][p],
+                              mesh->o_N,
+                              zero,
+                              zero,zero,zero,
+                              mesh->o_EToE,
+                              mesh->o_BBLower[p],
+                              mesh->o_BBRaiseids[p],
+                              mesh->o_BBRaiseVals[p],
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_q,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);    
+      if (mesh->MRABpmlNelP[l][p])
+        mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
+                              mesh->o_MRABpmlElIdsP[l][p],
+                              mesh->o_MRABpmlIdsP[l][p],
+                              mesh->o_N,
+                              zero,
+                              zero,zero,zero,
+                              mesh->o_EToE,
+                              mesh->o_BBLower[p],
+                              mesh->o_BBRaiseids[p],
+                              mesh->o_BBRaiseVals[p],
+                              mesh->o_vmapM,
+                              mesh->o_rhsq,
+                              mesh->o_pmlrhsq,
+                              mesh->o_q,
+                              mesh->o_pmlq,
+                              mesh->o_fQM,
+                              mesh->o_fQP,
+                              mesh->MRABshiftIndex[l]);
       #endif
-      }
     }
   }
 
@@ -242,19 +304,38 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       // compute volume contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[l][p]) {
+          if (mesh->MRABNelP[l][p]) 
             mesh->volumeKernel[p](mesh->MRABNelP[l][p],
-                  mesh->o_MRABelIdsP[l][p],
-                  mesh->o_vgeo,
-                  mesh->o_D0ids[p],
-                  mesh->o_D1ids[p],
-                  mesh->o_D2ids[p],
-                  mesh->o_D3ids[p],
-                  mesh->o_Dvals[p],
-                  mesh->o_q,
-                  mesh->o_rhsq,
-                  mesh->MRABshiftIndex[l]);
-          }
+                                  mesh->o_MRABelIdsP[l][p],
+                                  mesh->o_vgeo,
+                                  mesh->o_D0ids[p],
+                                  mesh->o_D1ids[p],
+                                  mesh->o_D2ids[p],
+                                  mesh->o_D3ids[p],
+                                  mesh->o_Dvals[p],
+                                  mesh->o_q,
+                                  mesh->o_rhsq,
+                                  mesh->MRABshiftIndex[l]);
+          if (mesh->MRABpmlNelP[l][p])
+            mesh->pmlVolumeKernel[p](mesh->MRABpmlNelP[l][p],
+                                    mesh->o_MRABpmlElIdsP[l][p],
+                                    mesh->o_MRABpmlIdsP[l][p],
+                                    mesh->o_vgeo,
+                                    mesh->o_D0ids[p],
+                                    mesh->o_D1ids[p],
+                                    mesh->o_D2ids[p],
+                                    mesh->o_D3ids[p],
+                                    mesh->o_Dvals[p],
+                                    mesh->o_pmlSigmaX,
+                                    mesh->o_pmlSigmaY,
+                                    mesh->o_pmlSigmaZ,
+                                    mesh->o_cubInterpT[p],
+                                    mesh->o_cubProjectT[p],
+                                    mesh->o_q,
+                                    mesh->o_pmlq,
+                                    mesh->o_rhsq,
+                                    mesh->o_pmlrhsq,
+                                    mesh->MRABshiftIndex[l]);
         }
       }
 
@@ -270,27 +351,49 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       // compute surface contribution to DG acoustics RHS
       for (iint l=0;l<lev;l++) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[l][p]) {
+          if (mesh->MRABNelP[l][p]) 
             mesh->surfaceKernel[p](mesh->MRABNelP[l][p],
-                      mesh->o_MRABelIdsP[l][p],
-                      mesh->o_sgeo,
-                      mesh->o_L0ids[p],
-                      mesh->o_L0vals[p],
-                      mesh->o_ELids[p],
-                      mesh->o_ELvals[p],
-                      mesh->o_vmapM,
-                      mesh->o_mapP,
-                      mesh->o_EToB,
-                      t,
-                      mesh->o_x,
-                      mesh->o_y,
-                      mesh->o_z,
-                      mesh->o_q,
-                      mesh->o_fQM,
-                      mesh->o_fQP,
-                      mesh->o_rhsq,
-                      mesh->MRABshiftIndex[l]);
-          }
+                                  mesh->o_MRABelIdsP[l][p],
+                                  mesh->o_sgeo,
+                                  mesh->o_L0ids[p],
+                                  mesh->o_L0vals[p],
+                                  mesh->o_ELids[p],
+                                  mesh->o_ELvals[p],
+                                  mesh->o_vmapM,
+                                  mesh->o_mapP,
+                                  mesh->o_EToB,
+                                  t,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mesh->o_q,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->o_rhsq,
+                                  mesh->MRABshiftIndex[l]);
+          if (mesh->MRABpmlNelP[l][p])
+            mesh->pmlSurfaceKernel[p](mesh->MRABpmlNelP[l][p],
+                                mesh->o_MRABpmlElIdsP[l][p],
+                                mesh->o_MRABpmlIdsP[l][p],
+                                mesh->o_sgeo,
+                                mesh->o_L0ids[p],
+                                mesh->o_L0vals[p],
+                                mesh->o_ELids[p],
+                                mesh->o_ELvals[p],
+                                mesh->o_vmapM,
+                                mesh->o_mapP,
+                                mesh->o_EToB,
+                                t,
+                                mesh->o_x,
+                                mesh->o_y,
+                                mesh->o_z,
+                                mesh->o_q,
+                                mesh->o_pmlq,
+                                mesh->o_fQM,
+                                mesh->o_fQP,
+                                mesh->o_rhsq,
+                                mesh->o_pmlrhsq,
+                                mesh->MRABshiftIndex[l]);
         }
       }
 
@@ -325,74 +428,131 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       #if WADG
       for (iint l=0; l<lev; l++) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[l][p]) {
+          if (mesh->MRABNelP[l][p]) 
             mesh->updateKernel[p](mesh->MRABNelP[l][p],
-                  mesh->o_MRABelIdsP[l][p],
-                  mesh->o_N,
-                  mesh->dt*pow(2,l),
-                  a1,a2,a3,
-                  mesh->o_cubInterpT[p],
-                  mesh->o_cubProjectT[p],
-                  mesh->o_c2,
-                  mesh->o_EToE,
-                  mesh->o_BBLower[p],
-                  mesh->o_BBRaiseids[p],
-                  mesh->o_BBRaiseVals[p],
-                  mesh->o_vmapM,
-                  mesh->o_rhsq,
-                  mesh->o_q,
-                  mesh->o_fQM,
-                  mesh->o_fQP,
-                  mesh->MRABshiftIndex[l]);
-          }
+                                  mesh->o_MRABelIdsP[l][p],
+                                  mesh->o_N,
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_cubInterpT[p],
+                                  mesh->o_cubProjectT[p],
+                                  mesh->o_c2,
+                                  mesh->o_EToE,
+                                  mesh->o_BBLower[p],
+                                  mesh->o_BBRaiseids[p],
+                                  mesh->o_BBRaiseVals[p],
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_q,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);
+          if (mesh->MRABpmlNelP[l][p])
+            mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
+                                  mesh->o_MRABpmlElIdsP[l][p],
+                                  mesh->o_MRABpmlIdsP[l][p],
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_cubInterpT[p],
+                                  mesh->o_cubProjectT[p],
+                                  mesh->o_c2,
+                                  mesh->o_EToE,
+                                  mesh->o_BBLower[p],
+                                  mesh->o_BBRaiseids[p],
+                                  mesh->o_BBRaiseVals[p],
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_pmlrhsq,
+                                  mesh->o_q,
+                                  mesh->o_pmlq,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);
         }
         //rotate index
         mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
       }
       if (lev<mesh->MRABNlevels) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNhaloEleP[lev][p]) {
+          if (mesh->MRABNhaloEleP[lev][p])
             mesh->traceUpdateKernel[p](mesh->MRABNhaloEleP[lev][p],
-                  mesh->o_MRABhaloIdsP[lev][p],
-                  mesh->o_N,
-                  mesh->dt*pow(2,lev-1),
-                  b1,b2,b3,
-                  mesh->o_cubInterpT[p],
-                  mesh->o_cubProjectT[p],
-                  mesh->o_c2,
-                  mesh->o_EToE,
-                  mesh->o_BBLower[p],
-                  mesh->o_BBRaiseids[p],
-                  mesh->o_BBRaiseVals[p],
-                  mesh->o_vmapM,
-                  mesh->o_rhsq,
-                  mesh->o_q,
-                  mesh->o_fQM,
-                  mesh->o_fQP,
-                  mesh->MRABshiftIndex[lev]);
-          }
+                                      mesh->o_MRABhaloIdsP[lev][p],
+                                      mesh->o_N,
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_cubInterpT[p],
+                                      mesh->o_cubProjectT[p],
+                                      mesh->o_c2,
+                                      mesh->o_EToE,
+                                      mesh->o_BBLower[p],
+                                      mesh->o_BBRaiseids[p],
+                                      mesh->o_BBRaiseVals[p],
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_q,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
+          if (mesh->MRABpmlNhaloEleP[lev][p])
+            mesh->pmlTraceUpdateKernel[p](mesh->MRABpmlNhaloEleP[lev][p],
+                                      mesh->o_MRABpmlHaloEleIdsP[lev][p],
+                                      mesh->o_MRABpmlHaloIdsP[lev][p],
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_cubInterpT[p],
+                                      mesh->o_cubProjectT[p],
+                                      mesh->o_c2,
+                                      mesh->o_EToE,
+                                      mesh->o_BBLower[p],
+                                      mesh->o_BBRaiseids[p],
+                                      mesh->o_BBRaiseVals[p],
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_pmlrhsq,
+                                      mesh->o_q,
+                                      mesh->o_pmlq,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
         }
       }
       #else     
       for (iint l=0; l<lev; l++) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNelP[l][p]) {
+          if (mesh->MRABNelP[l][p]) 
             mesh->updateKernel[p](mesh->MRABNelP[l][p],
-                  mesh->o_MRABelIdsP[l][p],
-                  mesh->o_N,
-                  mesh->dt*pow(2,l),
-                  a1,a2,a3,
-                  mesh->o_EToE,
-                  mesh->o_BBLower[p],
-                  mesh->o_BBRaiseids[p],
-                  mesh->o_BBRaiseVals[p],
-                  mesh->o_vmapM,
-                  mesh->o_rhsq,
-                  mesh->o_q,
-                  mesh->o_fQM,
-                  mesh->o_fQP,
-                  mesh->MRABshiftIndex[l]);    
-          }
+                                  mesh->o_MRABelIdsP[l][p],
+                                  mesh->o_N,
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_EToE,
+                                  mesh->o_BBLower[p],
+                                  mesh->o_BBRaiseids[p],
+                                  mesh->o_BBRaiseVals[p],
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_q,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);    
+          if (mesh->MRABpmlNelP[l][p])
+            mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
+                                  mesh->o_MRABpmlElIdsP[l][p],
+                                  mesh->o_MRABpmlIdsP[l][p],
+                                  mesh->dt*pow(2,l),
+                                  a1,a2,a3,
+                                  mesh->o_EToE,
+                                  mesh->o_BBLower[p],
+                                  mesh->o_BBRaiseids[p],
+                                  mesh->o_BBRaiseVals[p],
+                                  mesh->o_vmapM,
+                                  mesh->o_rhsq,
+                                  mesh->o_pmlrhsq,
+                                  mesh->o_q,
+                                  mesh->o_pmlq,
+                                  mesh->o_fQM,
+                                  mesh->o_fQP,
+                                  mesh->MRABshiftIndex[l]);
         }
         //rotate index
         mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
@@ -400,23 +560,41 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
 
       if (lev<mesh->MRABNlevels) {
         for (iint p=1;p<=mesh->NMax;p++) {
-          if (mesh->MRABNhaloEleP[lev][p]) {
+          if (mesh->MRABNhaloEleP[lev][p]) 
             mesh->traceUpdateKernel[p](mesh->MRABNhaloEleP[lev][p],
-                  mesh->o_MRABhaloIdsP[lev][p],
-                  mesh->o_N,
-                  mesh->dt*pow(2,lev-1),
-                  b1,b2,b3,
-                  mesh->o_EToE,
-                  mesh->o_BBLower[p],
-                  mesh->o_BBRaiseids[p],
-                  mesh->o_BBRaiseVals[p],
-                  mesh->o_vmapM,
-                  mesh->o_rhsq,
-                  mesh->o_q,
-                  mesh->o_fQM,
-                  mesh->o_fQP,
-                  mesh->MRABshiftIndex[lev]);
-          }
+                                      mesh->o_MRABhaloIdsP[lev][p],
+                                      mesh->o_N,
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_EToE,
+                                      mesh->o_BBLower[p],
+                                      mesh->o_BBRaiseids[p],
+                                      mesh->o_BBRaiseVals[p],
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_q,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
+          if (mesh->MRABpmlNhaloEleP[lev][p])
+            mesh->pmlTraceUpdateKernel[p](mesh->MRABpmlNhaloEleP[lev][p],
+                                      mesh->o_MRABpmlHaloEleIds[lev][p],
+                                      mesh->o_MRABpmlHaloIdsP[lev][p],
+                                      mesh->o_N,
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->o_EToE,
+                                      mesh->o_BBLower[p],
+                                      mesh->o_BBRaiseids[p],
+                                      mesh->o_BBRaiseVals[p],
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_pmlrhsq,
+                                      mesh->o_q,
+                                      mesh->o_pmlq,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP,
+                                      mesh->MRABshiftIndex[lev]);
         }
       }
       #endif
@@ -456,15 +634,61 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
         }
       }
 
+      addSourceField(mesh, mesh->q,mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));
+
       // do error stuff on host
-      acousticsError3D(mesh, mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1));
-      
+      acousticsError3D(mesh, (mesh->dt)*(tstep+1)*pow(2,mesh->MRABNlevels-1));
+
       // output field files
       iint fld = 3;
-      meshPlotVTU3DP(mesh, "foo", fld);
+      char fileName[BUFSIZ];
+
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+      sprintf(fileName, "foo_%04d_%04d.vtu", rank, Nframe++);
+      meshPlotVTU3DP(mesh, fileName, fld);
     }
   }
 
   free(recvBuffer);
   free(sendBuffer);
+}
+
+
+//Ricker pulse
+void acousticsRickerPulse3D(dfloat x, dfloat y, dfloat z, dfloat t, dfloat f, dfloat c,
+                           dfloat *u, dfloat *v, dfloat *w, dfloat *p);
+
+void addSourceField(mesh3D *mesh, dfloat *q, dfloat t) {
+
+  for (iint m=0;m<mesh->sourceNelements;m++) {
+    iint e = mesh->sourceElements[m];
+    int N = mesh->N[e];
+
+    for (iint n=0;n<mesh->Np[N];n++) {
+      iint id = n + e*mesh->NpMax;
+
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+      dfloat z = mesh->z[id];
+
+      dfloat x0 = mesh->sourceX0;
+      dfloat y0 = mesh->sourceY0;
+      dfloat z0 = mesh->sourceZ0;
+      dfloat t0 = mesh->sourceT0;
+      dfloat freq = mesh->sourceFreq;
+
+      dfloat c = sqrt(mesh->sourceC2);
+
+      dfloat u, v, w, p;
+      acousticsRickerPulse3D(x-x0, y-y0, z-z0, t+t0, freq,c, &u, &v, &w, &p);
+
+      iint qid = mesh->Nfields*id;
+      q[qid+0] += u;
+      q[qid+1] += v;
+      q[qid+2] += w;
+      q[qid+3] += p;
+    }
+  }
 }
