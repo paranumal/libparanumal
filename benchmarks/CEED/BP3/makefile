@@ -42,6 +42,7 @@ ellipticParallelGatherScatter.o \
 ellipticParallelGatherScatterSetup.o \
 ellipticPipelinedSolveHex3D.o 
 #ellipticSolveHex3D.o 
+
 # library objects
 LOBJS = \
 ../../../src/meshConnect.o \
