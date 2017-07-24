@@ -26,6 +26,7 @@ typedef struct {
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;  
 
+  
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
@@ -142,7 +143,7 @@ typedef struct {
   occa::stream defaultStream;
   occa::stream dataStream;
 
-  
+  occa::kernel combinedInnerProductKernel;
   
 }solver_t;
 

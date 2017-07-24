@@ -12,7 +12,6 @@ libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas
 
 flags  += -D DPWD='"${CURDIR}"'
 CC =  mpic++ #${CXX}#mpicxx
-
 #flags += -fopenmp
 
 # Debug Option
