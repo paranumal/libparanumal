@@ -40,6 +40,11 @@ acousticsUpdate3D.o \
 acousticsVolume3D.o \
 acousticsCavitySolution3D.o \
 acousticsGaussianPulse3D.o \
+acousticsPmlSetup3D.o \
+acousticsPmlVolume3D.o \
+acousticsPmlSurface3D.o \
+acousticsPmlUpdate3D.o \
+acousticsSourceSetup3D.o \
 meshSetupTetP3D.o \
 meshConnectFaceNodesP3D.o \
 meshPhysicalNodesTetP3D.o \

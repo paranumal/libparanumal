@@ -42,6 +42,8 @@ typedef struct {
   iint *EToP; // element-to-partition/process connectivity
   iint *EToB; // element-to-boundary condition type
 
+  int *elementInfo; //type of element
+
   // boundary faces
   iint NboundaryFaces; // number of boundary faces
   iint *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
@@ -134,6 +136,12 @@ typedef struct {
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
+  //source injection
+  dfloat *sourceq;
+  dfloat sourceX0, sourceY0, sourceZ0, sourceT0, sourceC2, sourceFreq;
+  iint sourceNelements, *MRABsourceNelements;
+  iint *sourceElements;
+
   // surface integration node info
   iint    *intNfp;    // number of integration nodes on each face
   dfloat **intInterp; // interp from surface node to integration nodes
@@ -142,6 +150,7 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat **VB, **invVB; // Bernstein Vandermonde matrices
+  dfloat **invVB1D, **invVB2D;
   iint **D0ids, **D1ids, **D2ids, **D3ids; // Bernstein deriv matrix indices
   dfloat **Dvals; // Bernstein deriv matrix values
   dfloat **VBq, **PBq; // cubature interpolation/projection matrices
@@ -172,6 +181,14 @@ typedef struct {
   iint ***MRABelIdsP, ***MRABhaloIdsP;
   iint *MRABshiftIndex;
 
+  iint *MRABpmlNelements, *MRABpmlNhaloElements;
+  iint **MRABpmlElementIds, **MRABpmlIds;
+  iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
+
+  iint **MRABpmlNelP, **MRABpmlNhaloEleP;
+  iint ***MRABpmlElIdsP, ***MRABpmlIdsP;
+  iint ***MRABpmlHaloEleIdsP, ***MRABpmlHaloIdsP;
+
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
   iint    *plotNp;        // number of plot nodes per element
@@ -190,6 +207,7 @@ typedef struct {
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
+  dfloat *pmlSigmaZ;
   dfloat *pmlq;
   dfloat *pmlrhsq;
   dfloat *pmlresq;
@@ -239,8 +257,15 @@ typedef struct {
 
   //MRAB element lists
   occa::memory *o_MRABelementIds, *o_MRABhaloIds;
+  occa::memory *o_MRABpmlElementIds, *o_MRABpmlIds;
+  occa::memory *o_MRABpmlHaloElementIds, *o_MRABpmlHaloIds;
+
   occa::memory *o_MRABNelP, *o_MRABNhaloEleP;
   occa::memory **o_MRABelIdsP, **o_MRABhaloIdsP;
+
+  occa::memory *o_MRABpmlNelP, *o_MRABpmlNhaloEleP;
+  occa::memory **o_MRABpmlElIdsP, **o_MRABpmlHaloEleIdsP;
+  occa::memory **o_MRABpmlIdsP, **o_MRABpmlHaloIdsP;
 
   // DG halo exchange info
   occa::memory o_haloElementList;
@@ -251,6 +276,7 @@ typedef struct {
   
   // Bernstein-Bezier occa arrays
   occa::memory *o_D0ids, *o_D1ids, *o_D2ids, *o_D3ids, *o_Dvals; // Bernstein deriv matrix indices
+  occa::memory *o_invVB1DT, *o_invVB2DT;
   occa::memory *o_VBq, *o_PBq; // cubature interpolation/projection matrices
   occa::memory *o_L0vals, *o_L0ids, *o_ELids, *o_ELvals; 
   occa::memory *o_BBLower, *o_BBRaiseids, *o_BBRaiseVals; 
@@ -269,7 +295,7 @@ typedef struct {
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT;
   
   occa::memory o_pmlElementList;
-  occa::memory o_pmlSigmaX, o_pmlSigmaY;
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
   
   occa::memory o_pmlrhsq, o_pmlresq, o_pmlq;
 
@@ -325,10 +351,10 @@ typedef struct {
   occa::kernel relaxationKernel;
   
   occa::kernel pmlKernel; // deprecated
-  occa::kernel pmlVolumeKernel;
-  occa::kernel pmlSurfaceKernel;
-  occa::kernel pmlUpdateKernel;
-
+  occa::kernel *pmlVolumeKernel;
+  occa::kernel *pmlSurfaceKernel;
+  occa::kernel *pmlUpdateKernel;
+  occa::kernel *pmlTraceUpdateKernel;
   
 }mesh_t;
 
