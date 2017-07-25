@@ -39,7 +39,8 @@ void acousticsPmlSetup3D(mesh3D *mesh){
     for (iint m=0;m<mesh->MRABNelements[lev];m++) {
       iint e = mesh->MRABelementIds[lev][m];
       int type = mesh->elementInfo[e];
-      if ((type==100)||(type==200)||(type==300)) {
+      if ((type==100)||(type==200)||(type==300)
+          ||(type==400)||(type==500)||(type==600)||(type==700)){
         mesh->pmlNelements++;
         mesh->MRABpmlNelements[lev]++;
         mesh->MRABpmlNelP[lev][mesh->N[e]]++;
@@ -48,7 +49,8 @@ void acousticsPmlSetup3D(mesh3D *mesh){
     for (iint m=0;m<mesh->MRABNhaloElements[lev];m++) {
       iint e = mesh->MRABhaloIds[lev][m];
       int type = mesh->elementInfo[e];
-      if ((type==100)||(type==200)||(type==300)) {
+      if ((type==100)||(type==200)||(type==300)
+          ||(type==400)||(type==500)||(type==600)||(type==700)){
         mesh->MRABpmlNhaloElements[lev]++;
         mesh->MRABpmlNhaloEleP[lev][mesh->N[e]]++;
       }
@@ -343,7 +345,7 @@ void acousticsPmlSetup3D(mesh3D *mesh){
       mesh->o_MRABpmlIdsP[lev]        = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
       mesh->o_MRABpmlHaloEleIdsP[lev] = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
       mesh->o_MRABpmlHaloIdsP[lev]    = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));        
-      for (iint p=0;p<=mesh->NMax;p++) {
+      for (iint p=1;p<=mesh->NMax;p++) {
         if (mesh->MRABpmlNelP[lev][p]) {
           mesh->o_MRABpmlElIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNelP[lev][p]*sizeof(iint),
              mesh->MRABpmlElIdsP[lev][p]);

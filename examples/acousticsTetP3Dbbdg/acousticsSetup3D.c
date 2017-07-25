@@ -540,6 +540,11 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->surfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->updateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->traceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlVolumeKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlSurfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlTraceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+
 
   for (iint p=1;p<=mesh->NMax;p++) {
     occa::kernelInfo newInfo = kernelInfo;
@@ -565,7 +570,7 @@ void acousticsSetup3D(mesh3D *mesh){
     newInfo.addDefine("p_NblockS", NblockS);
 
     int NblockCub = 512/mesh->cubNp[p]; // works for CUDA
-    kernelInfo.addDefine("p_NblockCub", NblockCub);
+    newInfo.addDefine("p_NblockCub", NblockCub);
 
     int maxCubNodes = mymax(mesh->cubNp[p], maxNodes);
     newInfo.addDefine("p_maxCubNodes", maxCubNodes);
@@ -592,11 +597,11 @@ void acousticsSetup3D(mesh3D *mesh){
       mesh->pmlUpdateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
                "acousticsMRABPmlUpdateP3D_wadg",
-                 kernelInfo);
+                 newInfo);
       mesh->pmlTraceUpdateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
                "acousticsMRABPmlTraceUpdateP3D_wadg",
-                 kernelInfo);
+                 newInfo);
     #else 
       mesh->updateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP3D.okl",
@@ -609,21 +614,21 @@ void acousticsSetup3D(mesh3D *mesh){
       mesh->pmlUpdateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
                "acousticsMRABPmlUpdateP3D",
-                 kernelInfo);
+                 newInfo);
       mesh->pmlTraceUpdateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
                "acousticsMRABPmlTraceUpdateP3D",
-                 kernelInfo);
+                 newInfo);
     #endif
 
     mesh->pmlVolumeKernel[p] =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlVolume3D.okl",
                "acousticsbbdgMRABPmlVolume3D",
-               kernelInfo);
+               newInfo);
     mesh->pmlSurfaceKernel[p] =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlSurface3D.okl",
                "acousticsbbdgMRABPmlSurface3D",
-               kernelInfo);
+               newInfo);
   }
   
   mesh->haloExtractKernel =
