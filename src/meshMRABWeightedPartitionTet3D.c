@@ -15,6 +15,7 @@ typedef struct {
 
   iint cRank;
   iint cId;
+  int type;
 } cElement_t;
 
 typedef struct {
@@ -100,6 +101,7 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
   mesh->EX = (dfloat*) realloc(mesh->EX,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
+  mesh->elementInfo = (int *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(int));
   mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
@@ -109,6 +111,7 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
       mesh->EZ  [e*mesh->Nverts + n] = acceptedPartition[e].EZ[n];
     }
+    mesh->elementInfo[e] = acceptedPartition[e].type;
     mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
