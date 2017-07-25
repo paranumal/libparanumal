@@ -144,6 +144,7 @@ typedef struct {
   occa::stream dataStream;
 
   occa::kernel combinedInnerProductKernel;
+  occa::kernel combinedUpdateKernel;
   
 }solver_t;
 
