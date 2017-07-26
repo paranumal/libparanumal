@@ -36,8 +36,11 @@ LIBS	=  $(links) -L../../../utilities/BlasLapack -lBlasLapack
 testInnerProduct: testInnerProduct.o
 	$(LD)  $(LDFLAGS)  -o testInnerProduct testInnerProduct.o $(paths) $(LIBS)
 
+testScaledAdd: testScaledAdd.o
+	$(LD)  $(LDFLAGS)  -o testScaledAdd testScaledAdd.o $(paths) $(LIBS)
+
 # what to do if user types "make clean"
 clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) ellipticMainHex3D.o
+	rm -r testInnerProduct testScaledAdd testInnerProduct.o testScaledAdd.o
 
 
