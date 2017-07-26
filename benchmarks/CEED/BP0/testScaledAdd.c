@@ -34,6 +34,8 @@ int main(int argc, char **argv){
     h_b[n] = 1.;
   }
 
+  dfloat alpha = 1., beta = 1.;
+  
   /* DEVICE INFO */
   char deviceConfig[BUFSIZ];
   sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
@@ -43,41 +45,33 @@ int main(int argc, char **argv){
   
   occa::memory o_a = device.malloc(maxN*sizeof(dfloat), h_a);
   occa::memory o_b = device.malloc(maxN*sizeof(dfloat), h_b);
-  occa::memory o_adotb = device.malloc(maxNblocks*sizeof(dfloat), h_adotb);
 
   /* KERNEL INFO */
   occa::kernelInfo kernelInfo;
-  kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addDefine("iint", iintString);
   kernelInfo.addDefine("dfloat", dfloatString);
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
   
   /* KERNEL BUILD */
-  occa::kernel innerProductKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
-				   "innerProductAtomic",
+  occa::kernel scaledAddKernel
+    = device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+				   "scaledAdd",
 				   kernelInfo);
 
   printf("N Elapsed Bandwidth\n");
   for(int N=minN;N<=maxN;N+=stepN){
-    // make each block load more than one value per thread
-    int Nblocks = ((N+3)/4+blockSize-1)/blockSize;
-    
-    o_adotb.copyFrom(h_adotb);
+
     int Ntests = 10;
 
     occa::streamTag startTag = device.tagStream();
     
     for(int test=0;test<Ntests;++test)
-      innerProductKernel(N, Nblocks, o_a, o_b, o_adotb);
+      scaledAddKernel(N, alpha, o_a, beta, o_b);
     
     occa::streamTag stopTag = device.tagStream();
-
-    o_adotb.copyTo(h_result);
     
     double elapsed = device.timeBetween(startTag, stopTag)/(double)Ntests;
-    dfloat BW = sizeof(dfloat)*(N*2)/(double)(1024*1024*1024*elapsed); // neglect write out
-    printf("%d %g %g %d\n", N, elapsed, BW, (iint)(h_result[0]/Ntests));
+    dfloat BW = sizeof(dfloat)*(N*3)/(double)(1024*1024*1024*elapsed); // neglect write out
+    printf("%d %g %g\n", N, elapsed, BW);
     
   }
 
