@@ -11,7 +11,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   dfloat patchsize = 0.1;
 
   //frequency and time shift of the riker pulse
-  mesh->sourceFreq = 4.0;
+  mesh->sourceFreq = 10.0;
   mesh->sourceT0 = -0.1;
 
   //We want to collect a patch of elements around the source point and solve for 
@@ -122,7 +122,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   mesh->invVB1D = (dfloat **) calloc((mesh->NMax+1), sizeof(dfloat*));
   mesh->o_invVB1DT = (occa::memory*) calloc((mesh->NMax+1), sizeof(occa::memory));
   dfloat *invVB1DT = (dfloat *) calloc(mesh->NfpMax*mesh->NfpMax, sizeof(dfloat));
-  for (iint p=0;p<=mesh->NMax;p++) {
+  for (iint p=1;p<=mesh->NMax;p++) {
     mesh->invVB1D[p] = (dfloat *) calloc(mesh->Nfp[p]*mesh->Nfp[p], sizeof(dfloat));
     for (int n=0;n<mesh->Nfp[p];n++) {
       for (int m=0;m<mesh->Nfp[p];m++) {

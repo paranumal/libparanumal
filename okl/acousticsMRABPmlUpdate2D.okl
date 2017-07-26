@@ -22,6 +22,7 @@ kernel void acousticsMRABPmlUpdate2D(const iint pmlNelements,
     exclusive iint e;
 
     for(iint n=0; n < p_maxNodes; ++n; inner0){
+      e = pmlElementIds[et];
       if (n < p_Np){
         const iint pmlId = pmlIds[et];
 
@@ -91,8 +92,8 @@ kernel void acousticsMRABPmlTraceUpdate2D(const iint pmlNelements,
     exclusive iint e;
 
     for(iint n=0; n < p_maxNodes; ++n; inner0){
+      e = pmlElementIds[et];
       if (n < p_Np){
-        e = pmlElementIds[et];
         const iint pmlId = pmlIds[et];
 
         const iint id = p_Nfields*(e*p_Np + n);
