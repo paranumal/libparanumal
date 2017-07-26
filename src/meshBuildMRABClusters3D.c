@@ -14,6 +14,7 @@ typedef struct {
 
   iint cRank;
   iint cId;
+  int type;
 } cElement_t;
 
 typedef struct {
@@ -68,6 +69,7 @@ void meshBuildMRABClusters3D(mesh3D *mesh, iint lev, dfloat *weights, iint *leve
       (*elements)[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
       (*elements)[e].EZ[n] = mesh->EZ[e*mesh->Nverts+n];
     }
+    (*elements)[e].type = mesh->elementInfo[e];
 
     //initialize the clustering numbering
     (*elements)[e].cId = e; 

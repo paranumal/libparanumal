@@ -132,7 +132,7 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
   mesh->invVB2D = (dfloat **) calloc((mesh->NMax+1), sizeof(dfloat*));
   mesh->o_invVB2DT = (occa::memory*) calloc((mesh->NMax+1), sizeof(occa::memory));
   dfloat *invVB2DT = (dfloat *) calloc(mesh->NfpMax*mesh->NfpMax, sizeof(dfloat));
-  for (iint p=0;p<=mesh->NMax;p++) {
+  for (iint p=1;p<=mesh->NMax;p++) {
     mesh->invVB2D[p] = (dfloat *) calloc(mesh->Nfp[p]*mesh->Nfp[p], sizeof(dfloat));
     for (int n=0;n<mesh->Nfp[p];n++) {
       for (int m=0;m<mesh->Nfp[p];m++) {

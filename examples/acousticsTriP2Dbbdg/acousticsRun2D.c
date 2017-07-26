@@ -216,6 +216,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
                                 mesh->o_MRABpmlElIdsP[l][p],
                                 mesh->o_MRABpmlIdsP[l][p],
+                                mesh->o_N,
                                 zero,
                                 zero,zero,zero,
                                 mesh->o_cubInterpT[p],
@@ -259,6 +260,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
         mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
                                 mesh->o_MRABpmlElIdsP[l][p],
                                 mesh->o_MRABpmlIdsP[l][p],
+                                mesh->o_N,
                                 zero,
                                 zero,zero,zero,
                                 mesh->o_EToE,
@@ -440,6 +442,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                   mesh->o_x,
                                   mesh->o_y,
                                   mesh->o_invVB1DT[p],
+                                  mesh->o_EToB,
                                   mesh->o_EToE,
                                   mesh->o_BBLower[p],
                                   mesh->o_BBRaiseids[p],
@@ -491,6 +494,7 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                       mesh->o_x,
                                       mesh->o_y,
                                       mesh->o_invVB1DT[p],
+                                      mesh->o_EToB,
                                       mesh->o_EToE,
                                       mesh->o_BBLower[p],
                                       mesh->o_BBRaiseids[p],
@@ -603,6 +607,10 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
                                       mesh->o_N,
                                       mesh->dt*pow(2,lev-1),
                                       b1,b2,b3,
+                                      mesh->o_EToE,
+                                      mesh->o_BBLower[p],
+                                      mesh->o_BBRaiseids[p],
+                                      mesh->o_BBRaiseVals[p],
                                       mesh->o_vmapM,
                                       mesh->o_rhsq,
                                       mesh->o_pmlrhsq,
@@ -676,13 +684,25 @@ void addSourceField(mesh2D *mesh, dfloat *q, dfloat t) {
 
   for (iint m=0;m<mesh->sourceNelements;m++) {
     iint e = mesh->sourceElements[m];
-    iint N = mesh->N[e];
 
-    for (iint n=0;n<mesh->Np[N];n++) {
+    iint vid = e*mesh->Nverts;
+    dfloat xe1 = mesh->EX[vid+0]; /* x-coordinates of vertices */
+    dfloat xe2 = mesh->EX[vid+1];
+    dfloat xe3 = mesh->EX[vid+2];
+    
+    dfloat ye1 = mesh->EY[vid+0]; /* y-coordinates of vertices */
+    dfloat ye2 = mesh->EY[vid+1];
+    dfloat ye3 = mesh->EY[vid+2];
+    
+    for (iint n=0;n<mesh->NpMax;n++) {
       iint id = n + e*mesh->NpMax;
 
-      dfloat x = mesh->x[id];
-      dfloat y = mesh->y[id];
+      dfloat rn = mesh->r[mesh->NMax][n];
+      dfloat sn = mesh->s[mesh->NMax][n];
+  
+      /* physical coordinate of interpolation node */
+      dfloat x = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      dfloat y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
 
       dfloat x0 = mesh->sourceX0;
       dfloat y0 = mesh->sourceY0;

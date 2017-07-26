@@ -10,7 +10,7 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
 
   for (int e=0;e<mesh->Nelements;e++){
     mesh->N[e] = N;
-    if (e%2==0) mesh->N[e] = N-1;
+    //if (e%2==0) mesh->N[e] = N-1;
   }
 
   mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));

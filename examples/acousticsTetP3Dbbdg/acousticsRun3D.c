@@ -199,6 +199,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                               mesh->o_cubInterpT[p],
                               mesh->o_cubProjectT[p],
                               mesh->o_c2,
+                              zero,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              mesh->o_invVB2DT[p],
+                              mesh->o_EToB,
                               mesh->o_EToE,
                               mesh->o_BBLower[p],
                               mesh->o_BBRaiseids[p],
@@ -238,6 +244,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                               mesh->o_N,
                               zero,
                               zero,zero,zero,
+                              zero,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              mesh->o_invVB2DT[p],
+                              mesh->o_EToB,
                               mesh->o_EToE,
                               mesh->o_BBLower[p],
                               mesh->o_BBRaiseids[p],
@@ -437,6 +449,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                   mesh->o_cubInterpT[p],
                                   mesh->o_cubProjectT[p],
                                   mesh->o_c2,
+                                  t,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mesh->o_invVB2DT[p],
+                                  mesh->o_EToB,
                                   mesh->o_EToE,
                                   mesh->o_BBLower[p],
                                   mesh->o_BBRaiseids[p],
@@ -451,6 +469,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
             mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
                                   mesh->o_MRABpmlElIdsP[l][p],
                                   mesh->o_MRABpmlIdsP[l][p],
+                                  mesh->o_N,
                                   mesh->dt*pow(2,l),
                                   a1,a2,a3,
                                   mesh->o_cubInterpT[p],
@@ -483,6 +502,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                       mesh->o_cubInterpT[p],
                                       mesh->o_cubProjectT[p],
                                       mesh->o_c2,
+                                      t,
+                                      mesh->o_x,
+                                      mesh->o_y,
+                                      mesh->o_z,
+                                      mesh->o_invVB2DT[p],
+                                      mesh->o_EToB,
                                       mesh->o_EToE,
                                       mesh->o_BBLower[p],
                                       mesh->o_BBRaiseids[p],
@@ -497,6 +522,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
             mesh->pmlTraceUpdateKernel[p](mesh->MRABpmlNhaloEleP[lev][p],
                                       mesh->o_MRABpmlHaloEleIdsP[lev][p],
                                       mesh->o_MRABpmlHaloIdsP[lev][p],
+                                      mesh->o_N,
                                       mesh->dt*pow(2,lev-1),
                                       b1,b2,b3,
                                       mesh->o_cubInterpT[p],
@@ -525,6 +551,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                   mesh->o_N,
                                   mesh->dt*pow(2,l),
                                   a1,a2,a3,
+                                  t,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mesh->o_invVB2DT[p],
+                                  mesh->o_EToB,
                                   mesh->o_EToE,
                                   mesh->o_BBLower[p],
                                   mesh->o_BBRaiseids[p],
@@ -539,6 +571,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
             mesh->pmlUpdateKernel[p](mesh->MRABpmlNelP[l][p],
                                   mesh->o_MRABpmlElIdsP[l][p],
                                   mesh->o_MRABpmlIdsP[l][p],
+                                  mesh->o_N,
                                   mesh->dt*pow(2,l),
                                   a1,a2,a3,
                                   mesh->o_EToE,
@@ -566,6 +599,12 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                       mesh->o_N,
                                       mesh->dt*pow(2,lev-1),
                                       b1,b2,b3,
+                                      t,
+                                      mesh->o_x,
+                                      mesh->o_y,
+                                      mesh->o_z,
+                                      mesh->o_invVB2DT[p],
+                                      mesh->o_EToB,
                                       mesh->o_EToE,
                                       mesh->o_BBLower[p],
                                       mesh->o_BBRaiseids[p],
@@ -578,7 +617,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                       mesh->MRABshiftIndex[lev]);
           if (mesh->MRABpmlNhaloEleP[lev][p])
             mesh->pmlTraceUpdateKernel[p](mesh->MRABpmlNhaloEleP[lev][p],
-                                      mesh->o_MRABpmlHaloEleIds[lev][p],
+                                      mesh->o_MRABpmlHaloEleIdsP[lev][p],
                                       mesh->o_MRABpmlHaloIdsP[lev][p],
                                       mesh->o_N,
                                       mesh->dt*pow(2,lev-1),
@@ -664,14 +703,34 @@ void addSourceField(mesh3D *mesh, dfloat *q, dfloat t) {
 
   for (iint m=0;m<mesh->sourceNelements;m++) {
     iint e = mesh->sourceElements[m];
-    int N = mesh->N[e];
+    
+    iint vid = e*mesh->Nverts;
+    dfloat xe1 = mesh->EX[vid+0]; /* x-coordinates of vertices */
+    dfloat xe2 = mesh->EX[vid+1];
+    dfloat xe3 = mesh->EX[vid+2];
+    dfloat xe4 = mesh->EX[vid+3];
+    
+    dfloat ye1 = mesh->EY[vid+0]; /* y-coordinates of vertices */
+    dfloat ye2 = mesh->EY[vid+1];
+    dfloat ye3 = mesh->EY[vid+2];
+    dfloat ye4 = mesh->EY[vid+3];
 
-    for (iint n=0;n<mesh->Np[N];n++) {
+    dfloat ze1 = mesh->EZ[vid+0]; /* y-coordinates of vertices */
+    dfloat ze2 = mesh->EZ[vid+1];
+    dfloat ze3 = mesh->EZ[vid+2];
+    dfloat ze4 = mesh->EZ[vid+3];
+    
+    for (iint n=0;n<mesh->NpMax;n++) {
       iint id = n + e*mesh->NpMax;
 
-      dfloat x = mesh->x[id];
-      dfloat y = mesh->y[id];
-      dfloat z = mesh->z[id];
+      dfloat rn = mesh->r[mesh->NMax][n];
+      dfloat sn = mesh->s[mesh->NMax][n];
+      dfloat tn = mesh->t[mesh->NMax][n];
+  
+      /* physical coordinate of interpolation node */
+        dfloat x = -0.5*(rn+sn+tn+1.)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3 + 0.5*(1+tn)*xe4 ;
+        dfloat y = -0.5*(rn+sn+tn+1.)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4 ;
+        dfloat z = -0.5*(rn+sn+tn+1.)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4 ;
 
       dfloat x0 = mesh->sourceX0;
       dfloat y0 = mesh->sourceY0;
