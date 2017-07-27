@@ -7,7 +7,8 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   
   mesh2D *mesh = ins->mesh; 
   solver_t *solver = ins->vSolver; 
-  dfloat t = tstep*ins->dt;
+ // dfloat t = tstep*ins->dt;
+  dfloat t = tstep*ins->dt + ins->dt;
   
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
 

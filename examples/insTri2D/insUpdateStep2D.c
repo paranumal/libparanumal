@@ -74,34 +74,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_PIy);
 
 
-  #if 0
-  ins->o_PIx.copyTo(ins->rhsU);
-  ins->o_PIy.copyTo(ins->rhsV);
-  dfloat maxu = 0, maxv =0; 
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = e*mesh->Np + n;
-      maxu = mymax(maxu, fabs(ins->rhsU[id]));
-      maxv = mymax(maxv, fabs(ins->rhsV[id]));
-
-      ins->rhsV[id] = 0.0; 
-      ins->rhsU[id] = 0.0;
-    }
-  }
-
-  printf("PIx: %.5e and PIy: %.5e \n",maxu,maxv);
   
-  // int index1 =(ins->index+1)%3;
-  // int Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  // ins->o_PIx.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-  // ins->o_PIy.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-
-  // ins->o_PIx.copyFrom(ins->rhsU);
-  // ins->o_PIy.copyFrom(ins->rhsV);
-
-  #endif
-
-
   // U <= U - dt/g0 * d(pressure increment)/dx
   // V <= V - dt/g0 * d(pressure increment)/dy
   ins->updateUpdateKernel(mesh->Nelements,

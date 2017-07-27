@@ -9,6 +9,9 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);
 
+
+  #if 0
+
   const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
   //
   dfloat *dU = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
@@ -188,8 +191,8 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
       sprintf(fname, "insErrors.txt");
       FILE *fp;
       fp = fopen(fname, "a");
-      fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
-                  mesh->N, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p, gh1u, gh1v, gh1p);
+      fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+                  mesh->N, ins->dt, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p, gh1u, gh1v, gh1p);
     }
 
 
@@ -199,5 +202,142 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
  free(gU);
  free(gV);
  free(gP);
+
+
+ #else
+
+ const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+  //
+  dfloat *dUdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *dUdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *dVdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *dVdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  //
+   for(iint e=0;e<mesh->Nelements;++e){
+    //  int flag = 0; 
+    // for(iint f=0;f<mesh->Nfaces;++f){
+    //   iint bc = mesh->EToB[e*mesh->Nfaces+f];
+    //   if(bc == 1){ flag = 1; }
+    // }
+
+    // if(flag){ // Compute Derivatives dUdx, etc;
+      // prefetch geometric factors (constant on triangle)
+      dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
+      dfloat drdy = mesh->vgeo[e*mesh->Nvgeo + RYID];
+      dfloat dsdx = mesh->vgeo[e*mesh->Nvgeo + SXID];
+      dfloat dsdy = mesh->vgeo[e*mesh->Nvgeo + SYID];
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;     
+        for(iint i=0;i<mesh->Np;++i){
+          // load data at node i of element e (note Nfields==4)
+          iint id = e*mesh->Np + i;
+          dfloat u = ins->U[id+offset];
+          dfloat v = ins->V[id+offset];
+             
+          dfloat Drni = mesh->Dr[n*mesh->Np+i];
+          dfloat Dsni = mesh->Ds[n*mesh->Np+i];
+          // differentiate (u,v,p) with respect to 'r' and 's'
+          dudr += Drni*u;
+          duds += Dsni*u;
+          dvdr += Drni*v;
+          dvds += Dsni*v;   
+      }
+      dUdx[e*mesh->Np + n] = drdx*dudr + dsdx*duds;
+      dUdy[e*mesh->Np + n] = drdy*dudr + dsdy*duds;
+      dVdx[e*mesh->Np + n] = drdx*dvdr + dsdx*dvds;
+      dVdy[e*mesh->Np + n] = drdy*dvdr + dsdy*dvds;
+    // }
+  }
+
+ }
+ 
+
+  dfloat W[mesh->Nfp];
+  if(mesh->N==1){
+    W[0] = 1.000000000000000; W[1] = 1.000000000000000; 
+  }
+
+ if(mesh->N==2){
+    W[0] = 0.333333333333333; W[1] = 1.333333333333333;
+    W[2] = 0.333333333333333; 
+  }
+
+  if(mesh->N==3){
+    W[0] = 0.166666666666666; W[1] = 0.833333333333334;
+    W[2] = 0.833333333333334; W[3] = 0.166666666666666;
+  }
+  if(mesh->N==4){
+    W[0] = 0.100000000000000; W[1] = 0.544444444444444;
+    W[2] = 0.711111111111111; W[3] = 0.544444444444444;
+    W[4] = 0.100000000000000; 
+  }
+  if(mesh->N==5){
+    W[0] = 0.066666666666666; W[1] = 0.378474956297847;
+    W[2] = 0.554858377035487; W[3] = 0.554858377035486;
+    W[4] = 0.378474956297847; W[5] = 0.066666666666667;
+  }
+
+  if(mesh->N==6){
+    W[0] = 0.047619047619047; W[1] = 0.276826047361566;
+    W[2] = 0.431745381209863; W[3] = 0.487619047619048;
+    W[4] = 0.431745381209863; W[5] = 0.276826047361566;
+    W[6] = 0.047619047619047;
+  }
+//
+dfloat cd = 0.0, cl = 0.0; 
+iint sk=0;
+for(iint e=0;e<mesh->Nelements;++e){
+   iint flag = 0; 
+   iint bc = 0; 
+  for(iint f=0;f<mesh->Nfaces;++f){
+    bc = mesh->EToB[e*mesh->Nfaces+f];
+    if(bc == 1){ flag = 1; }
+  }
+
+  if(flag){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      bc = mesh->EToB[e*mesh->Nfaces+f];
+      if(bc==1){
+       for(iint n=0;n<mesh->Nfp; n++){
+        // load surface geofactors for this face
+        iint sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
+        dfloat nx = mesh->sgeo[sid+0];
+        dfloat ny = mesh->sgeo[sid+1];
+        dfloat sJ = mesh->sgeo[sid+2];
+        
+        iint vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+        iint idM = mesh->vmapM[vid];
+        //
+        dfloat dudx = dUdx[idM]; 
+        dfloat dudy = dUdy[idM]; 
+        dfloat dvdx = dVdx[idM]; 
+        dfloat dvdy = dVdy[idM];
+        //
+        dfloat p = ins->P[idM + offset];
+
+        cd += W[n]*(sJ*(-p*nx + ins->nu*(nx*2.0*dudx + ny*(dvdx + dudy))));
+        cl += W[n]*(sJ*(-p*ny + ins->nu*(nx*(dvdx + dudy) + ny*2.0*dvdy)));
+      }
+      // printf("%d %.5e \n",sk,cl);
+      //sk++;
+    }
+  }
+}
+}
+
+// Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
+char fname[BUFSIZ];
+sprintf(fname, "/u0/outputs/ins2D/DragLift.dat");
+FILE *fp;
+fp = fopen(fname, "a");
+fprintf(fp,"%d %.5e %.5e %.5e\n", mesh->N, time, cd, cl);
+fclose(fp);
+
+free(dUdx);
+free(dVdx);
+free(dUdy);
+free(dVdy);
+
+ #endif
   
 }

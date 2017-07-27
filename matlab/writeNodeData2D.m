@@ -91,6 +91,28 @@ plotNelements = size(plotEToV,1);
 %% transform to bi-unit triangle
 [plotR,plotS] = xytors(plotR,plotS);
 
+%% check triangulation
+before = plotNelements
+sk = 0;
+for e=1:plotNelements
+  v1 = plotEToV(e,1)+1;
+  v2 = plotEToV(e,2)+1;
+  v3 = plotEToV(e,3)+1;
+
+  x1 = plotR(v1);
+  x2 = plotR(v2);
+  x3 = plotR(v3);
+
+  y1 = plotS(v1);
+  y2 = plotS(v2);
+  y3 = plotS(v3);
+
+  plotA = (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1);
+  if(abs(plotA)>1e-5) sk = sk+1; plotEToV(sk,:) = [v1-1,v2-1,v3-1]; end
+end
+plotNelements = sk;
+plotEToV = plotEToV(1:sk,:);
+after = plotNelements
 %% create interpolation matrix from warp & blend to plot nodes
 plotInterp = Vandermonde2D(N, plotR,plotS)/V;
 
@@ -269,7 +291,14 @@ V1Dq = bern_basis_1D(N,r1Dq);
 V = Vandermonde2D(N,r,s);
 [VB Vr Vs V1 V2 V3] = bern_basis_tri(N,r,s);
 VB1D = bern_basis_1D(N,r1D);
-invVB = inv(VB);
+
+inv(VB1D)
+
+invVB = inv(VB)
+
+BBMM = VB' * MM * VB
+
+cond(BBMM)
 
 %% write VDM for conversion
 

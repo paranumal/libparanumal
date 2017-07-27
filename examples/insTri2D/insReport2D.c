@@ -22,8 +22,11 @@ void insReport2D(ins_t *ins, iint tstep, char *options){
     //insComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
     char fname[BUFSIZ];
-    sprintf(fname, "foo_%04d", rank);
+    
+    sprintf(fname, "/u0/outputs/ins2D/");
+    sprintf(fname, "%sfoo_%04d", fname,rank);
     sprintf(fname, "%s_%04d.vtu", fname, tstep/ins->errorStep);
+    
     insPlotVTU2D(ins, fname);
   } 
 }
