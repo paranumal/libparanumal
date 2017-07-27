@@ -6,6 +6,8 @@ iint factorial(iint n) {
   return retval;
 }
 
+dfloat wavespeed(dfloat x, dfloat y, dfloat z);
+
 void acousticsSetup3D(mesh3D *mesh){
 
   iint rank, size;
@@ -335,13 +337,7 @@ void acousticsSetup3D(mesh3D *mesh){
         dfloat y = -0.5*(rn+sn+tn+1.)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4 ;
         dfloat z = -0.5*(rn+sn+tn+1.)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4 ;
         
-        // smoothly varying (sinusoidal) wavespeed
-        //printf("M_PI = %f\n",M_PI);
-        if (z<0.f) {
-          mesh->c2[n + mesh->cubNpMax*e] = 0.2;//1.0 + 0.5*sin(M_PI*y);
-        } else {
-          mesh->c2[n + mesh->cubNpMax*e] = 1.0;
-        }
+        mesh->c2[n + mesh->cubNpMax*e] = wavespeed(x,y,z);
       }
     }
 
@@ -636,3 +632,19 @@ void acousticsSetup3D(mesh3D *mesh){
 				       "meshHaloExtract3D",
 				       kernelInfo);
 }
+
+dfloat wavespeed(dfloat x, dfloat y, dfloat z) {
+
+  dfloat c2;
+  
+  if (z<0.f) {
+    c2 = 1.5;//1.0 + 0.5*sin(M_PI*y);
+  } else {
+    c2 = 1.0;
+  }
+
+  return c2;
+}
+
+
+        

@@ -10,6 +10,8 @@ iint factorial(iint n) {
   return retval;
 }
 
+dfloat wavespeed(dfloat x, dfloat y);
+
 void acousticsSetup2D(mesh2D *mesh){
 
   iint rank, size;
@@ -29,8 +31,9 @@ void acousticsSetup2D(mesh2D *mesh){
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   dfloat hmin = 1e9;
   for(iint e=0;e<mesh->Nelements;++e){ 
-    EtoDT[e] = 1e9;  
+    EtoDT[e] = 1e9;
 
+    //find the min and max length scales
     for(iint f=0;f<mesh->Nfaces;++f){
       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
@@ -41,11 +44,11 @@ void acousticsSetup2D(mesh2D *mesh){
 
       dfloat hest = .5/(sJ*invJ);
 
+      hmin = mymin(hmin, hest);
+
       // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
       dfloat dtEst = cfl*hest/((mesh->N[e]+1.)*(mesh->N[e]+1.)*mesh->Lambda2);
-
-      hmin = mymin(hmin, hest);
-      EtoDT[e] = mymin(EtoDT[e], dtEst);
+      EtoDT[e] = mymin(EtoDT[e],dtEst);
     }
   }
 
@@ -293,7 +296,6 @@ void acousticsSetup2D(mesh2D *mesh){
       iint N = mesh->N[e];
 
       for(iint n=0;n<mesh->cubNp[N];++n){ /* for each node */
-        
         // cubature node coordinates
         dfloat rn = mesh->cubr[N][n]; 
         dfloat sn = mesh->cubs[N][n];
@@ -302,13 +304,7 @@ void acousticsSetup2D(mesh2D *mesh){
         dfloat x = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
         dfloat y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
         
-        // smoothly varying (sinusoidal) wavespeed
-        //printf("M_PI = %f\n",M_PI);
-        if (y<0.f) {
-          mesh->c2[n + mesh->cubNpMax*e] = 1.5;//1.0 + 0.5*sin(M_PI*y);
-        } else {
-          mesh->c2[n + mesh->cubNpMax*e] = 1;
-        }
+        mesh->c2[n + mesh->cubNpMax*e] = wavespeed(x,y);
       }
     }
 
@@ -591,4 +587,17 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
+}
+
+dfloat wavespeed(dfloat x, dfloat y) {
+
+  dfloat c2;
+  
+  if (y<0.f) {
+    c2 = 1.5;//1.0 + 0.5*sin(M_PI*y);
+  } else {
+    c2 = 1;
+  }
+
+  return c2;
 }

@@ -127,20 +127,21 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
-  // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTetP3D(mesh);
-
   // compute geometric factors
   meshGeometricFactorsTet3D(mesh);
+
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTetP3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetupP(mesh);
 
+  // compute physical (x,y) locations of the element nodes
+  meshPhysicalNodesTetP3D(mesh);
+  
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP3D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTetP3D(mesh);
 
   if (mesh->totalHaloPairs) {
     mesh->N = (iint *) realloc(mesh->N,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
