@@ -74,7 +74,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 30;
+  iint maxIterations = 3000;
   double AxTime;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
@@ -169,9 +169,9 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  //  timeAxOperator(solver, lambda, o_r, o_x);
-
-  timeSolver(solver, lambda, o_r, o_x, options);
+  timeAxOperator(solver, lambda, o_r, o_x);
+  
+  //  timeSolver(solver, lambda, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
