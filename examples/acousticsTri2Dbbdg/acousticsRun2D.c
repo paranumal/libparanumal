@@ -344,17 +344,6 @@ void acousticsOccaRun2Dbbdg(mesh2D *mesh){
               sendBuffer,
               recvBuffer);
 
-        #if ASYNC 
-          mesh->device.setStream(defaultStream);
-        #endif
-      }
-
-
-      if(mesh->totalHaloPairs>0){
-        #if ASYNC 
-          mesh->device.setStream(dataStream);
-        #endif
-
         // wait for halo data to arrive
         meshHaloExchangeFinish(mesh);
 
