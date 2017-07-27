@@ -192,7 +192,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-G");
 
   // generically used for blocked DEVICE reductions
@@ -208,6 +208,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   printf("NblockG = %d\n", NblockG);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
+
+  kernelInfo.addDefine("p_gjNq", mesh->gjNq);
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
