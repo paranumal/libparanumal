@@ -6,9 +6,15 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
 
   // MPI send buffer
   iint haloBytes = mesh->totalHaloPairs*mesh->NfpMax*mesh->Nfields*sizeof(dfloat);
+#if ASYNC
+  occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
+  occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
+  dfloat *sendBuffer = (char*) o_sendBufferPinned.getMappedPointer();
+  dfloat *recvBuffer = (char*) o_recvBufferPinned.getMappedPointer();
+#else  
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
-  
+#endif
   //temp buffer to store the solution while plotting is happening.
   //Should probably do this better, but we have a Vandermond matrix to 
   // go from degree N modal space to degree NMax nodal space, but no inverse yet.

@@ -53,6 +53,7 @@ meshHaloSetupP.o \
 meshMRABSetupP3D.o \
 meshMRABWeightedPartitionTetP3D.o \
 meshBuildMRABClustersP3D.o \
+meshSetPolynomialDegree3D.o \
 meshClusteredGeometricPartitionP3D.o \
 meshSurfaceGeometricFactorsTetP3D.o \
 meshLoadReferenceNodesTetP3D.o 

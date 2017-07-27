@@ -126,6 +126,8 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels);
 void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
 
+void meshSetPolynomialDegree2D(mesh2D *mesh, int N);
+
 #define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
 
 /* offsets for geometric factors */
