@@ -20,20 +20,23 @@ mesh3D *meshSetupTetP3D(char *filename, int N){
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesTetP3D(mesh, N);
 
-  // compute physical (x,y,z) locations of the element nodes
-  meshPhysicalNodesTetP3D(mesh);
-
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTetP3D(mesh);
+  
   // compute geometric factors
   meshGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetupP(mesh);
+  
+  //set polynomial degree in each element
+  meshSetPolynomialDegree3D(mesh, N);
+
+  // compute physical (x,y,z) locations of the element nodes
+  meshPhysicalNodesTetP3D(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP3D(mesh);
-
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTetP3D(mesh);
 
 
   // initialize LSERK4 time stepping coefficients
