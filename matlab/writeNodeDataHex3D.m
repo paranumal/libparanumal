@@ -123,14 +123,14 @@ end
 
 
 %% compute equispaced nodes on equilateral triangle
-[plotR,plotS,plotT] = meshgrid(linspace(-1,1,N+1));
+[plotR,plotS,plotT] = meshgrid(linspace(-1,1,2)); %% hacked
 plotR = plotR(:); plotS = plotS(:); plotT = plotT(:);
 
 %% count plot nodes
 plotNp = length(plotR);
 
 %% triangulate equilateral element nodes
-plotEToV = delaunay3(plotR,plotS,plotT)-1; 
+plotEToV = delaunay(plotR,plotS,plotT)-1; 
 
 %% count triangles in plot node triangulation
 plotNelements = size(plotEToV,1); 
@@ -235,7 +235,7 @@ for n=1:NqP
   end
   fprintf(fid, '\n');
 end
-fprintf(fid, '%% diagOp [ weight so that inv(W\(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
+fprintf(fid, '%% diagOp [ weight so that inv(inv(W)*(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
 for n=1:NqP
     fprintf(fid, '%17.15E ', diagOp(n));
   fprintf(fid, '\n');
@@ -309,7 +309,7 @@ for n=1:NqP
   end
   fprintf(fid, '\n');
 end
-fprintf(fid, '%% diagOpDG [ weight so that inv(W\(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
+fprintf(fid, '%% diagOpDG [ weight so that inv(inv(W)*(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
 for n=1:NqP
     fprintf(fid, '%17.15E ', diagOp(n));
   fprintf(fid, '\n');
@@ -323,8 +323,27 @@ for n=1:NqP
 end
 
 
+[gr,gw] = JacobiGQ(0,0,N+1);
+gI = Vandermonde1D(N, gr)/Vandermonde1D(N, r1d);
+gD = GradVandermonde1D(N, gr)/Vandermonde1D(N, r1d);
+gNq = length(gr);
 
-
+fprintf(fid, '%% gNq (gauss quadrature count)\n');
+fprintf(fid, '%d\n', gNq);
+fprintf(fid, '%% gI [ 1D interpolation from GLL to Gauss nodes  ]\n');
+for n=1:gNq
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', gI(n,m));
+  end
+  fprintf(fid, '\n');
+end
+fprintf(fid, '%% gI [ 1D differentiation from GLL to Gauss nodes  ]\n');
+for n=1:gNq
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', gD(n,m));
+  end
+  fprintf(fid, '\n');
+end
 
 fclose(fid);
 if(0)

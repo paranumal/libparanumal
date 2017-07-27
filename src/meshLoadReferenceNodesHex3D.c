@@ -248,6 +248,29 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   }
 
 
+  // interpolation from GLL to Gauss nodes 
+  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp);
+  sscanf(buf, iintFormat, &(mesh->gNq));
+  fgets(buf, BUFSIZ, fp);
+  // interpolation matrix
+  mesh->gI = (dfloat*) calloc(mesh->gNq*mesh->Nq, sizeof(dfloat));
+  for(int n=0;n<mesh->gNq;++n){
+    for(int m=0;m<mesh->Nq;++m){
+      fscanf(fp, dfloatFormat, mesh->gI+n*mesh->Nq+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+  fgets(buf, BUFSIZ, fp);
+  // differentiation matrix
+  mesh->gD = (dfloat*) calloc(mesh->gNq*mesh->Nq, sizeof(dfloat));
+  for(int n=0;n<mesh->gNq;++n){
+    for(int m=0;m<mesh->Nq;++m){
+      fscanf(fp, dfloatFormat, mesh->gD+n*mesh->Nq+m);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+  
   
 #if 0
   // read number of volume cubature nodes
