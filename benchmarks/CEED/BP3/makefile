@@ -40,8 +40,8 @@ ellipticSolveSetupHex3D.o \
 ellipticHaloExchange3D.o \
 ellipticParallelGatherScatter.o \
 ellipticParallelGatherScatterSetup.o \
-ellipticPipelinedSolveHex3D.o 
-#ellipticSolveHex3D.o 
+ellipticSolveHex3D.o
+#ellipticPipelinedSolveHex3D.o 
 
 # library objects
 LOBJS = \

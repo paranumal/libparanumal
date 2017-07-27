@@ -15,17 +15,17 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
 #if 0
-    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
 
-    //    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    //    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
 
     // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
-#if 0
+#if 1
     mesh->device.setStream(solver->dataStream);
     mesh->device.finish();
     mesh->device.setStream(solver->defaultStream);
@@ -38,7 +38,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->dataStream);
       
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
 				solver->o_pAp);
       }
 
@@ -59,11 +59,12 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->defaultStream);
 
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
 				solver->o_pAp);
       } 
     }
 
+#if 0
     o_q.copyTo(solver->p);
     o_Aq.copyTo(solver->Ap);
     dfloat localpAp =0;
@@ -84,7 +85,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     printf("rank = %d, device pAp = %g, halo pAp = %g\n", rank, localpAp, halopAp);
-
+#endif
 
     // C0 halo gather-scatter (on data stream)
     if(halo->Ngather){
@@ -98,8 +99,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
       
       // copy totally gather halo data back from HOST to DEVICE
-      mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp); 
+      //      mesh->device.setStream(solver->dataStream);
+      halo->o_gatherTmp.copyFrom(halo->gatherTmp); 
       
       // wait for async copy
       //      occa::streamTag tag = mesh->device.tagStream();
@@ -199,7 +200,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
   if(strstr(options, "CONTINUOUS")){
     // BROKEN
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq,
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq,
 		     solver->o_invDegree, solver->o_pAp);
   }
   else{
@@ -350,7 +351,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
+  const dfloat tol = 1e-8;
 
   occa::memory &o_p  = solver->o_p;
   occa::memory &o_z  = solver->o_z;
@@ -405,11 +406,15 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
     // dot(p,A*p)
     // these are only equivalent if p is continuous
+    #if 0
     if(strstr(options,"CONTINUOUS")){
       dfloat localpAp = 0;
       solver->o_pAp.copyTo(&localpAp);
       MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-    }else{
+      printf("pAp=%g\n", pAp);
+    }else
+      #endif
+      {
       pAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
     }
 
@@ -466,8 +471,8 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotr0 <= rdotr1
     rdotr0 = rdotr1;
 
-    //    if(rank==0)
-    //      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+    if(rank==0)
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
     ++Niter;
   };

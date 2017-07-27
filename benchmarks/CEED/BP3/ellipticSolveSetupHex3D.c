@@ -1,5 +1,80 @@
 #include "ellipticHex3D.h"
 
+// specialized version for geometric factors at Gauss (not GLL) nodes
+dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
+
+  /* number of second order geometric factors */
+  iint NgjGeo = 7;
+  iint gjNq = mesh->gjNq;
+  iint gjNp = gjNq*gjNq*gjNq;
+  dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
+
+  dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
+  
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+
+    /* find vertex indices and physical coordinates */
+    int id = e*mesh->Nverts;
+    
+    dfloat *xe = mesh->EX + id;
+    dfloat *ye = mesh->EY + id;
+    dfloat *ze = mesh->EZ + id;
+
+    for(iint k=0;k<gjNq;++k){
+      for(iint j=0;j<gjNq;++j){
+	for(iint i=0;i<gjNq;++i){
+	  
+	  iint n = i + j*gjNq + k*gjNq*gjNq;
+
+	  /* local node coordinates */
+	  dfloat rn = mesh->gjr[i]; 
+	  dfloat sn = mesh->gjr[j];
+	  dfloat tn = mesh->gjr[k];
+	  
+	  /* Jacobian matrix */
+	  dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
+	  dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
+	  dfloat xt = 0.125*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
+	  
+	  dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+	  dfloat ys = 0.125*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
+	  dfloat yt = 0.125*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
+	  
+	  dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
+	  dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
+	  dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
+	  
+	  /* compute geometric factors for affine coordinate transform*/
+	  dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+
+	  if(J<1e-12) printf("J = %g !!!!!!!!!!!!!\n", J);
+	  
+	  dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
+	  dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
+	  dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
+	  
+	  dfloat JW = J*mesh->gjw[i]*mesh->gjw[j]*mesh->gjw[k];
+	  
+	  /* store second order geometric factors */
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+	  gjGeo[NgjGeo*gjNp*e + n + gjNp*GWJID] = JW;
+	  
+	}
+      }
+    }
+  }
+
+  printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
+
+  return gjGeo;
+}
+
+
 void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
 
   // build degree vector
@@ -25,18 +100,18 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  int NblockV = 1024/mesh->Np; // works for CUDA
-  int NblockS = 1024/maxNodes; // works for CUDA
+  int NblockV = mymax(1,1024/mesh->Np); // works for CUDA
+  int NblockS = mymax(1,1024/maxNodes); // works for CUDA
   int NblockG;
 
-  iint gNq = mesh->Nq+1;
-  iint gNp = gNq*gNq*gNq;
-  iint gNq2 = gNq*gNq;
-  if(gNq2<=32) 
-    NblockG = ( 32/gNq2 );
+  iint gjNq = mesh->gjNq;
+  iint gjNp = gjNq*gjNq*gjNq;
+  iint gjNq2 = gjNq*gjNq;
+  if(gjNq2<=32) 
+    NblockG = ( 32/gjNq2 );
   else {
     if(mesh->Nq<=6) {
-      NblockG = 256/gNq2; 
+      NblockG = 256/gjNq2; 
       printf("mesh->Nq=%d and NblockG=%d\n", mesh->Nq, NblockG);
     }
     else 
@@ -108,29 +183,16 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->Nblock = Nblock;
 
   // BP3 specific stuff starts here
-  dfloat *gD = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
-  dfloat *gI = (dfloat*) calloc(gNq*mesh->Nq, sizeof(dfloat));
-  dfloat *gggeo = (dfloat*) calloc(gNp*mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
-
-  srand48(32);
-  for(iint n=0;n<gNq*mesh->Nq;++n){
-    gD[n] = drand48();
-    gI[n] = drand48();
-  }
-
-  for(iint n=0;n<gNp*mesh->Nelements*mesh->Nggeo;++n){
-    // gggeo[n] = drand48();
-    gggeo[n] = .1;
-  }
+  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
   
-  solver->o_gD = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gD);
-  solver->o_gI = mesh->device.malloc(gNq*mesh->Nq*sizeof(dfloat), gI);
-  solver->o_gggeo = mesh->device.malloc(mesh->Nggeo*gNp*mesh->Nelements*sizeof(dfloat), gggeo);
+  solver->o_gjD = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjD);
+  solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
+  solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
   // BP3 specific stuff ends here 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-G");
 
   // generically used for blocked DEVICE reductions
@@ -181,11 +243,13 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
                "put",
                kernelInfo);
 
+  if(mesh->Nq<12){
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
                "ellipticAxHex3D_e3",
                kernelInfo);
-
+  }
+  
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
 				       "ellipticPartialAxHex3D_e3",
@@ -232,17 +296,18 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "ellipticPartialGradientHex3D",
 				       kernelInfo);
 
-
-  solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-               "ellipticAxIpdgHex3D",
-               kernelInfo);
-
-  solver->partialIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-				       "ellipticPartialAxIpdgHex3D",
-				       kernelInfo);
-
+  if(mesh->Nq<12){
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+					 "ellipticAxIpdgHex3D",
+					 kernelInfo);
+    
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+					 "ellipticPartialAxIpdgHex3D",
+					 kernelInfo);
+  }
+  
   solver->combinedInnerProductKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
 				       "ellipticCombinedInnerProduct",

@@ -1,6 +1,107 @@
 #include "ellipticHex3D.h"
  
 
+void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x){
+
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  
+  mesh_t *mesh = solver->mesh;
+  
+  // sync processes
+  mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
+  
+  double tic = MPI_Wtime();
+  double AxTime;
+  
+  iint iterations = 10;
+
+  // assume 1 mpi process
+  for(int it=0;it<iterations;++it)
+    solver->partialAxKernel(solver->NlocalGatherElements,
+			    solver->o_localGatherElementList,
+			    solver->o_gjGeo,
+			    solver->o_gjD,
+			    solver->o_gjI,
+			    lambda, o_r, o_x,
+			    solver->o_pAp);
+  
+  mesh->device.finish();
+  double toc = MPI_Wtime();
+
+  double localElapsed = toc-tic;
+  iint   localDofs = mesh->Np*mesh->Nelements;
+  double globalElapsed;
+  iint   globalDofs;
+  int    root = 0;
+  
+  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+
+  iint gjNq = mesh->gjNq;
+  iint Nq = mesh->Nq;
+
+  double flops = gjNq*Nq*Nq*Nq*4 +
+    gjNq*gjNq*Nq*Nq*6 +
+    gjNq*gjNq*gjNq*Nq*8 +
+    gjNq*gjNq*gjNq*17 +
+    gjNq*gjNq*gjNq*Nq*8 +
+    gjNq*gjNq*Nq*Nq*6 +
+    gjNq*Nq*Nq*Nq*4; // excludes inner product
+
+  double gflops = mesh->Nelements*flops*iterations/(1024*1024*1024.*globalElapsed);
+
+  if(rank==root){
+    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size), gflops);
+  }
+
+  
+}
+
+void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
+
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  
+  mesh_t *mesh = solver->mesh;
+  
+  // sync processes
+  mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
+  
+  double tic = MPI_Wtime();
+  iint maxIterations = 3000;
+  double AxTime;
+  
+  iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
+
+  mesh->device.finish();
+  double toc = MPI_Wtime();
+
+  double localElapsed = toc-tic;
+  iint   localDofs = mesh->Np*mesh->Nelements;
+  double globalElapsed;
+  iint   globalDofs;
+  int    root = 0;
+  
+  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+
+  if(rank==root){
+    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) \n",
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size));
+  }
+
+  
+}
+
+
+
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -68,31 +169,10 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  // sync processes
-  mesh->device.finish();
-  MPI_Barrier(MPI_COMM_WORLD);
-  
-  double tic = MPI_Wtime();
-  iint maxIterations = 30;
-  
-  iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
+  //  timeAxOperator(solver, lambda, o_r, o_x);
 
-  mesh->device.finish();
-  double toc = MPI_Wtime();
+  timeSolver(solver, lambda, o_r, o_x, options);
 
-  double localElapsed = toc-tic;
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  double globalElapsed;
-  iint   globalDofs;
-  int    root = 0;
-  
-  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
-  
-  if(rank==root){
-    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)]\n",
-	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size));
-  }
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
   

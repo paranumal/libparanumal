@@ -51,12 +51,12 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
 #if 0
-    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
 
-    //    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq);
+    //    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
 
@@ -74,7 +74,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->dataStream);
       
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
 				solver->o_pAp);
       }
 
@@ -96,7 +96,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->defaultStream);
 
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq, 
+				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
 				solver->o_pAp);
       } 
     }
@@ -202,7 +202,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 
   // compute local element operations and store result in o_Aq
   if(strstr(options, "CONTINUOUS")){
-    solver->AxKernel(mesh->Nelements, solver->o_gggeo, solver->o_gD, solver->o_gI, lambda, o_q, o_Aq,
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq,
 		     solver->o_invDegree, solver->o_pAp);
   }
   else{

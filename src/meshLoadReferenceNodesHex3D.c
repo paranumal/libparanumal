@@ -251,22 +251,30 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // interpolation from GLL to Gauss nodes 
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->gNq));
+  sscanf(buf, iintFormat, &(mesh->gjNq));
   fgets(buf, BUFSIZ, fp);
   // interpolation matrix
-  mesh->gI = (dfloat*) calloc(mesh->gNq*mesh->Nq, sizeof(dfloat));
-  for(int n=0;n<mesh->gNq;++n){
+  mesh->gjr = (dfloat*) calloc(mesh->gjNq, sizeof(dfloat));
+  mesh->gjw = (dfloat*) calloc(mesh->gjNq, sizeof(dfloat));
+  for(int n=0;n<mesh->gjNq;++n){
+    fscanf(fp, dfloatFormat dfloatFormat, mesh->gjr+n, mesh->gjw+n);
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+  fgets(buf, BUFSIZ, fp);
+  // interpolation matrix
+  mesh->gjI = (dfloat*) calloc(mesh->gjNq*mesh->Nq, sizeof(dfloat));
+  for(int n=0;n<mesh->gjNq;++n){
     for(int m=0;m<mesh->Nq;++m){
-      fscanf(fp, dfloatFormat, mesh->gI+n*mesh->Nq+m);
+      fscanf(fp, dfloatFormat, mesh->gjI+n*mesh->Nq+m);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   fgets(buf, BUFSIZ, fp);
   // differentiation matrix
-  mesh->gD = (dfloat*) calloc(mesh->gNq*mesh->Nq, sizeof(dfloat));
-  for(int n=0;n<mesh->gNq;++n){
+  mesh->gjD = (dfloat*) calloc(mesh->gjNq*mesh->Nq, sizeof(dfloat));
+  for(int n=0;n<mesh->gjNq;++n){
     for(int m=0;m<mesh->Nq;++m){
-      fscanf(fp, dfloatFormat, mesh->gD+n*mesh->Nq+m);
+      fscanf(fp, dfloatFormat, mesh->gjD+n*mesh->Nq+m);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }

@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include <mpi.h>
-
-#include "mesh.h"
+#include "ellipticHex3D.h"
 
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
