@@ -74,7 +74,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 3000;
+  iint maxIterations = 30;
   double AxTime;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
