@@ -108,7 +108,7 @@ for e=1:plotNelements
   y3 = plotS(v3);
 
   plotA = (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1);
-  if(abs(plotA)>1e-5) sk = sk+1; plotEToV(sk,:) = [v1,v2,v3]; end
+  if(abs(plotA)>1e-5) sk = sk+1; plotEToV(sk,:) = [v1-1,v2-1,v3-1]; end
 end
 plotNelements = sk;
 plotEToV = plotEToV(1:sk,:);
