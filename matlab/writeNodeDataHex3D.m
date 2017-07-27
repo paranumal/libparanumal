@@ -330,14 +330,18 @@ gNq = length(gr);
 
 fprintf(fid, '%% gNq (gauss quadrature count)\n');
 fprintf(fid, '%d\n', gNq);
-fprintf(fid, '%% gI [ 1D interpolation from GLL to Gauss nodes  ]\n');
+fprintf(fid, '%% gjr,gjw Gauss Jacobi nodes and weights\n');
+for n=1:gNq
+  fprintf(fid, '%17.15E %17.15E \n', gr(n), gw(n));
+end
+fprintf(fid, '%% gjI [ 1D interpolation from GLL to Gauss nodes  ]\n');
 for n=1:gNq
   for m=1:N+1
     fprintf(fid, '%17.15E ', gI(n,m));
   end
   fprintf(fid, '\n');
 end
-fprintf(fid, '%% gI [ 1D differentiation from GLL to Gauss nodes  ]\n');
+fprintf(fid, '%% gjD [ 1D differentiation from GLL to Gauss nodes  ]\n');
 for n=1:gNq
   for m=1:N+1
     fprintf(fid, '%17.15E ', gD(n,m));
