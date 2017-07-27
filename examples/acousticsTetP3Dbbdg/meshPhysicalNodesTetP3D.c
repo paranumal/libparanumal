@@ -41,4 +41,33 @@ void meshPhysicalNodesTetP3D(mesh3D *mesh){
       mesh->z[e*mesh->NpMax+n] = -0.5*(1+rn+sn+tn)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4;
     }
   }
+
+  // create halo extension for x,y arrays
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
+  iint localNodes     = mesh->Nelements*mesh->NpMax;
+
+  // temporary send buffer
+  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+
+  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
+  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->z = (dfloat*) realloc(mesh->z, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
+  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);   
+
+  // grab EX,EY,EZ from halo
+  mesh->EX = (dfloat*) realloc(mesh->EX, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
+  mesh->EY = (dfloat*) realloc(mesh->EY, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
+  mesh->EZ = (dfloat*) realloc(mesh->EZ, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
+
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EX, sendBuffer, mesh->EX + mesh->Nverts*mesh->Nelements);
+  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EY, sendBuffer, mesh->EY + mesh->Nverts*mesh->Nelements);
+  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EZ, sendBuffer, mesh->EZ + mesh->Nverts*mesh->Nelements);
+
+  if (totalHaloNodes) free(sendBuffer);
 }

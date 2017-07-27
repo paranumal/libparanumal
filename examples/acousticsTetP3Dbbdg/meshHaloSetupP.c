@@ -5,7 +5,7 @@
 
 typedef struct {
   
-  iint element, face, N;
+  iint element, face;
   iint elementN, faceN, rankN;
 
 }facePair_t;
@@ -50,8 +50,8 @@ void meshHaloSetupP(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint r = mesh->EToP[e*mesh->Nfaces+f]; // rank of neighbor
       if(r!=-1){
-  mesh->totalHaloPairs += 1;
-  mesh->NhaloPairs[r] += 1;
+        mesh->totalHaloPairs += 1;
+        mesh->NhaloPairs[r] += 1;
       }
     }
   }
@@ -71,14 +71,12 @@ void meshHaloSetupP(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       iint ef = e*mesh->Nfaces+f;
       if(mesh->EToP[ef]!=-1){
-  haloElements[cnt].element  = e;
-  haloElements[cnt].face     = f;
-  haloElements[cnt].elementN = mesh->EToE[ef];
-  haloElements[cnt].faceN    = mesh->EToF[ef];
-  haloElements[cnt].rankN    = mesh->EToP[ef];
-  haloElements[cnt].N        = mesh->N[e];
-
-  ++cnt;
+        haloElements[cnt].element  = e;
+        haloElements[cnt].face     = f;
+        haloElements[cnt].elementN = mesh->EToE[ef];
+        haloElements[cnt].faceN    = mesh->EToF[ef];
+        haloElements[cnt].rankN    = mesh->EToP[ef];
+        ++cnt;
       }
     }
   }
@@ -99,52 +97,12 @@ void meshHaloSetupP(mesh_t *mesh){
   for(iint r=0;r<size;++r){
     for(iint e=0;e<mesh->Nelements;++e){
       for(iint f=0;f<mesh->Nfaces;++f){
-  iint ef = e*mesh->Nfaces+f;
-  if(mesh->EToP[ef]==r)
-    mesh->EToE[ef] = cnt++;
+        iint ef = e*mesh->Nfaces+f;
+        if(mesh->EToP[ef]==r)
+          mesh->EToE[ef] = cnt++;
       }
     }
   }
 
-  // create halo extension for x,y arrays
-  iint totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
-  iint localNodes     = mesh->Nelements*mesh->NpMax;
-
-  // temporary send buffer
-  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
-
-  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
-  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
-  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
-  if(mesh->dim==3)
-    mesh->z = (dfloat*) realloc(mesh->z, (localNodes+totalHaloNodes)*sizeof(dfloat));
-  
-  // send halo data and recv into extended part of arrays
-  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
-  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
-  if(mesh->dim==3)
-    meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);   
-
-  // grab EX,EY,EZ from halo
-  mesh->EX = (dfloat*) realloc(mesh->EX, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
-  mesh->EY = (dfloat*) realloc(mesh->EY, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
-  if(mesh->dim==3)
-    mesh->EZ = (dfloat*) realloc(mesh->EZ, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
-
-  // send halo data and recv into extended part of arrays
-  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EX, sendBuffer, mesh->EX + mesh->Nverts*mesh->Nelements);
-  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EY, sendBuffer, mesh->EY + mesh->Nverts*mesh->Nelements);
-  if(mesh->dim==3)
-    meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EZ, sendBuffer, mesh->EZ + mesh->Nverts*mesh->Nelements);
-  
-  iint *intSendBuffer = (iint *) calloc(totalHaloNodes,sizeof(iint));
-
-  mesh->N = (iint*) realloc(mesh->N, (mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
-  
-  // send halo data and recv into extended part of arrays
-  meshHaloExchange(mesh, sizeof(iint), mesh->N, sendBuffer, mesh->N + mesh->Nelements);  
-
   free(haloElements);
-  free(sendBuffer);
-  free(intSendBuffer);
 }
