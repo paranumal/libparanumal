@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "mpi.h"
+
 #include "mesh3D.h"
 
 typedef struct {
@@ -117,9 +117,9 @@ typedef struct {
 
   // integration storage for BP3
   int gNq;
-  occa::memory o_gggeo; // Jacobian matrix at integration nodes
-  occa::memory o_gI;    // interpolate from GLL to integration nodes
-  occa::memory o_gD;    // differentiate and interpolate from GLL to integration nodes
+  occa::memory o_gjGeo; // Jacobian matrix at integration nodes
+  occa::memory o_gjI;    // interpolate from GLL to integration nodes
+  occa::memory o_gjD;    // differentiate and interpolate from GLL to integration nodes
 
   // list of elements that are needed for global gather-scatter
   iint NglobalGatherElements;
