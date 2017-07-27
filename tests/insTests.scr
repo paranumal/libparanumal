@@ -3,30 +3,39 @@ cd  ../examples/insTri2D;
 
 make clean; make -j;
 
-./insMainTri2D ../../meshes/insVortex2D_h0.msh 1 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h2.msh 1 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h4.msh 1 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h8.msh 1 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 1 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 2 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 3 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 4 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 5 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 6 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 7 insVortex2D.h
+./insMainTri2D ../../meshes/insVortex2D.msh 8 insVortex2D.h
 
-./insMainTri2D ../../meshes/insVortex2D_h0.msh 2 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h2.msh 2 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h4.msh 2 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h8.msh 2 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h0.msh 1 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h2.msh 1 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h4.msh 1 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h8.msh 1 insVortex2D.h
 
-./insMainTri2D ../../meshes/insVortex2D_h0.msh 3 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h2.msh 3 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h4.msh 3 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h8.msh 3 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h0.msh 2 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h2.msh 2 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h4.msh 2 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h8.msh 2 insVortex2D.h
 
-./insMainTri2D ../../meshes/insVortex2D_h0.msh 4 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h2.msh 4 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h4.msh 4 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h8.msh 4 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h0.msh 3 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h2.msh 3 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h4.msh 3 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h8.msh 3 insVortex2D.h
 
-./insMainTri2D ../../meshes/insVortex2D_h0.msh 5 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h2.msh 5 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h4.msh 5 insVortex2D.h
-./insMainTri2D ../../meshes/insVortex2D_h8.msh 5 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h0.msh 4 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h2.msh 4 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h4.msh 4 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h8.msh 4 insVortex2D.h
+
+#./insMainTri2D ../../meshes/insVortex2D_h0.msh 5 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h2.msh 5 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h4.msh 5 insVortex2D.h
+#./insMainTri2D ../../meshes/insVortex2D_h8.msh 5 insVortex2D.h
 
 
 

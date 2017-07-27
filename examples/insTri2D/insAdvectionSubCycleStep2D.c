@@ -6,9 +6,322 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 				dfloat * sendBuffer, dfloat * recvBuffer, 
 				char   * options){
 
+ mesh2D *mesh = ins->mesh;
+ dfloat     t = tstep*ins->dt;
+ 
+   // field offset at this step
+  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+
+  //Exctract Halo On Device
+  if(mesh->totalHaloPairs>0){
+    ins->totalHaloExtractKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+
+    // copy extracted halo to HOST
+    ins->o_tHaloBuffer.copyTo(sendBuffer);
+
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Np*(ins->NTfields)*sizeof(dfloat),
+			  sendBuffer,
+			  recvBuffer);
+  }
+
+  // COMPLETE HALO EXCHANGE
+  if(mesh->totalHaloPairs>0){
+
+    meshHaloExchangeFinish(mesh);
+
+    ins->o_tHaloBuffer.copyFrom(recvBuffer);
+    ins->totalHaloScatterKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+  }
+
+
+   // Solve Stokes Problem if Nonlinear solver is deactivated
+  dfloat activate_advection = 0.f; 
+  if(ins->a0){activate_advection  = 1.f;} 
+
+  const iint voffset = 0;  
+  // New subcycling
+  iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  
+
+// Substepping 
+	if(activate_advection){
+  	for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
+    	dfloat tbase = t + ststep*ins->sdt;    
+    	// LSERK4 stages
+    		for(iint rk=0;rk<mesh->Nrk;++rk){
+				// intermediate stage time
+					dfloat tstage = tbase +  ins->sdt*mesh->rkc[rk]; 
+
+				//
+					if(mesh->totalHaloPairs>0){
+						ins->velocityHaloExtractKernel(mesh->Nelements,
+																					mesh->totalHaloPairs,
+																					mesh->o_haloElementList,
+																					voffset, // 0 offset
+																					ins->o_Ue,
+																					ins->o_Ve,
+																					ins->o_vHaloBuffer);
+						// copy extracted halo to HOST 
+						ins->o_vHaloBuffer.copyTo(sendBuffer);            
+						// start halo exchange
+						meshHaloExchangeStart(mesh,
+																	mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+																	sendBuffer,
+																	recvBuffer);
+					}
+
+					// Compute Volume Contribution
+					if(strstr(options, "CUBATURE")){
+						ins->advectionCubatureVolumeKernel(mesh->Nelements,
+															mesh->o_vgeo,
+															mesh->o_cubDrWT,
+															mesh->o_cubDsWT,
+															mesh->o_cubInterpT,
+															voffset, // zero offset
+															ins->o_Ue,
+															ins->o_Ve,
+															ins->o_rhsU,
+															ins->o_rhsV);
+					} 
+					else {
+						ins->advectionVolumeKernel(mesh->Nelements,
+																       mesh->o_vgeo,
+																       mesh->o_DrT,
+																       mesh->o_DsT,
+																       voffset, //zero offset
+																       ins->o_Ue,
+																       ins->o_Ve,
+																       ins->o_rhsU,
+																       ins->o_rhsV);
+						}
+
+
+					if(mesh->totalHaloPairs>0){
+
+						meshHaloExchangeFinish(mesh);
+
+						ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+
+						ins->velocityHaloScatterKernel(mesh->Nelements,
+																					 mesh->totalHaloPairs,
+																					 mesh->o_haloElementList,
+																					 voffset, //0 offset
+																					 ins->o_Ue,
+																					 ins->o_Ve,
+																					 ins->o_vHaloBuffer);
+					}
+
+    
+				  if(strstr(options, "CUBATURE")){
+				  ins->advectionCubatureSurfaceKernel(mesh->Nelements,
+								      mesh->o_sgeo,
+								      mesh->o_intInterpT,
+								      mesh->o_intLIFTT,
+								      mesh->o_vmapM,
+								      mesh->o_vmapP,
+								      mesh->o_EToB,
+								      tstage,
+								      mesh->o_intx,
+								      mesh->o_inty,
+								      voffset, // 0
+								      ins->o_Ue,
+								      ins->o_Ve,
+								      ins->o_rhsU,
+								      ins->o_rhsV);
+				} 
+				else {
+				  ins->advectionSurfaceKernel(mesh->Nelements,
+							      mesh->o_sgeo,
+							      mesh->o_LIFTT,
+							      mesh->o_vmapM,
+							      mesh->o_vmapP,
+							      mesh->o_EToB,
+							      tstage,
+							      mesh->o_x,
+							      mesh->o_y,
+							      voffset, // 0
+							      ins->o_Ue,
+							      ins->o_Ve,
+							      ins->o_rhsU,
+							      ins->o_rhsV);
+				}
+
+
+			  // Update Kernel
+				ins->subCycleRKUpdateKernel(mesh->Nelements,
+							    activate_advection,
+							    ins->sdt,
+							    mesh->rka[rk],
+							    mesh->rkb[rk],
+							    ins->o_rhsU,
+							    ins->o_rhsV,
+							    ins->o_resU, 
+							    ins->o_resV,
+							    ins->o_Ue,
+							    ins->o_Ve);
+			}
+		}
+	}
+
+
+ // Update Time
+	t +=ins->dt; 
+
+ // Compute NU at t^(n+1)
+	if(mesh->totalHaloPairs>0){
+		ins->velocityHaloExtractKernel(mesh->Nelements,
+																	mesh->totalHaloPairs,
+																	mesh->o_haloElementList,
+																	voffset, // 0 offset
+																	ins->o_Ue,
+																	ins->o_Ve,
+																	ins->o_vHaloBuffer);
+		// copy extracted halo to HOST 
+		ins->o_vHaloBuffer.copyTo(sendBuffer);            
+		// start halo exchange
+		meshHaloExchangeStart(mesh,
+													mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+													sendBuffer,
+													recvBuffer);
+	}
+
+  // Compute Volume Contribution
+  if(strstr(options, "CUBATURE")){
+    ins->advectionCubatureVolumeKernel(mesh->Nelements,
+				       mesh->o_vgeo,
+				       mesh->o_cubDrWT,
+				       mesh->o_cubDsWT,
+				       mesh->o_cubInterpT,
+				       voffset,
+				       ins->o_Ue,
+				       ins->o_Ve,
+				       ins->o_rhsU,
+				       ins->o_rhsV);
+  } else {
+    ins->advectionVolumeKernel(mesh->Nelements,
+			       mesh->o_vgeo,
+			       mesh->o_DrT,
+			       mesh->o_DsT,
+			       voffset,
+			       ins->o_Ue,
+			       ins->o_Ve,
+			       ins->o_rhsU,
+			       ins->o_rhsV);
+  }
+
+  // Compute Volume Contribution for Pressure
+  ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            offset,
+                            ins->o_P,
+                            ins->o_Px,
+                            ins->o_Py);
+
+	if(mesh->totalHaloPairs>0){
+
+		meshHaloExchangeFinish(mesh);
+
+		ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+
+		ins->velocityHaloScatterKernel(mesh->Nelements,
+																	 mesh->totalHaloPairs,
+																	 mesh->o_haloElementList,
+																	 voffset, //0 offset
+																	 ins->o_Ue,
+																	 ins->o_Ve,
+																	 ins->o_vHaloBuffer);
+	}
+
+ if(strstr(options, "CUBATURE")){
+  ins->advectionCubatureSurfaceKernel(mesh->Nelements,
+																			mesh->o_sgeo,
+																			mesh->o_intInterpT,
+																			mesh->o_intLIFTT,
+																			mesh->o_vmapM,
+																			mesh->o_vmapP,
+																			mesh->o_EToB,
+																			t,
+																			mesh->o_intx,
+																			mesh->o_inty,
+																			voffset,
+																			ins->o_Ue,
+																			ins->o_Ve,
+																			ins->o_rhsU,
+																			ins->o_rhsV);
+} 
+else {
+  ins->advectionSurfaceKernel(mesh->Nelements,
+															mesh->o_sgeo,
+															mesh->o_LIFTT,
+															mesh->o_vmapM,
+															mesh->o_vmapP,
+															mesh->o_EToB,
+															t,
+															mesh->o_x,
+															mesh->o_y,
+															voffset,
+															ins->o_Ue,
+															ins->o_Ve,
+															ins->o_rhsU,
+															ins->o_rhsV);
+  }
+
+const iint solverid = 0; // Pressure Solve
+  // Compute Surface Conribution
+  ins->gradientSurfaceKernel(mesh->Nelements,
+												     mesh->o_sgeo,
+												     mesh->o_LIFTT,
+												     mesh->o_vmapM,
+												     mesh->o_vmapP,
+												     mesh->o_EToB,
+												     mesh->o_x,
+												     mesh->o_y,
+												     t,
+												     ins->dt,
+												     ins->c0,
+												     ins->c1,
+												     ins->c2,
+												     ins->index,
+												     mesh->Nelements+mesh->totalHaloPairs,
+												     solverid, // pressure BCs
+													   ins->o_PI, //not used
+												     ins->o_P,
+												     ins->o_Px,
+												     ins->o_Py);
+
+
+iint index1 = ins->index;
+ins->o_rhsU.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+ins->o_rhsV.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+
+#if 0
+
+
   mesh2D *mesh = ins->mesh; 
   // field offset 
   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);  
+
+  // Subcycling with Burger Type, Modified
 
   // May be modified : Solver may do smt while exchanging
   if(mesh->totalHaloPairs>0){
@@ -243,6 +556,8 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
   }
 
 
+
+
   // Now Compute N(Ue) Term in n+1
 
    dfloat tn1 = (tstep+1)*ins->dt;
@@ -252,7 +567,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
     ins->velocityHaloExtractKernel(mesh->Nelements,
 				   mesh->totalHaloPairs,
 				   mesh->o_haloElementList,
-				   voffset, // 0 offset
+				   voffset,  //voffset
 				   ins->o_Ue,
 				   ins->o_Ve,
 				   ins->o_vHaloBuffer);
@@ -348,5 +663,8 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 
 
   //#endif
+#endif
+
+
 
 }    
