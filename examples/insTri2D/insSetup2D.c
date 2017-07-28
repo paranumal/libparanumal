@@ -78,6 +78,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   ins->rho       = rho;
   ins->tau       = (mesh->N)*(mesh->N+1);
 
+  if(mesh->N==1){ins->tau *=10;} // tau is too small for low N
+  if(mesh->N==2){ins->tau *= 5;} // tau is too small for low N
+
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
@@ -151,6 +154,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   umax = sqrt(umax);
 
   dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  // if(mesh->N=1)
+  //   cfl = 0.05; 
+
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -460,13 +466,13 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->pressureHaloExtractKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloExtract2D",
+				       "insPressureHaloExtract",
 				       kernelInfo);
 
   printf("Compiling INS PoissonHalo Extract Kernel\n");
   ins->pressureHaloScatterKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloScatter2D",
+				       "insPressureHaloScatter",
 				       kernelInfo);
   // ===========================================================================//
 #if 0
