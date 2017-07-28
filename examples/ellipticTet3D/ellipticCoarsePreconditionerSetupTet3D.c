@@ -324,13 +324,11 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
   if(strstr(options, "ALMOND")){
  
     precon->parAlmond = parAlmondSetup(mesh,
-         Nnum, 
          globalStarts,
          recvNtotal,      
          recvRows,        
          recvCols,       
          recvVals,   
-         0, // 0 if no null space
          hgs,
          options); 
     
