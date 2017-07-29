@@ -11,7 +11,7 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   FILE *fp = fopen(fname, "r");
 
   char buf[BUFSIZ];
-  fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); //read comment
   fgets(buf, BUFSIZ, fp);
   int Ncheck;
   sscanf(buf, "%d", &Ncheck);
@@ -200,9 +200,38 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
     for(int n=0;n<mesh->cubNp*mesh->Np;++n){
       fscanf(fp, dfloatFormat, mesh->cubProject+n);
     }
-    fgets(buf, BUFSIZ, fp); // read comment  
-  }
+    fgets(buf, BUFSIZ, fp); // read comment 
 
+
+
+    // read number of surface integration nodes
+    fgets(buf, BUFSIZ, fp); // read comment
+    fgets(buf, BUFSIZ, fp); 
+    sscanf(buf, iintFormat, &(mesh->intNfp));
+
+    // read surface intergration node interpolation matrix
+    mesh->intInterp 
+    = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+    fgets(buf, BUFSIZ, fp); // read comment
+
+    for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
+      for(int m=0;m<mesh->Nfp;++m){
+        fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
+      }
+      fgets(buf,BUFSIZ,fp); // rest of line
+    }
+
+    // read lift matrix from surface integration to volume nodes
+    mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+    fgets(buf, BUFSIZ, fp); // read comment
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
+        fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
+      }
+      fgets(buf,BUFSIZ,fp); // rest of line
+    }
+
+  }
 
 
   //-------------Berstein Bezier DG stuff added by NC--------------------// 

@@ -149,7 +149,7 @@ typedef struct {
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
   dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
-  dfloat *intx, *inty; // coordinates of suface integration nodes
+  dfloat *intx, *inty, *intz; // coordinates of suface integration nodes
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
@@ -260,7 +260,7 @@ typedef struct {
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
 
   // cubature (for wadg)
-  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
+  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices

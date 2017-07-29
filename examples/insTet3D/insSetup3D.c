@@ -35,10 +35,10 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->W     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->P     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
-  //rhs storage
-  ins->rhsU  = (dfloat*) calloc(2*mesh->Nelements*mesh->Np,sizeof(dfloat));
-  ins->rhsV  = (dfloat*) calloc(2*mesh->Nelements*mesh->Np,sizeof(dfloat));
-  ins->rhsW  = (dfloat*) calloc(2*mesh->Nelements*mesh->Np,sizeof(dfloat));
+  //rhs storage *3 is for velocity projection, need to be checked
+  ins->rhsU  = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->rhsW  = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat));
   ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
   //additional field storage (could reduce in the future)
@@ -228,9 +228,9 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->o_W = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->W);
   ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
 
-  ins->o_rhsU  = mesh->device.malloc(2*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
-  ins->o_rhsV  = mesh->device.malloc(2*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
-  ins->o_rhsW  = mesh->device.malloc(2*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsW);
+  ins->o_rhsU  = mesh->device.malloc(3*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
+  ins->o_rhsV  = mesh->device.malloc(3*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
+  ins->o_rhsW  = mesh->device.malloc(3*mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsW);
   ins->o_rhsP  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsP);
 
   ins->o_NU = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->NU);
@@ -261,73 +261,73 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
  ins->mesh = mesh;
 
   // ===========================================================================
-  // printf("Compiling Advection volume kernel with cubature integration\n");
-  // ins->advectionCubatureVolumeKernel =
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-		// 		       "insAdvectionCubatureVolume2D",
-		// 		       kernelInfo);
+  printf("Compiling Advection volume kernel with cubature integration\n");
+  ins->advectionCubatureVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+				       "insAdvectionCubatureVolume3D",
+				       kernelInfo);
 
-//   printf("Compiling Advection surface kernel with cubature integration\n");
-//   ins->advectionCubatureSurfaceKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-// 				       "insAdvectionCubatureSurface2D",
-// 				       kernelInfo);
+  printf("Compiling Advection surface kernel with cubature integration\n");
+  ins->advectionCubatureSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+				       "insAdvectionCubatureSurface3D",
+				       kernelInfo);
 
-//   printf("Compiling Advection volume kernel with collocation integration\n");
-//   ins->advectionVolumeKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-// 				       "insAdvectionVolume2D",
-// 				       kernelInfo);
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->advectionVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+				       "insAdvectionVolume3D",
+				       kernelInfo);
 
-//   printf("Compiling Advection surface kernel with collocation integration\n");
-//   ins->advectionSurfaceKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-// 				       "insAdvectionSurface2D",
-// 				       kernelInfo);
+  printf("Compiling Advection surface kernel with collocation integration\n");
+  ins->advectionSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+				       "insAdvectionSurface3D",
+				       kernelInfo);
 
 //    printf("Compiling SubCycle Advection RK update kernel\n");
 //     ins->subCycleRKUpdateKernel =
 //       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 //            "insSubCycleRKUpdate2D",
 //            kernelInfo);
-//   // ===========================================================================
-//   printf("Compiling Gradient volume kernel with collocation integration\n");
-//   ins->gradientVolumeKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
-// 				       "insGradientVolume2D",
-// 				       kernelInfo);
+  // ===========================================================================
+  printf("Compiling Gradient volume kernel with collocation integration\n");
+  ins->gradientVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
+				       "insGradientVolume3D",
+				       kernelInfo);
 
-//   printf("Compiling Gradient volume kernel with collocation integration\n");
-//   ins->gradientSurfaceKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
-// 				       "insGradientSurface2D",
-// 				       kernelInfo);
+  printf("Compiling Gradient volume kernel with collocation integration\n");
+  ins->gradientSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
+				       "insGradientSurface3D",
+				       kernelInfo);
 
-//   // ===========================================================================
-//   printf("Compiling Divergence volume kernel with collocation integration\n");
-//   ins->divergenceVolumeKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
-// 				       "insDivergenceVolume2D",
-// 				       kernelInfo);
+  // ===========================================================================
+  printf("Compiling Divergence volume kernel with collocation integration\n");
+  ins->divergenceVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
+				       "insDivergenceVolume3D",
+				       kernelInfo);
 
-//   printf("Compiling Divergencesurface kernel with collocation integration\n");
-//   ins->divergenceSurfaceKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
-// 				       "insDivergenceSurface2D",
-// 				       kernelInfo);
+  printf("Compiling Divergencesurface kernel with collocation integration\n");
+  ins->divergenceSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
+				       "insDivergenceSurface3D",
+				       kernelInfo);
 
-//   // ===========================================================================
-//   printf("Compiling Helmholtz volume update kernel\n");
-//   ins->helmholtzRhsForcingKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-// 				       "insHelmholtzRhsForcing2D",
-// 				       kernelInfo);
+  // ===========================================================================
+  printf("Compiling Helmholtz volume update kernel\n");
+  ins->helmholtzRhsForcingKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+				       "insHelmholtzRhsForcing3D",
+				       kernelInfo);
 
-//   printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
-//   ins->helmholtzRhsIpdgBCKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-// 				       "insHelmholtzRhsIpdgBC2D",
-// 				       kernelInfo);
+  printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
+  ins->helmholtzRhsIpdgBCKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+				       "insHelmholtzRhsIpdgBC3D",
+				       kernelInfo);
 
 
   printf("Compiling INS Helmholtz Halo Extract Kernel\n");
@@ -362,17 +362,17 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 // 				       "insPoissonPenalty2D",
 // 				       kernelInfo);
 
-  // printf("Compiling INS Poisson Halo Extract Kernel\n");
-  // ins->velocityHaloExtractKernel=
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-		// 		       "insVelocityHaloExtract3D",
-		// 		       kernelInfo);
+  printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->velocityHaloExtractKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+				       "insVelocityHaloExtract3D",
+				       kernelInfo);
 
-  // printf("Compiling INS PoissonHalo Extract Kernel\n");
-  // ins->velocityHaloScatterKernel=
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-		// 		       "insVelocityHaloScatter3D",
-		// 		       kernelInfo);
+  printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->velocityHaloScatterKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+				       "insVelocityHaloScatter3D",
+				       kernelInfo);
 
 //   printf("Compiling Poisson surface kernel with collocation integration\n");
 //   ins->updateUpdateKernel =
@@ -381,18 +381,18 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 // 				       kernelInfo);
 
 
-  // printf("Compiling INS Poisson Halo Extract Kernel\n");
-  // ins->pressureHaloExtractKernel=
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-		// 		       "insPressureHaloExtract",
-		// 		       kernelInfo);
+  printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->pressureHaloExtractKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+				       "insPressureHaloExtract",
+				       kernelInfo);
 
-  // printf("Compiling INS PoissonHalo Extract Kernel\n");
-  // ins->pressureHaloScatterKernel=
-  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-		// 		       "insPressureHaloScatter",
-		// 		       kernelInfo);
-//   // ===========================================================================//
+  printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->pressureHaloScatterKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+				       "insPressureHaloScatter",
+				       kernelInfo);
+  // ===========================================================================//
 
   return ins;
 }
