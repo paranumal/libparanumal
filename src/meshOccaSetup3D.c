@@ -124,6 +124,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 	       intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
       }
     }
+
     for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
       for(int m=0;m<mesh->Nfp;++m){
 	       intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
@@ -132,24 +133,32 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_cubInterpT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubInterpT);
+    	  cubInterpT);
 
     mesh->o_cubProjectT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubProjectT);
+    	  cubProjectT);
 
     mesh->o_cubDrWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubDrWT);
+    	  cubDrWT);
 
     mesh->o_cubDsWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubDsWT);
+    	  cubDsWT);
 
     mesh->o_cubDtWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubDtWT);
-    
+    	  cubDtWT);
+
+    mesh->o_intInterpT =
+      mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+        intInterpT);
+
+    mesh->o_intLIFTT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+        intLIFTT);
+
 
     // =============== Bernstein-Bezier allocations [added by NC] ============
     mesh->o_D0ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D0ids);
@@ -220,6 +229,38 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     }
   }
 
+ #if 1
+ // printf("Integration number of points: %d \n",mesh->intNfp);
+  mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+  mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      for(iint n=0;n<mesh->intNfp;++n){
+        dfloat ix = 0, iy = 0, iz=0;
+        for(iint m=0;m<mesh->Nfp;++m){
+          iint vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
+          dfloat xm = mesh->x[vid];
+          dfloat ym = mesh->y[vid];
+          dfloat zm = mesh->z[vid];
+          dfloat Inm = mesh->intInterp[m+n*mesh->Nfp+f*mesh->intNfp*mesh->Nfp]; // Fixed
+          ix += Inm*xm;
+          iy += Inm*ym;
+          iz += Inm*zm;
+        }
+        iint id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
+        mesh->intx[id] = ix;
+        mesh->inty[id] = iy;
+        mesh->intz[id] = iz;
+      }
+    }
+  }
+
+
+
+
+  #endif
 
   printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
   if (mesh->Nverts==8){     // hardcoded for hexes
@@ -287,6 +328,19 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->z);
+
+
+  mesh->o_intx =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+      mesh->intx);
+
+  mesh->o_inty =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+      mesh->inty);
+
+   mesh->o_intz =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+      mesh->intz);
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
