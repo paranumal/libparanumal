@@ -6,11 +6,10 @@
 void meshSurfaceGeometricFactorsTetP3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 6;
-  mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
-                            mesh->Nsgeo*mesh->Nfaces, sizeof(dfloat));
+  mesh->Nsgeo = 5;
+  mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfaces, sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     iint id = e*mesh->Nverts;
@@ -83,33 +82,5 @@ void meshSurfaceGeometricFactorsTetP3D(mesh3D *mesh){
     mesh->sgeo[base+NZID] = nz4/sJ4;
     mesh->sgeo[base+SJID] = sJ4*J;
     mesh->sgeo[base+IJID] = 1./J;
-#if 0
-    printf("N1=(%g,%g,%g),sJ1=%g\n", nx1/sJ1,ny1/sJ1,nz1/sJ1,sJ1*J);
-    printf("N2=(%g,%g,%g),sJ2=%g\n", nx2/sJ2,ny2/sJ2,nz2/sJ2,sJ2*J);
-    printf("N3=(%g,%g,%g),sJ3=%g\n", nx3/sJ3,ny3/sJ3,nz3/sJ3,sJ3*J);
-    printf("N4=(%g,%g,%g),sJ4=%g\n", nx4/sJ4,ny4/sJ4,nz4/sJ4,sJ4*J);
-#endif      
-  }
-  
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint baseM = e*mesh->Nfaces + f;
-      
-      // awkward: (need to find eP,fP relative to bulk+halo)
-      iint idP = mesh->vmapP[e*mesh->NfpMax*mesh->Nfaces+f*mesh->NfpMax+0];
-      iint eP = (idP>=0) ? (idP/mesh->NpMax):e;
-      
-      iint fP = mesh->EToF[baseM];
-      fP = (fP==-1) ? f:fP;
-      
-      iint baseP = eP*mesh->Nfaces + fP;
-      
-      // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
-      dfloat hinvM = 0.5*mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
-      dfloat hinvP = 0.5*mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
-      
-      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-    }
   }
 }

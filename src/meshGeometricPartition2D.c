@@ -59,39 +59,41 @@ unsigned int hilbert2D(unsigned int index1, unsigned int index2){
 
 // spread bits of i by introducing zeros between binary bits
 unsigned long long int bitSplitter(unsigned int i){
-  
+
   unsigned long long int mask = 1;
   unsigned long long int li = i;
   unsigned long long int lj = 0;
-  
+
   for(int b=0;b<bitRange;++b){
     lj |=  (li & mask) << b;
     mask <<= 1;
   }
-  
+
   return lj;
 
 }
 
 // compute Morton index of (ix,iy) relative to a bitRange x bitRange  Morton lattice
 unsigned long long int mortonIndex2D(unsigned int ix, unsigned int iy){
-  
+
   // spread bits of ix apart (introduce zeros)
   unsigned long long int sx = bitSplitter(ix);
   unsigned long long int sy = bitSplitter(iy);
 
   // interleave bits of ix and iy
   unsigned long long int mi = sx | (sy<<1);
-  
+
   return mi;
 }
 
 // capsule for element vertices + Morton index
 typedef struct {
-  
+
   unsigned long long int index;
-  
+
   iint element;
+
+  int type;
 
   // 4 for maximum number of vertices per element in 2D
   iint v[4];
@@ -105,10 +107,10 @@ int compareElements(const void *a, const void *b){
 
   element_t *ea = (element_t*) a;
   element_t *eb = (element_t*) b;
-  
+
   if(ea->index < eb->index) return -1;
   if(ea->index > eb->index) return  1;
-  
+
   return 0;
 
 }
@@ -122,13 +124,13 @@ void meshGeometricPartition2D(mesh2D *mesh){
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+
   iint maxNelements;
   MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
   maxNelements = 2*((maxNelements+1)/2);
-  
+
   // fix maxNelements
-  element_t *elements 
+  element_t *elements
     = (element_t*) calloc(maxNelements, sizeof(element_t));
 
   // local bounding box of element centers
@@ -144,7 +146,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
     }
     cx /= mesh->Nverts;
     cy /= mesh->Nverts;
-    
+
     mincx = mymin(mincx, cx);
     maxcx = mymax(maxcx, cx);
     mincy = mymin(mincy, cy);
@@ -166,7 +168,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // choose sub-range of Morton lattice coordinates to embed element centers in
   unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));
-  
+
   // compute Morton index for each element
   for(iint e=0;e<mesh->Nelements;++e){
 
@@ -187,9 +189,11 @@ void meshGeometricPartition2D(mesh2D *mesh){
       elements[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
     }
 
+    elements[e].type = mesh->elementInfo[e];
+
     unsigned int ix = (cx-gmincx)*Nboxes/(gmaxcx-gmincx);
     unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
-			
+
     //elements[e].index = mortonIndex2D(ix, iy);
     elements[e].index = hilbert2D(ix, iy);
   }
@@ -203,10 +207,10 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // odd-even parallel sort of element capsules based on their Morton index
   parallelSort(maxNelements, elements, sizeof(element_t),
-	       compareElements, 
+	       compareElements,
 	       bogusMatch);
 
-  
+
   // compress and renumber elements
   iint sk  = 0;
   for(iint e=0;e<maxNelements;++e){
@@ -217,20 +221,20 @@ void meshGeometricPartition2D(mesh2D *mesh){
   }
 
   iint localNelements = sk;
-  
+
   /// redistribute elements to improve balancing
   iint *globalNelements = (iint *) calloc(size,sizeof(iint));
   iint *starts = (iint *) calloc(size+1,sizeof(iint));
-  
+
   MPI_Allgather(&localNelements, 1, MPI_IINT, globalNelements, 1,  MPI_IINT, MPI_COMM_WORLD);
-  
+
   for(iint r=0;r<size;++r)
     starts[r+1] = starts[r]+globalNelements[r];
-  
+
   iint allNelements = starts[size];
 
   // decide how many to keep on each process
-  int chunk = allNelements/size; 
+  int chunk = allNelements/size;
   int remainder = allNelements - chunk*size;
 
   iint *Nsend = (iint *) calloc(size, sizeof(iint));
@@ -238,30 +242,30 @@ void meshGeometricPartition2D(mesh2D *mesh){
   iint *Ncount = (iint *) calloc(size, sizeof(iint));
   iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
   iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
-  
+
 
   for(iint e=0;e<localNelements;++e){
 
     // global element index
-    elements[e].element = starts[rank]+e; 
-    
+    elements[e].element = starts[rank]+e;
+
     // 0, chunk+1, 2*(chunk+1) ..., remainder*(chunk+1), remainder*(chunk+1) + chunk
     iint r;
     if(elements[e].element<remainder*(chunk+1))
-      r = elements[e].element/(chunk+1);	
+      r = elements[e].element/(chunk+1);
     else
       r = remainder + ((elements[e].element-remainder*(chunk+1))/chunk);
-    
+
     ++Nsend[r];
-  } 
-  
+  }
+
   // find send offsets
   for(iint r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
-  
-  // exchange byte counts 
+
+  // exchange byte counts
   MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
-  
+
   // count incoming clusters
   iint newNelements = 0;
   for(iint r=0;r<size;++r){
@@ -272,9 +276,9 @@ void meshGeometricPartition2D(mesh2D *mesh){
   }
   for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
-  
+
   element_t *tmpElements = (element_t *) calloc(newNelements, sizeof(element_t));
-  
+
   // exchange parallel clusters
   MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_CHAR,
                 tmpElements, Nrecv, recvOffsets, MPI_CHAR, MPI_COMM_WORLD);
@@ -282,16 +286,18 @@ void meshGeometricPartition2D(mesh2D *mesh){
   // replace elements with inbound elements
   if (elements) free(elements);
   elements = tmpElements;
-  
+
   // reset number of elements and element-to-vertex connectivity from returned capsules
   free(mesh->EToV);
   free(mesh->EX);
   free(mesh->EY);
+  free(mesh->elementInfo);
 
   mesh->Nelements = newNelements;
   mesh->EToV = (iint*) calloc(newNelements*mesh->Nverts, sizeof(iint));
   mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
+  mesh->elementInfo = (int*) calloc(newNelements, sizeof(int));
 
   for(iint e=0;e<newNelements;++e){
     for(iint n=0;n<mesh->Nverts;++n){
@@ -299,6 +305,6 @@ void meshGeometricPartition2D(mesh2D *mesh){
       mesh->EX[e*mesh->Nverts + n]   = elements[e].EX[n];
       mesh->EY[e*mesh->Nverts + n]   = elements[e].EY[n];
     }
+    mesh->elementInfo[e] = elements[e].type;
   }
-
 }

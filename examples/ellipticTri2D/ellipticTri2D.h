@@ -6,7 +6,7 @@
 #include "mesh2D.h"
 
 // block size for reduction (hard coded)
-#define blockSize 256 
+#define blockSize 256
 
 typedef struct {
 
@@ -24,21 +24,23 @@ typedef struct {
 
   occa::memory o_oasForwardDgT;
   occa::memory o_oasBackDgT;
-  
+
   occa::kernel restrictKernel;
   occa::kernel preconKernel;
 
   occa::kernel coarsenKernel;
-  occa::kernel prolongateKernel;  
+  occa::kernel prolongateKernel;
 
   occa::kernel patchSolverKernel;
   occa::kernel approxPatchSolverKernel;
+  occa::kernel localPatchSolverKernel;
 
   ogs_t *ogsP, *ogsDg;
   hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invAP;
+  occa::memory o_invDegreeAP;
 
   // coarse grid basis for preconditioning
   occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
@@ -60,7 +62,7 @@ typedef struct {
 
   // block Jacobi precon
   occa::memory o_invMM;
-  occa::kernel blockJacobiKernel;  
+  occa::kernel blockJacobiKernel;
 } precon_t;
 
 
@@ -74,16 +76,25 @@ typedef struct {
 
   ogs_t *ogsDg;
 
+  // C0 halo gather-scatter info
+  ogs_t *halo;
+
+  // C0 nonhalo gather-scatter info
+  ogs_t *nonHalo;
+
   char *type;
 
   iint Nblock;
 
   dfloat tau;
-  
+
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
 
   dfloat *sendBuffer, *recvBuffer;
+
+  occa::stream defaultStream;
+  occa::stream dataStream;
 
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
@@ -98,8 +109,16 @@ typedef struct {
   occa::memory o_invDegree;
   occa::memory o_EToB;
 
+  // list of elements that are needed for global gather-scatter
+  iint NglobalGatherElements;
+  occa::memory o_globalGatherElementList;
+
+  // list of elements that are not needed for global gather-scatter
+  iint NlocalGatherElements;
+  occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
+  occa::kernel partialAxKernel;
   occa::kernel rhsBCKernel;
   occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
@@ -110,6 +129,8 @@ typedef struct {
 
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
+  occa::kernel partialGradientKernel;
+  occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
 }solver_t;
 
@@ -145,3 +166,18 @@ void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options);
+
+void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+
+void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+
+void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *recvBuffer);
+
+void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
+          iint Nlocal,     // number of local nodes
+          iint Nbytes,     // number of bytes per node
+          iint *gatherLocalIds,  // local index of nodes
+          iint *gatherBaseIds,   // global index of their base nodes
+          iint *gatherHaloFlags,
+          ogs_t **halo,
+          ogs_t **nonHalo);   // 1 for halo node, 0 for not

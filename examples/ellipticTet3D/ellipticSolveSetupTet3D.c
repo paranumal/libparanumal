@@ -27,6 +27,9 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
   iint NallP  = NtotalP;
+
+  int NblockV = mymax(1,1024/mesh->Np); // works for CUDA
+  int NblockS = mymax(1,1024/(mesh->Nfp*mesh->Nfaces)); // works for CUDA
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -59,6 +62,10 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   solver->Nblock = Nblock;
 
+  kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NblockS", NblockS);
+  
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);

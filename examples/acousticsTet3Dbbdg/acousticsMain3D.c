@@ -11,7 +11,7 @@ int main(int argc, char **argv){
     exit(-1);
   }
 
-  // int specify polynomial degree 
+  // int specify polynomial degree
   int N = atoi(argv[2]);
 
   // set up mesh stuff
@@ -22,7 +22,7 @@ int main(int argc, char **argv){
 
   // run
   //acousticsRun3Dbbdg(mesh);
-  acousticsOccaRun3Dbbdg(mesh);  
+  acousticsOccaRun3Dbbdg(mesh);
 
   // close down MPI
   MPI_Finalize();

@@ -49,7 +49,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
-                                   dfloat **patchesInvA,
+                                   dfloat **patchesInvA, dfloat **localA,
                                    const char *options);
 
 precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
@@ -276,30 +276,62 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     precon->o_oasDiagInvOpDg =
       mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
-    if (strstr(options,"PATCHSOLVE")||strstr(options,"APPROXPATCH")) {
+    if (strstr(options,"PATCHSOLVE")||strstr(options,"APPROXPATCH")
+      ||strstr(options,"LOCALPATCH")) {
       iint nnz;
       nonZero_t *A;
       dfloat *invAP;
+      dfloat *localInvA;
       hgs_t *hgs;
 
       NpP = mesh->Np*(mesh->Nfaces+1);
       iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-      if (strstr(options,"PATCHSOLVE")) {
-        //initialize the full inverse operators on each 4 element patch
-        ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
+      //initialize the full inverse operators on each 4 element patch
+      ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
                                    BCType, &A, &nnz, &hgs, globalStarts,
-                                   &invAP, options);   
+                                   &invAP, &localInvA, options);
 
+      if (strstr(options,"PATCHSOLVE")) {
         precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
       } else if (strstr(options,"APPROXPATCH")) {
+        for (iint e =0;e<mesh->Nelements;e++) {
+          //check if this is a boudary element
+          int bcflag=0;
+          for (int f=0;f<mesh->Nfaces;f++)
+            if (mesh->EToE[e*mesh->Nfaces +f]<0) bcflag++;
+
+          if (bcflag) break;
+
+          iint offset = e*NpP*NpP;
+          for (int n=0;n<NpP*NpP;n++)
+            invAP[offset+n] = mesh->invAP[n];
+        }
+
         //set reference patch inverse
-        precon->o_invAP = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->invAP);      
+        //precon->o_invAP = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->invAP);
+        precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
 
         //rotated node ids of neighbouring element
         mesh->o_rmapP = mesh->device.malloc(mesh->Np*mesh->Nfaces*sizeof(iint),mesh->rmapP);
-        mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);    
+        mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
+      } else if (strstr(options,"LOCALPATCH")) {
+        //initialize the full inverse operators on each 4 element patch
+        ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
+                                   BCType, &A, &nnz, &hgs, globalStarts,
+                                   &invAP, &localInvA, options);
+
+        precon->o_invAP = mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Np*sizeof(dfloat),localInvA);
       }
+
+      dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+      for (iint e=0;e<mesh->Nelements;e++) {
+        for (int f=0;f<mesh->Nfaces;f++)
+            invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
+        invDegree[e] = 1./invDegree[e];
+      }
+      precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+      free(invDegree);
 
       mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
 
@@ -308,7 +340,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       solver->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
       solver->o_zP.free();
       solver->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), solver->zP);
-      
+
       //build a gather for the overlapping nodes
 
       // every degree of freedom has its own global id
@@ -351,15 +383,17 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
             int fP = (f==0) ? 0: mesh->EToF[e*mesh->Nfaces+f-1];
 
             if (eP>-1) {
-              if (strstr(options,"PATCHSOLVE")) {
-                globalIdsP[e*NpP + f*mesh->Np + n] = globalIds[eP*mesh->Np + n];
-                globalOwnersP[e*NpP + f*mesh->Np + n] = globalOwners[eP*mesh->Np + n];
-
-              } else if (strstr(options,"APPROXPATCH")) {
+              if (strstr(options,"APPROXPATCH")) {
                 int id = mesh->rmapP[fP*mesh->Np+n];
                 globalIdsP[e*NpP + f*mesh->Np + n] = globalIds[eP*mesh->Np + id];
                 globalOwnersP[e*NpP + f*mesh->Np + n] = globalOwners[eP*mesh->Np + id];
+              } else {
+                globalIdsP[e*NpP + f*mesh->Np + n] = globalIds[eP*mesh->Np + n];
+                globalOwnersP[e*NpP + f*mesh->Np + n] = globalOwners[eP*mesh->Np + n];
               }
+            } else {
+              globalIdsP[e*NpP + f*mesh->Np + n] = -1;
+              globalOwnersP[e*NpP + f*mesh->Np + n] = -1;
             }
           }
         }
@@ -398,6 +432,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
+    
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
@@ -416,7 +451,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
                                    Cols,
                                    Vals,
                                    hgs,
-                                   options);  
+                                   options);
 
     free(A); free(Rows); free(Cols); free(Vals);
   }

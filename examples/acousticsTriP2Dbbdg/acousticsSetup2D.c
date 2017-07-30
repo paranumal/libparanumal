@@ -10,6 +10,8 @@ iint factorial(iint n) {
   return retval;
 }
 
+dfloat wavespeed(dfloat x, dfloat y);
+
 void acousticsSetup2D(mesh2D *mesh){
 
   iint rank, size;
@@ -17,7 +19,7 @@ void acousticsSetup2D(mesh2D *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // set time step
-  mesh->finalTime = 0.5;
+  mesh->finalTime = 1.;
   dfloat cfl = .4; // depends on the stability region size
 
   // errorStep
@@ -29,8 +31,9 @@ void acousticsSetup2D(mesh2D *mesh){
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   dfloat hmin = 1e9;
   for(iint e=0;e<mesh->Nelements;++e){ 
-    EtoDT[e] = 1e9;  
+    EtoDT[e] = 1e9;
 
+    //find the min and max length scales
     for(iint f=0;f<mesh->Nfaces;++f){
       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
@@ -41,16 +44,16 @@ void acousticsSetup2D(mesh2D *mesh){
 
       dfloat hest = .5/(sJ*invJ);
 
+      hmin = mymin(hmin, hest);
+
       // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
       dfloat dtEst = cfl*hest/((mesh->N[e]+1.)*(mesh->N[e]+1.)*mesh->Lambda2);
-
-      hmin = mymin(hmin, hest);
-      EtoDT[e] = mymin(EtoDT[e], dtEst);
+      EtoDT[e] = mymin(EtoDT[e],dtEst);
     }
   }
 
   //use dt on each element to setup MRAB
-  int maxLevels = 10;
+  int maxLevels = 100;
   meshMRABSetupP2D(mesh,EtoDT,maxLevels);
 
 
@@ -75,8 +78,11 @@ void acousticsSetup2D(mesh2D *mesh){
       dfloat y = mesh->y[n + mesh->NpMax*e];
 
       cnt = e*mesh->NpMax*mesh->Nfields + n*mesh->Nfields;
-      acousticsGaussianPulse2D(x, y, t,
-             mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      //acousticsGaussianPulse2D(x, y, t,
+      //       mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      mesh->q[cnt+0] = 0.;
+      mesh->q[cnt+1] = 0.;
+      mesh->q[cnt+2] = 0.;
     }
   }
 
@@ -290,7 +296,6 @@ void acousticsSetup2D(mesh2D *mesh){
       iint N = mesh->N[e];
 
       for(iint n=0;n<mesh->cubNp[N];++n){ /* for each node */
-        
         // cubature node coordinates
         dfloat rn = mesh->cubr[N][n]; 
         dfloat sn = mesh->cubs[N][n];
@@ -299,13 +304,7 @@ void acousticsSetup2D(mesh2D *mesh){
         dfloat x = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
         dfloat y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
         
-        // smoothly varying (sinusoidal) wavespeed
-        //printf("M_PI = %f\n",M_PI);
-        if (y<0.f) {
-          mesh->c2[n + mesh->cubNpMax*e] = 0.2;//1.0 + 0.5*sin(M_PI*y);
-        } else {
-          mesh->c2[n + mesh->cubNpMax*e] = 1.0;
-        }
+        mesh->c2[n + mesh->cubNpMax*e] = wavespeed(x,y);
       }
     }
 
@@ -372,6 +371,14 @@ void acousticsSetup2D(mesh2D *mesh){
     mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQM);
   mesh->o_fQP = 
     mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQP);
+
+
+  //set up pml
+  acousticsPmlSetup2D(mesh);
+
+  //set up source injection
+  acousticsSourceSetup2D(mesh,kernelInfo);
+
 
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
@@ -487,6 +494,10 @@ void acousticsSetup2D(mesh2D *mesh){
   mesh->surfaceKernel      = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->updateKernel       = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->traceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlVolumeKernel       = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlSurfaceKernel      = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlUpdateKernel       = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlTraceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
 
   for (iint p=1;p<=mesh->NMax;p++) {
     occa::kernelInfo newInfo = kernelInfo;
@@ -508,6 +519,9 @@ void acousticsSetup2D(mesh2D *mesh){
 
     int NblockS = 512/maxNodes; // works for CUDA
     newInfo.addDefine("p_NblockS", NblockS);
+
+    int NblockCub = 512/mesh->cubNp[p]; // works for CUDA
+    newInfo.addDefine("p_NblockCub", NblockCub);
 
     int maxCubNodes = mymax(mesh->cubNp[p], maxNodes);
     newInfo.addDefine("p_maxCubNodes", maxCubNodes);
@@ -531,6 +545,14 @@ void acousticsSetup2D(mesh2D *mesh){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
                  "acousticsMRABTraceUpdateP2D_wadg",
                  newInfo);
+      mesh->pmlUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP2D.okl",
+                 "acousticsMRABPmlUpdateP2D_wadg",
+                   newInfo);
+      mesh->pmlTraceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP2D.okl",
+                 "acousticsMRABPmlTraceUpdateP2D_wadg",
+                   newInfo);
     #else 
       mesh->updateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
@@ -540,7 +562,24 @@ void acousticsSetup2D(mesh2D *mesh){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP2D.okl",
                  "acousticsMRABTraceUpdateP2D",
                  newInfo);
+      mesh->pmlUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP2D.okl",
+                 "acousticsMRABPmlUpdateP2D",
+                   newInfo);
+      mesh->pmlTraceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP2D.okl",
+                 "acousticsMRABPmlTraceUpdateP2D",
+                   newInfo);
     #endif
+
+    mesh->pmlVolumeKernel[p] =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlVolumeP2D.okl",
+               "acousticsbbdgMRABPmlVolumeP2D",
+               newInfo);
+    mesh->pmlSurfaceKernel[p] =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlSurfaceP2D.okl",
+               "acousticsbbdgMRABPmlSurfaceP2D",
+               newInfo);
 
   }
   
@@ -548,4 +587,17 @@ void acousticsSetup2D(mesh2D *mesh){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
                "meshHaloExtract2D",
                kernelInfo);
+}
+
+dfloat wavespeed(dfloat x, dfloat y) {
+
+  dfloat c2;
+  
+  if (y<0.f) {
+    c2 = 1.5;//1.0 + 0.5*sin(M_PI*y);
+  } else {
+    c2 = 1;
+  }
+
+  return c2;
 }
