@@ -82,21 +82,11 @@ void insRun3D(ins_t *ins, char *options){
   #endif
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
-
-    // switch(subcycling){
-    //   case 1:
-    //     insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
-    //   break;
-
-    //   case 0:
-    //    insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-    //   break;
-    // }
     
     insAdvectionStep3D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-    // insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-    // insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
-    // insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
+    insHelmholtzStep3D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+    insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
 
     printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){

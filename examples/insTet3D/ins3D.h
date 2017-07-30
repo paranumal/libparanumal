@@ -114,15 +114,15 @@ void insPlotVTU3D(ins_t *solver, char *fileNameBase);
 void insAdvectionStep3D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
-// void insHelmholtzStep2D(ins_t *solver, iint tstep, iint haloBytes,
-// 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+void insHelmholtzStep3D(ins_t *solver, iint tstep, iint haloBytes,
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
-// void insPoissonStep2D(ins_t *solver, iint tstep, iint haloBytes,
-// 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+void insPoissonStep3D(ins_t *solver, iint tstep, iint haloBytes,
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
-// void insUpdateStep2D(ins_t *solver, iint tstep, iint haloBytes,
-// 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+void insUpdateStep3D(ins_t *solver, iint tstep, iint haloBytes,
+	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
 

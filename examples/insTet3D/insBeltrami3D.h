@@ -113,6 +113,8 @@
 // Compute bcs for P increment
 #define insPoissonBoundaryConditions3D(bc,t,dt,x,y,z,nx,ny,nz,pB,pxB,pyB,pzB)	\
   {	\
+    dfloat a = OCCA_PI/4.f; \
+    dfloat d = OCCA_PI/2.f; \
     if((bc==1)||(bc==4)){						\
       *(pB) = 0.f;							\
 									\

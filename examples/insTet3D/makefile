@@ -43,7 +43,10 @@ insRun3D.o \
 insError3D.o \
 insReport3D.o \
 insPlotVTU3D.o \
-insAdvectionStep3D.o  
+insAdvectionStep3D.o \
+insHelmholtzStep3D.o \
+insPoissonStep3D.o \
+insUpdateStep3D.o     
 #../ellipticTet3D/ellipticSetupTet3D.o \
 #../ellipticTet3D/ellipticPreconditionerSetupTet3D.o\
 #../ellipticTet3D/ellipticCoarsePreconditionerSetupTet3D.o\
@@ -105,13 +108,8 @@ clean :
 
 
 #insMakePeriodic2D.o \
-
-
 #insErrorNorms2D.o \
-
-
 #insAdvectionSubCycleStep2D.o \
-#insHelmholtzStep2D.o \
-#insPoissonStep2D.o \
+
 #insUpdateStep2D.o \
 #insBuildVectorIpdgTri2D.o \
