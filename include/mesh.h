@@ -1,6 +1,7 @@
 #ifndef MESH_H
 #define MESH_H 1
 
+#include "mpi.h"
 #include <math.h>
 #include <stdlib.h>
 #include <occa.hpp>
