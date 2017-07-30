@@ -46,18 +46,17 @@ insPlotVTU3D.o \
 insAdvectionStep3D.o \
 insHelmholtzStep3D.o \
 insPoissonStep3D.o \
-insUpdateStep3D.o     
-#../ellipticTet3D/ellipticSetupTet3D.o \
-#../ellipticTet3D/ellipticPreconditionerSetupTet3D.o\
-#../ellipticTet3D/ellipticCoarsePreconditionerSetupTet3D.o\
-#../ellipticTet3D/ellipticSolveTet3D.o\
-#../ellipticTet3D/ellipticSolveSetupTet3D.o\
-#../ellipticTet3D/ellipticHaloExchange3D.o\
-#../ellipticTet3D/ellipticParallelGatherScatterTet3D.o \
-#../ellipticTet3D/ellipticBuildContinuousTet3D.o \
-#../ellipticTet3D/ellipticBuildIpdgTet3D.o
+insUpdateStep3D.o \
+../ellipticTet3D/ellipticSetupTet3D.o \
+../ellipticTet3D/ellipticPreconditionerSetupTet3D.o\
+../ellipticTet3D/ellipticCoarsePreconditionerSetupTet3D.o\
+../ellipticTet3D/ellipticSolveTet3D.o\
+../ellipticTet3D/ellipticSolveSetupTet3D.o\
+../ellipticTet3D/ellipticHaloExchange3D.o\
+../ellipticTet3D/ellipticParallelGatherScatterTet3D.o \
+../ellipticTet3D/ellipticBuildContinuousTet3D.o \
+../ellipticTet3D/ellipticBuildIpdgTet3D.o
 
-# library objects
 LOBJS = \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \

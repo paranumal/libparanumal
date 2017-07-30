@@ -177,18 +177,18 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
+  // ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
   // kernelInfoV.addInclude(boundaryHeaderFileName);
-  // solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
+  // solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
   // ins->vSolver        = vSolver;
   // ins->vSolverOptions = vSolverOptions;
 
   printf("==================PRESSURE SOLVE SETUP========================\n");
-  // SETUP PRESSURE and VELOCITY SOLVERS
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insPressureEllipticBC2D.h");
+  //SETUP PRESSURE and VELOCITY SOLVERS
+  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
   // kernelInfoP.addInclude(boundaryHeaderFileName);
-  // solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
+  // solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
   // ins->pSolver        = pSolver;
   // ins->pSolverOptions = pSolverOptions;
 
