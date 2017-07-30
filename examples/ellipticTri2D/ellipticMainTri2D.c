@@ -21,10 +21,10 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE, BLOCKJACOBI
   // method can be IPDG
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,APPROXSOLVE coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND,UBERGRID");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
 
@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   //dfloat lambda = 0;
 
   // set up
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
-  // Boundary Type translation. Just default from the mesh file. 
+  // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
   dfloat tau = (mesh->N)*(mesh->N+2-1);
@@ -134,7 +134,7 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU2D(mesh, "foo", 0);
+  meshPlotVTU2D(mesh, "foo.vtu", 0);
 
   // close down MPI
   MPI_Finalize();

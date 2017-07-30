@@ -16,6 +16,7 @@ typedef struct {
 
   iint cRank;
   iint cId;
+  int type;
 } cElement_t;
 
 typedef struct {
@@ -102,6 +103,7 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
   mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->N  =   (iint*) realloc(mesh->N, mesh->Nelements*sizeof(iint));
+  mesh->elementInfo  =   (int*) realloc(mesh->elementInfo, mesh->Nelements*sizeof(int));
   mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
 
   for(iint e=0;e<mesh->Nelements;++e){
@@ -112,6 +114,7 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
       mesh->EZ  [e*mesh->Nverts + n] = acceptedPartition[e].EZ[n];
     }
     mesh->N[e] = acceptedPartition[e].N;
+    mesh->elementInfo[e] = acceptedPartition[e].type;
     mesh->MRABlevel[e] = acceptedPartition[e].level;
   }
 
@@ -124,20 +127,21 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
-  // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTetP3D(mesh);
-
   // compute geometric factors
   meshGeometricFactorsTet3D(mesh);
+
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTetP3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetupP(mesh);
 
+  // compute physical (x,y) locations of the element nodes
+  meshPhysicalNodesTetP3D(mesh);
+  
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP3D(mesh);
 
-  // compute surface geofacs
-  meshSurfaceGeometricFactorsTetP3D(mesh);
 
   if (mesh->totalHaloPairs) {
     mesh->N = (iint *) realloc(mesh->N,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));

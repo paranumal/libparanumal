@@ -12,6 +12,34 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   occa::initTimer(mesh->device);
 
+
+  // find elements that have all neighbors on this process
+  iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+
+  iint Ninterior = 0, NnotInterior = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint flag = 0;
+    for(iint f=0;f<mesh->Nfaces;++f)
+      if(mesh->EToP[e*mesh->Nfaces+f]!=-1)
+	      flag = 1;
+    if(!flag)
+      internalElementIds[Ninterior++] = e;
+    else
+      notInternalElementIds[NnotInterior++] = e;
+  }
+
+  printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
+
+  mesh->NinternalElements = Ninterior;
+  mesh->NnotInternalElements = NnotInterior;
+  if(Ninterior)
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
+
+  if(NnotInterior>0)
+    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(iint), notInternalElementIds);
+
+
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
@@ -124,7 +152,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 	       intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
       }
     }
-
     for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
       for(int m=0;m<mesh->Nfp;++m){
 	       intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
@@ -133,19 +160,19 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_cubInterpT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-    	  cubInterpT);
+			  cubInterpT);
 
     mesh->o_cubProjectT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-    	  cubProjectT);
+			  cubProjectT);
 
     mesh->o_cubDrWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-    	  cubDrWT);
+			  cubDrWT);
 
     mesh->o_cubDsWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-    	  cubDsWT);
+			  cubDsWT);
 
     mesh->o_cubDtWT =
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),

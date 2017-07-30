@@ -6,6 +6,8 @@ iint factorial(iint n) {
   return retval;
 }
 
+dfloat wavespeed(dfloat x, dfloat y, dfloat z);
+
 void acousticsSetup3D(mesh3D *mesh){
 
   iint rank, size;
@@ -71,11 +73,15 @@ void acousticsSetup3D(mesh3D *mesh){
       dfloat z = mesh->z[n + mesh->NpMax*e];
       
       iint cnt = e*mesh->NpMax*mesh->Nfields + n*mesh->Nfields;
-      acousticsGaussianPulse3D(x, y, z, time,
-				mesh->q+cnt,
-				mesh->q+cnt+1,
-				mesh->q+cnt+2,
-				mesh->q+cnt+3);
+      //acousticsGaussianPulse3D(x, y, z, time,
+			//	mesh->q+cnt,
+			//	mesh->q+cnt+1,
+			//	mesh->q+cnt+2,
+			//	mesh->q+cnt+3);
+      mesh->q[cnt+0] = 0.;
+      mesh->q[cnt+1] = 0.;
+      mesh->q[cnt+2] = 0.;
+      mesh->q[cnt+3] = 0.;
     }
   }
 
@@ -331,13 +337,7 @@ void acousticsSetup3D(mesh3D *mesh){
         dfloat y = -0.5*(rn+sn+tn+1.)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4 ;
         dfloat z = -0.5*(rn+sn+tn+1.)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4 ;
         
-        // smoothly varying (sinusoidal) wavespeed
-        //printf("M_PI = %f\n",M_PI);
-        if (z<0.f) {
-          mesh->c2[n + mesh->cubNpMax*e] = 0.2;//1.0 + 0.5*sin(M_PI*y);
-        } else {
-          mesh->c2[n + mesh->cubNpMax*e] = 1.0;
-        }
+        mesh->c2[n + mesh->cubNpMax*e] = wavespeed(x,y,z);
       }
     }
 
@@ -427,6 +427,12 @@ void acousticsSetup3D(mesh3D *mesh){
     mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQM);
   mesh->o_fQP = 
     mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->NfpMax*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQP);
+
+  //set up pml
+  acousticsPmlSetup3D(mesh);
+
+  //set up source injection
+  acousticsSourceSetup3D(mesh,kernelInfo);
 
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
@@ -530,6 +536,11 @@ void acousticsSetup3D(mesh3D *mesh){
   mesh->surfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->updateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
   mesh->traceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlVolumeKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlSurfaceKernel = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+  mesh->pmlTraceUpdateKernel  = (occa::kernel *) malloc((mesh->NMax+1)*sizeof(occa::kernel));
+
 
   for (iint p=1;p<=mesh->NMax;p++) {
     occa::kernelInfo newInfo = kernelInfo;
@@ -554,6 +565,9 @@ void acousticsSetup3D(mesh3D *mesh){
     int NblockS = 512/maxNodes; // works for CUDA
     newInfo.addDefine("p_NblockS", NblockS);
 
+    int NblockCub = 512/mesh->cubNp[p]; // works for CUDA
+    newInfo.addDefine("p_NblockCub", NblockCub);
+
     int maxCubNodes = mymax(mesh->cubNp[p], maxNodes);
     newInfo.addDefine("p_maxCubNodes", maxCubNodes);
 
@@ -576,6 +590,14 @@ void acousticsSetup3D(mesh3D *mesh){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP3D.okl",
                  "acousticsMRABTraceUpdateP3D_wadg",
                  newInfo);
+      mesh->pmlUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
+               "acousticsMRABPmlUpdateP3D_wadg",
+                 newInfo);
+      mesh->pmlTraceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
+               "acousticsMRABPmlTraceUpdateP3D_wadg",
+                 newInfo);
     #else 
       mesh->updateKernel[p] =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP3D.okl",
@@ -585,8 +607,24 @@ void acousticsSetup3D(mesh3D *mesh){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABUpdateP3D.okl",
                  "acousticsMRABTraceUpdateP3D",
                  newInfo);
+      mesh->pmlUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
+               "acousticsMRABPmlUpdateP3D",
+                 newInfo);
+      mesh->pmlTraceUpdateKernel[p] =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsMRABPmlUpdateP3D.okl",
+               "acousticsMRABPmlTraceUpdateP3D",
+                 newInfo);
     #endif
 
+    mesh->pmlVolumeKernel[p] =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlVolume3D.okl",
+               "acousticsbbdgMRABPmlVolume3D",
+               newInfo);
+    mesh->pmlSurfaceKernel[p] =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/acousticsbbdgMRABPmlSurface3D.okl",
+               "acousticsbbdgMRABPmlSurface3D",
+               newInfo);
   }
   
   mesh->haloExtractKernel =
@@ -594,3 +632,19 @@ void acousticsSetup3D(mesh3D *mesh){
 				       "meshHaloExtract3D",
 				       kernelInfo);
 }
+
+dfloat wavespeed(dfloat x, dfloat y, dfloat z) {
+
+  dfloat c2;
+  
+  if (z<0.f) {
+    c2 = 1.5;//1.0 + 0.5*sin(M_PI*y);
+  } else {
+    c2 = 1.0;
+  }
+
+  return c2;
+}
+
+
+        

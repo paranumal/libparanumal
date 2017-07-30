@@ -4,29 +4,29 @@ void boundaryConditions3D(iint bc, dfloat time, dfloat x, dfloat y, dfloat z,
 			  dfloat uM, dfloat vM, dfloat wM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *wP, dfloat *pP){
   if(bc==1){
-    *uP = -uM;	
+    *uP = -uM;
     *vP = -vM;
     *wP = -wM;
-    *pP = pM;	
-  }		
-  if(bc==2){	
+    *pP = pM;
+  }
+  if(bc==2){
     dfloat dx = 1.f/sqrt(2.f);
     dfloat dy = 1.f/sqrt(2.f);
     dfloat dz = 0;
     dfloat omega = 10.f*M_PI;
-    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));	
+    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat wI = dz*wave;
-    dfloat pI = wave;	
-    *uP = -uM -2.f*uI;	
+    dfloat pI = wave;
+    *uP = -uM -2.f*uI;
     *vP = -vM -2.f*vI;
-    *wP = -wM -2.f*wI;	
-    *pP = pM;		
+    *wP = -wM -2.f*wI;
+    *pP = pM;
   }
 }
 
-    
+
 void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
 
   // temporary storage for flux terms
@@ -62,18 +62,18 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
       iint idP = mesh->mapP[id]*mesh->Nfields;
 
       if(idP<0) idP = idM;
-      
+
       // load negative trace node values of q
-      dfloat uM = mesh->fQ[idM+0];
-      dfloat vM = mesh->fQ[idM+1];
-      dfloat wM = mesh->fQ[idM+2];
-      dfloat pM = mesh->fQ[idM+3];
+      dfloat uM = mesh->fQM[idM+0];
+      dfloat vM = mesh->fQM[idM+1];
+      dfloat wM = mesh->fQM[idM+2];
+      dfloat pM = mesh->fQM[idM+3];
 
       // load positive trace node values of q
-      dfloat uP = mesh->fQ[idP+0];
-      dfloat vP = mesh->fQ[idP+1];
-      dfloat wP = mesh->fQ[idP+2];
-      dfloat pP = mesh->fQ[idP+3];
+      dfloat uP = mesh->fQP[idP+0];
+      dfloat vP = mesh->fQP[idP+1];
+      dfloat wP = mesh->fQP[idP+2];
+      dfloat pP = mesh->fQP[idP+3];
 
       // find boundary type
       iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];
@@ -82,13 +82,13 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
                  mesh->x[idM], mesh->y[idM], mesh->z[idM],
                  uM, vM, wM, pM,
                  &uP, &vP,&wP, &pP);
-      
+
       // compute (q^* - q^-)
       dfloat duS = 0.5*(uP-uM) + mesh->Lambda2*(-nx*(pP-pM));
       dfloat dvS = 0.5*(vP-vM) + mesh->Lambda2*(-ny*(pP-pM));
       dfloat dwS = 0.5*(wP-wM) + mesh->Lambda2*(-nz*(pP-pM));
       dfloat dpS = 0.5*(pP-pM) + mesh->Lambda2*(-nx*(uP-uM)-ny*(vP-vM)-nz*(wP-wM));
-      
+
       // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
       fluxu[n] = invJ*sJ*(-nx*dpS);
       fluxv[n] = invJ*sJ*(-ny*dpS);
@@ -98,8 +98,8 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
 
     // apply L0 to fluxes.
     for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-    
-      iint id = n%mesh->Nfp;  
+
+      iint id = n%mesh->Nfp;
       iint f  = n/mesh->Nfp;
 
       dfloat utmpflux = 0.0;
@@ -111,7 +111,7 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
       for (int m = 0; m < 7; ++m){
         iint   L0id  = mesh->L0ids [7*id+m];
         dfloat L0val = mesh->L0vals[7*id+m];
-        
+
         utmpflux += L0val * fluxu[L0id+f*mesh->Nfp];
         vtmpflux += L0val * fluxv[L0id+f*mesh->Nfp];
         wtmpflux += L0val * fluxw[L0id+f*mesh->Nfp];
@@ -127,7 +127,7 @@ void acousticsSurface3Dbbdg(mesh3D *mesh, iint lev, dfloat time){
     // apply lift reduction and accumulate RHS
     for(iint n=0;n<mesh->Np;++n){
       iint id = 3*mesh->Nfields*(mesh->Np*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
-      
+
       // load RHS
       dfloat rhsqnu = mesh->rhsq[id+0];
       dfloat rhsqnv = mesh->rhsq[id+1];

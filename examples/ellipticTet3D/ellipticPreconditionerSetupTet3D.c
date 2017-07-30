@@ -299,13 +299,11 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
     }
 
     precon->parAlmond = parAlmondSetup(mesh, 
-                                   Nnum, 
                                    globalStarts, 
                                    globalnnzTotal,      
                                    globalRows,        
                                    globalCols,        
                                    globalVals,    
-                                   0,             // 0 if no null space
                                    hgs,
                                    options);
 

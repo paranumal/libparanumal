@@ -36,7 +36,7 @@ void pcg(parAlmond_t *parAlmond,
       parAlmond->levels[0]->x[i] = x[i];
 
     free(x); free(p); free(Ap);
-    return; 
+    return;
   }
 
   // Precondition, z = M^{-1}*r
@@ -94,9 +94,9 @@ void pcg(parAlmond_t *parAlmond,
     dfloat zdotAp = 0;
     MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     beta = -alpha*zdotAp/rdotz0;
-  #else 
+  #else
     beta = rdotz1/rdotz0;
-  #endif 
+  #endif
 
     // p = z + beta*p
     vectorAdd(m, 1.0, z, beta, p);
@@ -141,9 +141,9 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
 
   occa::memory o_x, o_p, o_Ap;
 
-  o_x  = parAlmond->device.malloc(n*sizeof(dfloat));
-  o_Ap = parAlmond->device.malloc(n*sizeof(dfloat));
-  o_p  = parAlmond->device.malloc(n*sizeof(dfloat));
+  o_x  = parAlmond->device.malloc(n*sizeof(dfloat),parAlmond->levels[0]->x);
+  o_Ap = parAlmond->device.malloc(n*sizeof(dfloat),parAlmond->levels[0]->x);
+  o_p  = parAlmond->device.malloc(n*sizeof(dfloat),parAlmond->levels[0]->x);
 
   //    x = 0;
   setVector(parAlmond, m, o_x, 0.0);
@@ -153,7 +153,7 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
     parAlmond->levels[0]->o_x.copyFrom(o_x);
     printf("Almond PCG iter %d, res = %g\n", 0, sqrt(rdotr0));
     o_x.free(); o_p.free(); o_Ap.free();
-    return; 
+    return;
   }
 
   // Precondition, z = M^{-1}*r
@@ -210,9 +210,9 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
     dfloat zdotAp = 0;
     MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     beta = -alpha*zdotAp/rdotz0;
-  #else 
+  #else
     beta = rdotz1/rdotz0;
-  #endif 
+  #endif
 
     // p = z + beta*p
     vectorAdd(parAlmond, m, 1.0, o_z, beta, o_p);

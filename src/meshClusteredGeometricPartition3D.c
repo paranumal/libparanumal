@@ -16,6 +16,7 @@ typedef struct {
 
   iint cRank;
   iint cId;
+  int type;
 } cElement_t;
 
 typedef struct {
@@ -318,7 +319,6 @@ dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, iint Nclusters, cluster_t
     memcpy(sendElements+sendId, *elements+id, cnt*sizeof(cElement_t)); 
     Ncount[destRank] += cnt;
   }
-  free(recvParallelClusters);
 
   // exchange element counts 
   MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
@@ -349,6 +349,7 @@ dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, iint Nclusters, cluster_t
   }
   free(recvElements);
   free(parallelClusters);
+
 
   *Nelements = newNelements;
 

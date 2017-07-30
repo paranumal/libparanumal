@@ -31,4 +31,29 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
       mesh->y[e*mesh->NpMax+n] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
     }
   }
+
+  // create halo extension for x,y arrays
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
+  iint localNodes     = mesh->Nelements*mesh->NpMax;
+
+  // temporary send buffer
+  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+
+  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
+  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
+  meshHaloExchange(mesh, mesh->NpMax*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+
+  // grab EX,EY,EZ from halo
+  mesh->EX = (dfloat*) realloc(mesh->EX, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
+  mesh->EY = (dfloat*) realloc(mesh->EY, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
+
+  // send halo data and recv into extended part of arrays
+  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EX, sendBuffer, mesh->EX + mesh->Nverts*mesh->Nelements);
+  meshHaloExchange(mesh, mesh->Nverts*sizeof(dfloat), mesh->EY, sendBuffer, mesh->EY + mesh->Nverts*mesh->Nelements);
+
+  if (totalHaloNodes) free(sendBuffer);
 }

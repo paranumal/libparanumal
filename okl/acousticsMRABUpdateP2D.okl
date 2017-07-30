@@ -5,6 +5,11 @@ kernel void acousticsMRABUpdateP2D(const iint Nelements,
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
+           const dfloat t,
+           const dfloat * restrict x,
+           const dfloat * restrict y,
+           const dfloat * restrict invVB1D,
+           const iint   * restrict EToB,
            const iint   * restrict EToE,
            const dfloat * restrict BBLower,
            const iint   * restrict BBRaiseids,
@@ -26,6 +31,10 @@ kernel void acousticsMRABUpdateP2D(const iint Nelements,
     shared dfloat s_unp[p_Nfaces*p_Nfpp1];
     shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
     shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+
+    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
     for(iint n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
@@ -60,6 +69,26 @@ kernel void acousticsMRABUpdateP2D(const iint Nelements,
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
+        //compute source injection if present
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          const iint idM = vmapM[id];
+
+          //get the nodal values of the incident field along the trace
+          const dfloat X = x[idM];
+          const dfloat Y = y[idM];
+
+          const dfloat c = sqrt(p_sourceC2);
+
+          dfloat u,v,p;
+
+          acousticsPointSource2D((X-p_sourceX0), (Y-p_sourceY0), (t+p_sourceT0), p_sourceFreq, c, u, v, p);
+
+          s_sourceu[n] = u;
+          s_sourcev[n] = v;
+          s_sourcep[n] = p;
+        }
+
         //gather negative traces
         s_un[n] = s_q[qidM+0];
         s_vn[n] = s_q[qidM+1];
@@ -72,7 +101,39 @@ kernel void acousticsMRABUpdateP2D(const iint Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    barrier(localMemFence); 
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const int f  = n/p_Nfp; //face number
+        const int id  = n%p_Nfp; //local node number
+
+        dfloat sourceu = 0.f;
+        dfloat sourcev = 0.f;
+        dfloat sourcep = 0.f;
+
+        dfloat s = 0.f;
+
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          if (bc==-10) s= 1.f;
+          if (bc==-11) s=-1.f;
+
+          occaUnroll(p_Nfp)
+          for (int m=0;m<p_Nfp;m++) {
+            sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
+            sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
+            sourcep += invVB1D[id + p_Nfp*m]*s_sourcep[f*p_Nfp+m];
+          }
+        }
+        s_un[n] += sourceu;
+        s_vn[n] += sourcev;
+        s_pn[n] += sourcep;
+      }
+    }
+
+    barrier(localMemFence);
 
     for(iint n=0; n < p_maxNodes; ++n; inner0){  
       const iint e = elementIds[et];      
@@ -144,6 +205,11 @@ kernel void acousticsMRABTraceUpdateP2D(const iint Nelements,
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
+           const dfloat t,
+           const dfloat * restrict x,
+           const dfloat * restrict y,
+           const dfloat * restrict invVB1D,
+           const iint   * restrict EToB,
            const iint   * restrict EToE,
            const dfloat * restrict BBLower,
            const iint   * restrict BBRaiseids,
@@ -165,6 +231,10 @@ kernel void acousticsMRABTraceUpdateP2D(const iint Nelements,
     shared dfloat s_unp[p_Nfaces*p_Nfpp1];
     shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
     shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+
+    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
     for(iint n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
@@ -191,6 +261,26 @@ kernel void acousticsMRABTraceUpdateP2D(const iint Nelements,
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
+        //compute source injection if present
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          const iint idM = vmapM[id];
+
+          //get the nodal values of the incident field along the trace
+          const dfloat X = x[idM];
+          const dfloat Y = y[idM];
+
+          const dfloat c = sqrt(p_sourceC2);
+
+          dfloat u,v,p;
+
+          acousticsPointSource2D((X-p_sourceX0), (Y-p_sourceY0), (t+p_sourceT0), p_sourceFreq, c, u, v, p);
+
+          s_sourceu[n] = u;
+          s_sourcev[n] = v;
+          s_sourcep[n] = p;
+        }
+
         //gather negative traces
         s_un[n] = s_q[qidM+0];
         s_vn[n] = s_q[qidM+1];
@@ -200,6 +290,38 @@ kernel void acousticsMRABTraceUpdateP2D(const iint Nelements,
         fQM[qid+0] = s_un[n];
         fQM[qid+1] = s_vn[n];
         fQM[qid+2] = s_pn[n];
+      }
+    }
+
+    barrier(localMemFence); 
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const int f  = n/p_Nfp; //face number
+        const int id  = n%p_Nfp; //local node number
+
+        dfloat sourceu = 0.f;
+        dfloat sourcev = 0.f;
+        dfloat sourcep = 0.f;
+
+        dfloat s = 0.f;
+
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          if (bc==-10) s= 1.f;
+          if (bc==-11) s=-1.f;
+
+          occaUnroll(p_Nfp)
+          for (int m=0;m<p_Nfp;m++) {
+            sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
+            sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
+            sourcep += invVB1D[id + p_Nfp*m]*s_sourcep[f*p_Nfp+m];
+          }
+        }
+        s_un[n] += sourceu;
+        s_vn[n] += sourcev;
+        s_pn[n] += sourcep;
       }
     }
 
@@ -280,6 +402,11 @@ kernel void acousticsMRABUpdateP2D_wadg(const iint Nelements,
            const dfloat * restrict cubInterp,
            const dfloat * restrict cubProject,
            const dfloat * restrict c2,
+           const dfloat t,
+           const dfloat * restrict x,
+           const dfloat * restrict y,
+           const dfloat * restrict invVB1D,
+           const iint   * restrict EToB,
            const iint   * restrict EToE,
            const dfloat * restrict BBLower,
            const iint   * restrict BBRaiseids,
@@ -301,6 +428,10 @@ kernel void acousticsMRABUpdateP2D_wadg(const iint Nelements,
     shared dfloat s_unp[p_Nfaces*p_Nfpp1];
     shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
     shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+
+    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
@@ -396,6 +527,26 @@ kernel void acousticsMRABUpdateP2D_wadg(const iint Nelements,
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
+        //compute source injection if present
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          const iint idM = vmapM[id];
+
+          //get the nodal values of the incident field along the trace
+          const dfloat X = x[idM];
+          const dfloat Y = y[idM];
+
+          const dfloat c = sqrt(p_sourceC2);
+
+          dfloat u,v,p;
+
+          acousticsPointSource2D((X-p_sourceX0), (Y-p_sourceY0), (t+p_sourceT0), p_sourceFreq, c, u, v, p);
+
+          s_sourceu[n] = u;
+          s_sourcev[n] = v;
+          s_sourcep[n] = p;
+        }
+
         //gather negative traces
         s_un[n] = s_q[qidM+0];
         s_vn[n] = s_q[qidM+1];
@@ -405,6 +556,38 @@ kernel void acousticsMRABUpdateP2D_wadg(const iint Nelements,
         fQM[qid+0] = s_un[n];
         fQM[qid+1] = s_vn[n];
         fQM[qid+2] = s_pn[n];
+      }
+    }
+
+    barrier(localMemFence); 
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const int f  = n/p_Nfp; //face number
+        const int id  = n%p_Nfp; //local node number
+
+        dfloat sourceu = 0.f;
+        dfloat sourcev = 0.f;
+        dfloat sourcep = 0.f;
+
+        dfloat s = 0.f;
+
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          if (bc==-10) s= 1.f;
+          if (bc==-11) s=-1.f;
+
+          occaUnroll(p_Nfp)
+          for (int m=0;m<p_Nfp;m++) {
+            sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
+            sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
+            sourcep += invVB1D[id + p_Nfp*m]*s_sourcep[f*p_Nfp+m];
+          }
+        }
+        s_un[n] += sourceu;
+        s_vn[n] += sourcev;
+        s_pn[n] += sourcep;
       }
     }
 
@@ -483,6 +666,11 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const iint Nelements,
            const dfloat * restrict cubInterp,
            const dfloat * restrict cubProject,
            const dfloat * restrict c2,
+           const dfloat t,
+           const dfloat * restrict x,
+           const dfloat * restrict y,
+           const dfloat * restrict invVB1D,
+           const iint   * restrict EToB,
            const iint   * restrict EToE,
            const dfloat * restrict BBLower,
            const iint   * restrict BBRaiseids,
@@ -504,6 +692,10 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const iint Nelements,
     shared dfloat s_unp[p_Nfaces*p_Nfpp1];
     shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
     shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+
+    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
@@ -590,6 +782,26 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const iint Nelements,
         const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
         const iint qid   = p_Nfields*id;
 
+        //compute source injection if present
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          const iint idM = vmapM[id];
+
+          //get the nodal values of the incident field along the trace
+          const dfloat X = x[idM];
+          const dfloat Y = y[idM];
+
+          const dfloat c = sqrt(p_sourceC2);
+
+          dfloat u,v,p;
+
+          acousticsPointSource2D((X-p_sourceX0), (Y-p_sourceY0), (t+p_sourceT0), p_sourceFreq, c, u, v, p);
+
+          s_sourceu[n] = u;
+          s_sourcev[n] = v;
+          s_sourcep[n] = p;
+        }
+
         //gather negative traces
         s_un[n] = s_q[qidM+0];
         s_vn[n] = s_q[qidM+1];
@@ -599,6 +811,38 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const iint Nelements,
         fQM[qid+0] = s_un[n];
         fQM[qid+1] = s_vn[n];
         fQM[qid+2] = s_pn[n];
+      }
+    }
+
+    barrier(localMemFence); 
+
+    for(iint n=0; n < p_maxNodes; ++n; inner0){  
+      if (n < p_Nfp*p_Nfaces){
+        const iint e = elementIds[et];
+        const int f  = n/p_Nfp; //face number
+        const int id  = n%p_Nfp; //local node number
+
+        dfloat sourceu = 0.f;
+        dfloat sourcev = 0.f;
+        dfloat sourcep = 0.f;
+
+        dfloat s = 0.f;
+
+        int bc = EToB[e*p_Nfaces+f];
+        if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
+          if (bc==-10) s= 1.f;
+          if (bc==-11) s=-1.f;
+
+          occaUnroll(p_Nfp)
+          for (int m=0;m<p_Nfp;m++) {
+            sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
+            sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
+            sourcep += invVB1D[id + p_Nfp*m]*s_sourcep[f*p_Nfp+m];
+          }
+        }
+        s_un[n] += sourceu;
+        s_vn[n] += sourcev;
+        s_pn[n] += sourcep;
       }
     }
 

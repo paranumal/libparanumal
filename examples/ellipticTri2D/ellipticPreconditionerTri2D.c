@@ -1,7 +1,5 @@
 #include "ellipticTri2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
@@ -21,20 +19,36 @@ void ellipticPatchSmootherTri2D(solver_t *solver,
     precon->patchSolverKernel(mesh->Nelements,
                               precon->o_invAP,
                               mesh->o_EToE,
+                              precon->o_invDegreeAP,
                               o_r,
                               solver->o_zP);
     meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
     occaTimerToc(mesh->device,"PatchSolveKernel");
   } else if (strstr(options,"APPROXPATCH")) {
     occaTimerTic(mesh->device,"PatchSolveKernel");
-    precon->approxPatchSolverKernel(mesh->Nelements,
+    //precon->approxPatchSolverKernel(mesh->Nelements,
+    //                          precon->o_invAP,
+    //                          mesh->o_EToE,
+    //                          mesh->o_EToF,
+    //                          mesh->o_rmapP,
+    //                          precon->o_invDegreeAP,
+    //                          o_r,
+    //                          o_zP);
+    precon->patchSolverKernel(mesh->Nelements,
                               precon->o_invAP,
                               mesh->o_EToE,
-                              mesh->o_EToF,
-                              mesh->o_rmapP,
+                              precon->o_invDegreeAP,
                               o_r,
-                              o_zP);
+                              solver->o_zP);
     meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
+    occaTimerToc(mesh->device,"PatchSolveKernel");
+  } else if (strstr(options,"LOCALPATCH")) {
+    occaTimerTic(mesh->device,"PatchSolveKernel");
+    precon->localPatchSolverKernel(mesh->Nelements,
+                              precon->o_invAP,
+                              mesh->o_EToE,
+                              o_r,
+                              o_Sr);
     occaTimerToc(mesh->device,"PatchSolveKernel");
   } else {
     occaTimerTic(mesh->device,"PatchSmoothKernel");
@@ -77,8 +91,9 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
     //}
 
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+    ellipticStartHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, o_r, recvBuffer);
 
     //patch solve
     ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
@@ -123,14 +138,15 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     //}
   } else if(strstr(options, "OMS")){
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
+    ellipticStartHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, o_r, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, o_r, recvBuffer);
 
-    //smooth the fine problem z = Sr 
+    //smooth the fine problem z = Sr
     ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
 
     dfloat one = 1.; dfloat mone = -1.;
-    if(strstr(options, "COARSEGRID")){ 
+    if(strstr(options, "COARSEGRID")){
       occaTimerTic(mesh->device,"coarseGrid");
       //res = r-Az
       ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
@@ -145,11 +161,11 @@ void ellipticPreconditioner2D(solver_t *solver,
       parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
       occaTimerToc(mesh->device,"ALMOND");
 
-      // prolongate back to fine problem 
+      // prolongate back to fine problem
       occaTimerTic(mesh->device,"prolongateKernel");
       precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
       occaTimerToc(mesh->device,"prolongateKernel");
-      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);  
+      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
     }
 
     //do another fine smoothing
@@ -157,9 +173,10 @@ void ellipticPreconditioner2D(solver_t *solver,
     ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
     ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
 
-    ellipticStartHaloExchange2D(mesh, solver->o_res, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, solver->o_res, recvBuffer);
-    
+    ellipticStartHaloExchange2D(solver, solver->o_res, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, solver->o_res, sendBuffer, recvBuffer);
+    ellipticEndHaloExchange2D(solver, solver->o_res, recvBuffer);
+
     //smooth the fine problem z = z + S(r-Az)
     ellipticPatchSmootherTri2D(solver,solver->o_res,solver->o_Sres,options);
     ellipticScaledAdd(solver, one, solver->o_Sres, one, o_z);

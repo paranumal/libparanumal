@@ -20,20 +20,24 @@ mesh2D *meshSetupTriP2D(char *filename, int N){
   // load reference (r,s) element nodes
   meshLoadReferenceNodesTriP2D(mesh, N);
 
-  // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTriP2D(mesh);
-
   // compute geometric factors
   meshGeometricFactorsTri2D(mesh);
 
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsTriP2D(mesh);
+
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetupP(mesh);
- 
+  
+  //set polynomial degree in each element
+  meshSetPolynomialDegree2D(mesh, N);
+
+  // compute physical (x,y) locations of the element nodes
+  meshPhysicalNodesTriP2D(mesh);
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodesP2D(mesh);
 
-   // compute surface geofacs
-  meshSurfaceGeometricFactorsTriP2D(mesh);
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
