@@ -177,7 +177,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  // ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   // kernelInfoV.addInclude(boundaryHeaderFileName);
   // solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
@@ -343,24 +343,24 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 				       kernelInfo);
 
 
-//   // ===========================================================================
-//   printf("Compiling Helmholtz volume update kernel\n");
-//   ins->poissonRhsForcingKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-// 				       "insPoissonRhsForcing2D",
-// 				       kernelInfo);
+  // ===========================================================================
+  printf("Compiling Helmholtz volume update kernel\n");
+  ins->poissonRhsForcingKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+				       "insPoissonRhsForcing3D",
+				       kernelInfo);
 
-//   printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
-//   ins->poissonRhsIpdgBCKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-// 				       "insPoissonRhsIpdgBC2D",
-// 				       kernelInfo);
+  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
+  ins->poissonRhsIpdgBCKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+				       "insPoissonRhsIpdgBC3D",
+				       kernelInfo);
 
-//   printf("Compiling Poisson penalty surface kernel\n");
-//   ins->poissonPenaltyKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
-// 				       "insPoissonPenalty2D",
-// 				       kernelInfo);
+  printf("Compiling Poisson penalty surface kernel\n");
+  ins->poissonPenaltyKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty3D.okl",
+				       "insPoissonPenalty3D",
+				       kernelInfo);
 
   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->velocityHaloExtractKernel=
@@ -374,11 +374,11 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 				       "insVelocityHaloScatter3D",
 				       kernelInfo);
 
-//   printf("Compiling Poisson surface kernel with collocation integration\n");
-//   ins->updateUpdateKernel =
-//     mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
-// 				       "insUpdateUpdate2D",
-// 				       kernelInfo);
+  printf("Compiling Poisson surface kernel with collocation integration\n");
+  ins->updateUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate3D.okl",
+				       "insUpdateUpdate3D",
+				       kernelInfo);
 
 
   printf("Compiling INS Poisson Halo Extract Kernel\n");
