@@ -18,6 +18,70 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   
   iint iterations = 10;
 
+  occa::streamTag start = mesh->device.tagStream();
+
+
+#if 1
+    // assume 1 mpi process
+  for(int it=0;it<iterations;++it){
+    
+    ogs_t *nonHalo = solver->nonHalo;
+    ogs_t *halo = solver->halo;
+
+    if(solver->NglobalGatherElements){
+      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+			      solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_r, o_x, 
+			      solver->o_pAp);
+    }
+    
+    if(halo->Ngather){
+      //	mesh->device.setStream(solver->dataStream);
+      
+      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_x, halo->o_gatherTmp);
+    }
+    
+    if(solver->NlocalGatherElements){
+      
+      solver->partialAxKernel(solver->NlocalGatherElements,
+			      solver->o_localGatherElementList,
+			      solver->o_gjGeo,
+			      solver->o_gjD,
+			      solver->o_gjI,
+			      lambda, o_r, o_x,
+			      solver->o_pAp);
+    }
+
+    // C0 halo gather-scatter (on data stream)
+    if(halo->Ngather){
+      occa::streamTag tag;   
+      
+      // MPI based gather scatter using libgs
+      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
+      
+      // copy totally gather halo data back from HOST to DEVICE
+      //      mesh->device.setStream(solver->dataStream);
+      halo->o_gatherTmp.copyFrom(halo->gatherTmp); 
+      
+      // wait for async copy
+      //      occa::streamTag tag = mesh->device.tagStream();
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+      
+      // do scatter back to local nodes
+      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_x);
+      
+      // make sure the scatter has finished on the data stream
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+    }      
+
+    // finalize gather using local and global contributions
+    mesh->device.setStream(solver->defaultStream);
+    if(nonHalo->Ngather)
+      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_x);
+
+  }
+#else
   // assume 1 mpi process
   for(int it=0;it<iterations;++it)
     solver->partialAxKernel(solver->NlocalGatherElements,
@@ -25,20 +89,29 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 			    solver->o_gjGeo,
 			    solver->o_gjD,
 			    solver->o_gjI,
-			    lambda, o_r, o_x,
-			    solver->o_pAp);
-  
+			    lambda, o_r, 
+			    solver->o_grad,
+			    o_x);
+#endif  
+
+  occa::streamTag end = mesh->device.tagStream();
+
   mesh->device.finish();
   double toc = MPI_Wtime();
 
   double localElapsed = toc-tic;
+  //  localElapsed = mesh->device.timeBetween(start, end);
+
   iint   localDofs = mesh->Np*mesh->Nelements;
+  iint localElements = mesh->Nelements;
   double globalElapsed;
   iint   globalDofs;
+  iint   globalElements;
   int    root = 0;
   
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
 
   iint gjNq = mesh->gjNq;
   iint Nq = mesh->Nq;
@@ -51,7 +124,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*Nq*Nq*Nq*4; // excludes inner product
 
-  double gflops = mesh->Nelements*flops*iterations/(1024*1024*1024.*globalElapsed);
+  double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
@@ -74,7 +147,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 3000;
+  iint maxIterations = 30;
   double AxTime;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
@@ -93,7 +166,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) \n",
-	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size));
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*(double)iterations)/(globalElapsed*size));
   }
 
   
@@ -117,6 +190,13 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
+  char customCache[BUFSIZ];
+  sprintf(customCache, "/home/tcew/._occa_cache_rank_%05d", rank);
+  setenv("OCCA_CACHE_DIR", customCache, 1);
+
+  char *check = getenv("OCCA_CACHE_DIR");
+  printf("found OCD: %s\n", check);
+
   // int specify polynomial degree 
   int N = atoi(argv[2]);
 
