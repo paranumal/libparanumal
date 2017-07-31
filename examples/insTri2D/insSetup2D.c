@@ -76,10 +76,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   ins->finalTime = 300.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = (mesh->N)*(mesh->N+1);
+  ins->tau       = 2.0f* (mesh->N+1)*(mesh->N+2)/2.0f;
 
-  if(mesh->N==1){ins->tau *=10;} // tau is too small for low N
-  if(mesh->N==2){ins->tau *= 5;} // tau is too small for low N
+  // if(mesh->N==1){ins->tau *=10;} // tau is too small for low N
+  // if(mesh->N==2){ins->tau *= 5;} // tau is too small for low N
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -195,7 +195,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   #endif
   
   // errorStep
-  ins->errorStep =40;
+  ins->errorStep =50;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
