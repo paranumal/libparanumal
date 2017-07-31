@@ -401,14 +401,14 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_IHID", IHID);
 
 
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  //int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  //kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  //int NblockV = 256/mesh->Np; // works for CUDA
+  //kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  //int NblockS = 256/maxNodes; // works for CUDA
+  //kernelInfo.addDefine("p_NblockS", NblockS);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);  
 
