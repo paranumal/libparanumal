@@ -217,6 +217,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
 }
 
 void ellipticPreconditioner3D(solver_t *solver,
+            dfloat lambda,
 			      occa::memory &o_r,
 			      occa::memory &o_zP,
 			      occa::memory &o_z,
@@ -304,6 +305,14 @@ void ellipticPreconditioner3D(solver_t *solver,
     parAlmondPrecon(o_z, precon->parAlmond, o_r);
     occaTimerToc(mesh->device,"parALMOND");
 
+  } else if(strstr(options, "BLOCKJACOBI")){
+
+    dfloat invLambda = 1./lambda;
+
+    occaTimerTic(mesh->device,"blockJacobiKernel");
+    precon->blockJacobiKernel(mesh->Nelements, invLambda, mesh->o_vgeo, precon->o_invMM, o_r, o_z);
+    occaTimerToc(mesh->device,"blockJacobiKernel");
+
   } else if(strstr(options, "JACOBI")){
 
     iint Ntotal = mesh->Np*mesh->Nelements;
@@ -356,7 +365,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner3D(solver, o_r, o_zP, o_z, options); // r => rP => zP => z
+    ellipticPreconditioner3D(solver, lambda, o_r, o_zP, o_z, options); // r => rP => zP => z
     
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -409,7 +418,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner3D(solver, o_r, o_zP, o_z, options);
+      ellipticPreconditioner3D(solver, lambda, o_r, o_zP, o_z, options);
 
       // dot(r,z)
       rdotz1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
