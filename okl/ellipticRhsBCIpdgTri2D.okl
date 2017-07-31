@@ -52,12 +52,12 @@ kernel void ellipticRhsBCIpdgTri2D(const int Nelements,
         }  
 
         const dfloat du = uP;
-        const dfloat hlf = 1.f;
+        const dfloat half = 1.f;
         
-        s_nxdu[n] = hlf*sJ*invJ*nx*du;
-        s_nydu[n] = hlf*sJ*invJ*ny*du;
+        s_nxdu[n] = half*sJ*invJ*nx*du;
+        s_nydu[n] = half*sJ*invJ*ny*du;
 
-        s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+        s_lapuflux[n] = half*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
       }
     }
 

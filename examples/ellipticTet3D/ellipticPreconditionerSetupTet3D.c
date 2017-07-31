@@ -32,11 +32,18 @@ typedef struct{
 // compare on global indices 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options);
+extern "C"
+{
+  void dgetrf_ (int *, int *, double *, int *, int *, int *);
+  void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
+}
+
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
+                              hgs_t **hgs, iint *globalStarts, const char *options);
 
 void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
 
-precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lambda, const char *options){
+precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -255,7 +262,7 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       for(iint r=0;r<size;++r)
         globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
-      ellipticBuildIpdgTet3D(mesh, lambda, &A, &nnz,options);
+      ellipticBuildIpdgTet3D(mesh, tau, lambda, BCType, &A, &nnz, &hgs, globalStarts, options);
     
       qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
@@ -264,53 +271,52 @@ precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat lamb
       ellipticBuildContinuousTet3D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
     
-    //collect global assembled matrix
-    iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
-    iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-    MPI_Allgather(&nnz, 1, MPI_IINT, 
-                  globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
-    globalnnzOffset[0] = 0;
-    for (iint n=0;n<size;n++)
-      globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
+    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
+    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
+    dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    iint globalnnzTotal = globalnnzOffset[size];
-
-    iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
-    iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
-    for (iint n=0;n<size;n++){
-      globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
-      globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
-    }
-    nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
-
-    MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR, 
-                  globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-    
-
-    iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
-    iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
-    iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
-    dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
-
-    for (iint n=0;n<globalnnzTotal;n++) {
-      globalRows[n] = globalNonZero[n].row;
-      globalCols[n] = globalNonZero[n].col;
-      globalVals[n] = globalNonZero[n].val;
+    for (iint n=0;n<nnz;n++) {
+      Rows[n] = A[n].row;
+      Cols[n] = A[n].col;
+      Vals[n] = A[n].val;
     }
 
-    precon->parAlmond = parAlmondSetup(mesh, 
-                                   globalStarts, 
-                                   globalnnzTotal,      
-                                   globalRows,        
-                                   globalCols,        
-                                   globalVals,    
+    precon->parAlmond = parAlmondSetup(mesh,
+                                   globalStarts,
+                                   nnz,
+                                   Rows,
+                                   Cols,
+                                   Vals,
                                    hgs,
                                    options);
 
-    precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-    precon->o_z1 = mesh->device.malloc(Nnum*sizeof(dfloat));
-    precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
-    precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
+    free(A); free(Rows); free(Cols); free(Vals);
+  }
+  else if (strstr(options, "BLOCKJACOBI")){
+
+    // compute inverse mass matrix
+    dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
+    iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
+    int lwork = mesh->Np*mesh->Np;
+    double *work = (double*) calloc(lwork, sizeof(double));
+    iint info;
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      MMinv[n] = mesh->MM[n];
+    }
+
+    dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
+    dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
+    if(info)
+      printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
+
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      dfMMinv[n] = MMinv[n];
+    }
+
+    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
+
+    free(MMinv); free(ipiv); free(work); free(dfMMinv);
   }
 
   return precon;
