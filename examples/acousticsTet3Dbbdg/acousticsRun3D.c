@@ -181,10 +181,20 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
 
 void acousticsOccaRun3Dbbdg(mesh3D *mesh){
 
+  occa::stream defaultStream = mesh->device.getStream();
+  occa::stream dataStream    = mesh->device.createStream();
+  mesh->device.setStream(defaultStream);
+
   // MPI send buffer
+  dfloat *sendBuffer;
+  dfloat *recvBuffer;
   iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
-  dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
-  dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+  if (haloBytes) {
+    occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
+    occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
+    sendBuffer = (dfloat*) o_sendBufferPinned.getMappedPointer();
+    recvBuffer = (dfloat*) o_recvBufferPinned.getMappedPointer();
+  }
 
   int Nframe=0;
 
@@ -276,8 +286,11 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
 
       if(mesh->totalHaloPairs>0){
         // extract halo on DEVICE
-        iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+        #if ASYNC 
+          mesh->device.setStream(dataStream);
+        #endif
 
+        iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
         mesh->haloExtractKernel(mesh->totalHaloPairs,
                     Nentries,
                     mesh->o_haloElementList,
@@ -287,11 +300,9 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
         // copy extracted halo to HOST
         mesh->o_haloBuffer.copyTo(sendBuffer);
 
-        // start halo exchange
-        meshHaloExchangeStart(mesh,
-              mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
-              sendBuffer,
-              recvBuffer);
+        #if ASYNC 
+          mesh->device.setStream(defaultStream);
+        #endif
       }
 
       // compute volume contribution to DG acoustics RHS
@@ -331,12 +342,30 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       }
 
       if(mesh->totalHaloPairs>0){
+        #if ASYNC 
+          mesh->device.setStream(dataStream);
+        #endif
+
+        //make sure the async copy is finished
+        mesh->device.finish();
+
+        // start halo exchange
+        meshHaloExchangeStart(mesh,
+              mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
+              sendBuffer,
+              recvBuffer);
+
         // wait for halo data to arrive
         meshHaloExchangeFinish(mesh);
 
         // copy halo data to DEVICE
         size_t offset = mesh->Nfaces*mesh->Nfp*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        mesh->o_fQP.copyFrom(recvBuffer, haloBytes, offset);
+        mesh->o_fQP.asyncCopyFrom(recvBuffer, haloBytes, offset);
+        mesh->device.finish();        
+
+        #if ASYNC 
+          mesh->device.setStream(defaultStream);
+        #endif
       }
 
       // compute surface contribution to DG acoustics RHS
@@ -617,9 +646,6 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       meshPlotVTU3D(mesh, fileName, fld);
     }
   }
-
-  free(recvBuffer);
-  free(sendBuffer);
 }
 
 //Ricker pulse
