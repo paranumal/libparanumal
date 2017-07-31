@@ -25,7 +25,8 @@ int main(int argc, char **argv){
     //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
     strdup("solver=PCG, FLEXIBLE, VERBOSE method=IPDG preconditioner=FULLALMOND");
-  
+    //strdup("solver=PCG, FLEXIBLE, VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
+
   // set up mesh stuff
 
   mesh3D *mesh = meshSetupTet3D(argv[1], N);
