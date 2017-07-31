@@ -128,65 +128,70 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			  LIFTT);
 
-    dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    dfloat *cubDsWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    dfloat *cubDtWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->cubNp;++m){
-      	cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
-      	cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
-      	cubDtWT[n+m*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
-      	
-      	cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
-      	cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+    if(mesh->cubNp){
+      dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+      dfloat *cubDsWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+      dfloat *cubDtWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+      dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->cubNp;++m){
+	  cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+	  cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+	  cubDtWT[n+m*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
+	  
+	  cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
+	  cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
+	}
       }
+
+      mesh->o_cubInterpT =
+	mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			    cubInterpT);
+      
+      mesh->o_cubProjectT =
+	mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			    cubProjectT);
+      
+      mesh->o_cubDrWT =
+	mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			    cubDrWT);
+      
+      mesh->o_cubDsWT =
+	mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			    cubDsWT);
+      
+      mesh->o_cubDtWT =
+	mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			    cubDtWT);
+
     }
 
-    // build surface integration matrix transposes
-    dfloat *intLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-    dfloat *intInterpT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
-	       intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
+    if(mesh->intNfp){
+      // build surface integration matrix transposes
+      dfloat *intLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+      dfloat *intInterpT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
+	  intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
+	}
       }
-    }
-    for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
-      for(int m=0;m<mesh->Nfp;++m){
-	       intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
+      for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
+	for(int m=0;m<mesh->Nfp;++m){
+	  intInterpT[n+m*mesh->Nfaces*mesh->intNfp] = mesh->intInterp[n*mesh->Nfp + m];
+	}
       }
+
+      mesh->o_intInterpT =
+	mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			    intInterpT);
+      
+      mesh->o_intLIFTT =
+	mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			    intLIFTT);
+
     }
-
-    mesh->o_cubInterpT =
-      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubInterpT);
-
-    mesh->o_cubProjectT =
-      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubProjectT);
-
-    mesh->o_cubDrWT =
-      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubDrWT);
-
-    mesh->o_cubDsWT =
-      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-			  cubDsWT);
-
-    mesh->o_cubDtWT =
-      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
-    	  cubDtWT);
-
-    mesh->o_intInterpT =
-      mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-        intInterpT);
-
-    mesh->o_intLIFTT =
-      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-        intLIFTT);
-
-
+    
     // =============== Bernstein-Bezier allocations [added by NC] ============
     mesh->o_D0ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D0ids);
     mesh->o_D1ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D1ids);
@@ -357,17 +362,19 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->z);
 
 
-  mesh->o_intx =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-      mesh->intx);
-
-  mesh->o_inty =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-      mesh->inty);
-
-   mesh->o_intz =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-      mesh->intz);
+  if(mesh->intNfp){
+    mesh->o_intx =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			  mesh->intx);
+    
+    mesh->o_inty =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			  mesh->inty);
+    
+    mesh->o_intz =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			  mesh->intz);
+  }
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
@@ -404,11 +411,14 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
+#if 0
+  // TW: these should be defined at the solver setup
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
+#endif
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);  
 
