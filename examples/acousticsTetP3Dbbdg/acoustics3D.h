@@ -6,6 +6,7 @@
 #include "mesh3D.h"
 
 #define WADG 1
+#define ASYNC 1
 
 void acousticsSetup3D(mesh3D *mesh);
 

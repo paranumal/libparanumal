@@ -7,7 +7,8 @@ int main(int argc, char **argv){
 
   if(argc!=3){
     // to run cavity test case with degree N elements
-    printf("usage: ./main meshes/cavityTetH02.msh N\n");
+    printf("usage 1: ./main meshes/cavityTetH02.msh N\n");
+    printf("usage 2: ./main meshes/cavityTetH02.msh N BoundaryConditions.h\n");
     exit(-1);
   }
 
@@ -23,7 +24,7 @@ int main(int argc, char **argv){
   char *options = 
     //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
-    strdup("solver=PCG method=IPDG preconditioner=FULLALMOND");
+    strdup("solver=PCG, FLEXIBLE, VERBOSE method=IPDG preconditioner=FULLALMOND");
   
   // set up mesh stuff
 
@@ -39,14 +40,28 @@ int main(int argc, char **argv){
   occa::kernelInfo kernelInfo;
   ellipticSetupTet3D(mesh, kernelInfo);
 
-  solver_t *solver = ellipticSolveSetupTet3D(mesh, lambda, kernelInfo, options);
+  // capture header file
+  char *boundaryHeaderFileName;
+  if(argc==3)
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/homogeneous3D.h"); // default
+  else
+    boundaryHeaderFileName = strdup(argv[3]);
+  //add user defined boundary data
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
+  //add standard boundary functions
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
+  // Boundary Type translation. Just default from the mesh file.
+  int BCType[3] = {0,1,2};
+
+  dfloat tau = 2*(mesh->N+1)*(mesh->N+3)/3.0;
+  solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  
-  // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -76,6 +91,28 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
+  //add boundary condition contribution to rhs
+  if (strstr(options,"IPDG")) {
+    dfloat zero = 0.f;
+    solver->rhsBCIpdgKernel(mesh->Nelements,
+                           mesh->o_vmapM,
+                           mesh->o_vmapP,
+                           solver->tau,
+                           zero,
+                           mesh->o_x,
+                           mesh->o_y,
+                           mesh->o_z,
+                           mesh->o_vgeo,
+                           mesh->o_sgeo,
+                           mesh->o_EToB,
+                           mesh->o_DrT,
+                           mesh->o_DsT,
+                           mesh->o_DtT,
+                           mesh->o_LIFTT,
+                           mesh->o_MM,
+                           o_r);
+  }
+
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
   
   // copy solution from DEVICE to HOST
@@ -100,7 +137,7 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
   
-  meshPlotVTU3D(mesh, "foo", 0);
+  meshPlotVTU3D(mesh, "foo.vtu", 0);
   
   // close down MPI
   MPI_Finalize();
