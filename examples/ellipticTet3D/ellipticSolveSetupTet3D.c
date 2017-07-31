@@ -143,49 +143,49 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 				       "put",
 				       kernelInfo);
 
-  mesh->AxKernel =
+  solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
                "ellipticAxTet3D",
                kernelInfo);
 
-  mesh->weightedInnerProduct1Kernel =
+  solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
-  mesh->weightedInnerProduct2Kernel =
+  solver->weightedInnerProduct2Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
-  mesh->innerProductKernel =
+  solver->innerProductKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
   
-  mesh->scaledAddKernel =
+  solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
-  mesh->dotMultiplyKernel =
+  solver->dotMultiplyKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
-  mesh->dotDivideKernel = 
+  solver->dotDivideKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
-  mesh->gradientKernel = 
+  solver->gradientKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl", 
 				       "ellipticGradientTet3D",
 					 kernelInfo);
 
 
-  mesh->ipdgKernel =
+  solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl", 
 				       "ellipticAxIpdgTet3D",
 				       kernelInfo);  
