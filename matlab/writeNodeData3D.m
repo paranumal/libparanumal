@@ -12,7 +12,7 @@ Nfaces = 4;
 
 % find all the nodes that lie on each edge
 NODETOL = 1e-8;
-faceNodes1   = find( abs(t+1) < NODETOL)'; 
+faceNodes1   = find( abs(t+1) < NODETOL)';
 faceNodes2   = find( abs(s+1) < NODETOL)';
 faceNodes3   = find( abs(r+s+t+1) < NODETOL)';
 faceNodes4   = find( abs(r+1) < NODETOL)';
@@ -32,31 +32,31 @@ fprintf(fid, '%% number of nodes\n');
 fprintf(fid, '%d\n', Np);
 fprintf(fid, '%% node coordinates\n');
 for n=1:Np
-  fprintf(fid, '%17.15E %17.15E %17.15E\n', r(n), s(n), t(n));
+    fprintf(fid, '%17.15E %17.15E %17.15E\n', r(n), s(n), t(n));
 end
 
 fprintf(fid, '%% r collocation differentation matrix\n');
 for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Dr(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:Np
+        fprintf(fid, '%17.15E ', Dr(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 fprintf(fid, '%% s collocation differentation matrix\n');
 for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Ds(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:Np
+        fprintf(fid, '%17.15E ', Ds(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 fprintf(fid, '%% t collocation differentation matrix\n');
 for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Dt(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:Np
+        fprintf(fid, '%17.15E ', Dt(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 MM = inv(transpose(V))/V;
@@ -70,18 +70,18 @@ end
 
 fprintf(fid, '%% faceNodes\n');
 for f=1:Nfaces
-  for m=1:Nfp
-    fprintf(fid, '%d ', faceNodes(m,f)-1); %% adjust for 0-indexing
-  end
-  fprintf(fid, '\n');
+    for m=1:Nfp
+        fprintf(fid, '%d ', faceNodes(m,f)-1); %% adjust for 0-indexing
+    end
+    fprintf(fid, '\n');
 end
 
 fprintf(fid, '%% LIFT matrix\n');
 for n=1:Np
-  for m=1:Nfp*Nfaces
-    fprintf(fid, '%17.15E ', LIFT(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:Nfp*Nfaces
+        fprintf(fid, '%17.15E ', LIFT(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 %% compute equispaced nodes on equilateral triangle
@@ -91,30 +91,30 @@ end
 plotNp = length(plotR);
 
 %% triangulate equilateral element nodes
-%plotEToV = delaunay3(plotR,plotS,plotT)-1; 
-plotEToV = delaunayFixVolume(plotR,plotS,plotT)-1; 
+%plotEToV = delaunay3(plotR,plotS,plotT)-1;
+plotEToV = delaunayFixVolume(plotR,plotS,plotT)-1;
 
 %% count triangles in plot node triangulation
-plotNelements = size(plotEToV,1); 
+plotNelements = size(plotEToV,1);
 
 %% create interpolation matrix from warp & blend to plot nodes
-plotInterp = Vandermonde3D(N, plotR,plotS,plotT)/V; 
+plotInterp = Vandermonde3D(N, plotR,plotS,plotT)/V;
 
 %% output plot nodes
 fprintf(fid, '%% number of plot nodes\n');
 fprintf(fid, '%d\n', plotNp);
 fprintf(fid, '%% plot node coordinates\n');
 for n=1:plotNp
-  fprintf(fid, '%17.15E %17.15E %17.15E\n', plotR(n), plotS(n), plotT(n));
+    fprintf(fid, '%17.15E %17.15E %17.15E\n', plotR(n), plotS(n), plotT(n));
 end
 
 %% output plot interpolation matrix
 fprintf(fid, '%% plot node interpolation matrix\n');
 for n=1:plotNp
-  for m=1:Np
-    fprintf(fid, '%17.15E ', plotInterp(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:Np
+        fprintf(fid, '%17.15E ', plotInterp(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 %% output plot triangulation
@@ -126,8 +126,8 @@ fprintf(fid, '%d\n', size(plotEToV,2));
 
 fprintf(fid, '%% triangulation of plot nodes\n');
 for n=1:plotNelements
-  fprintf(fid, '%d %d %d %d\n' ,...
- 	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3),plotEToV(n,4));
+    fprintf(fid, '%d %d %d %d\n' ,...
+        plotEToV(n,1),plotEToV(n,2),plotEToV(n,3),plotEToV(n,4));
 end
 
 %% output cubature arrays
@@ -142,7 +142,7 @@ if N < 7
     cubDrT = V*transpose(cVr)*diag(cubw);
     cubDsT = V*transpose(cVs)*diag(cubw);
     cubDtT = V*transpose(cVt)*diag(cubw);
-
+    
     Ncub = length(cubw);
     fprintf(fid, '%% number of volume cubature nodes\n');
     fprintf(fid, '%d\n', Ncub);
@@ -159,32 +159,32 @@ if N < 7
         end
         fprintf(fid, '\n');
     end
-
-   fprintf(fid, '%% cubature r weak differentiation matrix\n');
-for n=1:Np
-    for m=1:Ncub
-        fprintf(fid, '%17.15E ', cubDrT(n,m));
+    
+    fprintf(fid, '%% cubature r weak differentiation matrix\n');
+    for n=1:Np
+        for m=1:Ncub
+            fprintf(fid, '%17.15E ', cubDrT(n,m));
+        end
+        fprintf(fid, '\n');
     end
-    fprintf(fid, '\n');
-end
-
-fprintf(fid, '%% cubature s weak differentiation matrix\n');
-for n=1:Np
-    for m=1:Ncub
-        fprintf(fid, '%17.15E ', cubDsT(n,m));
+    
+    fprintf(fid, '%% cubature s weak differentiation matrix\n');
+    for n=1:Np
+        for m=1:Ncub
+            fprintf(fid, '%17.15E ', cubDsT(n,m));
+        end
+        fprintf(fid, '\n');
     end
-    fprintf(fid, '\n');
-end
-
-
-fprintf(fid, '%% cubature t weak differentiation matrix\n');
-for n=1:Np
-    for m=1:Ncub
-        fprintf(fid, '%17.15E ', cubDtT(n,m));
+    
+    
+    fprintf(fid, '%% cubature t weak differentiation matrix\n');
+    for n=1:Np
+        for m=1:Ncub
+            fprintf(fid, '%17.15E ', cubDtT(n,m));
+        end
+        fprintf(fid, '\n');
     end
-    fprintf(fid, '\n');
-end
-
+    
     
     fprintf(fid,'%% cubature projection matrix\n');
     for i=1:Np
@@ -193,11 +193,55 @@ end
         end
         fprintf(fid, '\n');
     end
-
-
+    
+    
+    
+    % Surface Cubature
+    [cubx,cuby,cubw] = Cubature2D(3*N);
+    Nfi = length(cubx);
+    ir = [cubx,         cubx,        cubx,                  -ones(Nfi,1)];
+    is = [cuby,        -ones(Nfi,1), cuby,                   cubx];
+    it = [-ones(Nfi,1), cuby,       -(ones(Nfi,1)+cubx+cuby),cuby];
+    iw = [cubw,cubw,cubw,cubw];
+    
+    sV = Vandermonde3D(N, ir(:), is(:),it(:));
+    sInterp = sV/V;
+    
+    iInterp = [sInterp(1:Nfi,faceNodes(:,1));...
+        sInterp(Nfi+1:2*Nfi,faceNodes(:,2));...
+        sInterp(2*Nfi+1:3*Nfi,faceNodes(:,3));...
+        sInterp(3*Nfi+1:4*Nfi,faceNodes(:,4))];
+    fprintf(fid, '%% number of surface integration nodes per face\n');
+    fprintf(fid, '%d\n', length(cubx));
+    fprintf(fid, '%% surface integration interpolation matrix\n');
+    for n=1:Nfi*Nfaces
+        for m=1:Nfp
+            fprintf(fid, '%17.15E ', iInterp(n,m));
+        end
+        fprintf(fid, '\n');
+    end
+    
+    bInterp = [];
+    bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
+    bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
+    bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
+    bInterp(3*Nfi+1:4*Nfi,3*Nfp+1:4*Nfp) = iInterp(3*Nfi+1:4*Nfi,:);
+    
+    % integration node lift matrix
+    iLIFT = V*V'*sInterp'*diag(iw(:));
+    size(iLIFT)
+    size(iInterp)
+    max(max(abs(iLIFT*bInterp-LIFT)))
+    
+    fprintf(fid, '%% surface integration lift matrix\n');
+    for n=1:Np
+        for m=1:Nfi*Nfaces
+            fprintf(fid, '%17.15E ', iLIFT(n,m));
+        end
+        fprintf(fid, '\n');
+    end
+    
 end
-%%
-
 %% BB
 
 addpath('./bern')
@@ -257,8 +301,8 @@ for i = 1:Np
     if length(tmp) < 4
         tmp = [tmp zeros(1,4-length(tmp))];
     end
-    D1ids(i,:) = tmp; 
-   
+    D1ids(i,:) = tmp;
+    
     
     tmp = find(D2(i,:));
     D2vals(i,1:length(tmp)) = D2(i,tmp);
@@ -275,7 +319,7 @@ for i = 1:Np
         tmp = [tmp zeros(1,4-length(tmp))];
     end
     D3ids(i,:) = tmp;
-
+    
     tmp = find(D4(i,:));
     D4vals(i,1:length(tmp)) = D4(i,tmp);
     tmp = tmp-1; % zero indexing
@@ -484,16 +528,16 @@ VB2D = bern_basis_tri(N,r2D,s2D);
 V2D = Vandermonde2D(N, r2D,s2D);
 
 Nm1 = N-1;
-if (N>1) 
+if (N>1)
     [r2Dm1 s2Dm1] = Nodes2D(Nm1); [r2Dm1 s2Dm1] = xytors(r2Dm1,s2Dm1);
     VB2Dm1 = bern_basis_tri(Nm1,r2Dm1,s2Dm1);
     V2Dm1 = Vandermonde2D(Nm1, r2Dm1,s2Dm1);
-else 
+else
     r2Dm1 =0;
     s2Dm1 =0;
     VB2Dm1 = 1;
     V2Dm1 = 1;
-end; 
+end;
 
 Nfpm1 = (Nm1+1)*(Nm1+2)/2;
 
@@ -501,12 +545,12 @@ BBLower = V2D\VB2D;
 BB = [];
 sk =1;
 for n=0:N
-  for m=0:N-n
-    if n+m<N
-      BB = [BB; BBLower(sk,:)];
+    for m=0:N-n
+        if n+m<N
+            BB = [BB; BBLower(sk,:)];
+        end
+        sk = sk+1;
     end
-    sk = sk+1;
-  end
 end
 BBLower = VB2Dm1\V2Dm1*BB;
 
@@ -543,19 +587,19 @@ VY = [ 0, 0,sqrt(3),  1/sqrt(3),-7*sqrt(3)/9, 8*sqrt(3)/9, 8*sqrt(3)/9, 1/sqrt(3
 VZ = [ 0, 0,      0,2*sqrt(6)/3, 4*sqrt(6)/9, 4*sqrt(6)/9, 4*sqrt(6)/9,-2*sqrt(6)/3];
 
 EToV = [1,2,3,4;
-        1,2,4,5;
-        2,3,4,6;
-        3,1,4,7;
-        1,3,2,8];
+    1,2,4,5;
+    2,3,4,6;
+    3,1,4,7;
+    1,3,2,8];
 
 BCType = [0,0,0,0;
-          0,0,0,0;
-          0,0,0,0;
-          0,0,0,0;
-          0,0,0,0];
+    0,0,0,0;
+    0,0,0,0;
+    0,0,0,0;
+    0,0,0,0];
 
 StartUp3D;
-  
+
 % build weak Poisson operator matrices
 [A, M] = PoissonIPDG3D();
 
@@ -572,9 +616,9 @@ condSubA = cond(subA);
 
 [B,d] = eig(subA, subM);
 
-%% A = S + lambda*M 
-%%   = M*(M\S + lambda*I) 
-%%   ~ J*Mhat*(Mhat\Shat/hscale2 + lambda*I) 
+%% A = S + lambda*M
+%%   = M*(M\S + lambda*I)
+%%   ~ J*Mhat*(Mhat\Shat/hscale2 + lambda*I)
 %%   ~ J*Mhat*Bhat*(d/scale + lambda*I)/Bhat
 %% inv(A) ~ Bhat*inv(J*(d/scale+lambda*I))*inv(Mhat*Bhat)
 
@@ -587,22 +631,22 @@ fprintf(fid, '%% stencil size for IPDG OAS NpP\n');
 fprintf(fid, '%d\n', NpP);
 fprintf(fid, '%% forward matrix [ change of basis for IPDG OAS precon ]\n');
 for n=1:NpP
-  for m=1:NpP
-  fprintf(fid, '%17.15E ', forwardMatrix(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:NpP
+        fprintf(fid, '%17.15E ', forwardMatrix(n,m));
+    end
+    fprintf(fid, '\n');
 end
 fprintf(fid, '%% diagOp \n');
 for n=1:NpP
     fprintf(fid, '%17.15E ', diagOp(n));
-  fprintf(fid, '\n');
+    fprintf(fid, '\n');
 end
 fprintf(fid, '%% backward matrix [ reverse change of basis for IPDG OAS precon ]\n');
 for n=1:NpP
-  for m=1:NpP
-    fprintf(fid, '%17.15E ', backwardMatrix(n,m));
-  end
-  fprintf(fid, '\n');
+    for m=1:NpP
+        fprintf(fid, '%17.15E ', backwardMatrix(n,m));
+    end
+    fprintf(fid, '\n');
 end
 
 fclose(fid);

@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
   char *velSolverOptions =
@@ -41,12 +41,16 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insUniform2D.h"); // default
   else
     boundaryHeaderFileName = strdup(argv[3]);
- 
+
+  for(iint i=0; i<1; i++){
+  
+  //iint i=0; 
   printf("Setup INS Solver: \n");
-  ins_t *ins = insSetup2D(mesh,options,velSolverOptions,prSolverOptions,boundaryHeaderFileName);
+  ins_t *ins = insSetup2D(mesh,i,options,velSolverOptions,prSolverOptions,boundaryHeaderFileName);
 
   printf("OCCA Run: \n");
   insRun2D(ins,options);
+  }
 
   // close down MPI
   MPI_Finalize();
