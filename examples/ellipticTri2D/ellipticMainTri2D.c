@@ -18,14 +18,23 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
-  // preconditioner can be JACOBI, OAS, NONE, BLOCKJACOBI
-  // method can be IPDG
+  // can add FLEXIBLE and VERBOSE options
+  // preconditioner can be JACOBI, OAS, BLOCKJACOBI, FULLALMOND, or MULTIGRID
+  // method can be IPDG or CONTINUOUS
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
     strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,DAMPEDJACOBI coarse=COARSEGRID,ALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
+
+  //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
+  // solver can be EXACT, KCYCLE, or VCYCLE
+  // can add GATHER or NOGATHER to build a gsop
+  // partition can be STRONG, DISTRIBUTED, SATURATE
+  // for MULTIGRID: smoother can be specified as JACOBI, EXACTPATCH, APPROXPATCH
+  char *parAlmondOptions = 
+    strdup("solver=KCYCLE,NOGATHER partition=STRONG smoother=JACOBI");
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
@@ -57,7 +66,7 @@ int main(int argc, char **argv){
   int BCType[3] = {0,1,2};
 
   dfloat tau = (mesh->N)*(mesh->N+2-1);
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
