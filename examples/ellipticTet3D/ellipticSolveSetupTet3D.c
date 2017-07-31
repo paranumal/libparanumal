@@ -19,7 +19,11 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
   
 }
 
-solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options){
+solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, 
+                          occa::kernelInfo &kernelInfo, const char *options){
+
+  iint rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint NtotalP = mesh->NpP*mesh->Nelements;
@@ -32,6 +36,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   int NblockS = mymax(1,1024/(mesh->Nfp*mesh->Nfaces)); // works for CUDA
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
+
+  solver->tau = tau;
 
   solver->mesh = mesh;
 
@@ -54,13 +60,49 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
   
-  // use this for OAS precon pairwise halo exchange
-  solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-  solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+  //setup async halo stream
+  solver->defaultStream = mesh->device.getStream();
+  solver->dataStream = mesh->device.createStream();
+  mesh->device.setStream(solver->defaultStream);
+  
+  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  if(Nbytes>0){
+    occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+    occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+    
+    solver->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
+    solver->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+  }else{
+    solver->sendBuffer = NULL;
+    solver->recvBuffer = NULL;
+  }
+  mesh->device.setStream(solver->defaultStream);
 
   solver->type = strdup(dfloatString);
 
   solver->Nblock = Nblock;
+
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    iint Nlocal = mesh->Np*mesh->Nelements;
+    iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
+    
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
+    
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+  }
+
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  //kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
 
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -101,53 +143,57 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 				       "put",
 				       kernelInfo);
 
-  mesh->AxKernel =
+  solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
                "ellipticAxTet3D",
                kernelInfo);
 
-  mesh->weightedInnerProduct1Kernel =
+  solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
 				       "weightedInnerProduct1",
 				       kernelInfo);
 
-  mesh->weightedInnerProduct2Kernel =
+  solver->weightedInnerProduct2Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
 				       "weightedInnerProduct2",
 				       kernelInfo);
 
-  mesh->innerProductKernel =
+  solver->innerProductKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
 				       "innerProduct",
 				       kernelInfo);
   
-  mesh->scaledAddKernel =
+  solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
 					 "scaledAdd",
 					 kernelInfo);
 
-  mesh->dotMultiplyKernel =
+  solver->dotMultiplyKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
 					 "dotMultiply",
 					 kernelInfo);
 
-  mesh->dotDivideKernel = 
+  solver->dotDivideKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
 					 "dotDivide",
 					 kernelInfo);
 
 
-  mesh->gradientKernel = 
+  solver->gradientKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl", 
 				       "ellipticGradientTet3D",
 					 kernelInfo);
 
 
-  mesh->ipdgKernel =
+  solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl", 
 				       "ellipticAxIpdgTet3D",
 				       kernelInfo);  
 
+  solver->rhsBCIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTet3D.okl",
+               "ellipticRhsBCIpdgTet3D",
+               kernelInfo);
   
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
@@ -160,7 +206,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   occaTimerToc(mesh->device,"GatherScatterSetup"); 
   
   occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTet3D(mesh, solver->ogs, lambda, options);
+  solver->precon = ellipticPreconditionerSetupTet3D(mesh, solver->ogs, tau, lambda, BCType, options);
   
   solver->precon->preconKernel = 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl", 
@@ -181,6 +227,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
 				       "ellipticPreconProlongate",
 				       kernelInfo);
+
+  solver->precon->blockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
+               "ellipticBlockJacobiPreconTet3D",
+               kernelInfo);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
@@ -199,23 +250,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
-  if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Np*mesh->Nelements;
-    iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
-    
-    // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
-    
-    meshHaloExchange(mesh,
-         mesh->Nvgeo*sizeof(dfloat),
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
-    
-    mesh->o_vgeo =
-      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-  }
 
   if (strstr(options,"MATRIXFREE")) { 
     //set matrix free A in parAlmond

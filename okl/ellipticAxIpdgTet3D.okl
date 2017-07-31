@@ -12,6 +12,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         const dfloat tau,
         const dfloat * restrict vgeo,
         const dfloat * restrict sgeo,
+        const iint   * restrict EToB,
         const dfloat * restrict DrT,
         const dfloat * restrict DsT,
         const dfloat * restrict DtT,
@@ -66,11 +67,11 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        // Neumann boundary condition
-        const dfloat sc = (idP==idM || idP<0) ? -1.f:1.f;
-        gradqP.x *= sc;
-        gradqP.y *= sc;
-        gradqP.z *= sc;
+        iint bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+          ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y, gradqM.z, gradqP.w, gradqP.x, gradqP.y, gradqP.z);
+          gradqP = 2*gradqP - gradqM;
+        }
         
         const dfloat dq = gradqP.w - gradqM.w;
         const dfloat half = 0.5f;
