@@ -317,7 +317,7 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 	    }
 
 	  dfloat rhsu =  drdx*df11dr + dsdx*df11ds 
-	    + drdy*df12dr + dsdy*df12ds;
+	               + drdy*df12dr + dsdy*df12ds;
 
 	  dfloat rhsv = drdx*df21dr + dsdx*df21ds 
 	    + drdy*df22dr + dsdy*df22ds;
@@ -416,7 +416,7 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
 	    const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
 	    const dfloat nx   = sgeo[sid+p_NXID];
 	    const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat sJ 	= sgeo[sid+p_SJID];
+	    const dfloat sJ   = sgeo[sid+p_SJID];
 	    const dfloat invJ = sgeo[sid+p_IJID];
 
 	    dfloat iUM = 0.f,   iVM = 0.f;
@@ -502,14 +502,8 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
 }
 
 
-
-
-
-
-
-
 kernel void insSubCycleRKUpdate2D(const iint Nelements,
-				  const dfloat sc, 
+				  const dfloat activate_advection, 
 				  const dfloat dt,	
 				  const dfloat rka,
 				  const dfloat rkb,
@@ -517,14 +511,6 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
 				  const dfloat * restrict rhsV,
 				  dfloat  * restrict resU,
 				  dfloat  * restrict resV,
-				  const int offset0,
-				  const dfloat c0,
-				  const int offset1,
-				  const dfloat c1,
-				  const int offset2,
-				  const dfloat c2,
-				  const dfloat * restrict Px,
-				  const dfloat * restrict Py,
 				  dfloat  * restrict U,
 				  dfloat  * restrict V){
 
@@ -537,20 +523,13 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
       dfloat resu = resU[id];
       dfloat resv = resV[id];
 
-      // No that advection volume solves for N(u) not -N(u)
+      // Not that advection kernels computes for N(u) not -N(u)
       dfloat rhsu = -rhsU[id];
       dfloat rhsv = -rhsV[id];
 
-      rhsu -= c0*Px[n+offset0];
-      rhsu -= c1*Px[n+offset1];
-      rhsu -= c2*Px[n+offset2];
-
-      rhsv -= c0*Py[n+offset0];
-      rhsv -= c1*Py[n+offset1];
-      rhsv -= c2*Py[n+offset2];
-
-      rhsu *= sc;
-      rhsv *= sc;
+      // If not axtivated zero it out
+      rhsu *= activate_advection;
+      rhsv *= activate_advection;
       
       dfloat u = U[id];
       dfloat v = V[id];
@@ -569,6 +548,75 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
     }
   }
 }
+
+
+
+
+
+
+
+
+// kernel void insSubCycleRKUpdate2D(const iint Nelements,
+// 				  const dfloat sc, 
+// 				  const dfloat dt,	
+// 				  const dfloat rka,
+// 				  const dfloat rkb,
+// 				  const dfloat * restrict rhsU,
+// 				  const dfloat * restrict rhsV,
+// 				  dfloat  * restrict resU,
+// 				  dfloat  * restrict resV,
+// 				  const int offset0,
+// 				  const dfloat c0,
+// 				  const int offset1,
+// 				  const dfloat c1,
+// 				  const int offset2,
+// 				  const dfloat c2,
+// 				  const dfloat * restrict Px,
+// 				  const dfloat * restrict Py,
+// 				  dfloat  * restrict U,
+// 				  dfloat  * restrict V){
+
+//   // Low storage Runge Kutta time step update
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
+
+//       const iint id = n + e*p_Np;
+
+//       dfloat resu = resU[id];
+//       dfloat resv = resV[id];
+
+//       // No that advection solves for N(u) not -N(u)
+//       dfloat rhsu = -rhsU[id];
+//       dfloat rhsv = -rhsV[id];
+
+//       rhsu -= c0*Px[n+offset0];
+//       rhsu -= c1*Px[n+offset1];
+//       rhsu -= c2*Px[n+offset2];
+
+//       rhsv -= c0*Py[n+offset0];
+//       rhsv -= c1*Py[n+offset1];
+//       rhsv -= c2*Py[n+offset2];
+
+//       rhsu *= sc;
+//       rhsv *= sc;
+      
+//       dfloat u = U[id];
+//       dfloat v = V[id];
+
+//       resu = rka*resu + dt*rhsu;
+//       resv = rka*resv + dt*rhsv;
+
+//       u += rkb*resu;
+//       v += rkb*resv;
+
+//       resU[id] = resu;
+//       resV[id] = resv;
+
+//       U[id] = u;
+//       V[id] = v;
+//     }
+//   }
+// }
 
 
 

@@ -37,6 +37,8 @@ typedef struct {
   dfloat *rhsU, *rhsV, *rhsP;
   dfloat *U, *V, *P; 
 
+  dfloat dtfactor;
+
   dfloat *NU, *NV;
   dfloat *Px, *Py;
   dfloat *PI;
@@ -52,7 +54,7 @@ typedef struct {
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
-
+ 
   occa::memory o_U, o_V, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsP; 
 
@@ -105,7 +107,7 @@ typedef struct{
 
 
 
-ins_t *insSetup2D(mesh2D *mesh, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
+ins_t *insSetup2D(mesh2D *mesh, iint i, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 
@@ -113,6 +115,7 @@ void insRun2D(ins_t *solver, char *options);
 void insPlotVTU2D(ins_t *solver, char *fileNameBase);
 void insReport2D(ins_t *solver, iint tstep, char *options);
 void insError2D(ins_t *solver, dfloat time, char *options);
+void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
 void insAdvectionStep2D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);

@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSolverOptions, char *boundaryHeaderFileName){
+ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOptions, char *pSolverOptions, char *boundaryHeaderFileName){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -49,7 +49,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 
   if(strstr(options,"SUBCYCLING")){
 
-    ins->Nsubsteps = 1; //was 3
+    ins->Nsubsteps = 8; //was 3
 
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -67,16 +67,19 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 100.0;
+  ins->finalTime = 300.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = (mesh->N)*(mesh->N+1);
+
+  if(mesh->N==1){ins->tau *=10;} // tau is too small for low N
+  if(mesh->N==2){ins->tau *= 5;} // tau is too small for low N
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -109,10 +112,10 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 #endif
 
 
-#if 1
-      ins->U[id] = 1;
-      ins->V[id] = 0;
-      ins->P[id] = 0;
+#if 1 // Zero flow
+      ins->U[id] = 1.0;
+      ins->V[id] = 0.0;
+      ins->P[id] = 0.0;
 #endif
     }
   }
@@ -151,6 +154,9 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   umax = sqrt(umax);
 
   dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  // if(mesh->N=1)
+  //   cfl = 0.05; 
+
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -170,16 +176,26 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     ins->NtimeSteps  = ins->NtimeSteps/ins->Nsubsteps;
 
     printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
-
   }
   else{
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt   = ins->finalTime/ins->NtimeSteps;
   }
+  
+  #if 0
+  // dfloat A[5]; 
+  // A[0] = 1e-4; A[1] = 0.333333*1e-4; A[2] = 1e-5; A[3] = 0.333333*1e-5; A[4] =1e-6;
+  // printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
+  // ins->dt = A[factor];
 
-
+  ins->dt = pow(2.0,factor)*1e-4;
+  ins->NtimeSteps = ins->finalTime/ins->dt;
+  ins->dt   = ins->finalTime/ins->NtimeSteps;
+  ins->sdt  = ins->dt/ins->Nsubsteps;
+  #endif
+  
   // errorStep
-  ins->errorStep =100;
+  ins->errorStep =40;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -201,6 +217,7 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+ // ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
@@ -276,43 +293,43 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
 
-    printf("Compiling SubCycle Advection volume kernel \n");
-    ins->subCycleVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleVolume2D",
-					 kernelInfo);
+    // printf("Compiling SubCycle Advection volume kernel \n");
+    // ins->subCycleVolumeKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleVolume2D",
+				// 	 kernelInfo);
 
-    printf("Compiling SubCycle Advection surface kernel\n");
-    ins->subCycleSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleSurface2D",
-					 kernelInfo);
+    // printf("Compiling SubCycle Advection surface kernel\n");
+    // ins->subCycleSurfaceKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleSurface2D",
+				// 	 kernelInfo);
 
-    printf("Compiling SubCycle Advection cubature  volume kernel \n");
-    ins->subCycleCubatureVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleCubatureVolume2D",
-					 kernelInfo);
+    // printf("Compiling SubCycle Advection cubature  volume kernel \n");
+    // ins->subCycleCubatureVolumeKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleCubatureVolume2D",
+				// 	 kernelInfo);
 
-    printf("Compiling SubCycle Advection cubature surface kernel\n");
-    ins->subCycleCubatureSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleCubatureSurface2D",
-					 kernelInfo);
-
-
-    printf("Compiling SubCycle Advection RK update kernel\n");
-    ins->subCycleRKUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleRKUpdate2D",
-					 kernelInfo);
+    // printf("Compiling SubCycle Advection cubature surface kernel\n");
+    // ins->subCycleCubatureSurfaceKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleCubatureSurface2D",
+				// 	 kernelInfo);
 
 
+    // printf("Compiling SubCycle Advection RK update kernel\n");
+    // ins->subCycleRKUpdateKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleRKUpdate2D",
+				// 	 kernelInfo);
 
-    ins->subCycleExtKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-					 "insSubCycleExt2D",
-					 kernelInfo);
+
+
+    // ins->subCycleExtKernel =
+    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+				// 	 "insSubCycleExt2D",
+				// 	 kernelInfo);
 
   }
 
@@ -350,6 +367,11 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
 				       "insAdvectionSurface2D",
 				       kernelInfo);
 
+   printf("Compiling SubCycle Advection RK update kernel\n");
+    ins->subCycleRKUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleRKUpdate2D",
+           kernelInfo);
   // ===========================================================================
   printf("Compiling Gradient volume kernel with collocation integration\n");
   ins->gradientVolumeKernel =
@@ -444,13 +466,13 @@ ins_t *insSetup2D(mesh2D *mesh, char * options, char *vSolverOptions, char *pSol
   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->pressureHaloExtractKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloExtract2D",
+				       "insPressureHaloExtract",
 				       kernelInfo);
 
   printf("Compiling INS PoissonHalo Extract Kernel\n");
   ins->pressureHaloScatterKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloScatter2D",
+				       "insPressureHaloScatter",
 				       kernelInfo);
   // ===========================================================================//
 #if 0
