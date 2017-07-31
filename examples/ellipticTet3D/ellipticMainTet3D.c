@@ -56,7 +56,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = (mesh->N+1)*(mesh->N+2)/2.0;
+  dfloat tau = 2*(mesh->N+1)*(mesh->N+3)/3.0;
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
