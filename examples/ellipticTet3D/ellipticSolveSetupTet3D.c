@@ -227,6 +227,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
 				       "ellipticPreconProlongate",
 				       kernelInfo);
+
+  solver->precon->blockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
+               "ellipticBlockJacobiPreconTet3D",
+               kernelInfo);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
