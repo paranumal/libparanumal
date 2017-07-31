@@ -10,30 +10,71 @@ typedef struct{
 
 } nonZero_t;
 
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
+int parallelCompareRowColumn(const void *a, const void *b);
+
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
+                      hgs_t **hgs, iint *globalStarts, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  /* find number of elements on each rank */
-  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-    rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
-  for(iint r=0;r<size;++r){
-    rankStarts[r+1] = rankStarts[r]+(rankNelements[r])*mesh->Np;
+  iint Nnum = mesh->Np*mesh->Nelements;
+
+  // create a global numbering system
+  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(iint));
+  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+
+  if (strstr(options,"PROJECT")) {
+    // Create a contiguous numbering system, starting from the element-vertex connectivity
+    for (iint n=0;n<Nnum;n++) {
+      iint id = mesh->gatherLocalIds[n];
+      globalIds[id] = mesh->gatherBaseIds[n];
+    }
+
+    // squeeze node numbering
+    meshParallelConsecutiveGlobalNumbering(Nnum, globalIds, globalOwners, globalStarts);
+
+    //use the ordering to define a gather+scatter for assembly
+    *hgs = meshParallelGatherSetup(mesh, Nnum, globalIds, globalOwners);
+
+  } else {
+    // every degree of freedom has its own global id
+    /* so find number of elements on each rank */
+    iint *rankNelements = (iint*) calloc(size, sizeof(iint));
+    iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
+    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+      rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+    //find offsets
+    for(iint r=0;r<size;++r){
+      rankStarts[r+1] = rankStarts[r]+rankNelements[r];
+    }
+    //use the offsets to set a global id
+    for (iint e =0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Np;n++) {
+        globalIds[e*mesh->Np +n] = n + (e + rankStarts[rankM])*mesh->Np;
+        globalOwners[e*mesh->Np +n] = rankM;
+      }
+    }
+
+    /* do a halo exchange of global node numbers */
+    if (mesh->totalHaloPairs) {
+      iint *idSendBuffer = (iint *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(iint));
+      meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
+      free(idSendBuffer);
+    }
   }
-  
-  /* do a halo exchange of local node numbers */
 
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
-  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
-  dfloat tau = 2; // hackery
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -163,7 +204,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
                           +(nx*dtdxP+ny*dtdyP+nz*dtdzP)*mesh->Dt[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv; 
+        dfloat penalty = tau*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
         for (iint n=0;n<mesh->Np;n++) {
           for (iint i=0;i<mesh->Nfp;i++) {
@@ -176,12 +217,26 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 
           dfloat AnmP = 0;
           if (eP < 0) {
+            int qSgn, gradqSgn;
+            int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+            iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+            if(bcType==1){ // Dirichlet
+              qSgn     = -1;
+              gradqSgn =  1;
+            } else if (bcType==2){ // Neumann
+              qSgn     =  1;
+              gradqSgn = -1;
+            } else { // Neumann for now
+              qSgn     =  1;
+              gradqSgn = -1;
+            }
+
             for (iint i=0;i<mesh->Nfp;i++) {
-              BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                  +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                  +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
-              BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
+              BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
+              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+                                  +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+                                  +0.5*qSgn*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
@@ -194,13 +249,10 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
           }
 
           if(fabs(AnmP)>tol){
-            // remote info
-            iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
-            if (rankP<0) rankP = rankM;
-            (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-            (*A)[nnz].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
-            (*A)[nnz].val = AnmP;
-            (*A)[nnz].ownerRank = rankM;
+            sendNonZeros[nnz].row = globalIds[eM*mesh->Np + n];
+            sendNonZeros[nnz].col = globalIds[eP*mesh->Np + m];
+            sendNonZeros[nnz].val = AnmP;
+            sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
             ++nnz;
           }
         }
@@ -212,23 +264,68 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
         dfloat Anm = BM[m+n*mesh->Np];
 
         if(fabs(Anm)>tol){
-          (*A)[nnz].row = n + eM*mesh->Np + rankStarts[rankM];
-          (*A)[nnz].col = m + eM*mesh->Np + rankStarts[rankM]; // this is wrong
-          (*A)[nnz].val = Anm;
-          (*A)[nnz].ownerRank = rankM;
+          sendNonZeros[nnz].row = globalIds[eM*mesh->Np+n];
+          sendNonZeros[nnz].col = globalIds[eM*mesh->Np+m];
+          sendNonZeros[nnz].val = Anm;
+          sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Np + n];
           ++nnz;
         }
       } 
     }
   }
 
-  // free up unused storage
-  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  // count how many non-zeros to send to each process
+  for(iint n=0;n<nnz;++n)
+    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+
+  // sort by row ordering
+  qsort(sendNonZeros, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // find send and recv offsets for gather
+  *nnzA = 0;
+  for(iint r=0;r<size;++r){
+    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+    *nnzA += ArecvCounts[r]/sizeof(nonZero_t);
+  }
+
+  *A = (nonZero_t*) calloc(*nnzA, sizeof(nonZero_t));
+
+  // determine number to receive
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
+    (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,
+    MPI_COMM_WORLD);
+
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort((*A), *nnzA, sizeof(nonZero_t), parallelCompareRowColumn);
+
+  // compress duplicates
+  nnz = 0;
+  for(iint n=1;n<*nnzA;++n){
+    if((*A)[n].row == (*A)[nnz].row &&
+       (*A)[n].col == (*A)[nnz].col){
+      (*A)[nnz].val += (*A)[n].val;
+    }
+    else{
+      ++nnz;
+      (*A)[nnz] = (*A)[n];
+    }
+  }
+  *nnzA = nnz+1;
   
-  *nnzA = nnz;
-  
+  free(globalIds);
+  free(globalOwners);
+  free(sendNonZeros);
+  free(AsendCounts);
+  free(ArecvCounts);
+  free(AsendOffsets);
+  free(ArecvOffsets);
+
   free(BM);  free(MS);
-  free(DrTMS); free(DsTMS); free(DtTMS);  
+  free(DrTMS); free(DsTMS); free(DtTMS);
 
   free(qmM); free(qmP);
   free(ndotgradqmM); free(ndotgradqmP);

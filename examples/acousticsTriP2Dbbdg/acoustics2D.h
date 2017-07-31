@@ -7,6 +7,7 @@
 #include "mesh2D.h"
 
 #define WADG 1
+#define ASYNC 1
 
 void acousticsSetup2D(mesh2D *mesh);
 
