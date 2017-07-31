@@ -1,7 +1,7 @@
 #include "ellipticHex3D.h"
  
 
-void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x){
+void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -22,64 +22,14 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 
 
 #if 1
+
+  void ellipticOperator3D(solver_t *solver, dfloat lambda,
+			  occa::memory &o_q, occa::memory &o_Aq, const char *options);
+  
     // assume 1 mpi process
   for(int it=0;it<iterations;++it){
     
-    ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo;
-
-    if(solver->NglobalGatherElements){
-      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-			      solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_r, o_x, 
-			      solver->o_pAp);
-    }
-    
-    if(halo->Ngather){
-      //	mesh->device.setStream(solver->dataStream);
-      
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_x, halo->o_gatherTmp);
-    }
-    
-    if(solver->NlocalGatherElements){
-      
-      solver->partialAxKernel(solver->NlocalGatherElements,
-			      solver->o_localGatherElementList,
-			      solver->o_gjGeo,
-			      solver->o_gjD,
-			      solver->o_gjI,
-			      lambda, o_r, o_x,
-			      solver->o_pAp);
-    }
-
-    // C0 halo gather-scatter (on data stream)
-    if(halo->Ngather){
-      occa::streamTag tag;   
-      
-      // MPI based gather scatter using libgs
-      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add"); 
-      
-      // copy totally gather halo data back from HOST to DEVICE
-      //      mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.copyFrom(halo->gatherTmp); 
-      
-      // wait for async copy
-      //      occa::streamTag tag = mesh->device.tagStream();
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-      
-      // do scatter back to local nodes
-      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_x);
-      
-      // make sure the scatter has finished on the data stream
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-    }      
-
-    // finalize gather using local and global contributions
-    mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather)
-      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_x);
-
+    ellipticOperator3D(solver, lambda, o_r, o_x, options);
   }
 #else
   // assume 1 mpi process
@@ -249,7 +199,7 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  timeAxOperator(solver, lambda, o_r, o_x);
+  timeAxOperator(solver, lambda, o_r, o_x, options);
   
   //  timeSolver(solver, lambda, o_r, o_x, options);
 

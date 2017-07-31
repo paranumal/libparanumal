@@ -6,7 +6,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
   mesh_t *mesh = solver->mesh;
 
-  occaTimerTic(mesh->device,"AxKernel");
+  //  occaTimerTic(mesh->device,"AxKernel");
   
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
@@ -183,7 +183,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     
   }
 
-  occaTimerToc(mesh->device,"AxKernel");
+  //  occaTimerToc(mesh->device,"AxKernel");
 }
 
 
