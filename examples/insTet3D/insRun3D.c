@@ -136,10 +136,11 @@ void insRun3D(ins_t *ins, char *options){
   }
 
 
- // For Final Time
-insReport3D(ins, ins->NtimeSteps+1,options);
+ 
 
 #if 0
+// For Final Time
+insReport3D(ins, ins->NtimeSteps+1,options);
 insErrorNorms2D(ins, ins->finalTime, options);
 #endif
 
