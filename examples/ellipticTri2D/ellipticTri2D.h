@@ -66,6 +66,15 @@ typedef struct {
   // block Jacobi precon
   occa::memory o_invMM;
   occa::kernel blockJacobiKernel;
+
+  //operator call-backs
+  void **OASsmootherArgs;
+  void **OAScoarsenArgs;
+  void **OASprolongateArgs;
+
+  void (*OASsmooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
+  void (*OAScoarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
+  void (*OASprolongate)(void **args, occa::memory o_x, occa::memory o_Px);
 } precon_t;
 
 
@@ -116,6 +125,7 @@ typedef struct {
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
   occa::kernel rhsBCIpdgKernel;
+
 }solver_t;
 
 void ellipticRunTri2D(mesh2D *mesh);

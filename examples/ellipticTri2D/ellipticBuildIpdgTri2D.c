@@ -41,6 +41,10 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 
   } else {
     // every degree of freedom has its own global id
+    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+      for(iint r=0;r<size;++r)
+        globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
+
     /* so find number of elements on each rank */
     iint *rankNelements = (iint*) calloc(size, sizeof(iint));
     iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
