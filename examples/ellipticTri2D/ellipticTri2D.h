@@ -10,6 +10,9 @@
 
 typedef struct {
 
+  dfloat *zP;
+  occa::memory o_zP;
+
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
 
@@ -26,14 +29,13 @@ typedef struct {
   occa::memory o_oasBackDgT;
 
   occa::kernel restrictKernel;
-  occa::kernel preconKernel;
 
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;
 
-  occa::kernel patchSolverKernel;
+  occa::kernel overlappingPatchKernel;
+  occa::kernel exactPatchSolverKernel;
   occa::kernel approxPatchSolverKernel;
-  occa::kernel localPatchSolverKernel;
   occa::kernel patchGatherKernel;
 
   ogs_t *ogsP, *ogsDg;
@@ -72,7 +74,7 @@ typedef struct {
   void **OAScoarsenArgs;
   void **OASprolongateArgs;
 
-  void (*OASsmooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
+  void (*OASsmooth)(void **args, occa::memory &o_r, occa::memory &o_x);
   void (*OAScoarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
   void (*OASprolongate)(void **args, occa::memory o_x, occa::memory o_Px);
 } precon_t;
@@ -95,13 +97,12 @@ typedef struct {
   dfloat tau;
 
   // HOST shadow copies
-  dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
+  dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
 
   dfloat *sendBuffer, *recvBuffer;
 
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
-  occa::memory o_zP; // extended OAS preconditioner patch solution
   occa::memory o_res;
   occa::memory o_Sres;
   occa::memory o_Ax; // A*initial guess
@@ -128,19 +129,9 @@ typedef struct {
 
 }solver_t;
 
-void ellipticRunTri2D(mesh2D *mesh);
-
 void ellipticOccaRunTri2D(mesh2D *mesh);
 
 void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
-
-void ellipticVolumeTri2D(mesh2D *mesh);
-
-void ellipticSurfaceTri2D(mesh2D *mesh, dfloat time);
-
-void ellipticUpdateTri2D(mesh2D *mesh, dfloat rka, dfloat rkb);
-
-void ellipticErrorTri2D(mesh2D *mesh, dfloat time);
 
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
@@ -149,8 +140,6 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
-void ellipticCoarsePreconditionerTri2D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
-
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
 void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
@@ -158,3 +147,13 @@ void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
+
+//smoother setups
+void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
+void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, const char *options);
+
+//smoother ops
+void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
+void exactFullPatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void approxFullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);

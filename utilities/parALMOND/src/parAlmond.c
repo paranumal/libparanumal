@@ -6,8 +6,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
 
   //gather the global problem
   //if the rhs has already been gather scattered, weight the gathered rhs
-  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")
-      ||strstr(parAlmond->options,"PRECONC0")) {
+  if(strstr(parAlmond->options,"GATHER")) {
     meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
     dotStar(parAlmond, parAlmond->hgs->Ngather,
             parAlmond->hgs->o_invDegree, parAlmond->levels[0]->o_rhs);
@@ -15,20 +14,29 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  device_kcycle(parAlmond, 0);
-  //device_vcycle(parAlmond, 0);
-  //device_pcg(parAlmond,1000,1e-8);
-
-  //host versions
-  //parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
-  //kcycle(parAlmond,0);
-  //vcycle(parAlmond,0);
-  //pcg(parAlmond,1000,1e-8);
-  //parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
+  if (strstr(parAlmond->options,"HOST")) {  
+    //host versions
+    parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      vcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"EXACT")) {
+      pcg(parAlmond,1000,1e-8);
+    }
+    parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
+  } else {
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      device_kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      device_vcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"EXACT")) {
+      device_pcg(parAlmond,1000,1e-8);
+    }
+  }
 
   //scatter the result
-  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")
-      ||strstr(parAlmond->options,"PRECONC0")) {
+  if(strstr(parAlmond->options,"GATHER")) {
     meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
   } else {
     parAlmond->levels[0]->o_x.copyTo(o_x);
@@ -110,7 +118,7 @@ void parAlmondAgmgSetup(void *Almond,
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
   for (iint i=0;i<numLocalRows;i++) nullA[i] = 1;
 
-  agmgSetup(parAlmond,level,A, nullA, globalRowStarts, options);
+  agmgSetup(parAlmond,level,A, nullA, globalRowStarts, parAlmond->options);
 
   parAlmond->hgs = hgs;
 
@@ -120,7 +128,7 @@ void parAlmondAgmgSetup(void *Almond,
   parAlmond->o_x = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
   parAlmond->o_Ax = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*sizeof(dfloat));
 
-  if (strstr(options, "VERBOSE"))
+  if (strstr(parAlmond->options, "VERBOSE"))
     parAlmondReport(parAlmond);
 }
 
