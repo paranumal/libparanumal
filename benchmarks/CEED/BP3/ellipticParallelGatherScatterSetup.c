@@ -119,7 +119,7 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
 
     occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc((*halo)->Ngather*Nbytes, NULL);
     (*halo)->gatherTmp = (char*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
-    printf("host gatherTmp = %p, Nbytes = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), Nbytes, (*halo)->Ngather);
+    //    printf("host gatherTmp = %p, Nbytes = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), Nbytes, (*halo)->Ngather);
 
     //    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
     
