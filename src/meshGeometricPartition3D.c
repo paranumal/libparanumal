@@ -69,6 +69,10 @@ void bogusMatch(void *a, void *b){ }
 // geometric partition of elements in 3D mesh using Morton ordering + parallelSort
 void meshGeometricPartition3D(mesh3D *mesh){
 
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
   iint maxNelements;
   MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_IINT, MPI_MAX,
 		MPI_COMM_WORLD);
@@ -146,6 +150,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
 	       compareElements, 
 	       bogusMatch);
 
+#if 0
   // count number of elements that end up on this process
   iint cnt = 0;
   for(iint e=0;e<maxNelements;++e)
@@ -175,4 +180,102 @@ void meshGeometricPartition3D(mesh3D *mesh){
       ++cnt;
     }
   }
+#else
+  // compress and renumber elements
+  iint sk  = 0;
+  for(iint e=0;e<maxNelements;++e){
+    if(elements[e].element != -1){
+      elements[sk] = elements[e];
+      ++sk;
+    }
+  }
+
+  iint localNelements = sk;
+
+  /// redistribute elements to improve balancing
+  iint *globalNelements = (iint *) calloc(size,sizeof(iint));
+  iint *starts = (iint *) calloc(size+1,sizeof(iint));
+
+  MPI_Allgather(&localNelements, 1, MPI_IINT, globalNelements, 1,  MPI_IINT, MPI_COMM_WORLD);
+
+  for(iint r=0;r<size;++r)
+    starts[r+1] = starts[r]+globalNelements[r];
+
+  iint allNelements = starts[size];
+
+  // decide how many to keep on each process
+  int chunk = allNelements/size;
+  int remainder = allNelements - chunk*size;
+
+  iint *Nsend = (iint *) calloc(size, sizeof(iint));
+  iint *Nrecv = (iint *) calloc(size, sizeof(iint));
+  iint *Ncount = (iint *) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
+
+
+  for(iint e=0;e<localNelements;++e){
+
+    // global element index
+    elements[e].element = starts[rank]+e;
+
+    // 0, chunk+1, 2*(chunk+1) ..., remainder*(chunk+1), remainder*(chunk+1) + chunk
+    iint r;
+    if(elements[e].element<remainder*(chunk+1))
+      r = elements[e].element/(chunk+1);
+    else
+      r = remainder + ((elements[e].element-remainder*(chunk+1))/chunk);
+
+    ++Nsend[r];
+  }
+
+  // find send offsets
+  for(iint r=1;r<size;++r)
+    sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
+
+  // exchange byte counts
+  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // count incoming clusters
+  iint newNelements = 0;
+  for(iint r=0;r<size;++r){
+    newNelements += Nrecv[r];
+    Nrecv[r] *= sizeof(element_t);
+    Nsend[r] *= sizeof(element_t);
+    sendOffsets[r] *= sizeof(element_t);
+  }
+  for(iint r=1;r<size;++r)
+    recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
+
+  element_t *tmpElements = (element_t *) calloc(newNelements, sizeof(element_t));
+
+  // exchange parallel clusters
+  MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_CHAR,
+                tmpElements, Nrecv, recvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+
+  // replace elements with inbound elements
+  if (elements) free(elements);
+  elements = tmpElements;
+
+  // reset number of elements and element-to-vertex connectivity from returned capsules
+  free(mesh->EToV);
+  free(mesh->EX);
+  free(mesh->EY);
+  free(mesh->EZ);
+
+  mesh->Nelements = newNelements;
+  mesh->EToV = (iint*) calloc(newNelements*mesh->Nverts, sizeof(iint));
+  mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
+  mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
+  mesh->EZ = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
+
+  for(iint e=0;e<newNelements;++e){
+    for(iint n=0;n<mesh->Nverts;++n){
+      mesh->EToV[e*mesh->Nverts + n] = elements[e].v[n];
+      mesh->EX[e*mesh->Nverts + n]   = elements[e].EX[n];
+      mesh->EY[e*mesh->Nverts + n]   = elements[e].EY[n];
+      mesh->EZ[e*mesh->Nverts + n]   = elements[e].EZ[n];
+    }
+  }
+#endif
 }

@@ -357,6 +357,15 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   // subtract r = b - A*x
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
+  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  dfloat rdotz0 = 0;
+  iint Niter = 0;
+  //sanity check
+  if (rdotr0<=(tol*tol)) {
+    printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
+    return 0; 
+  }
+
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){
 
@@ -374,12 +383,11 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   
   // dot(r,r)
-  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-  dfloat rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
+  rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  iint Niter = 0;
-  dfloat alpha, beta;
+  
+  dfloat alpha, beta, pAp = 0;
   
   if(rank==0)
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);

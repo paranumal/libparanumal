@@ -313,6 +313,7 @@ kernel void ellipticAxHex3D_e1(const iint     Nelements,
 */
 
 #define p_gjNp (p_gjNq*p_gjNq*p_gjNq)
+#define p_gjNq2 (p_gjNq*p_gjNq)
 #define p_Nq2 (p_Nq*p_Nq)
 
 #if ((p_NblockG*p_gjNq*p_gjNq)<=32)
@@ -760,7 +761,6 @@ kernel void ellipticAxHex3D_e3(const int Nelements,
 #else
 #define p_gllPad 0
 #endif
-
 
 /* note that the gjGeo must be the geometric factors at the p_gjNp integration nodes */
 kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
@@ -1766,7 +1766,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 				      const dfloat * restrict gjD,
 				      const dfloat * restrict gjI,
 				      const dfloat   lambda,
-				      const dfloat * restrict q,
+				      dfloat * restrict q,
 				      dfloat * restrict Aq,
 				      dfloat * restrict qAq){  
 
@@ -1837,7 +1837,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	for(int a=0;a<p_gjNq;++a;inner0){
 	  
 	  const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
-	  r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
+	  r_GwJ = gjGeo[base+p_GWJID*p_gjNp]; 
 	  r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 	  r_G01 = gjGeo[base+p_G01ID*p_gjNp];
 	  r_G02 = gjGeo[base+p_G02ID*p_gjNp];
@@ -1852,6 +1852,241 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	    dfloat Iqk = 0, Dqk = 0;
 	    
 	    // puts more data in flight
+	    for(int c=0;c<p_Nq;++c){
+	      const dfloat qcba = r_q[c]; 
+	      Iqk += s_I[k][c]*qcba;
+	      Dqk += s_D[k][c]*qcba;
+	    }
+	    s_Ixxq[b][a] = Iqk;
+	    s_Dxxq[b][a] = Dqk;
+	  }
+	}
+      }
+	
+      optBarrier(localMemFence);
+      
+      // interpolate and differentiate in 'r' direction
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+ 
+	  if(b<p_Nq){
+
+	    dfloat IxDq= 0, IxIq = 0, DxIq = 0;
+	    
+	    occaUnroll(p_Nq)
+	    for(int a=0;a<p_Nq;++a){
+	      const dfloat Iia = s_I[i][a];
+	      const dfloat Ixxqba = s_Ixxq[b][a];
+	      IxIq += Iia*Ixxqba;
+	      DxIq += Iia*s_Dxxq[b][a];
+	    }
+
+	    occaUnroll(p_Nq)
+	    for(int a=0;a<p_Nq;++a){
+	      const dfloat Dia = s_D[i][a];
+	      const dfloat Ixxqba = s_Ixxq[b][a];
+	      IxDq += Dia*Ixxqba;
+	    }
+	    
+	    s_IxDq[b][i] = IxDq;
+	    s_IxIq[b][i] = IxIq;
+	    s_DxIq[b][i] = DxIq;
+	  }
+	}
+      }
+	
+      optBarrier(localMemFence);
+      
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  
+	  dfloat qr = 0, qs = 0, qt = 0, qI = 0;
+	  
+	  // interpolate and differentiate in 's' direction
+	  occaUnroll(p_Nq)
+	    for(int b=0;b<p_Nq;++b){
+	      const dfloat Ijn = s_I[j][b];
+	      qr += Ijn*s_IxDq[b][i];
+	      qt += Ijn*s_DxIq[b][i];
+	      qI += Ijn*s_IxIq[b][i];
+	    }
+		
+	  occaUnroll(p_Nq)
+	    for(int b=0;b<p_Nq;++b){
+	      const dfloat Djn = s_D[j][b];
+	      qs += Djn*s_IxIq[b][i];
+	    }	 
+	  
+	  // apply chain rule (notice the swtich of indices in i,j)
+	  s_qr[i][j] = r_G00*qr + r_G01*qs + r_G02*qt;
+	  s_qs[i][j] = r_G01*qr + r_G11*qs + r_G12*qt;
+	  s_qt[i][j] = r_G02*qr + r_G12*qs + r_G22*qt;
+	  s_qI[i][j] = r_GwJ*qI*lambda;
+	}
+      }
+      
+      optBarrier(localMemFence);
+      
+      // transpose differentiate and interpolate in 'r'
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int a=0;a<p_gjNq;++a;inner0){
+	  
+	  if(a<p_Nq){
+	    dfloat tmpr = 0, tmps = 0, tmpt = 0, tmpI = 0;
+	    occaUnroll(p_gjNq)
+	      for(int i=0;i<p_gjNq;++i){
+		const dfloat Iia = s_I[i][a];
+		tmps += Iia*s_qs[i][j];
+		tmpt += Iia*s_qt[i][j];
+		tmpI += Iia*s_qI[i][j];
+	      }
+
+	    occaUnroll(p_gjNq)
+	      for(int i=0;i<p_gjNq;++i){
+		const dfloat Dia = s_D[i][a];
+		tmpr += Dia*s_qr[i][j];
+	      }
+	    
+	    s_Dqr[j][a] = tmpr+tmpI; // blend lambda term in here
+	    s_Iqs[j][a] = tmps;
+	    s_Iqt[j][a] = tmpt;
+	  }
+	}
+      }
+      
+      optBarrier(localMemFence);
+      
+      // transpose differentiate and interpolate in 's'
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int a=0;a<p_gjNq;++a;inner0){
+	  if(a<p_Nq && b<p_Nq){
+	    dfloat tmpr = 0, tmps = 0, tmpt = 0;
+	    
+	    occaUnroll(p_gjNq)
+	      for(int j=0;j<p_gjNq;++j){
+		const dfloat Ijb = s_I[j][b];
+		
+		tmpr += Ijb*s_Dqr[j][a];
+		tmpt += Ijb*s_Iqt[j][a];
+	      }
+
+
+	    occaUnroll(p_gjNq)
+	      for(int j=0;j<p_gjNq;++j){
+		const dfloat Djb = s_D[j][b];
+		
+		tmps += Djb*s_Iqs[j][a];
+	      }
+	    
+	    // transpose differentiate and interpolate in 't'
+	    tmpr += tmps; // blend r and s
+	    occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
+	      r_lapq[c] += s_I[k][c]*tmpr + s_D[k][c]*tmpt;
+	    }
+	  }
+	}
+      }
+    }
+    
+    //    optBarrier(localMemFence);
+    
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+	
+	dfloat r_qAq = 0;
+	
+	if(a<p_Nq && b<p_Nq){
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
+	      const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+	      Aq[id] = r_lapq[c];
+	    }
+	}
+      }
+    }
+  }
+}
+
+
+kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
+				      const iint * restrict elementList,
+				      const dfloat * restrict gjGeo, 
+				      const dfloat * restrict gjD,
+				      const dfloat * restrict gjI,
+				      const dfloat   lambda,
+				      const dfloat * restrict q,
+				      dfloat * restrict gradq,
+				      dfloat * restrict Aq){
+
+  // split into gradient then divergence to reduce register and shared memory pressure
+  
+  // gradient
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_D[p_gjNq][p_Nq+p_gllPad];
+    shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+
+    exclusive dfloat r_q[p_Nq];
+
+    shared dfloat s_Ixxq[p_Nq][p_Nq+p_gllPad];
+    shared dfloat s_Dxxq[p_Nq][p_Nq+p_gllPad];
+
+    shared dfloat s_IxDq[p_Nq][p_gjNq+p_gjPad];
+    shared dfloat s_IxIq[p_Nq][p_gjNq+p_gjPad];
+    shared dfloat s_DxIq[p_Nq][p_gjNq+p_gjPad];
+
+    exclusive iint emap;
+    exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;	      
+    
+    // prefetch D and I matrices and zero register storage
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+	const int t = a + p_gjNq*b;
+	
+	if(a<p_Nq && b<p_gjNq){
+	  s_D[b][a] = gjD[b*p_Nq+a];
+	  s_I[b][a] = gjI[b*p_Nq+a];
+	}
+	
+	emap = elementList[e];
+	
+	if(a<p_Nq && b<p_Nq){
+	  
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
+	      r_q[c] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+	    }
+	}
+      }
+    }
+    
+    // scan through k slices
+
+    for(int k=0;k<p_gjNq;++k){
+	
+      optBarrier(localMemFence);
+      
+      // prefetch slice
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int a=0;a<p_gjNq;++a;inner0){
+	  
+	  const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+	  r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
+	  r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+	  r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+	  r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+	  
+	  r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+	  r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+	  r_G22 = gjGeo[base+p_G22ID*p_gjNp];	  
+	  // assumes w*J built into G entries
+	  
+	  if(a<p_Nq && b<p_Nq){
+	    
+	    dfloat Iqk = 0, Dqk = 0;
+	    
+	    occaUnroll(p_Nq)
 	    for(int c=0;c<p_Nq;++c){
 	      const dfloat qcba = r_q[c]; 
 	      Iqk += s_I[k][c]*qcba;
@@ -1909,40 +2144,172 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	    }	 
 	  
 	  // apply chain rule (notice the swtich of indices in i,j)
-	  s_qr[i][j] = r_G00*qr + r_G01*qs + r_G02*qt;
-	  s_qs[i][j] = r_G01*qr + r_G11*qs + r_G12*qt;
-	  s_qt[i][j] = r_G02*qr + r_G12*qs + r_G22*qt;
-	  s_qI[i][j] = r_GwJ*qI*lambda;
+	  // should bundle these
+	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  gradq[base+0*p_gjNq2] = r_G00*qr + r_G01*qs + r_G02*qt;
+	  gradq[base+1*p_gjNq2] = r_G01*qr + r_G11*qs + r_G12*qt;
+	  gradq[base+2*p_gjNq2] = r_G02*qr + r_G12*qs + r_G22*qt;
+	  gradq[base+3*p_gjNq2] = r_GwJ*qI*lambda;
+	}
+      }
+    }
+  }
+
+  // divergence
+  for(int e=0;e<Nelements;++e;outer0){      
+    
+    shared dfloat s_D[p_gjNq][p_Nq+p_gllPad];
+    shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+    
+    exclusive dfloat r_lapq[p_Nq];
+
+    shared dfloat s_qtmp[p_gjNq][p_gjNq+p_gjPad];
+    
+    shared dfloat s_Dqr[p_gjNq][p_Nq+p_gllPad];
+    shared dfloat s_Iqs[p_gjNq][p_Nq+p_gllPad];
+    shared dfloat s_Iqt[p_gjNq][p_Nq+p_gllPad];
+    
+    exclusive iint emap;
+  
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+	if(a<p_Nq && b<p_gjNq){
+	  s_D[b][a] = gjD[b*p_Nq+a];
+	  s_I[b][a] = gjI[b*p_Nq+a];
+	}
+      }
+
+      for(int c=0;c<p_Nq;++c){
+	r_lapq[c] = 0.f;
+      }
+
+      emap = elementList[e];
+    }
+
+    for(int k=0;k<p_gjNq;++k){
+
+      // 1.
+      optBarrier(localMemFence);      
+
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){	
+	  // should bundle these
+	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  s_qtmp[i][j] = gradq[base+0*p_gjNq2];
 	}
       }
       
       optBarrier(localMemFence);
-      
+
       // transpose differentiate and interpolate in 'r'
-      for(int j=0;j<p_gjNq;++j;inner1){
-	for(int a=0;a<p_gjNq;++a;inner0){
+      for(int a=0;a<p_gjNq;++a;inner1){	
+	for(int j=0;j<p_gjNq;++j;inner0){
 	  
 	  if(a<p_Nq){
-	    dfloat tmpr = 0, tmps = 0, tmpt = 0, tmpI = 0;
+	    dfloat tmpr = 0;
+	    occaUnroll(p_gjNq)
+	      for(int i=0;i<p_gjNq;++i){
+		const dfloat Dia = s_D[i][a];
+		tmpr += Dia*s_qtmp[i][j];
+	      }
+	    
+	    s_Dqr[j][a] = tmpr; 
+	  }
+	}
+      }
+
+      // 2.
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){	
+	  // should bundle these
+	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  s_qtmp[i][j] = gradq[base+1*p_gjNq2];
+	}
+      }
+      
+      optBarrier(localMemFence);
+
+      // transpose differentiate and interpolate in 'r'
+      for(int a=0;a<p_gjNq;++a;inner1){	
+	for(int j=0;j<p_gjNq;++j;inner0){
+	  
+	  if(a<p_Nq){
+	    dfloat tmps = 0;
 	    occaUnroll(p_gjNq)
 	      for(int i=0;i<p_gjNq;++i){
 		const dfloat Iia = s_I[i][a];
-		const dfloat Dia = s_D[i][a];
-		tmpr += Dia*s_qr[i][j];
-		tmps += Iia*s_qs[i][j];
-		tmpt += Iia*s_qt[i][j];
-		tmpI += Iia*s_qI[i][j];
+		tmps += Iia*s_qtmp[i][j];
 	      }
 	    
-	    s_Dqr[j][a] = tmpr+tmpI; // blend lambda term in here
 	    s_Iqs[j][a] = tmps;
+	  }
+	}
+      }
+
+      optBarrier(localMemFence);
+
+      // 3.
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){	
+	  // should bundle these
+	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  s_qtmp[i][j] = gradq[base+2*p_gjNq2];
+	}
+      }
+      
+      optBarrier(localMemFence);
+
+      // transpose differentiate and interpolate in 'r'
+      for(int a=0;a<p_gjNq;++a;inner1){	
+	for(int j=0;j<p_gjNq;++j;inner0){
+	  
+	  if(a<p_Nq){
+	    dfloat tmpt = 0;
+	    occaUnroll(p_gjNq)
+	      for(int i=0;i<p_gjNq;++i){
+		const dfloat Iia = s_I[i][a];
+		tmpt += Iia*s_qtmp[i][j];
+	      }
+	    
 	    s_Iqt[j][a] = tmpt;
 	  }
 	}
       }
+
       
       optBarrier(localMemFence);
+
+      // 4.
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){	
+	  // should bundle these
+	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  s_qtmp[i][j] = gradq[base+3*p_gjNq2];
+	}
+      }
       
+      optBarrier(localMemFence);
+
+      // transpose differentiate and interpolate in 'r'
+      for(int a=0;a<p_gjNq;++a;inner1){	
+	for(int j=0;j<p_gjNq;++j;inner0){
+	  
+	  if(a<p_Nq){
+	    dfloat tmpI = 0;
+	    occaUnroll(p_gjNq)
+	      for(int i=0;i<p_gjNq;++i){
+		const dfloat Iia = s_I[i][a];
+		tmpI += Iia*s_qtmp[i][j];
+	      }
+	    
+	    s_Dqr[j][a] += tmpI; // blend lambda term in here
+	  }
+	}
+      }
+      
+      
+      optBarrier(localMemFence);
+
       // transpose differentiate and interpolate in 's'
       for(int b=0;b<p_gjNq;++b;inner1){
 	for(int a=0;a<p_gjNq;++a;inner0){
@@ -1950,7 +2317,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	    dfloat tmpr = 0, tmps = 0, tmpt = 0;
 	    
 	    occaUnroll(p_gjNq)
-	    for(int j=0;j<p_gjNq;++j){
+	      for(int j=0;j<p_gjNq;++j){
 	      const dfloat Ijb = s_I[j][b];
 	      const dfloat Djb = s_D[j][b];
 	      
@@ -1976,8 +2343,6 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
     for(int b=0;b<p_gjNq;++b;inner1){
       for(int a=0;a<p_gjNq;++a;inner0){
 	
-	dfloat r_qAq = 0;
-	
 	if(a<p_Nq && b<p_Nq){
 	  occaUnroll(p_Nq)
 	    for(int c=0;c<p_Nq;++c){
@@ -1989,3 +2354,208 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
     }
   }
 }
+
+// ONLY CPU
+
+kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
+				      const iint * restrict elementList,
+				      const dfloat * restrict gjGeo, 
+				      const dfloat * restrict gjD,
+				      const dfloat * restrict gjI,
+				      const dfloat   lambda,
+				      dfloat * restrict q,
+				      dfloat * restrict Aq,
+				      dfloat * restrict qAq){  
+
+  dfloat s_D[p_gjNq][p_Nq+p_gllPad];
+  dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+  
+  for(int b=0;b<p_gjNq;++b){
+    for(int a=0;a<p_Nq;++a){
+      s_D[b][a] = gjD[b*p_Nq+a];
+      s_I[b][a] = gjI[b*p_Nq+a];
+    }
+  }
+
+  dfloat r_q[p_Nq][p_Nq][p_Nq];
+  dfloat r_lapq[p_Nq][p_Nq][p_Nq];
+  
+  dfloat s_Ixxq[p_Nq][p_Nq+p_gllPad];
+  dfloat s_Dxxq[p_Nq][p_Nq+p_gllPad];
+  
+  dfloat s_IxDq[p_Nq][p_gjNq+p_gjPad];
+  dfloat s_IxIq[p_Nq][p_gjNq+p_gjPad];
+  dfloat s_DxIq[p_Nq][p_gjNq+p_gjPad];
+  
+  dfloat s_qr[p_gjNq][p_gjNq+p_gjPad];
+  dfloat s_qs[p_gjNq][p_gjNq+p_gjPad];
+  dfloat s_qt[p_gjNq][p_gjNq+p_gjPad];
+  
+  dfloat s_Dqr[p_gjNq][p_Nq+p_gllPad];
+  dfloat s_Iqs[p_gjNq][p_Nq+p_gllPad];
+  dfloat s_Iqt[p_gjNq][p_Nq+p_gllPad];
+  
+  dfloat s_qI[p_gjNq][p_gjNq+p_gjPad];
+  
+  for(int e=0;e<Nelements;++e){
+    
+    const iint emap = elementList[e];
+    
+    // prefetch D and I matrices and zero register storage
+    for(int c=0;c<p_Nq;++c){
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+	  r_lapq[c][b][a] = 0;
+	  r_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+	}
+      }
+    }
+    
+    // scan through k slices
+
+    for(int k=0;k<p_gjNq;++k){
+	
+      // prefetch slice
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+	  
+	  // assumes w*J built into G entries
+	  
+	  dfloat Iqk = 0, Dqk = 0;
+	  
+	  // puts more data in flight
+	  for(int c=0;c<p_Nq;++c){
+	    const dfloat qcba =  r_q[c][b][a]; 
+	    Iqk += s_I[k][c]*qcba;
+	    Dqk += s_D[k][c]*qcba;
+	  }
+	  s_Ixxq[b][a] = Iqk;
+	  s_Dxxq[b][a] = Dqk;
+	}
+      }
+      
+      // interpolate and differentiate in 'r' direction
+      for(int b=0;b<p_Nq;++b){
+	for(int i=0;i<p_gjNq;++i){
+	  
+	  dfloat IxDq= 0, IxIq = 0, DxIq = 0;
+	  
+	  for(int a=0;a<p_Nq;++a){
+	    const dfloat Iia = s_I[i][a];
+	    const dfloat Ixxqba = s_Ixxq[b][a];
+	    IxIq += Iia*Ixxqba;
+	    DxIq += Iia*s_Dxxq[b][a];
+	  }
+	  
+	  for(int a=0;a<p_Nq;++a){
+	    const dfloat Dia = s_D[i][a];
+	    const dfloat Ixxqba = s_Ixxq[b][a];
+	    IxDq += Dia*Ixxqba;
+	  }
+	  
+	  s_IxDq[b][i] = IxDq;
+	  s_IxIq[b][i] = IxIq;
+	  s_DxIq[b][i] = DxIq;
+	}
+      }
+      
+      for(int j=0;j<p_gjNq;++j){
+	for(int i=0;i<p_gjNq;++i){
+	  
+	  dfloat qr = 0, qs = 0, qt = 0, qI = 0;
+	  
+	  // interpolate and differentiate in 's' direction
+	  for(int b=0;b<p_Nq;++b){
+	    const dfloat Ijn = s_I[j][b];
+	    qr += Ijn*s_IxDq[b][i];
+	    qt += Ijn*s_DxIq[b][i];
+	    qI += Ijn*s_IxIq[b][i];
+	  }
+	  
+	  for(int b=0;b<p_Nq;++b){
+	    const dfloat Djn = s_D[j][b];
+	    qs += Djn*s_IxIq[b][i];
+	  }	 
+	  
+	  const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp]; 
+	  const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+	  const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+	  const dfloat r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+	  
+	  const dfloat r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+	  const dfloat r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+	  const dfloat r_G22 = gjGeo[base+p_G22ID*p_gjNp];	  
+	  
+	  // apply chain rule (notice the swtich of indices in i,j)
+	  s_qr[i][j] = r_G00*qr + r_G01*qs + r_G02*qt;
+	  s_qs[i][j] = r_G01*qr + r_G11*qs + r_G12*qt;
+	  s_qt[i][j] = r_G02*qr + r_G12*qs + r_G22*qt;
+	  s_qI[i][j] = r_GwJ*qI*lambda;
+	}
+      }
+      
+      // transpose differentiate and interpolate in 'r'
+      for(int j=0;j<p_gjNq;++j){
+	for(int a=0;a<p_Nq;++a){
+	  
+	  dfloat tmpr = 0, tmps = 0, tmpt = 0, tmpI = 0;
+
+	  for(int i=0;i<p_gjNq;++i){
+	    const dfloat Iia = s_I[i][a];
+	    tmps += Iia*s_qs[i][j];
+	    tmpt += Iia*s_qt[i][j];
+	    tmpI += Iia*s_qI[i][j];
+	  }
+	  
+	  for(int i=0;i<p_gjNq;++i){
+	    const dfloat Dia = s_D[i][a];
+	    tmpr += Dia*s_qr[i][j];
+	  }
+	  
+	  s_Dqr[j][a] = tmpr+tmpI; // blend lambda term in here
+	  s_Iqs[j][a] = tmps;
+	  s_Iqt[j][a] = tmpt;
+	}
+      }
+      
+      // transpose differentiate and interpolate in 's'
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+
+	  dfloat tmpr = 0, tmps = 0, tmpt = 0;
+	    
+	  for(int j=0;j<p_gjNq;++j){
+	    const dfloat Ijb = s_I[j][b];
+	    
+	    tmpr += Ijb*s_Dqr[j][a];
+	    tmpt += Ijb*s_Iqt[j][a];
+	  }
+	  
+	  for(int j=0;j<p_gjNq;++j){
+	    const dfloat Djb = s_D[j][b];
+	    
+	    tmps += Djb*s_Iqs[j][a];
+	  }
+	  
+	  // transpose differentiate and interpolate in 't'
+	  tmpr += tmps; // blend r and s
+
+	  for(int c=0;c<p_Nq;++c){
+	    r_lapq[c][b][a] += s_I[k][c]*tmpr + s_D[k][c]*tmpt;
+	  }
+	}
+      }
+    }
+
+    for(int c=0;c<p_Nq;++c){    
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+	  const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+	  Aq[id] = r_lapq[c][b][a];
+	}
+      }
+    }
+  }
+}
+

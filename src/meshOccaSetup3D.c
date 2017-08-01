@@ -29,7 +29,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       notInternalElementIds[NnotInterior++] = e;
   }
 
-  printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
+  //  printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
 
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
@@ -262,7 +262,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
  #if 1
- // printf("Integration number of points: %d \n",mesh->intNfp);
+  // printf("Integration number of points: %d \n",mesh->intNfp);
   mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
   mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
   mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
@@ -294,7 +294,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   #endif
 
-  printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
+  //  printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
   if (mesh->Nverts==8){     // hardcoded for hexes
 
     mesh->o_vgeo =

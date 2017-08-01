@@ -1,5 +1,15 @@
 #include "ellipticHex3D.h"
 
+occa::kernel saferBuildKernelFromSource(occa::device &device, 
+					const char *fname, const char *kname, occa::kernelInfo &kernelInfo){
+  
+  // should really use root to build and non-root to load
+  return device.buildKernelFromSource(fname, kname, kernelInfo);
+  
+}
+
+
+
 // specialized version for geometric factors at Gauss (not GLL) nodes
 dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 
@@ -9,8 +19,6 @@ dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
   iint gjNp = gjNq*gjNq*gjNq;
   dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
 
-  dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
-  
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -69,8 +77,6 @@ dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
     }
   }
 
-  printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
-
   return gjGeo;
 }
 
@@ -96,8 +102,9 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 
 solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options) {
 
-	iint rank;
+  iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int NblockV = mymax(1,1024/mesh->Np); // works for CUDA
@@ -112,7 +119,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   else {
     if(mesh->Nq<=6) {
       NblockG = 256/gjNq2; 
-      printf("mesh->Nq=%d and NblockG=%d\n", mesh->Nq, NblockG);
     }
     else 
       NblockG = 1;
@@ -123,8 +129,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
 
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  printf("Nblock = %d\n", Nblock);
-
 
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
@@ -140,7 +144,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->zP  = (dfloat*) calloc(NallP, sizeof(dfloat));
   solver->Ax  = (dfloat*) calloc(Nall, sizeof(dfloat));
   solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
-  printf("Nblkck = %d\n", Nblock);
+
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   solver->grad = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
   
@@ -192,8 +196,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-G");
+  kernelInfo.addCompilerFlag("-O3");
 
   // generically used for blocked DEVICE reductions
   kernelInfo.addDefine("p_blockSize", blockSize);
@@ -205,7 +210,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   kernelInfo.addDefine("p_NblockG", NblockG);
-  printf("NblockG = %d\n", NblockG);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
@@ -214,114 +218,131 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
-               "meshHaloExtract3D",
-               kernelInfo);
+  //  occa::setVerboseCompilation(0);
 
-  mesh->gatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
-               "gather",
-               kernelInfo);
+  for(iint r=0;r<size;++r){
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(r==rank){
+      printf("Building kernels for rank %d\n", rank);
+      fflush(stdout);
+      mesh->haloExtractKernel =
+	saferBuildKernelFromSource(mesh->device, 
+				   DHOLMES "/okl/meshHaloExtract3D.okl",
+				   "meshHaloExtract3D",
+				   kernelInfo);
+      
+      mesh->gatherKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
+				   "gather",
+				   kernelInfo);
+      
+      mesh->scatterKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
+				   "scatter",
+				   kernelInfo);
+      
+      mesh->gatherScatterKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
+				   "gatherScatter",
+				   kernelInfo);
 
-  mesh->scatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
-               "scatter",
-               kernelInfo);
+      
+      mesh->getKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
+				   "get",
+				   kernelInfo);
+      
+      mesh->putKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
+				   "put",
+				   kernelInfo);
+      
+#if 0
+      // WARNING
+      if(mesh->Nq<12){
+	solver->AxKernel =
+	  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
+				     "ellipticAxHex3D_e3",
+				     kernelInfo);
+      }
+#endif
 
-  mesh->gatherScatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
-				       "gatherScatter",
-				       kernelInfo);
-
-  
-  mesh->getKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
-               "get",
-               kernelInfo);
-
-  mesh->putKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
-               "put",
-               kernelInfo);
-
-  if(mesh->Nq<12){
-  solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
-               "ellipticAxHex3D_e3",
-               kernelInfo);
-  }
-  
-  solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D.okl",
-				       "ellipticPartialAxHex3D_e6",
-				       kernelInfo);
-  
-
-  mesh->weightedInnerProduct1Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
-               "weightedInnerProduct1",
-               kernelInfo);
-
-  mesh->weightedInnerProduct2Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
-               "weightedInnerProduct2",
-               kernelInfo);
-
-  mesh->innerProductKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
-               "innerProduct",
-               kernelInfo);
-
-  mesh->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-           "scaledAdd",
-           kernelInfo);
-
-  mesh->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
-           "dotMultiply",
-           kernelInfo);
-
-  mesh->dotDivideKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
-           "dotDivide",
-           kernelInfo);
-
-  solver->gradientKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
-				       "ellipticGradientHex3D",
-				       kernelInfo);
-  
-  solver->partialGradientKernel = 
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
-				       "ellipticPartialGradientHex3D",
-				       kernelInfo);
-
-  if(mesh->Nq<12){
-    solver->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+      // CPU version is e8, GPU version is e6
+      solver->partialAxKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
+				   "ellipticPartialAxHex3D_e6", 
+				   kernelInfo);
+      
+      
+      mesh->weightedInnerProduct1Kernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct1.okl",
+				   "weightedInnerProduct1",
+				   kernelInfo);
+      
+      mesh->weightedInnerProduct2Kernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct2.okl",
+				   "weightedInnerProduct2",
+				   kernelInfo);
+      
+      mesh->innerProductKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/innerProduct.okl",
+				   "innerProduct",
+				   kernelInfo);
+      
+      mesh->scaledAddKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scaledAdd.okl",
+				   "scaledAdd",
+				   kernelInfo);
+      
+      mesh->dotMultiplyKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotMultiply.okl",
+				   "dotMultiply",
+				   kernelInfo);
+      
+      mesh->dotDivideKernel = 
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotDivide.okl",
+				   "dotDivide",
+				   kernelInfo);
+      
+      solver->gradientKernel = 
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+				   "ellipticGradientHex3D",
+				   kernelInfo);
+      
+      solver->partialGradientKernel = 
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+				   "ellipticPartialGradientHex3D",
+				   kernelInfo);
+      
+      if(mesh->Nq<12){
+	solver->ipdgKernel =
+	  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
 					 "ellipticAxIpdgHex3D",
-					 kernelInfo);
-    
-    solver->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-					 "ellipticPartialAxIpdgHex3D",
-					 kernelInfo);
-  }
-  
-  solver->combinedInnerProductKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
-				       "ellipticCombinedInnerProduct",
-				       kernelInfo);
+				     kernelInfo);
+	
+	solver->partialIpdgKernel =
+	  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+				     "ellipticPartialAxIpdgHex3D",
+				     kernelInfo);
+      }
+      
+      solver->combinedInnerProductKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
+				   "ellipticCombinedInnerProduct",
+				   kernelInfo);
+      
+      solver->combinedUpdateKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedUpdate.okl",
+				   "ellipticCombinedUpdate",
+				   kernelInfo);
+      usleep(8000);
+    }
 
-  solver->combinedUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCombinedUpdate.okl",
-				       "ellipticCombinedUpdate",
-				       kernelInfo);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 
   occaTimerTic(mesh->device,"GatherScatterSetup");
-
+  
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   solver->ogs = meshParallelGatherScatterSetup(mesh,
 					       mesh->Np*mesh->Nelements,
@@ -428,7 +449,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
     localCount += 1-isHalo;
   }
   
-  printf("local = %d, global = %d\n", localCount, globalCount);
+  //  printf("local = %d, global = %d\n", localCount, globalCount);
   
   solver->globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
   solver->localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
@@ -450,7 +471,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       solver->localGatherElementList[localCount++] = e;
     }
   }
-  printf("local = %d, global = %d\n", localCount, globalCount);
+  //  printf("local = %d, global = %d\n", localCount, globalCount);
   
   solver->NglobalGatherElements = globalCount;
   solver->NlocalGatherElements = localCount;

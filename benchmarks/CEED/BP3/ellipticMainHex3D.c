@@ -1,7 +1,7 @@
 #include "ellipticHex3D.h"
  
 
-void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x){
+void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -18,6 +18,20 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   
   iint iterations = 10;
 
+  occa::streamTag start = mesh->device.tagStream();
+
+
+#if 1
+
+  void ellipticOperator3D(solver_t *solver, dfloat lambda,
+			  occa::memory &o_q, occa::memory &o_Aq, const char *options);
+  
+    // assume 1 mpi process
+  for(int it=0;it<iterations;++it){
+    
+    ellipticOperator3D(solver, lambda, o_r, o_x, options);
+  }
+#else
   // assume 1 mpi process
   for(int it=0;it<iterations;++it)
     solver->partialAxKernel(solver->NlocalGatherElements,
@@ -25,20 +39,29 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 			    solver->o_gjGeo,
 			    solver->o_gjD,
 			    solver->o_gjI,
-			    lambda, o_r, o_x,
-			    solver->o_pAp);
-  
+			    lambda, o_r, 
+			    solver->o_grad,
+			    o_x);
+#endif  
+
+  occa::streamTag end = mesh->device.tagStream();
+
   mesh->device.finish();
   double toc = MPI_Wtime();
 
   double localElapsed = toc-tic;
+  //  localElapsed = mesh->device.timeBetween(start, end);
+
   iint   localDofs = mesh->Np*mesh->Nelements;
+  iint localElements = mesh->Nelements;
   double globalElapsed;
   iint   globalDofs;
+  iint   globalElements;
   int    root = 0;
   
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
 
   iint gjNq = mesh->gjNq;
   iint Nq = mesh->Nq;
@@ -51,7 +74,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*Nq*Nq*Nq*4; // excludes inner product
 
-  double gflops = mesh->Nelements*flops*iterations/(1024*1024*1024.*globalElapsed);
+  double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
@@ -74,7 +97,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 3000;
+  iint maxIterations = 30;
   double AxTime;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
@@ -93,7 +116,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) \n",
-	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size));
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*(double)iterations)/(globalElapsed*size));
   }
 
   
@@ -117,6 +140,13 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
+  char customCache[BUFSIZ];
+  sprintf(customCache, "/home/tcew/._occa_cache_rank_%05d", rank);
+  setenv("OCCA_CACHE_DIR", customCache, 1);
+
+  char *check = getenv("OCCA_CACHE_DIR");
+  printf("found OCD: %s\n", check);
+
   // int specify polynomial degree 
   int N = atoi(argv[2]);
 
@@ -169,7 +199,7 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  timeAxOperator(solver, lambda, o_r, o_x);
+  timeAxOperator(solver, lambda, o_r, o_x, options);
   
   //  timeSolver(solver, lambda, o_r, o_x, options);
 
