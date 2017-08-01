@@ -2,10 +2,10 @@
 
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
-  solver_t *solver = args[0];
+  solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  occa::memory o_zP = solver->o_zP;
+  occa::memory o_zP = precon->o_zP;
 
   occaTimerTic(mesh->device,"OverlappingPatchKernel");
   precon->overlappingPatchKernel(mesh->Nelements,
@@ -27,70 +27,39 @@ void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
 void exactFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
-  solver_t *solver = args[0];
+  solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  occa::memory o_zP = solver->o_zP;
+  occa::memory o_zP = precon->o_zP;
 
   occaTimerTic(mesh->device,"exactFullPatchSolveKernel");
-  precon->patchSolverKernel(mesh->Nelements,
-                            precon->o_patchesIndex,
+  precon->exactPatchSolverKernel(mesh->Nelements,
                             precon->o_invAP,
                             mesh->o_EToE,
+                            mesh->o_EToF,
+                            mesh->o_rmapP,
                             precon->o_invDegreeAP,
                             o_r,
-                            solver->o_zP);
-#if 0
-  meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
-#else
-  solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, solver->o_zP, o_Sr);
-#endif
+                            o_zP);
+  solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, o_zP, o_Sr);
   occaTimerToc(mesh->device,"exactFullPatchSolveKernel");
 }
 
 void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
-  solver_t *solver = args[0];
+  solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  occa::memory o_zP = solver->o_zP;
+  occa::memory o_zP = precon->o_zP;
 
   occaTimerTic(mesh->device,"approxFullPatchSolveKernel");
-  //precon->approxPatchSolverKernel(mesh->Nelements,
-  //                          precon->o_invAP,
-  //                          mesh->o_EToE,
-  //                          mesh->o_EToF,
-  //                          mesh->o_rmapP,
-  //                          precon->o_invDegreeAP,
-  //                          o_r,
-  //                          o_zP);
-  precon->patchSolverKernel(mesh->Nelements,
+  precon->approxPatchSolverKernel(mesh->Nelements,
                             precon->o_patchesIndex,
                             precon->o_invAP,
                             mesh->o_EToE,
                             precon->o_invDegreeAP,
                             o_r,
-                            solver->o_zP);
-#if 0
-  meshParallelGather(mesh, precon->hgsDg, solver->o_zP, o_Sr);
-#else
-  solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, solver->o_zP, o_Sr);
-#endif
+                            o_zP);
+  solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, o_zP, o_Sr);
   occaTimerToc(mesh->device,"approxFullPatchSolveKernel");
-}
-
-void localFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
-
-  solver_t *solver = args[0];
-  mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
-  occa::memory o_zP = solver->o_zP;
-
-  occaTimerTic(mesh->device,"LocalFullPatchSolveKernel");
-  precon->localPatchSolverKernel(mesh->Nelements,
-                                  precon->o_invAP,
-                                  mesh->o_EToE,
-                                  o_r,
-                                  o_Sr);
-  occaTimerToc(mesh->device,"LocalFullPatchSolveKernel");
 }

@@ -26,11 +26,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NpP*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
-  iint NallP  = NtotalP;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -40,7 +38,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  solver->zP  = (dfloat*) calloc(NallP,  sizeof(dfloat));
   solver->Ax  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
@@ -50,7 +47,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
-  solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
+  
   solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
@@ -188,15 +185,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->precon = ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  solver->precon->preconKernel =
+  solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
-				       "ellipticOasPreconTri2D",
-				       kernelInfo);
+               "ellipticOasPreconTri2D",
+               kernelInfo);
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
-				       "ellipticFooTri2D",
-				       kernelInfo);
+               "ellipticFooTri2D",
+               kernelInfo);
 
   solver->precon->coarsenKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
@@ -214,19 +211,14 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 				       "ellipticBlockJacobiPreconTri2D",
 				       kernelInfo);
 
-  solver->precon->patchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticPatchSolver2D",
-               kernelInfo);
-
   solver->precon->approxPatchSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticApproxPatchSolver2D",
                kernelInfo);
 
-  solver->precon->localPatchSolverKernel =
+  solver->precon->exactPatchSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticLocalPatchSolver2D",
+               "ellipticPatchSolver2D",
                kernelInfo);
 
   solver->precon->patchGatherKernel =

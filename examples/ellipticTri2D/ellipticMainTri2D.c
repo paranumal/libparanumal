@@ -22,19 +22,20 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, BLOCKJACOBI, FULLALMOND, or MULTIGRID
   // method can be IPDG or CONTINUOUS
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,PATCHSOLVE coarse=COARSEGRID,ALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,DAMPEDJACOBI coarse=COARSEGRID,ALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,EXACTFULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,APPROXFULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,DAMPEDJACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be EXACT, KCYCLE, or VCYCLE
-  // can add GATHER or NOGATHER to build a gsop
-  // partition can be STRONG, DISTRIBUTED, SATURATE
-  // for MULTIGRID: smoother can be specified as JACOBI, EXACTPATCH, APPROXPATCH
+  // can add GATHER to build a gsop
+  // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions = 
-    strdup("solver=KCYCLE,NOGATHER partition=STRONG smoother=JACOBI");
+    //strdup("solver=KCYCLE,VERBOSE partition=STRONGNODES");
+    strdup("solver=EXACT,VERBOSE partition=STRONGNODES");
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
@@ -42,7 +43,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   //dfloat lambda = 0;
 
   // set up

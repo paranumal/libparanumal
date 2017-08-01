@@ -37,7 +37,8 @@ void ellipticPreconditioner2D(solver_t *solver,
     ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
 
     //patch solve
-    ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
+    //ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
+    precon->OASsmooth(precon->OASsmootherArgs, o_r, o_z);
 
     occaTimerTic(mesh->device,"coarseGrid");
 

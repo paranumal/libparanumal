@@ -2,6 +2,15 @@
 
 typedef struct{
 
+  iint row;
+  iint col;
+  iint ownerRank;
+  dfloat val;
+
+}nonZero_t;
+
+typedef struct{
+
   iint localId;
   iint baseId;
   iint haloFlag;
@@ -19,7 +28,22 @@ int parallelCompareBaseId(const void *a, const void *b){
   return 0;
 }
 
-void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat weight) {
+void ellipticBuildExactPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, 
+                                   dfloat **patchesInvA, const char *options);
+
+void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, 
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, 
+                                              dfloat tau, dfloat lambda, int* BCType, 
+                                              dfloat weight, const char *options) {
+
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   mesh2D *mesh = solver->mesh;
 
@@ -233,9 +257,102 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   precon->o_oasDiagInvOpDg =
     mesh->device.malloc(NpP*mesh->Nelements*sizeof(dfloat), diagInvOpDg);
 
+  //storage buffer for patches
+  iint NtotalP = mesh->NpP*mesh->Nelements;
+  precon->zP  = (dfloat*) calloc(NtotalP,  sizeof(dfloat));
+  precon->o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat),precon->zP); 
+
   //set function call back
   precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
   precon->OASsmootherArgs[0] = (void *) solver;
 
   precon->OASsmooth = overlappingPatchIpdg;
+}
+
+void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon, 
+                                            dfloat tau, dfloat lambda, int* BCType, 
+                                            const char *options) {
+
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  dfloat *invAP;
+  iint Npatches;
+  mesh_t *mesh = solver->mesh;
+
+  int NpP = mesh->Np*(mesh->Nfaces+1);
+
+  //initialize the full inverse operators on each 4 element patch
+  ellipticBuildExactPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, &invAP, options);
+
+  precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
+  
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int f=0;f<mesh->Nfaces;f++)
+        invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
+    invDegree[e] = 1./invDegree[e];
+  }
+  precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+  free(invDegree);
+
+  mesh->o_EToE  = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+  mesh->o_EToF  = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
+  mesh->o_rmapP = mesh->device.malloc(mesh->Np*mesh->Nfaces*sizeof(iint),mesh->rmapP);
+
+  //set storage for larger patch
+  precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
+  precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
+
+  //set function call back
+  precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
+  precon->OASsmootherArgs[0] = (void *) solver;
+
+  precon->OASsmooth = exactFullPatchIpdg;
+}
+
+void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon, 
+                                            dfloat tau, dfloat lambda, int* BCType, 
+                                            const char *options) {
+
+  iint rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  dfloat *invAP;
+  iint Npatches;
+  iint *patchesIndex;
+  mesh_t *mesh = solver->mesh;
+
+  int NpP = mesh->Np*(mesh->Nfaces+1);
+
+  //initialize the full inverse operators on each 4 element patch
+  ellipticBuildApproxPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, 
+                                      &Npatches, &patchesIndex, &invAP, options);
+
+  precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+  
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int f=0;f<mesh->Nfaces;f++)
+        invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
+    invDegree[e] = 1./invDegree[e];
+  }
+  precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+  free(invDegree);
+
+  mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+  mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
+
+  //set storage for larger patch
+  precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
+  precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
+
+  //set function call back
+  precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
+  precon->OASsmootherArgs[0] = (void *) solver;
+
+  precon->OASsmooth = approxFullPatchIpdg;
 }

@@ -73,7 +73,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       Vals[n] = A[n].val;
     }
 
-    precon->parAlmond = parAlmondInit(mesh, options);
+    precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
     parAlmondAgmgSetup(precon->parAlmond,0,
                        globalStarts,
                        nnz,
@@ -81,7 +81,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
                        Cols,
                        Vals,
                        hgs,
-                       options);
+                       parAlmondOptions);
 
     free(A); free(Rows); free(Cols); free(Vals);
 
@@ -117,147 +117,16 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     if (strstr(options, "IPDG")) {
       if(strstr(options, "OVERLAPPINGPATCH")){
         dfloat weight = 1.0; //stability weighting for smoother
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, weight);
+        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        //ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        dfloat weight = 1.0; //stability weighting for smoother
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, options);
       }
     }
 
-
-    if (strstr(options,"PATCHSOLVE")||strstr(options,"APPROXPATCH")
-      ||strstr(options,"LOCALPATCH")) {
-      iint nnz;
-      nonZero_t *A;
-      dfloat *invAP;
-      dfloat *localInvA;
-      iint Npatches;
-      iint *patchesIndex;
-      hgs_t *hgs;
-
-      NpP = mesh->Np*(mesh->Nfaces+1);
-      iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-
-      //initialize the full inverse operators on each 4 element patch
-      ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
-                                    BCType, &A, &nnz, &hgs, globalStarts,
-                                    &Npatches, &patchesIndex, &invAP, &localInvA, options);
-
-      Npatches = mesh->Nfaces*mesh->Nfaces*mesh->Nfaces+mesh->Nelements; // TW: HACK FOR THE MOMENT
-
-      if (strstr(options,"PATCHSOLVE")) {
-        precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
-        precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
-      } else if (strstr(options,"APPROXPATCH")) {
-        for (iint e =0;e<mesh->Nelements;e++) {
-          //check if this is a boudary element
-          int bcflag=0;
-          for (int f=0;f<mesh->Nfaces;f++)
-            if (mesh->EToE[e*mesh->Nfaces +f]<0) bcflag++;
-
-          if (bcflag) break;
-
-          iint offset = e*NpP*NpP;
-          for (int n=0;n<NpP*NpP;n++)
-            invAP[offset+n] = mesh->invAP[n];
-        }
-
-        //set reference patch inverse
-        //precon->o_invAP = mesh->device.malloc(NpP*NpP*sizeof(dfloat), mesh->invAP);
-        // TW: HACK FOR THE MOMENT (FIX LATER)
-        precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
-
-        //rotated node ids of neighbouring element
-        mesh->o_rmapP = mesh->device.malloc(mesh->Np*mesh->Nfaces*sizeof(iint),mesh->rmapP);
-        mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
-      } else if (strstr(options,"LOCALPATCH")) {
-        //initialize the full inverse operators on each 4 element patch
-        ellipticBuildPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda,
-                                      BCType, &A, &nnz, &hgs, globalStarts,
-                                      &Npatches, &patchesIndex, &invAP, &localInvA, options);
-
-        precon->o_invAP = mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Np*sizeof(dfloat),localInvA);
-      }
-
-      dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
-      for (iint e=0;e<mesh->Nelements;e++) {
-        for (int f=0;f<mesh->Nfaces;f++)
-            invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
-        invDegree[e] = 1./invDegree[e];
-      }
-      precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
-      free(invDegree);
-
-      mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
-
-      //set storage for larger patch
-      free(solver->zP);
-      solver->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
-      solver->o_zP.free();
-      solver->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), solver->zP);
-
-      //build a gather for the overlapping nodes
-
-      // every degree of freedom has its own global id
-      /* so find number of elements on each rank */
-      iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-      iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-      MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-        rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
-      //find offsets
-      for(iint r=0;r<size;++r)
-        rankStarts[r+1] = rankStarts[r]+rankNelements[r];
-
-      iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(iint));
-      iint *globalOwners = (iint*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np, sizeof(iint));
-
-      //use the offsets to set the global ids
-      for (iint e =0;e<mesh->Nelements;e++) {
-        for (int n=0;n<mesh->Np;n++) {
-          globalIds[e*mesh->Np + n] = n + (e + rankStarts[rank])*mesh->Np;
-          globalOwners[e*mesh->Np +n] = rank;
-        }
-      }
-
-      /* do a halo exchange of global node numbers */
-      if (mesh->totalHaloPairs) {
-        iint *idSendBuffer = (iint *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(iint));
-        meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
-        meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalOwners, idSendBuffer, globalOwners + mesh->Nelements*mesh->Np);
-        free(idSendBuffer);
-      }
-
-      iint *globalIdsP = (iint *) calloc(mesh->Nelements*NpP,sizeof(iint));
-      iint *globalOwnersP = (iint*) calloc(mesh->Nelements*NpP, sizeof(iint));
-
-      //use the global ids of the nodes to set the ids of each patch
-      for (iint e =0;e<mesh->Nelements;e++) {
-        for (int f=0;f<mesh->Nfaces;f++) {
-          for (int n=0;n<mesh->Np;n++) {
-            int eP = (f==0) ? e: mesh->EToE[e*mesh->Nfaces+f-1]; // load element e first
-            int fP = (f==0) ? 0: mesh->EToF[e*mesh->Nfaces+f-1];
-
-            if (eP>-1) {
-              if (strstr(options,"APPROXPATCH")) {
-                int id = mesh->rmapP[fP*mesh->Np+n];
-                globalIdsP[e*NpP + f*mesh->Np + n] = globalIds[eP*mesh->Np + id];
-                globalOwnersP[e*NpP + f*mesh->Np + n] = globalOwners[eP*mesh->Np + id];
-              } else {
-                globalIdsP[e*NpP + f*mesh->Np + n] = globalIds[eP*mesh->Np + n];
-                globalOwnersP[e*NpP + f*mesh->Np + n] = globalOwners[eP*mesh->Np + n];
-              }
-            } else {
-              globalIdsP[e*NpP + f*mesh->Np + n] = -1;
-              globalOwnersP[e*NpP + f*mesh->Np + n] = -1;
-            }
-          }
-        }
-      }
-      free(globalIds); free(globalOwners);
-      free(rankNelements); free(rankStarts);
-
-      //use the ordering to define a gather+scatter for assembly
-      precon->hgsDg = meshParallelGatherSetup(mesh, NpP*mesh->Nelements, globalIdsP, globalOwnersP);
-    }
-
-    // coarse grid preconditioner (only continous elements)
+    // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     nonZero_t *coarseA;
     iint nnzCoarseA;
@@ -283,6 +152,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       Vals[n] = coarseA[n].val;
     }
 
+    precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
     parAlmondAgmgSetup(precon->parAlmond, 0,
                        coarseGlobalStarts,
                        nnzCoarseA,
@@ -290,7 +160,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
                        Cols,
                        Vals,
                        coarsehgs,
-                       options);
+                       parAlmondOptions);
 
     free(coarseA); free(Rows); free(Cols); free(Vals);
 
@@ -300,7 +170,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
 
-  } else if(strstr(options, "OMS")){
+  } else if(strstr(options, "MULTIGRID")){
 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options);
 
