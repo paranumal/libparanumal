@@ -2,26 +2,6 @@
 
 typedef struct{
 
-  iint localId;
-  iint baseId;
-  iint haloFlag;
-
-} preconGatherInfo_t;
-
-int parallelCompareBaseId(const void *a, const void *b){
-
-  preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
-  preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
-
-  if(fa->baseId < fb->baseId) return -1;
-  if(fa->baseId > fb->baseId) return +1;
-
-  return 0;
-
-}
-
-typedef struct{
-
   iint row;
   iint col;
   iint ownerRank;
@@ -77,9 +57,87 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
   precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  if(strstr(options, "OAS")){
-    //set up the fine problem smoothing
 
+  if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
+    iint nnz;
+    nonZero_t *A;
+    hgs_t *hgs;
+
+    iint Nnum = mesh->Np*mesh->Nelements;
+    iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+
+    if (strstr(options,"IPDG")) {
+
+      MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+      for(iint r=0;r<size;++r)
+        globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
+
+      ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,&hgs,globalStarts, options);
+
+      qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+
+    } else if (strstr(options,"CONTINUOUS")) {
+
+      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+    }
+
+    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
+    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
+    dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
+
+    for (iint n=0;n<nnz;n++) {
+      Rows[n] = A[n].row;
+      Cols[n] = A[n].col;
+      Vals[n] = A[n].val;
+    }
+
+    precon->parAlmond = parAlmondInit(mesh, options);
+    parAlmondAgmgSetup(precon->parAlmond,0,
+                   globalStarts,
+                   nnz,
+                   Rows,
+                   Cols,
+                   Vals,
+                   hgs,
+                   options);
+
+    free(A); free(Rows); free(Cols); free(Vals);
+
+  } else if (strstr(options, "BLOCKJACOBI")){
+
+    // compute inverse mass matrix
+    dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
+    iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
+    int lwork = mesh->Np*mesh->Np;
+    double *work = (double*) calloc(lwork, sizeof(double));
+    iint info;
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      MMinv[n] = mesh->MM[n];
+    }
+
+    dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
+    dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
+    if(info)
+      printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
+
+    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+      dfMMinv[n] = MMinv[n];
+    }
+
+    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
+
+    free(MMinv); free(ipiv); free(work); free(dfMMinv);
+
+  } else if(strstr(options, "OAS")){
+
+    //set up the fine problem smoothing
+    if (strstr(options, "IPDG")) {
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        dfloat weight = 1.0; //stability weighting for smoother
+        ellipticSetupSmootherOverlappingPatchIpdg(mesh, precon, weight);
+      }
+    }
     // build gather-scatter
     iint NpP = mesh->Np + mesh->Nfaces*mesh->Nfp;
 
@@ -470,76 +528,6 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options);
 
-  } else if(strstr(options, "FULLALMOND")){
-    iint nnz;
-    nonZero_t *A;
-    hgs_t *hgs;
-
-    iint Nnum = mesh->Np*mesh->Nelements;
-    iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-
-    if (strstr(options,"IPDG")) {
-
-      MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-      for(iint r=0;r<size;++r)
-        globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
-
-      ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,&hgs,globalStarts, options);
-
-      qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-
-    } else if (strstr(options,"CONTINUOUS")) {
-
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
-    }
-
-    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
-    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
-    dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
-
-    for (iint n=0;n<nnz;n++) {
-      Rows[n] = A[n].row;
-      Cols[n] = A[n].col;
-      Vals[n] = A[n].val;
-    }
-
-    precon->parAlmond = parAlmondInit(mesh, options);
-    parAlmondAgmgSetup(precon->parAlmond,0,
-                   globalStarts,
-                   nnz,
-                   Rows,
-                   Cols,
-                   Vals,
-                   hgs,
-                   options);
-
-    free(A); free(Rows); free(Cols); free(Vals);
-  }
-  else if (strstr(options, "BLOCKJACOBI")){
-
-    // compute inverse mass matrix
-    dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-    double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
-    iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
-    int lwork = mesh->Np*mesh->Np;
-    double *work = (double*) calloc(lwork, sizeof(double));
-    iint info;
-    for(iint n=0;n<mesh->Np*mesh->Np;++n){
-      MMinv[n] = mesh->MM[n];
-    }
-
-    dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
-    dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
-    if(info)
-      printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
-
-    for(iint n=0;n<mesh->Np*mesh->Np;++n){
-      dfMMinv[n] = MMinv[n];
-    }
-
-    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
-
-    free(MMinv); free(ipiv); free(work); free(dfMMinv);
   }
 
 
