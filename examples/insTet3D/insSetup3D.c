@@ -68,16 +68,16 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   printf("Starting initial conditions for INS3D\n");
   //
  
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.025;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 0.1;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); // (mesh->N)*(mesh->N+1);
+  ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -91,7 +91,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
 
-     #if 1 //Beltrami Flow
+     #if 0 //Beltrami Flow
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*t);
       v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*t);
@@ -102,6 +102,22 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
           sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
           sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
      #endif
+     #if 1
+      dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
+      //
+      u = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+      v = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+      w = 0; 
+      p = 0.5*(1.0- exp(2.*lambda*x));
+
+     #endif
+
+     #if 0 // Uniform Channel Flow
+      u = 0.f;
+      v = 0.f;
+      w = 0.f;
+      p = 0.f;
+     #endif 
 
       ins->U[id] = u;
       ins->V[id] = v;
@@ -155,7 +171,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->dt   = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =50;
+  ins->errorStep =100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -173,24 +189,24 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   // SetUp Boundary Flags types for Elliptic Solve
   int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-
+  
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  // ins->lambda = (1.5f) / (ins->dt * ins->nu);
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
-  // kernelInfoV.addInclude(boundaryHeaderFileName);
-  // solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
-  // ins->vSolver        = vSolver;
-  // ins->vSolverOptions = vSolverOptions;
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
+  kernelInfoV.addInclude(boundaryHeaderFileName);
+  solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
+  ins->vSolver        = vSolver;
+  ins->vSolverOptions = vSolverOptions;
 
   printf("==================PRESSURE SOLVE SETUP========================\n");
   //SETUP PRESSURE and VELOCITY SOLVERS
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
-  // kernelInfoP.addInclude(boundaryHeaderFileName);
-  // solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
-  // ins->pSolver        = pSolver;
-  // ins->pSolverOptions = pSolverOptions;
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
+  kernelInfoP.addInclude(boundaryHeaderFileName);
+  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
+  ins->pSolver        = pSolver;
+  ins->pSolverOptions = pSolverOptions;
 
 
 

@@ -125,6 +125,7 @@ void insUpdateStep3D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 
+void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 
 // void insAdvectionSubCycleStep2D(ins_t *solver, iint tstep,
 //                      dfloat * tsendBuffer, dfloat *trecvBuffer, 

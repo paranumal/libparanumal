@@ -135,7 +135,7 @@ kernel void insDivergenceSurface3D(const iint Nelements,
 
             dfloat  vM = V[idM];
             dfloat  vP = V[idP];
-
+            
             dfloat  wM = W[idM];
             dfloat  wP = W[idP];
       		   
@@ -143,7 +143,7 @@ kernel void insDivergenceSurface3D(const iint Nelements,
       	    iint bc = EToB[face+p_Nfaces*e];
       	    if(bc>0) {
               idM = vmapM[id];
-	            insDivergenceBoundaryConditions3D(bc, time, x[idM], y[idM],z[idM], nx, ny,nz, uM,vM,wM, &uP,&vP,&wP);
+	            insDivergenceBoundaryConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
               // // Use strong form of the BCs
               uP = 2.f*uP-uM;        
               vP = 2.f*vP-vM;         
@@ -167,7 +167,6 @@ kernel void insDivergenceSurface3D(const iint Nelements,
       	if(e<Nelements){
       	  if(n<p_Np){
       	    iint id = e*p_Np + n;
-      	
       	    dfloat divu = divU[id];    
       	    
             occaUnroll(p_NfacesNfp)

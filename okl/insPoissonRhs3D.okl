@@ -7,7 +7,6 @@ kernel void insPoissonRhsForcing3D(const iint Nelements,
 				   dfloat * restrict rhs){
 
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
     shared dfloat s_rhs[p_NblockV][p_Np];
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
@@ -99,9 +98,10 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          dfloat pPm1, dpdxPm1, dpdyPm1, dpdzPm1;
-          insPoissonBoundaryConditions3D(bc,time,    dt, x[idM],y[idM],z[idM], nx,ny,nz, &pP,   &dpdxP,   &dpdyP, &dpdzP);
+          dfloat pPm1=0.f, dpdxPm1=0.f, dpdyPm1=0.f, dpdzPm1=0.f;
+          insPoissonBoundaryConditions3D(bc,time,dt, x[idM],y[idM],z[idM], nx,ny,nz, &pP,&dpdxP,&dpdyP,&dpdzP);
           insPoissonBoundaryConditions3D(bc,time-dt, dt, x[idM],y[idM],z[idM], nx,ny,nz, &pPm1, &dpdxPm1, &dpdyPm1,&dpdzPm1);
+          
           pP = pP - pPm1;
           dpdxP = dpdxP - dpdxPm1;
           dpdyP = dpdyP - dpdyPm1;

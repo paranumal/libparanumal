@@ -52,7 +52,7 @@ void insUpdateStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                     ins->o_pHaloBuffer);
   }
   
-  const iint solverid =1 ;
+  const iint solverid = 1; 
   // Compute Surface Contribution of gradient of pressure increment
   ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
