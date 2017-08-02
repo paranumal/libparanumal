@@ -37,6 +37,21 @@ void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *bas
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
+void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda,
+                                   iint *BCType, dfloat **invDiagA,
+                                   const char *options);
+
+
+void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
+                                dfloat tau, dfloat lambda, int* BCType,
+                                const char *options) {
+
+  
+  
+}
+
+
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon,
                                               dfloat tau, dfloat lambda, int* BCType,
                                               dfloat weight, const char *options) {
@@ -261,12 +276,6 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   iint NtotalP = mesh->NpP*mesh->Nelements;
   precon->zP  = (dfloat*) calloc(NtotalP,  sizeof(dfloat));
   precon->o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat),precon->zP);
-
-  //set function call back
-  precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-  precon->OASsmootherArgs[0] = (void *) solver;
-
-  precon->OASsmooth = overlappingPatchIpdg;
 }
 
 void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
@@ -304,12 +313,6 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
   //set storage for larger patch
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
-
-  //set function call back
-  precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-  precon->OASsmootherArgs[0] = (void *) solver;
-
-  precon->OASsmooth = exactFullPatchIpdg;
 }
 
 void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon,
@@ -350,9 +353,20 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
 
-  //set function call back
-  precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-  precon->OASsmootherArgs[0] = (void *) solver;
+}
 
-  precon->OASsmooth = approxFullPatchIpdg;
+void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon,
+                                            dfloat tau, dfloat lambda, int* BCType,
+                                            dfloat weight, const char *options) {
+
+  dfloat *invDiagA;
+  mesh_t *mesh = solver->mesh;
+
+  ellipticBuildJacobiIpdgTri2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+
+  dfloat weight = 0.5; //dampening factor (may need to be tuned)
+  for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
+    invDiagA[n] *= weight;
+
+  precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 }

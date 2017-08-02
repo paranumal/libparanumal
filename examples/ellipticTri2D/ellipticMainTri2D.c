@@ -22,9 +22,9 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, BLOCKJACOBI, FULLALMOND, or MULTIGRID
   // method can be IPDG or CONTINUOUS
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,EXACTFULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,EXACTFULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,APPROXFULLPATCH");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,DAMPEDJACOBI");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,DAMPEDJACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
@@ -34,8 +34,8 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    //strdup("solver=KCYCLE,VERBOSE partition=STRONGNODES");
-    strdup("solver=EXACT,VERBOSE partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE partition=STRONGNODES");
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
@@ -66,7 +66,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = (mesh->N)*(mesh->N+2-1);
+  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
