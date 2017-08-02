@@ -7,17 +7,17 @@
 #include "ins3D.h"
 
 int main(int argc, char **argv){
-
   // start up MPI
   MPI_Init(&argc, &argv);
 
   char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
-  char *velSolverOptions = strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
+  char *velSolverOptions = 
+      strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,MATRIXFREE"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
+      strdup("solver=PCG,FLEXIBLE method=IPDG,preconditioner=FULLALMOND"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
 
   if(argc!=3 && argc!=4){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
@@ -33,7 +33,7 @@ int main(int argc, char **argv){
   // capture header file
   char *boundaryHeaderFileName;
   if(argc==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insUniform2D.h"); // default
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insUniform3D.h"); // default
   else
     boundaryHeaderFileName = strdup(argv[3]);
 

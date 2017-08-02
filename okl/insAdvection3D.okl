@@ -18,10 +18,10 @@ kernel void insAdvectionVolume3D(const iint Nelements,
     shared dfloat s_F11[p_NblockV][p_Np];
     shared dfloat s_F12[p_NblockV][p_Np];
     shared dfloat s_F13[p_NblockV][p_Np];
-
+    
     shared dfloat s_F22[p_NblockV][p_Np];
     shared dfloat s_F23[p_NblockV][p_Np];
-
+    
     shared dfloat s_F33[p_NblockV][p_Np];
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
@@ -32,7 +32,7 @@ kernel void insAdvectionVolume3D(const iint Nelements,
       	  const dfloat u = U[id];
           const dfloat v = V[id];
           const dfloat w = W[id];
-
+          
       	  s_F11[es][n] = u*u;
           s_F12[es][n] = u*v;
           s_F13[es][n] = u*w;

@@ -453,18 +453,22 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
     
+    if(strstr(options,"VERBOSE")){
     if(rank==0)
-      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)); }
 
     ++Niter;
     
   }while(rdotr0>(tol*tol));
 
+  if(rank==0)
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+
   occaTimerToc(mesh->device,"PCG");
 
   occa::printTimer();
 
-  printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
+  // printf("total number of nodes: %d\n", mesh->Np*mesh->Nelements);
 
   return Niter;
 }

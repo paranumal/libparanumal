@@ -100,7 +100,6 @@ kernel void insVelocityHaloExtract2D(const iint Nelments,
     for(iint n=0;n<p_Np;++n;inner0){     // for all entries in this element
       const iint id   = haloElements[e] + offset;
       const iint base = p_NVfields*p_Np*e;
-
       haloq[n + 0*p_Np + base] = U[n + p_Np*id];
       haloq[n + 1*p_Np + base] = V[n + p_Np*id];
     }

@@ -135,6 +135,7 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dudx[p_Np];
     shared  dfloat s_dudy[p_Np];
+
     shared  dfloat s_dvdx[p_Np];
     shared  dfloat s_dvdy[p_Np];
 
@@ -161,14 +162,11 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       if(n<p_NfacesNfp){
       	const iint id  = n + e*p_Nfaces*p_Nfp;
       	idM = vmapM[id];
-
       	const iint face = n/p_Nfp;
-
-
-	dfloat dudxP=0, dudyP=0, uP=0;
-	dfloat dvdxP=0, dvdyP=0, vP=0;
-
-      	// load surface geofactors for this face
+      	dfloat dudxP=0, dudyP=0, uP=0;
+      	dfloat dvdxP=0, dvdyP=0, vP=0;
+      	
+        // load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
       	nx = sgeo[sid+p_NXID];
       	ny = sgeo[sid+p_NYID];
@@ -183,13 +181,13 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	const dfloat dv = vP;
       	const dfloat hlf = 1.f;
 
-      	s_nxdu[n] = hlf*sJ*invJ*nx*du;
-      	s_nydu[n] = hlf*sJ*invJ*ny*du;
-      	s_nxdv[n] = hlf*sJ*invJ*nx*dv;
-	s_nydv[n] = hlf*sJ*invJ*ny*dv;
+        s_nxdu[n] = hlf*sJ*invJ*nx*du;
+        s_nydu[n] = hlf*sJ*invJ*ny*du;
+        s_nxdv[n] = hlf*sJ*invJ*nx*dv;
+        s_nydv[n] = hlf*sJ*invJ*ny*dv;
 
-	s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
-      	s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
+        s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+        s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
       }
     }
 

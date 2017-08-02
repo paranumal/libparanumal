@@ -5,6 +5,7 @@ void insRun3D(ins_t *ins, char *options){
   mesh3D *mesh = ins->mesh;
   // Write Initial Data
   insReport3D(ins, 0, options);
+  insErrorNorms3D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
   iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
@@ -24,7 +25,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  ins->NtimeSteps = 1; // !!!!!!!!!!!!!
+  ins->NtimeSteps = 500; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -88,10 +89,48 @@ void insRun3D(ins_t *ins, char *options){
     insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
 
+    #if 0
+    if(tstep<1){
+      iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+     // Overwrite Velocity
+     for(iint e=0;e<mesh->Nelements;++e){
+        for(iint n=0;n<mesh->Np;++n){
+          iint id = n + mesh->Np*e;
+          dfloat tt = (tstep+1)*ins->dt;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+          dfloat z = mesh->z[id];
+
+          dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
+          dfloat u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*tt);
+          dfloat v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*tt);
+          dfloat w = -a*( exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x) )* exp(-d*d*tt);
+          dfloat p = -a*a*exp(-2.f*d*d*tt)*( exp(2.f*a*x) +exp(2.f*a*y)+exp(2.f*a*z))
+                    *(sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+
+                      sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
+                      sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
+
+          // Current time
+          id +=ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+          ins->U[id] = u; 
+          ins->V[id] = v; 
+          ins->W[id] = w; 
+          ins->P[id] = p;
+        }
+      }
+     
+       // ins->o_U.copyFrom(ins->U);
+       // ins->o_V.copyFrom(ins->V);
+       // ins->o_W.copyFrom(ins->W);
+       //ins->o_P.copyFrom(ins->P);
+    }
+    #endif
+
     printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){
-      if(((tstep+1)%(10*ins->errorStep))==0){
+      if(((tstep+1)%(ins->errorStep))==0){
         insReport3D(ins, tstep+1,options);
+        insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
@@ -104,15 +143,16 @@ void insRun3D(ins_t *ins, char *options){
      for(iint e=0;e<mesh->Nelements;++e){
         for(iint n=0;n<mesh->Np;++n){
           const iint id = n + mesh->Np*e;
+          dfloat tt = ins->dt;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
           dfloat z = mesh->z[id];
 
           dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
-          dfloat u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*t);
-          dfloat v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*t);
-          dfloat w = -a*( exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x) )* exp(-d*d*t);
-          dfloat p = -a*a*exp(-2.f*d*d*t)*( exp(2.f*a*x) +exp(2.f*a*y)+exp(2.f*a*z))*( 
+          dfloat u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*tt);
+          dfloat v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*tt);
+          dfloat w = -a*( exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x) )* exp(-d*d*tt);
+          dfloat p = -a*a*exp(-2.f*d*d*tt)*( exp(2.f*a*x) +exp(2.f*a*y)+exp(2.f*a*z))*( 
                       sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+
                       sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
                       sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
@@ -122,7 +162,7 @@ void insRun3D(ins_t *ins, char *options){
           const iint id0   = n + mesh->Np*(e+index0*offset);
           ins->U[id0] = u; 
           ins->V[id0] = v; 
-          ins->W[id0] = v; 
+          ins->W[id0] = w; 
           ins->P[id0] = p;
         }
       }
@@ -138,7 +178,7 @@ void insRun3D(ins_t *ins, char *options){
 
  
 
-#if 0
+#if 1
 // For Final Time
 insReport3D(ins, ins->NtimeSteps+1,options);
 insErrorNorms2D(ins, ins->finalTime, options);

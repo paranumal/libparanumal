@@ -7,7 +7,7 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
   
   mesh3D *mesh = ins->mesh; 
   
-  //solver_t *solver = ins->vSolver; 
+  solver_t *solver = ins->vSolver; 
   
   dfloat t = tstep*ins->dt + ins->dt;
   
@@ -97,54 +97,58 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                 ins->o_rhsV,
                                 ins->o_rhsW);
 
-  // //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  // if(rhsPackingMode==0){
-  //   iint Ntotal = offset*mesh->Np;
-  //   ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-  //   ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-  //   ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-    
-  //   printf("Solving for Ux \n");
-  //   ellipticSolveTri3D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
-    
-  //   printf("Solving for Uy \n");
-  //   ellipticSolveTri3D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
-    
-  //   //copy into next stage's storage
-  //   int index1 = (ins->index+1)%3; //hard coded for 3 stages
-  //   ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-  //   ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
-  //   ins->o_WH.copyTo(ins->o_W,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
-  // }else{
+  //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
+  if(rhsPackingMode==0){
+    iint Ntotal = offset*mesh->Np;
+    ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+    ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+    ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-  //   printf("Solving for Ux and Uy \n");
-  //   parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
-
-  //   iint Ntotal = mesh->Np*offset;
-  //   dfloat *tmp  = (dfloat*) calloc(3*Ntotal, sizeof(dfloat));
-  //   dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  //   dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  //   dfloat *tmpW = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    #if 1
+    printf("Solving for Ux \n");
+    ellipticSolveTet3D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     
-  //   ins->o_rhsV.copyTo(tmp);
-
-  //   for(iint n=0;n<Ntotal;++n){
-  //     tmpU[n] = tmp[3*n+0];
-  //     tmpV[n] = tmp[3*n+1];
-  //     tmpW[n] = tmp[3*n+2];
-  //   }
-
-  //   //copy into next stage's storage
-  //   int index1 = (ins->index+1)%3; //hard coded for 3 stages
+    printf("Solving for Uy \n");
+    ellipticSolveTet3D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     
-  //   ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
-  //   ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
-  //   ins->o_W.copyFrom(tmpW,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+    printf("Solving for Uz \n");
+    ellipticSolveTet3D(solver, ins->lambda, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
+    #endif
+    //copy into next stage's storage
+    int index1 = (ins->index+1)%3; //hard coded for 3 stages
+    ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+    ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+    ins->o_WH.copyTo(ins->o_W,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+  }else{
 
-  //   free(tmp);
-  //   free(tmpU);
-  //   free(tmpV);
-  //   free(tmpW);
-  // }
+    printf("Solving for Ux,Uy and Uz \n");
+    parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
+
+    iint Ntotal = mesh->Np*offset;
+    dfloat *tmp  = (dfloat*) calloc(3*Ntotal, sizeof(dfloat));
+    dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    dfloat *tmpW = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+    
+    ins->o_rhsV.copyTo(tmp);
+
+    for(iint n=0;n<Ntotal;++n){
+      tmpU[n] = tmp[3*n+0];
+      tmpV[n] = tmp[3*n+1];
+      tmpW[n] = tmp[3*n+2];
+    }
+
+    //copy into next stage's storage
+    int index1 = (ins->index+1)%3; //hard coded for 3 stages
+    
+    ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+    ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+    ins->o_W.copyFrom(tmpW,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
+
+    free(tmp);
+    free(tmpU);
+    free(tmpV);
+    free(tmpW);
+  }
   
 }
