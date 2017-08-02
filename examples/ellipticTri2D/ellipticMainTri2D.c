@@ -33,7 +33,7 @@ int main(int argc, char **argv){
   // solver can be EXACT, KCYCLE, or VCYCLE
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
-  char *parAlmondOptions = 
+  char *parAlmondOptions =
     //strdup("solver=KCYCLE,VERBOSE partition=STRONGNODES");
     strdup("solver=EXACT,VERBOSE partition=STRONGNODES");
 

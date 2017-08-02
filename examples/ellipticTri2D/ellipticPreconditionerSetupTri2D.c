@@ -113,16 +113,16 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
   } else if(strstr(options, "OAS")){
 
+    dfloat weight = 1.0; //stability weighting for smoother
+
     //set up the fine problem smoothing
     if (strstr(options, "IPDG")) {
       if(strstr(options, "OVERLAPPINGPATCH")){
-        dfloat weight = 1.0; //stability weighting for smoother
         ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
       } else if(strstr(options, "EXACTFULLPATCH")){
-        //ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, options);
+        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
-        dfloat weight = 1.0; //stability weighting for smoother
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, options);
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
       }
     }
 

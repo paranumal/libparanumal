@@ -47,7 +47,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
-  
+
   solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
@@ -218,14 +218,14 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->precon->exactPatchSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticPatchSolver2D",
+               "ellipticExactPatchSolver2D",
                kernelInfo);
 
   solver->precon->patchGatherKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
                "ellipticPatchGather2D",
                kernelInfo);
-  
+
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
