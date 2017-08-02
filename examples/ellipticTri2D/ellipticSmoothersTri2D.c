@@ -36,8 +36,6 @@ void exactFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   precon->exactPatchSolverKernel(mesh->Nelements,
                             precon->o_invAP,
                             mesh->o_EToE,
-                            mesh->o_EToF,
-                            mesh->o_rmapP,
                             precon->o_invDegreeAP,
                             o_r,
                             o_zP);

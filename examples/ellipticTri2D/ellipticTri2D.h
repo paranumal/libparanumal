@@ -150,8 +150,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
 //smoother setups
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
-void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, const char *options);
-void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
+void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
 
 //smoother ops
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
