@@ -37,7 +37,7 @@ void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
-void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options);
+void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
 
 
 precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
@@ -118,11 +118,40 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     //set up the fine problem smoothing
     if (strstr(options, "IPDG")) {
       if(strstr(options, "OVERLAPPINGPATCH")){
+
         ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+
+        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
+        precon->OASsmootherArgs[0] = (void *) solver;
+        precon->OASsmooth = overlappingPatchIpdg;
+
       } else if(strstr(options, "EXACTFULLPATCH")){
+
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+
+        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
+        precon->OASsmootherArgs[0] = (void *) solver;
+        precon->OASsmooth = exactFullPatchIpdg;
+
       } else if(strstr(options, "APPROXFULLPATCH")){
+        
         ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+        
+        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
+        precon->OASsmootherArgs[0] = (void *) solver;
+        precon->OASsmooth = approxFullPatchIpdg;
+      
+      } else if(strstr(options, "DAMPEDJACOBI")){
+
+        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      
+        precon->OASsmootherArgs = (void **) calloc(4,sizeof(void*));
+        precon->OASsmootherArgs[0] = (void *) solver;
+        precon->OASsmootherArgs[1] = (void *) &(precon->o_invDiagA);
+        precon->OASsmootherArgs[2] = (void *) vlambda;
+        precon->OASsmootherArgs[3] = (void *) options;
+
+        precon->OASsmooth = dampedJacobi;
       }
     }
 
@@ -172,7 +201,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
   } else if(strstr(options, "MULTIGRID")){
 
-    ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options);
+    ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
   }
 

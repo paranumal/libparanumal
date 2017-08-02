@@ -47,7 +47,8 @@ kernel void ellipticPreconProlongate(const iint Nelements,
       for(iint n=0;n<p_Np;++n;inner0){
         iint e = eo + es;
         if(e<Nelements){
-          dfloat tmp = 0; 
+          //dfloat tmp = 0.; 
+          dfloat tmp = qN[e*p_Np+n]; 
 
           occaUnroll(p_Nverts)
             for(iint i=0;i<p_Nverts;++i){

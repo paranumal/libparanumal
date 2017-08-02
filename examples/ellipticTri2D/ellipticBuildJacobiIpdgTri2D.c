@@ -177,4 +177,5 @@ void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
   }
 
   free(SM);
+  free(MS);
 }

@@ -141,7 +141,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  //setVector(parAlmond, m, levels[k]->o_x, 0.0);
+  setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
   levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 
@@ -337,7 +337,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  //setVector(parAlmond, m, levels[k]->o_x, 0.0);
+  setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
   levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 

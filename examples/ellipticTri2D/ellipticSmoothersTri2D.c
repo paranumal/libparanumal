@@ -61,3 +61,29 @@ void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, o_zP, o_Sr);
   occaTimerToc(mesh->device,"approxFullPatchSolveKernel");
 }
+
+void dampedJacobi(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
+
+  solver_t *solver = (solver_t *) args[0];
+  occa::memory *o_invDiagA = (occa::memory *) args[1];
+  dfloat *lambda = (dfloat *) args[2];
+  char* options = (char*) args[3];
+
+  mesh_t *mesh = solver->mesh;
+  precon_t *precon = solver->precon;
+
+  if (x_is_zero) {
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,*o_invDiagA,o_r,o_x);
+    return;
+  }
+
+  dfloat one = 1.; dfloat mone = -1.;
+
+  //res = r-Ax
+  ellipticOperator2D(solver, *lambda, o_x, solver->o_res, options);
+  ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
+
+  //smooth the fine problem x = x + S(r-Ax)
+  solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,*o_invDiagA,solver->o_res,solver->o_res);
+  ellipticScaledAdd(solver, one, solver->o_res, one, o_x);
+}

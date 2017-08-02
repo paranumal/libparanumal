@@ -20,7 +20,7 @@ void ellipticPreconditioner2D(solver_t *solver,
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
 
-  if (strstr(options, "FULLALMOND")||strstr(options, "OMS")) {
+  if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
     occaTimerTic(mesh->device,"parALMOND");
     parAlmondPrecon(o_z, precon->parAlmond, o_r);
