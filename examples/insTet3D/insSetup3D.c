@@ -68,16 +68,16 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   printf("Starting initial conditions for INS3D\n");
   //
  
-  dfloat nu   = 0.025;   // kinematic viscosity,
+  dfloat nu   = 0.001;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.1;
+  ins->finalTime = 20.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
+  ins->tau       = 100.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -102,7 +102,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
           sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
           sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
      #endif
-     #if 1
+     #if 0
       dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       //
       u = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -112,7 +112,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 
      #endif
 
-     #if 0 // Uniform Channel Flow
+     #if 1 // Uniform Channel Flow
       u = 0.f;
       v = 0.f;
       w = 0.f;
@@ -171,7 +171,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->dt   = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =100;
+  ins->errorStep =1000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
