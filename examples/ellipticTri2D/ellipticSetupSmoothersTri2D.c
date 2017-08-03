@@ -2,15 +2,6 @@
 
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-}nonZero_t;
-
-typedef struct{
-
   iint localId;
   iint baseId;
   iint haloFlag;
@@ -27,30 +18,6 @@ int parallelCompareBaseId(const void *a, const void *b){
 
   return 0;
 }
-
-void ellipticBuildExactPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
-                                   const char *options);
-
-
-void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
-                                dfloat tau, dfloat lambda, int* BCType,
-                                const char *options) {
-
-  
-  
-}
-
 
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon,
                                               dfloat tau, dfloat lambda, int* BCType,
@@ -364,9 +331,9 @@ void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon,
 
   ellipticBuildJacobiIpdgTri2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
-  dfloat weight = 0.5; //dampening factor (may need to be tuned)
   for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
     invDiagA[n] *= weight;
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+  free(invDiagA);
 }

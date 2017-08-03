@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 csr *strong_graph(csr *A, dfloat threshold);
 bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i);
@@ -8,7 +8,6 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
 csr *transpose(agmgLevel* level, csr *A, iint *globalRowStarts, iint *globalColStarts);
 csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
 void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA);
-
 
 
 void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
@@ -47,7 +46,7 @@ void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *glo
   args[1] = (void *) levels[lev];
 
   levels[lev]->AxArgs = args;
-  levels[lev]->smootherArgs = args;
+  levels[lev]->smoothArgs = args;
   levels[lev]->Ax = agmgAx;
   levels[lev]->smooth = agmgSmooth;
   levels[lev]->device_Ax = device_agmgAx;
@@ -102,7 +101,7 @@ void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *glo
     levels[lev+1]->AxArgs = args;
     levels[lev+1]->coarsenArgs = args;
     levels[lev+1]->prolongateArgs = args;
-    levels[lev+1]->smootherArgs = args;
+    levels[lev+1]->smoothArgs = args;
 
     levels[lev+1]->Ax = agmgAx;
     levels[lev+1]->coarsen = agmgCoarsen;

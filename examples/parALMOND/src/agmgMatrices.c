@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
             iint nnz, iint *Ai, iint *Aj, dfloat *Avals){
@@ -624,20 +624,6 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
   }
 }
 
-void matFreeZeqAXPY(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat beta,
-              occa::memory o_y, occa::memory o_z) {
-
-  occaTimerTic(parAlmond->device,"matfree zeqaxpy");
-
-  //matrix free A action, temp1 = Ax
-  parAlmondMatrixFreeAX(parAlmond, o_x, A->o_temp1);
-
-  //z = alpha*Ax + beta*y
-  vectorAdd(parAlmond, A->Nrows, alpha, A->o_temp1, beta, o_y, o_z);
-
-  occaTimerToc(parAlmond->device,"matfree zeqaxpy");
-}
-
 void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
   occa::tic("csr smoothJacobi");
@@ -827,48 +813,6 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
   dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
 
   occaTimerToc(parAlmond->device,"hyb smoothDampedJacobi");
-}
-
-void matFreeSmoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
-
-  occaTimerTic(parAlmond->device,"matfree smoothJacobi");
-  if(x_is_zero){
-    dotStar(parAlmond, A->Nrows, 1., A->o_diagInv, o_r, 0., o_x);
-    occaTimerToc(parAlmond->device,"matfree smoothJacobi");
-    return;
-  }
-
-  //matrix free A action, temp1 = Ax
-  parAlmondMatrixFreeAX(parAlmond, o_x, A->o_temp1);
-
-  //temp1 = r-Ax
-  vectorAdd(parAlmond, A->Nrows, 1.0, o_r, -1.0, A->o_temp1);
-
-  // x = x + invD*temp1
-  dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 1., o_x);
-  occaTimerToc(parAlmond->device,"matfree smoothJacobi");
-}
-
-
-void matFreeSmoothDampedJacobi(parAlmond_t *parAlmond, hyb* A, occa::memory o_r,
-                            occa::memory o_x, dfloat alpha, bool x_is_zero){
-
-  occaTimerTic(parAlmond->device,"matfree smoothDampedJacobi");
-  if(x_is_zero){
-    dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, o_r, 0., o_x);
-    occaTimerToc(parAlmond->device,"matfree smoothDampedJacobi");
-    return;
-  }
-
-  //matrix free A action, temp1 = Ax
-  parAlmondMatrixFreeAX(parAlmond, o_x, A->o_temp1);
-
-  //temp1 = r-Ax
-  vectorAdd(parAlmond, A->Nrows, 1.0, o_r, -1.0, A->o_temp1);
-
-  // x = x + alpha*invD*temp1
-  dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, 1., o_x);
-  occaTimerToc(parAlmond->device,"matfree smoothDampedJacobi");
 }
 
 // set up halo infomation for inter-processor MPI

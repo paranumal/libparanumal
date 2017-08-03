@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 void kcycle(parAlmond_t *parAlmond, int k){
 
@@ -16,7 +16,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
   // zero out x
   //setVector(m, levels[k]->x, 0.0);
 
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x, true);
+  levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, true);
 
   // res = r - A*x
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
@@ -115,13 +115,13 @@ void kcycle(parAlmond_t *parAlmond, int k){
       for (iint n=0;n<mCoarse;n++)
         levels[k+1]->x[n] = parAlmond->xCoarse[n+parAlmond->coarseOffset];
     } else {
-      levels[k+1]->smooth(levels[k+1]->smootherArgs, levels[k+1]->rhs, levels[k+1]->x, true);
+      levels[k+1]->smooth(levels[k+1]->smoothArgs, levels[k+1]->rhs, levels[k+1]->x, true);
     }
   }
 
   levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
 
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x, false);
+  levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, false);
 
   occaTimerToc(parAlmond->device,name);
 }
@@ -143,7 +143,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   // zero out x
   setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
-  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
+  levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 
   // res = rhs - A*x
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
@@ -254,13 +254,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
-      levels[k+1]->device_smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
+      levels[k+1]->device_smooth(levels[k+1]->smoothArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
     }
   }
 
   levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
 
-  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, false);
+  levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, false);
 
   occaTimerToc(parAlmond->device,name);
 }
@@ -281,7 +281,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   // zero out x
   setVector(m, levels[k]->x,  0.0);
 
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x, true);
+  levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, true);
 
   // res = rhs - A*x
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
@@ -306,12 +306,12 @@ void vcycle(parAlmond_t *parAlmond, int k) {
       for (iint n=0;n<mCoarse;n++)
         levels[k+1]->x[n] = parAlmond->xCoarse[n+parAlmond->coarseOffset];
     } else {
-      levels[k+1]->smooth(levels[k+1]->smootherArgs, levels[k+1]->rhs, levels[k+1]->x,true);
+      levels[k+1]->smooth(levels[k+1]->smoothArgs, levels[k+1]->rhs, levels[k+1]->x,true);
     }
   }
 
   levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
-  levels[k]->smooth(levels[k]->smootherArgs, levels[k]->rhs, levels[k]->x,false);
+  levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x,false);
 
   occaTimerToc(parAlmond->device,name);
 }
@@ -339,7 +339,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   // zero out x
   setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
-  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x, true);
+  levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 
   // res = rhs - A*x
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
@@ -360,13 +360,13 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
       xxtSolve(parAlmond->xCoarse, parAlmond->ExactSolve, parAlmond->rhsCoarse);
       levels[k+1]->o_x.copyFrom(parAlmond->xCoarse+parAlmond->coarseOffset,mCoarse*sizeof(dfloat));
     } else {
-      levels[k+1]->device_smooth(levels[k+1]->smootherArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
+      levels[k+1]->device_smooth(levels[k+1]->smoothArgs, levels[k+1]->o_rhs, levels[k+1]->o_x, true);
     }
   }
 
   levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
 
-  levels[k]->device_smooth(levels[k]->smootherArgs, levels[k]->o_rhs, levels[k]->o_x,false);
+  levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x,false);
 
   occaTimerToc(parAlmond->device,name);
 }

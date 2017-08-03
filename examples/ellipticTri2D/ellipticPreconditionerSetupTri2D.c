@@ -1,44 +1,5 @@
 #include "ellipticTri2D.h"
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-}nonZero_t;
-
-extern "C"
-{
-  void dgetrf_ (int *, int *, double *, int *, int *, int *);
-  void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
-}
-
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
-                              hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
-
-void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
-                                   const char *options);
-
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
-                                   const char *options);
-
-void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
-
 
 precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
 
@@ -80,10 +41,57 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
                        Rows,
                        Cols,
                        Vals,
-                       hgs,
-                       parAlmondOptions);
+                       hgs);
 
     free(A); free(Rows); free(Cols); free(Vals);
+
+    if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
+      agmgLevel **levels = precon->parAlmond->levels;
+
+      dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
+      *vlambda = lambda;
+      levels[0]->AxArgs = (void **) calloc(3,sizeof(void*));
+      levels[0]->AxArgs[0] = (void *) solver;
+      levels[0]->AxArgs[1] = (void *) vlambda;
+      levels[0]->AxArgs[2] = (void *) options;
+      levels[0]->device_Ax = AxTri2D;
+
+      levels[0]->smoothArgs = (void **) calloc(2,sizeof(void*));
+      levels[0]->smoothArgs[0] = (void *) solver;
+      levels[0]->smoothArgs[1] = (void *) levels[0];
+      levels[0]->device_smooth = smoothTri2D;
+
+      levels[0]->smootherArgs = (void **) calloc(1,sizeof(void*));
+      levels[0]->smootherArgs[0] = (void *) solver;
+
+      //set up the fine problem smoothing
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        dfloat weight = 1.0; //stability weighting for smoother
+        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+        levels[0]->device_smoother = overlappingPatchIpdg;
+
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        dfloat weight = 1.0; //stability weighting for smoother
+        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+        levels[0]->device_smoother = exactFullPatchIpdg;
+
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        dfloat weight = 1.0; //stability weighting for smoother
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+        levels[0]->device_smoother = approxFullPatchIpdg;
+
+      } else { //default to damped jacobi
+        dfloat weight = levels[0]->smoother_params[0]; //stability weighting for smoother
+        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
+        levels[0]->device_smoother = dampedJacobi;
+      }
+
+      levels[0]->Nrows = mesh->Nelements*mesh->Np;
+      levels[0]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+
+      // extra storage for smoothing op
+      levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
+    }
 
   } else if (strstr(options, "BLOCKJACOBI")){
 
@@ -113,47 +121,56 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
 
   } else if(strstr(options, "OAS")){
 
-    dfloat weight = 1.0; //stability weighting for smoother
+    //create a dummy parAlmond level to store the OAS smoother
+    agmgLevel *OASLevel = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+    precon->OASLevel = OASLevel;
+    precon->OASsmoothArgs = (void **) calloc(2,sizeof(void*));
+    precon->OASsmoothArgs[0] = (void *) solver;
+    precon->OASsmoothArgs[1] = (void *) precon->OASLevel;
+
+    dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
+    *vlambda = lambda;
+
+    OASLevel->AxArgs = (void **) calloc(3,sizeof(void*));
+    OASLevel->AxArgs[0] = (void *) solver;
+    OASLevel->AxArgs[1] = (void *) vlambda;
+    OASLevel->AxArgs[2] = (void *) options;
+    OASLevel->device_Ax = AxTri2D;
+
+    OASLevel->smootherArgs = (void **) calloc(1,sizeof(void*));
+    OASLevel->smootherArgs[0] = (void *) solver;
+
+    dfloat weight = 1.; //stability weighting for smoother
 
     //set up the fine problem smoothing
     if (strstr(options, "IPDG")) {
       if(strstr(options, "OVERLAPPINGPATCH")){
 
         ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-
-        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-        precon->OASsmootherArgs[0] = (void *) solver;
-        precon->OASsmooth = overlappingPatchIpdg;
+        OASLevel->device_smoother = overlappingPatchIpdg;
 
       } else if(strstr(options, "EXACTFULLPATCH")){
 
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-
-        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-        precon->OASsmootherArgs[0] = (void *) solver;
-        precon->OASsmooth = exactFullPatchIpdg;
+        OASLevel->device_smoother = exactFullPatchIpdg;
 
       } else if(strstr(options, "APPROXFULLPATCH")){
-        
+
         ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        
-        precon->OASsmootherArgs = (void **) calloc(1,sizeof(void*));
-        precon->OASsmootherArgs[0] = (void *) solver;
-        precon->OASsmooth = approxFullPatchIpdg;
-      
-      } else if(strstr(options, "DAMPEDJACOBI")){
+        OASLevel->device_smoother = approxFullPatchIpdg;
+
+      } else { //default to damped jacobi
 
         ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
-      
-        precon->OASsmootherArgs = (void **) calloc(4,sizeof(void*));
-        precon->OASsmootherArgs[0] = (void *) solver;
-        precon->OASsmootherArgs[1] = (void *) &(precon->o_invDiagA);
-        precon->OASsmootherArgs[2] = (void *) vlambda;
-        precon->OASsmootherArgs[3] = (void *) options;
-
-        precon->OASsmooth = dampedJacobi;
+        OASLevel->device_smoother = dampedJacobi;
       }
     }
+
+    OASLevel->Nrows = mesh->Nelements*mesh->Np;
+    OASLevel->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+
+    // extra storage for smoothing op
+    OASLevel->o_smootherResidual = mesh->device.malloc(OASLevel->Ncols*sizeof(dfloat));
 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
@@ -188,8 +205,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
                        Rows,
                        Cols,
                        Vals,
-                       coarsehgs,
-                       parAlmondOptions);
+                       coarsehgs);
 
     free(coarseA); free(Rows); free(Cols); free(Vals);
 

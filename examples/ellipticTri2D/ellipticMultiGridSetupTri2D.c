@@ -1,49 +1,9 @@
 #include "ellipticTri2D.h"
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-}nonZero_t;
-
-typedef struct {
-
-  iint Nrows;
-  iint Ncols;
-
-  void **AxArgs;
-  void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax);
-
-  void **coarsenArgs;   
-  void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
-
-  void **prolongateArgs;
-  void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px);
-
-  void **smootherArgs;  
-  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
-
-  dfloat *res;
-  occa::memory *o_res;
-
-} MGLevel;
-
-// compare on global indices
-int parallelCompareRowColumn(const void *a, const void *b);
-
-extern "C"
-{
-  void dgetrf_ (int *, int *, double *, int *, int *, int *);
-  void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
-}
-
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 
-void AxTri2D(void **args, occa::memory o_x, occa::memory o_Ax) {
+void AxTri2D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
   dfloat *lambda = (dfloat *) args[1];
@@ -52,7 +12,7 @@ void AxTri2D(void **args, occa::memory o_x, occa::memory o_Ax) {
   ellipticOperator2D(solver,*lambda,o_x,o_Ax,options);
 }
 
-void coarsenTri2D(void **args, occa::memory o_x, occa::memory o_Rx) {
+void coarsenTri2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
   occa::memory *o_V = (occa::memory *) args[1];
@@ -63,7 +23,7 @@ void coarsenTri2D(void **args, occa::memory o_x, occa::memory o_Rx) {
   precon->coarsenKernel(mesh->Nelements, *o_V, o_x, o_Rx);
 }
 
-void prolongateTri2D(void **args, occa::memory o_x, occa::memory o_Px) {
+void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   solver_t *solver = (solver_t *) args[0];
   occa::memory *o_V = (occa::memory *) args[1];
@@ -74,52 +34,8 @@ void prolongateTri2D(void **args, occa::memory o_x, occa::memory o_Px) {
   precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
 }
 
-void smoothTri2D(void **args, occa::memory o_r, occa::memory o_x, bool xIsZero) {
-
-  solver_t *solver = (solver_t *) args[0];
-  MGLevel *level = (MGLevel *) args[1];
-  
-  occa::memory o_res = level->o_res;
-  
-  if (xIsZero) {
-    //just call the smoother
-    level->smooth(level->smootherArgs, o_r, o_x);
-    return;
-  }
-
-  dfloat one = 1.; dfloat mone = -1.;
-
-  //res = r-Ax
-  level->Ax(level->AxArgs, o_x, o_res);
-  solver->scaledAddKernel(level->Nrows, one, o_r, mone, o_res);
-
-  //smooth the fine problem x = x + S(r-Ax)
-  level->smooth(level->smootherArgs, o_res, o_res)
-  solver->scaledAddKernel(level->Nrows, one, o_res, one, o_x);
-}
-
-
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
-                              hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
-
-void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
-                                   const char *options);
-
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
-
-
-
-void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, 
-                                dfloat tau, dfloat lambda, iint *BCType, 
+void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
+                                dfloat tau, dfloat lambda, iint *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
   void (*smoother)(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
@@ -133,22 +49,58 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   //maually build multigrid levels
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
 
-  void **AxArgs = (void **) calloc(3,sizeof(void*));
+  precon->parAlmond->numLevels++;
+  agmgLevel **levels = precon->parAlmond->levels;
+
+  levels[0] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
-  AxArgs[0] = (void *) solver;
-  AxArgs[1] = (void *) vlambda;
-  AxArgs[2] = (void *) options;
+  levels[0]->AxArgs = (void **) calloc(3,sizeof(void*));
+  levels[0]->AxArgs[0] = (void *) solver;
+  levels[0]->AxArgs[1] = (void *) vlambda;
+  levels[0]->AxArgs[2] = (void *) options;
+  levels[0]->device_Ax = AxTri2D;
 
+  levels[0]->smoothArgs = (void **) calloc(2,sizeof(void*));
+  levels[0]->smoothArgs[0] = (void *) solver;
+  levels[0]->smoothArgs[1] = (void *) levels[0];
+  levels[0]->device_smooth = smoothTri2D;
 
-  //add matrix free top level
-  parAlmondAddDeviceLevel(precon->parAlmond, 0,
-                          mesh->Np*mesh->Nelements,
-                          mesh->Np*(mesh->Nelements+mesh->totalHaloPairs),
-                          AxArgs,AxTri2D,
-                          NULL,NULL,
-                          NULL,NULL,
-                          smootherArgs,dampedJacobiTri2D);
+  levels[0]->smootherArgs = (void **) calloc(1,sizeof(void*));
+  levels[0]->smootherArgs[0] = (void *) solver;
+
+  //set up the fine problem smoothing
+  //TODO the weight should be found by estimating the max eigenvalue of Smoother*A, via Arnoldi?
+  //  for now, the weights can be adjusted for stability here
+  if (strstr(options, "IPDG")) {
+    if(strstr(options, "OVERLAPPINGPATCH")){
+      dfloat weight = 0.08; //stability weighting for smoother
+      ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      levels[0]->device_smoother = overlappingPatchIpdg;
+
+    } else if(strstr(options, "EXACTFULLPATCH")){
+      dfloat weight = 0.85; //stability weighting for smoother
+      ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      levels[0]->device_smoother = exactFullPatchIpdg;
+
+    } else if(strstr(options, "APPROXFULLPATCH")){
+      dfloat weight = 0.25; //stability weighting for smoother
+      ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      levels[0]->device_smoother = approxFullPatchIpdg;
+
+    } else if(strstr(options, "DAMPEDJACOBI")){
+      dfloat weight = 0.65; //stability weighting for smoother
+      ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
+      levels[0]->device_smoother = dampedJacobi;
+    }
+  }
+
+  levels[0]->Nrows = mesh->Nelements*mesh->Np;
+  levels[0]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+
+  // extra storage for smoothing op
+  levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
 
   // coarse grid preconditioner
   nonZero_t *coarseA;
@@ -162,7 +114,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
                                          &V1, &coarseA, &nnzCoarseA,
                                          &coarsehgs, coarseGlobalStarts, options);
 
-  iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
   precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
   iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
@@ -175,19 +126,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     Vals[n] = coarseA[n].val;
   }
 
-  void **coarsenArgs = (void **) calloc(2,sizeof(void*));
-  coarsenArgs[0] = (void *) solver;
-  coarsenArgs[1] = (void *) &(precon->o_V1);
-
-  //add corasen and prolongation ops to level 1
-  parAlmondAddDeviceLevel(precon->parAlmond, 1,
-                          mesh->Np*mesh->Nelements,
-                          mesh->Np*(mesh->Nelements+mesh->totalHaloPairs),
-                          NULL,NULL,
-                          coarsenArgs, coarsenTri2D,
-                          coarsenArgs, prolongateTri2D,
-                          NULL,NULL);
-
   // build amg starting at level 1
   parAlmondAgmgSetup(precon->parAlmond, 1,
                      coarseGlobalStarts,
@@ -195,8 +133,15 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
                      Rows,
                      Cols,
                      Vals,
-                     coarsehgs,
-                     parAlmondOptions);
+                     coarsehgs);
+
+  levels[1]->coarsenArgs = (void **) calloc(2,sizeof(void*));
+  levels[1]->coarsenArgs[0] = (void *) solver;
+  levels[1]->coarsenArgs[1] = (void *) &(precon->o_V1);
+  levels[1]->device_coarsen = coarsenTri2D;
+
+  levels[1]->prolongateArgs = levels[1]->coarsenArgs;
+  levels[1]->device_prolongate = prolongateTri2D;
 
 
   free(coarseA); free(Rows); free(Cols); free(Vals);

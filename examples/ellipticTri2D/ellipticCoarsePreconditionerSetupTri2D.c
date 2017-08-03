@@ -1,14 +1,5 @@
 #include "ellipticTri2D.h"
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-}nonZero_t;
-
 // compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b){
 

@@ -1,15 +1,6 @@
 
 #include "ellipticTri2D.h"
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
-
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,

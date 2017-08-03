@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 // parAlmond's function call-backs
 void agmgAx(void **args, dfloat *x, dfloat *Ax){
@@ -29,28 +29,28 @@ void agmgSmooth(void **args, dfloat *rhs, dfloat *x, bool x_is_zero){
   }
 }
 
-void device_agmgAx(void **args, occa::memory o_x, occa::memory o_Ax){
+void device_agmgAx(void **args, occa::memory &o_x, occa::memory &o_Ax){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   axpy(parAlmond,level->deviceA, 1.0, o_x, 0.0, o_Ax);
 }
 
-void device_agmgCoarsen(void **args, occa::memory o_r, occa::memory o_Rr){
+void device_agmgCoarsen(void **args, occa::memory &o_r, occa::memory &o_Rr){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
 }
 
-void device_agmgProlongate(void **args, occa::memory o_x, occa::memory o_Px){
+void device_agmgProlongate(void **args, occa::memory &o_x, occa::memory &o_Px){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   axpy(parAlmond, level->dcsrP, 1.0, o_x, 1.0, o_Px);
 }
 
-void device_agmgSmooth(void **args, occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
+void device_agmgSmooth(void **args, occa::memory &o_rhs, occa::memory &o_x, bool x_is_zero){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 

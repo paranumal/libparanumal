@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 
 void pcg(parAlmond_t *parAlmond,
