@@ -1,10 +1,6 @@
 
 kernel void insUpdateUpdate3D(const iint Nelements,
-                              const dfloat dt,
-                              const dfloat g0,
-                              const dfloat a0,
-                              const dfloat a1,
-                              const dfloat a2,
+                              const dfloat dt_invg0,
                               const dfloat c0,
                               const dfloat c1,
                               const dfloat c2,
@@ -32,9 +28,9 @@ for(iint e=0;e<Nelements;++e;outer0){
     const iint id2 = n + (e+index2*offset)*p_Np;
 
     // // Update Velocity u = u - dt/g0 * grad(Pr)
-    U[id2] = U[id2] - dt/g0 * PIx[id];
-    V[id2] = V[id2] - dt/g0 * PIy[id];
-    W[id2] = W[id2] - dt/g0 * PIz[id];
+    U[id2] = U[id2] - dt_invg0*PIx[id];
+    V[id2] = V[id2] - dt_invg0*PIy[id];
+    W[id2] = W[id2] - dt_invg0*PIz[id];
 
     // Get Pressure from Pressure Increament
      P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];
