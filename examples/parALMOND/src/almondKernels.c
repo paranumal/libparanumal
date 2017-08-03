@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 void buildAlmondKernels(parAlmond_t *parAlmond){
 
@@ -81,7 +81,7 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
              "vectorAddInnerProductKernel", defs);
 
   parAlmond->kcycleCombinedOp1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
-             "kcycleCombinedOp1Kernel", defs);  
+             "kcycleCombinedOp1Kernel", defs);
 
   parAlmond->kcycleCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
              "kcycleCombinedOp2Kernel", defs);

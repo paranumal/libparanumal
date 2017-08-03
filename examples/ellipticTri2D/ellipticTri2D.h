@@ -4,81 +4,11 @@
 #include <string.h>
 #include "mpi.h"
 #include "mesh2D.h"
+#include "parAlmond.h"
+#include "ellipticPreconTri2D.h"
 
 // block size for reduction (hard coded)
 #define blockSize 256
-
-typedef struct {
-
-  dfloat *zP;
-  occa::memory o_zP;
-
-  occa::memory o_vmapPP;
-  occa::memory o_faceNodesP;
-
-  occa::memory o_oasForward;
-  occa::memory o_oasBack;
-  occa::memory o_oasDiagInvOp;
-
-  occa::memory o_oasForwardDg;
-  occa::memory o_oasBackDg;
-  occa::memory o_oasDiagInvOpDg;
-  occa::memory o_invDegreeDGP;
-
-  occa::memory o_oasForwardDgT;
-  occa::memory o_oasBackDgT;
-
-  occa::kernel restrictKernel;
-
-  occa::kernel coarsenKernel;
-  occa::kernel prolongateKernel;
-
-  occa::kernel overlappingPatchKernel;
-  occa::kernel exactPatchSolverKernel;
-  occa::kernel approxPatchSolverKernel;
-  occa::kernel patchGatherKernel;
-
-  ogs_t *ogsP, *ogsDg;
-  hgs_t *hgsP, *hgsDg;
-
-  occa::memory o_diagA;
-  occa::memory o_invDiagA;
-  occa::memory o_invAP;
-  occa::memory o_invDegreeAP;
-  occa::memory o_patchesIndex;
-
-  // coarse grid basis for preconditioning
-  occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
-  occa::memory o_r1, o_z1;
-  dfloat *r1, *z1;
-
-  void *xxt;
-  void *almond;
-
-  occa::memory o_coarseInvDegree;
-
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
-  dfloat *B, *tmp2;
-  occa::memory *o_B, o_tmp2;
-  void *xxt2;
-  void *parAlmond;
-
-  // block Jacobi precon
-  occa::memory o_invMM;
-  occa::kernel blockJacobiKernel;
-
-  //operator call-backs
-  void **OASsmootherArgs;
-  void **OAScoarsenArgs;
-  void **OASprolongateArgs;
-
-  void (*OASsmooth)(void **args, occa::memory &o_r, occa::memory &o_x);
-  void (*OAScoarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
-  void (*OASprolongate)(void **args, occa::memory o_x, occa::memory o_Px);
-} precon_t;
-
 
 typedef struct {
 
@@ -152,8 +82,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
 void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
 void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
+void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int* BCType, dfloat weight, const char *options);
 
-//smoother ops
-void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactFullPatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxFullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
+                                dfloat tau, dfloat lambda, int* BCType,
+                                const char *options);

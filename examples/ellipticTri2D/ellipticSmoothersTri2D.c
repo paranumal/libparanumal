@@ -1,5 +1,28 @@
 #include "ellipticTri2D.h"
 
+void smoothTri2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero) {
+
+  solver_t *solver = (solver_t *) args[0];
+  agmgLevel *level = (agmgLevel *) args[1];
+
+  occa::memory o_res = level->o_smootherResidual;
+
+  if (xIsZero) {
+    level->device_smoother(level->smootherArgs, o_r, o_x);
+    return;
+  }
+
+  dfloat one = 1.; dfloat mone = -1.;
+
+  //res = r-Ax
+  level->device_Ax(level->AxArgs,o_x,o_res);
+  solver->scaledAddKernel(level->Nrows,one, o_r, mone, o_res);
+
+  //smooth the fine problem x = x + S(r-Ax)
+  level->device_smoother(level->smootherArgs, o_res, o_res);
+  solver->scaledAddKernel(level->Nrows,one, o_res, one, o_x);
+}
+
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t*) args[0];
@@ -62,28 +85,11 @@ void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occaTimerToc(mesh->device,"approxFullPatchSolveKernel");
 }
 
-void dampedJacobi(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
+void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t *) args[0];
-  occa::memory *o_invDiagA = (occa::memory *) args[1];
-  dfloat *lambda = (dfloat *) args[2];
-  char* options = (char*) args[3];
-
   mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
+  occa::memory o_invDiagA = solver->precon->o_invDiagA;
 
-  if (x_is_zero) {
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,*o_invDiagA,o_r,o_x);
-    return;
-  }
-
-  dfloat one = 1.; dfloat mone = -1.;
-
-  //res = r-Ax
-  ellipticOperator2D(solver, *lambda, o_x, solver->o_res, options);
-  ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
-
-  //smooth the fine problem x = x + S(r-Ax)
-  solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,*o_invDiagA,solver->o_res,solver->o_res);
-  ellipticScaledAdd(solver, one, solver->o_res, one, o_x);
+  solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,o_invDiagA,o_r,o_Sr);
 }

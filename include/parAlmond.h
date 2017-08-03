@@ -1,3 +1,5 @@
+#ifndef PARALMOND_H
+#define PARALMOND_H 1
 
 typedef struct csr_t {
 
@@ -141,6 +143,9 @@ typedef struct dcsr_t {
 
 } dcoo;
 
+typedef enum {PCG=0,GMRES=1}KrylovType;
+typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
+
 typedef struct agmgLevel_t {
   iint Nrows;
   iint Ncols;
@@ -149,20 +154,23 @@ typedef struct agmgLevel_t {
   iint *globalAggStarts; //global partitioning of coarse level
 
   void **AxArgs;
+  void **smoothArgs;
   void **smootherArgs;
   void **coarsenArgs;
   void **prolongateArgs;
 
   //operator call-backs
-  void (*device_Ax)(void **args, occa::memory o_x, occa::memory o_Ax);
-  void (*device_smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero);
-  void (*device_coarsen)(void **args, occa::memory o_x, occa::memory o_Rx);
-  void (*device_prolongate)(void **args, occa::memory o_x, occa::memory o_Px);
+  void (*device_Ax)        (void **args, occa::memory &o_x, occa::memory &o_Ax);
+  void (*device_smooth)    (void **args, occa::memory &o_r, occa::memory &o_x, bool x_is_zero);
+  void (*device_smoother)  (void **args, occa::memory &o_r, occa::memory &o_Sr);
+  void (*device_coarsen)   (void **args, occa::memory &o_x, occa::memory &o_Rx);
+  void (*device_prolongate)(void **args, occa::memory &o_x, occa::memory &o_Px);
 
   //host versions
-  void (*Ax)(void **args, dfloat *x, dfloat *Ax);
-  void (*smooth)(void **args, dfloat *r, dfloat *x, bool x_is_zero);
-  void (*coarsen)(void **args, dfloat *x, dfloat *Rx);
+  void (*Ax)        (void **args, dfloat *x, dfloat *Ax);
+  void (*smooth)    (void **args, dfloat *r, dfloat *x, bool x_is_zero);
+  void (*smoother)  (void **args, dfloat *r, dfloat *Sr);
+  void (*coarsen)   (void **args, dfloat *x, dfloat *Rx);
   void (*prolongate)(void **args, dfloat *x, dfloat *Px);
 
   //agmg operators
@@ -184,9 +192,79 @@ typedef struct agmgLevel_t {
   occa::memory o_ckp1, o_vkp1, o_wkp1;
 
   dfloat *smoother_params;
+  dfloat *smootherResidual;
+  occa::memory o_smootherResidual;
 
   dfloat threshold;
   iint numAggregates;
   SmoothType stype;
 
 } agmgLevel;
+
+typedef struct {
+  agmgLevel **levels;
+  int numLevels;
+
+  KrylovType ktype;
+
+  mesh_t *mesh;
+  hgs_t *hgs;
+  const char* options;
+
+  //Matrix Free args
+  void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options);
+  void **MatFreeArgs;
+
+  //Coarse xxt solver
+  void *ExactSolve;
+  iint coarseTotal;
+  iint coarseOffset;
+  dfloat *xCoarse, *rhsCoarse;
+
+  occa::device device;
+
+  occa::memory o_x;
+  occa::memory o_Ax;
+  occa::memory o_rho;
+
+  occa::kernel ellAXPYKernel;
+  occa::kernel ellZeqAXPYKernel;
+  occa::kernel ellJacobiKernel;
+  occa::kernel cooAXKernel;
+  occa::kernel scaleVectorKernel;
+  occa::kernel vectorAddKernel;
+  occa::kernel vectorAddKernel2;
+  occa::kernel setVectorKernel;
+  occa::kernel dotStarKernel;
+  occa::kernel simpleDotStarKernel;
+  occa::kernel haloExtract;
+  occa::kernel agg_interpolateKernel;
+  occa::kernel innerProdKernel;
+  occa::kernel vectorAddInnerProdKernel;
+  occa::kernel kcycleCombinedOp1Kernel;
+  occa::kernel kcycleCombinedOp2Kernel;
+
+} parAlmond_t;
+
+parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
+
+void parAlmondAgmgSetup(parAlmond_t* parAlmond,
+                       int level,
+                       iint* rowStarts,
+                       iint  nnz,
+                       iint* Ai,
+                       iint* Aj,
+                       dfloat* Avals,
+                       hgs_t *hgs);
+
+void parAlmondPrecon(parAlmond_t* parAlmond, occa::memory o_x, occa::memory o_rhs);
+
+void parAlmondAddDeviceLevel(void *Almond, int lev, iint Nrows, iint Ncols,
+        void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
+        void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
+        void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
+        void **smootherArgs,  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero));
+
+int parAlmondFree(void* A);
+
+#endif

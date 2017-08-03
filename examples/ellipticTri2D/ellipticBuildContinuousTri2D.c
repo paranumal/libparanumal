@@ -1,18 +1,10 @@
 #include "ellipticTri2D.h"
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {  
-  
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
+
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -24,13 +16,13 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
   for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n]; 
+    iint id = mesh->gatherLocalIds[n];
     globalNumbering[id] = mesh->gatherBaseIds[n];
   }
 
   // squeeze node numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
-  
+
   //use the ordering to define a gather+scatter for assembly
   *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
@@ -88,7 +80,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
-  
+
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
 
@@ -101,7 +93,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
-  
+
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
     (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,

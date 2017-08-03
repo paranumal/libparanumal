@@ -1,4 +1,4 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
 void gmresUpdate(iint Nrows,
                  dfloat *x,
@@ -63,7 +63,8 @@ void gmres(parAlmond_t *parAlmond,
   parAlmond->ktype = GMRES;
 
   // initial residual
-  dfloat nb = norm(m, b);
+  dfloat nb = innerProd(m, b, b);
+  nb = sqrt(nb);
 
   dfloat *r = (dfloat *) calloc(m,sizeof(dfloat));
 
@@ -72,7 +73,8 @@ void gmres(parAlmond_t *parAlmond,
   for (iint k=0;k<m;k++)
     r[k] = b[k];
 
-  dfloat nr = norm(m, r);
+  dfloat nr = innerProd(m, r, r);
+  nr = sqrt(nr);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
   s[0] = nr;
@@ -118,8 +120,7 @@ void gmres(parAlmond_t *parAlmond,
       H[k + i*(maxIt+1)] = hki;
     }
 
-    H[i+1 + i*(maxIt+1)] = norm(m,w);
-
+    H[i+1 + i*(maxIt+1)] = sqrt(innerProd(m, w, w));
 
     for(iint k=0; k<i; ++k){
       dfloat h1 = H[k +     i*(maxIt+1)];
@@ -136,12 +137,12 @@ void gmres(parAlmond_t *parAlmond,
     H[i   +  i*(maxIt+1)] = hr;
     H[i+1 +  i*(maxIt+1)] = 0.;
 
-    dfloat ct = h1/hr; 
+    dfloat ct = h1/hr;
     dfloat st = h2/hr;
     J[4*i    ] =  ct;     J[4*i + 2] = st;
     J[4*i + 1] = -st;     J[4*i + 3] = ct;
 
-    dfloat s1 = s[i]; 
+    dfloat s1 = s[i];
     dfloat s2 = s[i+1];
 
     s[i  ] =  ct*s1 + st*s2;
@@ -150,9 +151,9 @@ void gmres(parAlmond_t *parAlmond,
     resVec[i+1] = fabs(s[i+1]);
 
     if(fabs(s[i+1]) < tol) break;
-    
+
     if(i < maxIt-1){
-      dfloat nw = norm(m,w);
+      dfloat nw = sqrt(innerProd(m, w, w));
 
       // V(:,i+1) = w/nw
       vectorAdd(m,1./nw, w, 0.0, V[i+1]);
@@ -260,12 +261,12 @@ void gmres(parAlmond_t *parAlmond,
     H[i   +  i*(maxIt+1)] = hr;
     H[i+1 +  i*(maxIt+1)] = 0;
 
-    dfloat ct = h1/hr; 
+    dfloat ct = h1/hr;
     dfloat st = h2/hr;
     J[4*i    ] =  ct;     J[4*i + 2] = st;
     J[4*i + 1] = -st;     J[4*i + 3] = ct;
 
-    dfloat s1 = s[i]; 
+    dfloat s1 = s[i];
     dfloat s2 = s[i+1];
 
     s[i  ] =  ct*s1 + st*s2;
@@ -285,7 +286,7 @@ void gmres(parAlmond_t *parAlmond,
 
   if(end == maxIt)
     printf("gmres did not converge in given number of iterations \n");
-  
+
   for(iint i=0; i<maxIt; ++i)
     o_V[i].free();
 

@@ -23,7 +23,7 @@ void ellipticPreconditioner2D(solver_t *solver,
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
     occaTimerTic(mesh->device,"parALMOND");
-    parAlmondPrecon(o_z, precon->parAlmond, o_r);
+    parAlmondPrecon(precon->parAlmond, o_z, o_r);
     occaTimerToc(mesh->device,"parALMOND");
 
   } else if(strstr(options, "OAS")){
@@ -38,7 +38,7 @@ void ellipticPreconditioner2D(solver_t *solver,
 
     //patch solve
     //ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
-    precon->OASsmooth(precon->OASsmootherArgs, o_r, o_z);
+    smoothTri2D(precon->OASsmoothArgs, o_r, o_z,true);
 
     occaTimerTic(mesh->device,"coarseGrid");
 
@@ -48,17 +48,14 @@ void ellipticPreconditioner2D(solver_t *solver,
     occaTimerToc(mesh->device,"coarsenKernel");
 
     occaTimerTic(mesh->device,"ALMOND");
-    parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
+    parAlmondPrecon(precon->parAlmond, precon->o_z1, precon->o_r1);
     occaTimerToc(mesh->device,"ALMOND");
 
-    // prolongate from P1 to PN
+    // prolongate from P1 to PN, adding patch and coarse solves together
     occaTimerTic(mesh->device,"prolongateKernel");
-    precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
+    precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_z);
     occaTimerToc(mesh->device,"prolongateKernel");
 
-    // add patch and coarse solves together
-    dfloat one = 1.;
-    ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
     occaTimerToc(mesh->device,"coarseGrid");
 
     //project weighting

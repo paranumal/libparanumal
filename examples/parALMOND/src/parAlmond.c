@@ -1,9 +1,6 @@
-#include "parAlmond.h"
+#include "agmg.h"
 
-void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
-
-  parAlmond_t *parAlmond = (parAlmond_t*) A;
-
+void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rhs) {
   //gather the global problem
   //if the rhs has already been gather scattered, weight the gathered rhs
   if(strstr(parAlmond->options,"GATHER")) {
@@ -14,7 +11,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
     parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
   }
 
-  if (strstr(parAlmond->options,"HOST")) {  
+  if (strstr(parAlmond->options,"HOST")) {
     //host versions
     parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
     if(strstr(parAlmond->options,"KCYCLE")) {
@@ -43,7 +40,7 @@ void parAlmondPrecon(occa::memory o_x, void *A, occa::memory o_rhs) {
   }
 }
 
-void *parAlmondInit(mesh_t *mesh, const char* options) {
+parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
@@ -60,16 +57,15 @@ void *parAlmondInit(mesh_t *mesh, const char* options) {
   //buffer for innerproducts in kcycle
   parAlmond->o_rho  = mesh->device.malloc(3*sizeof(dfloat));
 
-  return (void *) parAlmond;
+  return parAlmond;
 }
 
-void parAlmondAddDeviceLevel(void *Almond, iint lev, iint Nrows, iint Ncols,
-        void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
-        void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
-        void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
-        void **smootherArgs,  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero)) {
+void parAlmondAddDeviceLevel(parAlmond_t *parAlmond, iint lev, iint Nrows, iint Ncols,
+        void **AxArgs,        void (*Ax)        (void **args, occa::memory &o_x, occa::memory &o_Ax),
+        void **coarsenArgs,   void (*coarsen)   (void **args, occa::memory &o_x, occa::memory &o_Rx),
+        void **prolongateArgs,void (*prolongate)(void **args, occa::memory &o_x, occa::memory &o_Px),
+        void **smootherArgs,  void (*smooth)    (void **args, occa::memory &o_r, occa::memory &o_x, bool x_is_zero)) {
 
-  parAlmond_t *parAlmond = (parAlmond_t *) Almond;
   agmgLevel **levels = parAlmond->levels;
 
   if (lev > parAlmond->numLevels-1)
@@ -94,21 +90,18 @@ void parAlmondAddDeviceLevel(void *Almond, iint lev, iint Nrows, iint Ncols,
   levels[lev]->device_prolongate = prolongate;
 }
 
-void parAlmondAgmgSetup(void *Almond,
+void parAlmondAgmgSetup(parAlmond_t *parAlmond,
        int level,
        iint* globalRowStarts,       //global partition
        iint  nnz,                   //--
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
        iint* Aj,                    //--
        dfloat* Avals,               //--
-       hgs_t *hgs,                  // gs op for problem assembly (to be removed in future?)
-       const char* options){
+       hgs_t *hgs){                  // gs op for problem assembly (to be removed in future?)
 
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  parAlmond_t *parAlmond = (parAlmond_t *) Almond;
 
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
@@ -132,42 +125,8 @@ void parAlmondAgmgSetup(void *Almond,
     parAlmondReport(parAlmond);
 }
 
-
-
-
 //TODO code this
 int parAlmondFree(void* A) {
   return 0;
 }
 
-
-
-void parAlmondMatrixFreeAX(parAlmond_t *parAlmond, occa::memory &o_x, occa::memory &o_Ax){
-
-  mesh_t* mesh = parAlmond->mesh;
-
-  if(strstr(parAlmond->options,"CONTINUOUS")||strstr(parAlmond->options,"PROJECT")) {
-    //scatter x
-    meshParallelScatter(mesh, parAlmond->hgs, o_x, parAlmond->o_x);
-
-    occaTimerTic(mesh->device,"MatFreeAxKernel");
-    parAlmond->MatFreeAx(parAlmond->MatFreeArgs,parAlmond->o_x,parAlmond->o_Ax,parAlmond->options);
-    occaTimerToc(mesh->device,"MatFreeAxKernel");
-
-    //gather the result back to the global problem
-    meshParallelGather(mesh, parAlmond->hgs, parAlmond->o_Ax, o_Ax);
-  } else {
-    occaTimerTic(mesh->device,"MatFreeAxKernel");
-    parAlmond->MatFreeAx(parAlmond->MatFreeArgs,o_x,o_Ax,parAlmond->options);
-    occaTimerToc(mesh->device,"MatFreeAxKernel");
-  }
-}
-
-void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
-                        void **args) {
-  parAlmond_t *parAlmond = (parAlmond_t*) A;
-
-  parAlmond->MatFreeAx = MatFreeAx;
-  parAlmond->MatFreeArgs = args;
-
-}
