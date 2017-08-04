@@ -101,17 +101,53 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   }
 
   //set the number of MG levels and their degree
-  int numLevels = mesh->N;
-  int *levelDegree = (int *) calloc(numLevels,sizeof(int));
-  for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - n; //all degrees
+  int numLevels; 
+  int *levelDegree;
+
+  if (strstr(options,"ALLDEGREES")) {
+    numLevels = mesh->N;
+    levelDegree= (int *) calloc(numLevels,sizeof(int));
+    for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - n; //all degrees
+  } else if (strstr(options,"HALFDEGREES")) {
+    numLevels = floor(mesh->N/2.)+1;
+    levelDegree= (int *) calloc(numLevels,sizeof(int));
+    for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - 2*n; //decrease by two
+    levelDegree[numLevels-1] = 1; //ensure the last level is degree 1
+  } else if (strstr(options,"HALFDOFS")) {
+    // pick the degrees so the dofs of each level halfs (roughly)
+    //start by counting the number of levels neccessary
+    numLevels = 1;
+    int degree = mesh->N;
+    int dofs = meshLevels[degree]->Np;
+    while (dofs>3) {
+      numLevels++;
+      for (;degree>0;degree--) 
+        if (meshLevels[degree]->Np<=dofs/2)
+          break;
+      dofs = meshLevels[degree]->Np;
+    }
+    levelDegree= (int *) calloc(numLevels,sizeof(int));
+    degree = mesh->N;
+    numLevels = 1;
+    levelDegree[0] = degree;
+    dofs = meshLevels[degree]->Np;
+    while (dofs>3) {
+      for (;degree>0;degree--) 
+        if (meshLevels[degree]->Np<=dofs/2)
+          break;
+      dofs = meshLevels[degree]->Np;
+      levelDegree[numLevels] = degree; 
+      numLevels++;
+    }
+  }
 
   //storage for lambda parameter
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
 
   //storage for restriction matrices
-  dfloat **R = (dfloat **) calloc(numLevels+1,sizeof(dfloat*));
-  occa::memory *o_R = (occa::memory *) calloc(numLevels+1,sizeof(occa::memory));
+  dfloat **R = (dfloat **) calloc(numLevels,sizeof(dfloat*));
+  occa::memory *o_R = (occa::memory *) calloc(numLevels,sizeof(occa::memory));
 
   //maually build multigrid levels
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
@@ -220,6 +256,51 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
     levels[n]->device_prolongate = prolongateTri2D;
+  }
+
+  //report the multigrid levels
+  if (strstr(options,"VERBOSE")) {
+    if(rank==0) {
+      printf("------------------Multigrid Report---------------------\n");
+      printf("-------------------------------------------------------\n");
+      printf("level|  Degree  |    dimension   |      Smoother       \n");
+      printf("     |  Degree  |  (min,max,avg) |      Smoother       \n");
+      printf("-------------------------------------------------------\n");
+    }
+
+    for(int lev=0; lev<numLevels; lev++){
+
+      iint Nrows = levels[lev]->Nrows;
+
+      iint minNrows=0, maxNrows=0, totalNrows=0;
+      dfloat avgNrows;
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      avgNrows = (dfloat) totalNrows/size;
+
+      if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+
+      char *smootherString;
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        smootherString = strdup("OVERLAPPINGPATCH");
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        smootherString = strdup("EXACTFULLPATCH");
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        smootherString = strdup("APPROXFULLPATCH");
+      } else { //default to damped jacobi
+        smootherString = strdup("DAMPEDJACOBI");
+      }
+
+      if (rank==0){
+        printf(" %3d |    %2d    |   %10.2f  |   %s  \n",
+          lev, levelDegree[lev], (dfloat)minNrows, smootherString);
+        printf("     |          |   %10.2f  |   \n", (dfloat)maxNrows);
+        printf("     |          |   %10.2f  |   \n", avgNrows);
+      }
+    }
+    if(rank==0)
+      printf("-------------------------------------------------------\n");
   }
 
   for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
