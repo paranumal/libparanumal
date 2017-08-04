@@ -66,7 +66,7 @@ void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
@@ -81,12 +81,13 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
 
 //smoother setups
-void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
-void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
-void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
-void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int* BCType, dfloat weight, const char *options);
+void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherApproxFullPatchIpdg (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
 
 void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
 void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);

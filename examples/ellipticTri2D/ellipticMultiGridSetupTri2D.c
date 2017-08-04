@@ -90,7 +90,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   mesh2D *mesh = solver->mesh;
-  solver->precon = precon;
 
   //read all the nodes files and load them in a dummy mesh array
   mesh2D **meshLevels = (mesh2D**) calloc(mesh->N+1,sizeof(mesh2D*));
@@ -186,37 +185,24 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->smootherArgs = (void **) calloc(1,sizeof(void*));
     levels[n]->smootherArgs[0] = (void *) solverL;
 
-    //set up the fine problem smoothing
-    //TODO the weight should be found by estimating the max eigenvalue of Smoother*A, via Arnoldi?
-    //  for now, the weights can be adjusted for stability here
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        dfloat weight = 0.08; //stability weighting for smoother
-        ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, tau, lambda, BCType, weight, options);
-        levels[n]->device_smoother = overlappingPatchIpdg;
-
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        dfloat weight = 0.85; //stability weighting for smoother
-        ellipticSetupSmootherExactFullPatchIpdg(solverL, solverL->precon, tau, lambda, BCType, weight, options);
-        levels[n]->device_smoother = exactFullPatchIpdg;
-
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        dfloat weight = 0.25; //stability weighting for smoother
-        ellipticSetupSmootherApproxFullPatchIpdg(solverL, solverL->precon, tau, lambda, BCType, weight, options);
-        levels[n]->device_smoother = approxFullPatchIpdg;
-
-      } else { //default to damped jacobi
-        dfloat weight = 0.65; //stability weighting for smoother
-        ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, tau, lambda, BCType, weight, options);
-        levels[n]->device_smoother = dampedJacobi;
-      }
-    }
-
     levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
 
     // extra storage for smoothing op
     levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
+
+    //set up the fine problem smoothing
+    if (strstr(options, "IPDG")) {
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        ellipticSetupSmootherExactFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        ellipticSetupSmootherApproxFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else { //default to damped jacobi
+        ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      }
+    }
 
     if (n==0) continue; //dont need restriction and prolongation ops at top level
 

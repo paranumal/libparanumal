@@ -26,78 +26,83 @@ void kcycle(parAlmond_t *parAlmond, int k){
   levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
 
   if(k+1 < parAlmond->numLevels - 1){
-    dfloat *ckp1 = levels[k+1]->ckp1;
-    dfloat *vkp1 = levels[k+1]->vkp1;
-    dfloat *wkp1 = levels[k+1]->wkp1;
-    dfloat *dkp1 = levels[k+1]->x;
-    dfloat *rkp1 = levels[k+1]->rhs;
-
-    // first inner krylov iteration
-    kcycle(parAlmond, k+1);
-
-    //ckp1 = x
-    memcpy(ckp1,levels[k+1]->x,mCoarse*sizeof(dfloat));
-
-    // v = A*c
-    levels[k+1]->Ax(levels[k+1]->AxArgs,ckp1,vkp1);
-
-    dfloat rhoLocal[3], rhoGlobal[3];
-    dfloat rho1, alpha1, norm_rkp1;
-    dfloat norm_rktilde_p, norm_rktilde_pGlobal;
-
-    if(parAlmond->ktype == PCG)
-      kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1);
-
-    if(parAlmond->ktype == GMRES)
-      kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1);
-
-    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-
-    alpha1 = rhoGlobal[0];
-    rho1   = rhoGlobal[1];
-    norm_rkp1 = sqrt(rhoGlobal[2]);
-
-    // rkp1 = rkp1 - (alpha1/rho1)*vkp1
-    norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1);
-    MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
-    norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
-
-    dfloat t = 0.2;
-
-    if(norm_rktilde_pGlobal < t*norm_rkp1){
-      // x = (alpha1/rho1)*x
-      scaleVector(mCoarse, levels[k+1]->x, alpha1/rho1);
+    if(k>2) {
+      vcycle(parAlmond,k+1);
+      //kcycle(parAlmond, k+1);
     } else{
+      dfloat *ckp1 = levels[k+1]->ckp1;
+      dfloat *vkp1 = levels[k+1]->vkp1;
+      dfloat *wkp1 = levels[k+1]->wkp1;
+      dfloat *dkp1 = levels[k+1]->x;
+      dfloat *rkp1 = levels[k+1]->rhs;
 
+      // first inner krylov iteration
       kcycle(parAlmond, k+1);
 
-      // w = A*d
-      levels[k+1]->Ax(levels[k+1]->AxArgs,dkp1,wkp1);
+      //ckp1 = x
+      memcpy(ckp1,levels[k+1]->x,mCoarse*sizeof(dfloat));
 
-      dfloat gamma, beta, alpha2;
+      // v = A*c
+      levels[k+1]->Ax(levels[k+1]->AxArgs,ckp1,vkp1);
+
+      dfloat rhoLocal[3], rhoGlobal[3];
+      dfloat rho1, alpha1, norm_rkp1;
+      dfloat norm_rktilde_p, norm_rktilde_pGlobal;
 
       if(parAlmond->ktype == PCG)
-        kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1);
+        kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1);
 
       if(parAlmond->ktype == GMRES)
-        kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1);
+        kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1);
 
       MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
-      gamma  = rhoGlobal[0];
-      beta   = rhoGlobal[1];
-      alpha2 = rhoGlobal[2];
+      alpha1 = rhoGlobal[0];
+      rho1   = rhoGlobal[1];
+      norm_rkp1 = sqrt(rhoGlobal[2]);
 
-      if(fabs(rho1) > (dfloat) 1e-20){
+      // rkp1 = rkp1 - (alpha1/rho1)*vkp1
+      norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1);
+      MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
-        dfloat rho2 = beta - gamma*gamma/rho1;
+      dfloat t = 0.2;
 
-        if(fabs(rho2) > (dfloat) 1e-20){
-          // levels[k+1]->x = (alpha1/rho1 - (gam*alpha2)/(rho1*rho2))*ckp1 + (alpha2/rho2)*dkp1
-          dfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
-          dfloat b = alpha2/rho2;
+      if(norm_rktilde_pGlobal < t*norm_rkp1){
+        // x = (alpha1/rho1)*x
+        scaleVector(mCoarse, levels[k+1]->x, alpha1/rho1);
+      } else{
 
-          vectorAdd(mCoarse, a, ckp1, b, levels[k+1]->x);
+        kcycle(parAlmond, k+1);
+
+        // w = A*d
+        levels[k+1]->Ax(levels[k+1]->AxArgs,dkp1,wkp1);
+
+        dfloat gamma, beta, alpha2;
+
+        if(parAlmond->ktype == PCG)
+          kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1);
+
+        if(parAlmond->ktype == GMRES)
+          kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1);
+
+        MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+        gamma  = rhoGlobal[0];
+        beta   = rhoGlobal[1];
+        alpha2 = rhoGlobal[2];
+
+        if(fabs(rho1) > (dfloat) 1e-20){
+
+          dfloat rho2 = beta - gamma*gamma/rho1;
+
+          if(fabs(rho2) > (dfloat) 1e-20){
+            // levels[k+1]->x = (alpha1/rho1 - (gam*alpha2)/(rho1*rho2))*ckp1 + (alpha2/rho2)*dkp1
+            dfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
+            dfloat b = alpha2/rho2;
+
+            vectorAdd(mCoarse, a, ckp1, b, levels[k+1]->x);
+          }
         }
       }
     }
@@ -155,8 +160,8 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
   if(k+1 < parAlmond->numLevels - 1){
     if(k>2) {
-      //device_vcycle(parAlmond,k+1);
-      device_kcycle(parAlmond, k+1);
+      device_vcycle(parAlmond,k+1);
+      //device_kcycle(parAlmond, k+1);
     } else{
       // first inner krylov iteration
       device_kcycle(parAlmond,k+1);

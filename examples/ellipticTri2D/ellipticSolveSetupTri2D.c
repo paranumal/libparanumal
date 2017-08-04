@@ -185,9 +185,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 					       mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
-  occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
-  occaTimerToc(mesh->device,"PreconditionerSetup");
+  solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
@@ -229,6 +227,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
                "ellipticPatchGather2D",
                kernelInfo);
+
+  occaTimerTic(mesh->device,"PreconditionerSetup");
+  ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
+  occaTimerToc(mesh->device,"PreconditionerSetup");
+
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
