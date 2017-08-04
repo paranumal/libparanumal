@@ -10,7 +10,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
 void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA);
 
 
-void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
 
   iint rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -24,10 +24,10 @@ void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *glo
 
   agmgLevel **levels = parAlmond->levels;
 
-  if (!levels[lev]) {
-    levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
-    parAlmond->numLevels++;
-  }
+  int lev = parAlmond->numLevels; //add this level to the end of the chain
+
+  levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+  parAlmond->numLevels++;
 
   //copy A matrix and null vector
   levels[lev]->A = A;
