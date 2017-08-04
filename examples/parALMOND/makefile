@@ -1,6 +1,6 @@
 sDir = ./src
 iDir = ./include
-objDir = ./obj
+objDir = ./
 
 
 sources = $(wildcard $(sDir)/*c)
