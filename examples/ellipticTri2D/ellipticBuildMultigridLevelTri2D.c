@@ -50,6 +50,39 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     }
   }
 
+  //build element stiffness matrices
+  dfloat *SrrT, *SrsT, *SsrT, *SssT;
+  if (mesh->Nverts == 3) {
+    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        for (iint k=0;k<mesh->Np;k++) {
+          for (iint l=0;l<mesh->Np;l++) {
+            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          }
+        }
+      }
+    }
+    SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+        SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      }
+    }
+  }
+
   mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
            mesh->Dr);
 
@@ -168,7 +201,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
   //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  printf("NpFine = %d, NpCoarse = %d\n", NpFine, NpCoarse);
   kernelInfo.addDefine("p_NpFine", NpFine);
   kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 

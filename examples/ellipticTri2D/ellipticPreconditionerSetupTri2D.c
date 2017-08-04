@@ -1,14 +1,14 @@
 #include "ellipticTri2D.h"
 
 
-precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
+void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   mesh2D *mesh = solver->mesh;
-  precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
+  precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
     iint nnz;
@@ -64,33 +64,22 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
       levels[0]->smootherArgs = (void **) calloc(1,sizeof(void*));
       levels[0]->smootherArgs[0] = (void *) solver;
 
-      //set up the fine problem smoothing
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        dfloat weight = 1.0; //stability weighting for smoother
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        levels[0]->device_smoother = overlappingPatchIpdg;
-
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        dfloat weight = 1.0; //stability weighting for smoother
-        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        levels[0]->device_smoother = exactFullPatchIpdg;
-
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        dfloat weight = 1.0; //stability weighting for smoother
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        levels[0]->device_smoother = approxFullPatchIpdg;
-
-      } else { //default to damped jacobi
-        dfloat weight = levels[0]->smoother_params[0]; //stability weighting for smoother
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        levels[0]->device_smoother = dampedJacobi;
-      }
-
       levels[0]->Nrows = mesh->Nelements*mesh->Np;
       levels[0]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
       // extra storage for smoothing op
       levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
+
+      //set up the fine problem smoothing
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);\
+      } else { //default to damped jacobi
+        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      }
     }
 
   } else if (strstr(options, "BLOCKJACOBI")){
@@ -140,37 +129,25 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     OASLevel->smootherArgs = (void **) calloc(1,sizeof(void*));
     OASLevel->smootherArgs[0] = (void *) solver;
 
-    dfloat weight = 1.; //stability weighting for smoother
-
-    //set up the fine problem smoothing
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        OASLevel->device_smoother = overlappingPatchIpdg;
-
-      } else if(strstr(options, "EXACTFULLPATCH")){
-
-        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        OASLevel->device_smoother = exactFullPatchIpdg;
-
-      } else if(strstr(options, "APPROXFULLPATCH")){
-
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        OASLevel->device_smoother = approxFullPatchIpdg;
-
-      } else { //default to damped jacobi
-
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, tau, lambda, BCType, weight, options);
-        OASLevel->device_smoother = dampedJacobi;
-      }
-    }
-
     OASLevel->Nrows = mesh->Nelements*mesh->Np;
     OASLevel->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
     // extra storage for smoothing op
     OASLevel->o_smootherResidual = mesh->device.malloc(OASLevel->Ncols*sizeof(dfloat));
+
+    //set up the fine problem smoothing
+    if (strstr(options, "IPDG")) {
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFULLPATCH")){
+        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFULLPATCH")){
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else { //default to damped jacobi
+        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      }
+    }
+
 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
@@ -220,7 +197,4 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
   }
-
-
-  return precon;
 }

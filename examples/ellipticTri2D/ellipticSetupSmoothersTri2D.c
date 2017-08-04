@@ -19,9 +19,8 @@ int parallelCompareBaseId(const void *a, const void *b){
   return 0;
 }
 
-void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon,
-                                              dfloat tau, dfloat lambda, int* BCType,
-                                              dfloat weight, const char *options) {
+void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -232,7 +231,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
     for(iint n=0;n<NpP;++n){
       iint pid = n + e*NpP;
 
-      diagInvOpDg[pid] = weight/(J*lambda + Jhinv2*mesh->oasDiagOpDg[n]);
+      diagInvOpDg[pid] = 1.0/(J*lambda + Jhinv2*mesh->oasDiagOpDg[n]);
     }
   }
 
@@ -243,11 +242,30 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   iint NtotalP = mesh->NpP*mesh->Nelements;
   precon->zP  = (dfloat*) calloc(NtotalP,  sizeof(dfloat));
   precon->o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat),precon->zP);
+
+
+  level->device_smoother = overlappingPatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint n=0;n<NpP*mesh->Nelements;n++)
+      diagInvOpDg[n] *= weight;
+
+    //update diagonal with weight
+    precon->o_oasDiagInvOpDg.copyFrom(diagInvOpDg);
+  }
 }
 
-void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
-                                            dfloat tau, dfloat lambda, int* BCType,
-                                            dfloat weight, const char *options) {
+void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -268,10 +286,9 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
   for (iint e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++)
         invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
-    invDegree[e] = weight/invDegree[e]; //build in weight
+    invDegree[e] = 1.0/invDegree[e];
   }
   precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
-  free(invDegree);
 
   mesh->o_EToE  = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
   mesh->o_EToF  = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
@@ -280,11 +297,31 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
   //set storage for larger patch
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
+
+
+  level->device_smoother = exactFullPatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint e=0;e<mesh->Nelements;e++)
+      invDegree[e] *= weight;
+
+    //update with weight
+    precon->o_invDegreeAP.copyFrom(invDegree);
+  }
+  free(invDegree);
 }
 
-void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon,
-                                            dfloat tau, dfloat lambda, int* BCType,
-                                            dfloat weight, const char *options) {
+void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -308,10 +345,9 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   for (iint e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++)
         invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
-    invDegree[e] = weight/invDegree[e]; //build in weight
+    invDegree[e] = 1.0/invDegree[e]; //build in weight
   }
   precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
-  free(invDegree);
 
   mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
   mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
@@ -320,20 +356,209 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
 
+  level->device_smoother = approxFullPatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint e=0;e<mesh->Nelements;e++)
+      invDegree[e] *= weight;
+
+    //update with weight
+    precon->o_invDegreeAP.copyFrom(invDegree);
+  }
+  free(invDegree);
 }
 
-void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon,
-                                            dfloat tau, dfloat lambda, int* BCType,
-                                            dfloat weight, const char *options) {
+void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   dfloat *invDiagA;
   mesh_t *mesh = solver->mesh;
 
   ellipticBuildJacobiIpdgTri2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
-  for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
-    invDiagA[n] *= weight;
-
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+
+  level->device_smoother = dampedJacobi;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
+      invDiagA[n] *= weight;
+
+    //update diagonal with weight
+    precon->o_invDiagA.copyFrom(invDiagA);
+  }
+
   free(invDiagA);
+}
+
+static void eig(const int Nrows, double *A, double *WR, double *WI){
+
+  int NB  = 256;
+  char JOBVL  = 'V';
+  char JOBVR  = 'V';
+  int     N = Nrows;
+  int   LDA = Nrows;
+  int  LWORK  = (NB+2)*N;
+
+  double *WORK  = new double[LWORK];
+  double *VL  = new double[Nrows*Nrows];
+  double *VR  = new double[Nrows*Nrows];
+
+  int INFO = -999;
+
+  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
+    VL, &LDA, VR, &LDA, WORK, &LWORK, &INFO);
+
+
+  assert(INFO == 0);
+
+  delete [] VL;
+  delete [] VR;
+  delete [] WORK;
+}
+
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
+
+  mesh_t *mesh = solver->mesh;
+
+  const iint N = level->Nrows;
+  const iint M = level->Ncols;
+
+  int k = 10;
+
+  iint rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  iint Ntotal=0;
+  MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  if(k > Ntotal)
+    k = Ntotal;
+
+  // do an arnoldi
+
+  // allocate memory for Hessenberg matrix
+  double *H = (double *) calloc(k*k,sizeof(double));
+
+  // allocate memory for basis
+  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
+  dfloat *Vx = (dfloat *) calloc(M, sizeof(dfloat));
+
+  occa::memory o_Vx  = mesh->device.malloc(M*sizeof(dfloat));
+  occa::memory o_AVx = mesh->device.malloc(M*sizeof(dfloat));
+
+  for(int i=0; i<=k; i++)
+    V[i] = (dfloat *) calloc(N, sizeof(dfloat));
+
+  // generate a random vector for initial basis vector
+  for (iint i=0;i<N;i++)
+    Vx[i] = (dfloat) drand48();
+
+  dfloat norm_vo = 0.;
+  for (iint i=0;i<N;i++)
+    norm_vo += Vx[i]*Vx[i];
+
+  dfloat gNorm_vo = 0;
+  MPI_Allreduce(&norm_vo, &gNorm_vo, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  gNorm_vo = sqrt(gNorm_vo);
+
+  for (iint i=0;i<N;i++)
+    Vx[i] /= gNorm_vo;
+
+  for (iint i=0;i<N;i++)
+    V[0][i] = Vx[i];
+
+  for(int j=0; j<k; j++){
+
+    for (iint i=0;i<N;i++)
+      Vx[i] = V[j][i];
+
+    o_Vx.copyFrom(Vx); //send to device
+
+    // v[j+1] = invD*(A*v[j])
+    level->device_Ax(level->AxArgs,o_Vx,o_AVx);
+    level->device_smoother(level->smootherArgs, o_AVx, o_AVx);
+
+    o_AVx.copyTo(V[j+1],N*sizeof(dfloat)); //send result to host
+
+    // modified Gram-Schmidth
+    for(int i=0; i<=j; i++){
+      // H(i,j) = v[i]'*A*v[j]
+      dfloat hij = 0.;
+      for (iint n=0;n<N;n++)
+        hij += V[i][n]*V[j+1][n];
+
+      dfloat ghij = 0;
+      MPI_Allreduce(&hij, &ghij, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+      // v[j+1] = v[j+1] - hij*v[i]
+      for (iint n=0;n<N;n++)
+        V[j+1][n] -= ghij*V[i][n];
+
+      H[i + j*k] = (double) ghij;
+    }
+
+    if(j+1 < k){
+
+      dfloat norm_vj = 0.;
+      for (iint n=0;n<N;n++)
+        norm_vj += V[j+1][n]*V[j+1][n];
+
+      dfloat gNorm_vj;
+      MPI_Allreduce(&norm_vj, &gNorm_vj, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      gNorm_vj = sqrt(gNorm_vj);
+
+      H[j+1+ j*k] = (double) gNorm_vj;
+
+      for (iint n=0;n<N;n++)
+        V[j+1][n] *= 1./H[j+1 + j*k];
+    }
+  }
+
+  double *WR = (double *) calloc(k,sizeof(double));
+  double *WI = (double *) calloc(k,sizeof(double));
+
+  eig(k, H, WR, WI);
+
+  double rho = 0.;
+
+  for(int i=0; i<k; i++){
+    double rho_i  = sqrt(WR[i]*WR[i] + WI[i]*WI[i]);
+
+    if(rho < rho_i) {
+      rho = rho_i;
+    }
+  }
+
+  free(H);
+  free(WR);
+  free(WI);
+
+  // free memory
+  for(int i=0; i<=k; i++){
+    free(V[i]);
+  }
+
+  o_Vx.free();
+  o_AVx.free();
+
+  return rho;
 }
