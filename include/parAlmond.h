@@ -249,7 +249,6 @@ typedef struct {
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
-                       int level,
                        iint* rowStarts,
                        iint  nnz,
                        iint* Ai,
@@ -258,12 +257,6 @@ void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        hgs_t *hgs);
 
 void parAlmondPrecon(parAlmond_t* parAlmond, occa::memory o_x, occa::memory o_rhs);
-
-void parAlmondAddDeviceLevel(void *Almond, int lev, iint Nrows, iint Ncols,
-        void **AxArgs,        void (*Ax)(void **args, occa::memory o_x, occa::memory o_Ax),
-        void **coarsenArgs,   void (*coarsen)(void **args, occa::memory o_x, occa::memory o_Rx),
-        void **prolongateArgs,void (*prolongate)(void **args, occa::memory o_x, occa::memory o_Px),
-        void **smootherArgs,  void (*smooth)(void **args, occa::memory o_r, occa::memory o_x, bool x_is_zero));
 
 int parAlmondFree(void* A);
 

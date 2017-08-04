@@ -35,7 +35,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     }
 
     precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
-    parAlmondAgmgSetup(precon->parAlmond,0,
+    parAlmondAgmgSetup(precon->parAlmond,
                        globalStarts,
                        nnz,
                        Rows,
@@ -199,7 +199,7 @@ precon_t *ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat 
     }
 
     precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
-    parAlmondAgmgSetup(precon->parAlmond, 0,
+    parAlmondAgmgSetup(precon->parAlmond,
                        coarseGlobalStarts,
                        nnzCoarseA,
                        Rows,

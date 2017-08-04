@@ -78,6 +78,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
+
 //smoother setups
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);
 void ellipticSetupSmootherExactFullPatchIpdg  (solver_t *solver, precon_t *precon, dfloat tau, dfloat lambda, int *BCType, dfloat weight, const char *options);

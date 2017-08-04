@@ -87,6 +87,10 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
+  //sizes for the coarsen and prolongation kernels. degree N to degree 1
+  kernelInfo.addDefine("p_NpFine", mesh->Np);
+  kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
+
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 

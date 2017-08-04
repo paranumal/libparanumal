@@ -165,6 +165,10 @@ typedef struct {
   dfloat *BBRaiseVals; //Bernstein elevate matrix values
   dfloat *BBLower; //Berstein projection matrix.
 
+  //degree raising and lowering interpolation matrices
+  dfloat *interpRaise;
+  dfloat *interpLower;
+
   // time stepping info
   dfloat dt; // time step
   dfloat finalTime; // final time to run acoustics to

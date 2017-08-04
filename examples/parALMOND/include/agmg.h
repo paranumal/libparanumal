@@ -14,7 +14,7 @@
 #define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
 
 
-void agmgSetup(parAlmond_t *parAlmond, int lev, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
 void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 
