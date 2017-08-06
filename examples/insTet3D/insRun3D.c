@@ -4,7 +4,8 @@ void insRun3D(ins_t *ins, char *options){
 
   mesh3D *mesh = ins->mesh;
   // Write Initial Data
-  insReport3D(ins, 0, options);
+  //insReport3D(ins, 0, options);
+  
   //insErrorNorms3D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
   iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
@@ -25,7 +26,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  //ins->NtimeSteps = 500; // !!!!!!!!!!!!!
+  ins->NtimeSteps = 500; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 1
     // ok it seems 
@@ -50,7 +51,8 @@ void insRun3D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else if(tstep<400)
+    else 
+      //if(tstep<400)
     {
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
@@ -58,12 +60,12 @@ void insRun3D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else{
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-    }
+    // else{
+    //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
+    //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+    //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+    //   ins->g0 =  11.f/6.f;
+    // }
   #else
    if(tstep<1){
        //advection, first order in time, increment
