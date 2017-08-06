@@ -14,7 +14,7 @@ int main(int argc, char **argv){
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
   char *velSolverOptions = 
-      strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
+        strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
 
   char *prSolverOptions =
       strdup("solver=PCG,FLEXIBLE method=IPDG,preconditioner=FULLALMOND"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
