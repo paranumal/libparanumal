@@ -188,7 +188,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   // BP3 specific stuff starts here
   dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
-  
+
+  // TW: temporarily resize gjD
+  mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat)); 
   solver->o_gjD = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjD);
   solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
   solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
@@ -196,7 +198,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-G");
   kernelInfo.addCompilerFlag("-O3");
 
@@ -270,7 +272,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       // CPU version is e8, GPU version is e6
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				   "ellipticPartialAxHex3D_e6", 
+				   "ellipticPartialAxHex3D_cube1", 
 				   kernelInfo);
       
       

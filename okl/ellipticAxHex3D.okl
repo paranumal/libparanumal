@@ -2559,3 +2559,188 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
   }
 }
 
+
+#define gjCubeThreads(c,b,a)			\
+  barrier(localMemFence);			\
+  for(int c=0;c<p_gjNq;++c;inner2)		\
+    for(int b=0;b<p_gjNq;++b;inner1)		\
+      for(int a=0;a<p_gjNq;++a;inner0)
+
+kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
+					 const iint * restrict elementList,
+					 const dfloat * restrict gjGeo, 
+					 const dfloat * restrict gjD,
+					 const dfloat * restrict gjI,
+					 const dfloat   lambda,
+					 dfloat * restrict q,
+					 dfloat * restrict Aq,
+					 dfloat * restrict qAq){  
+
+  
+  for(int e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_gjD[p_gjNq][p_gjNq];
+    shared dfloat s_I[p_gjNq][p_Nq];
+
+    shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+
+    exclusive iint emap;
+    exclusive dfloat r_resr, r_ress, r_rest, r_resI;
+    
+    // prefetch D and I matrices and zero register storage
+    gjCubeThreads(c,b,a){
+      const int t = a + p_gjNq*b + p_gjNq2*c;
+      
+      if(t<p_gjNq*p_gjNq)
+	s_gjD[0][t] = gjD[t];
+      if(t<p_Nq*p_gjNq)
+	s_I[0][t] = gjI[t];
+      
+      emap = elementList[e];
+      
+      if(t<p_Np){
+	const int ta = t%p_Nq;
+	const int tb = (t/p_Nq)%p_Nq;
+	const int tc = t/(p_Nq*p_Nq);
+	s_q[tc][tb][ta] = q[emap*p_Np+t];
+      }
+    }
+    
+    gjCubeThreads(c,b,i){
+      r_resr = 0;
+      if(b<p_Nq && c<p_Nq){
+	dfloat tmp = 0;
+	for(int a=0;a<p_Nq;++a) // transform in 'a'
+	  tmp += s_I[i][a]*s_q[c][b][a];
+	r_resr = tmp;
+      }
+    }
+
+    gjCubeThreads(c,b,i)
+      s_q[c][b][i] = r_resr;
+
+    gjCubeThreads(c,j,i){
+      r_ress = 0;
+      if(c<p_Nq){
+	dfloat tmp = 0;
+	for(int b=0;b<p_Nq;++b) // transform in 'b'
+	  tmp += s_I[j][b]*s_q[c][b][i];
+	r_ress = tmp;
+      }
+    }
+
+    gjCubeThreads(c,j,i){
+      s_q[c][j][i] = r_ress;
+    }
+
+    gjCubeThreads(k,j,i){
+      dfloat tmp = 0;
+      for(int c=0;c<p_Nq;++c) // transform in 'c'
+	tmp += s_I[k][c]*s_q[c][j][i];
+      r_rest = tmp;
+    }
+    
+    gjCubeThreads(k,j,i)
+      s_q[k][j][i] = r_rest;
+    
+    gjCubeThreads(k,j,i){
+      const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+      const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp]; 
+      const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+      const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+      const dfloat r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+      
+      const dfloat r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+      const dfloat r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+      const dfloat r_G22 = gjGeo[base+p_G22ID*p_gjNp];
+      
+      dfloat qr = 0, qs = 0, qt = 0;
+      
+      for(iint n=0;n<p_gjNq;++n){
+	qr += s_gjD[i][n]*s_q[k][j][n];
+	qs += s_gjD[j][n]*s_q[k][n][i];
+	qt += s_gjD[k][n]*s_q[n][j][i];
+      }
+      
+      // apply chain rule (notice the swtich of indices in i,j)
+      r_resr = r_G00*qr + r_G01*qs + r_G02*qt;
+      r_ress = r_G01*qr + r_G11*qs + r_G12*qt;
+      r_rest = r_G02*qr + r_G12*qs + r_G22*qt;
+      r_resI = r_GwJ*s_q[k][j][i]*lambda;
+    }
+    
+    // compute 'r' weak derivative of resr
+    gjCubeThreads(k,j,i)
+      s_q[k][j][i] = r_resr;
+
+    gjCubeThreads(k,j,i){
+      dfloat tmp = 0;
+      for(int n=0;n<p_gjNq;++n)
+	tmp += s_gjD[i][n]*s_q[k][j][n];
+      r_resI += tmp;
+    }
+    
+    // compute 's' weak derivative of resr
+    gjCubeThreads(k,j,i)
+      s_q[k][j][i] = r_ress;
+    
+    gjCubeThreads(k,j,i){
+      dfloat tmp = 0;
+      for(int n=0;n<p_gjNq;++n)
+	tmp += s_gjD[j][n]*s_q[k][n][i];
+      r_resI += tmp;
+    }
+
+    // compute 't' weak derivative of resr
+    gjCubeThreads(k,j,i)
+      s_q[k][j][i] = r_rest;
+    
+    gjCubeThreads(k,j,i){
+      dfloat tmp = 0;
+      for(int n=0;n<p_gjNq;++n)
+	tmp += s_gjD[k][n]*s_q[n][j][i];
+      r_resI += tmp;
+    }
+
+    // NOW REVERSE: transform back in 't'
+    gjCubeThreads(k,j,i)
+      s_q[k][j][i] = r_resI;
+    
+    gjCubeThreads(c,j,i){
+      dfloat tmp = 0;
+      if(c<p_Nq){
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_I[n][c]*s_q[n][j][i];
+      }
+      r_rest = tmp;
+    }
+
+    // transform back in 's'
+    gjCubeThreads(c,j,i)
+      s_q[c][j][i] = r_rest;
+    
+    gjCubeThreads(c,b,i){
+      dfloat tmp = 0;
+      if(c<p_Nq && b<p_Nq){
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_I[n][b]*s_q[c][n][i];
+      }
+      r_ress = tmp;
+    }
+    
+    // transform back in 'r'
+    gjCubeThreads(c,b,i)
+      s_q[c][b][i] = r_ress;
+    
+    gjCubeThreads(c,b,a){
+      if(a<p_Nq && b<p_Nq && c<p_Nq){
+	dfloat tmp = 0;
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_I[n][a]*s_q[c][b][n];
+	// could store in s_q again
+	const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+	Aq[id] = tmp;
+      }
+    }
+  }
+}
