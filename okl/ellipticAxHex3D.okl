@@ -2910,19 +2910,19 @@ barrier(localMemFence);
 		for(int c=0; c<p_Nq; ++c; inner2) {
 			for(int b=0; b<p_Nq; ++b; inner1) {
 				for(int i=0; i<p_Nq; ++i:inner0) {
-					//KS [c][b][i] ?????
+
 					r_Aq= r_res;
 				}
 			}
 		}
 // s direction
 		barrier(localMemFence);
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
+		for(int c=0; c<p_Nq; ++c; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int a=0; a<p_Nq; ++a:inner0) {
 					if(a<p_Nq && c<p_Nq) {
 						dfloat Iq = 0;
-						for(int b=0; b<p_Nq; ++b) {
+						for(int b=0; b<p_glNq; ++b) {
 							Iq += s_gsI[b][j]*s_q[c][b][a];
 						}
 						r_res = Iq;
@@ -2947,7 +2947,7 @@ barrier(localMemFence);
 				for(int a=0; a<p_gjNq; ++a:inner0) {
 
 					dfloat Iq = 0;
-					for(int c=0; c<p_Nq; ++c) {
+					for(int c=0; c<p_glNq; ++c) {
 						Iq += s_gsI[c][k]*s_q[c][b][a];
 					}
 					r_res = Iq;
@@ -2965,9 +2965,9 @@ barrier(localMemFence);
 		}
 		barrier(localMemFence);
 // place the result where it is supposed to be
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+		for(int k=0; k<p_gj; ++k; inner2) {
+			for(int j=0; j<p_gj; ++j; inner1) {
+				for(int i=0; i<p_gj; ++i; inner0) {
 					emap = elementList[e];
 					iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					Aq[base] = r_Aq;
