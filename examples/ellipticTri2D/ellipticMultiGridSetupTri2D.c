@@ -101,7 +101,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   }
 
   //set the number of MG levels and their degree
-  int numLevels; 
+  int numLevels;
   int *levelDegree;
 
   if (strstr(options,"ALLDEGREES")) {
@@ -121,7 +121,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     int dofs = meshLevels[degree]->Np;
     while (dofs>3) {
       numLevels++;
-      for (;degree>0;degree--) 
+      for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
       dofs = meshLevels[degree]->Np;
@@ -132,11 +132,11 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levelDegree[0] = degree;
     dofs = meshLevels[degree]->Np;
     while (dofs>3) {
-      for (;degree>0;degree--) 
+      for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
       dofs = meshLevels[degree]->Np;
-      levelDegree[numLevels] = degree; 
+      levelDegree[numLevels] = degree;
       numLevels++;
     }
   }
@@ -235,6 +235,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
         ellipticSetupSmootherExactFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
         ellipticSetupSmootherApproxFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTBLOCKJACOBI")){
+        ellipticSetupSmootherExactBlockJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXBLOCKJACOBI")){
+        ellipticSetupSmootherApproxBlockJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       }
@@ -288,6 +292,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
         smootherString = strdup("EXACTFULLPATCH");
       } else if(strstr(options, "APPROXFULLPATCH")){
         smootherString = strdup("APPROXFULLPATCH");
+      } else if(strstr(options, "EXACTBLOCKJACOBI")){
+        smootherString = strdup("EXACTBLOCKJACOBI");
+      } else if(strstr(options, "APPROXBLOCKJACOBI")){
+        smootherString = strdup("APPROXBLOCKJACOBI");
       } else { //default to damped jacobi
         smootherString = strdup("DAMPEDJACOBI");
       }

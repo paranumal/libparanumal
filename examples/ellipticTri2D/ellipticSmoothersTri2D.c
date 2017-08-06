@@ -85,6 +85,37 @@ void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occaTimerToc(mesh->device,"approxFullPatchSolveKernel");
 }
 
+void exactBlockJacobiIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
+
+  solver_t *solver = (solver_t*) args[0];
+  mesh_t *mesh = solver->mesh;
+  precon_t *precon = solver->precon;
+
+  occaTimerTic(mesh->device,"exactBlockJacobiSolveKernel");
+  precon->exactBlockJacobiSolverKernel(mesh->Nelements,
+                            precon->o_invAP,
+                            precon->o_invDegreeAP,
+                            o_r,
+                            o_Sr);
+  occaTimerToc(mesh->device,"exactBlockJacobiSolveKernel");
+}
+
+void approxBlockJacobiIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
+
+  solver_t *solver = (solver_t*) args[0];
+  mesh_t *mesh = solver->mesh;
+  precon_t *precon = solver->precon;
+
+  occaTimerTic(mesh->device,"approxBlockJacobiSolveKernel");
+  precon->approxBlockJacobiSolverKernel(mesh->Nelements,
+                            precon->o_patchesIndex,
+                            precon->o_invAP,
+                            precon->o_invDegreeAP,
+                            o_r,
+                            o_Sr);
+  occaTimerToc(mesh->device,"approxBlockJacobiSolveKernel");
+}
+
 void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t *) args[0];
