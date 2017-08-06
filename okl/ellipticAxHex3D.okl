@@ -2597,7 +2597,7 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
 	s_I[0][t] = gjI[t];
       
       emap = elementList[e];
-      
+    
       if(t<p_Np){
 	const int ta = t%p_Nq;
 	const int tb = (t/p_Nq)%p_Nq;
@@ -2607,11 +2607,11 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     }
     
     gjCubeThreads(c,b,i){
-      r_resr = 0;
       if(b<p_Nq && c<p_Nq){
 	dfloat tmp = 0;
-	for(int a=0;a<p_Nq;++a) // transform in 'a'
-	  tmp += s_I[i][a]*s_q[c][b][a];
+	occaUnroll(p_Nq)
+	  for(int a=0;a<p_Nq;++a) // transform in 'a'
+	    tmp += s_I[i][a]*s_q[c][b][a];
 	r_resr = tmp;
       }
     }
@@ -2620,23 +2620,23 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
       s_q[c][b][i] = r_resr;
 
     gjCubeThreads(c,j,i){
-      r_ress = 0;
       if(c<p_Nq){
 	dfloat tmp = 0;
-	for(int b=0;b<p_Nq;++b) // transform in 'b'
-	  tmp += s_I[j][b]*s_q[c][b][i];
+	occaUnroll(p_Nq)
+	  for(int b=0;b<p_Nq;++b) // transform in 'b'
+	    tmp += s_I[j][b]*s_q[c][b][i];
 	r_ress = tmp;
       }
     }
 
-    gjCubeThreads(c,j,i){
+    gjCubeThreads(c,j,i)
       s_q[c][j][i] = r_ress;
-    }
 
     gjCubeThreads(k,j,i){
       dfloat tmp = 0;
-      for(int c=0;c<p_Nq;++c) // transform in 'c'
-	tmp += s_I[k][c]*s_q[c][j][i];
+      occaUnroll(p_Nq)
+	for(int c=0;c<p_Nq;++c) // transform in 'c'
+	  tmp += s_I[k][c]*s_q[c][j][i];
       r_rest = tmp;
     }
     
@@ -2656,11 +2656,12 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
       
       dfloat qr = 0, qs = 0, qt = 0;
       
-      for(iint n=0;n<p_gjNq;++n){
-	qr += s_gjD[i][n]*s_q[k][j][n];
-	qs += s_gjD[j][n]*s_q[k][n][i];
-	qt += s_gjD[k][n]*s_q[n][j][i];
-      }
+      occaUnroll(p_gjNq)
+	for(iint n=0;n<p_gjNq;++n){
+	  qr += s_gjD[i][n]*s_q[k][j][n];
+	  qs += s_gjD[j][n]*s_q[k][n][i];
+	  qt += s_gjD[k][n]*s_q[n][j][i];
+	}
       
       // apply chain rule (notice the swtich of indices in i,j)
       r_resr = r_G00*qr + r_G01*qs + r_G02*qt;
@@ -2675,8 +2676,9 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
 
     gjCubeThreads(k,j,i){
       dfloat tmp = 0;
-      for(int n=0;n<p_gjNq;++n)
-	tmp += s_gjD[i][n]*s_q[k][j][n];
+      occaUnroll(p_gjNq)
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_gjD[n][i]*s_q[k][j][n]; // transpose(D)
       r_resI += tmp;
     }
     
@@ -2686,8 +2688,9 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     
     gjCubeThreads(k,j,i){
       dfloat tmp = 0;
-      for(int n=0;n<p_gjNq;++n)
-	tmp += s_gjD[j][n]*s_q[k][n][i];
+      occaUnroll(p_gjNq)
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_gjD[n][j]*s_q[k][n][i]; // transpose(D)
       r_resI += tmp;
     }
 
@@ -2695,10 +2698,11 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     gjCubeThreads(k,j,i)
       s_q[k][j][i] = r_rest;
     
-    gjCubeThreads(k,j,i){
+    gjCubeThreads(k,j,i){ // notice swapped
       dfloat tmp = 0;
-      for(int n=0;n<p_gjNq;++n)
-	tmp += s_gjD[k][n]*s_q[n][j][i];
+      occaUnroll(p_gjNq)
+	for(int n=0;n<p_gjNq;++n)
+	  tmp += s_gjD[n][k]*s_q[n][j][i]; // transpose(D)
       r_resI += tmp;
     }
 
@@ -2709,8 +2713,9 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     gjCubeThreads(c,j,i){
       dfloat tmp = 0;
       if(c<p_Nq){
-	for(int n=0;n<p_gjNq;++n)
-	  tmp += s_I[n][c]*s_q[n][j][i];
+	occaUnroll(p_gjNq)
+	  for(int n=0;n<p_gjNq;++n)
+	    tmp += s_I[n][c]*s_q[n][j][i];
       }
       r_rest = tmp;
     }
@@ -2722,8 +2727,9 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     gjCubeThreads(c,b,i){
       dfloat tmp = 0;
       if(c<p_Nq && b<p_Nq){
-	for(int n=0;n<p_gjNq;++n)
-	  tmp += s_I[n][b]*s_q[c][n][i];
+	occaUnroll(p_gjNq)
+	  for(int n=0;n<p_gjNq;++n)
+	    tmp += s_I[n][b]*s_q[c][n][i];
       }
       r_ress = tmp;
     }
@@ -2735,8 +2741,9 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
     gjCubeThreads(c,b,a){
       if(a<p_Nq && b<p_Nq && c<p_Nq){
 	dfloat tmp = 0;
-	for(int n=0;n<p_gjNq;++n)
-	  tmp += s_I[n][a]*s_q[c][b][n];
+	occaUnroll(p_gjNq)
+	  for(int n=0;n<p_gjNq;++n)
+	    tmp += s_I[n][a]*s_q[c][b][n];
 	// could store in s_q again
 	const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 	Aq[id] = tmp;
