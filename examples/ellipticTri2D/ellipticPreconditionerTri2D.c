@@ -64,7 +64,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
     //}
 
-  } else if(strstr(options, "BLOCKJACOBI")){
+  } else if(strstr(options, "MASSMATRIX")){
 
     dfloat invLambda = 1./lambda;
 

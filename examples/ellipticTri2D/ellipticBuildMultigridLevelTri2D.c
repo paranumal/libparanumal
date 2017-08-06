@@ -281,6 +281,16 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                "ellipticPatchGather2D",
                kernelInfo);
 
+  solver->precon->approxBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxBlockJacobiSolver2D",
+               kernelInfo);
+
+  solver->precon->exactBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactBlockJacobiSolver2D",
+               kernelInfo);
+
   free(DrT); free(DsT); free(LIFTT);
 
   return solver;

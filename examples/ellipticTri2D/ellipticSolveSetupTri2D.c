@@ -228,6 +228,16 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                "ellipticPatchGather2D",
                kernelInfo);
 
+  solver->precon->approxBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxBlockJacobiSolver2D",
+               kernelInfo);
+
+  solver->precon->exactBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactBlockJacobiSolver2D",
+               kernelInfo);
+
   occaTimerTic(mesh->device,"PreconditionerSetup");
   ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
   occaTimerToc(mesh->device,"PreconditionerSetup");

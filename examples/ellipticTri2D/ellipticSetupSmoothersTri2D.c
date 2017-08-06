@@ -267,10 +267,6 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
-  iint rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   dfloat *invAP;
   iint Npatches;
   mesh_t *mesh = solver->mesh;
@@ -323,10 +319,6 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
 void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
-  iint rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   dfloat *invAP;
   iint Npatches;
   iint *patchesIndex;
@@ -357,6 +349,90 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
 
   level->device_smoother = approxFullPatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint e=0;e<mesh->Nelements;e++)
+      invDegree[e] *= weight;
+
+    //update with weight
+    precon->o_invDegreeAP.copyFrom(invDegree);
+  }
+  free(invDegree);
+}
+
+void ellipticSetupSmootherExactBlockJacobiIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
+
+  dfloat *invAP;
+  mesh_t *mesh = solver->mesh;
+
+  int NpP = mesh->Np;
+
+  //initialize the full inverse operators on each element patch
+  ellipticBuildExactBlockJacobiIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, &invAP, options);
+
+  precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
+
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    invDegree[e] = 1.0;
+  }
+  precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+
+  level->device_smoother = exactBlockJacobiIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    //set the stabilty weight (jacobi-type interation)
+    dfloat weight = (4./3.)/rho;
+
+    printf("weight = %g \n", weight);
+
+    for (iint e=0;e<mesh->Nelements;e++)
+      invDegree[e] *= weight;
+
+    //update with weight
+    precon->o_invDegreeAP.copyFrom(invDegree);
+  }
+  free(invDegree);
+}
+
+void ellipticSetupSmootherApproxBlockJacobiIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
+
+  dfloat *invAP;
+  iint Npatches;
+  iint *patchesIndex;
+  mesh_t *mesh = solver->mesh;
+
+  int NpP = mesh->Np;
+
+  //initialize the full inverse operators on each 4 element patch
+  ellipticBuildApproxBlockJacobiIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType,
+                                      &Npatches, &patchesIndex, &invAP, options);
+
+  precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    invDegree[e] = 1.0;
+  }
+  precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+
+  level->device_smoother = approxBlockJacobiIpdg;
 
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {

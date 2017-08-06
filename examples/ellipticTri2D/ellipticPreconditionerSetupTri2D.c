@@ -76,13 +76,17 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       } else if(strstr(options, "EXACTFULLPATCH")){
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);\
+        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTBLOCKJACOBI")){
+        ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXBLOCKJACOBI")){
+        ellipticSetupSmootherApproxBlockJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       }
     }
 
-  } else if (strstr(options, "BLOCKJACOBI")){
+  } else if (strstr(options, "MASSMATRIX")){
 
     // compute inverse mass matrix
     dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -143,6 +147,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
         ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTBLOCKJACOBI")){
+        ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXBLOCKJACOBI")){
+        ellipticSetupSmootherApproxBlockJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       }
