@@ -2589,8 +2589,9 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
                                       const dfloat * restrict gllD,
                                       const dfloat lambda,
                                       dfloat * restrict q,
-                                      dfloat * restrict Ixq
-                                      float * restrict qAq)){
+                                      dfloat * restrict Ixq,
+																			dfloat * restrict Aq
+                                      float * restrict qAq){
 
 
 // load q into shared first
@@ -2937,7 +2938,7 @@ barrier(localMemFence);
 
 						for(int b=0; b<p_glNq; ++b) {
 							Iq += s_gsI[b][j]*s_q[c][b][a];
-						
+
 						r_res = Iq;
 					}
 				}
