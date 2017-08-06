@@ -2732,7 +2732,8 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		exclusive iint emap;
 
-		shared dfloat s_D[p_gjNq][p_Nq+p_gllPad];
+		shared dfloat s_gjD[p_gjNq][p_gjNq];
+		shared dfloat s_gllD[p_gjNq][p_Nq];
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		exlusive dfloat r_qr, r_qs, r_qt, r_tmp;
 
@@ -2741,13 +2742,17 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 
 					// D to shared, q to shared,
-					if (k==0) {
-						s_gjD[j][i] = gjD[j*p_Nq+i];
+					if (k==0 ) {
+						s_gjD[j][i] = gjD[j*p_gjNq+i];
+						if (i<p_Nq){
+							s_gllD[j][i] = gllD[j*p_glNq+i];
+
+						}
 					}
 					emap = elementList[e];
 
 					iint t = i + j*p_gjNq + k*p_gjNq2;
-					s_qsI[k][j][i] = q[emap*p_Np+t];
+					s_q[k][j][i] = q[emap*p_Np+t];
 				}//for i
 			}//for j
 		}//for k
@@ -2788,7 +2793,8 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
-		// Multiply by D^T
+		// Multiply by D^T, size p_Nq x p_gjNq
+		// D size p_gjNq x p_Nq
 
 		// r direction
 		for(int k=0; k<p_gjNq; ++k; inner2) {
@@ -2799,12 +2805,14 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+		for(int k=0; k<p_Nq; ++k; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 					dfloat tmp = 0.f;
-					for(iint n=0; n<p_Nq; ++n) {
-						tmp += s_D[n][i]*s_q[k][j][n];
+
+					for(iint n=0; n<p_gjNq; ++n) {
+						tmp += s_gllD[n][i]*s_q[k][j][n];
+
 					}
 					r_tmp +=tmp;
 				}
@@ -2821,12 +2829,14 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+		for(int k=0; k<p_Nq; ++k; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 					dfloat tmp = 0.f;
+
 					for(iint n=0; n<p_Nq; ++n) {
-						tmp += s_D[n][j]*s_q[k][n][i];
+						tmp += s_gllD[n][j]*s_q[k][n][i];
+
 					}
 					r_tmp +=tmp;
 				}
@@ -2844,12 +2854,14 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+		for(int k=0; k<p_Nq; ++k; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 					dfloat tmp = 0.f;
+
 					for(iint n=0; n<p_Nq; ++n) {
 						tmp += s_D[n][j]*s_q[n][j][i];
+
 					}
 					r_tmp +=tmp;
 				}
@@ -2884,7 +2896,7 @@ barrier(localMemFence);
 					iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					s_q[base] = qInt[base];
 					// load I to shared
-					if(a<p_Nq && b<p_gjNq && k == 0) {
+					if(i<p_Nq && && k == 0) {
 						s_I[j][i] = gjI[j*p_Nq+i];
 					}
 				}
@@ -2922,9 +2934,10 @@ barrier(localMemFence);
 				for(int a=0; a<p_Nq; ++a:inner0) {
 					if(a<p_Nq && c<p_Nq) {
 						dfloat Iq = 0;
+
 						for(int b=0; b<p_glNq; ++b) {
 							Iq += s_gsI[b][j]*s_q[c][b][a];
-						}
+						
 						r_res = Iq;
 					}
 				}
