@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 0
+#if 1
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -17,7 +17,7 @@
 #define iintString "int"
 #else
 #define iint int
-#define dfloat double
+#define dfloat float
 #define MPI_IINT MPI_INT
 #define MPI_DFLOAT MPI_DOUBLE
 #define iintFormat "%d"

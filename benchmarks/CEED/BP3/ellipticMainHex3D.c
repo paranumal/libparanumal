@@ -1,21 +1,21 @@
 #include "ellipticHex3D.h"
- 
+
 
 void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+
   mesh_t *mesh = solver->mesh;
-  
+
   // sync processes
   mesh->device.finish();
   MPI_Barrier(MPI_COMM_WORLD);
-  
+
   double tic = MPI_Wtime();
   double AxTime;
-  
+
   iint iterations = 10;
 
   occa::streamTag start = mesh->device.tagStream();
@@ -25,10 +25,10 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 
   void ellipticOperator3D(solver_t *solver, dfloat lambda,
 			  occa::memory &o_q, occa::memory &o_Aq, const char *options);
-  
+
     // assume 1 mpi process
   for(int it=0;it<iterations;++it){
-    
+
     ellipticOperator3D(solver, lambda, o_r, o_x, options);
   }
 #else
@@ -39,10 +39,10 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 			    solver->o_gjGeo,
 			    solver->o_gjD,
 			    solver->o_gjI,
-			    lambda, o_r, 
+			    lambda, o_r,
 			    solver->o_grad,
 			    o_x);
-#endif  
+#endif
 
   occa::streamTag end = mesh->device.tagStream();
 
@@ -58,7 +58,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   iint   globalDofs;
   iint   globalElements;
   int    root = 0;
-  
+
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
   MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
@@ -81,7 +81,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size), gflops);
   }
 
-  
+
 }
 
 void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
@@ -89,17 +89,17 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+
   mesh_t *mesh = solver->mesh;
-  
+
   // sync processes
   mesh->device.finish();
   MPI_Barrier(MPI_COMM_WORLD);
-  
+
   double tic = MPI_Wtime();
   iint maxIterations = 30;
   double AxTime;
-  
+
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
 
   mesh->device.finish();
@@ -110,7 +110,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   double globalElapsed;
   iint   globalDofs;
   int    root = 0;
-  
+
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
 
@@ -119,7 +119,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
 	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*(double)iterations)/(globalElapsed*size));
   }
 
-  
+
 }
 
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv){
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+
   char customCache[BUFSIZ];
   sprintf(customCache, "/home/tcew/._occa_cache_rank_%05d", rank);
   setenv("OCCA_CACHE_DIR", customCache, 1);
@@ -147,7 +147,7 @@ int main(int argc, char **argv){
   char *check = getenv("OCCA_CACHE_DIR");
   printf("found OCD: %s\n", check);
 
-  // int specify polynomial degree 
+  // int specify polynomial degree
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
@@ -161,10 +161,10 @@ int main(int argc, char **argv){
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
   ogs_t *ogs;
   precon_t *precon;
-  
+
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda = 1;
-  
+
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupHex3D(mesh, kernelInfo);
@@ -172,6 +172,7 @@ int main(int argc, char **argv){
   solver_t *solver = ellipticSolveSetupHex3D(mesh, lambda, kernelInfo, options);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  printf("Nall = %d, mesh->Np = %d mesh->Nelements = %d mesh->totalHaloPairs = %d \n", Nall, mesh->Np, mesh->Nelements, mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
@@ -200,12 +201,12 @@ int main(int argc, char **argv){
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
   timeAxOperator(solver, lambda, o_r, o_x, options);
-  
+
   //  timeSolver(solver, lambda, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
-  
+
   dfloat maxError = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -215,7 +216,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[id];
       dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
       dfloat error = fabs(exact-mesh->q[id]);
-      
+
       maxError = mymax(maxError, error);
 
       //mesh->q[id] -= exact;
@@ -226,7 +227,7 @@ int main(int argc, char **argv){
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   if(rank==0)
     printf("globalMaxError = %17.15g\n", globalMaxError);
-  
+
   // close down MPI
   MPI_Finalize();
 
