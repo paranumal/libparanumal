@@ -37,7 +37,12 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
 
-  SmoothType smoothType = CHEBYSHEV;
+  SmoothType smoothType;
+  if (strstr(options,"CHEBYSHEV")) {
+    smoothType = CHEBYSHEV;
+  } else { //default to DAMPED_JACOBI
+    smoothType = DAMPED_JACOBI;
+  }
   setupSmoother(parAlmond, levels[lev], smoothType);
 
   //set operator callback

@@ -284,13 +284,13 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  setVector(m, levels[k]->x,  0.0);
+  //setVector(m, levels[k]->x,  0.0);
 
   levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, true);
 
   // res = rhs - A*x
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
-  vectorAdd(parAlmond, m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
+  vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
   // coarsen the residual to next level
   levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
@@ -342,7 +342,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   // zero out x
-  setVector(parAlmond, m, levels[k]->o_x, 0.0);
+  //setVector(parAlmond, m, levels[k]->o_x, 0.0);
 
   levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, true);
 

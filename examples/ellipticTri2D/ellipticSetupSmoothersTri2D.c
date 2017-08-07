@@ -251,16 +251,27 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint n=0;n<NpP*mesh->Nelements;n++)
-      diagInvOpDg[n] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update diagonal with weight
-    precon->o_oasDiagInvOpDg.copyFrom(diagInvOpDg);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint n=0;n<NpP*mesh->Nelements;n++)
+        diagInvOpDg[n] *= weight;
+
+      //update diagonal with weight
+      precon->o_oasDiagInvOpDg.copyFrom(diagInvOpDg);
+    }
   }
 }
 
@@ -302,16 +313,27 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint e=0;e<mesh->Nelements;e++)
-      invDegree[e] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update with weight
-    precon->o_invDegreeAP.copyFrom(invDegree);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
   }
   free(invDegree);
 }
@@ -355,16 +377,27 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint e=0;e<mesh->Nelements;e++)
-      invDegree[e] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update with weight
-    precon->o_invDegreeAP.copyFrom(invDegree);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
   }
   free(invDegree);
 }
@@ -395,16 +428,27 @@ void ellipticSetupSmootherExactBlockJacobiIpdg(solver_t *solver, precon_t *preco
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint e=0;e<mesh->Nelements;e++)
-      invDegree[e] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update with weight
-    precon->o_invDegreeAP.copyFrom(invDegree);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
   }
   free(invDegree);
 }
@@ -439,16 +483,27 @@ void ellipticSetupSmootherApproxBlockJacobiIpdg(solver_t *solver, precon_t *prec
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint e=0;e<mesh->Nelements;e++)
-      invDegree[e] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update with weight
-    precon->o_invDegreeAP.copyFrom(invDegree);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
   }
   free(invDegree);
 }
@@ -470,16 +525,27 @@ void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, a
     //estimate the max eigenvalue of S*A
     dfloat rho = maxEigSmoothAx(solver, level);
 
-    //set the stabilty weight (jacobi-type interation)
-    dfloat weight = (4./3.)/rho;
+    if (strstr(options,"CHEBYSHEV")) {
 
-    printf("weight = %g \n", weight);
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
-      invDiagA[n] *= weight;
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
 
-    //update diagonal with weight
-    precon->o_invDiagA.copyFrom(invDiagA);
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
+        invDiagA[n] *= weight;
+
+      //update diagonal with weight
+      precon->o_invDiagA.copyFrom(invDiagA);
+    }
   }
 
   free(invDiagA);

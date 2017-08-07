@@ -748,7 +748,8 @@ void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_z
     for(iint i=0; i<A->Nrows; i++){
       dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
       res[i] = invD*r[i];
-      d[i]   = invTheta*res[i];
+      x[i] = 0.;
+      d[i] = invTheta*res[i];
     }
   } else {
 
@@ -762,7 +763,7 @@ void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_z
     }
   }
 
-  for (int k=0;k<level->ChebyshevIterations-1;k++) {
+  for (int k=0;k<level->ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
     vectorAdd(A->Nrows, 1.0, d, 1.0, x);
 
@@ -781,8 +782,8 @@ void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_z
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  vectorAdd(A->Nrows, 1.0, d, 1.0, x);
-
+  vectorAdd(A->Nrows, 1.0, d, 1.0, x);    
+  
   occa::toc("csr smoothChebyshev");
 }
 
@@ -883,9 +884,6 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
   dfloat lambdaN = level->smoother_params[0];
   dfloat lambda1 = level->smoother_params[1];
 
-  occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
-
-#if 0
   dfloat theta = 0.5*(lambdaN+lambda1);
   dfloat delta = 0.5*(lambdaN-lambda1);
   dfloat invTheta = 1.0/theta;
@@ -897,11 +895,12 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
   occa::memory o_Ad  = level->o_smootherResidual2;
   occa::memory o_d   = level->o_smootherUpdate;
 
+  occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
 
   if(x_is_zero){ //skip the Ax if x is zero
     //res = D^{-1}r
     dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_r, 0.0, o_res);
-
+    setVector(parAlmond, A->Nrows, o_x, 0.0);
     //d = invTheta*res
     vectorAdd(parAlmond, A->Nrows, invTheta, o_res, 0.0, o_d);
 
@@ -916,7 +915,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
     vectorAdd(parAlmond, A->Nrows, invTheta, o_res, 0.0, o_d);
   }
 
-  for (int k=0;k<level->ChebyshevIterations-1;k++) {
+  for (int k=0;k<level->ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
     vectorAdd(parAlmond, A->Nrows, 1.0, o_d, 1.0, o_x);
 
@@ -932,62 +931,6 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
   }
   //x_k+1 = x_k + d_k
   vectorAdd(parAlmond, A->Nrows, 1.0, o_d, 1.0, o_x);
-#else
-
-  const dfloat rho = (lambda_max - lambda_min)/(lambda_max + lambda_min);
-  const dfloat alpha = 0.25*rho*rho;
-  const dfloat lambda_avg = 0.5*(lambda_max + lambda_min);
-
-  dfloat gamma  = 1.;
-  dfloat beta_n = 2.;
-
-  if(x_is_zero){ //skip the Ax if x is zero
-    //res = D^{-1}r
-    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_r, 0.0, o_res);
-
-    //d = invTheta*res
-    vectorAdd(parAlmond, A->Nrows, 1.0/lambda_min, o_res, 0.0, o_d);
-
-  } else {
-
-    //res = D^{-1}(r-Ax)
-    level->device_Ax(level->AxArgs,o_x,o_res);
-    vectorAdd(parAlmond, A->Nrows, 1.0, o_r, -1.0, o_res);
-    dotStar(parAlmond, A->Nrows, A->o_diagInv, o_res);
-
-    //d = invTheta*res
-    vectorAdd(parAlmond, A->Nrows, 1.0/lambda_min, o_res, 0.0, o_d);
-  }
-
-  for(int k=1; k<=order; k++){
-
-    level->device_Ax(level->AxArgs,o_d,o_Ad);
-
-    // rn = - A*xn +r
-    zeqaxpy((T)-1.0, xn, (T) 1.0, r, rn);
-
-    gamma = alpha*beta_n/(1 - alpha*beta_n);
-
-    dfloat beta_np1 = 1 + gamma;
-
-    // TODO: use a vector add function instead
-    //    xnp1 = beta_np1*(xn + invD.*rn) - gamma_np1*xnm1;
-    for(int i=0; i<Nrows; i++)
-      xnp1[i] = beta_np1*(xn[i] + invD[i]*rn[i]) - gamma*xnm1[i];
-
-    xnm1 = xn;
-    xn = xnp1;
-
-    beta_n = beta_np1;
-    gamma_n = gamma_np1;
-  }
-
-  //  x = x+xn;
-  for(int i=0; i<Nrows; i++)
-    x[i] += xn[i];
-
-#endif
-
 
   occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
 }
