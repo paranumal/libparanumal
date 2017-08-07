@@ -3,8 +3,6 @@
 #include <stddef.h>
 
 #include "mesh.h"
-#include "mpi.h"
-
 
 void meshParallelGather(mesh_t *mesh,
 			       hgs_t *hgs, 
