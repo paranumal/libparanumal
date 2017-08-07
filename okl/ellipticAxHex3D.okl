@@ -2590,60 +2590,60 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
                                       const dfloat lambda,
                                       dfloat * restrict q,
                                       dfloat * restrict Ixq,
-																			dfloat * restrict Aq
+																			dfloat * restrict Aq,
                                       float * restrict qAq){
 
 
 // load q into shared first
 //kernel 1 - interpolate to gj hex
+for(int e=0; e<Nelements; ++e; outer0) {
+exclusive iint emap;
+exclusive dfloat r_res;
+shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+shared dfloat s_gsI[p_gjNq][p_Nq];
 
-	for(int e=0; e<Nelements; ++e; outer0) {
-		exclusive iint emap;
-		exclusive dfloat r_res;
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+	for(int c=0; c<p_gjNq; ++c; inner2) {
+		for(int b=0; b<p_gjNq; ++b; inner1) {
+			for(int a=0; a<p_gjNq; ++a; inner0) {
 
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a; inner0) {
+			if (c == 0 && a<p_Nq && b<p_gjNq) {
+				s_gsI[b][a] = gjI[b*p_Nq+a];
+			}
+			emap = elementList[e];
+			iint t = a + b*p_gjNq + c*p_gjNq2;
+			if (t<p_Np) {
+				iint ta = t%p_Nq;
+				iint tb = (t/p_Nq)%p_Nq;
+				iint tc = t/p_Nq2;
 
+				s_q[tc][tb][ta] = q[emap*p_Np+t];
 
-					if (c == 0 && a<p_Nq && b<p_gjNq) {
-						s_I[b][a] = gjI[b*p_Nq+a];
-					}
-					emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
-					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
+			}//if
+			}//for a
+		}// for b
+	}//for c
+	 //synch threads
+	barrier(localMemFence);
 
-						s_qsI[tc][tb][ta] = q[emap*p_Np+t];
-
-					}//if
-				}//for a
-			}// for b
-		}//for c
-		 //synch threads
-		barrier(localMemFence);
-
-// t direction
+	// t direction
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
-					if(a<p_Nq && b<p_Nq) {}
-					dfloat Iq = 0;
-					for(int c=0; c<p_Nq; ++c) {
-						Iq += s_gsI[k][c]*s_q[c][b][a];
-					}
-					r_res = Iq;
+				for(int a=0; a<p_gjNq; ++a; inner0) {
+				if(a<p_Nq && b<p_Nq) {}
+				dfloat Iq = 0;
+				for(int c=0; c<p_Nq; ++c) {
+					Iq += s_gsI[k][c]*s_q[c][b][a];
+				}
+				r_res = Iq;
 				}
 			}
 		}
+
 		barrier(localMemFence);
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
+				for(int a=0; a<p_gjNq; ++a;inner0) {
 					if(a<p_Nq && b<p_Nq) {
 						// q is now in interpolated in 't'
 						s_q[k][a][b] = r_res;
@@ -2652,118 +2652,119 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
+// r direction
+for(int c=0; c<p_gjNq; ++c; inner2) {
+	for(int b=0; b<p_gjNq; ++b; inner1) {
+		for(int i=0; i<p_gjNq; ++i;inner0) {
 
-		// r direction
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int i=0; i<p_gjNq; ++i:inner0) {
-					if(b<p_Nq && c<p_Nq) {}
-					dfloat Iq = 0;
-					for(int a=0; a<p_Nq; ++a) {
-						Iq += s_gsI[i][a]*s_q[c][b][a];
-					}
-					r_res = Iq;
-				}
+			dfloat Iq = 0;
+			for(int a=0; a<p_Nq; ++a) {
+				Iq += s_gsI[i][a]*s_q[c][b][a];
+			}
+			r_res = Iq;
+		}
+	}
+}
+
+barrier(localMemFence);
+
+for(int c=0; c<p_gjNq; ++c; inner2) {
+	for(int b=0; b<p_gjNq; ++b; inner1) {
+		for(int i=0; i<p_gjNq; ++i;inner0) {
+			if(b<p_Nq && c<p_Nq) {
+				// q is now in interpolated in 'r'
+				//KS [c][b][i] ?????
+				s_q[c][b][i] += r_res;
 			}
 		}
+	}
+}
+barrier(localMemFence);
 
-		barrier(localMemFence);
-
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int i=0; i<p_gjNq; ++i:inner0) {
-					if(b<p_Nq && c<p_Nq) {
-						// q is now in interpolated in 'r'
-						//KS [c][b][i] ?????
-						s_q[c][b][i] += r_res;
-					}
+// s direction
+for(int c=0; c<p_gjNq; ++c; inner2) {
+	for(int j=0; j<p_gjNq; ++j; inner1) {
+		for(int a=0; a<p_gjNq; ++a; inner0) {
+			if(a<p_Nq && c<p_Nq) {
+				dfloat Iq = 0;
+				for(int b=0; b<p_Nq; ++b) {
+					Iq += s_gsI[j][b]*s_q[c][b][a];
 				}
+				r_res = Iq;
 			}
 		}
-		barrier(localMemFence);
+	}
+}
+barrier(localMemFence);
 
-		// s direction
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
-					if(a<p_Nq && c<p_Nq) {
-						dfloat Iq = 0;
-						for(int b=0; b<p_Nq; ++b) {
-							Iq += s_gsI[j][b]*s_q[c][b][a];
-						}
-						r_res = Iq;
-					}
-				}
+
+
+for(int c=0; c<p_gjNq; ++c; inner2) {
+	for(int j=0; j<p_gjNq; ++j; inner1) {
+		for(int a=0; a<p_gjNq; ++a; inner0) {
+			if(a<p_Nq && c<p_Nq) {
+				// q is now in interpolated in 'r'
+				s_q[c][j][a] += r_res;
 			}
 		}
-		barrier(localMemFence);
+	}
+}
+barrier(localMemFence);
 
 
-
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
-					if(a<p_Nq && c<p_Nq) {
-						// q is now in interpolated in 'r'
-						s_q[c][j][a] += r_res;
-					}
-				}
+//save s_q to temporary variable
+	for(int b=0; b<p_gjNq; ++b; inner2) {
+		for(int a=0; a<p_gjNq; ++a; inner1) {
+			for(int c=0; c<p_gjNq; ++c; inner0) {
+			  emap = elementList[e];
+				const iint id = emap*p_Np + c*p_gjNq*p_gjNq+ b*p_gjNq + a;
+				Ixq[id] = s_q[c][b][a];
 			}
 		}
-		barrier(localMemFence);
-//save s_q
-		for(int b=0; b<p_gjNq; ++b; inner1) {
-			for(int a=0; a<p_gjNq; ++a; inner0) {
+	}
 
-				occaUnroll(p_Nq)
-				for(int c=0; c<p_gjNq; ++c) {
-					const iint id = emap*p_Np + c*p_gjNq*p_gjNq+ b*p_gjNq + a;
-					qInt[id] = s_q[c][b][a];
-				}
-			}
-		}
+	}// for e
 
-
-	}//for e
 // at this point q is interpolated in all 3 dim.
+// ------------KERNEL 2 -------------->
 
 // kernel 2 differentiate on gj hex
 	for(int e=0; e<Nelements; ++e; outer0) {
 
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		exclusive iint emap;
 
-		shared dfloat s_gjD[p_gjNq][p_gjNq];
-		shared dfloat s_gllD[p_gjNq][p_Nq];
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
-		exlusive dfloat r_qr, r_qs, r_qt, r_tmp;
+shared dfloat s_gjD[p_gjNq][p_gjNq];
+shared dfloat s_gllD[p_gjNq][p_Nq];
+shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+exclusive dfloat r_qr, r_qs, r_qt, r_tmp;
+exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+exclusive iint emap;
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
+				// D to shared, q to shared,
+				if (k==0 ) {
+					s_gjD[j][i] = gjD[j*p_gjNq+i];
+					if (i<p_Nq){
+					//	s_gllD[j][i] = gllD[j*p_Nq+i];
 
-					// D to shared, q to shared,
-					if (k==0 ) {
-						s_gjD[j][i] = gjD[j*p_gjNq+i];
-						if (i<p_Nq){
-							s_gllD[j][i] = gllD[j*p_glNq+i];
-
-						}
 					}
-					emap = elementList[e];
+				}
+				emap = elementList[e];
 
-					iint t = i + j*p_gjNq + k*p_gjNq2;
-					s_q[k][j][i] = q[emap*p_Np+t];
+				iint t = i + j*p_gjNq + k*p_gjNq2;
+				s_q[k][j][i] = Ixq[emap*p_Np+t];
+
 				}//for i
 			}//for j
 		}//for k
 		barrier(localMemFence);
 
-
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					//load geofactors for my (k,j,i)
+					emap = elementList[e];
 					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//geofactors for k j i thread
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
@@ -2776,20 +2777,20 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 					r_G22 = gjGeo[base+p_G22ID*p_gjNp];
 					// now, put together dq/dr, qq/ds, dq/dt and dq/dI
 
-					dfloat dr=0.0f, ds = 0.0f, dt=0.0f;
+					dfloat dr = 0.0f;
+					dfloat ds = 0.0f;
+					dfloat dt = 0.0f;
 
-
-					for (iint n = 0; n<p_gjNq; n++) {
-						dr += s_gjD[i][n]*s_q[k][j][n];
-						ds​ += s_gjD[ j][n]*s_q[k][ n][i];
-						dt += s_gjD[ k][n]*s_q[ n​][ j][i]
+					for (int n = 0; n<p_gjNq; ++n) {
+					   dr += s_gjD[i][n] * s_q[k][j][n];
+						 ds += s_gjD[j][n]*s_q[k][n][i];
+					   dt += s_gjD[k][n]*s_q[n][j][i];
 					}
-					// chain rule with geofactors???
-					r_qr = r_G00*qr + r_G01*qs + r_G02*qt;
-					r_qs = r_G01*qr + r_G11*qs + r_G12*qt;
-					r_qt = r_G02*qr + r_G12*qs + r_G22*qt;
-					r_tmp = r_GwJ*s_q[k][i][j]*lambda;
 
+					r_qr = r_G00*dr + r_G01*ds + r_G02*dt;
+					r_qs = r_G01*dr + r_G11*ds + r_G12*dt;
+					r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
+					r_tmp = r_GwJ*s_q[k][i][j]*lambda;
 				}
 			}
 		}
@@ -2806,6 +2807,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
+
 		for(int k=0; k<p_Nq; ++k; inner2) {
 			for(int j=0; j<p_Nq; ++j; inner1) {
 				for(int i=0; i<p_Nq; ++i; inner0) {
@@ -2820,6 +2822,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
+
 		//s direction
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
@@ -2844,7 +2847,6 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		barrier(localMemFence);
-
 		//t direction
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
@@ -2861,7 +2863,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 					dfloat tmp = 0.f;
 
 					for(iint n=0; n<p_Nq; ++n) {
-						tmp += s_D[n][j]*s_q[n][j][i];
+						tmp += s_gllD[n][j]*s_q[n][j][i];
 
 					}
 					r_tmp +=tmp;
@@ -2869,60 +2871,63 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 			}
 		}
 		//save the result.
-barrier(localMemFence);
+	barrier(localMemFence);
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					emap = elementList[e];
 					iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					qInt[base] = r_tmp;
+					Ixq[base] = r_tmp;
 				}
 			}
 		}
 
-	}//for e
 
-//kernel 3 interpolate back to gll hex
+}//for e
+
+//-------------------- kernel 3 interpolate back to gll hex ------------------->
 
 	for(int e=0; e<Nelements; ++e; outer0) {
 // read q
+
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_I[p_gjNq][p_Nq];
-		exclusive dfloat r_res, r_Aq;
+		exclusive dfloat r_res, r_Aq, emap;
+
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
-					emap = elementList[e];
-					iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					s_q[base] = qInt[base];
-					// load I to shared
-					if(i<p_Nq && && k == 0) {
-						s_I[j][i] = gjI[j*p_Nq+i];
-					}
+				emap = elementList[e];
+				iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+				s_q[k][j][i] = Ixq[base];
+				if(i<p_Nq &&  k == 0 && j<p_gjNq) {
+					s_I[j][i] = gjI[j*p_Nq+i];
+				}
+
 				}
 			}
 		}
 		barrier(localMemFence);
+
 		// multiply by I^T in each direction (?)
 		// r direction
 		for(int c=0; c<p_Nq; ++c; inner2) {
 			for(int b=0; b<p_Nq; ++b; inner1) {
-				for(int i=0; i<p_Nq; ++i:inner0) {
-					dfloat Iq = 0;
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					dfloat Iq = 0.0f;
 					for(int a=0; a<p_gjNq; ++a) {
-						Iq += s_gsI[a][i]*s_q[c][b][a];
+						Iq += s_I[a][i]*s_q[c][b][a];
 					}
 					r_res = Iq;
 				}
 			}
 		}
 
-
 		barrier(localMemFence);
 		for(int c=0; c<p_Nq; ++c; inner2) {
 			for(int b=0; b<p_Nq; ++b; inner1) {
-				for(int i=0; i<p_Nq; ++i:inner0) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 
 					r_Aq= r_res;
 				}
@@ -2932,61 +2937,63 @@ barrier(localMemFence);
 		barrier(localMemFence);
 		for(int c=0; c<p_Nq; ++c; inner2) {
 			for(int j=0; j<p_Nq; ++j; inner1) {
-				for(int a=0; a<p_Nq; ++a:inner0) {
+				for(int a=0; a<p_Nq; ++a; inner0) {
 					if(a<p_Nq && c<p_Nq) {
 						dfloat Iq = 0;
 
-						for(int b=0; b<p_glNq; ++b) {
-							Iq += s_gsI[b][j]*s_q[c][b][a];
-
+						for(int b=0; b<p_gjNq; ++b) {
+							Iq += s_I[b][j]*s_q[c][b][a];
+            }
 						r_res = Iq;
-					}
+
 				}
 			}
+		}
 		}
 		barrier(localMemFence);
 		for(int c=0; c<p_Nq; ++c; inner2) {
 			for(int b=0; b<p_Nq; ++b; inner1) {
-				for(int i=0; i<p_Nq; ++i:inner0) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 					r_Aq  += r_res;
 				}
 			}
 		}
 		barrier(localMemFence);
 
-// t direction
 
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a:inner0) {
+		// t direction
 
-					dfloat Iq = 0;
-					for(int c=0; c<p_glNq; ++c) {
-						Iq += s_gsI[c][k]*s_q[c][b][a];
+				for(int k=0; k<p_gjNq; ++k; inner2) {
+					for(int b=0; b<p_gjNq; ++b; inner1) {
+						for(int a=0; a<p_gjNq; ++a; inner0) {
+
+							dfloat Iq = 0;
+							for(int c=0; c<p_gjNq; ++c) {
+								Iq += s_I[c][k]*s_q[c][b][a];
+							}
+							r_res = Iq;
+						}
 					}
-					r_res = Iq;
 				}
-			}
-		}
 
-		barrier(localMemFence);
-		for(int c=0; c<p_Nq; ++c; inner2) {
-			for(int b=0; b<p_Nq; ++b; inner1) {
-				for(int i=0; i<p_Nq; ++i:inner0) {
-					r_Aq  += r_res;
+				barrier(localMemFence);
+				for(int c=0; c<p_Nq; ++c; inner2) {
+					for(int b=0; b<p_Nq; ++b; inner1) {
+						for(int i=0; i<p_Nq; ++i; inner0) {
+							r_Aq  += r_res;
+						}
+					}
 				}
-			}
-		}
-		barrier(localMemFence);
-// place the result where it is supposed to be
-		for(int k=0; k<p_gj; ++k; inner2) {
-			for(int j=0; j<p_gj; ++j; inner1) {
-				for(int i=0; i<p_gj; ++i; inner0) {
-					emap = elementList[e];
-					iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					Aq[base] = r_Aq;
+				barrier(localMemFence);
+		// place the result where it is supposed to be
+				for(int k=0; k<p_gj; ++k; inner2) {
+					for(int j=0; j<p_gj; ++j; inner1) {
+						for(int i=0; i<p_gj; ++i; inner0) {
+							emap = elementList[e];
+							iint base = emap*p_Np + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+							Aq[base] = r_Aq;
+						}
+					}
 				}
-			}
 		}
-	}        // for e
 } //kernel e9

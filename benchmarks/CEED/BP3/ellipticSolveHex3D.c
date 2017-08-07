@@ -56,6 +56,7 @@ printf("calling\n");
       //  solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
       // mesh->gjNq*mesh->Nq
       iint gjNq3 = mesh->gjNq*mesh->gjNq*mesh->gjNq;
+
       dfloat* Ixq = (dfloat*) calloc(gjNq3, sizeof(dfloat));
       occa::memory o_Ixq   = mesh->device.malloc(gjNq3*sizeof(dfloat), Ixq);
       dfloat* gjD = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
@@ -105,7 +106,7 @@ printf("calling\n");
         occa::memory o_gjD   = mesh->device.malloc(mesh->gjNq*mesh->gjNq*sizeof(dfloat), gjD);
 
 				solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				                        solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq,
+				                        solver->o_gjGeo, o_gjD, solver->o_gjI, solver->o_gjD, lambda, o_q, o_Ixq, o_Aq,
 				                        solver->o_pAp);
 			}
 		}
