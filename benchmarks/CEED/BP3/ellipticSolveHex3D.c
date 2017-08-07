@@ -36,7 +36,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 		{
 			if(solver->NglobalGatherElements) {
 				//	mesh->device.setStream(solver->dataStream);
-printf("calling\n");
+				printf("calling\n");
 /* arguments for e9 const iint Nelements,
                                       const iint * restrict elementList,
                                       const dfloat * restrict gjGeo,
@@ -48,31 +48,52 @@ printf("calling\n");
                                       dfloat * restrict Ixq,
                                       dfloat * restrict Aq,
                                       float * restrict qAq)
-                                      */
-                                      // gjD -> big p_gjNq x p_gjNq
-                                      // gllD -> amall p_gjNq x p_Nq
-                                      // Ixq -> size (p_qjNq)^3
+ */
+				// gjD -> big p_gjNq x p_gjNq
+				// gllD -> amall p_gjNq x p_Nq
+				// Ixq -> size (p_qjNq)^3
 
-      //  solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
-      // mesh->gjNq*mesh->Nq
-      iint gjNq3 = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-
-      dfloat* Ixq = (dfloat*) calloc(gjNq3, sizeof(dfloat));
-      occa::memory o_Ixq   = mesh->device.malloc(gjNq3*sizeof(dfloat), Ixq);
-      dfloat* gjD = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
-      // fill it with random numbers
-      for (iint i=0; i<mesh->gjNq; i++){
-        for (iint j=0; j<mesh->gjNq; j++){
-        gjD[j*mesh->gjNq+i] = drand48();
-      }
-      }
-
-      occa::memory o_gjD   = mesh->device.malloc(mesh->gjNq*mesh->gjNq*sizeof(dfloat), gjD);
+				//  solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
+				// mesh->gjNq*mesh->Nq
 
 
+				iint gjNq3 = mesh->gjNq*mesh->gjNq*mesh->gjNq;
+
+				dfloat* Ixq = (dfloat*) calloc(gjNq3, sizeof(dfloat));
+				occa::memory o_Ixq   = mesh->device.malloc(gjNq3*sizeof(dfloat), Ixq);
+				dfloat* gjD = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
+				// fill it with random numbers
+				for (iint i=0; i<mesh->gjNq; i++) {
+					for (iint j=0; j<mesh->gjNq; j++) {
+						gjD[j*mesh->gjNq+i] = drand48();
+					}
+				}
+				/*
+				   const iint Nelements,
+				                                      const iint * restrict elementList,
+				                                      const dfloat * restrict gjGeo,
+				                                      const dfloat * restrict gjD,
+				                                      const dfloat * restrict gjI,
+				                                      const dfloat lambda,
+				                                      dfloat * restrict q,
+				                                      dfloat * restrict Aq,
+				                                      dfloat * restrict qAq
+
+				 */
+				  occa::memory o_gjD   = mesh->device.malloc(mesh->gjNq*mesh->gjNq*sizeof(dfloat), gjD);
 				solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 				                        solver->o_gjGeo, o_gjD, solver->o_gjI, solver->o_gjD, lambda, o_q, o_Ixq, o_Aq,
-				                        solver->o_pAp);
+				                      solver->o_pAp);
+        printf("calling 1 \n");
+		/*solver->partialAxKernel(solver->NglobalGatherElements,
+				                        solver->o_globalGatherElementList,
+				                        solver->o_gjGeo,
+				                        solver->o_gjD,
+				                        solver->o_gjI,
+				                        lambda,
+				                        o_q,
+				                        o_Aq,
+				                        solver->o_pAp);*/
 			}
 
 			if(halo->Ngather) {
@@ -92,22 +113,32 @@ printf("calling\n");
 				//	mesh->device.setStream(solver->defaultStream);
 
 
-        iint gjNq3 = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-        dfloat* Ixq = (dfloat*) calloc(gjNq3, sizeof(dfloat));
-        occa::memory o_Ixq   = mesh->device.malloc(gjNq3*sizeof(dfloat), Ixq);
-        dfloat* gjD = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
-        // fill it with random numbers
-        for (iint i=0; i<mesh->gjNq; i++){
-          for (iint j=0; j<mesh->gjNq; j++){
-          gjD[j*mesh->gjNq+i] = drand48();
-        }
-        }
+				iint gjNq3 = mesh->gjNq*mesh->gjNq*mesh->gjNq;
+				dfloat* Ixq = (dfloat*) calloc(gjNq3, sizeof(dfloat));
+				occa::memory o_Ixq   = mesh->device.malloc(gjNq3*sizeof(dfloat), Ixq);
+				dfloat* gjD = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
+				// fill it with random numbers
+				for (iint i=0; i<mesh->gjNq; i++) {
+					for (iint j=0; j<mesh->gjNq; j++) {
+						gjD[j*mesh->gjNq+i] = drand48();
+					}
+				}
 
-        occa::memory o_gjD   = mesh->device.malloc(mesh->gjNq*mesh->gjNq*sizeof(dfloat), gjD);
-
+				occa::memory o_gjD   = mesh->device.malloc(mesh->gjNq*mesh->gjNq*sizeof(dfloat), gjD);
+  printf("calling 2 \n");
 				solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
 				                        solver->o_gjGeo, o_gjD, solver->o_gjI, solver->o_gjD, lambda, o_q, o_Ixq, o_Aq,
 				                        solver->o_pAp);
+
+  /*      solver->partialAxKernel(solver->NlocalGatherElements,
+                                  solver->o_localGatherElementList,
+                                  solver->o_gjGeo,
+                                  solver->o_gjD,
+                                  solver->o_gjI,
+                                  lambda,
+                                  o_q,
+                                  o_Aq,
+                                  solver->o_pAp);*/
 			}
 		}
 

@@ -8,7 +8,7 @@
 
 #if 1
 #define iint int
-#define dfloat float
+#define dfloat double
 #define MPI_IINT MPI_INT
 #define MPI_DFLOAT MPI_FLOAT
 #define iintFormat "%d"
@@ -96,8 +96,8 @@ typedef struct {
   dfloat *gllw; // 1D GLL quadrature weights
 
   iint gjNq;
-  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
-  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
+  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
 
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
   dfloat *oasForward;
@@ -573,4 +573,3 @@ void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory 
 
 
 #endif
-
