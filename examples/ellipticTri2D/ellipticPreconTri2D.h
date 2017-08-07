@@ -134,6 +134,7 @@ void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
 void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void smoothChebyshevTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 
 //smoother ops
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);

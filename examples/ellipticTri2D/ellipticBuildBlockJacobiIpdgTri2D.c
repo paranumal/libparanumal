@@ -165,16 +165,16 @@ void ellipticBuildExactBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *
       }
     }
 
-        printf("------------------\n");
-        for(iint n=0;n<patchNp;++n){
-          for(iint m=0;m<patchNp;++m){
-      if(fabs(patchA[n*patchNp+m])>1e-10)
-        printf("x");
-      else
-            printf("o");
-          }
-          printf("\n");
-        }
+    //    printf("------------------\n");
+    //    for(iint n=0;n<patchNp;++n){
+    //      for(iint m=0;m<patchNp;++m){
+    //  if(fabs(patchA[n*patchNp+m])>1e-10)
+    //    printf("x");
+    //  else
+    //        printf("o");
+    //      }
+    //      printf("\n");
+    //    }
     // in place inverse (patchA points into patchesInvA[0])
     matrixInverse(patchNp, patchA);
   }
