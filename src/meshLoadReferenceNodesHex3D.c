@@ -283,7 +283,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   mesh->gjD2 = (dfloat*) calloc(mesh->gjNq*mesh->gjNq, sizeof(dfloat));
   for(int n=0;n<mesh->gjNq;++n){
     for(int m=0;m<mesh->gjNq;++m){
-      fscanf(fp, dfloatFormat, mesh->gjD2+n*mesh->Nq+m);
+      fscanf(fp, dfloatFormat, mesh->gjD2+n*mesh->gjNq+m);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
