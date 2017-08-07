@@ -23,9 +23,11 @@ void agmgSmooth(void **args, dfloat *rhs, dfloat *x, bool x_is_zero){
   agmgLevel *level = (agmgLevel *) args[1];
 
   if(level->stype == JACOBI){
-    smoothJacobi(level->A, rhs, x, x_is_zero);
+    smoothJacobi(level, level->A, rhs, x, x_is_zero);
   } else if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(level->A, rhs, x, level->smoother_params[0], x_is_zero);
+    smoothDampedJacobi(level, level->A, rhs, x, x_is_zero);
+  } else if(level->stype == CHEBYSHEV){
+    smoothChebyshev(level, level->A, rhs, x, x_is_zero);
   }
 }
 
@@ -55,23 +57,21 @@ void device_agmgSmooth(void **args, occa::memory &o_rhs, occa::memory &o_x, bool
   agmgLevel *level = (agmgLevel *) args[1];
 
   if(level->stype == JACOBI){
-    smoothJacobi(parAlmond, level->deviceA, o_rhs, o_x, x_is_zero);
+    smoothJacobi(parAlmond, level, level->deviceA, o_rhs, o_x, x_is_zero);
   } else if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(parAlmond, level->deviceA, o_rhs, o_x, level->smoother_params[0], x_is_zero);
+    smoothDampedJacobi(parAlmond, level, level->deviceA, o_rhs, o_x, x_is_zero);
+  } else if(level->stype == CHEBYSHEV){
+    smoothChebyshev(parAlmond, level, level->deviceA, o_rhs, o_x, x_is_zero);
   }
 }
 
 dfloat rhoDinvA(csr *A, dfloat *invD);
 
-void setupSmoother(agmgLevel *level, SmoothType s){
+void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s){
 
   level->stype = s;
 
-  if(s == JACOBI){
-    return;
-  }
-
-  if(s == DAMPED_JACOBI){
+  if((s == DAMPED_JACOBI)||(s == CHEBYSHEV)){
     // estimate rho(invD * A)
     dfloat rho=0;
 
@@ -87,17 +87,34 @@ void setupSmoother(agmgLevel *level, SmoothType s){
     if(level->A->Nrows)
       free(invD);
 
-    level->smoother_params = (dfloat *) calloc(1,sizeof(dfloat));
+    if (s == DAMPED_JACOBI) {
 
-    level->smoother_params[0] = (4./3.)/rho;
+      level->smoother_params = (dfloat *) calloc(1,sizeof(dfloat));
 
-    printf("weight = %g \n", level->smoother_params[0]);
+      level->smoother_params[0] = (4./3.)/rho;
 
-    //temp storage for smoothing
-    if (level->Nrows)
-      level->A->scratch = (dfloat *) calloc(level->A->Ncols,sizeof(dfloat));
+      printf("weight = %g \n", level->smoother_params[0]);
 
-    return;
+      //temp storage for smoothing
+      if (level->Ncols) level->smootherResidual = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
+      if (level->Ncols) level->o_smootherResidual = parAlmond->device.malloc(level->Ncols*sizeof(dfloat),level->smootherResidual);
+
+    } else if (s == CHEBYSHEV) {
+
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
+
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
+
+      //temp storage for smoothing
+      if (level->Ncols) level->smootherResidual = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
+      if (level->Ncols) level->smootherResidual2 = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
+      if (level->Ncols) level->smootherUpdate   = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
+      if (level->Ncols) level->o_smootherResidual  = parAlmond->device.malloc(level->Ncols*sizeof(dfloat),level->smootherResidual);
+      if (level->Ncols) level->o_smootherResidual2 = parAlmond->device.malloc(level->Ncols*sizeof(dfloat),level->smootherResidual);
+      if (level->Ncols) level->o_smootherUpdate    = parAlmond->device.malloc(level->Ncols*sizeof(dfloat),level->smootherUpdate);
+    }
   }
 }
 

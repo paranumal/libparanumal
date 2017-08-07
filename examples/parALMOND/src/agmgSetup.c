@@ -34,11 +34,11 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   levels[lev]->nullA = nullA;
   levels[lev]->deviceA = newHYB(parAlmond, levels[lev]->A);
 
-  SmoothType s = DAMPED_JACOBI;
-  setupSmoother(levels[lev], s);
-
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
+
+  SmoothType smoothType = CHEBYSHEV;
+  setupSmoother(parAlmond, levels[lev], smoothType);
 
   //set operator callback
   void **args = (void **) calloc(2,sizeof(void*));
@@ -90,8 +90,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     levels[lev+1]->deviceR = newHYB (parAlmond, levels[lev+1]->R);
     levels[lev+1]->dcsrP   = newDCOO(parAlmond, levels[lev+1]->P);
 
-    SmoothType s = DAMPED_JACOBI;
-    setupSmoother(levels[lev+1], s);
+    setupSmoother(parAlmond, levels[lev+1], smoothType);
 
     //set operator callback
     void **args = (void **) calloc(2,sizeof(void*));
