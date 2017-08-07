@@ -66,6 +66,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   iint gjNq = mesh->gjNq;
   iint Nq = mesh->Nq;
 
+#if 1
   double flops = gjNq*Nq*Nq*Nq*4 +
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*gjNq*gjNq*Nq*8 +
@@ -73,7 +74,21 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
     gjNq*gjNq*gjNq*Nq*8 +
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*Nq*Nq*Nq*4; // excludes inner product
-
+#else
+  double flops = 
+    gjNq*Nq*Nq*Nq*2 + 
+    gjNq*gjNq*Nq*Nq*2 + 
+    gjNq*gjNq*gjNq*Nq*2 + 
+    gjNq*gjNq*gjNq*gjNq*6 + 
+    gjNq*gjNq*gjNq*15 + 
+    gjNq*gjNq*gjNq*gjNq*2 + 
+    gjNq*gjNq*gjNq*2 + 
+    gjNq*gjNq*gjNq*gjNq*4 + 
+    gjNq*gjNq*gjNq*2 + 
+    gjNq*gjNq*gjNq*Nq*2 + 
+    gjNq*gjNq*Nq*Nq*2 + 
+    gjNq*Nq*Nq*Nq*2 ;
+#endif
   double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
 
   if(rank==root){
@@ -97,7 +112,7 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 30;
+  iint maxIterations = 3000;
   double AxTime;
   
   iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);

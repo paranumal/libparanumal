@@ -2026,7 +2026,6 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
     shared dfloat s_D[p_gjNq][p_gjNq];
     shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
 
-    //    exclusive dfloat r_q[p_gjNq]; // replace with s_q3 ?
     exclusive dfloat r_lapq[p_gjNq];
 
     shared dfloat s_qr[p_gjNq][p_gjNq+p_gjPad];
@@ -2040,23 +2039,23 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
     // prefetch D and I matrices and zero register storage
     for(int b=0;b<p_gjNq;++b;inner1){
       for(int a=0;a<p_gjNq;++a;inner0){
-
+	
 	emap = elementList[e];
-
+	
 	const int t = a + p_gjNq*b;
 	
 	s_D[b][a] = gjD[b*p_gjNq+a];
 	
 	if(a<p_Nq && b<p_gjNq)
 	  s_I[b][a] = gjI[b*p_Nq+a];
-
+	
 	if(a<p_Nq && b<p_Nq){
+	  // prefetch q(a,b,:) to registers
 	  occaUnroll(p_Nq)
 	    for(int c=0;c<p_Nq;++c){
 	      r_lapq[c] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 	    }
 	}
-
       }
     }
     
@@ -2075,37 +2074,35 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 		for(int c=0;c<p_Nq;++c){
 		  tmp += s_I[k][c]*r_lapq[c];
 		}
-
+	      
 	      s_tmpq[k][b][a] = tmp;
 	    }
-	  
-	  occaUnroll(p_gjNq)
-	    for(int k=0;k<p_gjNq;++k){
-	      r_lapq[k] = 0;
-	    }
 	}
+	occaUnroll(p_gjNq)
+	  for(int k=0;k<p_gjNq;++k){
+	    r_lapq[k] = 0;
+	  }
       }
     }
     
     // scan through k slices
+    // interpolate to GJ in each 'r' and 's' direction
     occaUnroll(p_gjNq)
       for(int k=0;k<p_gjNq;++k){
 	
 	barrier(localMemFence);
-
+	
 	for(int b=0;b<p_gjNq;++b;inner1){
 	  for(int i=0;i<p_gjNq;++i;inner0){
+	    dfloat tmp = 0;
 	    
 	    if(b<p_Nq){
-	      dfloat tmp = 0;
-	    
 	      occaUnroll(p_Nq)
 		for(int a=0;a<p_Nq;++a){
 		  tmp += s_I[i][a]*s_tmpq[k][b][a];
 		}
-
-	      s_qr[b][i] = tmp;
 	    }
+	    s_qr[b][i] = tmp;
 	  }
 	}
 	
@@ -2120,17 +2117,20 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 	      for(int b=0;b<p_Nq;++b){
 		tmp += s_I[j][b]*s_qr[b][i];
 	      }
-
+	    
 	    s_tmpq[k][j][i] = tmp;
 	  }
 	}
+      }
+
+    occaUnroll(p_gjNq)
+      for(int k=0;k<p_gjNq;++k){
 	
 	barrier(localMemFence);
 	
-	// prefetch slice
 	for(int j=0;j<p_gjNq;++j;inner1){
 	  for(int i=0;i<p_gjNq;++i;inner0){
-
+	    
 	    const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 	    const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp]; 
 	    const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -2147,20 +2147,22 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 	      for(int n=0;n<p_gjNq;++n){
 		qr += s_D[i][n]*s_tmpq[k][j][n];
 		qs += s_D[j][n]*s_tmpq[k][n][i];
+		qt += s_D[k][n]*s_tmpq[n][j][i];
 	      }
-
-    
+	    
 	    // apply chain rule (notice the swtich of indices in i,j)
 	    s_qr[j][i] = r_G00*qr + r_G01*qs + r_G02*qt;
 	    s_qs[j][i] = r_G01*qr + r_G11*qs + r_G12*qt;
-	    r_qt = r_G02*qr + r_G12*qs + r_G22*qt; // does not need to be shared
+	    r_qt = r_G02*qr + r_G12*qs + r_G22*qt; 
+
+	    r_lapq[k] += lambda*r_GwJ*s_tmpq[k][j][i];
 	    
+#if 0
 	    occaUnroll(p_gjNq)
 	      for(int n=0;n<p_gjNq;++n){
 		r_lapq[n] += s_D[k][n]*r_qt;
 	      }
-
-	    r_lapq[k] += lambda*r_GwJ*s_tmpq[k][j][i];
+#endif
 	  }
 	}
 	
@@ -2175,6 +2177,7 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 	      for(int n=0;n<p_gjNq;++n){
 		lapqr += s_D[n][i]*s_qr[j][n];
 		lapqs += s_D[n][j]*s_qs[n][i];
+		r_lapq[n] += s_D[k][n]*r_qt;
 	      }
 	    
 	    r_lapq[k] += lapqr + lapqs;
@@ -2223,16 +2226,17 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 	for(int b=0;b<p_gjNq;++b;inner1){
 	  for(int a=0;a<p_gjNq;++a;inner0){
 	    const int t = a + b*p_gjNq;
-	    const int ta = t%p_Nq;
-	    const int tb = t/p_Nq;
 	    if(t<p_Nq*p_Nq){
+	      const int ta = t%p_Nq;
+	      const int tb = t/p_Nq;
+	      
 	      dfloat tmp = 0;
 	      
 	      occaUnroll(p_gjNq)
 		for(int i=0;i<p_gjNq;++i){
 		  tmp += s_I[i][ta]*s_qr[tb][i];
 		}
-
+	      
 	      const iint id = emap*p_Np + c*p_Nq2 + tb*p_Nq + ta;
 	      Aq[id] = tmp;
 	    }
