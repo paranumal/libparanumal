@@ -66,7 +66,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   iint gjNq = mesh->gjNq;
   iint Nq = mesh->Nq;
 
-#if 1
+#if 0
   double flops = gjNq*Nq*Nq*Nq*4 +
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*gjNq*gjNq*Nq*8 +
