@@ -32,5 +32,4 @@
 //stub
 #define ellipticBoundaryConditions3D(bc,t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB) \
   { \
-  }
-
+}
