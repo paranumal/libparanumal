@@ -569,14 +569,13 @@ kernel void insAdvectionCubatureSurface3D(const iint Nelements,
 
 dfloat myMax(dfloat a, dfloat  b){
   dfloat max = 0.f;
-if(a>=b) max = a;
-else max = b;
+  if(a>=b) 
+    max = a;
+  else 
+    max = b;
 
 return max;
 }
-
-
-
 
 kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
             const dfloat * restrict sgeo,
@@ -738,13 +737,20 @@ kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
             if(bc>0){
               insAdvectionBoundaryConditions3D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp],intz[n+e*p_Nfaces*p_intNfp], nx, ny,nz, iUM,iVM,iWM, &iUP, &iVP,&iWP);
             }
-            
-            // // Find max normal velocity on the face // LLF
-            // dfloat unM   = occaFabs(nx*iUM + ny*iVM + nz*iWM);
-            // dfloat unP   = occaFabs(nx*iUP + ny*iVP + nz*iWP);    
-            // dfloat unMax2 = (unM > unP) ? unM : unP;
-           
+
+            #if 0   
+            // Find max normal velocity on the face // LLF
+            dfloat unM   = occaFabs(nx*iUM + ny*iVM + nz*iWM);
+            dfloat unP   = occaFabs(nx*iUP + ny*iVP + nz*iWP);    
+            dfloat unMax2 = (unM > unP) ? unM : unP;
+
+            dfloat lambda = unMax2;
+            #else
             dfloat lambda = s_a[es*p_Nfaces + face][0];
+            #endif
+
+
+
             // if(e==350 && face==0)
             // printf("%g %g\n",lambda,  unMax2);
           
