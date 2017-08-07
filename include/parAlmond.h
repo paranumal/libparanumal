@@ -80,7 +80,6 @@ typedef struct hyb_t {
   ell *E;
 
   occa::memory o_diagInv;
-  occa::memory o_temp1;
 
   // MPI halo exchange info
   iint  NHalo;
@@ -193,7 +192,12 @@ typedef struct agmgLevel_t {
 
   dfloat *smoother_params;
   dfloat *smootherResidual;
+  dfloat *smootherResidual2;
+  dfloat *smootherUpdate;
   occa::memory o_smootherResidual;
+  occa::memory o_smootherResidual2;
+  occa::memory o_smootherUpdate;
+  int ChebyshevIterations;
 
   dfloat threshold;
   iint numAggregates;

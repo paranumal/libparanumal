@@ -403,7 +403,6 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   // copy the data to device memory
   if(csrA->Nrows) {
     A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), diagInv);
-    A->o_temp1 = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), diagInv);
     free(diagInv); free(rowCounters); free(bins);
   }
 
@@ -624,7 +623,7 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
   }
 }
 
-void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
+void smoothJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
   occa::tic("csr smoothJacobi");
   // x = inv(D)*(b-R*x)  where R = A-D
@@ -641,7 +640,7 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
   if (A->NsendTotal + A->NrecvTotal)
     csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
-  dfloat *y = A->scratch;
+  dfloat *y = level->smootherResidual;
   #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
     dfloat result = r[i];
@@ -673,7 +672,9 @@ void smoothJacobi(csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 }
 
 
-void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_zero) {
+void smoothDampedJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
+
+  dfloat alpha = level->smoother_params[0];
 
   occa::tic("csr smoothDampedJacobi");
   if(x_is_zero){
@@ -690,7 +691,7 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
     csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
   // x = (1-alpha)*x + alpha*inv(D) * (b-R*x) where R = A-D
-  dfloat *y = A->scratch;
+  dfloat *y = level->smootherResidual;
 
   const dfloat oneMalpha = 1. - alpha;
   #pragma omp parallel for
@@ -724,7 +725,68 @@ void smoothDampedJacobi(csr *A, dfloat *r, dfloat *x, dfloat alpha, bool x_is_ze
   occa::toc("csr smoothDampedJacobi");
 }
 
-void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
+void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
+
+  dfloat lambdaN = level->smoother_params[0];
+  dfloat lambda1 = level->smoother_params[1];
+
+  dfloat theta = 0.5*(lambdaN+lambda1);
+  dfloat delta = 0.5*(lambdaN-lambda1);
+  dfloat invTheta = 1.0/theta;
+  dfloat sigma = theta/delta;
+  dfloat rho_n = 1./sigma;
+  dfloat rho_np1;
+
+  dfloat *res = level->smootherResidual;
+  dfloat *Ad  = level->smootherResidual2;
+  dfloat *d   = level->smootherUpdate;
+
+  occa::tic("csr smoothChebyshev");
+
+  if(x_is_zero){ //skip the Ax if x is zero
+    #pragma omp parallel for
+    for(iint i=0; i<A->Nrows; i++){
+      dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
+      res[i] = invD*r[i];
+      d[i]   = invTheta*res[i];
+    }
+  } else {
+
+    level->Ax(level->AxArgs,x,res);
+
+    #pragma omp parallel for
+    for(iint i=0; i<A->Nrows; i++){
+      dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
+      res[i] = invD*(r[i]-res[i]);
+      d[i]   = invTheta*res[i];
+    }
+  }
+
+  for (int k=0;k<level->ChebyshevIterations-1;k++) {
+    //x_k+1 = x_k + d_k
+    vectorAdd(A->Nrows, 1.0, d, 1.0, x);
+
+    //r_k+1 = r_k - D^{-1}Ad_k
+    level->Ax(level->AxArgs,d,Ad);
+    #pragma omp parallel for
+    for(iint i=0; i<A->Nrows; i++) {
+      dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
+      res[i] = res[i] - invD*Ad[i];
+    }
+
+    rho_np1 = 1.0/(2.*sigma-rho_n);
+
+    //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
+    vectorAdd(A->Nrows, 2.0*rho_np1/delta, res, rho_np1*rho_n, d);
+    rho_n = rho_np1;
+  }
+  //x_k+1 = x_k + d_k
+  vectorAdd(A->Nrows, 1.0, d, 1.0, x);
+
+  occa::toc("csr smoothChebyshev");
+}
+
+void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
 
   occaTimerTic(parAlmond->device,"hyb smoothJacobi");
   if(x_is_zero){
@@ -734,6 +796,8 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
     return;
   }
 
+  occa::memory o_res = level->o_smootherResidual;
+
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
@@ -747,7 +811,7 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
   occaTimerTic(parAlmond->device,"ellJacobi1");
   if (A->Nrows)
     parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
-                            A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
+                            A->E->o_cols, A->E->o_coefs, o_x, o_r, o_res);
   occaTimerToc(parAlmond->device,"ellJacobi1");
 
   if (A->NsendTotal+A->NrecvTotal)
@@ -758,20 +822,17 @@ void smoothJacobi(parAlmond_t *parAlmond, hyb *A, occa::memory o_r, occa::memory
     o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
 
   // temp1 += -C*x
-  ax(parAlmond, A->C, -1.0, o_x, A->o_temp1);
+  ax(parAlmond, A->C, -1.0, o_x, o_res);
 
   // x = invD*temp1
   if (A->Nrows)
-    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, A->o_temp1, 0., o_x);
+    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_res, 0., o_x);
   occaTimerToc(parAlmond->device,"hyb smoothJacobi");
 }
 
-void smoothDampedJacobi(parAlmond_t *parAlmond,
-         hyb *A,
-         occa::memory o_r,
-         occa::memory o_x,
-         dfloat alpha,
-         bool x_is_zero){
+void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero){
+
+  dfloat alpha = level->smoother_params[0];
 
   occaTimerTic(parAlmond->device,"hyb smoothDampedJacobi");
   if(x_is_zero){
@@ -781,6 +842,8 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
     return;
   }
 
+  occa::memory o_res = level->o_smootherResidual;
+
   if (A->NsendTotal) {
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
@@ -794,7 +857,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
   occaTimerTic(parAlmond->device,"ellJacobi1");
   if (A->Nrows)
     parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
-                              A->E->o_cols, A->E->o_coefs, o_x, o_r, A->o_temp1);
+                              A->E->o_cols, A->E->o_coefs, o_x, o_r, o_res);
   occaTimerToc(parAlmond->device,"ellJacobi1");
 
   if (A->NsendTotal+A->NrecvTotal)
@@ -806,14 +869,129 @@ void smoothDampedJacobi(parAlmond_t *parAlmond,
 
 
   // temp1 += -C*x
-  ax(parAlmond, A->C, -1.0, o_x, A->o_temp1);
+  ax(parAlmond, A->C, -1.0, o_x, o_res);
 
   // x = alpha*invD*temp1 + (1-alpha)*x
   const dfloat beta = 1.0 - alpha;
-  dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, A->o_temp1, beta, o_x);
+  dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, o_res, beta, o_x);
 
   occaTimerToc(parAlmond->device,"hyb smoothDampedJacobi");
 }
+
+void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
+
+  dfloat lambdaN = level->smoother_params[0];
+  dfloat lambda1 = level->smoother_params[1];
+
+  occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
+
+#if 0
+  dfloat theta = 0.5*(lambdaN+lambda1);
+  dfloat delta = 0.5*(lambdaN-lambda1);
+  dfloat invTheta = 1.0/theta;
+  dfloat sigma = theta/delta;
+  dfloat rho_n = 1./sigma;
+  dfloat rho_np1;
+
+  occa::memory o_res = level->o_smootherResidual;
+  occa::memory o_Ad  = level->o_smootherResidual2;
+  occa::memory o_d   = level->o_smootherUpdate;
+
+
+  if(x_is_zero){ //skip the Ax if x is zero
+    //res = D^{-1}r
+    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_r, 0.0, o_res);
+
+    //d = invTheta*res
+    vectorAdd(parAlmond, A->Nrows, invTheta, o_res, 0.0, o_d);
+
+  } else {
+
+    //res = D^{-1}(r-Ax)
+    level->device_Ax(level->AxArgs,o_x,o_res);
+    vectorAdd(parAlmond, A->Nrows, 1.0, o_r, -1.0, o_res);
+    dotStar(parAlmond, A->Nrows, A->o_diagInv, o_res);
+
+    //d = invTheta*res
+    vectorAdd(parAlmond, A->Nrows, invTheta, o_res, 0.0, o_d);
+  }
+
+  for (int k=0;k<level->ChebyshevIterations-1;k++) {
+    //x_k+1 = x_k + d_k
+    vectorAdd(parAlmond, A->Nrows, 1.0, o_d, 1.0, o_x);
+
+    //r_k+1 = r_k - D^{-1}Ad_k
+    level->device_Ax(level->AxArgs,o_d,o_Ad);
+    dotStar(parAlmond, A->Nrows, -1.0, A->o_diagInv, o_Ad, 1.0, o_res);
+
+    rho_np1 = 1.0/(2.*sigma-rho_n);
+
+    //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
+    vectorAdd(parAlmond, A->Nrows, 2.0*rho_np1/delta, o_res, rho_np1*rho_n, o_d);
+    rho_n = rho_np1;
+  }
+  //x_k+1 = x_k + d_k
+  vectorAdd(parAlmond, A->Nrows, 1.0, o_d, 1.0, o_x);
+#else
+
+  const dfloat rho = (lambda_max - lambda_min)/(lambda_max + lambda_min);
+  const dfloat alpha = 0.25*rho*rho;
+  const dfloat lambda_avg = 0.5*(lambda_max + lambda_min);
+
+  dfloat gamma  = 1.;
+  dfloat beta_n = 2.;
+
+  if(x_is_zero){ //skip the Ax if x is zero
+    //res = D^{-1}r
+    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_r, 0.0, o_res);
+
+    //d = invTheta*res
+    vectorAdd(parAlmond, A->Nrows, 1.0/lambda_min, o_res, 0.0, o_d);
+
+  } else {
+
+    //res = D^{-1}(r-Ax)
+    level->device_Ax(level->AxArgs,o_x,o_res);
+    vectorAdd(parAlmond, A->Nrows, 1.0, o_r, -1.0, o_res);
+    dotStar(parAlmond, A->Nrows, A->o_diagInv, o_res);
+
+    //d = invTheta*res
+    vectorAdd(parAlmond, A->Nrows, 1.0/lambda_min, o_res, 0.0, o_d);
+  }
+
+  for(int k=1; k<=order; k++){
+
+    level->device_Ax(level->AxArgs,o_d,o_Ad);
+
+    // rn = - A*xn +r
+    zeqaxpy((T)-1.0, xn, (T) 1.0, r, rn);
+
+    gamma = alpha*beta_n/(1 - alpha*beta_n);
+
+    dfloat beta_np1 = 1 + gamma;
+
+    // TODO: use a vector add function instead
+    //    xnp1 = beta_np1*(xn + invD.*rn) - gamma_np1*xnm1;
+    for(int i=0; i<Nrows; i++)
+      xnp1[i] = beta_np1*(xn[i] + invD[i]*rn[i]) - gamma*xnm1[i];
+
+    xnm1 = xn;
+    xn = xnp1;
+
+    beta_n = beta_np1;
+    gamma_n = gamma_np1;
+  }
+
+  //  x = x+xn;
+  for(int i=0; i<Nrows; i++)
+    x[i] += xn[i];
+
+#endif
+
+
+  occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
+}
+
 
 // set up halo infomation for inter-processor MPI
 // exchange of trace nodes
