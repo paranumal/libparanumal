@@ -1,6 +1,7 @@
 #include "ins2D.h"
 
-#define SUBSTEP_METHOD 1 // 
+//#define SUBSTEP_METHOD 1 // OFIS method of Maday
+#define SUBSTEP_METHOD 2  // Lagrangian Subscyling of Maday, Patera, Ronquist 
 
 // complete a time step using LSERK4
 void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep, 
@@ -294,10 +295,12 @@ ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0)
   if(ins->a0){activate_advection  = 1.f;} 
 
   const iint voffset = 0;  
-  // New subcycling // Initialize U^e = U^n
+  //
   iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-  ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+	ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+	ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+	ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+	ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   
 
 // Substepping 
@@ -309,115 +312,145 @@ ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0)
 				// intermediate stage time
 					dfloat tstage = tbase +  ins->sdt*mesh->rkc[rk]; 
 
-				//
-					if(mesh->totalHaloPairs>0){
+				if(mesh->totalHaloPairs>0){
+ 
 						ins->velocityHaloExtractKernel(mesh->Nelements,
-																					mesh->totalHaloPairs,
-																					mesh->o_haloElementList,
-																					voffset, // 0 offset
-																					ins->o_Ue,
-																					ins->o_Ve,
-																					ins->o_vHaloBuffer);
+						                         mesh->totalHaloPairs,
+						                         mesh->o_haloElementList,
+						                         voffset, // 0 offset
+						                         ins->o_Ud,
+						                         ins->o_Vd,
+						                         ins->o_vHaloBuffer);
+
 						// copy extracted halo to HOST 
 						ins->o_vHaloBuffer.copyTo(sendBuffer);            
+
 						// start halo exchange
 						meshHaloExchangeStart(mesh,
-																	mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-																	sendBuffer,
-																	recvBuffer);
+						                    mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+						                    sendBuffer,
+						                    recvBuffer);
 					}
 
-					// Compute Volume Contribution
+								// Compute Volume Contribution
 					if(strstr(options, "CUBATURE")){
-						ins->advectionCubatureVolumeKernel(mesh->Nelements,
-															mesh->o_vgeo,
-															mesh->o_cubDrWT,
-															mesh->o_cubDsWT,
-															mesh->o_cubInterpT,
-															voffset, // zero offset
-															ins->o_Ue,
-															ins->o_Ve,
-															ins->o_rhsU,
-															ins->o_rhsV);
-					} 
-					else {
-						ins->advectionVolumeKernel(mesh->Nelements,
-																       mesh->o_vgeo,
-																       mesh->o_DrT,
-																       mesh->o_DsT,
-																       voffset, //zero offset
-																       ins->o_Ue,
-																       ins->o_Ve,
-																       ins->o_rhsU,
-																       ins->o_rhsV);
-						}
+
+					  ins->subCycleCubatureVolumeKernel(mesh->Nelements,
+					             mesh->o_vgeo,
+					             mesh->o_cubDrWT,
+					             mesh->o_cubDsWT,
+					             mesh->o_cubInterpT,
+					             ins->o_Ue,
+					             ins->o_Ve,
+					             ins->o_Ud,
+					             ins->o_Vd,
+					             ins->o_rhsU,
+					             ins->o_rhsV);
+					}
+					else{
+					  //Compute Volume
+					  ins->subCycleVolumeKernel(mesh->Nelements,
+					                            mesh->o_vgeo,
+					                            mesh->o_DrT,
+					                            mesh->o_DsT,
+					                            ins->o_Ue,
+					                            ins->o_Ve,
+					                            ins->o_Ud,
+					                            ins->o_Vd,
+					                            ins->o_rhsU,
+					                            ins->o_rhsV);
+
+					}
 
 
 					if(mesh->totalHaloPairs>0){
+  
+				    meshHaloExchangeFinish(mesh);
 
-						meshHaloExchangeFinish(mesh);
+				    ins->o_vHaloBuffer.copyFrom(recvBuffer); 
 
-						ins->o_vHaloBuffer.copyFrom(recvBuffer); 
-
-						ins->velocityHaloScatterKernel(mesh->Nelements,
-																					 mesh->totalHaloPairs,
-																					 mesh->o_haloElementList,
-																					 voffset, //0 offset
-																					 ins->o_Ue,
-																					 ins->o_Ve,
-																					 ins->o_vHaloBuffer);
+				    ins->velocityHaloScatterKernel(mesh->Nelements,
+				                                mesh->totalHaloPairs,
+				                                mesh->o_haloElementList,
+				                                voffset, //0 offset
+				                                ins->o_Ud,
+				                                ins->o_Vd,
+				                                ins->o_vHaloBuffer);
 					}
 
-    
-				  if(strstr(options, "CUBATURE")){
-				  ins->advectionCubatureSurfaceKernel(mesh->Nelements,
-								      mesh->o_sgeo,
-								      mesh->o_intInterpT,
-								      mesh->o_intLIFTT,
-								      mesh->o_vmapM,
-								      mesh->o_vmapP,
-								      mesh->o_EToB,
-								      tstage,
-								      mesh->o_intx,
-								      mesh->o_inty,
-								      voffset, // 0
-								      ins->o_Ue,
-								      ins->o_Ve,
-								      ins->o_rhsU,
-								      ins->o_rhsV);
-				} 
-				else {
-				  ins->advectionSurfaceKernel(mesh->Nelements,
-							      mesh->o_sgeo,
-							      mesh->o_LIFTT,
-							      mesh->o_vmapM,
-							      mesh->o_vmapP,
-							      mesh->o_EToB,
-							      tstage,
-							      mesh->o_x,
-							      mesh->o_y,
-							      voffset, // 0
-							      ins->o_Ue,
-							      ins->o_Ve,
-							      ins->o_rhsU,
-							      ins->o_rhsV);
-				}
+
+					// 			  // Compute Volume Contribution
+					// if(strstr(options, "CUBATURE")){
+					//   ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
+					//                                       mesh->o_sgeo,
+					//                                       mesh->o_intInterpT,
+					//                                       mesh->o_intLIFTT,
+					//                                       mesh->o_vmapM,
+					//                                       mesh->o_vmapP,
+					//                                       mesh->o_EToB,
+					//                                       t,
+					//                                       mesh->o_intx,
+					//                                       mesh->o_inty,
+					//                                       ins->o_Ue,
+					//                                       ins->o_Ve,
+					//                                       ins->o_Ud,
+					//                                       ins->o_Vd,
+					//                                       ins->o_rhsU,
+					//                                       ins->o_rhsV);
+					//   }
+					// else{
+					//    //Surface Kernel
+					//   ins->subCycleSurfaceKernel(mesh->Nelements,
+					//                             mesh->o_sgeo,
+					//                             mesh->o_LIFTT,
+					//                             mesh->o_vmapM,
+					//                             mesh->o_vmapP,
+					//                             mesh->o_EToB,
+					//                             t,
+					//                             mesh->o_x,
+					//                             mesh->o_y,
+					//                             ins->o_Ue,
+					//                             ins->o_Ve,
+					//                             ins->o_Ud,
+					//                             ins->o_Vd,
+					//                             ins->o_rhsU,
+					//                             ins->o_rhsV);
+
+					// }
 
 
-			  // Update Kernel
-				ins->subCycleRKUpdateKernel(mesh->Nelements,
-							    activate_advection,
-							    ins->sdt,
-							    mesh->rka[rk],
-							    mesh->rkb[rk],
-							    ins->o_rhsU,
-							    ins->o_rhsV,
-							    ins->o_resU, 
-							    ins->o_resV,
-							    ins->o_Ue,
-							    ins->o_Ve);
-			}
-		}
+		// 	  // Update Kernel
+  // ins->subCycleRKUpdateKernel(mesh->Nelements,
+  //                             activate_advection,
+  //                             ins->sdt,
+  //                             mesh->rka[rk],
+  //                             mesh->rkb[rk],
+  //                             ins->o_rhsU,
+  //                             ins->o_rhsV,
+  //                             ins->o_resU, 
+  //                             ins->o_resV,
+  //                             ins->o_Ud,
+  //                             ins->o_Vd);
+  
+  //   //printf("Extrapolating Velocity to %d \n", ststep+1);
+		// // Extrapolate Velocity
+		// iint offset1 = mesh->Nelements+mesh->totalHaloPairs;
+		// ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
+		//                     ststep,
+		//                     ins->sdt,
+		//                     ins->dt,
+		//                     ins->index,
+		//                     offset1,
+		//                     ins->o_U,
+		//                     ins->o_V,
+		//                     ins->o_Ue,
+		//                     ins->o_Ve);
+
+      }
+		
+
+
+		  }
 	}
 
 
@@ -461,8 +494,8 @@ const iint solverid = 0; // Pressure Solve
 
 iint index1 = ins->index;
 // Use NU to store Ue
-ins->o_Ue.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+ins->o_Ud.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+ins->o_Vd.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 
 #endif
 
