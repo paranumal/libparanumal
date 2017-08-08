@@ -379,72 +379,97 @@ ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0)
 					}
 
 
-					// 			  // Compute Volume Contribution
-					// if(strstr(options, "CUBATURE")){
-					//   ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
-					//                                       mesh->o_sgeo,
-					//                                       mesh->o_intInterpT,
-					//                                       mesh->o_intLIFTT,
-					//                                       mesh->o_vmapM,
-					//                                       mesh->o_vmapP,
-					//                                       mesh->o_EToB,
-					//                                       t,
-					//                                       mesh->o_intx,
-					//                                       mesh->o_inty,
-					//                                       ins->o_Ue,
-					//                                       ins->o_Ve,
-					//                                       ins->o_Ud,
-					//                                       ins->o_Vd,
-					//                                       ins->o_rhsU,
-					//                                       ins->o_rhsV);
-					//   }
-					// else{
-					//    //Surface Kernel
-					//   ins->subCycleSurfaceKernel(mesh->Nelements,
-					//                             mesh->o_sgeo,
-					//                             mesh->o_LIFTT,
-					//                             mesh->o_vmapM,
-					//                             mesh->o_vmapP,
-					//                             mesh->o_EToB,
-					//                             t,
-					//                             mesh->o_x,
-					//                             mesh->o_y,
-					//                             ins->o_Ue,
-					//                             ins->o_Ve,
-					//                             ins->o_Ud,
-					//                             ins->o_Vd,
-					//                             ins->o_rhsU,
-					//                             ins->o_rhsV);
+								  // Compute Volume Contribution
+					if(strstr(options, "CUBATURE")){
+					  ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
+					                                      mesh->o_sgeo,
+					                                      mesh->o_intInterpT,
+					                                      mesh->o_intLIFTT,
+					                                      mesh->o_vmapM,
+					                                      mesh->o_vmapP,
+					                                      mesh->o_EToB,
+					                                      t,
+					                                      mesh->o_intx,
+					                                      mesh->o_inty,
+					                                      ins->o_Ue,
+					                                      ins->o_Ve,
+					                                      ins->o_Ud,
+					                                      ins->o_Vd,
+					                                      ins->o_rhsU,
+					                                      ins->o_rhsV);
+					  }
+					else{
+					   //Surface Kernel
+					  ins->subCycleSurfaceKernel(mesh->Nelements,
+					                            mesh->o_sgeo,
+					                            mesh->o_LIFTT,
+					                            mesh->o_vmapM,
+					                            mesh->o_vmapP,
+					                            mesh->o_EToB,
+					                            t,
+					                            mesh->o_x,
+					                            mesh->o_y,
+					                            ins->o_Ue,
+					                            ins->o_Ve,
+					                            ins->o_Ud,
+					                            ins->o_Vd,
+					                            ins->o_rhsU,
+					                            ins->o_rhsV);
 
-					// }
+					}
 
 
-		// 	  // Update Kernel
-  // ins->subCycleRKUpdateKernel(mesh->Nelements,
-  //                             activate_advection,
-  //                             ins->sdt,
-  //                             mesh->rka[rk],
-  //                             mesh->rkb[rk],
-  //                             ins->o_rhsU,
-  //                             ins->o_rhsV,
-  //                             ins->o_resU, 
-  //                             ins->o_resV,
-  //                             ins->o_Ud,
-  //                             ins->o_Vd);
+			  // Update Kernel
+  ins->subCycleRKUpdateKernel(mesh->Nelements,
+                              activate_advection,
+                              ins->sdt,
+                              mesh->rka[rk],
+                              mesh->rkb[rk],
+                              ins->o_rhsU,
+                              ins->o_rhsV,
+                              ins->o_resU, 
+                              ins->o_resV,
+                              ins->o_Ud,
+                              ins->o_Vd);
   
-  //   //printf("Extrapolating Velocity to %d \n", ststep+1);
-		// // Extrapolate Velocity
-		// iint offset1 = mesh->Nelements+mesh->totalHaloPairs;
-		// ins->subCycleExtKernel((mesh->Nelements+mesh->totalHaloPairs),
-		//                     ststep,
-		//                     ins->sdt,
-		//                     ins->dt,
-		//                     ins->index,
-		//                     offset1,
-		//                     ins->o_U,
-		//                     ins->o_V,
-		//                     ins->o_Ue,
-		//                     ins->o_Ve);
+			  //printf("Extrapolating Velocity to %d \n", ststep+1);
+				// Extrapolate Velocity
+				const dfloat t1 = tstep*ins->dt, t2 = (tstep-1)*ins->dt, t3 = (tstep-2)*ins->dt;
+				// construct interpolating lagrange polynomial
+				dfloat c0 = 0, c1 = 0, c2 = 0;
+				#if 1
+				c0 = 1;
+				c1 = 0;
+				c2 = 0;
+				#endif
+				#if 0
+				c0 = (tstage-t2)/(t1-t2);
+				c1 = (tstage-t1)/(t2-t1);
+				c2 = 0;
+				#endif
+				#if 0
+
+				c0 = (tstage-t2)*(tstage-t3)/((t1-t2)*(t1-t3)); 
+				c1 = (tstage-t1)*(tstage-t3)/((t2-t1)*(t2-t3));
+				c2 = (tstage-t1)*(tstage-t2)/((t3-t1)*(t3-t2));
+				#endif
+
+				iint offset0 = ((ins->index+0)%3)*Ntotal;
+				iint offset1 = ((ins->index+2)%3)*Ntotal;
+				iint offset2 = ((ins->index+1)%3)*Ntotal;
+
+        printf("c0: %.5f, c1: %.5f c3: %.5f \n", c0,c1,c2);
+				ins->subCycleExtKernel(mesh->Nelements + mesh->totalHaloPairs,
+					                     c0,
+					                     c1,
+					                     c2,
+				                       offset0,
+				                       offset1,
+				                       offset2,
+				                       ins->o_U,
+				                       ins->o_V,
+				                       ins->o_Ue,
+				                       ins->o_Ve);
 
       }
 		
