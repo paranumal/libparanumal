@@ -1,0 +1,25 @@
+
+Lmod is automatically replacing "intel/15.3" with "gcc/5.2.0"
+
+
+The following have been reloaded with a version change:
+  1) mvapich2/2.1 => mvapich2/2.2
+
+./ellipticMainHex3D: error while loading shared libraries: libocca.so: cannot open shared object file: No such file or directory
+
+Usage:
+ kill [options] <pid|name> [...]
+
+Options:
+ -a, --all              do not restrict the name-to-pid conversion to processes
+                        with the same uid as the present process
+ -s, --signal <sig>     send specified signal
+ -q, --queue <sig>      use sigqueue(2) rather than kill(2)
+ -p, --pid              print pids without signaling them
+ -l, --list [=<signal>] list signal names, or convert one to a name
+ -L, --table            list signal names and numbers
+
+ -h, --help     display this help and exit
+ -V, --version  output version information and exit
+
+For more details see kill(1).
