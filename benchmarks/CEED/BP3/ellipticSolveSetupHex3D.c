@@ -146,7 +146,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->Ap  = (dfloat*) calloc(Nall, sizeof(dfloat));
 
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
-  solver->grad = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
+  solver->grad = (dfloat*) calloc(7*(Ntotal+Nhalo), sizeof(dfloat));
   
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->r);
@@ -211,8 +211,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
-  //  kernelInfo.addCompilerFlag("-G");
+  //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  //  kernelInfo.addCompilerFlag("-g");
   kernelInfo.addCompilerFlag("-O3");
 
   // generically used for blocked DEVICE reductions
@@ -285,7 +285,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       // CPU version is e8, GPU version is e6
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				   "ellipticPartialAxHex3D_e6", 
+				   "ellipticPartialAxHex3D_e8a", 
+				   //				   "ellipticPartialAxHex3D_incremental", 
 				   kernelInfo);
       
       

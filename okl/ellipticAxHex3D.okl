@@ -762,9 +762,6 @@ kernel void ellipticAxHex3D_e3(const int Nelements,
 #define p_gllPad 0
 #endif
 
-#define p_gllPad 0
-#define p_gjPad 0
-
 /* note that the gjGeo must be the geometric factors at the p_gjNp integration nodes */
 kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 				      const iint * restrict elementList,
@@ -1859,6 +1856,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	    // puts more data in flight
 	    occaUnroll(p_Nq)
 	      for(int c=0;c<p_Nq;++c){
+		// BADNESS
 		const dfloat qcba = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];; // r_q[c]; 
 		Iqk += s_I[k][c]*qcba;
 		Dqk += s_D[k][c]*qcba;
@@ -2013,6 +2011,8 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
     }
   }
 }
+
+
 
 
 
@@ -2678,7 +2678,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
       for(int j=0;j<p_gjNq;++j;inner1){
 	for(int i=0;i<p_gjNq;++i;inner0){	
 	  // should bundle these
-	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const iint base = e*p_gjNp*4 + 7*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 	  s_qtmp[i][j] = gradq[base+0*p_gjNq2];
 	}
       }
@@ -2706,7 +2706,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
       for(int j=0;j<p_gjNq;++j;inner1){
 	for(int i=0;i<p_gjNq;++i;inner0){	
 	  // should bundle these
-	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const iint base = e*p_gjNp*4 + 7*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 	  s_qtmp[i][j] = gradq[base+1*p_gjNq2];
 	}
       }
@@ -2736,7 +2736,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
       for(int j=0;j<p_gjNq;++j;inner1){
 	for(int i=0;i<p_gjNq;++i;inner0){	
 	  // should bundle these
-	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const iint base = e*p_gjNp*4 + 7*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 	  s_qtmp[i][j] = gradq[base+2*p_gjNq2];
 	}
       }
@@ -2767,7 +2767,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
       for(int j=0;j<p_gjNq;++j;inner1){
 	for(int i=0;i<p_gjNq;++i;inner0){	
 	  // should bundle these
-	  const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const iint base = e*p_gjNp*4 + 7*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 	  s_qtmp[i][j] = gradq[base+3*p_gjNq2];
 	}
       }
@@ -3037,6 +3037,164 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
 	for(int a=0;a<p_Nq;++a){
 	  const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 	  Aq[id] = r_lapq[c][b][a];
+	}
+      }
+    }
+  }
+}
+
+
+kernel void ellipticPartialAxHex3D_e8a(const iint Nelements,
+				       const iint * restrict elementList,
+				       const dfloat * restrict gjGeo, 
+				       const dfloat * restrict gjD,
+				       const dfloat * restrict gjI,
+				       const dfloat   lambda,
+				       const dfloat * restrict q,
+				       dfloat * restrict Aq,
+				       dfloat * restrict qAq){  
+  
+  dfloat s_D[p_gjNq][p_gjNq];
+  dfloat s_I[p_gjNq][p_Nq];
+  
+  for(int i=0;i<p_gjNq;++i)
+    for(int j=0;j<p_gjNq;++j)
+      s_D[i][j] = gjD[i*p_gjNq+j];
+  
+  for(int i=0;i<p_gjNq;++i)
+    for(int a=0;a<p_Nq;++a)
+      s_I[i][a] = gjI[i*p_Nq+a];
+
+  dfloat r_q[p_Nq][p_Nq][p_Nq];
+
+  dfloat s_Ixx[p_Nq][p_Nq];
+  dfloat s_IIx[p_Nq];
+  dfloat s_III[p_gjNq][p_gjNq][p_gjNq];
+  dfloat s_xII[p_gjNq][p_gjNq];
+  dfloat s_xxI[p_gjNq];
+
+  dfloat s_lap[p_gjNq][p_gjNq][p_gjNq];
+  
+  for(int e=0;e<Nelements;++e){
+    
+    const iint emap = elementList[e];
+    
+    for(int c=0;c<p_Nq;++c){
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+	  r_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+	}
+      }
+    }
+    
+
+    for(int k=0;k<p_gjNq;++k){
+      // interpolate to gj(k)
+      for(int b=0;b<p_Nq;++b){
+	for(int a=0;a<p_Nq;++a){
+	  dfloat tmp = 0;
+	  for(int c=0;c<p_Nq;++c){
+	    tmp += s_I[k][c]*r_q[c][b][a];
+	  }
+	  s_Ixx[b][a] = tmp;
+	}
+      }
+      
+      // interpolate to gj(j)
+      for(int j=0;j<p_gjNq;++j){
+	for(int a=0;a<p_Nq;++a){
+	  dfloat tmp = 0;
+	  for(int b=0;b<p_Nq;++b){
+	    tmp += s_I[j][b]*s_Ixx[b][a];
+	  }
+	  s_IIx[a] = tmp;
+	}
+	
+	// interpolate to gj(i)
+	for(int i=0;i<p_gjNq;++i){
+	  dfloat tmp = 0;
+	  for(int a=0;a<p_Nq;++a){
+	    tmp += s_I[i][a]*s_IIx[a];
+	  }
+	  s_III[k][j][i] = tmp;
+	  s_lap[k][j][i] = 0;
+	}
+      }
+    }
+    
+    for(int k=0;k<p_gjNq;++k){
+      for(int j=0;j<p_gjNq;++j){
+	for(int i=0;i<p_gjNq;++i){
+	  
+	  dfloat qr = 0, qs = 0, qt = 0;
+	  
+	  // differentiate in all directions
+	  for(int n=0;n<p_gjNq;++n){
+	    qr += s_D[i][n]*s_III[k][j][n];
+	    qs += s_D[j][n]*s_III[k][n][i];
+	    qt += s_D[k][n]*s_III[n][j][i];
+	  }
+	  
+	  const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+	  const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp]; 
+	  const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+	  const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+	  const dfloat r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+	  
+	  const dfloat r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+	  const dfloat r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+	  const dfloat r_G22 = gjGeo[base+p_G22ID*p_gjNp];	  
+	  
+	  // apply chain rule 
+	  const dfloat tmpr = r_G00*qr + r_G01*qs + r_G02*qt;
+	  const dfloat tmps = r_G01*qr + r_G11*qs + r_G12*qt;
+	  const dfloat tmpt = r_G02*qr + r_G12*qs + r_G22*qt;
+	  s_lap[k][j][i] += r_GwJ*s_III[k][j][i]*lambda;
+	  
+	  for(int n=0;n<p_gjNq;++n){ // transpose(D)
+	    s_lap[k][j][n] += s_D[i][n]*tmpr;
+	    s_lap[k][n][i] += s_D[j][n]*tmps;
+	    s_lap[n][j][i] += s_D[k][n]*tmpt;
+	  }
+	}
+      }
+    }
+    
+
+    for(int c=0;c<p_Nq;++c){
+      // interpolate to gll(c) 
+      for(int j=0;j<p_gjNq;++j){
+	for(int i=0;i<p_gjNq;++i){
+	  dfloat tmp = 0;
+	  for(int k=0;k<p_gjNq;++k){
+	    tmp += s_I[k][c]*s_lap[k][j][i];
+	  }
+	  s_xII[j][i] = tmp;
+	}
+      }
+
+      // interpolate to gll(b) 
+      for(int b=0;b<p_Nq;++b){
+	for(int i=0;i<p_gjNq;++i){
+	  dfloat tmp = 0;
+	  for(int j=0;j<p_gjNq;++j){
+	    tmp += s_I[j][b]*s_xII[j][i];
+	  }
+	  s_xxI[i] = tmp;
+	}
+
+	// interpolate to gll(b) 
+	for(int a=0;a<p_Nq;++a){
+	  
+	  dfloat tmp = 0;
+	  for(int i=0;i<p_gjNq;++i){
+	    tmp += s_I[i][a]*s_xxI[i];
+	  }
+
+	  const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+
+	  Aq[id] = tmp;
+
 	}
       }
     }
@@ -3461,3 +3619,210 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
   }
 }
 
+
+
+kernel void ellipticPartialAxHex3D_incremental(const iint Nelements,
+					       const iint * restrict elementList,
+					       const dfloat * restrict gjGeo, 
+					       const dfloat * restrict gjD,
+					       const dfloat * restrict gjI,
+					       const dfloat   lambda,
+					       dfloat * restrict q,
+					       dfloat * restrict Aq,
+					       dfloat * restrict grad){  
+  
+  
+  // 1. interpolate in r and s
+  for(int e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+    shared dfloat s_q[p_Nq][p_gjNq+p_gjPad];
+
+    exclusive int emap;
+    exclusive dfloat r_tmp;
+
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+
+	emap = elementList[e];
+
+	const int t = a + p_gjNq*b;
+	if(a<p_Nq){
+	  s_I[b][a] = gjI[b*p_Nq+a];
+	}
+      }
+    }
+    
+    occaUnroll(p_Nq)
+    for(int c=0;c<p_Nq;++c){
+
+      barrier(localMemFence);
+
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int a=0;a<p_gjNq;++a;inner0){
+	  const int t = a + p_gjNq*b;
+	  if(t<p_Nq2){
+	    const int ta = t%p_Nq;
+	    const int tb = t/p_Nq;
+	    s_q[tb][ta] = q[emap*p_Np + c*p_Nq2 + t];
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+      
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  dfloat tmp = 0;
+	  
+	  if(b<p_Nq){
+
+	    occaUnroll(p_Nq)
+	      for(int a=0;a<p_Nq;++a)
+		tmp += s_I[i][a]*s_q[b][a];
+
+	    r_tmp = tmp;
+	  }
+	}
+      }
+      
+      for(int b=0;b<p_gjNq;++b;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  if(b<p_Nq)
+	    s_q[b][i] = r_tmp;
+	}
+      }
+
+      barrier(localMemfence);
+      
+      for(int j=0;j<p_gjNq;++j;inner1)
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  dfloat tmp = 0;
+
+	  occaUnroll(p_Nq)
+	    for(int b=0;b<p_Nq;++b)
+	      tmp += s_I[j][b]*s_q[b][i];
+	  
+	  const int id = emap*p_gjNp + c*p_gjNq2 + j*p_gjNq + i;
+	  grad[id] = tmp;
+	}
+    }
+  }
+  
+  // 2. interpolate in t
+  for(int e=0;e<Nelements;++e;outer0){
+  
+    shared dfloat s_q[p_Nq][p_gjNq];
+
+    exclusive int emap;
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+	
+	emap = elementList[e];
+      }
+    }
+
+    for(int j=0;j<p_gjNq;++j){
+
+      barrier(localMemFence);
+	  
+      for(int c=0;c<p_gjNq;++c;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  const int id = i + p_gjNq*j + p_gjNq2*c + 7*emap*p_gjNp;
+	  if(c<p_Nq)
+	    s_q[c][i] = grad[id];
+	}
+      }
+      
+      barrier(localMemFence);
+
+      for(int k=0;k<p_gjNq;++k;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){
+	  dfloat tmp = 0;
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
+	      const dfloat qcji = s_q[c][i];
+	      tmp  += gjI[k*p_Nq+c]*qcji; // s_I[k][c]*qcji;
+	    }
+	  const int id = emap*p_gjNp*4 + i + p_gjNq*j + p_gjNq2*k;
+	  grad[id+p_gjNp] = tmp;
+
+	  dfloat tmpt = 0;
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
+	      const dfloat qcji = s_q[c][i];
+	      tmpt += gjD[k*p_Nq+c]*qcji; // s_D[k][c]*qcji;
+	    }
+
+	  grad[id+2*p_gjNp] = tmpt;
+	}
+      }
+    }
+  }
+
+  // 3. diff in r,s and chain rule
+  for(int e=0;e<Nelements;++e;outer0){
+  
+    shared dfloat s_q[p_gjNq][p_gjNq];
+
+    exclusive dfloat r_qt;
+
+    exclusive int emap;
+    for(int b=0;b<p_gjNq;++b;inner1)
+      for(int a=0;a<p_gjNq;++a;inner0)
+	emap = elementList[e];
+  
+    for(int k=0;k<p_gjNq;++k){
+      
+      barrier(localMemFence);
+
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){    
+	  const iint id = 7*emap*p_gjNp + k*p_gjNq2 + j*p_gjNq + i;
+	  s_q[j][i] = grad[id+p_gjNp];
+	  r_qt = grad[id+2*p_gjNp];
+	}
+      }
+
+      barrier(localMemFence);
+
+      // different gjD
+      for(int j=0;j<p_gjNq;++j;inner1){
+	for(int i=0;i<p_gjNq;++i;inner0){    
+	  dfloat qr = 0, qs = 0;
+	  occaUnroll(p_gjNq)
+	    for(int n=0;n<p_gjNq;++n){ // TW: warning different gjD
+	      qr += gjD[i*p_gjNq+n]*s_q[j][n];
+	      qs += gjD[j*p_gjNq+n]*s_q[n][i];
+	    }
+	  const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+
+	  const dfloat G00 = gjGeo[base+p_G00ID*p_gjNp];
+	  const dfloat G01 = gjGeo[base+p_G01ID*p_gjNp];
+	  const dfloat G02 = gjGeo[base+p_G02ID*p_gjNp];
+
+	  const dfloat gradr = G00*qr + G01*qs + G02*r_qt;
+	  
+	  const dfloat G11 = gjGeo[base+p_G11ID*p_gjNp];
+	  const dfloat G12 = gjGeo[base+p_G12ID*p_gjNp];
+
+	  const dfloat grads = G01*qr + G11*qs + G12*r_qt;
+
+	  const dfloat G22 = gjGeo[base+p_G22ID*p_gjNp];	  
+
+	  const dfloat gradt = G02*qr + G12*qs + G22*r_qt;
+
+	  const dfloat GwJ = gjGeo[base+p_GWJID*p_gjNp]; 	  
+	  const dfloat lapq = GwJ*lambda*s_q[j][i];
+
+	  // use different output
+	  const int id = 7*emap*p_gjNp + k*p_gjNq2 + j*p_gjNq + i;
+	  grad[id+3*p_gjNp] = gradr;
+	  grad[id+4*p_gjNp] = grads;
+	  grad[id+5*p_gjNp] = gradt;
+	  grad[id+6*p_gjNp] = lapq;
+	}
+      }
+    }
+  }
+}
