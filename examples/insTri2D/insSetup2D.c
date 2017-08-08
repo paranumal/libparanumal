@@ -154,9 +154,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   umax = sqrt(umax);
 
   dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
-  // if(mesh->N=1)
-  //   cfl = 0.05; 
-
+ 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
