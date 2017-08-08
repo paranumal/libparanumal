@@ -20,7 +20,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
 
-    //    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
+    //    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq);
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
 
@@ -117,9 +117,10 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
+#if 0
     if(nonHalo->Ngather)
       mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-    
+#endif
 #endif    
   }
   else{

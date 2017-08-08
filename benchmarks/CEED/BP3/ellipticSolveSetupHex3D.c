@@ -285,7 +285,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       // CPU version is e8, GPU version is e6
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				   "ellipticPartialAxHex3D_e8a", 
+				   "ellipticPartialAxHex3D_e6a", 
 				   //				   "ellipticPartialAxHex3D_incremental", 
 				   kernelInfo);
       
