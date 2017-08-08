@@ -443,7 +443,6 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
 void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 
-  occa::tic("csr axpy");
   if (A->NsendTotal + A->NrecvTotal)
     csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
@@ -468,12 +467,10 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y) {
 
     y[i] += alpha*result;
   }
-  occa::toc("csr axpy");
 }
 
 void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z) {
 
-  occa::tic("csr zeqaxpy");
   if (A->NsendTotal + A->NrecvTotal)
     csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
 
@@ -498,7 +495,6 @@ void zeqaxpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, dfloat *z)
 
     z[i] += alpha*result;
   }
-  occa::toc("csr zeqaxpy");
 }
 
 void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
@@ -625,7 +621,6 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
 
 void smoothJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
-  occa::tic("csr smoothJacobi");
   // x = inv(D)*(b-R*x)  where R = A-D
   if(x_is_zero){
     #pragma omp parallel for
@@ -633,7 +628,6 @@ void smoothJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero
       dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
       x[i] = invD*r[i];
     }
-    occa::toc("csr smoothJacobi");
     return;
   }
 
@@ -668,7 +662,6 @@ void smoothJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero
   for (iint i=0;i<A->Nrows;i++)
     x[i] = y[i];
 
-  occa::toc("csr smoothJacobi");
 }
 
 
@@ -676,14 +669,12 @@ void smoothDampedJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_i
 
   dfloat alpha = level->smoother_params[0];
 
-  occa::tic("csr smoothDampedJacobi");
   if(x_is_zero){
   #pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
       dfloat invD = 1.0/A->diagCoefs[A->diagRowStarts[i]];
       x[i] = alpha*invD*r[i];
     }
-    occa::toc("csr smoothDampedJacobi");
     return;
   }
 
@@ -721,8 +712,6 @@ void smoothDampedJacobi(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_i
   #pragma omp parallel for
   for (iint i=0;i<A->Nrows;i++)
     x[i] = y[i];
-
-  occa::toc("csr smoothDampedJacobi");
 }
 
 void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
@@ -740,8 +729,6 @@ void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_z
   dfloat *res = level->smootherResidual;
   dfloat *Ad  = level->smootherResidual2;
   dfloat *d   = level->smootherUpdate;
-
-  occa::tic("csr smoothChebyshev");
 
   if(x_is_zero){ //skip the Ax if x is zero
     #pragma omp parallel for
@@ -782,9 +769,7 @@ void smoothChebyshev(agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_z
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  vectorAdd(A->Nrows, 1.0, d, 1.0, x);    
-  
-  occa::toc("csr smoothChebyshev");
+  vectorAdd(A->Nrows, 1.0, d, 1.0, x);
 }
 
 void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {

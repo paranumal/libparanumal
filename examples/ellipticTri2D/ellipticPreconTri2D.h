@@ -81,6 +81,9 @@ extern "C"
   void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
   void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
+  double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
+  void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
+                double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,

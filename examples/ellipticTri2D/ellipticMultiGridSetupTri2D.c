@@ -221,19 +221,21 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
 
     if (strstr(options,"CHEBYSHEV")) {
-      levels[n]->device_smooth = smoothChebyshevTri2D;  
+      levels[n]->device_smooth = smoothChebyshevTri2D;
+
+      levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
 
       // extra storage for smoothing op
-      levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
-      levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
-      levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
+      levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
+      levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
+      levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
     } else {
-      levels[n]->device_smooth = smoothTri2D;  
+      levels[n]->device_smooth = smoothTri2D;
 
       // extra storage for smoothing op
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
     }
-    
+
     levels[n]->smootherArgs = (void **) calloc(1,sizeof(void*));
     levels[n]->smootherArgs[0] = (void *) solverL;
 

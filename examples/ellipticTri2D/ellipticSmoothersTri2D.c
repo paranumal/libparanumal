@@ -47,7 +47,7 @@ void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, boo
   if(xIsZero){ //skip the Ax if x is zero
     //res = Sr
     level->device_smoother(level->smootherArgs, o_r, o_res);
-    
+
     //d = invTheta*res
     solver->scaledAddKernel(level->Nrows, invTheta, o_res, zero, o_d);
   } else {
@@ -75,12 +75,13 @@ void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, boo
     rho_np1 = 1.0/(2.*sigma-rho_n);
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    solver->scaledAddKernel(level->Nrows, 2.0*rho_np1/delta, o_res, rho_np1*rho_n, o_d);    
+    solver->scaledAddKernel(level->Nrows, 2.0*rho_np1/delta, o_res, rho_np1*rho_n, o_d);
 
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
   solver->scaledAddKernel(level->Nrows, one, o_d, one, o_x);
+
 }
 
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
