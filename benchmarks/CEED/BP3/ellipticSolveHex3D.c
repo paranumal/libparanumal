@@ -85,7 +85,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 				                        solver->o_gjGeo, o_gjD, solver->o_gjI, solver->o_gjD, lambda, o_q, o_Ixq, o_Aq,
 				                      solver->o_pAp);
         printf("calling 1 \n");
-		/*solver->partialAxKernel(solver->NglobalGatherElements,
+	/*	solver->partialAxKernel(solver->NglobalGatherElements,
 				                        solver->o_globalGatherElementList,
 				                        solver->o_gjGeo,
 				                        solver->o_gjD,
@@ -130,7 +130,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 				                        solver->o_gjGeo, o_gjD, solver->o_gjI, solver->o_gjD, lambda, o_q, o_Ixq, o_Aq,
 				                        solver->o_pAp);
 
-  /*      solver->partialAxKernel(solver->NlocalGatherElements,
+      /* solver->partialAxKernel(solver->NlocalGatherElements,
                                   solver->o_localGatherElementList,
                                   solver->o_gjGeo,
                                   solver->o_gjD,
