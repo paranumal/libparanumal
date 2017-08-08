@@ -24,9 +24,9 @@ void insRun2D(ins_t *ins, char *options){
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-// ins->NtimeSteps = 3;
+  
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-  #if 1
+  #if 0
     // ok it seems 
     if(tstep<100){
       // no advection, first order in time
@@ -99,7 +99,7 @@ void insRun2D(ins_t *ins, char *options){
 
     printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){
-      if(((tstep+1)%(10*ins->errorStep))==0){
+      if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
       }
     }
