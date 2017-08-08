@@ -120,6 +120,7 @@ typedef struct {
   occa::memory o_gjGeo; // Jacobian matrix at integration nodes
   occa::memory o_gjI;    // interpolate from GLL to integration nodes
   occa::memory o_gjD;    // differentiate and interpolate from GLL to integration nodes
+  occa::memory o_gjD2;  // differentiate from GJ to GJ nodes
 
   // list of elements that are needed for global gather-scatter
   iint NglobalGatherElements;

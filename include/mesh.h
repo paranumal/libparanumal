@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -98,6 +98,7 @@ typedef struct {
   iint gjNq;
   dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
   dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjD2;     // 1D GJ to GJ node differentiation
 
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
   dfloat *oasForward;
