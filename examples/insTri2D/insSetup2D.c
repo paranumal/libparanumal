@@ -290,47 +290,47 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
     // Note that resU and resV can be replaced with already introduced buffer
     ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
     ins->o_Ve   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ve);
+    ins->o_Ud   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ud);
+    ins->o_Vd   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Vd);
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
 
-    // printf("Compiling SubCycle Advection volume kernel \n");
-    // ins->subCycleVolumeKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleVolume2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection volume kernel \n");
+    ins->subCycleVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleVolume2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection surface kernel\n");
-    // ins->subCycleSurfaceKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleSurface2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection surface kernel\n");
+    ins->subCycleSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleSurface2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection cubature  volume kernel \n");
-    // ins->subCycleCubatureVolumeKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleCubatureVolume2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection cubature  volume kernel \n");
+    ins->subCycleCubatureVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleCubatureVolume2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection cubature surface kernel\n");
-    // ins->subCycleCubatureSurfaceKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleCubatureSurface2D",
-				// 	 kernelInfo);
-
-
-    // printf("Compiling SubCycle Advection RK update kernel\n");
-    // ins->subCycleRKUpdateKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleRKUpdate2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection cubature surface kernel\n");
+    ins->subCycleCubatureSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleCubatureSurface2D",
+					 kernelInfo);
 
 
+    printf("Compiling SubCycle Advection RK update kernel\n");
+    ins->subCycleRKUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleRKUpdate2D",
+					 kernelInfo);
 
-    // ins->subCycleExtKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleExt2D",
-				// 	 kernelInfo);
+    ins->subCycleExtKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleExt2D",
+					 kernelInfo);
 
   }
 
