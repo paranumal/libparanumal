@@ -79,7 +79,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->finalTime = 20.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
+  ins->tau       = 6.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -194,7 +194,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+  //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
@@ -210,7 +210,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
   
-  #if 0
+  #if 1
    kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
@@ -241,13 +241,13 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   #else // Just for fast local reduction
   int maxVolumeNodes  = mymax(mesh->cubNp,mesh->Np);
   //
-  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);
-  kernelInfo.addDefine("p_S", Nfp);
-  
+  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);  
   int maxNodes        = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*Nfp, mesh->Nfaces*mesh->intNfp));
   int NblockV         = 256/mesh->Np; // works for CUDA
   int NblockS         = 256/maxNodes; // works for CUDA
+
+  kernelInfo.addDefine("p_S", Nfp);
    printf("NblockS: %d maxSurfaceNodes=%d SN = %d , mesh->Nfp = %d\n",NblockS, maxSurfaceNodes,Nfp, mesh->Nfp); 
 
     // ADD-DEFINES
@@ -313,7 +313,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 				       "insAdvectionCubatureVolume3D",
 				       kernelInfo);
   
-  #if 0
+  #if 1
   printf("Compiling Advection surface kernel with cubature integration\n");
   ins->advectionCubatureSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",

@@ -1,5 +1,7 @@
 #include "ins2D.h"
 
+#define SUBSTEP_METHOD 1 // 
+
 // complete a time step using LSERK4
 void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep, 
 				dfloat * tSendBuffer, dfloat * tRecvBuffer, 
@@ -49,7 +51,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 				ins->o_tHaloBuffer);
   }
 
-
+#if SUBSTEP_METHOD==1
    // Solve Stokes Problem if Nonlinear solver is deactivated
   dfloat activate_advection = 0.f; 
   if(ins->a0){activate_advection  = 1.f;} 
@@ -314,7 +316,18 @@ iint index1 = ins->index;
 ins->o_rhsU.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 ins->o_rhsV.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 
-#if 0
+#endif
+
+
+
+
+
+
+
+
+
+
+#if SUBSTEP_METHOD==2
 
 
   mesh2D *mesh = ins->mesh; 

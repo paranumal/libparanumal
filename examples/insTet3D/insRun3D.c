@@ -26,7 +26,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  ins->NtimeSteps = 2000; // !!!!!!!!!!!!!
+  ins->NtimeSteps = 10000; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 1
     // ok it seems 
