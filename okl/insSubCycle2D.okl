@@ -215,7 +215,6 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 					const dfloat * restrict cubDrWT,
 					const dfloat * restrict cubDsWT,
 					const dfloat * restrict cubInterpT,
-					const iint offset,
 					const dfloat * restrict U,
 					const dfloat * restrict V,
 					const dfloat * restrict Ud,
@@ -622,11 +621,12 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
 
 
 kernel void insSubCycleExt2D(const iint Nelements,
-			     const iint ststep,
-			     const dfloat sdt,	
-			     const dfloat dt,
-			     const iint index,
-			     const iint offset,
+                 const iint c0,
+			     const iint c1,
+			     const iint c2,	
+			     const iint offset0,
+			     const iint offset1,
+			     const iint offset2,
 			     const dfloat * restrict U,
 			     const dfloat * restrict V,
 			     dfloat * restrict Ue,
@@ -635,14 +635,9 @@ kernel void insSubCycleExt2D(const iint Nelements,
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
-      //hard coded for 3 stages
-      const int index0 = (index+0)%3;
-      const int index1 = (index+2)%3; //back one step 
-      const int index2 = (index+1)%3; //back two steps
-
-      const iint id0   = n + p_Np*(e+index0*offset);
-      const iint id1   = n + p_Np*(e+index1*offset);
-      const iint id2   = n + p_Np*(e+index2*offset);
+      const iint id0   = n + p_Np*e+ offset0;
+      const iint id1   = n + p_Np*e+ offset1;
+      const iint id2   = n + p_Np*e+ offset2;
 
       //U 
       const dfloat Um0  = U[id0];
@@ -652,23 +647,10 @@ kernel void insSubCycleExt2D(const iint Nelements,
       const dfloat Vm0  = V[id0];
       const dfloat Vm1  = V[id1];
       const dfloat Vm2  = V[id2];
-      // NU 
-      //
-      const dfloat x  = (ststep+1)*sdt; 
-      const dfloat x1 = 0.f, x2 = -dt, x3 = -2.f*dt; 
-
-      // Construct interpolating lagrange polynomial
-      const dfloat c0 = (x-x2)*(x-x3)/((x1-x2)*(x1-x3)); 
-      const dfloat c1 = (x-x1)*(x-x3)/((x2-x1)*(x2-x3));
-      const dfloat c2 = (x-x1)*(x-x2)/((x3-x1)*(x3-x2));
-
+      
       const iint id = n+e*p_Np;
       Ue[id] = c0*Um0 + c1*Um1 + c2*Um2;
       Ve[id] = c0*Vm0 + c1*Vm1 + c2*Vm2;
-
-
-
-
     }
   }
 }

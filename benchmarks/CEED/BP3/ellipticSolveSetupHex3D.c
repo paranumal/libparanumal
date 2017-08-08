@@ -186,79 +186,95 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 	}
 	mesh->device.setStream(solver->defaultStream);
 #endif
-	solver->Nblock = Nblock;
+  solver->Nblock = Nblock;
 
-// BP3 specific stuff starts here
-	dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
+  // BP3 specific stuff starts here
+  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
 
-	solver->o_gjD = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjD);
-	solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
-	solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
-// BP3 specific stuff ends here
+#if 0
+  // build a gjD that maps gjNq to gjNq
+  dfloat *gjD2 = (dfloat*) calloc(gjNq*gjNq, sizeof(dfloat));
+  for(iint n=0;n<gjNq;++n){
+    for(iint m=0;m<gjNq;++m){
+      for(iint i=0;i<mesh->Nq;++i){
+	gjD2[n*gjNq+m] += mesh->gjD[n*mesh->Nq+i]*mesh->gjI[m*mesh->Nq+i];
+      }
+    }
+  }
+#endif
 
-	kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  // TW: temporarily resize gjD
+  mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat)); 
+  solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
+  solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
+  solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
+  solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
+  // BP3 specific stuff ends here 
 
-//  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
-//  kernelInfo.addCompilerFlag("-G");
-	kernelInfo.addCompilerFlag("-O3");
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-// generically used for blocked DEVICE reductions
-	kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  //  kernelInfo.addCompilerFlag("-G");
+  kernelInfo.addCompilerFlag("-O3");
 
-	kernelInfo.addDefine("p_maxNodes", maxNodes);
-	kernelInfo.addDefine("p_Nmax", maxNodes);
+  // generically used for blocked DEVICE reductions
+  kernelInfo.addDefine("p_blockSize", blockSize);
 
-	kernelInfo.addDefine("p_NblockV", NblockV);
-	kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo.addDefine("p_Nmax", maxNodes);
 
-	kernelInfo.addDefine("p_NblockG", NblockG);
+  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NblockS", NblockS);
 
-	kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_NblockG", NblockG);
 
-	kernelInfo.addDefine("p_gjNq", mesh->gjNq);
-	kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
-	kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
-	kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+  kernelInfo.addDefine("p_Lambda2", 0.5f);
 
-//  occa::setVerboseCompilation(0);
+  kernelInfo.addDefine("p_gjNq", mesh->gjNq);
+  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
+  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
+  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-	for(iint r=0; r<size; ++r) {
-		MPI_Barrier(MPI_COMM_WORLD);
-		if(r==rank) {
-			printf("Building kernels for rank %d\n", rank);
-			fflush(stdout);
-			mesh->haloExtractKernel =
-				saferBuildKernelFromSource(mesh->device,
-				                           DHOLMES "/okl/meshHaloExtract3D.okl",
-				                           "meshHaloExtract3D",
-				                           kernelInfo);
+  //  occa::setVerboseCompilation(0);
 
-			mesh->gatherKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
-				                           "gather",
-				                           kernelInfo);
+  for(iint r=0;r<size;++r){
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(r==rank){
+      printf("Building kernels for rank %d\n", rank);
+      fflush(stdout);
+      mesh->haloExtractKernel =
+	saferBuildKernelFromSource(mesh->device, 
+				   DHOLMES "/okl/meshHaloExtract3D.okl",
+				   "meshHaloExtract3D",
+				   kernelInfo);
+      
+      mesh->gatherKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
+				   "gather",
+				   kernelInfo);
+      
+      mesh->scatterKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
+				   "scatter",
+				   kernelInfo);
+      
+      mesh->gatherScatterKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
+				   "gatherScatter",
+				   kernelInfo);
 
-			mesh->scatterKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
-				                           "scatter",
-				                           kernelInfo);
-
-			mesh->gatherScatterKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
-				                           "gatherScatter",
-				                           kernelInfo);
-
-
-			mesh->getKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
-				                           "get",
-				                           kernelInfo);
-
-			mesh->putKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
-				                           "put",
-				                           kernelInfo);
-
+      
+      mesh->getKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
+				   "get",
+				   kernelInfo);
+      
+      mesh->putKernel =
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
+				   "put",
+				   kernelInfo);
+      
+>>>>>>> c9b4df69e1e891508c168fc780105d22eaaf26f7
 #if 0
 			// WARNING
 			if(mesh->Nq<12) {

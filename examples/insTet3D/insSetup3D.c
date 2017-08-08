@@ -4,7 +4,9 @@
 #define USE_2_STREAMS
 
 ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolverOptions, char *boundaryHeaderFileName){
+  
 
+  printf("Volume Ncup: %d Surface Ncub: %d", mesh->cubNp, mesh->intNfp);
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank, size;
@@ -13,8 +15,8 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+//  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
+  // printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
 
@@ -68,16 +70,16 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   printf("Starting initial conditions for INS3D\n");
   //
  
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.001;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 20.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+1); // (mesh->N)*(mesh->N+1);
+  ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -91,7 +93,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
 
-     #if 1 //Beltrami Flow
+     #if 0 //Beltrami Flow
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*t);
       v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*t);
@@ -102,6 +104,22 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
           sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
           sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
      #endif
+     #if 0
+      dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
+      //
+      u = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+      v = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+      w = 0; 
+      p = 0.5*(1.0- exp(2.*lambda*x));
+
+     #endif
+
+     #if 1 // Uniform Channel Flow
+      u = 0.f;
+      v = 0.f;
+      w = 0.f;
+      p = 0.f;
+     #endif 
 
       ins->U[id] = u;
       ins->V[id] = v;
@@ -155,7 +173,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->dt   = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =50;
+  ins->errorStep =2000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -173,28 +191,27 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   // SetUp Boundary Flags types for Elliptic Solve
   int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-
+  
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  // ins->lambda = (1.5f) / (ins->dt * ins->nu);
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
-  // kernelInfoV.addInclude(boundaryHeaderFileName);
-  // solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
-  // ins->vSolver        = vSolver;
-  // ins->vSolverOptions = vSolverOptions;
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
+  kernelInfoV.addInclude(boundaryHeaderFileName);
+  solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
+  ins->vSolver        = vSolver;
+  ins->vSolverOptions = vSolverOptions;
 
   printf("==================PRESSURE SOLVE SETUP========================\n");
   //SETUP PRESSURE and VELOCITY SOLVERS
-  // boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
-  // kernelInfoP.addInclude(boundaryHeaderFileName);
-  // solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
-  // ins->pSolver        = pSolver;
-  // ins->pSolverOptions = pSolverOptions;
-
-
-
-  kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
+  kernelInfoP.addInclude(boundaryHeaderFileName);
+  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
+  ins->pSolver        = pSolver;
+  ins->pSolverOptions = pSolverOptions;
+  
+  #if 1
+   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -219,7 +236,36 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
+  kernelInfo.addDefine("p_idt", (float) 1.f/ins->dt);
+
+  #else // Just for fast local reduction
+  int maxVolumeNodes  = mymax(mesh->cubNp,mesh->Np);
+  //
+  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);  
+  int maxNodes        = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*Nfp, mesh->Nfaces*mesh->intNfp));
+  int NblockV         = 256/mesh->Np; // works for CUDA
+  int NblockS         = 256/maxNodes; // works for CUDA
+
+  kernelInfo.addDefine("p_S", Nfp);
+   printf("NblockS: %d maxSurfaceNodes=%d SN = %d , mesh->Nfp = %d\n",NblockS, maxSurfaceNodes,Nfp, mesh->Nfp); 
+
+    // ADD-DEFINES
+  kernelInfo.addDefine("p_maxNodesVolume", maxVolumeNodes);
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
+  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo.addDefine("p_NTfields", ins->NTfields);
+  kernelInfo.addDefine("p_NVfields", ins->NVfields);
+  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
+  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
+  kernelInfo.addDefine("p_nu",      (float) ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
+  #endif 
+
+  
 
   printf("mesh nfields %d\n", mesh->Nfields);
   // MEMORY ALLOCATION
@@ -266,12 +312,21 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
 				       "insAdvectionCubatureVolume3D",
 				       kernelInfo);
-
+  
+  #if 1
   printf("Compiling Advection surface kernel with cubature integration\n");
   ins->advectionCubatureSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
 				       "insAdvectionCubatureSurface3D",
 				       kernelInfo);
+  #else
+
+  printf("Compiling Advection surface kernel with cubature integration\n");
+  ins->advectionCubatureSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+               "insAdvectionCubatureSurface3D_0",
+               kernelInfo);
+  #endif
 
   printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel =

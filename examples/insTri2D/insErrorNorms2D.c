@@ -10,7 +10,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_P.copyTo(ins->P);
 
 
-  #if 0
+  #if 1
 
   const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
   //

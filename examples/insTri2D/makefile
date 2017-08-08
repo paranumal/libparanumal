@@ -59,6 +59,7 @@ insBuildVectorIpdgTri2D.o \
 ../ellipticTri2D/ellipticSolveSetupTri2D.o\
 ../ellipticTri2D/ellipticHaloExchange2D.o\
 ../ellipticTri2D/ellipticParallelGatherScatterTri2D.o \
+../ellipticTri2D/ellipticParallelGatherScatterSetup.o \
 ../ellipticTri2D/ellipticBuildIpdgTri2D.o \
 ../ellipticTri2D/ellipticBuildContinuousTri2D.o \
 ../ellipticTri2D/ellipticBuildPatchesIpdgTri2D.o 

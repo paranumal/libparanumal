@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "mpi.h"
 
 #include "mesh.h"
 

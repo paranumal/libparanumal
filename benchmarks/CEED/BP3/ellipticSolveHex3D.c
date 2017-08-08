@@ -15,7 +15,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	if(strstr(options, "CONTINUOUS")) {
 		//    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
 #if 0
-		solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
+
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq);
+
 
 		ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
@@ -141,6 +143,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
                                   solver->o_pAp);*/
 			}
 		}
+
+      
+
 
 #if 0
 		o_q.copyTo(solver->p);
@@ -311,7 +316,6 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
 		if(mesh->totalHaloPairs) {
 			offset = mesh->Nelements;
 			solver->partialGradientKernel(mesh->totalHaloPairs, offset, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
-		}
 
 #if 1
 		if(mesh->NnotInternalElements)
