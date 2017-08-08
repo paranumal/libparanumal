@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include <mpi.h>
-
 #include "mesh.h"
 
 typedef struct {

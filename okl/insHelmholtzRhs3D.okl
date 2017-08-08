@@ -94,9 +94,9 @@ kernel void insHelmholtzRhsForcing3D(const iint Nelements,
                                      - (c0*Pym0+c1*Pym1+c2*Pym2) 
                                      -  (a0*NVm0+a1*NVm1+a2*NVm2));
                                      //-(a0+a1+a2)*NVm0) ; 
-          s_rhsW[es][n]  = J*p_inu*( + (b0*Wm0 +b1*Wm1 +b2*Wm2 )*p_idt 
-                                     - (c0*Pzm0+c1*Pzm1+c2*Pzm2) 
-                                     -  (a0*NWm0+a1*NWm1+a2*NWm2));
+          s_rhsW[es][n]  = J*p_inu*( + (b0*Wm0  + b1*Wm1  + b2*Wm2 )*p_idt 
+                                     - (c0*Pzm0 + c1*Pzm1 + c2*Pzm2) 
+                                     - (a0*NWm0 + a1*NWm1 + a2*NWm2));
                                      //-(a0+a1+a2)*NWm0) ; 
       	}
       }
@@ -167,43 +167,37 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     shared  dfloat s_dudx[p_Np];
     shared  dfloat s_dudy[p_Np];
     shared  dfloat s_dudz[p_Np];
-
     shared  dfloat s_dvdx[p_Np];
     shared  dfloat s_dvdy[p_Np];
     shared  dfloat s_dvdz[p_Np];
-
     shared  dfloat s_dwdx[p_Np];
     shared  dfloat s_dwdy[p_Np];
     shared  dfloat s_dwdz[p_Np];
-
+    //
     shared  dfloat s_lapu[p_Np];
     shared  dfloat s_lapv[p_Np];
     shared  dfloat s_lapw[p_Np];
-
+    //
     shared  dfloat s_nxdu[p_NfacesNfp];
     shared  dfloat s_nydu[p_NfacesNfp];
     shared  dfloat s_nzdu[p_NfacesNfp];
-
     shared  dfloat s_nxdv[p_NfacesNfp];
     shared  dfloat s_nydv[p_NfacesNfp];
     shared  dfloat s_nzdv[p_NfacesNfp];
-
     shared  dfloat s_nxdw[p_NfacesNfp];
     shared  dfloat s_nydw[p_NfacesNfp];
     shared  dfloat s_nzdw[p_NfacesNfp];
-
+    //
     shared  dfloat s_lapuflux[p_NfacesNfp];
     shared  dfloat s_lapvflux[p_NfacesNfp];
     shared  dfloat s_lapwflux[p_NfacesNfp];
-
+    //
     shared  dfloat s_Lnxdu[p_Np];
     shared  dfloat s_Lnydu[p_Np];
     shared  dfloat s_Lnzdu[p_Np];
-
     shared  dfloat s_Lnxdv[p_Np];
     shared  dfloat s_Lnydv[p_Np];
     shared  dfloat s_Lnzdv[p_Np];
-
     shared  dfloat s_Lnxdw[p_Np];
     shared  dfloat s_Lnydw[p_Np];
     shared  dfloat s_Lnzdw[p_Np];
@@ -224,15 +218,15 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 
       	// load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
-      	nx = sgeo[sid+p_NXID];
-        ny = sgeo[sid+p_NYID];
-        nz = sgeo[sid+p_NZID];
-      	sJ = sgeo[sid+p_SJID];
-      	invJ = sgeo[sid+p_IJID];
-      	hinv = sgeo[sid+p_IHID];
+      	nx    = sgeo[sid+p_NXID];
+        ny    = sgeo[sid+p_NYID];
+        nz    = sgeo[sid+p_NZID];
+      	sJ    = sgeo[sid+p_SJID];
+      	invJ  = sgeo[sid+p_IJID];
+      	hinv  = sgeo[sid+p_IHID];
 
         int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) insHelmholtzBoundaryConditionsIpdg3D(bc, t, x[idM],y[idM],z[idM], nx,ny,nz, &uP, &dudxP,&dudyP,&dudzP, &vP, &dvdxP,&dvdyP,&dvdzP, &wP, &dwdxP,&dwdyP,&dwdzP);
+        if(bc>0) insHelmholtzBoundaryConditionsIpdg3D(bc,t, x[idM],y[idM],z[idM], nx,ny,nz, &uP,&dudxP,&dudyP,&dudzP, &vP,&dvdxP,&dvdyP,&dvdzP, &wP,&dwdxP,&dwdyP,&dwdzP);
 
       	const dfloat du = uP;
         const dfloat dv = vP;
@@ -290,17 +284,18 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 
       	occaUnroll(p_NfacesNfp)
       	  for(iint i=0;i<p_NfacesNfp;++i){
-      	    Lnxdu += LIFTT[n+i*p_Np]*s_nxdu[i];
-            Lnydu += LIFTT[n+i*p_Np]*s_nydu[i];
-            Lnzdu += LIFTT[n+i*p_Np]*s_nzdu[i];
+            dfloat liftt = LIFTT[n+i*p_Np];
+      	    Lnxdu += liftt*s_nxdu[i];
+            Lnydu += liftt*s_nydu[i];
+            Lnzdu += liftt*s_nzdu[i];
       	   
-            Lnxdv += LIFTT[n+i*p_Np]*s_nxdv[i];
-            Lnydv += LIFTT[n+i*p_Np]*s_nydv[i];
-            Lnzdv += LIFTT[n+i*p_Np]*s_nzdv[i];
+            Lnxdv += liftt*s_nxdv[i];
+            Lnydv += liftt*s_nydv[i];
+            Lnzdv += liftt*s_nzdv[i];
 
-            Lnxdw += LIFTT[n+i*p_Np]*s_nxdw[i];
-            Lnydw += LIFTT[n+i*p_Np]*s_nydw[i];
-            Lnzdw += LIFTT[n+i*p_Np]*s_nzdw[i];
+            Lnxdw += liftt*s_nxdw[i];
+            Lnydw += liftt*s_nydw[i];
+            Lnzdw += liftt*s_nzdw[i];
       	  }
 
       	dfloat dudx = Lnxdu;
@@ -346,9 +341,9 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
       	iint id = idM%p_Np;
-        s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id] + nz*s_Lnzdu[id]);
-        s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id] + nz*s_Lnzdv[id]);
-        s_lapwflux[n] += sJ*invJ*(nx*s_Lnxdw[id]+ny*s_Lnydw[id] + nz*s_Lnzdw[id]);
+        s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
+        s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]+nz*s_Lnzdv[id]);
+        s_lapwflux[n] += sJ*invJ*(nx*s_Lnxdw[id]+ny*s_Lnydw[id]+nz*s_Lnzdw[id]);
       }
 
       if(n<p_Np){
@@ -426,8 +421,9 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 	else{
     // Chekc it later !!!!!!!
 	  const iint id = e*p_Np+n;
-    	  rhsU[2*id+0] -=  J*Mlapu;
-        rhsU[2*id+1] -=  J*Mlapv;
+    	  rhsU[3*id+0] -=  J*Mlapu;
+        rhsU[3*id+1] -=  J*Mlapv;
+        rhsU[3*id+2] -=  J*Mlapw;
 	}
       }
     }

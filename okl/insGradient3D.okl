@@ -132,10 +132,6 @@ kernel void insGradientSurface3D(const iint Nelements,
               idM = vmapM[id];
               insGradientBoundaryConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, PM,&PP);
               if(solverID==1){ // Pressure Increament Gradient
-                // dfloat PPo = 0.f;
-                // dfloat to  = time-dt;
-                // insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
-                // PP = PP-c0*PPo;
                PP = PM;
               }
               

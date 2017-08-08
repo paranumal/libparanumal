@@ -2,7 +2,7 @@
 
 void insReport3D(ins_t *ins, iint tstep, char *options){
 
-  dfloat t = (tstep+1)*ins->dt;
+  dfloat t = (tstep)*ins->dt;
   
   // copy data back to host
   ins->o_U.copyTo(ins->U);
@@ -21,9 +21,9 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
   if(strstr(options, "VTU")){ 
     // output field files
     char fname[BUFSIZ];
-    sprintf(fname, "/u0/outputs/ins3D/");
-    sprintf(fname, "%sfoo_%04d", fname,rank);
-    sprintf(fname, "%s_%04d.vtu", fname, tstep/ins->errorStep);
+    // sprintf(fname, "/u0/outputs/ins3D/");
+    // sprintf(fname, "%sfoo_%04d", fname,rank);
+    sprintf(fname, "/u0/outputs/ins3D/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     
     insPlotVTU3D(ins, fname);
   } 

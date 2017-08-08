@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include  "mpi.h"
 
 #include "mesh3D.h"
 

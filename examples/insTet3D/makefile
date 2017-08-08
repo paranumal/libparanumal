@@ -47,6 +47,7 @@ insAdvectionStep3D.o \
 insHelmholtzStep3D.o \
 insPoissonStep3D.o \
 insUpdateStep3D.o \
+insErrorNorms3D.o \
 ../ellipticTet3D/ellipticSetupTet3D.o \
 ../ellipticTet3D/ellipticPreconditionerSetupTet3D.o\
 ../ellipticTet3D/ellipticCoarsePreconditionerSetupTet3D.o\

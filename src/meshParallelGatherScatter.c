@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "mesh.h"
-#include "mpi.h"
+
 
 // ok to use o_v = o_gsv
 void meshParallelGatherScatter(mesh_t *mesh,

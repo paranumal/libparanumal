@@ -50,7 +50,7 @@
     } else if(bc==2){						\
       *(pB) = pM;						\
     } else if(bc==3){						\
-      *(pB) = -a*a*occaExp(-2.f*d*d*t)*( occaExp(2.f*a*x)+occaExp(2.f*a*y)+occaExp(2.f*a*z))*(occaSin(a*x+d*y)*occaCos(a*z+d*x)*occaExp(a*(y+z))+occaSin(a*y+d*z)*occaCos(a*x+d*y)*occaExp(a*(x+z))+occaSin(a*z+d*x)*occaCos(a*y+d*z)*occaExp(a*(x+y))); \
+      *(pB) = -a*a*occaExp(-2.f*d*d*t)*(occaExp(2.f*a*x)+occaExp(2.f*a*y)+occaExp(2.f*a*z))*(occaSin(a*x+d*y)*occaCos(a*z+d*x)*occaExp(a*(y+z))+occaSin(a*y+d*z)*occaCos(a*x+d*y)*occaExp(a*(x+z))+occaSin(a*z+d*x)*occaCos(a*y+d*z)*occaExp(a*(x+y))); \
     }								\
   }
 
@@ -120,18 +120,21 @@
 									\
       *(pxB) = 0.f;							\
       *(pyB) = 0.f;							\
+      *(pzB) = 0.f;              \
     }									\
     if(bc==2){								\
       *(pB)  = 0.f;							\
 									\
       *(pxB) = 0.f; \
       *(pyB) = 0.f; \
+      *(pzB) = 0.f; \
     }									\
     if(bc==3){								\
       *(pB) = -a*a*occaExp(-2.f*d*d*t)*( occaExp(2.f*a*x)+occaExp(2.f*a*y)+occaExp(2.f*a*z))*(occaSin(a*x+d*y)*occaCos(a*z+d*x)*occaExp(a*(y+z))+occaSin(a*y+d*z)*occaCos(a*x+d*y)*occaExp(a*(x+z))+occaSin(a*z+d*x)*occaCos(a*y+d*z)*occaExp(a*(x+y))); \
 									\
       *(pxB) = 0.f;							\
       *(pyB) = 0.f;							\
+      *(pzB) = 0.f;             \
     }									\
   }
 

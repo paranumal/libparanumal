@@ -104,7 +104,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
   kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
-
+  
+  kernelInfo.addDefine("p_blockSize", blockSize);
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
