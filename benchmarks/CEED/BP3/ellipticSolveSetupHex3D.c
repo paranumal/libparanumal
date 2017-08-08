@@ -189,9 +189,22 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   // BP3 specific stuff starts here
   dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
 
+#if 0
+  // build a gjD that maps gjNq to gjNq
+  dfloat *gjD2 = (dfloat*) calloc(gjNq*gjNq, sizeof(dfloat));
+  for(iint n=0;n<gjNq;++n){
+    for(iint m=0;m<gjNq;++m){
+      for(iint i=0;i<mesh->Nq;++i){
+	gjD2[n*gjNq+m] += mesh->gjD[n*mesh->Nq+i]*mesh->gjI[m*mesh->Nq+i];
+      }
+    }
+  }
+#endif
+
   // TW: temporarily resize gjD
   mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat)); 
-  solver->o_gjD = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjD);
+  solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
+  solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
   solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
   solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
   // BP3 specific stuff ends here 
@@ -272,7 +285,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       // CPU version is e8, GPU version is e6
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				   "ellipticPartialAxHex3D_cube1", 
+				   "ellipticPartialAxHex3D_e6", 
 				   kernelInfo);
       
       

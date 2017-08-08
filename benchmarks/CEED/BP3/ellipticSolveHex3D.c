@@ -15,7 +15,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
   if(strstr(options, "CONTINUOUS")){
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
 #if 0
-    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq);
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq);
 
     ellipticParallelGatherScatter(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 #else
@@ -38,8 +38,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->dataStream);
       
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
-				solver->o_pAp);
+				solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq, 
+				solver->o_grad);
       }
 
       if(halo->Ngather){
@@ -59,8 +59,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	//	mesh->device.setStream(solver->defaultStream);
 
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq, 
-				solver->o_pAp);
+				solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq, 
+				solver->o_grad);
       } 
     }
 
@@ -200,8 +200,8 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
   if(strstr(options, "CONTINUOUS")){
     // BROKEN
     //    mesh->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD, solver->o_gjI, lambda, o_q, o_Aq,
-		     solver->o_invDegree, solver->o_pAp);
+    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq,
+		     solver->o_invDegree, solver->o_grad);
   }
   else{
     // tau should not be hard coded

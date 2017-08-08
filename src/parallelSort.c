@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mpi.h"
 /* use this for iint */
 #include "mesh.h"
 

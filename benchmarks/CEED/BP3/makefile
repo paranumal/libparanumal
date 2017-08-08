@@ -75,6 +75,7 @@ LOBJS = \
 ../../../src/parallelSort.o\
 ../../../src/hash.o \
 ../../../src/timer.o 
+#../../../src/mpistubs.o
 
 COBJS = \
 ../../../src/gsParallelGatherScatter.o\
