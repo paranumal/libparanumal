@@ -308,6 +308,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
         smootherString = strdup("EXACTFULLPATCH");
       } else if(strstr(options, "APPROXFULLPATCH")){
         smootherString = strdup("APPROXFULLPATCH");
+      } else if(strstr(options, "EXACTFACEPATCH")){
+        smootherString = strdup("EXACTFACEPATCH");
+      } else if(strstr(options, "APPROXFACEPATCH")){
+        smootherString = strdup("APPROXFACEPATCH");
       } else if(strstr(options, "EXACTBLOCKJACOBI")){
         smootherString = strdup("EXACTBLOCKJACOBI");
       } else if(strstr(options, "APPROXBLOCKJACOBI")){
