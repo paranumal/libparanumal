@@ -8,7 +8,7 @@ int main(int argc, char **argv){
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if(argc!=3 && argc!=4){
+  if(argc<3){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
     printf("usage 2: ./main meshes/cavityH005.msh N BoundaryConditions.h\n");
     exit(-1);
@@ -19,17 +19,18 @@ int main(int argc, char **argv){
 
   // solver can be CG or PCG
   // can add FLEXIBLE and VERBOSE options
-  // preconditioner can be NONE, JACOBI, OAS, BLOCKJACOBI, FULLALMOND, or MULTIGRID
-  // OAS and MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
-  // OAS and MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
+  // method can be IPDG or CONTINUOUS
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // OAS and MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
+  //                                     EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
-  // method can be IPDG or CONTINUOUS
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=EXACTFULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -38,8 +39,15 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+
+
+  //this is strictly for testing, to do repeated runs. Will be removed later
+  if (argc==6) {
+    options = strdup(argv[4]);
+    parAlmondOptions = strdup(argv[5]);
+  }
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);

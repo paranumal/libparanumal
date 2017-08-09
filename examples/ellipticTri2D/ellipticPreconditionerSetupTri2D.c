@@ -212,5 +212,12 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
+  } else if(strstr(options,"JACOBI")) {
+
+    dfloat *invDiagA;
+
+    ellipticBuildJacobiIpdgTri2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+
+    precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
   }
 }

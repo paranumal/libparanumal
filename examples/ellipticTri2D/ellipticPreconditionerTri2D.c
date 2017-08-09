@@ -77,7 +77,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     iint Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
-    solver->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
+    solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");
   }
   else{ // turn off preconditioner

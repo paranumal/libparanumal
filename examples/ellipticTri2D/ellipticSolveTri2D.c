@@ -232,6 +232,11 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   occaTimerTic(mesh->device,"PCG");
 
+  //start timer
+  mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
+  double tic = MPI_Wtime();
+
   // gather-scatter
   if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
@@ -274,7 +279,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   
   dfloat alpha, beta, pAp = 0;
 
-  if(rank==0)
+  if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
   while(rdotr0>(tol*tol)){
@@ -348,8 +353,31 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   }
 
-  if(rank==0)
+  if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+
+
+  mesh->device.finish();
+  double toc = MPI_Wtime();
+  double localElapsed = toc-tic;
+
+  iint size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  iint   localDofs = mesh->Np*mesh->Nelements;
+  iint   localElements = mesh->Nelements;
+  double globalElapsed;
+  iint   globalDofs;
+  iint   globalElements;
+
+  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+
+  if(rank==0){
+    printf("%02d %02d %d %d %d %17.15lg %17.15E %17.15E \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)] \n",
+     size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, globalDofs/(double)size, (globalDofs*Niter)/(globalElapsed*size));
+  }
 
   occaTimerToc(mesh->device,"PCG");
 
