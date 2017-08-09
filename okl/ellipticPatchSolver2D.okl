@@ -290,7 +290,7 @@ kernel void ellipticExactFacePatchSolver2D(const int NfacePairs,
           const iint e = FPairsToE[2*f+es];
 
           s_q[es*p_Np+n] = 0.f;
-          if(eP>=0){
+          if(e>=0){
             s_q[es*p_Np+n] = q[e*p_Np+n];
           }
         }
@@ -313,7 +313,12 @@ kernel void ellipticExactFacePatchSolver2D(const int NfacePairs,
             }
 
           const iint e = FPairsToE[2*f+es];
-          const dfloat invDeg = invDegree[e];
+          dfloat invDeg;
+          if(e>=0) {
+            invDeg = invDegree[e];
+          } else {
+            invDeg = 0.f;
+          }
 
           invAPq[2*p_Np*f+es*p_Np+n] = invDeg*(res1+res2);
         }
@@ -343,7 +348,7 @@ kernel void ellipticApproxFacePatchSolver2D(const int NfacePairs,
           const iint e = FPairsToE[2*f+es];
 
           s_q[es*p_Np+n] = 0.f;
-          if(eP>=0){
+          if(e>=0){
             s_q[es*p_Np+n] = q[e*p_Np+n];
           }
         }
@@ -356,7 +361,7 @@ kernel void ellipticApproxFacePatchSolver2D(const int NfacePairs,
     for(iint es=0;es<2;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
         if(f<NfacePairs){
-          const iint offset = patchesIndex[e]*2*p_Np*2*p_Np + es*p_Np + n; // patch matrices offset
+          const iint offset = patchesIndex[f]*2*p_Np*2*p_Np + es*p_Np + n; // patch matrices offset
           dfloat res1 = 0.f, res2 = 0.f;
 
           occaUnroll(p_Np)
@@ -366,8 +371,13 @@ kernel void ellipticApproxFacePatchSolver2D(const int NfacePairs,
             }
 
           const iint e = FPairsToE[2*f+es];
-          const dfloat invDeg = invDegree[e];
 
+          dfloat invDeg;
+          if(e>=0) {
+            invDeg = invDegree[e];
+          } else {
+            invDeg = 0.f;
+          }
           invAPq[2*p_Np*f+es*p_Np+n] = invDeg*(res1+res2);
         }
       }

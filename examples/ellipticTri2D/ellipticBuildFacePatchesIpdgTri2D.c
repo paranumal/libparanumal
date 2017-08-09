@@ -23,7 +23,6 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   //start with diagonals
   for(iint N=0;N<NpatchElements;++N){
     iint e;
-    int fM = 0;
 
     iint vbase;
     dfloat drdx;
@@ -42,9 +41,6 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     } else {
       //element number
       e = mesh->FPairsToE[2*face+N];
-      fM = mesh->FPairsToF[2*face+N];
-
-      if (e<0) continue; //skip this block if this is a boundary face
 
       vbase = e*mesh->Nvgeo;
       drdx = mesh->vgeo[vbase+RXID];
@@ -226,7 +222,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     eM = mesh->FPairsToE[2*face+0];
     eP = mesh->FPairsToE[2*face+1];
 
-    fM = mesh->FPairsToE[2*face+0];
+    fM = mesh->FPairsToF[2*face+0];
 
     sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     nx = mesh->sgeo[sid+NXID];
@@ -248,107 +244,105 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     dsdyP = mesh->vgeo[vbaseP+SYID];
   }
 
-  if (eP>=0) {
 
-    dfloat penalty = tau*hinv;
+  dfloat penalty = tau*hinv;
 
-    // mass matrix for this face
-    dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
+  // mass matrix for this face
+  dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
-    // penalty term just involves face nodes
-    for(iint n=0;n<mesh->Nfp;++n){
-      for(iint m=0;m<mesh->Nfp;++m){
-        iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
-        iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+  // penalty term just involves face nodes
+  for(iint n=0;n<mesh->Nfp;++n){
+    for(iint m=0;m<mesh->Nfp;++m){
+      iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
+      iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
-        dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
+      dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 
-        // neighbor penalty term
-        int mP;
-        if(face==-1) {
-          //this assumes the nodes are arrange so face 0 is the first row
-          mP = mesh->Nfp-1-m;
-        } else {
-          iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
-          mP = mesh->vmapP[idM]%mesh->Np;
-        }
-
-        int id = nM*patchNp + mesh->Np + mP;
-
-        // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
-        A[id] += -0.5*penalty*MSfnm;
+      // neighbor penalty term
+      int mP;
+      if(face==-1) {
+        //this assumes the nodes are arrange so face 0 is the first row
+        mP = mesh->Nfp-1-m;
+      } else {
+        iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
+        mP = mesh->vmapP[idM]%mesh->Np;
       }
+
+      int id = nM*patchNp + mesh->Np + mP;
+
+      // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
+      A[id] += -0.5*penalty*MSfnm;
     }
+  }
 
-    // now add differential surface terms
-    for(iint n=0;n<mesh->Nfp;++n){
-      for(iint m=0;m<mesh->Np;++m){
-        int nM = mesh->faceNodes[fM*mesh->Nfp+n];
+  // now add differential surface terms
+  for(iint n=0;n<mesh->Nfp;++n){
+    for(iint m=0;m<mesh->Np;++m){
+      int nM = mesh->faceNodes[fM*mesh->Nfp+n];
 
-        for(iint i=0;i<mesh->Nfp;++i){
-          int iM = mesh->faceNodes[fM*mesh->Nfp+i];
-          int iP;
-
-          if(eM==-1) {
-            iP = mesh->Nfp-1-i;
-          } else {
-            iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
-          }
-
-          dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
-
-          if(eP>=0){
-            dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
-            dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
-
-            int id = nM*patchNp + (fM+1)*mesh->Np + m;
-
-            //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
-            A[id] += -0.5*nx*MSfni*DxPim;
-            A[id] += -0.5*ny*MSfni*DyPim;
-          }
-        }
-      }
-    }
-
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Nfp;++m){
-        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
-        int mP;
+      for(iint i=0;i<mesh->Nfp;++i){
+        int iM = mesh->faceNodes[fM*mesh->Nfp+i];
+        int iP;
 
         if(eM==-1) {
-          mP = mesh->Nfp-1-m;
+          iP = mesh->Nfp-1-i;
         } else {
-          mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+          iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
         }
 
-        for(iint i=0;i<mesh->Nfp;++i){
-          iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+        dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
-          dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
+        if(eP>=0){
+          dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
+          dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
 
-          dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
-          dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+          int id = nM*patchNp + mesh->Np + m;
 
-          if(eP>=0){
-            int id = n*patchNp + (fM+1)*mesh->Np + mP;
-
-            //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
-            A[id] +=  +0.5*nx*DxMin*MSfim;
-            A[id] +=  +0.5*ny*DyMin*MSfim;
-          }
+          //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
+          A[id] += -0.5*nx*MSfni*DxPim;
+          A[id] += -0.5*ny*MSfni*DyPim;
         }
       }
     }
+  }
 
-    //write the transpose of the off-diagonal block
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Nfp;++m){
-        int id  = n*patchNp + mesh->Np + m;
-        int idT = mesh->Np*patchNp + m*patchNp + n;
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfp;++m){
+      int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+      int mP;
 
-        A[idT] = A[id];
+      if(eM==-1) {
+        mP = mesh->Nfp-1-m;
+      } else {
+        mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
       }
+
+      for(iint i=0;i<mesh->Nfp;++i){
+        iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+
+        dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
+
+        dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
+        dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+
+        if(eP>=0){
+          int id = n*patchNp + mesh->Np + mP;
+
+          //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
+          A[id] +=  +0.5*nx*DxMin*MSfim;
+          A[id] +=  +0.5*ny*DyMin*MSfim;
+        }
+      }
+    }
+  }
+
+  //write the transpose of the off-diagonal block
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Np;++m){
+      int id  = n*patchNp + mesh->Np + m;
+      int idT = mesh->Np*patchNp + m*patchNp + n;
+
+      A[idT] = A[id];
     }
   }
 }
@@ -404,12 +398,7 @@ void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *
   mesh->FPairsToE = (iint *) calloc(2*mesh->NfacePairs,sizeof(iint));
   mesh->FPairsToF = (int *) calloc(2*mesh->NfacePairs,sizeof(int));
 
-  //fill everything with -1
-  for (iint n=0;n<2*mesh->NfacePairs;n++) {
-    mesh->FPairsToE[n] = -1;
-    mesh->FPairsToF[n] = -1;
-  }
-
+  //fill with -1
   for (iint n=0;n<(mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces;n++) {
     mesh->EToFPairs[n] = -1;
   }
@@ -440,7 +429,7 @@ void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *
   int patchNp = mesh->Np*NpatchElements;
 
   //patch inverse storage
-  *patchesInvA = (dfloat*) calloc(mesh->Nelements*patchNp*patchNp, sizeof(dfloat));
+  *patchesInvA = (dfloat*) calloc(mesh->NfacePairs*patchNp*patchNp, sizeof(dfloat));
 
   // loop over all elements
   for(iint face=0;face<mesh->NfacePairs;++face){
@@ -512,12 +501,7 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
   mesh->FPairsToE = (iint *) calloc(2*mesh->NfacePairs,sizeof(iint));
   mesh->FPairsToF = (int *) calloc(2*mesh->NfacePairs,sizeof(int));
 
-  //fill everything with -1
-  for (iint n=0;n<2*mesh->NfacePairs;n++) {
-    mesh->FPairsToE[n] = -1;
-    mesh->FPairsToF[n] = -1;
-  }
-
+  //fill with -1
   for (iint n=0;n<(mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces;n++) {
     mesh->EToFPairs[n] = -1;
   }
@@ -550,7 +534,7 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  *patchesIndex = (iint*) calloc(mesh->NfacePairs, sizeof(iint));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));

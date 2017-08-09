@@ -480,13 +480,13 @@ void ellipticSetupSmootherApproxFacePatchIpdg(solver_t *solver, precon_t *precon
   mesh_t *mesh = solver->mesh;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildApproxPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType,
+  ellipticBuildApproxFacePatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   int NpP = 2*mesh->Np;
 
-  precon->o_invAP = mesh->device.malloc(mesh->NfacePairs*NpP*NpP*sizeof(dfloat),invAP);
-  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+  precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->NfacePairs*sizeof(iint), patchesIndex);
 
   dfloat *invDegree = (dfloat*) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(dfloat));
   for (iint face=0;face<mesh->NfacePairs;face++) {
