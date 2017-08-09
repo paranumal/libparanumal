@@ -402,6 +402,147 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   free(invDegree);
 }
 
+void ellipticSetupSmootherExactFacePatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
+
+  dfloat *invAP;
+  iint Npatches;
+  mesh_t *mesh = solver->mesh;
+
+  //initialize the full inverse operators on each 2 element patch
+  ellipticBuildExactFacePatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, &invAP, options);
+
+  int NpP = 2*mesh->Np;
+
+  precon->o_invAP = mesh->device.malloc(mesh->NfacePairs*NpP*NpP*sizeof(dfloat),invAP);
+
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(dfloat));
+  for (iint face=0;face<mesh->NfacePairs;face++) {
+    iint eM = mesh->FPairsToE[2*face+0];
+    iint eP = mesh->FPairsToE[2*face+1];
+
+    invDegree[eM]++; //overlap degree = # of patches
+    if (eP>=0) invDegree[eP]++; //overlap degree = # of patches
+  }
+  for (iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;e++) {
+    invDegree[e] = 1.0/invDegree[e];
+  }
+
+  precon->o_invDegreeAP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(dfloat),invDegree);
+
+  mesh->o_FPairsToE = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToE);
+  mesh->o_FPairsToF = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToF);
+  mesh->o_EToFPairs = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToFPairs);
+
+  //set storage for larger patch
+  precon->zP = (dfloat*) calloc(mesh->NfacePairs*NpP,  sizeof(dfloat));
+  precon->o_zP = mesh->device.malloc(mesh->NfacePairs*NpP*sizeof(dfloat), precon->zP);
+
+
+  level->device_smoother = exactFacePatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    if (strstr(options,"CHEBYSHEV")) {
+
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
+
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
+
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
+  }
+  free(invDegree);
+}
+
+void ellipticSetupSmootherApproxFacePatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+                                              dfloat tau, dfloat lambda, int* BCType, const char *options) {
+
+  dfloat *invAP;
+  iint Npatches;
+  iint *patchesIndex;
+  mesh_t *mesh = solver->mesh;
+
+  //initialize the full inverse operators on each 4 element patch
+  ellipticBuildApproxPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType,
+                                      &Npatches, &patchesIndex, &invAP, options);
+
+  int NpP = 2*mesh->Np;
+
+  precon->o_invAP = mesh->device.malloc(mesh->NfacePairs*NpP*NpP*sizeof(dfloat),invAP);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+
+  dfloat *invDegree = (dfloat*) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(dfloat));
+  for (iint face=0;face<mesh->NfacePairs;face++) {
+    iint eM = mesh->FPairsToE[2*face+0];
+    iint eP = mesh->FPairsToE[2*face+1];
+
+    invDegree[eM]++; //overlap degree = # of patches
+    if (eP>=0) invDegree[eP]++; //overlap degree = # of patches
+  }
+  for (iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;e++) {
+    invDegree[e] = 1.0/invDegree[e];
+  }
+
+  precon->o_invDegreeAP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(dfloat),invDegree);
+
+  mesh->o_FPairsToE = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToE);
+  mesh->o_FPairsToF = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToF);
+  mesh->o_EToFPairs = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToFPairs);
+
+  //set storage for larger patch
+  precon->zP = (dfloat*) calloc(mesh->NfacePairs*NpP,  sizeof(dfloat));
+  precon->o_zP = mesh->device.malloc(mesh->NfacePairs*NpP*sizeof(dfloat), precon->zP);
+
+
+  level->device_smoother = approxFacePatchIpdg;
+
+  //check if stabilization is needed
+  if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
+    //estimate the max eigenvalue of S*A
+    dfloat rho = maxEigSmoothAx(solver, level);
+
+    if (strstr(options,"CHEBYSHEV")) {
+
+      level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
+
+      level->ChebyshevIterations = 2;
+      level->smoother_params[0] = rho;
+      level->smoother_params[1] = rho/10.;
+
+    } else {
+
+      //set the stabilty weight (jacobi-type interation)
+      dfloat weight = (4./3.)/rho;
+
+      printf("weight = %g \n", weight);
+
+      for (iint e=0;e<mesh->Nelements;e++)
+        invDegree[e] *= weight;
+
+      //update with weight
+      precon->o_invDegreeAP.copyFrom(invDegree);
+    }
+  }
+  free(invDegree);
+}
+
 void ellipticSetupSmootherExactBlockJacobiIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 

@@ -228,6 +228,21 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                "ellipticPatchGather2D",
                kernelInfo);
 
+  solver->precon->approxFacePatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxFacePatchSolver2D",
+               kernelInfo);
+
+  solver->precon->exactFacePatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactFacePatchSolver2D",
+               kernelInfo);
+
+  solver->precon->facePatchGatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
+               "ellipticFacePatchGather2D",
+               kernelInfo);
+
   solver->precon->approxBlockJacobiSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticApproxBlockJacobiSolver2D",
