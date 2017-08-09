@@ -77,6 +77,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
         ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFACEPATCH")){
+        ellipticSetupSmootherExactFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFACEPATCH")){
+        ellipticSetupSmootherApproxFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "EXACTBLOCKJACOBI")){
         ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXBLOCKJACOBI")){
@@ -147,6 +151,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
         ellipticSetupSmootherExactFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
         ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFACEPATCH")){
+        ellipticSetupSmootherExactFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFACEPATCH")){
+        ellipticSetupSmootherApproxFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       } else if(strstr(options, "EXACTBLOCKJACOBI")){
         ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXBLOCKJACOBI")){

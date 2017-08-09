@@ -35,9 +35,12 @@ typedef struct {
   occa::kernel overlappingPatchKernel;
   occa::kernel exactPatchSolverKernel;
   occa::kernel approxPatchSolverKernel;
+  occa::kernel exactFacePatchSolverKernel;
+  occa::kernel approxFacePatchSolverKernel;
   occa::kernel exactBlockJacobiSolverKernel;
   occa::kernel approxBlockJacobiSolverKernel;
   occa::kernel patchGatherKernel;
+  occa::kernel facePatchGatherKernel;
 
   ogs_t *ogsP, *ogsDg;
   hgs_t *hgsP, *hgsDg;
@@ -117,6 +120,16 @@ void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *bas
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
+
+void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType,
+                                   dfloat **patchesInvA, const char *options);
+
+void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
 void ellipticBuildExactBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    dfloat **patchesInvA, const char *options);
@@ -143,6 +156,8 @@ void smoothChebyshevTri2D    (void **args, occa::memory &o_r, occa::memory &o_x,
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
 void exactFullPatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
 void approxFullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void exactFacePatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void approxFacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
 void exactBlockJacobiIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
 void approxBlockJacobiIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
 void dampedJacobi        (void **args, occa::memory &o_r, occa::memory &o_Sr);

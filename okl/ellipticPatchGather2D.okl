@@ -38,3 +38,34 @@ kernel void ellipticPatchGather2D(const int Nelements,
   }
 }
 
+kernel void ellipticFacePatchGather2D(const int Nelements,
+                                  const iint   * restrict EToFPairs,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict Gq){
+
+  // assume one patch per outer iteration (tune later)
+  for(iint eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+
+    for(iint e=eo;e<eo+p_NblockP;++e;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+
+        if(e<Nelements){
+
+          dfloat Gqn = 0;
+
+          for(iint f=0;f<p_Nfaces;++f){
+            const iint fP = EToFPairs[p_Nfaces*e+f];
+
+            if (fP >=0) {
+              Gqn += q[fP*p_Np + n];
+            }
+          }
+
+          Gq[e*p_Np+n] = Gqn;
+        }
+      }
+    }
+  }
+}
+
+

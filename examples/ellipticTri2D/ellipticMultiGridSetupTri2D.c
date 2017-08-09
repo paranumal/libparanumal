@@ -247,6 +247,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
         ellipticSetupSmootherExactFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXFULLPATCH")){
         ellipticSetupSmootherApproxFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "EXACTFACEPATCH")){
+        ellipticSetupSmootherExactFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "APPROXFACEPATCH")){
+        ellipticSetupSmootherApproxFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       } else if(strstr(options, "EXACTBLOCKJACOBI")){
         ellipticSetupSmootherExactBlockJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       } else if(strstr(options, "APPROXBLOCKJACOBI")){

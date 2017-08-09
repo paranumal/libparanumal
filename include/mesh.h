@@ -61,6 +61,12 @@ typedef struct {
   iint NinternalElements; // number of elements that can update without halo exchange
   iint NnotInternalElements; // number of elements that cannot update without halo exchange
 
+  //list of fair pairs
+  iint NfacePairs;
+  iint *EToFPairs;
+  iint *FPairsToE;
+  int *FPairsToF;
+
   // NBN: streams / command queues
   occa::stream stream0, stream1;
 
@@ -262,6 +268,8 @@ typedef struct {
   occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
+
+  occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
