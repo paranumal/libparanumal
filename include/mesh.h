@@ -10,19 +10,19 @@
 #define iint int
 #define dfloat double
 #define MPI_IINT MPI_INT
-#define MPI_DFLOAT MPI_FLOAT
+#define MPI_DFLOAT MPI_DOUBLE
 #define iintFormat "%d"
-#define dfloatFormat "%f"
-#define dfloatString "float"
+#define dfloatFormat "%lf"
+#define dfloatString "double"
 #define iintString "int"
 #else
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
-#define MPI_DFLOAT MPI_DOUBLE
+#define MPI_DFLOAT MPI_FLOAT
 #define iintFormat "%d"
-#define dfloatFormat "%lf"
-#define dfloatString "double"
+#define dfloatFormat "%f"
+#define dfloatString "float"
 #define iintString "int"
 #endif
 

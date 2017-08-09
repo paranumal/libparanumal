@@ -40,7 +40,7 @@ dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 					dfloat rn = mesh->gjr[i];
 					dfloat sn = mesh->gjr[j];
 					dfloat tn = mesh->gjr[k];
-
+				//	printf("r,s,t=%g,%g,%g\n", rn,sn,tn);
 					/* Jacobian matrix */
 					dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
 					dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
@@ -189,6 +189,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->Nblock = Nblock;
 
   // BP3 specific stuff starts here
+  
   dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
 
 #if 0
@@ -204,12 +205,12 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 #endif
 
   // TW: temporarily resize gjD
-  mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat)); 
+  mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat));
   solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
   solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
   solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
   solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
-  // BP3 specific stuff ends here 
+  // BP3 specific stuff ends here
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
@@ -243,38 +244,37 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
       printf("Building kernels for rank %d\n", rank);
       fflush(stdout);
       mesh->haloExtractKernel =
-	saferBuildKernelFromSource(mesh->device, 
+	saferBuildKernelFromSource(mesh->device,
 				   DHOLMES "/okl/meshHaloExtract3D.okl",
 				   "meshHaloExtract3D",
 				   kernelInfo);
-      
+
       mesh->gatherKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
 				   "gather",
 				   kernelInfo);
-      
+
       mesh->scatterKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
 				   "scatter",
 				   kernelInfo);
-      
+
       mesh->gatherScatterKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
 				   "gatherScatter",
 				   kernelInfo);
 
-      
+
       mesh->getKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
 				   "get",
 				   kernelInfo);
-      
+
       mesh->putKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
 				   "put",
 				   kernelInfo);
-      
->>>>>>> c9b4df69e1e891508c168fc780105d22eaaf26f7
+
 #if 0
 			// WARNING
 			if(mesh->Nq<12) {

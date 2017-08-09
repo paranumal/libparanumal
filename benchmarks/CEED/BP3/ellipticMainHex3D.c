@@ -229,8 +229,11 @@ int main(int argc, char **argv){
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
-      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
-      dfloat error = fabs(exact-mesh->q[id]);
+//printf("xd = %lf yn = %lf zn = %lf \n",xn,yn,zn);      
+dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+    dfloat error = fabs(exact-mesh->q[id]);
+
+//printf("element %d id = %d exact %lf comp. %lf error %lf \n",e, id, exact, mesh->q[id], exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
 
@@ -238,7 +241,7 @@ int main(int argc, char **argv){
     }
   }
 
-  dfloat globalMaxError = 0;
+  dfloat globalMaxError = 0.0f;
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   if(rank==0)
     printf("globalMaxError = %17.15g\n", globalMaxError);
