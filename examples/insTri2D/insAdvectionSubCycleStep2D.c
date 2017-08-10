@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
-//#define SUBSTEP_METHOD 1 // OFIS method of Maday
-#define SUBSTEP_METHOD 2  // Lagrangian Subscyling of Maday, Patera, Ronquist 
+#define SUBSTEP_METHOD 1 // OFIS method of Maday
+//#define SUBSTEP_METHOD 2  // Lagrangian Subscyling of Maday, Patera, Ronquist 
 
 // complete a time step using LSERK4
 void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep, 
@@ -10,6 +10,8 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 				char   * options){
 
 #if SUBSTEP_METHOD==1
+
+	 printf("SUBSTEP METHOD :1 \n");
 
  mesh2D *mesh = ins->mesh;
  dfloat     t = tstep*ins->dt;
@@ -54,12 +56,6 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 				ins->o_tHaloBuffer);
   }
 
-
-
-
-
-
-  printf("SUBSTEP METHOD :1 \n");
    // Solve Stokes Problem if Nonlinear solver is deactivated
   dfloat activate_advection = 0.f; 
   if(ins->a0){activate_advection  = 1.f;} 
@@ -174,7 +170,6 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 							      ins->o_rhsV);
 				}
 
-
 			  // Update Kernel
 				ins->subCycleRKUpdateKernel(mesh->Nelements,
 							    activate_advection,
@@ -230,10 +225,10 @@ const iint solverid = 0; // Pressure Solve
 												     ins->o_Py);
 
 
-iint index1 = ins->index;
+//iint index1 = ins->index;
 // Use NU to store Ue
-ins->o_Ue.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+ins->o_Ue.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);
+ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);
 
 #endif
 
@@ -437,7 +432,7 @@ ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0)
 				const dfloat t1 = tstep*ins->dt, t2 = (tstep-1)*ins->dt, t3 = (tstep-2)*ins->dt;
 				// construct interpolating lagrange polynomial
 				dfloat c0 = 0, c1 = 0, c2 = 0;
-				#if 1
+				#if 0
 				c0 = 1;
 				c1 = 0;
 				c2 = 0;
@@ -447,7 +442,7 @@ ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0)
 				c1 = (tstage-t1)/(t2-t1);
 				c2 = 0;
 				#endif
-				#if 0
+				#if 1
 
 				c0 = (tstage-t2)*(tstage-t3)/((t1-t2)*(t1-t3)); 
 				c1 = (tstage-t1)*(tstage-t3)/((t2-t1)*(t2-t3));
