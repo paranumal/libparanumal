@@ -108,7 +108,7 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
  free(dW);
  free(dP);
 
-
+#if 0
 iint tstep = time/ins->dt+1; 
  int ranka;
  MPI_Comm_rank(MPI_COMM_WORLD, &ranka);
@@ -117,12 +117,13 @@ if(strstr(options, "VTU")){
     char fname[BUFSIZ];
     // sprintf(fname, "/u0/outputs/ins3D/");
     // sprintf(fname, "%sfoo_%04d", fname,rank);
-    sprintf(fname, "/u0/outputs/ins3D/Error_%04d_%04d.vtu",ranka,tstep/ins->errorStep);
+    //sprintf(fname, "/u0/outputs/ins3D/Error_%04d_%04d.vtu",ranka,tstep/ins->errorStep);
+    sprintf(fname, "Error_%04d_%04d.vtu",ranka,tstep/ins->errorStep);
     
     insPlotVTU3D(ins, fname);
   } 
 
-
+#endif
 
 // compute maximum over all processes
 dfloat gliu,gliv,gliw,glip;
@@ -146,7 +147,8 @@ if(rank==0){
 
   // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
   char fname[BUFSIZ];
-  sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
+  //sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
+  sprintf(fname, "insTetErr.txt");
   FILE *fp;
   fp = fopen(fname, "a");
   fprintf(fp,"%d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
