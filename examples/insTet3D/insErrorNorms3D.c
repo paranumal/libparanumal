@@ -10,12 +10,17 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
   ins->o_W.copyTo(ins->W);  
   ins->o_P.copyTo(ins->P);
 
-  dfloat maxU = 0.f;
-  dfloat maxV = 0.f;
-  dfloat maxW = 0.f;
-  dfloat maxP = 0.f; 
-  
+ 
+  dfloat *dU = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat *dV = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat *dW = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat *dP = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+
+  dfloat l2u=0, l2v = 0, l2w =0, l2p = 0;
+  dfloat liu=0, liv = 0, liw =0, lip = 0;
+
   for(iint e=0;e<mesh->Nelements;++e){
+    
     for(int n=0;n<mesh->Np;++n){
       iint id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
@@ -35,7 +40,7 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
                         sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
                         sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); 
       #else 
-       dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
+      dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       dfloat uex = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
       dfloat vex = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
@@ -50,22 +55,58 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
       dfloat w = ins->W[id];
       dfloat p = ins->P[id];
       // 
-      maxU = mymax(maxU, fabs(u-uex));
-      maxV = mymax(maxV, fabs(v-vex));
-      maxW = mymax(maxW, fabs(w-wex));
-      maxP = mymax(maxP, fabs(p-pex));
-
+      liu = mymax(liu, fabs(u-uex));
+      liv = mymax(liv, fabs(v-vex));
+      liw = mymax(liw, fabs(w-wex));
+      lip = mymax(lip, fabs(p-pex));
       //
-      ins->U[id] = fabs(u-uex);
-      ins->V[id] = fabs(v-vex);
-      ins->W[id] = fabs(w-wex);
-      ins->P[id] = fabs(p-pex);
-      // 
+      dU[n] = fabs(u-uex);
+      dV[n] = fabs(v-vex);
+      dW[n] = fabs(w-wex);
+      dP[n] = fabs(p-pex);
+      //
     }
+
+    dfloat l2ue=0, l2ve = 0, l2we =0, l2pe = 0;
+    
+    for(int i=0;i<mesh->Np;++i){
+    dfloat uei = dU[i];
+    dfloat vei = dV[i];
+    dfloat wei = dW[i];
+    dfloat pei = dP[i];
+      for(int j=0;j<mesh->Np;++j){
+      dfloat uej = dU[j];
+      dfloat vej = dV[j];
+      dfloat wej = dW[j];
+      dfloat pej = dP[j];
+      dfloat mm = mesh->MM[j+i*mesh->Np];
+
+      l2ue += mm*uei*uej;
+      l2ve += mm*vei*vej;
+      l2we += mm*wei*wej;
+      l2pe += mm*pei*pej;
+      }
+    // 
+    }
+
+    dfloat j = mesh->vgeo[e*mesh->Nvgeo+JID];
+    l2u += j*l2ue;
+    l2v += j*l2ve;
+    l2w += j*l2we;
+    l2p += j*l2pe;
+    //
   }
+ 
+ // Get Square Root
+  l2u  = sqrt(l2u);
+  l2v  = sqrt(l2v);
+  l2w  = sqrt(l2w);
+  l2p  = sqrt(l2p);
 
-
-
+ free(dU);
+ free(dV);
+ free(dW);
+ free(dP);
 
 
 iint tstep = time/ins->dt+1; 
@@ -84,29 +125,36 @@ if(strstr(options, "VTU")){
 
 
 // compute maximum over all processes
-dfloat gMaxU,gMaxV,gMaxW,gMaxP;
-MPI_Allreduce(&maxU, &gMaxU, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-MPI_Allreduce(&maxV, &gMaxV, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-MPI_Allreduce(&maxW, &gMaxW, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);    
-MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+dfloat gliu,gliv,gliw,glip;
+MPI_Allreduce(&liu, &gliu, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&liv, &gliv, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&liw, &gliw, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);    
+MPI_Allreduce(&lip, &glip, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+//
+dfloat gl2u,gl2v,gl2w,gl2p;
+MPI_Allreduce(&l2u, &gl2u, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&l2v, &gl2v, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&l2w, &gl2w, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&l2p, &gl2p, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+     //
 
 int rank;
 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-if(rank==0)
+if(rank==0){
   printf("Step: %d Time: %g Uerr: %g Verr: %g Werr: %g Perr: %g\n", 
-         (int)(time/ins->dt), time, gMaxU, gMaxV, gMaxW, gMaxP);
+         (int)(time/ins->dt), time, gliu, gliv, gliw, glip);
 
   // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
   char fname[BUFSIZ];
   sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
   FILE *fp;
   fp = fopen(fname, "a");
-  fprintf(fp,"Step: %d Time: %g Uerr: %g Verr: %g Werr: %g Perr: %g\n", 
-         (int)(time/ins->dt), time, gMaxU, gMaxV, gMaxW, gMaxP);
+  fprintf(fp,"%d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+         (int)(time/ins->dt), mesh->N, ins->dt, time, gliu, gliv, gliw, glip, gl2u, gl2v, gl2w, gl2p);
  
   fclose(fp);
   
-
+ }
 
 
 
