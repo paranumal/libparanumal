@@ -193,6 +193,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
       fp = fopen(fname, "a");
       fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
                   mesh->N, ins->dt, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p, gh1u, gh1v, gh1p);
+      fclose(fp);
     }
 
 

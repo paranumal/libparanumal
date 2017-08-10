@@ -56,6 +56,7 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
       	  const dfloat NUm0 = NU[id0];
           const dfloat NUm1 = NU[id1];
           const dfloat NUm2 = NU[id2];
+
       	  const dfloat NVm0 = NV[id0];
           const dfloat NVm1 = NV[id1];
           const dfloat NVm2 = NV[id2];
@@ -63,6 +64,7 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
           const dfloat Pxm0 = Px[id0];
           const dfloat Pxm1 = Px[id1];
           const dfloat Pxm2 = Px[id2];
+
           const dfloat Pym0 = Py[id0];
           const dfloat Pym1 = Py[id1];
           const dfloat Pym2 = Py[id2];
@@ -83,9 +85,8 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
           s_rhsU[es][n]  = J*p_inu*( + (b0*NUm0 + b1*NUm1 + b2*NUm2 )*p_idt 
                                      - (c0*Pxm0+c1*Pxm1+c2*Pxm2)); 
                                      
-          s_rhsV[es][n]  = J*p_inu*( + (b0*NVm0 +b1*NVm1 +b2*NVm2 )*p_idt 
-                                     - (c0*Pym0+c1*Pym1+c2*Pym2)); 
-                                     
+          s_rhsV[es][n]  = J*p_inu*( + (b0*NVm0+b1*NVm1+b2*NVm2 )*p_idt 
+                                     - (c0*Pym0+c1*Pym1+c2*Pym2));                                                
           }
 
       	}
