@@ -81,15 +81,14 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
     gjNq*gjNq*gjNq*Nq*2 + 
     gjNq*gjNq*gjNq*gjNq*6 + 
     gjNq*gjNq*gjNq*15 + 
-    gjNq*gjNq*gjNq*gjNq*2 + 
+    gjNq*gjNq*gjNq*gjNq*6 + 
     gjNq*gjNq*gjNq*2 + 
-    gjNq*gjNq*gjNq*gjNq*4 + 
     gjNq*gjNq*gjNq*2 + 
     gjNq*gjNq*gjNq*Nq*2 + 
     gjNq*gjNq*Nq*Nq*2 + 
     gjNq*Nq*Nq*Nq*2 ;
 #endif
-  double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
+  double gflops = (globalElements*flops*iterations)/(1024*1024*1024.*globalElapsed);
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
