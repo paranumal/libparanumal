@@ -16,7 +16,6 @@ Physical Surface("Inflow", 2) = {15, 6, 23, 27, 28};
 Physical Surface("Outflow", 3) = {19};
 Physical Volume("Domain", 9) = {1};
 
-//+Mesh.RemeshAlgorithm = 1; // automatic
-//+Mesh.RemeshParametrization = 7; // conformal finite element
-//+Mesh.Algorithm = 6; // Frontal
+
+
 
