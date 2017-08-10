@@ -3558,7 +3558,6 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 					emap = elementList[e];
 					iint t = i + j*p_gjNq + k*p_gjNq2;
 					s_q[k][j][i] = Ixq[emap*p_gjNp+t];
-					
 				}//for i
 			}//for j
 		}//for k
@@ -3587,18 +3586,14 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 					occaUnroll(p_gjNq)
 					for (int n = 0; n<p_gjNq; ++n) {
 						dr += s_gjD[i][n] * s_q[k][j][n];
-						ds += s_gjD[j][n] *s_q[k][n][i];
-						dt += s_gjD[k][n] *s_q[n][j][i];
+						ds += s_gjD[j][n]*s_q[k][n][i];
+						dt += s_gjD[k][n]*s_q[n][j][i];
 					}
 					r_qr = r_G00*dr + r_G01*ds + r_G02*dt;
 					r_qs = r_G01*dr + r_G11*ds + r_G12*dt;
 					r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
 
 					r_tmp = r_GwJ*s_q[k][j][i]*lambda;
-					
-					//iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-			 //		Ixq[base] = s_q[i][j][k];
-		//		s_q2[k][j][i] = ds;
 				}
 			}
 		}
@@ -3613,8 +3608,6 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 					s_q[k][j][i] = r_qr;
 					s_q2[k][j][i] = r_qs;
 					s_q3[k][j][i] = r_qt;
-					
-				
 				}
 			}
 		}
@@ -3627,12 +3620,61 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 					occaUnroll(p_gjNq)
 					for(iint m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][i]*s_q[k][j][m];
-						tmp += s_gjD[m][j]*s_q2[k][m][i];
-						tmp += s_gjD[m][k]*s_q3[m][j][i];
+						tmp += s_gjD[m][j]*s_q[k][m][i];
+						tmp += s_gjD[m][k]*s_q[m][j][i];
 					}
 					r_tmp +=tmp;
 						iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-			 		Ixq[base] = r_tmp;
+					Ixq[base] = r_tmp;
+				}
+			}
+		}
+		barrier(localMemFence);
+
+		//s direction
+
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					s_q[k][j][i] = r_qs;
+				}
+			}
+		}
+		barrier(localMemFence);
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					dfloat tmp = 0.f;
+					occaUnroll(p_gjNq)
+					for(iint m=0; m<p_gjNq; ++m) {
+						tmp += s_gjD[m][j]*s_q[k][m][i];
+					}
+					r_tmp +=tmp;
+				}
+			}
+		}
+		barrier(localMemFence);
+		//t direction
+
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					s_q[k][j][i] = r_qt;
+				}
+			}
+		}
+		barrier(localMemFence);
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					dfloat tmp = 0.f;
+					occaUnroll(p_gjNq)
+					for(iint m=0; m<p_gjNq; ++m) {
+						tmp += s_gjD[m][k]*s_q[m][j][i];
+					}
+					r_tmp +=tmp;
+					iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+			//		Ixq[base] = r_tmp;
 				}
 			}
 		}
@@ -3739,308 +3781,6 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 		}
 	}//e
 } //kernel e10
-
-//kernel e11 --> NO REGISTERS2SHARED and no REGISTERS2GLOBAL transfers
-
-
-// e10 is the same as e9, just less barriers
-kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
-                                       const iint * restrict elementList,
-                                       const dfloat * restrict gjGeo,
-                                       const dfloat * restrict gllD,
-                                       const dfloat * restrict gjI,
-                                       const dfloat lambda,
-                                       dfloat * restrict q,
-                                       dfloat * restrict Ixq,
-                                       dfloat * restrict Aq
-                                      ){
-
-
-	// load q into shared first
-	//kernel 1 - interpolate to gj hex
-	for(int e=0; e<Nelements; ++e; outer0) {
-	//	exclusive iint emap;
-	//	exclusive dfloat r_res;
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_gsI[p_gjNq][p_Nq];
-
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a; inner0) {
-			//		r_res =0.0f;
-					if (c == 0 && a<p_Nq && b<p_gjNq) {
-						s_gsI[b][a] = gjI[b*p_Nq+a];
-					}
-					iint emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
-					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
-						s_q[tc][tb][ta] = q[emap*p_Np+t];
-					}//if
-				}//for a
-			}// for b
-		}//for c
-		//synch threads
-		barrier(localMemFence);
-		//============== interpolate in 3 dir ========================
-		// r --> s --> t
-		// rrrrrrr
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-			//		dfloat Iq = 0.0f;
-			s_q2[c][b][i] = 0.0f;
-					if (c<p_Nq && b<p_Nq){
-						occaUnroll(p_Nq)
-						for(int n=0; n<p_Nq; ++n) {
-							s_q2[c][b][i] += s_gsI[i][n]*s_q[c][b][n];
-						}
-					}
-	
-				}
-			}
-		}
-
-		barrier(localMemFence);
-
-		
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-				//	dfloat Iq = 0.0f;
-				s_q[c][j][i] = 0.0f;
-					if(c<p_Nq) {
-						occaUnroll(p_Nq)
-						for(int n=0; n<p_Nq; ++n) {
-							s_q[c][j][i] += s_gsI[j][n]*s_q2[c][n][i];
-						}
-					}
-	
-				}
-			}
-		}
-		barrier(localMemFence);
-
-		
-
-		// t direction
-
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-				//	dfloat Iq = 0.0f;
-				s_q2[k][j][i] =0.0f;
-					occaUnroll(p_Nq)
-					for(int n=0; n<p_Nq; ++n) {
-						s_q2[k][j][i] += s_gsI[k][n]*s_q[n][j][i];
-					}
-					//	r_res = Iq;
-					//		s_q[k][j][i] = Iq;
-					iint emap = elementList[e];
-					const iint id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
-					Ixq[id] = s_q2[k][j][i];
-					//s_q[k][j][i];
-				}
-			}
-		}
-	}// for e
-
-	// at this point q is interpolated in all 3 dim.
-	// ------------KERNEL 2 -------------->
-
-	// kernel 2 differentiate on gj hex
-	for(int e=0; e<Nelements; ++e; outer0) {
-		shared dfloat s_gjD[p_gjNq][p_gjNq];
-		//	shared dfloat s_gllD[p_gjNq][p_Nq];
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_q1[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_q3[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_i4[p_gjNq][p_gjNq][p_gjNq];
-	//	exclusive dfloat r_qr, r_qs, r_qt, r_tmp;
-//		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-//		exclusive iint emap;
-
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					// D to shared, q to shared,
-					if (k==0 ) {
-						s_gjD[j][i] = gllD[j*p_gjNq+i];
-					}
-					iint emap = elementList[e];
-					iint t = i + j*p_gjNq + k*p_gjNq2;
-					s_q[k][j][i] = Ixq[emap*p_gjNp+t];
-					
-				}//for i
-			}//for j
-		}//for k
-		barrier(localMemFence);
-
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					//load geofactors for my (k,j,i)
-					dfloat qr, qs, qt, tmp;
-		      dfloat G00, G01, G02, G11, G12, G22, GwJ;
-		      iint emap;
-
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					//geofactors for k j i thread
-					GwJ = gjGeo[base+p_GWJID*p_gjNp];
-					G00 = gjGeo[base+p_G00ID*p_gjNp];
-					G01 = gjGeo[base+p_G01ID*p_gjNp];
-					G02 = gjGeo[base+p_G02ID*p_gjNp];
-
-					G11 = gjGeo[base+p_G11ID*p_gjNp];
-					G12 = gjGeo[base+p_G12ID*p_gjNp];
-					G22 = gjGeo[base+p_G22ID*p_gjNp];
-					// now, put together dq/dr, qq/ds, dq/dt and dq/dI
-
-					dfloat dr = 0.0f;
-					dfloat ds = 0.0f;
-					dfloat dt = 0.0f;
-					occaUnroll(p_gjNq)
-					for (int n = 0; n<p_gjNq; ++n) {
-						dr += s_gjD[i][n] * s_q[k][j][n];
-						ds += s_gjD[j][n] *s_q[k][n][i];
-						dt += s_gjD[k][n] *s_q[n][j][i];
-					}
-					qr = G00*dr + G01*ds + G02*dt;
-					qs = G01*dr + G11*ds + G12*dt;
-					qt = G02*dr + G12*ds + G22*dt;
-
-					tmp = GwJ*s_q[k][j][i]*lambda;
-					
-				  s_q1[k][j][i] = qr;
-					s_q2[k][j][i] = qs;
-					s_q3[k][j][i] = qt;
-					s_i4[k][j][i] = tmp;
-					
-			 
-					
-				}
-			}
-		}
-		barrier(localMemFence);
-		// Multiply by D^T, size p_Nq x p_gjNq
-		// D size p_gjNq x p_Nq
-
-	
-
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					dfloat tmp = 0.f;
-					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
-						tmp += s_gjD[m][i]*s_q1[k][j][m];
-						tmp += s_gjD[m][j]*s_q2[k][m][i];
-						tmp += s_gjD[m][k]*s_q3[m][j][i];
-					}
-					s_i4[k][j][i]+=tmp;
-					iint emap = elementList[e];
-						iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-			 		Ixq[base] = s_i4[k][j][i];
-				}
-			}
-		}
-	}//for e
-
-	//-------------------- kernel 3 interpolate back to gll hex ------------------->
-
-	for(int e=0; e<Nelements; ++e; outer0) {
-		// read q
-
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
-		shared dfloat s_I[p_gjNq][p_Nq];
-	//	exclusive dfloat r_res = 0.0f, r_Aq=0.0f;
-	//	iint emap;
-		for(int k=0; k<p_gjNq; ++k; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-
-					iint base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					iint emap =elementList[e];
-					s_q[k][j][i] = Ixq[emap*p_gjNp+base];
-					if(i<p_Nq &&  k == 0 && j<p_gjNq) {
-						s_I[j][i] = gjI[j*p_Nq+i];
-					}
-				}
-			}
-		}
-		barrier(localMemFence);
-
-
-		// t first
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					dfloat Iq = 0.0f;
-					if(c<p_Nq){
-						occaUnroll(p_gjNq)
-						for(int m=0; m<p_gjNq; ++m) {
-							// k--> c
-							Iq += s_I[m][c]*s_q[m][j][i];
-						}
-					}
-					//r_res = Iq;
-						s_q2[c][j][i] = Iq;
-					
-				}
-			}
-		}
-
-	
-
-
-
-
-		// r direction
-		barrier(localMemFence);
-
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					if(c<p_Nq && b<p_Nq){
-						dfloat Iq = 0.0f;
-						occaUnroll(p_gjNq)
-						for(int m=0; m<p_gjNq; ++m) {
-							Iq += s_I[m][b]*s_q2[c][m][i];
-						}
-					
-						s_q[c][b][i] = Iq;
-					}
-				}
-			}
-		}
-		barrier(localMemFence);
-
-	
-
-
-		for(int c=0; c<p_gjNq; ++c; inner2) {
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a; inner0) {
-					if (c<p_Nq && b<p_Nq && a< p_Nq){
-						dfloat Iq = 0.0f;
-						occaUnroll(p_gjNq)
-						for(int m=0; m<p_gjNq; ++m) {
-							Iq += s_I[m][a]*s_q[c][b][m];
-						}
-						iint emap = elementList[e];
-						iint base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
-						Aq[base] = Iq;
-					}
-				}
-			}
-		}
-	}//e
-} //kernel e11
 
 
 // e10 is an optimized version of e9 - WITH as little memFences as possible.
