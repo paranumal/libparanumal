@@ -259,6 +259,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->gjNq;++n){
     fscanf(fp, dfloatFormat dfloatFormat, mesh->gjr+n, mesh->gjw+n);
     fgets(buf,BUFSIZ,fp); // rest of line
+    printf("gj[%d]=%g\n", n, mesh->gjr[n]);
   }
   fgets(buf, BUFSIZ, fp);
   // interpolation matrix
