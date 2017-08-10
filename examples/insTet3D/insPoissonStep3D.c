@@ -116,7 +116,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  #if 0// if time dependent BC or Pressure Solve not Increment
+  #if 1// if time dependent BC or Pressure Solve not Increment
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,

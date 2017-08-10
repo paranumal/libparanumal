@@ -1,0 +1,8 @@
+
+cd ../examples/insTet3D;
+make clean; make -j; 
+mpiexec -n 2 ./ins3D ../../meshes/insKovasznay3D_2.msh  1  insKovasznay3D.h
+mpiexec -n 2 ./ins3D ../../meshes/insKovasznay3D_2.msh  2  insKovasznay3D.h
+mpiexec -n 2 ./ins3D ../../meshes/insKovasznay3D_2.msh  3  insKovasznay3D.h
+mpiexec -n 2 ./ins3D ../../meshes/insKovasznay3D_2.msh  4  insKovasznay3D.h
+mpiexec -n 2 ./ins3D ../../meshes/insKovasznay3D_2.msh  5  insKovasznay3D.h

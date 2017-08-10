@@ -49,7 +49,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 
   if(strstr(options,"SUBCYCLING")){
 
-    ins->Nsubsteps = 4; //was 3
+    ins->Nsubsteps = 8; //was 3
 
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -73,7 +73,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 3.0;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0f* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -153,7 +153,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
+  //dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -167,7 +168,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   if(strstr(options,"SUBCYCLING")){
-    ins->NtimeSteps = ins->finalTime/(ins->Nsubsteps*ins->dt);
+    ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
     ins->sdt        = ins->dt/ins->Nsubsteps;
 
@@ -191,7 +192,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   #endif
   
   // errorStep
-  ins->errorStep =25;
+  ins->errorStep =1000000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
