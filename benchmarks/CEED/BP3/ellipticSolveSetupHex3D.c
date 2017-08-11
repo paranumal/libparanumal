@@ -291,7 +291,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				                           "ellipticPartialAxHex3D_e12",
+				                           "ellipticAxHex3D_e0b",
 				                           kernelInfo);
 
 
