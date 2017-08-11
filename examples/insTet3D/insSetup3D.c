@@ -76,7 +76,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.5;
+  ins->finalTime = 0.1;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
@@ -157,7 +157,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 0.1; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.05; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 

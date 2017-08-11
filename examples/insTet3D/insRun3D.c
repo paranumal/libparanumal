@@ -99,7 +99,7 @@ void insRun3D(ins_t *ins, char *options){
       }
     }
     
-#if 0 // For time accuracy test fed history with exact solution
+#if 1 // For time accuracy test fed history with exact solution
     if(tstep<1){
       iint offset = (mesh->Nelements+mesh->totalHaloPairs);
      // Overwrite Velocity
