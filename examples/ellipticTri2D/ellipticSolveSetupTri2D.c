@@ -253,10 +253,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
 
+  long long int pre = mesh->device.memoryAllocated();
+
   occaTimerTic(mesh->device,"PreconditionerSetup");
   ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
   occaTimerToc(mesh->device,"PreconditionerSetup");
 
+  long long int usedBytes = mesh->device.memoryAllocated()-pre;
+
+  solver->precon->preconBytes = usedBytes;
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
   dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));

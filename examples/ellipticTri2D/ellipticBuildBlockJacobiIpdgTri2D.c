@@ -9,28 +9,12 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 void BlockJacobiPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {
 
-  iint vbase;
-  dfloat drdx;
-  dfloat drdy;
-  dfloat dsdx;
-  dfloat dsdy;
-  dfloat J;
-
-  if (eM==-1) { //reference patch
-    //equilateral triangle V = {(-1,0),(1,0),(0,sqrt(3))}
-    drdx = 1.0;
-    drdy = 1./sqrt(3.);
-    dsdx = 0.;
-    dsdy = 2./sqrt(3.);
-    J = sqrt(3.)/2.;
-  } else {
-    vbase = eM*mesh->Nvgeo;
-    drdx = mesh->vgeo[vbase+RXID];
-    drdy = mesh->vgeo[vbase+RYID];
-    dsdx = mesh->vgeo[vbase+SXID];
-    dsdy = mesh->vgeo[vbase+SYID];
-    J = mesh->vgeo[vbase+JID];
-  }
+  iint vbase = eM*mesh->Nvgeo;
+  dfloat drdx = mesh->vgeo[vbase+RXID];
+  dfloat drdy = mesh->vgeo[vbase+RYID];
+  dfloat dsdx = mesh->vgeo[vbase+SXID];
+  dfloat dsdy = mesh->vgeo[vbase+SYID];
+  dfloat J = mesh->vgeo[vbase+JID];
 
   /* start with stiffness matrix  */
   for(iint n=0;n<mesh->Np;++n){
@@ -49,36 +33,14 @@ void BlockJacobiPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, 
   }
 
   for (iint fM=0;fM<mesh->Nfaces;fM++) {
-    iint sid;
-    dfloat nx;
-    dfloat ny;
-    dfloat sJ;
-    dfloat hinv;
-    int bc=0;
-
     // load surface geofactors for this face
-    if (eM==-1) { //reference patch
-      if (fM==0) {
-        nx = 0.;
-        ny = -1.;
-      } else if (fM==1) {
-        nx = sqrt(3.)/2.;
-        ny = 1./2.;
-      } else if (fM==2) {
-        nx = -sqrt(3.)/2.;
-        ny = 1./2.;
-      }
-      sJ = 1.0;
-      hinv = 2./sqrt(3.);
-    } else {
-      sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
-      nx = mesh->sgeo[sid+NXID];
-      ny = mesh->sgeo[sid+NYID];
-      sJ = mesh->sgeo[sid+SJID];
-      hinv = mesh->sgeo[sid+IHID];
+    iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dfloat nx = mesh->sgeo[sid+NXID];
+    dfloat ny = mesh->sgeo[sid+NYID];
+    dfloat sJ = mesh->sgeo[sid+SJID];
+    dfloat hinv = mesh->sgeo[sid+IHID];
 
-      bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-    }
+    int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
     dfloat penalty = tau*hinv;
 
@@ -242,9 +204,43 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
   (*Npatches) = 1;
   int refPatches = 0;
 
+
+  //build a mini mesh struct for the reference patch
+  mesh2D *refMesh = (mesh2D*) calloc(1,sizeof(mesh2D));
+  memcpy(refMesh,mesh,sizeof(mesh2D));
+
+  //vertices of reference patch
+  dfloat V1x = -1., V2x = 1., V3x =        0.;
+  dfloat V1y =  0., V2y = 0., V3y =  sqrt(3.);
+
+  refMesh->Nelements = 1;
+
+  refMesh->EX = (dfloat *) calloc(mesh->Nverts,sizeof(dfloat));
+  refMesh->EY = (dfloat *) calloc(mesh->Nverts,sizeof(dfloat));
+
+  refMesh->EX[0] = V1x;  refMesh->EY[0] = V1y;
+  refMesh->EX[1] = V2x;  refMesh->EY[1] = V2y;
+  refMesh->EX[2] = V3x;  refMesh->EY[2] = V3y;
+
+  refMesh->EToV = (iint*) calloc(mesh->Nverts, sizeof(iint));
+
+  refMesh->EToV[0] = 0;
+  refMesh->EToV[1] = 1;
+  refMesh->EToV[2] = 2;
+
+  refMesh->EToB = (iint*) calloc(mesh->Nfaces,sizeof(iint));
+  for (iint n=0;n<mesh->Nfaces;n++) refMesh->EToB[n] = 0;
+
+  meshConnect(refMesh);
+  meshLoadReferenceNodesTri2D(refMesh, mesh->N);
+  meshPhysicalNodesTri2D(refMesh);
+  meshGeometricFactorsTri2D(refMesh);
+  meshConnectFaceNodes2D(refMesh);
+  meshSurfaceGeometricFactorsTri2D(refMesh);
+
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  BlockJacobiPatchAx(mesh, basis, tau, lambda, BCType, MS, -1, refPatchInvA);
+  BlockJacobiPatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   matrixInverse(mesh->Np, refPatchInvA);
 
   // loop over all elements
@@ -261,7 +257,7 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
     iint fP1 = mesh->EToF[eM*mesh->Nfaces+1];
     iint fP2 = mesh->EToF[eM*mesh->Nfaces+2];
 
-    if(eP0>=0 && eP1>=0 && eP2>=0){ //check if this is an interiour patch
+    if(eP0>=0 && eP1>=0 && eP2>=0){ //check if this is an interior patch
 
       //hit the patch with the reference inverse
       for(iint n=0;n<mesh->Np;++n){
@@ -276,9 +272,9 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
       dfloat cond = matrixConditionNumber(mesh->Np,invRefAA);
       dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-      //printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+      printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
-      if (rate < 0.7) {
+      if (rate < 1) {
         (*patchesIndex)[eM] = 0;
         refPatches++;
         continue;
@@ -303,6 +299,7 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
   printf("saving %d full patches\n",*Npatches);
   printf("using %d reference patches\n", refPatches);
 
+  free(refMesh);
   free(patchA); free(invRefAA);
   free(MS);
 }

@@ -591,6 +591,8 @@ gauss = GaussFaceMesh2D(NGauss);
 % build weak Poisson operator matrices
 [A, M] = CurvedPoissonIPDG2D();
 
+full(A)
+
 %% hack since we know W&B face 1 nodes are first
 vmapP = reshape(vmapP, Nfp*Nfaces, K);
 idsP = vmapP(:,1);

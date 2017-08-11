@@ -9,6 +9,8 @@ typedef struct{
 
 typedef struct {
 
+  long long int preconBytes;
+
   dfloat *zP;
   occa::memory o_zP;
 
