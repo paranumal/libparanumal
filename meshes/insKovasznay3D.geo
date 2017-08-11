@@ -16,6 +16,4 @@ Physical Surface("Inflow", 2) = {15, 6, 23, 27, 28};
 Physical Surface("Outflow", 3) = {19};
 Physical Volume("Domain", 9) = {1};
 
-
-
-
+Coherence;
