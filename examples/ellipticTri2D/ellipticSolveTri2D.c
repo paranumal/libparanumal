@@ -253,7 +253,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   //sanity check
   if (rdotr0<=(tol*tol)) {
     printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
-    return 0; 
+    return 0;
   }
 
 
@@ -276,7 +276,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  
+
   dfloat alpha, beta, pAp = 0;
 
   if((rank==0)&&strstr(options,"VERBOSE"))
@@ -375,8 +375,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
   if(rank==0){
-    printf("%02d %02d %d %d %d %17.15lg %17.15E %17.15E \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS)] \n",
-     size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, globalDofs/(double)size, (globalDofs*Niter)/(globalElapsed*size));
+    printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+     size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
   }
 
   occaTimerToc(mesh->device,"PCG");
