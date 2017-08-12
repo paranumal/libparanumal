@@ -1432,6 +1432,16 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers
   }
 
+  //do the local copy without MPI (since it could be huge)
+  iint localcnt = sendCounts[rank]/sizeof(rapEntry_t);
+  iint sendlocaloffset = sendOffsets[rank]/sizeof(rapEntry_t);
+  iint recvlocaloffset = recvOffsets[rank]/sizeof(rapEntry_t);
+  for (iint i=0;i<localcnt;i++) {
+    recvRAPEntries[i+recvlocaloffset] = RAPEntries[i+sendlocaloffset];
+  }
+  sendCounts[rank] = 0;
+  recvCounts[rank] = 0;
+
   MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,
                 recvRAPEntries, recvCounts, recvOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
