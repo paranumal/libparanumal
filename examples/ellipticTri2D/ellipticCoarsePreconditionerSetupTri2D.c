@@ -16,14 +16,14 @@ int parallelCompareRowColumn(const void *a, const void *b){
 
 }
 
-void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
-                              hgs_t **hgs, iint *globalStarts, const char *options);
+void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              unsigned long long *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
+                                   iint *BCType, dfloat **V1, nonZero_t **A, unsigned long long *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options){
 
   int size, rank;
@@ -54,22 +54,18 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     Vs1[2*mesh->Np+n] = 0.5*(+1);
   }
 
-  //precon->o_Vr1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vr1);
-  //precon->o_Vs1 = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), Vs1);
-
   //build coarse grid A
   if (strstr(options,"IPDG")) {
     MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
     for(iint r=0;r<size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Nverts;
 
-    ellipticBuildCoarseIpdgTri2D(mesh,tau,lambda,BCType,A,nnzA,hgs,globalStarts,options);
-
-    qsort(*A, *nnzA, sizeof(nonZero_t), parallelCompareRowColumn);
+    ellipticBuildCoarseIpdgTri2D(mesh,tau,lambda,BCType,A,nnzA,globalStarts,options);
 
   } else if (strstr(options,"CONTINUOUS")) {
 
-    ellipticBuildCoarseContinuousTri2D(mesh,lambda,A,nnzA,hgs,globalStarts,options);
+    //disabled. Need to fix the unsigned long long nnz
+    //ellipticBuildCoarseContinuousTri2D(mesh,lambda,A,nnzA,hgs,globalStarts,options);
   }
 }
 
@@ -240,8 +236,8 @@ void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t *
   free(ArecvOffsets);
 }
 
-void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
-                      hgs_t **hgs, iint *globalStarts, const char *options){
+void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                                  unsigned long long *nnzA, iint *globalStarts, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -252,43 +248,29 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
 
   // create a global numbering system
   iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(iint));
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
-  if (strstr(options,"PROJECT")||strstr(options,"PRECONC0")) {
-    // Create a contiguous numbering system, starting from the element-vertex connectivity
-    memcpy(globalIds, mesh->EToV, Nnum*sizeof(iint));
-
-    // squeeze node numbering
-    meshParallelConsecutiveGlobalNumbering(Nnum, globalIds, globalOwners, globalStarts);
-
-    //use the ordering to define a gather+scatter for assembly
-    *hgs = meshParallelGatherSetup(mesh, Nnum, globalIds, globalOwners);
-
-  } else {
-    // every degree of freedom has its own global id
-    /* so find number of elements on each rank */
-    iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-    iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-      rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
-    //find offsets
-    for(iint r=0;r<size;++r){
-      rankStarts[r+1] = rankStarts[r]+rankNelements[r];
+  // every degree of freedom has its own global id
+  /* so find number of elements on each rank */
+  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
+  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+                rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  //find offsets
+  for(iint r=0;r<size;++r){
+    rankStarts[r+1] = rankStarts[r]+rankNelements[r];
+  }
+  //use the offsets to set a global id
+  for (iint e =0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Nverts;n++) {
+      globalIds[e*mesh->Nverts +n] = n + (e + rankStarts[rankM])*mesh->Nverts;
     }
-    //use the offsets to set a global id
-    for (iint e =0;e<mesh->Nelements;e++) {
-      for (int n=0;n<mesh->Nverts;n++) {
-        globalIds[e*mesh->Nverts +n] = n + (e + rankStarts[rankM])*mesh->Nverts;
-        globalOwners[e*mesh->Nverts +n] = rankM;
-      }
-    }
+  }
 
-    /* do a halo exchange of global node numbers */
-    if (mesh->totalHaloPairs) {
-      iint *idSendBuffer = (iint *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(iint));
-      meshHaloExchange(mesh, mesh->Nverts*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
-      free(idSendBuffer);
-    }
+  /* do a halo exchange of global node numbers */
+  if (mesh->totalHaloPairs) {
+    iint *idSendBuffer = (iint *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, mesh->Nverts*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
+    free(idSendBuffer);
   }
 
   // Build coarse basis restriction
@@ -302,13 +284,9 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     V[2*mesh->Np+n] = +0.5*(1.+sn);
   }
 
-  iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
+  unsigned long long nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
 
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-12;
@@ -355,7 +333,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
   }
 
   // reset non-zero counter
-  int nnz = 0;
+  unsigned long long nnz = 0;
 
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
@@ -487,10 +465,10 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
             }
           }
           if(fabs(AnmP)>tol){
-            sendNonZeros[nnz].row = globalIds[eM*mesh->Nverts + i];
-            sendNonZeros[nnz].col = globalIds[eP*mesh->Nverts + j];
-            sendNonZeros[nnz].val = AnmP;
-            sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Nverts + i];
+            (*A)[nnz].row = globalIds[eM*mesh->Nverts + i];
+            (*A)[nnz].col = globalIds[eP*mesh->Nverts + j];
+            (*A)[nnz].val = AnmP;
+            (*A)[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -507,65 +485,23 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
         }
 
         if(fabs(Anm)>tol){
-          sendNonZeros[nnz].row = globalIds[eM*mesh->Nverts+i];
-          sendNonZeros[nnz].col = globalIds[eM*mesh->Nverts+j];
-          sendNonZeros[nnz].val = Anm;
-          sendNonZeros[nnz].ownerRank = globalOwners[eM*mesh->Nverts + i];
+          (*A)[nnz].row = globalIds[eM*mesh->Nverts+i];
+          (*A)[nnz].col = globalIds[eM*mesh->Nverts+j];
+          (*A)[nnz].val = Anm;
+          (*A)[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
     }
   }
 
-  // count how many non-zeros to send to each process
-  for(iint n=0;n<nnz;++n)
-    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
-
-  // sort by row ordering
-  qsort(sendNonZeros, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-
-  // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
-
-  // find send and recv offsets for gather
-  *nnzA = 0;
-  for(iint r=0;r<size;++r){
-    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
-    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnzA += ArecvCounts[r]/sizeof(nonZero_t);
-  }
-
-  *A = (nonZero_t*) calloc(*nnzA, sizeof(nonZero_t));
-
-  // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
-    (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,
-    MPI_COMM_WORLD);
+  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  *nnzA = nnz;
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), *nnzA, sizeof(nonZero_t), parallelCompareRowColumn);
 
-  // compress duplicates
-  nnz = 0;
-  for(iint n=1;n<*nnzA;++n){
-    if((*A)[n].row == (*A)[nnz].row &&
-       (*A)[n].col == (*A)[nnz].col){
-      (*A)[nnz].val += (*A)[n].val;
-    }
-    else{
-      ++nnz;
-      (*A)[nnz] = (*A)[n];
-    }
-  }
-  *nnzA = nnz+1;
-
   free(globalIds);
-  free(globalOwners);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
 
   free(V);
   free(BP); free(BM);  free(MS);

@@ -274,7 +274,7 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
 
       printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
-      if (rate < 1) {
+      if (rate < 1.0) {
         (*patchesIndex)[eM] = 0;
         refPatches++;
         continue;

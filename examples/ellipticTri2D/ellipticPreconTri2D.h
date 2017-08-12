@@ -91,8 +91,8 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, iint *nnzA,
-                              hgs_t **hgs, iint *globalStarts, const char *options);
+void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              unsigned long long *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
@@ -105,7 +105,7 @@ void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    const char *options);
 
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
+                                   iint *BCType, dfloat **V1, nonZero_t **A, unsigned long long *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options);
 
 void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,

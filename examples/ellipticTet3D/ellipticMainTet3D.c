@@ -13,27 +13,49 @@ int main(int argc, char **argv){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  
-  // int specify polynomial degree 
+
+  // int specify polynomial degree
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
-  // preconditioner can be JACOBI, OAS, NONE
-  // method can be IPDG
-  char *options = 
-    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=OAS coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE method=IPDG,PROJECT preconditioner=FULLALMOND,UBERGRID,MATRIXFREE");
-    strdup("solver=PCG method=IPDG preconditioner=FULLALMOND");
-  
-  // set up mesh stuff
+  // can add FLEXIBLE and VERBOSE options
+  // method can be IPDG or CONTINUOUS
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // OAS and MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
+  //                                     EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
+  // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
+  // FULLALMOND: can include MATRIXFREE option
+  char *options =
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=EXACTFULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
+
+  //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
+  // solver can be EXACT, KCYCLE, or VCYCLE
+  // smoother can be DAMPEDJACOBI or CHEBYSHEV
+  // can add GATHER to build a gsop
+  // partition can be STRONGNODES, DISTRIBUTED, SATURATE
+  char *parAlmondOptions =
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+
+
+  //this is strictly for testing, to do repeated runs. Will be removed later
+  if (argc==6) {
+    options = strdup(argv[4]);
+    parAlmondOptions = strdup(argv[5]);
+  }
 
   mesh3D *mesh = meshSetupTet3D(argv[1], N);
   ogs_t *ogs;
   precon_t *precon;
-  
+
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda = 1;
-  
+
   // set up
   //  ellipticSetupTet3D(mesh, &ogs, &precon, lambda);
   occa::kernelInfo kernelInfo;
@@ -44,7 +66,7 @@ int main(int argc, char **argv){
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  
+
   // convergence tolerance (currently absolute)
   const dfloat tol = 1e-6;
 
@@ -65,7 +87,7 @@ int main(int argc, char **argv){
 	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
       }
       iint id = n+e*mesh->Np;
-      
+
       r[id] = -rhs*J;
       x[id] = 0.;
       mesh->q[id] = nrhs[n];
@@ -77,7 +99,7 @@ int main(int argc, char **argv){
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
-  
+
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
@@ -90,21 +112,21 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[id];
       dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
       dfloat error = fabs(exact-mesh->q[id]);
-      
+
       maxError = mymax(maxError, error);
     }
   }
-  
+
   dfloat globalMaxError = 0;
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
-  
+
   meshPlotVTU3D(mesh, "foo", 0);
-  
+
   // close down MPI
   MPI_Finalize();
-  
+
   exit(0);
   return 0;
 }

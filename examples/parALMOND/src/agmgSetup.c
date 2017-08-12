@@ -79,6 +79,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
     dfloat *nullCoarseA;
 
+    printf("Setting up coarse level %d\n", lev+1);
+
     coarsenAgmgLevel(levels[lev], &(levels[lev+1]->A), &(levels[lev+1]->P),
                                   &(levels[lev+1]->R), &nullCoarseA);
 
@@ -1336,6 +1338,8 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   iint N = A->Nrows;
   iint M = A->Ncols;
 
+  printf("Level has %d rows, and is making %d aggregates\n", N, globalAggStarts[rank+1]-globalAggStarts[rank]);
+
   pEntry_t *PEntries;
   if (M) PEntries = (pEntry_t *) calloc(M,sizeof(pEntry_t));
 
@@ -1394,11 +1398,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
       cnt++;
     }
   }
-  if (M) free(PEntries);
 
   //sort entries by the coarse row and col
-  if (totalNNZ)
-    qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
+  if (totalNNZ) qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
 
   iint *sendCounts = (iint *) calloc(size,sizeof(iint));
   iint *recvCounts = (iint *) calloc(size,sizeof(iint));
@@ -1433,13 +1435,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,
                 recvRAPEntries, recvCounts, recvOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
-  free(RAPEntries);
-  free(sendCounts); free(recvCounts);
-  free(sendOffsets); free(recvOffsets);
 
   //sort entries by the coarse row and col
-  qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
-
+  if (recvNtotal) qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
 
 
   //count total number of nonzeros;
@@ -1449,18 +1447,22 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
           (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) nnz++;
 
-  if (nnz)
-    RAPEntries = (rapEntry_t *) calloc(nnz,sizeof(rapEntry_t));
+  rapEntry_t *newRAPEntries;
+  if (nnz) {
+    newRAPEntries = (rapEntry_t *) calloc(nnz,sizeof(rapEntry_t));
+  } else {
+    newRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));
+  }
 
   //compress nonzeros
   nnz = 0;
-  if (recvNtotal) RAPEntries[nnz++] = recvRAPEntries[0];
+  if (recvNtotal) newRAPEntries[nnz++] = recvRAPEntries[0];
   for (iint i=1;i<recvNtotal;i++) {
     if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
           (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) {
-      RAPEntries[nnz++] = recvRAPEntries[i];
+      newRAPEntries[nnz++] = recvRAPEntries[i];
     } else {
-      RAPEntries[nnz-1].coef += recvRAPEntries[i].coef;
+      newRAPEntries[nnz-1].coef += recvRAPEntries[i].coef;
     }
   }
 
@@ -1477,9 +1479,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   RAP->offdRowStarts = (iint *) calloc(numAggs+1, sizeof(iint));
 
   for (iint n=0;n<nnz;n++) {
-    iint row = RAPEntries[n].I - globalAggOffset;
-    if ((RAPEntries[n].J > globalAggStarts[rank]-1)&&
-          (RAPEntries[n].J < globalAggStarts[rank+1])) {
+    iint row = newRAPEntries[n].I - globalAggOffset;
+    if ((newRAPEntries[n].J > globalAggStarts[rank]-1)&&
+          (newRAPEntries[n].J < globalAggStarts[rank+1])) {
       RAP->diagRowStarts[row+1]++;
     } else {
       RAP->offdRowStarts[row+1]++;
@@ -1510,19 +1512,17 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   iint diagCnt =0;
   iint offdCnt =0;
   for (iint n=0;n<nnz;n++) {
-    if ((RAPEntries[n].J > globalAggStarts[rank]-1)&&
-          (RAPEntries[n].J < globalAggStarts[rank+1])) {
-      diagCols[diagCnt]  = RAPEntries[n].J - globalAggOffset;
-      diagCoefs[diagCnt] = RAPEntries[n].coef;
+    if ((newRAPEntries[n].J > globalAggStarts[rank]-1)&&
+          (newRAPEntries[n].J < globalAggStarts[rank+1])) {
+      diagCols[diagCnt]  = newRAPEntries[n].J - globalAggOffset;
+      diagCoefs[diagCnt] = newRAPEntries[n].coef;
       diagCnt++;
     } else {
-      RAP->offdCols[offdCnt]  = RAPEntries[n].J;
-      RAP->offdCoefs[offdCnt] = RAPEntries[n].coef;
+      RAP->offdCols[offdCnt]  = newRAPEntries[n].J;
+      RAP->offdCoefs[offdCnt] = newRAPEntries[n].coef;
       offdCnt++;
     }
   }
-
-  if (nnz) free(RAPEntries);
 
   //move diagonal entries first
   for (iint i=0;i<RAP->Nrows;i++) {
@@ -1538,10 +1538,6 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
         cnt++;
       }
     }
-  }
-  if (RAP->diagNNZ) {
-    free(diagCols);
-    free(diagCoefs);
   }
 
   //record global indexing of columns
@@ -1570,7 +1566,6 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     RAP->colMap = (iint *) realloc(RAP->colMap,RAP->Ncols*sizeof(iint));
     for (iint n=0; n<RAP->NHalo; n++)
       RAP->colMap[n+RAP->NlocalCols] = col[n];
-    free(col);
 
     //shift the column indices to local indexing
     for (iint n=0;n<RAP->offdNNZ;n++) {
@@ -1580,9 +1575,21 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
           RAP->offdCols[n] = m;
       }
     }
+    free(col);
   }
-
   csrHaloSetup(RAP,globalAggStarts);
+
+  //clean up
+  if (M) free(PEntries);
+  free(sendCounts); free(recvCounts);
+  free(sendOffsets); free(recvOffsets);
+  if (RAP->diagNNZ) {
+    free(diagCols);
+    free(diagCoefs);
+  }
+  free(RAPEntries);
+  free(newRAPEntries);
+  free(recvRAPEntries);
 
   return RAP;
 }
