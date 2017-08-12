@@ -168,7 +168,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     if (n==numLevels-1) {
       // build degree 1 matrix problem
       nonZero_t *coarseA;
-      iint nnzCoarseA;
+      unsigned long long nnzCoarseA;
       hgs_t *coarsehgs;
       dfloat *V1;
 

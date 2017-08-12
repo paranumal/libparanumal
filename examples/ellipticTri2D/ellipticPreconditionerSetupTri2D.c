@@ -11,7 +11,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    iint nnz;
+    unsigned long long nnz;
     nonZero_t *A;
     hgs_t *hgs;
 
@@ -19,9 +19,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
 
     if (strstr(options,"IPDG")) {
-      ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,&hgs,globalStarts, options);
+      ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+      //disabled. Need to fix the unsigned long long nnz
+      //ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
@@ -33,7 +34,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
     }
-
+printf("START ALMOND SETUP\n");
     precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
     parAlmondAgmgSetup(precon->parAlmond,
                        globalStarts,
@@ -168,7 +169,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     nonZero_t *coarseA;
-    iint nnzCoarseA;
+    unsigned long long nnzCoarseA;
     hgs_t *coarsehgs;
     dfloat *V1;
 
