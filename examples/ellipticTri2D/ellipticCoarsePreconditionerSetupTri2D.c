@@ -17,13 +17,13 @@ int parallelCompareRowColumn(const void *a, const void *b){
 }
 
 void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              unsigned long long *nnzA, iint *globalStarts, const char *options);
+                              iint *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, unsigned long long *nnzA,
+                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options){
 
   int size, rank;
@@ -34,9 +34,6 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 
   // 2. Build coarse grid element basis functions
   *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-
   for(iint n=0;n<mesh->Np;++n){
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
@@ -44,14 +41,6 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     (*V1)[0*mesh->Np+n] = -0.5*(rn+sn);
     (*V1)[1*mesh->Np+n] = +0.5*(1.+rn);
     (*V1)[2*mesh->Np+n] = +0.5*(1.+sn);
-
-    Vr1[0*mesh->Np+n] = 0.5*(-1);
-    Vr1[1*mesh->Np+n] = 0.5*(+1);
-    Vr1[2*mesh->Np+n] = 0;
-
-    Vs1[0*mesh->Np+n] = 0.5*(-1);
-    Vs1[1*mesh->Np+n] = 0;
-    Vs1[2*mesh->Np+n] = 0.5*(+1);
   }
 
   //build coarse grid A
@@ -63,9 +52,7 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
     ellipticBuildCoarseIpdgTri2D(mesh,tau,lambda,BCType,A,nnzA,globalStarts,options);
 
   } else if (strstr(options,"CONTINUOUS")) {
-
-    //disabled. Need to fix the unsigned long long nnz
-    //ellipticBuildCoarseContinuousTri2D(mesh,lambda,A,nnzA,hgs,globalStarts,options);
+    ellipticBuildCoarseContinuousTri2D(mesh,lambda,A,nnzA,hgs,globalStarts,options);
   }
 }
 
@@ -237,7 +224,7 @@ void ellipticBuildCoarseContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t *
 }
 
 void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                                  unsigned long long *nnzA, iint *globalStarts, const char *options){
+                                  iint *nnzA, iint *globalStarts, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -284,7 +271,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     V[2*mesh->Np+n] = +0.5*(1.+sn);
   }
 
-  unsigned long long nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
+  iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -333,7 +320,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
   }
 
   // reset non-zero counter
-  unsigned long long nnz = 0;
+  iint nnz = 0;
 
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
@@ -495,7 +482,7 @@ void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     }
   }
 
-  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)

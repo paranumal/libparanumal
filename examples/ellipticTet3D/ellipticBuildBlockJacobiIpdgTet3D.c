@@ -35,7 +35,7 @@ void BlockJacobiPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, 
   /* start with stiffness matrix  */
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->Np;++m){
-      
+
       A[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
       A[n*mesh->Np+m] += J*G00*mesh->Srr[n*mesh->Np+m];
       A[n*mesh->Np+m] += J*G01*mesh->Srs[n*mesh->Np+m];
@@ -100,7 +100,7 @@ void BlockJacobiPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, 
           iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
 
           dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
-	  
+
           dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m] + dtdx*mesh->Dt[iM*mesh->Np+m];
           dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m] + dtdy*mesh->Dt[iM*mesh->Np+m];
           dfloat DzMim = drdz*mesh->Dr[iM*mesh->Np+m] + dsdz*mesh->Ds[iM*mesh->Np+m] + dtdz*mesh->Dt[iM*mesh->Np+m];
@@ -233,7 +233,7 @@ void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
   //vertices of reference patch
   dfloat V1x = -1., V2x = 1., V3x =        0., V4x = 0;
   dfloat V1y =  0., V2y = 0., V3y =  sqrt(3.), V4y = 1./sqrt(3.);
-  dfloat V1z =  0., V2z = 0., V3z = 0.,        V4z = 2*sqrt(6.)/3.;
+  dfloat V1z =  0., V2z = 0., V3z =        0., V4z = 2*sqrt(6.)/3.;
 
   refMesh->Nelements = 1;
 

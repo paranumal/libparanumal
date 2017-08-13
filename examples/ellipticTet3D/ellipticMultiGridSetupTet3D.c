@@ -1,18 +1,18 @@
-#include "ellipticTri2D.h"
+#include "ellipticTet3D.h"
 
-void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
+void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 
-void AxTri2D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
+void AxTet3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
   dfloat *lambda = (dfloat *) args[1];
   char *options = (char *) args[2];
 
-  ellipticOperator2D(solver,*lambda,o_x,o_Ax,options);
+  ellipticOperator3D(solver,*lambda,o_x,o_Ax,options);
 }
 
-void coarsenTri2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
+void coarsenTet3D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
   occa::memory *o_V = (occa::memory *) args[1];
@@ -23,7 +23,7 @@ void coarsenTri2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
   precon->coarsenKernel(mesh->Nelements, *o_V, o_x, o_Rx);
 }
 
-void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
+void prolongateTet3D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   solver_t *solver = (solver_t *) args[0];
   occa::memory *o_V = (occa::memory *) args[1];
@@ -34,7 +34,7 @@ void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
   precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
 }
 
-dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
+dfloat *buildCoarsenerTet3D(mesh3D** meshLevels, int N, int Nc) {
 
   //TODO We can build the coarsen matrix either from the interRaise or interpLower matrices. Need to check which is better
 
@@ -81,7 +81,7 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
   return R;
 }
 
-void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
+void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
                                 dfloat tau, dfloat lambda, iint *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
@@ -89,15 +89,15 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D *mesh = solver->mesh;
+  mesh3D *mesh = solver->mesh;
 
   //read all the nodes files and load them in a dummy mesh array
-  mesh2D **meshLevels = (mesh2D**) calloc(mesh->N+1,sizeof(mesh2D*));
+  mesh3D **meshLevels = (mesh3D**) calloc(mesh->N+1,sizeof(mesh3D*));
   for (int n=1;n<mesh->N+1;n++) {
-    meshLevels[n] = (mesh2D *) calloc(1,sizeof(mesh2D));
+    meshLevels[n] = (mesh3D *) calloc(1,sizeof(mesh3D));
     meshLevels[n]->Nverts = mesh->Nverts;
     meshLevels[n]->Nfaces = mesh->Nfaces;
-    meshLoadReferenceNodesTri2D(meshLevels[n], n);
+    meshLoadReferenceNodesTet3D(meshLevels[n], n);
   }
 
   //set the number of MG levels and their degree
@@ -119,7 +119,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     int degree = mesh->N;
     int dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    while (dofs>4) {
       numLevels++;
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
@@ -131,7 +131,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     levelDegree[0] = degree;
     dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    while (dofs>4) {
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
@@ -161,7 +161,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     } else {
       //build ops for this level
       printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", levelDegree[n]);
-      solverL = ellipticBuildMultigridLevelTri2D(solver,levelDegree,n,options);
+      solverL = ellipticBuildMultigridLevelTet3D(solver,levelDegree,n,options);
     }
 
     //check if we're at the degree 1 problem
@@ -174,7 +174,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-      ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+      ellipticCoarsePreconditionerSetupTet3D(mesh, precon, tau, lambda, BCType,
                                              &V1, &coarseA, &nnzCoarseA,
                                              &coarsehgs, coarseGlobalStarts, options);
 
@@ -211,7 +211,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->AxArgs[0] = (void *) solverL;
     levels[n]->AxArgs[1] = (void *) vlambda;
     levels[n]->AxArgs[2] = (void *) options;
-    levels[n]->device_Ax = AxTri2D;
+    levels[n]->device_Ax = AxTet3D;
 
     levels[n]->smoothArgs = (void **) calloc(2,sizeof(void*));
     levels[n]->smoothArgs[0] = (void *) solverL;
@@ -221,7 +221,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
 
     if (strstr(options,"CHEBYSHEV")) {
-      levels[n]->device_smooth = smoothChebyshevTri2D;
+      levels[n]->device_smooth = smoothChebyshevTet3D;
 
       levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
 
@@ -230,7 +230,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
       levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
     } else {
-      levels[n]->device_smooth = smoothTri2D;
+      levels[n]->device_smooth = smoothTet3D;
 
       // extra storage for smoothing op
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
@@ -266,16 +266,16 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     int N = levelDegree[n-1];
     int Nc = levelDegree[n];
 
-    R[n] = buildCoarsenerTri2D(meshLevels, N, Nc);
+    R[n] = buildCoarsenerTet3D(meshLevels, N, Nc);
     o_R[n] = mesh->device.malloc(meshLevels[N]->Np*meshLevels[Nc]->Np*sizeof(dfloat), R[n]);
 
     levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
     levels[n]->coarsenArgs[1] = (void *) &(o_R[n]);
-    levels[n]->device_coarsen = coarsenTri2D;
+    levels[n]->device_coarsen = coarsenTet3D;
 
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
-    levels[n]->device_prolongate = prolongateTri2D;
+    levels[n]->device_prolongate = prolongateTet3D;
   }
 
   //report the multigrid levels
@@ -321,7 +321,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       }
 
       if (rank==0){
-        printf(" %3d |    %2d    |   %10.2f  |   %s  \n",
+        printf(" %3d |    %3d    |   %10.2f  |   %s  \n",
           lev, levelDegree[lev], (dfloat)minNrows, smootherString);
         printf("     |          |   %10.2f  |   \n", (dfloat)maxNrows);
         printf("     |          |   %10.2f  |   \n", avgNrows);

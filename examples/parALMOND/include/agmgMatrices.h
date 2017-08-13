@@ -1,7 +1,7 @@
 
 //creators
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
-            unsigned long long NNZ,   iint *Ai, iint *Aj, dfloat *Avals);
+            iint NNZ,   iint *Ai, iint *Aj, dfloat *Avals);
 void freeCSR(csr *A);
 dcoo *newDCOO(parAlmond_t *parAlmond, csr *B);
 hyb * newHYB(parAlmond_t *parAlmond, csr *csrA);

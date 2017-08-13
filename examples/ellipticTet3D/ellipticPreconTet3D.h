@@ -91,68 +91,68 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                               iint *nnzA, iint *globalStarts, const char *options);
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
+void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
-void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
                                    const char *options);
 
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
+void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options);
 
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
 
-void ellipticBuildExactPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    dfloat **patchesInvA, const char *options);
 
-void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    dfloat **patchesInvA, const char *options);
 
-void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    dfloat **patchesInvA, const char *options);
 
-void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
 //Multigrid function callbacks
-void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
-void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
-void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
-void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
-void smoothChebyshevTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void AxTet3D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
+void coarsenTet3D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
+void prolongateTet3D(void **args, occa::memory &o_x, occa::memory &o_Px);
+void smoothTet3D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void smoothChebyshevTet3D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 
 //smoother ops
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);

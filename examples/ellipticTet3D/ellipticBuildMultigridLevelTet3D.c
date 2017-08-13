@@ -1,30 +1,30 @@
-#include "ellipticTri2D.h"
+#include "ellipticTet3D.h"
 
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
+solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
 
   //populate the mini-mesh using the mesh struct
-  mesh2D *mesh = (mesh2D*) calloc(1,sizeof(mesh2D));
-  memcpy(mesh,baseSolver->mesh,sizeof(mesh2D));
+  mesh3D *mesh = (mesh3D*) calloc(1,sizeof(mesh3D));
+  memcpy(mesh,baseSolver->mesh,sizeof(mesh3D));
 
   solver->mesh = mesh;
 
   int N = levelDegree[n];
   int NFine = levelDegree[n-1];
-  int NpFine = (NFine+1)*(NFine+2)/2;
-  int NpCoarse = (N+1)*(N+2)/2;
+  int NpFine = (NFine+1)*(NFine+2)*(NFine+3)/6;
+  int NpCoarse = (N+1)*(N+2)*(N+3)/6;
 
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesTri2D(mesh, N);
+  meshLoadReferenceNodesTet3D(mesh, N);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(mesh);
+  meshPhysicalNodesTet3D(mesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(mesh);
+  meshConnectFaceNodes3D(mesh);
 
   // global nodes
   //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
@@ -32,14 +32,17 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
+  free(mesh->z);
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *DtT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+      DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
     }
   }
 
@@ -51,19 +54,29 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   }
 
   //build element stiffness matrices
-  if (mesh->Nverts == 3) {
+  if (mesh->Nverts==4) {
     mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
         for (iint k=0;k<mesh->Np;k++) {
           for (iint l=0;l<mesh->Np;l++) {
             mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
             mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
           }
         }
       }
@@ -76,11 +89,17 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
            mesh->Ds);
 
+  mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+           mesh->Dt);
+
   mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
             DrT);
 
   mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
             DsT);
+
+  mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+            DtT);
 
   mesh->o_LIFT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
@@ -116,14 +135,16 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
 
+  kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
+
   kernelInfo.addDefine("p_NXID", NXID);
   kernelInfo.addDefine("p_NYID", NYID);
+  kernelInfo.addDefine("p_NZID", NZID);
   kernelInfo.addDefine("p_SJID", SJID);
   kernelInfo.addDefine("p_IJID", IJID);
   kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_IHID", IHID);
 
-  kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
 
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
@@ -157,15 +178,24 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
 
   kernelInfo.addDefine("p_G00ID", G00ID);
   kernelInfo.addDefine("p_G01ID", G01ID);
+  kernelInfo.addDefine("p_G02ID", G02ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
+  kernelInfo.addDefine("p_G12ID", G12ID);
+  kernelInfo.addDefine("p_G22ID", G22ID);
   kernelInfo.addDefine("p_GWJID", GWJID);
 
 
   kernelInfo.addDefine("p_RXID", RXID);
   kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo.addDefine("p_TXID", TXID);
 
   kernelInfo.addDefine("p_RYID", RYID);
   kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo.addDefine("p_TYID", TYID);
+
+  kernelInfo.addDefine("p_RZID", RZID);
+  kernelInfo.addDefine("p_SZID", SZID);
+  kernelInfo.addDefine("p_TZID", TZID);
 
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
@@ -180,7 +210,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   // add custom defines
@@ -211,31 +241,31 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
            kernelInfo);
 
   solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+               "ellipticAxTet3D",
                kernelInfo);
 
   solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
+               "ellipticGradientTet3D",
            kernelInfo);
 
   solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticAxIpdgTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
+               "ellipticAxIpdgTet3D",
                kernelInfo);
 
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
   solver->precon->overlappingPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
-               "ellipticOasPreconTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl",
+               "ellipticOasPreconTet3D",
                kernelInfo);
 
   solver->precon->restrictKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
-               "ellipticFooTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl",
+               "ellipticFooTet3D",
                kernelInfo);
 
   solver->precon->coarsenKernel =
@@ -249,51 +279,51 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
-               "ellipticBlockJacobiPreconTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
+               "ellipticBlockJacobiPreconTet3D",
                kernelInfo);
 
   solver->precon->approxPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxPatchSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticApproxPatchSolver3D",
                kernelInfo);
 
   solver->precon->exactPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactPatchSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticExactPatchSolver3D",
                kernelInfo);
 
   solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
-               "ellipticPatchGather2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
+               "ellipticPatchGather3D",
                kernelInfo);
 
   solver->precon->approxFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxFacePatchSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticApproxFacePatchSolver3D",
                kernelInfo);
 
   solver->precon->exactFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactFacePatchSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticExactFacePatchSolver3D",
                kernelInfo);
 
   solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
-               "ellipticFacePatchGather2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
+               "ellipticFacePatchGather3D",
                kernelInfo);
 
   solver->precon->approxBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxBlockJacobiSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticApproxBlockJacobiSolver3D",
                kernelInfo);
 
   solver->precon->exactBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactBlockJacobiSolver2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticExactBlockJacobiSolver3D",
                kernelInfo);
 
-  free(DrT); free(DsT); free(LIFTT);
+  free(DrT); free(DsT); free(dtT); free(LIFTT);
 
   return solver;
 }

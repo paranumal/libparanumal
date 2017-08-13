@@ -1,11 +1,11 @@
-#include "ellipticTri2D.h"
+#include "ellipticTet3D.h"
 
 void matrixInverse(int N, dfloat *A);
 
 dfloat matrixConditionNumber(int N, dfloat *A);
 
-void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
-                        dfloat *MS, iint face, dfloat *A) {
+void BuildFacePatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+                        dfloat *MS, iint eM, dfloat *A) {
 
   int NpatchElements = 2;
   int patchNp = NpatchElements*mesh->Np;
@@ -28,9 +28,26 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     iint vbase = e*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
+    dfloat drdz = mesh->vgeo[vbase+RZID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
+    dfloat dsdz = mesh->vgeo[vbase+SZID];
+    dfloat dtdx = mesh->vgeo[vbase+TXID];
+    dfloat dtdy = mesh->vgeo[vbase+TYID];
+    dfloat dtdz = mesh->vgeo[vbase+TZID];
     dfloat J = mesh->vgeo[vbase+JID];
+
+    dfloat G00 = drdx*drdx + drdy*drdy + drdz*drdz;
+    dfloat G01 = drdx*dsdx + drdy*dsdy + drdz*dsdz;
+    dfloat G02 = drdx*dtdx + drdy*dtdy + drdz*dtdz;
+
+    dfloat G10 = dsdx*drdx + dsdy*drdy + dsdz*drdz;
+    dfloat G11 = dsdx*dsdx + dsdy*dsdy + dsdz*dsdz;
+    dfloat G12 = dsdx*dtdx + dsdy*dtdy + dsdz*dtdz;
+
+    dfloat G20 = dtdx*drdx + dtdy*drdy + dtdz*drdz;
+    dfloat G21 = dtdx*dsdx + dtdy*dsdy + dtdz*dsdz;
+    dfloat G22 = dtdx*dtdx + dtdy*dtdy + dtdz*dtdz;
 
     /* start with stiffness matrix  */
     for(iint n=0;n<mesh->Np;++n){
@@ -38,15 +55,15 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
         int id = N*mesh->Np*patchNp + n*patchNp + N*mesh->Np + m;
 
         A[id]  = J*lambda*mesh->MM[n*mesh->Np+m];
-        A[id] += J*drdx*drdx*mesh->Srr[n*mesh->Np+m];
-        A[id] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+m];
-        A[id] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+m];
-        A[id] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+m];
-
-        A[id] += J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
-        A[id] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
-        A[id] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
-        A[id] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
+        A[id] += J*G00*mesh->Srr[n*mesh->Np+m];
+        A[id] += J*G01*mesh->Srs[n*mesh->Np+m];
+        A[id] += J*G02*mesh->Srt[n*mesh->Np+m];
+        A[id] += J*G10*mesh->Ssr[n*mesh->Np+m];
+        A[id] += J*G11*mesh->Sss[n*mesh->Np+m];
+        A[id] += J*G12*mesh->Sst[n*mesh->Np+m];
+        A[id] += J*G20*mesh->Str[n*mesh->Np+m];
+        A[id] += J*G21*mesh->Sts[n*mesh->Np+m];
+        A[id] += J*G22*mesh->Stt[n*mesh->Np+m];
       }
     }
 
@@ -55,6 +72,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
       iint sid = mesh->Nsgeo*(e*mesh->Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
+      dfloat nz = mesh->sgeo[sid+NZID];
       dfloat sJ = mesh->sgeo[sid+SJID];
       dfloat hinv = mesh->sgeo[sid+IHID];
 
@@ -102,14 +120,16 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
 
             dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
-            dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m];
-            dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
+            dfloat DxMim = drdx*mesh->Dr[iM*mesh->Np+m] + dsdx*mesh->Ds[iM*mesh->Np+m]+ dtdx*mesh->Dt[iM*mesh->Np+m];
+            dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m]+ dtdy*mesh->Dt[iM*mesh->Np+m];
+            dfloat DzMim = drdz*mesh->Dr[iM*mesh->Np+m] + dsdz*mesh->Ds[iM*mesh->Np+m]+ dtdz*mesh->Dt[iM*mesh->Np+m];
 
             int id = N*mesh->Np*patchNp + nM*patchNp + N*mesh->Np + m;
 
             // OP11 = OP11 + 0.5*( - mmE*Dn1)
             A[id] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
             A[id] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+            A[id] += -0.5*nz*(1+bcD)*(1-bcN)*MSfni*DzMim;
           }
         }
       }
@@ -123,14 +143,16 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
 
             dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
 
-            dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
-            dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+            dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n]+ dtdx*mesh->Dt[iM*mesh->Np+n];
+            dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n]+ dtdy*mesh->Dt[iM*mesh->Np+n];
+            dfloat DzMin = drdz*mesh->Dr[iM*mesh->Np+n] + dsdz*mesh->Ds[iM*mesh->Np+n]+ dtdz*mesh->Dt[iM*mesh->Np+n];
 
             int id = N*mesh->Np*patchNp + n*patchNp + N*mesh->Np + mM;
 
             // OP11 = OP11 + (- Dn1'*mmE );
             A[id] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
             A[id] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+            A[id] +=  -0.5*nz*(1+bcD)*(1-bcN)*DzMin*MSfim;
           }
         }
       }
@@ -145,21 +167,34 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
   dfloat nx = mesh->sgeo[sid+NXID];
   dfloat ny = mesh->sgeo[sid+NYID];
+  dfloat nz = mesh->sgeo[sid+NZID];
   dfloat sJ = mesh->sgeo[sid+SJID];
   dfloat hinv = mesh->sgeo[sid+IHID];
 
   iint vbase = eM*mesh->Nvgeo;
+
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
+  dfloat drdz = mesh->vgeo[vbase+RZID];
   dfloat dsdx = mesh->vgeo[vbase+SXID];
   dfloat dsdy = mesh->vgeo[vbase+SYID];
+  dfloat dsdz = mesh->vgeo[vbase+SZID];
+  dfloat dtdx = mesh->vgeo[vbase+TXID];
+  dfloat dtdy = mesh->vgeo[vbase+TYID];
+  dfloat dtdz = mesh->vgeo[vbase+TZID];
+
   dfloat J = mesh->vgeo[vbase+JID];
 
   iint vbaseP = eP*mesh->Nvgeo;
   dfloat drdxP = mesh->vgeo[vbaseP+RXID];
   dfloat drdyP = mesh->vgeo[vbaseP+RYID];
+  dfloat drdzP = mesh->vgeo[vbaseP+RZID];
   dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
   dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
+  dfloat dsdzP = mesh->vgeo[vbaseP+SZID];
+  dfloat dtdxP = mesh->vgeo[vbaseP+TXID];
+  dfloat dtdyP = mesh->vgeo[vbaseP+TYID];
+  dfloat dtdzP = mesh->vgeo[vbaseP+TZID];
 
   dfloat penalty = tau*hinv;
 
@@ -196,14 +231,16 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
 
         dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
-        dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m];
-        dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m];
+        dfloat DxPim = drdxP*mesh->Dr[iP*mesh->Np+m] + dsdxP*mesh->Ds[iP*mesh->Np+m]+ dtdxP*mesh->Dt[iP*mesh->Np+m];
+        dfloat DyPim = drdyP*mesh->Dr[iP*mesh->Np+m] + dsdyP*mesh->Ds[iP*mesh->Np+m]+ dtdyP*mesh->Dt[iP*mesh->Np+m];
+        dfloat DzPim = drdzP*mesh->Dr[iP*mesh->Np+m] + dsdzP*mesh->Ds[iP*mesh->Np+m]+ dtdzP*mesh->Dt[iP*mesh->Np+m];
 
         int id = nM*patchNp + mesh->Np + m;
 
         //OP12(Fm1,:) = OP12(Fm1,:) - 0.5*(      mmE(Fm1,Fm1)*Dn2(Fm2,:) );
         A[id] += -0.5*nx*MSfni*DxPim;
         A[id] += -0.5*ny*MSfni*DyPim;
+        A[id] += -0.5*nz*MSfni*DzPim;
       }
     }
   }
@@ -218,14 +255,16 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
 
         dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
 
-        dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n];
-        dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
+        dfloat DxMin = drdx*mesh->Dr[iM*mesh->Np+n] + dsdx*mesh->Ds[iM*mesh->Np+n]+ dtdx*mesh->Dt[iM*mesh->Np+n];
+        dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n]+ dtdy*mesh->Dt[iM*mesh->Np+n];
+        dfloat DzMin = drdz*mesh->Dr[iM*mesh->Np+n] + dsdz*mesh->Ds[iM*mesh->Np+n]+ dtdz*mesh->Dt[iM*mesh->Np+n];
 
         int id = n*patchNp + mesh->Np + mP;
 
         //OP12(:,Fm2) = OP12(:,Fm2) - 0.5*(-Dn1'*mmE(:, Fm1) );
         A[id] +=  +0.5*nx*DxMin*MSfim;
         A[id] +=  +0.5*ny*DyMin*MSfim;
+        A[id] +=  +0.5*nz*DzMin*MSfim;
       }
     }
   }
@@ -241,7 +280,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   }
 }
 
-void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat **patchesInvA, const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -251,6 +290,7 @@ void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *
       basis[n+n*basisNp] = 1;
     }
   }
+
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
@@ -339,7 +379,7 @@ void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *
   free(MS);
 }
 
-void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -422,73 +462,60 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
     }
   }
 
+
   //build a mini mesh struct for the reference patch
-  mesh2D *refMesh = (mesh2D*) calloc(1,sizeof(mesh2D));
-  memcpy(refMesh,mesh,sizeof(mesh2D));
+  mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
+  memcpy(refMesh,mesh,sizeof(mesh3D));
 
   //vertices of reference patch
-  dfloat V1x = -1., V2x = 1., V3x =        0., V4x =        0.;
-  dfloat V1y =  0., V2y = 0., V3y =  sqrt(3.), V4y = -sqrt(3.);
+  int Nv = 8;
+  dfloat VX[8] = [-1, 1,      0,          0,           0,         5./3,        -5./3,         0];
+  dfloat VY[8] = [ 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)];
+  dfloat VZ[8] = [ 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3];
+
+  iint EToV[5][4] = [1,2,3,4;
+         1,2,4,5;
+         2,3,4,6;
+         3,1,4,7;
+         1,3,2,8];
+
 
   refMesh->Nelements = NpatchElements;
 
   refMesh->EX = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
   refMesh->EY = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
-
-  refMesh->EX[0*mesh->Nverts+0] = V1x;  refMesh->EY[0*mesh->Nverts+0] = V1y;
-  refMesh->EX[0*mesh->Nverts+1] = V2x;  refMesh->EY[0*mesh->Nverts+1] = V2y;
-  refMesh->EX[0*mesh->Nverts+2] = V3x;  refMesh->EY[0*mesh->Nverts+2] = V3y;
-
-  refMesh->EX[1*mesh->Nverts+0] = V2x;  refMesh->EY[1*mesh->Nverts+0] = V2y;
-  refMesh->EX[1*mesh->Nverts+1] = V1x;  refMesh->EY[1*mesh->Nverts+1] = V1y;
-  refMesh->EX[1*mesh->Nverts+2] = V4x;  refMesh->EY[1*mesh->Nverts+2] = V4y;
+  refMesh->EZ = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
 
   refMesh->EToV = (iint*) calloc(NpatchElements*mesh->Nverts, sizeof(iint));
 
-  refMesh->EToV[0*mesh->Nverts+0] = 0;
-  refMesh->EToV[0*mesh->Nverts+1] = 1;
-  refMesh->EToV[0*mesh->Nverts+2] = 2;
-
-  refMesh->EToV[1*mesh->Nverts+0] = 1;
-  refMesh->EToV[1*mesh->Nverts+1] = 0;
-  refMesh->EToV[1*mesh->Nverts+2] = 3;
+  for(int e=0;e<NpatchElements;++e){
+    for(int n=0;n<Nverts;++n){
+      int v = EToV[e][n]-1;
+      refMesh->EX[e*mesh->Nverts+n] = VX[v];
+      refMesh->EY[e*mesh->Nverts+n] = VY[v];
+      refMesh->EZ[e*mesh->Nverts+n] = VZ[v];
+      refMesh->EToV[e*mesh->Nverts+n] = v;
+    }
+  }
 
   refMesh->EToB = (iint*) calloc(NpatchElements*mesh->Nfaces,sizeof(iint));
   for (iint n=0;n<NpatchElements*mesh->Nfaces;n++) refMesh->EToB[n] = 0;
 
   meshConnect(refMesh);
-  meshLoadReferenceNodesTri2D(refMesh, mesh->N);
-  meshPhysicalNodesTri2D(refMesh);
-  meshGeometricFactorsTri2D(refMesh);
-  meshConnectFaceNodes2D(refMesh);
-  meshSurfaceGeometricFactorsTri2D(refMesh);
+  meshLoadReferenceNodesTet3D(refMesh, mesh->N);
+  meshPhysicalNodesTet3D(refMesh);
+  meshGeometricFactorsTet3D(refMesh);
+  meshConnectFaceNodes3D(refMesh);
+  meshSurfaceGeometricFactorsTet3D(refMesh);
 
-  //build a list of all face pairs
-  refMesh->NfacePairs=1;
-
-  refMesh->EToFPairs = (iint *) calloc(2*mesh->Nfaces,sizeof(iint));
-  refMesh->FPairsToE = (iint *) calloc(2,sizeof(iint));
-  refMesh->FPairsToF = (int *)  calloc(2,sizeof(int));
-
-  //fill with -1
-  for (iint n=0;n<2*mesh->Nfaces;n++)  refMesh->EToFPairs[n] = -1;
-
-  refMesh->FPairsToE[0] = 0;
-  refMesh->FPairsToE[1] = 1;
-  refMesh->FPairsToF[0] = 0;
-  refMesh->FPairsToF[1] = 0;
-  refMesh->EToFPairs[0] = 0;
-  refMesh->EToFPairs[refMesh->Nfaces] = 1;
-
-
-
-  iint Nperm = pow(mesh->Nfaces,2);//all possible configuration of neighbours
+  // TW: THIS IS NOT CORRECT IN 3D - need 3 rotations per possible face connection
+  iint Nperm = pow(mesh->Nfaces,2)*3;//all possible configureation of neighbours
   (*Npatches) = Nperm;
   int refPatches = 0;
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (iint*) calloc(mesh->NfacePairs, sizeof(iint));
+  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));
@@ -504,6 +531,7 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
   int blkCounter = 1;
   int *permIndex = (int*) calloc(patchNp, sizeof(int));
   for(iint blk=1;blk<Nperm;++blk){
+    // TW: NO LONGER CORRECT
     iint f0 = blk%mesh->Nfaces;
     iint f1 = (blk/mesh->Nfaces)%mesh->Nfaces;
 
@@ -525,6 +553,7 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
     ++blkCounter;
   }
 
+
   // loop over all elements
   for(iint face=0;face<mesh->NfacePairs;++face){
 
@@ -540,13 +569,15 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
       iint eM0 = mesh->EToE[eM*mesh->Nfaces+0];
       iint eM1 = mesh->EToE[eM*mesh->Nfaces+1];
       iint eM2 = mesh->EToE[eM*mesh->Nfaces+2];
+      iint eM3 = mesh->EToE[eM*mesh->Nfaces+3];
 
       iint eP0 = mesh->EToE[eP*mesh->Nfaces+0];
       iint eP1 = mesh->EToE[eP*mesh->Nfaces+1];
       iint eP2 = mesh->EToE[eP*mesh->Nfaces+2];
+      iint eP3 = mesh->EToE[eP*mesh->Nfaces+3];
 
-      if(eM0>=0 && eM1>=0 && eM2>=0 &&
-          eP0>=0 && eP1>=0 && eP2>=0){ //check if this is an interiour patch
+      if(eM0>=0 && eM1>=0 && eM2>=0  && eM3>0 &&
+          eP0>=0 && eP1>=0 && eP2>=0 && eP3>0){ //check if this is an interiour patch
         iint blk = fM + mesh->Nfaces*fP;
 
         refPatchInvA = *patchesInvA + blk*patchNp*patchNp;
@@ -564,10 +595,10 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
         dfloat cond = matrixConditionNumber(patchNp,invRefAA);
         dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-        //printf("Face %d's conditioned patch reports cond = %g and rate = %g \n", face, cond, rate);
+        //printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
         if (rate < 1.0) {
-          (*patchesIndex)[face] = blk;
+          (*patchesIndex)[eM] = blk;
           refPatches++;
           continue;
         }
@@ -587,11 +618,13 @@ void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
       }
     }
 
-    (*patchesIndex)[face] = (*Npatches)-1;
+    (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
   printf("saving %d full patches\n",*Npatches);
   printf("using %d reference patches\n", refPatches);
+
+  free(refMesh);
 
   free(patchA); free(invRefAA);
   free(MS);

@@ -20,14 +20,13 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
-  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
-  // OAS and MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
+  // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
   //                                     EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=EXACTFULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH");
     strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
@@ -54,14 +53,30 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
 
   // set up
-  //  ellipticSetupTet3D(mesh, &ogs, &precon, lambda);
   occa::kernelInfo kernelInfo;
   ellipticSetupTet3D(mesh, kernelInfo);
 
-  solver_t *solver = ellipticSolveSetupTet3D(mesh, lambda, kernelInfo, options);
+  // capture header file
+  char *boundaryHeaderFileName;
+  if(argc==3)
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/homogeneous3D.h"); // default
+  else
+    boundaryHeaderFileName = strdup(argv[3]);
+  //add user defined boundary data
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
+  //add standard boundary functions
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
+  // Boundary Type translation. Just default from the mesh file.
+  int BCType[3] = {0,1,2};
+
+  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3)/3.0;
+  solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));

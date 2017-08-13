@@ -1330,6 +1330,25 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   iint globalAggOffset = globalAggStarts[rank];
 
+  MPI_Datatype mpi_rapEntry_t, oldtypes[2];
+  int blockcounts[2];
+
+  MPI_Aint    rapEntryoffsets[2], extent;
+
+  /* Setup description of the 4 MPI_FLOAT fields x, y, z, velocity */
+  rapEntryoffsets[0] = 0;
+  oldtypes[0] = MPI_IINT;
+  blockcounts[0] = 2;
+
+  MPI_Type_extent(MPI_IINT, &extent);
+  rapEntryoffsets[1] = 2 * extent;
+  oldtypes[1] = MPI_DFLOAT;
+  blockcounts[1] = 1;
+
+  /* Now define structured type and commit it */
+  MPI_Type_struct(2, blockcounts, rapEntryoffsets, oldtypes, &mpi_rapEntry_t);
+  MPI_Type_commit(&mpi_rapEntry_t);
+
   //The galerkin product can be computed as
   // (RAP)_IJ = sum_{i in Agg_I} sum_{j in Agg_j} P_iI A_ij P_jJ
   // Since each row of P has only one entry, we can share the ncessary
@@ -1411,7 +1430,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     iint id = RAPEntries[i].I;
     for (iint r=0;r<size;r++) {
       if (globalAggStarts[r]-1<id && id < globalAggStarts[r+1])
-        sendCounts[r] += sizeof(rapEntry_t);
+        sendCounts[r]++;
     }
   }
 
@@ -1423,7 +1442,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   for(iint r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(rapEntry_t);
+    recvNtotal += recvCounts[r];
   }
   rapEntry_t *recvRAPEntries;
   if (recvNtotal) {
@@ -1432,23 +1451,12 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers
   }
 
-  //do the local copy without MPI (since it could be huge)
-  iint localcnt = sendCounts[rank]/sizeof(rapEntry_t);
-  iint sendlocaloffset = sendOffsets[rank]/sizeof(rapEntry_t);
-  iint recvlocaloffset = recvOffsets[rank]/sizeof(rapEntry_t);
-  for (iint i=0;i<localcnt;i++) {
-    recvRAPEntries[i+recvlocaloffset] = RAPEntries[i+sendlocaloffset];
-  }
-  sendCounts[rank] = 0;
-  recvCounts[rank] = 0;
-
-  MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_CHAR,
-                recvRAPEntries, recvCounts, recvOffsets, MPI_CHAR,
+  MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, mpi_rapEntry_t,
+                recvRAPEntries, recvCounts, recvOffsets, mpi_rapEntry_t,
                 MPI_COMM_WORLD);
 
   //sort entries by the coarse row and col
   if (recvNtotal) qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
-
 
   //count total number of nonzeros;
   iint nnz =0;
