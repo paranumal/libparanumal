@@ -150,7 +150,7 @@ typedef struct {
 }solver_t;
 
 // block size for reduction (hard coded)
-#define blockSize 256
+#define blockSize 1024
 
 void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
