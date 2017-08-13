@@ -79,7 +79,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
     dfloat *nullCoarseA;
 
-    printf("Setting up coarse level %d\n", lev+1);
+    //printf("Setting up coarse level %d\n", lev+1);
 
     coarsenAgmgLevel(levels[lev], &(levels[lev+1]->A), &(levels[lev+1]->P),
                                   &(levels[lev+1]->R), &nullCoarseA);
@@ -1357,7 +1357,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   iint N = A->Nrows;
   iint M = A->Ncols;
 
-  printf("Level has %d rows, and is making %d aggregates\n", N, globalAggStarts[rank+1]-globalAggStarts[rank]);
+  //printf("Level has %d rows, and is making %d aggregates\n", N, globalAggStarts[rank+1]-globalAggStarts[rank]);
 
   pEntry_t *PEntries;
   if (M) PEntries = (pEntry_t *) calloc(M,sizeof(pEntry_t));

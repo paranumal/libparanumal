@@ -16,53 +16,113 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *recvBuffer = solver->recvBuffer;
 
   if(strstr(options, "CONTINUOUS")){
-    // compute local element operations and store result in o_Aq
-    solver->AxKernel(mesh->Nelements,
-                   mesh->o_ggeo,
-                   mesh->o_SrrT,
-                   mesh->o_SrsT,
-                   mesh->o_SsrT,
-                   mesh->o_SssT,
-                   mesh->o_MM,
-                   lambda,
-                   o_q,
-                   o_Aq);
+    ogs_t *nonHalo = solver->nonHalo;
+    ogs_t *halo = solver->halo;
+
+    if(halo->Ngather) {
+      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+                              mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+                              mesh->o_MM, lambda, o_q, o_Aq);
+      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
+      halo->o_gatherTmp.copyTo(halo->gatherTmp);
+    }
+    if(nonHalo->Ngather)
+      solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+                              mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+                              mesh->o_MM, lambda, o_q, o_Aq);
+
+    // C0 halo gather-scatter (on data stream)
+    if(halo->Ngather) {
+      occa::streamTag tag;
+
+      // MPI based gather scatter using libgs
+      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add");
+
+      // copy totally gather halo data back from HOST to DEVICE
+      mesh->device.setStream(solver->dataStream);
+      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
+
+      // wait for async copy
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+
+      // do scatter back to local nodes
+      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
+
+      // make sure the scatter has finished on the data stream
+      tag = mesh->device.tagStream();
+      mesh->device.waitFor(tag);
+    }
+
+    // finalize gather using local and global contributions
+    mesh->device.setStream(solver->defaultStream);
+    if(nonHalo->Ngather)
+      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+
 
   } else{
 
-    ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
+    iint offset = 0;
 
-    ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
+    ellipticStartHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
 
-    occaTimerTic(mesh->device,"gradientKernel");
+    solver->partialGradientKernel(mesh->Nelements,
+                                  offset,
+                                  mesh->o_vgeo,
+                                  mesh->o_DrT,
+                                  mesh->o_DsT,
+                                  o_q,
+                                  solver->o_grad);
 
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
-    solver->gradientKernel(allNelements,
-       mesh->o_vgeo,
-       mesh->o_DrT,
-       mesh->o_DsT,
-       o_q,
-       solver->o_grad);
+    ellipticInterimHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
 
-    occaTimerToc(mesh->device,"gradientKernel");
-    occaTimerTic(mesh->device,"ipdgKernel");
+    if(mesh->NinternalElements)
+      solver->partialIpdgKernel(mesh->NinternalElements,
+                                mesh->o_internalElementIds,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                lambda,
+                                solver->tau,
+                                mesh->o_vgeo,
+                                mesh->o_sgeo,
+                                mesh->o_EToB,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_LIFTT,
+                                mesh->o_MM,
+                                solver->o_grad,
+                                o_Aq);
 
-    solver->ipdgKernel(mesh->Nelements,
-		       mesh->o_vmapM,
-		       mesh->o_vmapP,
-		       lambda,
-		       solver->tau,
-		       mesh->o_vgeo,
-		       mesh->o_sgeo,
-		       mesh->o_EToB,
-		       mesh->o_DrT,
-		       mesh->o_DsT,
-		       mesh->o_LIFTT,
-		       mesh->o_MM,
-		       solver->o_grad,
-		       o_Aq);
+    ellipticEndHaloExchange2D(solver, o_q, recvBuffer);
 
-    occaTimerToc(mesh->device,"ipdgKernel");
+    if(mesh->totalHaloPairs){
+      offset = mesh->Nelements;
+      solver->partialGradientKernel(mesh->totalHaloPairs,
+                                    offset,
+                                    mesh->o_vgeo,
+                                    mesh->o_DrT,
+                                    mesh->o_DsT,
+                                    o_q,
+                                    solver->o_grad);
+    }
+
+    if(mesh->NnotInternalElements)
+      solver->partialIpdgKernel(mesh->NnotInternalElements,
+                                mesh->o_notInternalElementIds,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                lambda,
+                                solver->tau,
+                                mesh->o_vgeo,
+                                mesh->o_sgeo,
+                                mesh->o_EToB,
+                                mesh->o_DrT,
+                                mesh->o_DsT,
+                                mesh->o_LIFTT,
+                                mesh->o_MM,
+                                solver->o_grad,
+                                o_Aq);
+
   }
 
   if(strstr(options, "CONTINUOUS"))
