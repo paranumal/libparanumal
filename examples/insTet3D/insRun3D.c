@@ -26,7 +26,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  ins->NtimeSteps = 2000; // !!!!!!!!!!!!!
+  //ins->NtimeSteps = 10; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 1
     // ok it seems 
@@ -51,8 +51,7 @@ void insRun3D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else 
-      //if(tstep<400)
+    else if(tstep<400)
     {
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
@@ -60,12 +59,12 @@ void insRun3D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    // else{
-    //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-    //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
-    //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-    //   ins->g0 =  11.f/6.f;
-    // }
+    else{
+      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
+      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+      ins->g0 =  11.f/6.f;
+    }
   #else
    if(tstep<1){
        //advection, first order in time, increment
@@ -91,13 +90,13 @@ void insRun3D(ins_t *ins, char *options){
     insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
     //
-    printf("tstep = %d\n", tstep);
-    if(strstr(options, "REPORT")){
-      if(((tstep+1)%(ins->errorStep))==0){
-        insReport3D(ins, tstep+1,options);
-        //insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
-      }
-    }
+    // printf("tstep = %d\n", tstep);
+    // if(strstr(options, "REPORT")){
+    //   if(((tstep+1)%(ins->errorStep))==0){
+    //     insReport3D(ins, tstep+1,options);
+    //     insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
+    //   }
+    // }
     
 #if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
@@ -111,6 +110,7 @@ void insRun3D(ins_t *ins, char *options){
           dfloat y = mesh->y[id];
           dfloat z = mesh->z[id];
 
+          #if 0
           dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
           dfloat u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*tt);
           dfloat v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*tt);
@@ -119,6 +119,16 @@ void insRun3D(ins_t *ins, char *options){
                       sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+
                       sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
                       sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
+          #endif
+
+          #if 1
+           dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
+               //
+           dfloat u = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+           dfloat v = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+           dfloat w = 0; 
+           dfloat p = 0.5*(1.0- exp(2.*lambda*x));
+          #endif
 
           // Current time
           const int index0 = (ins->index+0)%3;
@@ -144,7 +154,8 @@ void insRun3D(ins_t *ins, char *options){
 #if 1
 // For Final Time
 insReport3D(ins, ins->NtimeSteps+1,options);
-//insErrorNorms3D(ins, ins->finalTime, options);
+//dfloat finaltime = (ins->NtimeSteps+1)*ins->dt;
+//insErrorNorms3D(ins, finaltime, options);
 #endif
 
 //Deallocate Halo MPI storage

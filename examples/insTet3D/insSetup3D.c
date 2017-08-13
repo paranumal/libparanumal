@@ -14,7 +14,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
 //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   // printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
@@ -76,7 +76,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 20.0;
+  ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
@@ -173,7 +173,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->dt   = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =2000;
+  ins->errorStep =10000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -195,7 +195,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  //ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
@@ -210,7 +210,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
   
-  #if 0
+  #if 1
    kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
@@ -241,13 +241,13 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   #else // Just for fast local reduction
   int maxVolumeNodes  = mymax(mesh->cubNp,mesh->Np);
   //
-  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);
-  kernelInfo.addDefine("p_S", Nfp);
-  
+  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);  
   int maxNodes        = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*Nfp, mesh->Nfaces*mesh->intNfp));
   int NblockV         = 256/mesh->Np; // works for CUDA
   int NblockS         = 256/maxNodes; // works for CUDA
+
+  kernelInfo.addDefine("p_S", Nfp);
    printf("NblockS: %d maxSurfaceNodes=%d SN = %d , mesh->Nfp = %d\n",NblockS, maxSurfaceNodes,Nfp, mesh->Nfp); 
 
     // ADD-DEFINES
@@ -313,7 +313,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
 				       "insAdvectionCubatureVolume3D",
 				       kernelInfo);
   
-  #if 0
+  #if 1
   printf("Compiling Advection surface kernel with cubature integration\n");
   ins->advectionCubatureSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
