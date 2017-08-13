@@ -7,7 +7,7 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D *mesh = solver->mesh;
+  mesh3D *mesh = solver->mesh;
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond

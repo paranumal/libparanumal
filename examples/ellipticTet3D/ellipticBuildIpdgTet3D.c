@@ -42,7 +42,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-12;
+  dfloat tol = 1e-8;
 
   dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
 
@@ -174,40 +174,52 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
                           +(nx*dtdxP+ny*dtdyP+nz*dtdzP)*mesh->Dt[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;
+        dfloat penalty = tau*hinv; 
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
         for (iint n=0;n<mesh->Np;n++) {
           for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                 -0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                -0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
+                                -0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
             BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
           }
 
           dfloat AnmP = 0;
           if (eP < 0) {
+            int qSgn, gradqSgn;
+            int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+            iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+            if(bcType==1){ // Dirichlet
+              qSgn     = -1;
+              gradqSgn =  1;
+            } else if (bcType==2){ // Neumann
+              qSgn     =  1;
+              gradqSgn = -1;
+            } else { // Neumann for now
+              qSgn     =  1;
+              gradqSgn = -1;
+            }
+
             for (iint i=0;i<mesh->Nfp;i++) {
-              BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
-              BM[m+n*mesh->Np] += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                  +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                  +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
-              BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
+              BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
+              BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+                                  +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
+                                  +0.5*qSgn*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+              BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
             for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
                       +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-                      +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i];
+                      +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
 
           if(fabs(AnmP)>tol){
             // remote info
-            iint rankP = mesh->EToP[eM*mesh->Nfaces+fM];
-            if (rankP<0) rankP = rankM;
             (*A)[nnz].row = globalIds[eM*mesh->Np+n];
             (*A)[nnz].col = globalIds[eP*mesh->Np+m];
             (*A)[nnz].val = AnmP;
@@ -216,7 +228,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           }
         }
       }
-    }
+    }    
 
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {

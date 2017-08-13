@@ -39,6 +39,7 @@ LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
 # list of objects to be compiled
 AOBJS    = \
   insSetupQuad2D.o \
+  insRunQuad2D.o \
 ../ellipticQuad2D/ellipticSetupQuad2D.o \
 ../ellipticQuad2D/ellipticSolveSetupQuad2D.o \
 ../ellipticQuad2D/ellipticSolveQuad2D.o \
@@ -48,8 +49,6 @@ AOBJS    = \
 ../ellipticQuad2D/ellipticCoarsePreconditionerSetupQuad2D.o \
 ../ellipticQuad2D/ellipticBuildIpdgQuad2D.o \
 ../ellipticQuad2D/ellipticBuildContinuousQuad2D.o
-# insRun2D.o \
-# insMakePeriodic2D.o \
 # insPlotVTU2D.o \
 # insError2D.o \
 # insReport2D.o \
@@ -93,10 +92,10 @@ LOBJS = \
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
 ../../src/gsParallelGatherScatterSetup.o\
-../../src/xxtCoarseSolve.o
+../../src/xxtCoarseSolve.o 
 
-insMainQuad2D:$(AOBJS) $(LOBJS) insMainQuad2D.o gslibInterface
-	$(LD)  $(LDFLAGS)  -o insMainQuad2D insMainQuad2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+insQuad2D:$(AOBJS) $(LOBJS) insMainQuad2D.o gslibInterface
+	$(LD)  $(LDFLAGS)  -o insQuad2D insMainQuad2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
@@ -105,4 +104,4 @@ gslibInterface:
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) insMainQuad2D.o
+	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) insQuad2D.o

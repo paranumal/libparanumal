@@ -45,10 +45,10 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       for(iint n=0;n<mesh->Nfp[N];++n){
         // load surface geofactors for this face
         iint sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
-        dfloat nx   = mesh->sgeo[sid+0];
-        dfloat ny   = mesh->sgeo[sid+1];
-        dfloat sJ   = mesh->sgeo[sid+2];
-        dfloat invJ = mesh->sgeo[sid+3];
+        dfloat nx   = mesh->sgeo[sid+NXID];
+        dfloat ny   = mesh->sgeo[sid+NYID];
+        dfloat sJ   = mesh->sgeo[sid+SJID];
+        dfloat invJ = mesh->sgeo[sid+IJID];
 
         // indices of negative and positive traces of face node
         iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;

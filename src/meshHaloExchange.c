@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "mpi.h"
+
 #include "mesh.h"
 
 // send data from partition boundary elements
