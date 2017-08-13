@@ -22,9 +22,6 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
-  iint rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;

@@ -59,7 +59,6 @@ typedef struct {
 
 }solver_t;
 
-void ellipticOccaRunTri2D(mesh2D *mesh);
 
 void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 
@@ -69,8 +68,6 @@ void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &
 void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
-
-void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
 void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 

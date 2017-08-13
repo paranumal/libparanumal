@@ -65,72 +65,11 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occaTimerToc(mesh->device,"ipdgKernel");
   }
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options, "CONTINUOUS"))
     // parallel gather scatter
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 
   occaTimerToc(mesh->device,"AxKernel");
-}
-
-void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options) {
-
-  solver_t *solver = (solver_t *) args[0];
-  dfloat  *lambda  = (dfloat *)  args[1];
-
-  mesh_t *mesh = solver->mesh;
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-
-  if(strstr(options, "CONTINUOUS")){
-    // compute local element operations and store result in o_Aq
-    solver->AxKernel(mesh->Nelements,
-                   mesh->o_ggeo,
-                   mesh->o_SrrT,
-                   mesh->o_SrsT,
-                   mesh->o_SsrT,
-                   mesh->o_SssT,
-                   mesh->o_MM,
-                   lambda,
-                   o_q,
-                   o_Aq);
-
-  } else{
-
-    ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
-
-    ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
-
-    occaTimerTic(mesh->device,"gradientKernel");
-
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
-    solver->gradientKernel(allNelements,
-       mesh->o_vgeo,
-       mesh->o_DrT,
-       mesh->o_DsT,
-       o_q,
-       solver->o_grad);
-
-    occaTimerToc(mesh->device,"gradientKernel");
-    occaTimerTic(mesh->device,"ipdgKernel");
-
-    // TW NOTE WAS 2 !
-    solver->ipdgKernel(mesh->Nelements,
-		       mesh->o_vmapM,
-		       mesh->o_vmapP,
-		       lambda,
-		       solver->tau,
-		       mesh->o_vgeo,
-		       mesh->o_sgeo,
-		       mesh->o_EToB,
-		       mesh->o_DrT,
-		       mesh->o_DsT,
-		       mesh->o_LIFTT,
-		       mesh->o_MM,
-		       solver->o_grad,
-		       o_Aq);
-
-    occaTimerToc(mesh->device,"ipdgKernel");
-  }
 }
 
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
@@ -160,7 +99,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   occaTimerTic(mesh->device,"weighted inner product2");
 
-  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options,"CONTINUOUS"))
     solver->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
@@ -238,7 +177,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   double tic = MPI_Wtime();
 
   // gather-scatter
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options, "CONTINUOUS"))
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   // compute A*x
@@ -260,7 +199,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(solver, lambda, o_r, o_z, options); // r => rP => zP => z
+    ellipticPreconditioner2D(solver, lambda, o_r, o_z, options);
 
     // p = z
     o_p.copyFrom(o_z); // PCG

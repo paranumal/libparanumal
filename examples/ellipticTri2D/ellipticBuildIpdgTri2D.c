@@ -4,7 +4,7 @@
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                            unsigned long long *nnzA, iint *globalStarts, const char *options){
+                            iint *nnzA, iint *globalStarts, const char *options){
 
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -43,7 +43,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
     free(idSendBuffer);
   }
 
-  unsigned long long nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-12;
@@ -91,7 +91,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
 
   // reset non-zero counter
-  unsigned long long nnz = 0;
+  iint nnz = 0;
 
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
@@ -224,12 +224,12 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
       }
     }
   }
-
-  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
+  printf("nnz = %lu\n", nnz);
+  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
 
   // sort by row block (just in case)
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
   free(globalIds);
 

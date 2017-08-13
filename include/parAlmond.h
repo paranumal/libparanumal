@@ -9,13 +9,13 @@ typedef struct csr_t {
   iint NlocalCols;
 
   //local
-  unsigned long long diagNNZ;
+  iint diagNNZ;
   iint   *diagRowStarts;
   iint   *diagCols;
   dfloat *diagCoefs;
 
   //non-local
-  unsigned long long offdNNZ;
+  iint offdNNZ;
   iint   *offdRowStarts;
   iint   *offdCols;
   dfloat *offdCoefs;
@@ -49,7 +49,7 @@ typedef struct ell_t {
   iint Ncols;
   iint nnzPerRow;
   iint strideLength;
-  unsigned long long actualNNZ;
+  iint actualNNZ;
 
   occa::memory o_cols;
   occa::memory o_coefs;
@@ -60,7 +60,7 @@ typedef struct coo_t {
 
   iint Nrows;
   iint Ncols;
-  unsigned long long nnz;
+  iint nnz;
 
   // device memory
   occa::memory o_offsets;
@@ -110,13 +110,13 @@ typedef struct dcsr_t {
   iint NlocalCols;
 
   //local
-  unsigned long long diagNNZ;
+  iint diagNNZ;
   occa::memory o_diagRows;
   occa::memory o_diagCols;
   occa::memory o_diagCoefs;
 
   //non-local
-  unsigned long long offdNNZ;
+  iint offdNNZ;
   occa::memory o_offdRows;
   occa::memory o_offdCols;
   occa::memory o_offdCoefs;
@@ -254,7 +254,7 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        iint* rowStarts,
-                       unsigned long long  nnz,
+                       iint  nnz,
                        iint* Ai,
                        iint* Aj,
                        dfloat* Avals,

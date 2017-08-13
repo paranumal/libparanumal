@@ -1,7 +1,7 @@
 #include "agmg.h"
 
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
-            unsigned long long nnz, iint *Ai, iint *Aj, dfloat *Avals){
+            iint nnz, iint *Ai, iint *Aj, dfloat *Avals){
 
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
