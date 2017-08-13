@@ -73,7 +73,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 300.0;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0f* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -105,14 +105,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
       ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
 #endif
 
-#if 0
+#if 1
       ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
       ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
       ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-nu*8.f*M_PI*M_PI*0.0);
 #endif
 
 
-#if 1 // Zero flow
+#if 0 // Zero flow
       ins->U[id] = 1.0;
       ins->V[id] = 0.0;
       ins->P[id] = 0.0;
@@ -153,10 +153,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
-  // if(mesh->N=1)
-  //   cfl = 0.05; 
-
+  dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
+  //dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
+ 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -169,11 +168,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   if(strstr(options,"SUBCYCLING")){
-    ins->NtimeSteps  = ins->finalTime/ins->dt;
-    ins->sdt         = ins->finalTime/ins->NtimeSteps;
-
-    ins->dt          = ins->sdt*ins->Nsubsteps;
-    ins->NtimeSteps  = ins->NtimeSteps/ins->Nsubsteps;
+    ins->NtimeSteps = ins->finalTime/ins->dt;
+    ins->dt         = ins->finalTime/ins->NtimeSteps;
+    ins->sdt        = ins->dt/ins->Nsubsteps;
 
     printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
   }
@@ -195,7 +192,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   #endif
   
   // errorStep
-  ins->errorStep =50;
+  ins->errorStep =1000000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -216,8 +213,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
- // ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
@@ -262,6 +259,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
+   iint substep = 0; 
+   if(strstr(options,"SUBCYCLING")){ substep = 1;}
+   kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
+
+
   printf("mesh nfields %d\n", mesh->Nfields);
   // MEMORY ALLOCATION
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
@@ -289,47 +291,47 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
     // Note that resU and resV can be replaced with already introduced buffer
     ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
     ins->o_Ve   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ve);
+    ins->o_Ud   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ud);
+    ins->o_Vd   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Vd);
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
 
-    // printf("Compiling SubCycle Advection volume kernel \n");
-    // ins->subCycleVolumeKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleVolume2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection volume kernel \n");
+    ins->subCycleVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleVolume2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection surface kernel\n");
-    // ins->subCycleSurfaceKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleSurface2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection surface kernel\n");
+    ins->subCycleSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleSurface2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection cubature  volume kernel \n");
-    // ins->subCycleCubatureVolumeKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleCubatureVolume2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection cubature  volume kernel \n");
+    ins->subCycleCubatureVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleCubatureVolume2D",
+					 kernelInfo);
 
-    // printf("Compiling SubCycle Advection cubature surface kernel\n");
-    // ins->subCycleCubatureSurfaceKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleCubatureSurface2D",
-				// 	 kernelInfo);
-
-
-    // printf("Compiling SubCycle Advection RK update kernel\n");
-    // ins->subCycleRKUpdateKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleRKUpdate2D",
-				// 	 kernelInfo);
+    printf("Compiling SubCycle Advection cubature surface kernel\n");
+    ins->subCycleCubatureSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleCubatureSurface2D",
+					 kernelInfo);
 
 
+    printf("Compiling SubCycle Advection RK update kernel\n");
+    ins->subCycleRKUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleRKUpdate2D",
+					 kernelInfo);
 
-    // ins->subCycleExtKernel =
-    //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-				// 	 "insSubCycleExt2D",
-				// 	 kernelInfo);
+    ins->subCycleExtKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+					 "insSubCycleExt2D",
+					 kernelInfo);
 
   }
 
@@ -399,7 +401,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 				       kernelInfo);
 
   // ===========================================================================
-  printf("Compiling Helmholtz volume update kernel\n");
+  printf("Compiling Helmholtz Rhs Forcing  kernel\n");
   ins->helmholtzRhsForcingKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
 				       "insHelmholtzRhsForcing2D",

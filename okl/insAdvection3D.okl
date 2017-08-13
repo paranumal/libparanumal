@@ -604,7 +604,7 @@ kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
-    volatile shared dfloat s_a[p_NblockS*p_Nfaces][p_S];
+    shared volatile  dfloat s_a[p_NblockS][p_Nfaces][p_Nfp];
     // shared storage for flux terms
     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
     shared dfloat s_VM[p_NblockS][p_NfacesNfp];
@@ -618,7 +618,7 @@ kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
     shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
     shared dfloat s_iFluxNz[p_NblockS][p_intNfpNfaces];
 
-    exclusive dfloat unMax;
+    exclusive iint f, m;
 
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
@@ -654,51 +654,106 @@ kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
           dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);
           dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);    
           
-          unMax = (unM > unP) ? unM : unP;
+          dfloat unMax = (unM > unP) ? unM : unP;
 
-          // if(e==350 && face==0)
-          // printf("%d %d %g\n",e, face, unMax);
-          }
-
-        if(e<Nelements && n<(p_Nfaces*p_S)){
-          const int lface = n/p_S;
-          const iint fnode = n-lface*p_S; 
-          s_a[es*p_Nfaces + lface][fnode] = fnode < p_Nfp ? unMax : 0.f;
-        }
-      
+          #if 1
+            f = n/p_Nfp;
+            m = n%p_Nfp;
+            s_a[es][f][m] = unMax;
+          #endif        
+        }    
      }
     }
 
     barrier(localMemFence);
 
-    // Now Reduction for maximum face values
     for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
-         if(n<(p_Nfaces*p_S)){
-          const iint lface = n/p_S;
-          const iint g = es*p_Nfaces + lface;
-          const iint s = n - lface*p_S;
-          if(p_S>32){
-           if(s<32) s_a[g][s]  = myMax(s_a[g][s],s_a[g][s + 32]);
-          }
-          if(p_S>16){ 
-            if(s<16) s_a[g][s] = myMax(s_a[g][s],s_a[g][s + 16]);
-          }
-          if(p_S>8){
-            if(s<8) s_a[g][s]  = myMax(s_a[g][s],s_a[g][s + 8]);
-          }
-          if(p_S>4){
-            if(s<4) s_a[g][s]  = myMax(s_a[g][s],s_a[g][s + 4]);
-          }
-          if(s< 2){
-            if(s<2) s_a[g][s]  = myMax(s_a[g][s],s_a[g][s + 2]);
-          } 
-          if(s==0) s_a[g][0]   = myMax(s_a[g][s],s_a[g][s + 1]);
-        }
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+        if(n<(p_Nfaces*p_Nfp)){ 
+        if(m<128 && m+128 < p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+128]);
+       }
       }
     }
 
     barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+        if(n<(p_Nfaces*p_Nfp)){ 
+        if(m<64 && m+64<p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+64]);
+      }
+      }
+    }
+
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+        if(n<(p_Nfaces*p_Nfp)){ 
+        if(m<32 && m+32<p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+32]);
+      }
+      }
+    }
+
+  barrier(localMemFence); // OCCA COMPLAINS!!!!
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+        if(n<(p_Nfaces*p_Nfp)){ 
+        if(m<16 && m+16<p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+16]);
+      }
+      }
+    }
+
+    barrier(localMemFence);
+
+      for(iint es=0;es<p_NblockS;++es;inner1){
+        for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+          if(n<(p_Nfaces*p_Nfp)){ 
+          if(m<8 && m+8<p_Nfp)
+            s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+8]);
+        }
+        }
+      }
+
+  barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+        if(n<(p_Nfaces*p_Nfp)){ 
+        if(m<4 && m+4<p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+4]);
+      }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+       if(n<(p_Nfaces*p_Nfp)){ 
+         if(m<2 && m+2<p_Nfp)
+          s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+2]);
+      }
+      }
+    }
+  barrier(localMemFence);
+
+  for(iint es=0;es<p_NblockS;++es;inner1){
+        for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+          if(n<(p_Nfaces*p_Nfp)){ 
+          if(m<1 && (m+1)<p_Nfp)
+            s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+1]);
+        }
+        }
+      }
+
+  barrier(localMemFence);
 
     // interpolate to surface integration nodes
     for(iint es=0;es<p_NblockS;++es;inner1){
@@ -738,22 +793,9 @@ kernel void insAdvectionCubatureSurface3D_0(const iint Nelements,
               insAdvectionBoundaryConditions3D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp],intz[n+e*p_Nfaces*p_intNfp], nx, ny,nz, iUM,iVM,iWM, &iUP, &iVP,&iWP);
             }
 
-            #if 0   
-            // Find max normal velocity on the face // LLF
-            dfloat unM   = occaFabs(nx*iUM + ny*iVM + nz*iWM);
-            dfloat unP   = occaFabs(nx*iUP + ny*iVP + nz*iWP);    
-            dfloat unMax2 = (unM > unP) ? unM : unP;
-
-            dfloat lambda = unMax2;
-            #else
-            dfloat lambda = s_a[es*p_Nfaces + face][0];
-            #endif
-
-
-
-            // if(e==350 && face==0)
-            // printf("%g %g\n",lambda,  unMax2);
-          
+           
+              dfloat lambda = s_a[es][face][0];
+              
             // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
             s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUP*iUP + iUM*iUM) 
