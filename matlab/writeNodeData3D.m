@@ -649,6 +649,47 @@ for n=1:NpP
     fprintf(fid, '\n');
 end
 
+%% permutations
+mVXYZ = [-1,+1,-1,-1;
+	 -1,-1,+1,-1;
+	 -1,-1,-1,+1];
+Nverts = 4;
+cnt = 0;
+for v1=1:Nverts
+  for v2=1:Nverts
+    for v3=1:Nverts
+      for v4=1:Nverts
+
+	if(v1~=v2 & v1~=v3 & v1~=v4 & v2~=v3 & v2 ~=v4 & v3~=v4)
+	  vX1 = mVXYZ(:,v1)';
+	  vX2 = mVXYZ(:,v2)';
+	  vX3 = mVXYZ(:,v3)';
+	  vX4 = mVXYZ(:,v4)';
+				  
+	  permRST = -0.5*(1+r+s+t)*vX1+0.5*(1+r)*vX2+0.5*(1+s)*vX3+0.5*(1+t)*vX4;
+
+	  [v1,v2,v3,v4]
+	  
+	  permr = permRST(:,1);
+	  perms = permRST(:,2);
+	  permt = permRST(:,3);
+
+	  for n=1:Np
+	    for m=1:Np
+	      dist(n,m) = (r(n)-permr(m))^2 + (s(n)-perms(m))^2 + (t(n)-permt(m))^2;
+	    end
+	  end
+	  [foo,ids] = min(dist);
+	  cnt = cnt+1;
+	  ids
+	  pmap(cnt, :) = [v1,v2,v3,v4,ids];
+
+	end
+      end
+    end
+  end
+end
+pmap
 
 %% degree raising interpolation
 [rP1,sP1,tP1] = Nodes3D(N+1);
