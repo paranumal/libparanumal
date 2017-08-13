@@ -292,7 +292,7 @@ printf("p_blockSize = %d \n", blockSize);
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				                           "ellipticAxHex3D_e1c0",
+				                           "ellipticAxHex3D_e1c",
 				                           kernelInfo);
 
 
