@@ -432,8 +432,30 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   for(int n=0;n<mesh->NpP*mesh->NpP;++n){
     fscanf(fp, dfloatFormat, mesh->oasBackDg+n);
   }
+
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  int Npp1;
+  sscanf(buf, "%d %d", &Npp1, &NpPcheck);
+
+  //degree raising and lowering interpolation matrices
+  mesh->interpRaise = (dfloat*) calloc(Npp1*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<Npp1*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->interpRaise+n);
+  }
   fgets(buf, BUFSIZ, fp); // read comment
 
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  int Npm1;
+  sscanf(buf, "%d %d", &Npm1, &NpPcheck);
 
+  mesh->interpLower = (dfloat*) calloc(Npm1*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<Npm1*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->interpLower+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  
   fclose(fp);
 }
