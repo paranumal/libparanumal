@@ -237,8 +237,10 @@ printf("p_blockSize = %d \n", blockSize);
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-  kernelInfo.addDefine("p_Nz", 5);
-  
+  int Nz = mymin(mesh->Nq, 64/mesh->Nq);
+  kernelInfo.addDefine("p_Nz", Nz);
+  printf("Nz = %d\n", Nz);
+
   //  occa::setVerboseCompilation(0);
 
   for(iint r=0;r<size;++r){
@@ -294,7 +296,7 @@ printf("p_blockSize = %d \n", blockSize);
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DTW.okl",
-				                           "ellipticAxHex3D_cuboid1",
+				                           "ellipticAxHex3D_cuboid0",
 				                           kernelInfo);
 
 
