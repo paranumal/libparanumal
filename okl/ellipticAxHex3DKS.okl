@@ -1,125 +1,464 @@
 
-// e1c - like e6, just no interpolation. 2d i-j "slabs". 
+// e1c - like e6, just no interpolation. 2d i-j "slabs".
 
 kernel void ellipticAxHex3D_e1c(const iint Nelements,
                                 const iint * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
-				const dfloat * restrict q,
-				dfloat * restrict Aq){
+                                const dfloat * restrict q,
+                                dfloat * restrict Aq){
 
-  for(iint e=0; e<Nelements; ++e; outer0){
+	for(iint e=0; e<Nelements; ++e; outer0){
 
-    shared dfloat s_tmpr[p_Nq][p_Nq];
-    shared dfloat s_tmps[p_Nq][p_Nq];
-    shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_Aq[p_Nq][p_Nq][p_Nq];
-    
-    shared dfloat s_D[p_Nq][p_Nq];
-    
-    exclusive dfloat  r_qt, r_tmpt;
-    exclusive int emap;
-    
-    // prefetch q(i,j,:,e) to register array
-    for(iint j=0; j<p_Nq; ++j; inner1) {
-      for(iint i=0; i<p_Nq; ++i; inner0) {
-	emap = elementList[e];
+		shared dfloat s_tmpr[p_Nq][p_Nq];
+		shared dfloat s_tmps[p_Nq][p_Nq];
+		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_Aq[p_Nq][p_Nq][p_Nq];
 
-	const iint base = i + j*p_Nq + emap*p_Np;
-	for (iint k=0; k<p_Nq; k++){
-	  
-	  s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
-	  s_Aq[k][j][i] = 0.f;
-	} 
+		shared dfloat s_D[p_Nq][p_Nq];
 
-	s_D[j][i] = D[j*p_Nq+i];
-      }
-    }
-    
-    barrier(localMemFence);
-    
-    for(iint k=0; k<p_Nq; ++k) {
-      
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
-	  
-	  dfloat qtk = 0.f;
-	  for(iint n=0; n<p_Nq; ++n) {
-	    qtk += s_D[k][n]*s_q[n][j][i];
-	  }
-	  r_qt = qtk;
+		exclusive dfloat  r_qt, r_tmpt;
+		exclusive int emap;
+
+		// prefetch q(i,j,:,e) to register array
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+				emap = elementList[e];
+
+				const iint base = i + j*p_Nq + emap*p_Np;
+				for (iint k=0; k<p_Nq; k++){
+
+					s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
+					s_Aq[k][j][i] = 0.f;
+
+				}
+
+				s_D[j][i] = D[j*p_Nq+i];
+			}
+		}
+
+		barrier(localMemFence);
+
+		for(iint k=0; k<p_Nq; ++k) {
+
+			for(iint j=0; j<p_Nq; ++j; inner1) {
+				for(iint i=0; i<p_Nq; ++i; inner0) {
+
+					dfloat qtk = 0.f;
+					for(iint n=0; n<p_Nq; ++n) {
+						qtk += s_D[k][n]*s_q[n][j][i];
+					}
+					r_qt = qtk;
+				}
+			}
+
+			barrier(localMemFence);
+
+			// process k-slice (first r- and s-derivatives)
+			for(iint j=0; j<p_Nq; ++j; inner1) {
+				for(iint i=0; i<p_Nq; ++i; inner0) {
+
+					const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+					const dfloat G00 = ggeo[base+p_G00ID*p_Np];
+					const dfloat G01 = ggeo[base+p_G01ID*p_Np];
+					const dfloat G02 = ggeo[base+p_G02ID*p_Np];
+					const dfloat G11 = ggeo[base+p_G11ID*p_Np];
+					const dfloat G12 = ggeo[base+p_G12ID*p_Np];
+					const dfloat G22 = ggeo[base+p_G22ID*p_Np];
+					const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
+
+					dfloat qr = 0.f, qs = 0.f;
+					for(iint n=0; n<p_Nq; ++n) {
+
+						qr += s_D[i][n]*s_q[k][j][n];
+						qs += s_D[j][n]*s_q[k][n][i];
+					}
+
+					// assumes w*J built into G entries
+					s_tmpr[j][i] = G00*qr + G01*qs + G02*r_qt;
+					s_tmps[j][i] = G01*qr + G11*qs + G12*r_qt;
+					r_tmpt           = G02*qr + G12*qs + G22*r_qt;
+
+					s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
+
+					for(iint n=0; n<p_Nq; ++n) {
+						s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
+					}
+				}
+			}
+
+
+			barrier(localMemFence);
+
+			// second derivatives
+
+			for(iint j=0; j<p_Nq; ++j; inner1) {
+				for(iint i=0; i<p_Nq; ++i; inner0) {
+
+					dfloat Aq1 = 0.0f, Aq2 = 0.0f;
+
+					for(iint n=0; n<p_Nq; ++n) {
+						Aq1 += s_D[n][i]*s_tmpr[j][n];
+						Aq2 += s_D[n][j]*s_tmps[n][i];
+					}
+
+					s_Aq[k][j][i] +=  Aq1 + Aq2;
+				}
+			}
+		}//for k ()
+
+		barrier(localMemFence);
+
+		// write result out (local node storage)
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+
+				for (iint k=0; k<p_Nq; k++){
+					int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+					Aq[base] = s_Aq[k][j][i];
+				}
+			}
+		}
 	}
-      }
-      
-      barrier(localMemFence);
-
-      // process k-slice (first r- and s-derivatives)
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
-						
-	  const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-	  
-	  const dfloat G00 = ggeo[base+p_G00ID*p_Np];
-	  const dfloat G01 = ggeo[base+p_G01ID*p_Np];
-	  const dfloat G02 = ggeo[base+p_G02ID*p_Np];
-	  const dfloat G11 = ggeo[base+p_G11ID*p_Np];
-	  const dfloat G12 = ggeo[base+p_G12ID*p_Np];
-	  const dfloat G22 = ggeo[base+p_G22ID*p_Np];
-	  const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
-	  
-	  dfloat qr = 0.f, qs = 0.f;
-	  for(iint n=0; n<p_Nq; ++n) {
-	    
-	    qr += s_D[i][n]*s_q[k][j][n];
-	    qs += s_D[j][n]*s_q[k][n][i];
-	  }
-	  
-	  // assumes w*J built into G entries
-	  s_tmpr[j][i] = G00*qr + G01*qs + G02*r_qt;
-	  s_tmps[j][i] = G01*qr + G11*qs + G12*r_qt;
-	  r_tmpt           = G02*qr + G12*qs + G22*r_qt;
-	  
-	  s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
-	  
-	  for(iint n=0; n<p_Nq; ++n) {
-	    s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
-	  }
-	}
-      }
-      
-      
-      barrier(localMemFence);
-      
-      // second derivatives
-		
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
-
-	  dfloat Aq1 = 0.0f, Aq2 = 0.0f;
-	  
-	  for(iint n=0; n<p_Nq; ++n) {
-	    Aq1 += s_D[n][i]*s_tmpr[j][n];
-	    Aq2 += s_D[n][j]*s_tmps[n][i];
-	  }
-	  
-	  s_Aq[k][j][i] +=  Aq1 + Aq2;
-	}
-      }
-    }//for k ()
-
-    barrier(localMemFence);
-
-    // write result out (local node storage)
-    for(iint j=0; j<p_Nq; ++j; inner1) {
-      for(iint i=0; i<p_Nq; ++i; inner0) {
-				
-	for (iint k=0; k<p_Nq; k++){
-	  int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[base] = s_Aq[k][j][i];
-	}
-      }
-    }
-  }
 
 } //e1c
+
+//e1c0 -> version with k as internal loop
+
+
+// e1c - like e6, just no interpolation. 2d i-j "slabs".
+
+kernel void ellipticAxHex3D_e1c0(const iint Nelements,
+                                 const iint * restrict elementList,
+                                 const dfloat * restrict ggeo,
+                                 const dfloat * restrict D,
+                                 const dfloat lambda,
+                                 const dfloat * restrict q,
+                                 dfloat * restrict Aq){
+
+	for(iint e=0; e<Nelements; ++e; outer0){
+
+		shared dfloat s_tmpr[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_tmps[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_Aq[p_Nq][p_Nq][p_Nq];
+
+		shared dfloat s_D[p_Nq][p_Nq];
+
+		exclusive dfloat  r_qt[p_Nq], r_tmpt[p_Nq];
+
+		exclusive int emap;
+
+		// prefetch q(i,j,:,e) to register array
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+				emap = elementList[e];
+
+				const iint base = i + j*p_Nq + emap*p_Np;
+				for (iint k=0; k<p_Nq; k++){
+
+					s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
+					s_Aq[k][j][i] = 0.f;
+				}
+
+				s_D[j][i] = D[j*p_Nq+i];
+
+			}
+		}
+
+		barrier(localMemFence);
+
+
+
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(iint k=0; k<p_Nq; ++k) {
+					dfloat qtk = 0.f;
+					for(iint n=0; n<p_Nq; ++n) {
+						qtk += s_D[k][n]*s_q[n][j][i];
+						//   qtk += s_D[j][n]*s_q[n][j][i];
+					}
+					r_qt[k] = qtk;
+					//	s_Aq[k][j][i] =qtk;
+				}
+			}
+		}
+
+		barrier(localMemFence);
+
+		// process k-slice (first r- and s-derivatives)
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(iint k=0; k<p_Nq; ++k) {
+					const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+					const dfloat G00 = ggeo[base+p_G00ID*p_Np];
+					const dfloat G01 = ggeo[base+p_G01ID*p_Np];
+					const dfloat G02 = ggeo[base+p_G02ID*p_Np];
+					const dfloat G11 = ggeo[base+p_G11ID*p_Np];
+					const dfloat G12 = ggeo[base+p_G12ID*p_Np];
+					const dfloat G22 = ggeo[base+p_G22ID*p_Np];
+					const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
+
+					dfloat qr = 0.f, qs = 0.f;
+					for(iint n=0; n<p_Nq; ++n) {
+
+						qr += s_D[i][n]*s_q[k][j][n];
+						qs += s_D[j][n]*s_q[k][n][i];
+					}
+
+					// assumes w*J built into G entries
+					s_tmpr[k][j][i] = G00*qr + G01*qs + G02*r_qt[k];
+					s_tmps[k][j][i] = G01*qr + G11*qs + G12*r_qt[k];
+					r_tmpt[k]           = G02*qr + G12*qs + G22*r_qt[k];
+
+
+					s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
+
+					for(iint n=0; n<p_Nq; ++n) {
+						s_Aq[n][j][i] += s_D[k][n]*r_tmpt[k];
+					}
+				}
+			}
+		}
+
+
+		barrier(localMemFence);
+
+		// second derivatives
+
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(iint k=0; k<p_Nq; ++k) {
+					dfloat Aq1 = 0.0f, Aq2 = 0.0f;
+
+					for(iint n=0; n<p_Nq; ++n) {
+						Aq1 += s_D[n][i]*s_tmpr[k][j][n];
+						Aq2 += s_D[n][j]*s_tmps[k][n][i];
+					}
+
+					s_Aq[k][j][i] +=  Aq1 + Aq2;
+				}
+			}
+		}
+		//	}//for k ()
+
+		barrier(localMemFence);
+
+		// write result out (local node storage)
+		for(iint j=0; j<p_Nq; ++j; inner1) {
+			for(iint i=0; i<p_Nq; ++i; inner0) {
+
+				for (iint k=0; k<p_Nq; k++){
+					int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+					Aq[base] = s_Aq[k][j][i];
+				}
+			}
+		}
+	}
+
+} //e1c
+
+// e1d - slab version of e0 (cross between e0 and e1)
+
+#define sliceThickness 1
+// k = 0..., p_Nq/sliceThickness
+// i = 0 ... p_Nq-1, j = 0,..., p_Nq-1
+#define shift p_Nq/sliceThickness
+
+#define cubeThreadsSliced                             \
+	for(iint k=0; k<shift; ++k; inner2)            \
+		for(iint j=0; j<p_Nq; ++j; inner1)          \
+			for(iint i=0; i<p_Nq; ++i; inner0)
+
+kernel void ellipticAxHex3D_e1d(const iint Nelements,
+                                const iint * restrict elementList,
+                                const dfloat * restrict ggeo,
+                                const dfloat * restrict D,
+                                const dfloat lambda,
+                                const dfloat * restrict q,
+                                dfloat * restrict Aq){
+
+	//
+
+	for(iint e=0; e<Nelements; ++e; outer0) {
+
+		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_D[p_Nq][p_Nq];
+
+		exclusive dfloat r_qr[sliceThickness+1], r_qs[sliceThickness+1], r_qt[sliceThickness+1], r_Aq[sliceThickness+1];
+		exclusive dfloat r_G01, r_G02, r_G12;
+
+		// prefetch q(:,:,:,e) to shared
+		cubeThreadsSliced {
+		  iint s = k;
+		  //  while  (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  const iint base = i + j*p_Nq + s*p_Nq*p_Nq + elementList[e]*p_Np;
+
+
+			  s_q[s][j][i] = q[base];
+			  //  s++;
+			  s+=shift;
+
+			  if(k==0) // fetch D to shared
+				  s_D[j][i] = D[j*p_Nq+i];
+		  }
+		}
+
+
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+
+		  iint s =k;
+		  //  int c =0;
+
+		  //  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  const iint base = elementList[e]*p_Nggeo*p_Np + s*p_Nq*p_Nq + j*p_Nq + i;
+
+			  // assumes w*J built into G entries
+			  const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
+
+
+
+			  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
+
+			  for(iint n=0; n<p_Nq; ++n) {
+				  qr += s_D[i][n]*s_q[s][j][n];
+				  qs += s_D[j][n]*s_q[s][n][i];
+				  qt += s_D[s][n]*s_q[n][j][i];
+			  }
+
+			  r_qr[s/shift] = qr;
+			  r_qs[s/shift] = qs;
+			  r_qt[s/shift] = qt;
+
+			  r_Aq[s/shift] = GwJ*lambda*s_q[s][j][i];
+			  //	  s++;
+			  s+=shift;
+		  }//while
+		}
+
+		// r term ----->
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+		  iint s=k;
+		  //while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  const iint base = elementList[e]*p_Nggeo*p_Np + s*p_Nq*p_Nq + j*p_Nq + i;
+        
+			  const dfloat G00 = ggeo[base+p_G00ID*p_Np];
+			  r_G01 = ggeo[base+p_G01ID*p_Np];
+			  r_G02 = ggeo[base+p_G02ID*p_Np];
+
+			  s_q[s][j][i] = G00*r_qr[s/shift] + r_G01*r_qs[s/shift] + r_G02*r_qt[s/shift];
+			  //  s++;
+			  s+=shift;
+		  }
+
+		}
+
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+		  iint s=k;
+		  //	  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  dfloat tmp = 0.f;
+		  for(iint n=0; n<p_Nq; ++n)
+				  tmp += s_D[n][i]*s_q[s][j][n];
+
+			  r_Aq[s/shift] += tmp;
+			  //  s++;
+			  s+=shift;
+		  }
+		}
+
+		// s term ---->
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+		  iint s=k;
+		  //	  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  const iint base = elementList[e]*p_Nggeo*p_Np + s*p_Nq*p_Nq + j*p_Nq + i;
+
+		
+			  
+			 const  dfloat G11 = ggeo[base+p_G11ID*p_Np];
+			  r_G12 = ggeo[base+p_G12ID*p_Np];
+
+			  s_q[s][j][i] = r_G01*r_qr[s/shift] + G11*r_qs[s/shift] + r_G12*r_qt[s/shift];
+			  //  s++;
+			  //s+=sliceThickness;
+			  s+=shift;
+		  }
+		}
+
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+		  iint s=k;
+		  //	  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  dfloat tmp = 0.f;
+		  for(iint n=0; n<p_Nq; ++n)
+				  tmp += s_D[n][j]*s_q[s][n][i];
+
+			  r_Aq[s/shift] += tmp;
+			  //  s++;
+			  //	s+=sliceThickness;
+			  s+=shift;
+		  }
+		}
+
+		// t term ---->
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+
+		  iint s=k;
+		  //  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  const iint base = elementList[e]*p_Nggeo*p_Np + s*p_Nq*p_Nq + j*p_Nq + i;
+      const dfloat G22 = ggeo[base+p_G22ID*p_Np];
+
+
+			  s_q[s][j][i] = r_G02*r_qr[s/shift] + r_G12*r_qs[s/shift] + G22*r_qt[s/shift];
+			  //	  s++;
+			  //  s+=sliceThickness;
+			  s+=shift;
+		  }
+		}
+
+		barrier(localMemFence);
+
+		cubeThreadsSliced {
+		  iint s=k;
+		  //	  while (s<(k+sliceThickness)&&(s<p_Nq)){
+		  while (s<p_Nq){
+		  dfloat tmp = 0.f;
+		  for(iint n=0; n<p_Nq; ++n)
+				  tmp += s_D[n][s]*s_q[n][j][i];
+
+			  r_Aq[s/shift] += tmp;
+
+			  iint base =  elementList[e]*p_Np + s*p_Nq*p_Nq + j*p_Nq + i;
+			  Aq[base] = r_Aq[s/shift];
+			  //  s++;
+			  //	s+=sliceThickness;
+			  s+=shift;
+		  }
+		}
+	}
+}//e0a end
+
+
+
+
+
