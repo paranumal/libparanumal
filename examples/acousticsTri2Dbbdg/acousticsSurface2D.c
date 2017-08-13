@@ -56,14 +56,14 @@ void acousticsSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       iint idP = mesh->mapP[id]*mesh->Nfields;
 
       // load negative trace node values of q
-      dfloat uM = mesh->fQ[idM+0];
-      dfloat vM = mesh->fQ[idM+1];
-      dfloat pM = mesh->fQ[idM+2];
+      dfloat uM = mesh->fQM[idM+0];
+      dfloat vM = mesh->fQM[idM+1];
+      dfloat pM = mesh->fQM[idM+2];
 
       // load positive trace node values of q
-      dfloat uP = mesh->fQ[idP+0]; 
-      dfloat vP = mesh->fQ[idP+1];
-      dfloat pP = mesh->fQ[idP+2];
+      dfloat uP = mesh->fQP[idP+0]; 
+      dfloat vP = mesh->fQP[idP+1];
+      dfloat pP = mesh->fQP[idP+2];
 
       // find boundary type
       iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];

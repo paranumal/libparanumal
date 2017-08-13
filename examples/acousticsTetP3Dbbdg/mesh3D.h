@@ -100,6 +100,8 @@ void meshMRABSetupP3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
 
+void meshSetPolynomialDegree3D(mesh3D *mesh, int N);
+
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
 /* offsets for geometric factors */

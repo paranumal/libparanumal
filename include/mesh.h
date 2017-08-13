@@ -1,6 +1,7 @@
 #ifndef MESH_H
 #define MESH_H 1
 
+#include "mpi.h"
 #include <math.h>
 #include <stdlib.h>
 #include <occa.hpp>
@@ -44,6 +45,8 @@ typedef struct {
   iint *EToF; // element-to-(local)face connectivity
   iint *EToP; // element-to-partition/process connectivity
   iint *EToB; // element-to-boundary condition type
+
+  int *elementInfo; //type of element
 
   // boundary faces
   iint NboundaryFaces; // number of boundary faces
@@ -98,6 +101,11 @@ typedef struct {
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
 
+  iint gjNq;
+  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
+  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjD2;     // 1D GJ to GJ node differentiation
+
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
   dfloat *oasForward;
   dfloat *oasBack;
@@ -131,7 +139,7 @@ typedef struct {
   // field info for PDE solver
   iint Nfields;
   dfloat *q;    // solution data array
-  dfloat *fQ; //solution trace array
+  dfloat *fQM, *fQP; //solution trace arrays
   dfloat *rhsq, *rhsq2, *rhsq3; // right hand side data array
   dfloat *resq; // residual data array (for LSERK time-stepping)
 
@@ -151,14 +159,21 @@ typedef struct {
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
+  //source injection
+  dfloat *sourceq;
+  dfloat sourceX0, sourceY0, sourceZ0, sourceT0, sourceC2, sourceFreq;
+  iint sourceNelements, *MRABsourceNelements;
+  iint *sourceElements;
+
   // surface integration node info
   iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
   dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
-  dfloat *intx, *inty; // coordinates of suface integration nodes
+  dfloat *intx, *inty, *intz; // coordinates of suface integration nodes
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
+  dfloat *invVB1D, *invVB2D;
   iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
@@ -191,6 +206,10 @@ typedef struct {
   iint **MRABelementIds, **MRABhaloIds;
   iint *MRABshiftIndex;
 
+  iint *MRABpmlNelements, *MRABpmlNhaloElements;
+  iint **MRABpmlElementIds, **MRABpmlIds;
+  iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
+
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann;
 
@@ -208,17 +227,18 @@ typedef struct {
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
 
-    // pml stuff
+  // pml stuff
   iint    pmlNfields;
   //  iint    pmlNelements; // deprecated
   iint   *pmlElementList; // deprecated
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
+  dfloat *pmlSigmaZ;
   dfloat *pmlq;
   dfloat *pmlrhsq;
   dfloat *pmlresq;
-  //
+
 
   dfloat *invTau;
 
@@ -251,7 +271,7 @@ typedef struct {
 
   // occa stuff
   occa::device device;
-  occa::memory o_q, o_rhsq, o_resq, o_fQ;
+  occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
@@ -272,7 +292,7 @@ typedef struct {
   occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
   // cubature (for wadg)
-  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty;
+  occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
@@ -281,6 +301,10 @@ typedef struct {
   //MRAB element lists
   occa::memory *o_MRABelementIds;
   occa::memory *o_MRABhaloIds;
+  occa::memory *o_MRABpmlElementIds;
+  occa::memory *o_MRABpmlIds;
+  occa::memory *o_MRABpmlHaloElementIds;
+  occa::memory *o_MRABpmlHaloIds;
 
   // DG halo exchange info
   occa::memory o_haloElementList;
@@ -291,6 +315,7 @@ typedef struct {
 
   // Bernstein-Bezier occa arrays
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
+  occa::memory o_invVB1DT, o_invVB2DT;
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
 
@@ -325,7 +350,8 @@ typedef struct {
 
 
   occa::memory o_pmlElementList;
-  occa::memory o_pmlSigmaX, o_pmlSigmaY;
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
+  occa::memory o_pmlrhsq;
 
   occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
@@ -365,6 +391,7 @@ typedef struct {
 
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
+  occa::kernel gatherScatterKernel;
 
   occa::kernel getKernel;
   occa::kernel putKernel;
@@ -396,10 +423,11 @@ typedef struct {
 
 
 
-  occa::kernel pmlKernel; // deprecated
+  occa::kernel pmlKernel;
   occa::kernel pmlVolumeKernel;
   occa::kernel pmlSurfaceKernel;
   occa::kernel pmlUpdateKernel;
+  occa::kernel pmlTraceUpdateKernel;
 
 
   // Experimental Time Steppings for Boltzmann

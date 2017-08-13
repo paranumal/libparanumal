@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "mpi.h"
 #include "mesh3D.h"
 
 void meshParallelPrint3D(mesh3D *mesh){

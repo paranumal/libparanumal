@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "mesh.h"
-#include "mpi.h"
 
 void meshParallelScatter(mesh_t *mesh,
 			       hgs_t *hgs, 

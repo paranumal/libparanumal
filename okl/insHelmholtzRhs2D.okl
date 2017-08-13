@@ -56,6 +56,7 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
       	  const dfloat NUm0 = NU[id0];
           const dfloat NUm1 = NU[id1];
           const dfloat NUm2 = NU[id2];
+
       	  const dfloat NVm0 = NV[id0];
           const dfloat NVm1 = NV[id1];
           const dfloat NVm2 = NV[id2];
@@ -63,19 +64,31 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
           const dfloat Pxm0 = Px[id0];
           const dfloat Pxm1 = Px[id1];
           const dfloat Pxm2 = Px[id2];
+
           const dfloat Pym0 = Py[id0];
           const dfloat Pym1 = Py[id1];
           const dfloat Pym2 = Py[id2];
 
       	  // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
+          if(p_SUBSCYCLE==0){
           s_rhsU[es][n]  = J*p_inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*p_idt 
                                      - (c0*Pxm0+c1*Pxm1+c2*Pxm2) 
                                      - (a0*NUm0+a1*NUm1+a2*NUm2));
-                                    //-(a0+a1+a2)*NUm0) ; 
+                                     //-(a0+a1+a2)*NUm0) ; 
           s_rhsV[es][n]  = J*p_inu*( + (b0*Vm0 +b1*Vm1 +b2*Vm2 )*p_idt 
                                      - (c0*Pym0+c1*Pym1+c2*Pym2) 
                                      -  (a0*NVm0+a1*NVm1+a2*NVm2));
-                                       //-(a0+a1+a2)*NVm0) ; 
+                                     //-(a0+a1+a2)*NVm0) ; 
+          }
+          else{
+          // New Substepiing Update
+          s_rhsU[es][n]  = J*p_inu*( + (b0*NUm0 + b1*NUm1 + b2*NUm2 )*p_idt 
+                                     - (c0*Pxm0+c1*Pxm1+c2*Pxm2)); 
+                                     
+          s_rhsV[es][n]  = J*p_inu*( + (b0*NVm0+b1*NVm1+b2*NVm2 )*p_idt 
+                                     - (c0*Pym0+c1*Pym1+c2*Pym2));                                                
+          }
+
       	}
       }
     }
@@ -135,6 +148,7 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dudx[p_Np];
     shared  dfloat s_dudy[p_Np];
+
     shared  dfloat s_dvdx[p_Np];
     shared  dfloat s_dvdy[p_Np];
 
@@ -161,14 +175,11 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       if(n<p_NfacesNfp){
       	const iint id  = n + e*p_Nfaces*p_Nfp;
       	idM = vmapM[id];
-
       	const iint face = n/p_Nfp;
-
-
-	dfloat dudxP=0, dudyP=0, uP=0;
-	dfloat dvdxP=0, dvdyP=0, vP=0;
-
-      	// load surface geofactors for this face
+      	dfloat dudxP=0, dudyP=0, uP=0;
+      	dfloat dvdxP=0, dvdyP=0, vP=0;
+      	
+        // load surface geofactors for this face
       	iint sid = p_Nsgeo*(e*p_Nfaces+face);
       	nx = sgeo[sid+p_NXID];
       	ny = sgeo[sid+p_NYID];
@@ -183,13 +194,13 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	const dfloat dv = vP;
       	const dfloat hlf = 1.f;
 
-      	s_nxdu[n] = hlf*sJ*invJ*nx*du;
-      	s_nydu[n] = hlf*sJ*invJ*ny*du;
-      	s_nxdv[n] = hlf*sJ*invJ*nx*dv;
-	s_nydv[n] = hlf*sJ*invJ*ny*dv;
+        s_nxdu[n] = hlf*sJ*invJ*nx*du;
+        s_nydu[n] = hlf*sJ*invJ*ny*du;
+        s_nxdv[n] = hlf*sJ*invJ*nx*dv;
+        s_nydv[n] = hlf*sJ*invJ*ny*dv;
 
-	s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
-      	s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
+        s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+        s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
       }
     }
 

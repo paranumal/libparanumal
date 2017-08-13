@@ -55,6 +55,7 @@ ellipticSolveTri2D.o\
 ellipticSolveSetupTri2D.o\
 ellipticHaloExchange2D.o\
 ellipticParallelGatherScatterTri2D.o \
+ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTri2D.o \
 ellipticBuildContinuousTri2D.o \
 ellipticBuildFullPatchesIpdgTri2D.o \

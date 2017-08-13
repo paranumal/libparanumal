@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "mesh.h"
-#include "mpi.h"
 
 typedef struct{
 

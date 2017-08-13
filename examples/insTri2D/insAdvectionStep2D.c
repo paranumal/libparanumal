@@ -7,6 +7,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   mesh2D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt;
+  // dfloat t = tstep*ins->dt + ins->dt;
 
   // field offset at this step
   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
@@ -132,10 +133,10 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			     ins->c0,
 			     ins->c1,
 			     ins->c2,
-					 ins->index,
+			     ins->index,
 			     mesh->Nelements+mesh->totalHaloPairs,
 			     solverid, // pressure BCs
-					 ins->o_PI, //not used
+				 ins->o_PI, //not used
 			     ins->o_P,
 			     ins->o_Px,
 			     ins->o_Py);

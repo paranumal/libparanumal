@@ -54,6 +54,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
          solver->tau,
          mesh->o_vgeo,
          mesh->o_sgeo,
+         mesh->o_EToB,
          mesh->o_DrT,
          mesh->o_DsT,
          mesh->o_DtT,

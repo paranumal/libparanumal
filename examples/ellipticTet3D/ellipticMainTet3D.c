@@ -7,7 +7,8 @@ int main(int argc, char **argv){
 
   if(argc!=3){
     // to run cavity test case with degree N elements
-    printf("usage: ./main meshes/cavityTetH02.msh N\n");
+    printf("usage 1: ./main meshes/cavityTetH02.msh N\n");
+    printf("usage 2: ./main meshes/cavityTetH02.msh N BoundaryConditions.h\n");
     exit(-1);
   }
 

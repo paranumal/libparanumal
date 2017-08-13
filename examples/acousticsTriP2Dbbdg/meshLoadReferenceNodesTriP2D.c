@@ -5,14 +5,6 @@
 
 void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
-  //local element order
-  mesh->N = (iint*) malloc(mesh->Nelements*sizeof(iint));
-
-  for (int e=0;e<mesh->Nelements;e++){
-    mesh->N[e] = N;
-    if (e%2==0) mesh->N[e] = N-1;
-  }
-
   mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
   mesh->Nfp = (iint*) malloc((N+1)*sizeof(iint));
   mesh->plotNp = (iint*) malloc((N+1)*sizeof(iint));
@@ -387,11 +379,6 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
     fclose(fp);
   }
-
-  mesh->NMax = N;
-  mesh->NpMax = mesh->Np[N];
-  mesh->NfpMax = mesh->Nfp[N];
-  mesh->cubNpMax = mesh->cubNp[N];
 }
 
 
