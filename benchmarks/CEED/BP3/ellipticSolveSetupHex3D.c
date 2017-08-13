@@ -221,6 +221,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   // generically used for blocked DEVICE reductions
   kernelInfo.addDefine("p_blockSize", blockSize);
 
+printf("p_blockSize = %d \n", blockSize);
   kernelInfo.addDefine("p_maxNodes", maxNodes);
   kernelInfo.addDefine("p_Nmax", maxNodes);
 
@@ -291,7 +292,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				                           "ellipticAxHex3D_e0b",
+				                           "ellipticAxHex3D_e1c",
 				                           kernelInfo);
 
 
