@@ -33,9 +33,6 @@ void ellipticPreconditioner2D(solver_t *solver,
     //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
     //}
 
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
-
     //patch solve
     //ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
     smoothTri2D(precon->OASsmoothArgs, o_r, o_z,true);

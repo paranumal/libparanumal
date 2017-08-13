@@ -183,6 +183,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+
+  kernelInfo.addDefine("p_blockSize", blockSize);
+
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -200,6 +205,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   int NblockP = 512/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
+  int NblockG;
+  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+  else NblockG = 256/mesh->Np;
+  kernelInfo.addDefine("p_NblockG", NblockG);
+
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
            "scaledAdd",
@@ -215,14 +225,29 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                "ellipticAxTri2D",
                kernelInfo);
 
+  solver->partialAxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+               "ellipticPartialAxTri2D",
+               kernelInfo);
+
   solver->gradientKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
                "ellipticGradientTri2D",
            kernelInfo);
 
+  solver->partialGradientKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+               "ellipticPartialGradientTri2D",
+                kernelInfo);
+
   solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
                "ellipticAxIpdgTri2D",
+               kernelInfo);
+
+  solver->partialIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+               "ellipticPartialAxIpdgTri2D",
                kernelInfo);
 
   //new precon struct
