@@ -75,19 +75,27 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
     gjNq*gjNq*Nq*Nq*6 +
     gjNq*Nq*Nq*Nq*4; // excludes inner product
 #else
-  double flops = 
-    gjNq*Nq*Nq*Nq*2 + 
-    gjNq*gjNq*Nq*Nq*2 + 
-    gjNq*gjNq*gjNq*Nq*2 + 
-    gjNq*gjNq*gjNq*gjNq*6 + 
-    gjNq*gjNq*gjNq*15 + 
-    gjNq*gjNq*gjNq*gjNq*2 + 
-    gjNq*gjNq*gjNq*2 + 
-    gjNq*gjNq*gjNq*gjNq*4 + 
-    gjNq*gjNq*gjNq*2 + 
-    gjNq*gjNq*gjNq*Nq*2 + 
-    gjNq*gjNq*Nq*Nq*2 + 
-    gjNq*Nq*Nq*Nq*2 ;
+  double flops;
+  
+  if(!strstr(options, "COLLOCATION")){
+    flops = 
+      gjNq*Nq*Nq*Nq*2 + 
+      gjNq*gjNq*Nq*Nq*2 + 
+      gjNq*gjNq*gjNq*Nq*2 + 
+      gjNq*gjNq*gjNq*gjNq*6 + 
+      gjNq*gjNq*gjNq*15 + 
+      gjNq*gjNq*gjNq*gjNq*2 + 
+      gjNq*gjNq*gjNq*2 + 
+      gjNq*gjNq*gjNq*gjNq*4 + 
+      gjNq*gjNq*gjNq*2 + 
+      gjNq*gjNq*gjNq*Nq*2 + 
+      gjNq*gjNq*Nq*Nq*2 + 
+      gjNq*Nq*Nq*Nq*2 ;
+  }else{
+    flops = 
+      Nq*Nq*Nq*Nq*12 + 
+      Nq*Nq*Nq*15;
+  }
 #endif
   double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
 
