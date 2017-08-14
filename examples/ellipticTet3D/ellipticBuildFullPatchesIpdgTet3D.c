@@ -92,9 +92,9 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     iint e = (N==0) ? eM : mesh->EToE[mesh->Nfaces*eM+N-1];
 
     if (e<0) continue; //skip this block if this is a boundary face
-    
+
     iint vbase = e*mesh->Nvgeo;
-    
+
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -105,15 +105,15 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     dfloat dtdy = mesh->vgeo[vbase+TYID];
     dfloat dtdz = mesh->vgeo[vbase+TZID];
     dfloat J = mesh->vgeo[vbase+JID];
-    
+
     dfloat G00 = drdx*drdx + drdy*drdy + drdz*drdz;
     dfloat G01 = drdx*dsdx + drdy*dsdy + drdz*dsdz;
     dfloat G02 = drdx*dtdx + drdy*dtdy + drdz*dtdz;
-    
+
     dfloat G10 = dsdx*drdx + dsdy*drdy + dsdz*drdz;
     dfloat G11 = dsdx*dsdx + dsdy*dsdy + dsdz*dsdz;
     dfloat G12 = dsdx*dtdx + dsdy*dtdy + dsdz*dtdz;
-  
+
     dfloat G20 = dtdx*drdx + dtdy*drdy + dtdz*drdz;
     dfloat G21 = dtdx*dsdx + dtdy*dsdy + dtdz*dsdz;
     dfloat G22 = dtdx*dtdx + dtdy*dtdy + dtdz*dtdz;
@@ -253,7 +253,7 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
     dfloat dtdx = mesh->vgeo[vbase+TXID];
     dfloat dtdy = mesh->vgeo[vbase+TYID];
     dfloat dtdz = mesh->vgeo[vbase+TZID];
-    
+
     dfloat J = mesh->vgeo[vbase+JID];
 
     iint vbaseP = eP*mesh->Nvgeo;
@@ -352,7 +352,7 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   }
 }
 
-void ellipticBuildExactPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat **patchesInvA, const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -410,7 +410,7 @@ void ellipticBuildExactPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basi
   free(MS);
 }
 
-void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -459,15 +459,15 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
 
   //vertices of reference patch
   int Nv = 8;
-  dfloat VX[8] = [-1, 1,      0,          0,           0,         5./3,        -5./3,         0];
-  dfloat VY[8] = [ 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)];
-  dfloat VZ[8] = [ 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3];
+  dfloat VX[8] = {-1, 1,      0,          0,           0,         5./3,        -5./3,         0};
+  dfloat VY[8] = { 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)};
+  dfloat VZ[8] = { 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3};
 
-  iint EToV[5][4] = [1,2,3,4;
-		     1,2,4,5;
-		     2,3,4,6;
-		     3,1,4,7;
-		     1,3,2,8];
+  iint EToV[5*4] = {1,2,3,4,
+	                  1,2,4,5,
+	                  2,3,4,6,
+	                  3,1,4,7,
+	                  1,3,2,8};
 
 
   refMesh->Nelements = NpatchElements;
@@ -477,13 +477,13 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
   refMesh->EZ = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
 
   refMesh->EToV = (iint*) calloc(NpatchElements*mesh->Nverts, sizeof(iint));
-  
+
   for(int e=0;e<NpatchElements;++e){
-    for(int n=0;n<Nverts;++n){    
-      int v = EToV[e][n]-1;
-      refMesh->EX[e*mesh->Nverts+n] = VX[v]; 
-      refMesh->EY[e*mesh->Nverts+n] = VY[v]; 
-      refMesh->EZ[e*mesh->Nverts+n] = VZ[v]; 
+    for(int n=0;n<mesh->Nverts;++n){
+      int v = EToV[e*mesh->Nverts + n]-1;
+      refMesh->EX[e*mesh->Nverts+n] = VX[v];
+      refMesh->EY[e*mesh->Nverts+n] = VY[v];
+      refMesh->EZ[e*mesh->Nverts+n] = VZ[v];
       refMesh->EToV[e*mesh->Nverts+n] = v;
     }
   }
@@ -526,7 +526,7 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
     iint f1 = (blk/mesh->Nfaces)%mesh->Nfaces;
     iint f2= (blk/(mesh->Nfaces*mesh->Nfaces))%mesh->Nfaces;
     iint f3= (blk/(mesh->Nfaces*mesh->Nfaces*mesh->Nfaces));
-    
+
     iint r0 = (f0==0) ? 0: mesh->Nfaces-f0;
     iint r1 = (f1==0) ? 0: mesh->Nfaces-f1;
     iint r2 = (f2==0) ? 0: mesh->Nfaces-f2;
@@ -568,7 +568,7 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
     iint fP3 = mesh->EToF[eM*mesh->Nfaces+3];
 
     if(eP0>=0 && eP1>=0 && eP2>=0 && eP3>=0){ //check if this is an interiour patch
-      iint blk = fP0 + mesh->Nfaces*fP1 + mesh->Nfaces*mesh->Nfaces*fP2 + mesh->Nfaces*mesh->Nfaces*mesh->Nfacse*fP3;
+      iint blk = fP0 + mesh->Nfaces*fP1 + mesh->Nfaces*mesh->Nfaces*fP2 + mesh->Nfaces*mesh->Nfaces*mesh->Nfaces*fP3;
 
       refPatchInvA = *patchesInvA + blk*patchNp*patchNp;
 
@@ -593,7 +593,7 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
         continue;
       }
     }
-    
+
     ++(*Npatches);
     *patchesInvA = (dfloat*) realloc(*patchesInvA, (*Npatches)*patchNp*patchNp*sizeof(dfloat));
 

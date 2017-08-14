@@ -224,7 +224,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
       }
     }
   }
-  printf("nnz = %lu\n", nnz);
+  printf("nnz = %d\n", nnz);
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;

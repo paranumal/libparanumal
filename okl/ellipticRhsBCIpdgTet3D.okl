@@ -15,7 +15,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
             const dfloat * restrict LIFTT,
             const dfloat * restrict MM,
             dfloat * restrict rhs){
-  
+
   for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
     shared  dfloat s_dqdy[p_Np];
@@ -31,17 +31,17 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
 
     exclusive iint idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
-    
+
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
         const iint id  = n + e*p_Nfaces*p_Nfp;
-        idM = vmapM[id];          
+        idM = vmapM[id];
 
         // find face that owns this node
         const iint face = n/p_Nfp;
 
-        dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;         
-        
+        dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;
+
         // load surface geofactors for this face
         iint sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
@@ -52,15 +52,16 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
         hinv = sgeo[sid+p_IHID];
 
         const int bc = EToB[face+p_Nfaces*e];
+        printf("bc = %d\n", bc);
         if(bc>0) {
           ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, \
                                         0.f, 0.f, 0.f, 0.f,               \
                                         uP, dudxP, dudyP, dudzP);
-        }  
-        
+        }
+
         const dfloat dq = uP;
         const dfloat half = 1.f;
-        
+
         s_nxdq[n] = half*sJ*invJ*nx*dq;
         s_nydq[n] = half*sJ*invJ*ny*dq;
         s_nzdq[n] = half*sJ*invJ*nz*dq;
@@ -84,12 +85,12 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
         const dfloat dsdz = vgeo[gid + p_SZID];
         const dfloat dtdx = vgeo[gid + p_TXID];
         const dfloat dtdy = vgeo[gid + p_TYID];
-        const dfloat dtdz = vgeo[gid + p_TZID]; 
-        
+        const dfloat dtdz = vgeo[gid + p_TZID];
+
         dfloat Lnxdq = 0;
         dfloat Lnydq = 0;
         dfloat Lnzdq = 0;
-        
+
         occaUnroll(p_NfacesNfp)
           for(iint i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
@@ -131,21 +132,21 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
 
         s_lapq[n] -= (lapr+laps+lapt);
       }
-      
+
     }
-    
+
     barrier(localMemFence);
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Np){
         dfloat lap = 0;
-        
+
         // lift remaining surface terms
         occaUnroll(p_NfacesNfp)
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[n+i*p_Np]*s_lapflux[i];
           }
-        
+
         s_lapq[n] += lap;
       }
     }
@@ -155,7 +156,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-        
+
         dfloat Mlapq = 0;
 
         // multiply by mass matrix
@@ -163,7 +164,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[n+i*p_Np]*s_lapq[i];
           }
-        
+
         const iint id = e*p_Np+n;
         rhs[id] -=  J*Mlapq;
       }

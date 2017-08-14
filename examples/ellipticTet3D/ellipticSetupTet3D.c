@@ -20,3 +20,4 @@ void ellipticSetupTet3D(mesh3D *mesh, occa::kernelInfo &kernelInfo){
 
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
 }
+

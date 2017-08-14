@@ -3,8 +3,12 @@
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                             iint *nnzA, iint *globalStarts, const char *options){
+
+  iint size, rankM;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
   iint Nnum = mesh->Np*mesh->Nelements;
 
@@ -174,14 +178,14 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
                           +(nx*dtdxP+ny*dtdyP+nz*dtdzP)*mesh->Dt[m+vidP*mesh->Np];
         }
 
-        dfloat penalty = tau*hinv; 
+        dfloat penalty = tau*hinv;
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
         for (iint n=0;n<mesh->Np;n++) {
           for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                 -0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                -0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+                                -0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
             BM[m+n*mesh->Np] += +0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
           }
 
@@ -205,7 +209,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
               BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
               BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                   +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
-                                  +0.5*qSgn*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]; 
+                                  +0.5*qSgn*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
@@ -213,7 +217,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
                       +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
-                      +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]; 
+                      +0.5*sJ*(nx*dtdx+ny*dtdy+nz*dtdz)*DtTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i];
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmP[i];
             }
           }
@@ -228,7 +232,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           }
         }
       }
-    }    
+    }
 
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
@@ -244,7 +248,7 @@ void ellipticBuildIpdgTet3D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
       }
     }
   }
-  printf("nnz = %lu\n", nnz);
+  printf("nnz = %d\n", nnz);
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   // free up unused storage
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));

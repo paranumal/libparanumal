@@ -289,8 +289,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
-               "ellipticPatchGather2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticPatchGather",
                kernelInfo);
 
   solver->precon->approxFacePatchSolverKernel =
@@ -304,8 +304,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather2D.okl",
-               "ellipticFacePatchGather2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticFacePatchGather",
                kernelInfo);
 
   solver->precon->approxBlockJacobiSolverKernel =
