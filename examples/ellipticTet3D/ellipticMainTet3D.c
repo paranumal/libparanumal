@@ -28,10 +28,11 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXBLOCKJACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be EXACT, KCYCLE, or VCYCLE
@@ -39,7 +40,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE smoother=DAMPEDJACOBI partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
 
@@ -76,7 +77,7 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3)/3.0;
+  dfloat tau = 160.0*(mesh->N+1)*(mesh->N+3);
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
