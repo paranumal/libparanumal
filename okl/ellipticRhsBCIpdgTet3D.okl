@@ -97,9 +97,9 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
             Lnzdq += LIFTT[n+i*p_Np]*s_nzdq[i];
           }
 
-        dfloat dqdx = s_dqdx[n] + Lnxdq;
-        dfloat dqdy = s_dqdy[n] + Lnydq;
-        dfloat dqdz = s_dqdz[n] + Lnzdq;
+        dfloat dqdx = Lnxdq;
+        dfloat dqdy = Lnydq;
+        dfloat dqdz = Lnzdq;
 
         s_dqdx[n] = drdx*dqdx + drdy*dqdy + drdz*dqdz; // abuse of notation
         s_dqdy[n] = dsdx*dqdx + dsdy*dqdy + dsdz*dqdz;
@@ -129,7 +129,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
             lapt += DtT[n+i*p_Np]*s_dqdz[i];
           }
 
-        s_lapq[n] -= (lapr+laps+lapt);
+        s_lapq[n] = -(lapr+laps+lapt);
       }
 
     }
