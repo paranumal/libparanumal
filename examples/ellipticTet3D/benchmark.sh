@@ -35,9 +35,10 @@ declare -a parAlmondOptions=(
 numTests=${#options[@]}
 
 declare -a meshes=(
-"../../meshes/cavity3DH05.msh"
-"../../meshes/cavity3DH01.msh"
-"../../meshes/cavity3DH005.msh"
+"../../meshes/cavityTetH05.msh"
+"../../meshes/cavityTetH025.msh"
+"../../meshes/cavityTetH0125.msh"
+#"../../meshes/cavityTetH00625.msh"
 )
 
 numMeshes=${#meshes[@]}
