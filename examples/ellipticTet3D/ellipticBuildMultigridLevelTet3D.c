@@ -213,6 +213,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+
+  kernelInfo.addDefine("p_blockSize", blockSize);
+
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -229,6 +234,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
 
   int NblockP = 512/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
+
+  int NblockG;
+  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+  else NblockG = 256/mesh->Np;
+  kernelInfo.addDefine("p_NblockG", NblockG);
 
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
@@ -294,8 +304,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
-               "ellipticPatchGather3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticPatchGather",
                kernelInfo);
 
   solver->precon->approxFacePatchSolverKernel =
@@ -304,8 +314,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->exactFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticExactFacePatchSolver3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver.okl",
+               "ellipticExactFacePatchSolver",
                kernelInfo);
 
   solver->precon->facePatchGatherKernel =
@@ -323,7 +333,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
                "ellipticExactBlockJacobiSolver3D",
                kernelInfo);
 
-  free(DrT); free(DsT); free(dtT); free(LIFTT);
+  free(DrT); free(DsT); free(DtT); free(LIFTT);
 
   return solver;
 }

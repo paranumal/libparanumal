@@ -29,8 +29,8 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=BLOCKJACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -39,7 +39,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=DAMPEDJACOBI partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -83,9 +83,6 @@ int main(int argc, char **argv){
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
-  // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
-
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
@@ -95,7 +92,7 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[n+e*mesh->Np];
       dfloat zn = mesh->z[n+e*mesh->Np];
       //x[n+e*mesh->Np] = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
-      nrhs[n] = -(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -114,6 +111,28 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
+  //add boundary condition contribution to rhs
+  if (strstr(options,"IPDG")) {
+    dfloat zero = 0.f;
+    solver->rhsBCIpdgKernel(mesh->Nelements,
+                           mesh->o_vmapM,
+                           mesh->o_vmapP,
+                           solver->tau,
+                           zero,
+                           mesh->o_x,
+                           mesh->o_y,
+                           mesh->o_z,
+                           mesh->o_vgeo,
+                           mesh->o_sgeo,
+                           mesh->o_EToB,
+                           mesh->o_DrT,
+                           mesh->o_DsT,
+                           mesh->o_DtT,
+                           mesh->o_LIFTT,
+                           mesh->o_MM,
+                           o_r);
+  }
+
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
@@ -126,7 +145,7 @@ int main(int argc, char **argv){
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
-      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      dfloat exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
@@ -138,7 +157,7 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU3D(mesh, "foo", 0);
+  meshPlotVTU3D(mesh, "foo.vtu", 0);
 
   // close down MPI
   MPI_Finalize();

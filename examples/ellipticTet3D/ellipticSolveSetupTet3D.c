@@ -29,6 +29,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
+  solver->tau = tau;
+
   solver->mesh = mesh;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -78,6 +80,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  //kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+
+  kernelInfo.addDefine("p_blockSize", blockSize);
+
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -94,6 +101,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   int NblockP = 512/(5*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
+
+  int NblockG;
+  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+  else NblockG = 256/mesh->Np;
+  kernelInfo.addDefine("p_NblockG", NblockG);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
@@ -221,8 +233,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                kernelInfo);
 
   solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
-               "ellipticPatchGather3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticPatchGather",
                kernelInfo);
 
   solver->precon->approxFacePatchSolverKernel =
@@ -236,8 +248,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                kernelInfo);
 
   solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
-               "ellipticFacePatchGather3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticFacePatchGather",
                kernelInfo);
 
   solver->precon->approxBlockJacobiSolverKernel =

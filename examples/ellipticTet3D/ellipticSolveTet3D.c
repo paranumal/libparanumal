@@ -174,6 +174,11 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   occaTimerTic(mesh->device,"PCG");
 
+  //start timer
+  mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
+  double tic = MPI_Wtime();
+
   // gather-scatter
   if(strstr(options, "CONTINUOUS"))
     ellipticParallelGatherScatterTet3D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
@@ -198,7 +203,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner3D(solver, o_r, o_z, options);
+    ellipticPreconditioner3D(solver, lambda, o_r, o_z, options);
 
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -253,7 +258,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     if(strstr(options,"PCG")){
 
       // z = Precon^{-1} r
-      ellipticPreconditioner3D(solver, o_r, o_z, options);
+      ellipticPreconditioner3D(solver, lambda, o_r, o_z, options);
 
       // dot(r,z)
       rdotz1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);

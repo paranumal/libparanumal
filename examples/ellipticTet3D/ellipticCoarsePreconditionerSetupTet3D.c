@@ -76,16 +76,16 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
 
   //use the ordering to define a gather+scatter for assembly
-  hgs_t *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+  *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
   // ------------------------------------------------------------------------------------
   // 2. Build non-zeros of stiffness matrix (unassembled)
-  iint nnz = mesh->Nverts*mesh->Nverts*mesh->Nelements;
-  iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
-  iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
-  dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
+  iint nnzLocal = mesh->Nverts*mesh->Nverts*mesh->Nelements;
+  iint   *rowsA = (iint*) calloc(nnzLocal, sizeof(iint));
+  iint   *colsA = (iint*) calloc(nnzLocal, sizeof(iint));
+  dfloat *valsA = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
+  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
   iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));

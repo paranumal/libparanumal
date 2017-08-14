@@ -268,7 +268,7 @@ void ellipticSetupSmootherExactFullPatchIpdg(solver_t *solver, precon_t *precon,
   int NpP = mesh->Np*(mesh->Nfaces+1);
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildExactPatchesIpdgTet3D(mesh, mesh->Np, NULL, tau, lambda, BCType, &invAP, options);
+  ellipticBuildExactFullPatchesIpdgTet3D(mesh, mesh->Np, NULL, tau, lambda, BCType, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(mesh->Nelements*NpP*NpP*sizeof(dfloat),invAP);
 
@@ -332,7 +332,7 @@ void ellipticSetupSmootherApproxFullPatchIpdg(solver_t *solver, precon_t *precon
   int NpP = mesh->Np*(mesh->Nfaces+1);
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildApproxPatchesIpdgTet3D(mesh, mesh->Np, NULL, tau, lambda, BCType,
+  ellipticBuildApproxFullPatchesIpdgTet3D(mesh, mesh->Np, NULL, tau, lambda, BCType,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);

@@ -52,7 +52,7 @@ ellipticCoarsePreconditionerSetupTet3D.o\
 ellipticPreconditionerTet3D.o\
 ellipticSolveTet3D.o\
 ellipticSolveSetupTet3D.o\
-ellipticHaloExchange2D.o\
+ellipticHaloExchange3D.o\
 ellipticParallelGatherScatterTet3D.o \
 ellipticBuildIpdgTet3D.o \
 ellipticBuildContinuousTet3D.o \
@@ -105,7 +105,7 @@ COBJS = \
 
 ellipticMainTet3D:$(AOBJS) $(LOBJS) ellipticMainTet3D.o gslibInterface
 	cd ../parALMOND; make -j; cd ../ellipticTet3D
-	$(LD)  $(LDFLAGS)  -o ellipticMainTri2D ellipticMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+	$(LD)  $(LDFLAGS)  -o ellipticMainTet3D ellipticMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
 	cd ../../3rdParty/gslib.github; make -j; cd ../../examples/ellipticTri2D

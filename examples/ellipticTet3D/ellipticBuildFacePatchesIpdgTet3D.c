@@ -5,7 +5,7 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 void BuildFacePatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
-                        dfloat *MS, iint eM, dfloat *A) {
+                        dfloat *MS, iint face, dfloat *A) {
 
   int NpatchElements = 2;
   int patchNp = NpatchElements*mesh->Np;
@@ -379,7 +379,7 @@ void ellipticBuildExactFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *
   free(MS);
 }
 
-void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -467,17 +467,17 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
   mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
   memcpy(refMesh,mesh,sizeof(mesh3D));
 
-  //vertices of reference patch
+   //vertices of reference patch
   int Nv = 8;
-  dfloat VX[8] = [-1, 1,      0,          0,           0,         5./3,        -5./3,         0];
-  dfloat VY[8] = [ 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)];
-  dfloat VZ[8] = [ 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3];
+  dfloat VX[8] = {-1, 1,      0,          0,           0,         5./3,        -5./3,         0};
+  dfloat VY[8] = { 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)};
+  dfloat VZ[8] = { 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3};
 
-  iint EToV[5][4] = [1,2,3,4;
-         1,2,4,5;
-         2,3,4,6;
-         3,1,4,7;
-         1,3,2,8];
+  iint EToV[5*4] = {1,2,3,4,
+                    1,2,4,5,
+                    2,3,4,6,
+                    3,1,4,7,
+                    1,3,2,8};
 
 
   refMesh->Nelements = NpatchElements;
@@ -489,8 +489,8 @@ void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *bas
   refMesh->EToV = (iint*) calloc(NpatchElements*mesh->Nverts, sizeof(iint));
 
   for(int e=0;e<NpatchElements;++e){
-    for(int n=0;n<Nverts;++n){
-      int v = EToV[e][n]-1;
+    for(int n=0;n<mesh->Nverts;++n){
+      int v = EToV[e*mesh->Nverts+n]-1;
       refMesh->EX[e*mesh->Nverts+n] = VX[v];
       refMesh->EY[e*mesh->Nverts+n] = VY[v];
       refMesh->EZ[e*mesh->Nverts+n] = VZ[v];

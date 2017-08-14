@@ -114,11 +114,11 @@ void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    const char *options);
 
 
-void ellipticBuildExactPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildExactFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    dfloat **patchesInvA, const char *options);
 
-void ellipticBuildApproxPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildApproxFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
