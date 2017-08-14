@@ -114,26 +114,26 @@ int main(int argc, char **argv){
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
   //add boundary condition contribution to rhs
-  // if (strstr(options,"IPDG")) {
-    // dfloat zero = 0.f;
-    // solver->rhsBCIpdgKernel(mesh->Nelements,
-                           // mesh->o_vmapM,
-                           // mesh->o_vmapP,
-                           // solver->tau,
-                           // zero,
-                           // mesh->o_x,
-                           // mesh->o_y,
-                           // mesh->o_z,
-                           // mesh->o_vgeo,
-                           // mesh->o_sgeo,
-                           // mesh->o_EToB,
-                           // mesh->o_DrT,
-                           // mesh->o_DsT,
-                           // mesh->o_DtT,
-                           // mesh->o_LIFTT,
-                           // mesh->o_MM,
-                           // o_r);
-  // }
+  if (strstr(options,"IPDG")) {
+    dfloat zero = 0.f;
+    solver->rhsBCIpdgKernel(mesh->Nelements,
+                           mesh->o_vmapM,
+                           mesh->o_vmapP,
+                           solver->tau,
+                           zero,
+                           mesh->o_x,
+                           mesh->o_y,
+                           mesh->o_z,
+                           mesh->o_vgeo,
+                           mesh->o_sgeo,
+                           mesh->o_EToB,
+                           mesh->o_DrT,
+                           mesh->o_DsT,
+                           mesh->o_DtT,
+                           mesh->o_LIFTT,
+                           mesh->o_MM,
+                           o_r);
+  }
 
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
 
