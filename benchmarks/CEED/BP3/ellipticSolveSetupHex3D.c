@@ -110,6 +110,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
 	int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
 	int NblockV = mymax(1,1024/mesh->Np); // works for CUDA
+	int NblockV2 = 1; // works for CUDA
 	int NblockS = mymax(1,1024/maxNodes); // works for CUDA
 	int NblockG;
 
@@ -226,6 +227,7 @@ printf("p_blockSize = %d \n", blockSize);
   kernelInfo.addDefine("p_Nmax", maxNodes);
 
   kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NblockV2", NblockV2);
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   kernelInfo.addDefine("p_NblockG", NblockG);
@@ -295,9 +297,11 @@ printf("p_blockSize = %d \n", blockSize);
 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DTW.okl",
-				                           "ellipticAxHex3D_cuboid0",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DTW.okl",
+						     "ellipticAxHex3D_slab1",
+						     //"ellipticAxHex3D_cuboid0",
+						     //						     "ellipticAxHex3D_cube1",
+						     kernelInfo);
 
 
 			mesh->weightedInnerProduct1Kernel =
