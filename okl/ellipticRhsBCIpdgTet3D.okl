@@ -52,7 +52,6 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
         hinv = sgeo[sid+p_IHID];
 
         const int bc = EToB[face+p_Nfaces*e];
-        printf("bc = %d\n", bc);
         if(bc>0) {
           ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, \
                                         0.f, 0.f, 0.f, 0.f,               \
