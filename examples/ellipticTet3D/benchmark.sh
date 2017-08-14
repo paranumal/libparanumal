@@ -51,7 +51,7 @@ do
     for (( p=1; p<9; p++ ));
     do
       echo "Test " $i " : " ${testName[$i-1]}
-      ./ellipticMainTri2D ${meshes[$m-1]} $p homogeneous2D.h "${options[$i-1]}" "${parAlmondOptions[$i-1]}" |& grep RAN
+      ./ellipticMainTet3D ${meshes[$m-1]} $p homogeneous3D.h "${options[$i-1]}" "${parAlmondOptions[$i-1]}" |& grep RAN
     done
   done
 done
