@@ -223,7 +223,7 @@ void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *invRefAA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
-  (*Npatches) = 1;
+  (*Npatches) = 2;
   int refPatches = 0;
 
   //build a mini mesh struct for the reference patch

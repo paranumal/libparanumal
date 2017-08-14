@@ -174,6 +174,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   }
 
   kernelInfo.addDefine("p_G00ID", G00ID);
@@ -214,7 +215,6 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
 
   kernelInfo.addDefine("p_blockSize", blockSize);
 
@@ -314,13 +314,13 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   solver->precon->exactFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver.okl",
-               "ellipticExactFacePatchSolver",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+               "ellipticExactFacePatchSolver3D",
                kernelInfo);
 
   solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather3D.okl",
-               "ellipticFacePatchGather3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticFacePatchGather",
                kernelInfo);
 
   solver->precon->approxBlockJacobiSolverKernel =
