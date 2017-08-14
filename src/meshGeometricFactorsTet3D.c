@@ -66,5 +66,5 @@ void meshGeometricFactorsTet3D(mesh3D *mesh){
     mesh->ggeo[mesh->Nggeo*e + GWJID] = J;
   }
 
-  printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
+  //printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
 }
