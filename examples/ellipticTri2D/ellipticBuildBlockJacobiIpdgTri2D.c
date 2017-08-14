@@ -259,6 +259,8 @@ void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat 
 
     if(eP0>=0 && eP1>=0 && eP2>=0){ //check if this is an interior patch
 
+      refPatchInvA = *patchesInvA;
+
       //hit the patch with the reference inverse
       for(iint n=0;n<mesh->Np;++n){
         for(iint m=0;m<mesh->Np;++m){

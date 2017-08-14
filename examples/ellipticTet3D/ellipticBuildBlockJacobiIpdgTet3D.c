@@ -215,15 +215,7 @@ void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
     }
   }
 
-  //patch inverse storage
-  *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
-
-  //temp patch storage
-  dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  dfloat *invRefAA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-
-  (*Npatches) = 2;
+  (*Npatches) = 1;
   int refPatches = 0;
 
   //build a mini mesh struct for the reference patch
@@ -263,6 +255,14 @@ void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
   meshConnectFaceNodes3D(refMesh);
   meshSurfaceGeometricFactorsTet3D(refMesh);
 
+  //patch inverse storage
+  *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
+
+  //temp patch storage
+  dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *invRefAA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
   BlockJacobiPatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
@@ -285,6 +285,8 @@ void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
     iint fP3 = mesh->EToF[eM*mesh->Nfaces+3];
 
     if(eP0>=0 && eP1>=0 && eP2>=0 && eP3>=0){ //check if this is an interior patch
+
+      refPatchInvA = *patchesInvA;
 
       //hit the patch with the reference inverse
       for(iint n=0;n<mesh->Np;++n){
