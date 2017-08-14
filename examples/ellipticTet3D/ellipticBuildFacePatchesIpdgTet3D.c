@@ -1,8 +1,19 @@
 #include "ellipticTet3D.h"
 
+typedef struct {
+
+  int face;
+  int signature[4];
+  iint id;
+
+} refPatch_t;
+
+
 void matrixInverse(int N, dfloat *A);
 
 dfloat matrixConditionNumber(int N, dfloat *A);
+
+
 
 void BuildFacePatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint face, dfloat *A) {
@@ -280,6 +291,115 @@ void BuildFacePatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   }
 }
 
+void BuildReferenceFacePatch(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+                        dfloat *MS, iint face, int *signature, dfloat *A) {
+  //build a mini mesh struct for the reference patch
+  mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
+  memcpy(refMesh,mesh,sizeof(mesh3D));
+
+   //vertices of reference patch
+  int Nv = 8;
+  dfloat VX[8] = {-1, 1,      0,          0,           0,         5./3,        -5./3,         0};
+  dfloat VY[8] = { 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)};
+  dfloat VZ[8] = { 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3};
+
+  iint EToV[5*4] = {0,1,2,3,
+                    0,2,1,7,
+                    0,1,3,4,
+                    1,2,3,5,
+                    2,0,3,6};
+
+  int NpatchElements = 2;                    
+  refMesh->Nelements = NpatchElements;
+
+  refMesh->EX = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
+  refMesh->EY = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
+  refMesh->EZ = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
+
+  refMesh->EToV = (iint*) calloc(NpatchElements*mesh->Nverts, sizeof(iint));
+
+
+  for(int n=0;n<mesh->Nverts;++n){
+    int v = EToV[n];
+    refMesh->EX[n] = VX[v];
+    refMesh->EY[n] = VY[v];
+    refMesh->EZ[n] = VZ[v];
+    refMesh->EToV[n] = v;
+  } 
+
+  for (int n=0;n<mesh->Nverts;n++) {
+    if (signature[n]==-1) {
+      //fill the missing vertex based ont he face number
+      int v = EToV[(face+1)*mesh->Nverts+mesh->Nverts-1];  
+      refMesh->EX[mesh->Nverts+n] = VX[v];
+      refMesh->EY[mesh->Nverts+n] = VY[v];
+      refMesh->EZ[mesh->Nverts+n] = VZ[v];
+      refMesh->EToV[mesh->Nverts+n] = 4; //extra vert      
+    } else {
+      int v = signature[n];  
+      refMesh->EX[mesh->Nverts+n] = VX[v];
+      refMesh->EY[mesh->Nverts+n] = VY[v];
+      refMesh->EZ[mesh->Nverts+n] = VZ[v];
+      refMesh->EToV[mesh->Nverts+n] = v;      
+    }
+  }  
+
+  refMesh->EToB = (iint*) calloc(NpatchElements*mesh->Nfaces,sizeof(iint));
+  for (iint n=0;n<NpatchElements*mesh->Nfaces;n++) refMesh->EToB[n] = 0;
+
+  //build a list of all face pairs
+  refMesh->NfacePairs=1;
+
+  refMesh->EToFPairs = (iint *) calloc(2*mesh->Nfaces,sizeof(iint));
+  refMesh->FPairsToE = (iint *) calloc(2,sizeof(iint));
+  refMesh->FPairsToF = (int *)  calloc(2,sizeof(int));
+
+  //fill with -1
+  for (iint n=0;n<2*mesh->Nfaces;n++)  refMesh->EToFPairs[n] = -1;
+
+  refMesh->FPairsToE[0] = 0;
+  refMesh->FPairsToE[1] = 1;
+  refMesh->FPairsToF[0] = face;
+  refMesh->FPairsToF[1] = 0;
+  refMesh->EToFPairs[0] = 0;
+  refMesh->EToFPairs[refMesh->Nfaces] = 1;
+
+  meshConnect(refMesh);
+  meshLoadReferenceNodesTet3D(refMesh, mesh->N);
+  meshPhysicalNodesTet3D(refMesh);
+  meshGeometricFactorsTet3D(refMesh);
+  meshConnectFaceNodes3D(refMesh);
+  meshSurfaceGeometricFactorsTet3D(refMesh);
+
+  //build this reference patch
+  BuildFacePatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, A);
+
+  free(refMesh->EX);
+  free(refMesh->EY);
+  free(refMesh->EZ);
+  free(refMesh->EToV);
+
+  free(refMesh);
+}
+
+iint getFacePatchIndex(refPatch_t *referencePatchList, iint numRefPatches, int face, int *signature) {
+
+  iint index = -1;
+  for (iint n=0;n<numRefPatches;n++) {
+    if (referencePatchList[n].face == face) {
+      if ((referencePatchList[n].signature[0] == signature[0]) &&
+          (referencePatchList[n].signature[1] == signature[1]) && 
+          (referencePatchList[n].signature[2] == signature[2]) &&
+          (referencePatchList[n].signature[3] == signature[3])) {
+        index = referencePatchList[n].id;
+        break;
+      }
+    }
+  }
+  return index;
+}
+
+
 void ellipticBuildExactFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat **patchesInvA, const char *options){
 
@@ -463,98 +583,23 @@ void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
   }
 
 
-  //build a mini mesh struct for the reference patch
-  mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
-  memcpy(refMesh,mesh,sizeof(mesh3D));
-
-   //vertices of reference patch
-  int Nv = 8;
-  dfloat VX[8] = {-1, 1,      0,          0,           0,         5./3,        -5./3,         0};
-  dfloat VY[8] = { 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)};
-  dfloat VZ[8] = { 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3};
-
-  iint EToV[5*4] = {1,2,3,4,
-                    1,2,4,5,
-                    2,3,4,6,
-                    3,1,4,7,
-                    1,3,2,8};
-
-
-  refMesh->Nelements = NpatchElements;
-
-  refMesh->EX = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
-  refMesh->EY = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
-  refMesh->EZ = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
-
-  refMesh->EToV = (iint*) calloc(NpatchElements*mesh->Nverts, sizeof(iint));
-
-  for(int e=0;e<NpatchElements;++e){
-    for(int n=0;n<mesh->Nverts;++n){
-      int v = EToV[e*mesh->Nverts+n]-1;
-      refMesh->EX[e*mesh->Nverts+n] = VX[v];
-      refMesh->EY[e*mesh->Nverts+n] = VY[v];
-      refMesh->EZ[e*mesh->Nverts+n] = VZ[v];
-      refMesh->EToV[e*mesh->Nverts+n] = v;
-    }
-  }
-
-  refMesh->EToB = (iint*) calloc(NpatchElements*mesh->Nfaces,sizeof(iint));
-  for (iint n=0;n<NpatchElements*mesh->Nfaces;n++) refMesh->EToB[n] = 0;
-
-  meshConnect(refMesh);
-  meshLoadReferenceNodesTet3D(refMesh, mesh->N);
-  meshPhysicalNodesTet3D(refMesh);
-  meshGeometricFactorsTet3D(refMesh);
-  meshConnectFaceNodes3D(refMesh);
-  meshSurfaceGeometricFactorsTet3D(refMesh);
-
-  // TW: THIS IS NOT CORRECT IN 3D - need 3 rotations per possible face connection
-  iint Nperm = pow(mesh->Nfaces,2)*3;//all possible configureation of neighbours
-  (*Npatches) = Nperm;
+  (*Npatches) = 0;
+  int numRefPatches=0;
   int refPatches = 0;
 
   //patch inverse storage
-  *patchesInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  *patchesInvA = (dfloat*) calloc((*Npatches)*patchNp*patchNp, sizeof(dfloat));
+  *patchesIndex = (iint*) calloc(mesh->NfacePairs, sizeof(iint));
+
+  refPatch_t *referencePatchList = (refPatch_t *) calloc(numRefPatches,sizeof(refPatch_t));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));
   dfloat *invRefAA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));
 
+  dfloat *refPatchInvA;
 
-  //start with reference patch
-  dfloat *refPatchInvA = *patchesInvA;
-  BuildFacePatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
-  matrixInverse(patchNp, refPatchInvA);
-
-  //store the permutations of the reference patch
-  int blkCounter = 1;
-  int *permIndex = (int*) calloc(patchNp, sizeof(int));
-  for(iint blk=1;blk<Nperm;++blk){
-    // TW: NO LONGER CORRECT
-    iint f0 = blk%mesh->Nfaces;
-    iint f1 = (blk/mesh->Nfaces)%mesh->Nfaces;
-
-    iint r0 = (f0==0) ? 0: mesh->Nfaces-f0;
-    iint r1 = (f1==0) ? 0: mesh->Nfaces-f1;
-
-    for(iint n=0;n<mesh->Np;++n){
-      permIndex[n+0*mesh->Np] = 0*mesh->Np + mesh->rmapP[r0*mesh->Np+n];
-      permIndex[n+1*mesh->Np] = 1*mesh->Np + mesh->rmapP[r1*mesh->Np+n];
-    }
-
-    for(iint n=0;n<patchNp;++n){
-      for(iint m=0;m<patchNp;++m){
-        iint pn = permIndex[n];
-        iint pm = permIndex[m];
-        (*patchesInvA)[blkCounter*patchNp*patchNp + n*patchNp + m] = refPatchInvA[pn*patchNp+pm]; // maybe need to switch map
-      }
-    }
-    ++blkCounter;
-  }
-
-
-  // loop over all elements
+  // loop over all face pairs
   for(iint face=0;face<mesh->NfacePairs;++face){
 
     //build the patch A matrix for this element
@@ -565,22 +610,37 @@ void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
     iint fM = mesh->FPairsToF[2*face+0];
     iint fP = mesh->FPairsToF[2*face+1];
 
-    if (eP >=0) {
-      iint eM0 = mesh->EToE[eM*mesh->Nfaces+0];
-      iint eM1 = mesh->EToE[eM*mesh->Nfaces+1];
-      iint eM2 = mesh->EToE[eM*mesh->Nfaces+2];
-      iint eM3 = mesh->EToE[eM*mesh->Nfaces+3];
+    iint eM0 = mesh->EToE[eM*mesh->Nfaces+0];
+    iint eM1 = mesh->EToE[eM*mesh->Nfaces+1];
+    iint eM2 = mesh->EToE[eM*mesh->Nfaces+2];
+    iint eM3 = mesh->EToE[eM*mesh->Nfaces+3];
 
-      iint eP0 = mesh->EToE[eP*mesh->Nfaces+0];
-      iint eP1 = mesh->EToE[eP*mesh->Nfaces+1];
-      iint eP2 = mesh->EToE[eP*mesh->Nfaces+2];
-      iint eP3 = mesh->EToE[eP*mesh->Nfaces+3];
+    iint eP0 = mesh->EToE[eP*mesh->Nfaces+0];
+    iint eP1 = mesh->EToE[eP*mesh->Nfaces+1];
+    iint eP2 = mesh->EToE[eP*mesh->Nfaces+2];
+    iint eP3 = mesh->EToE[eP*mesh->Nfaces+3];
 
-      if(eM0>=0 && eM1>=0 && eM2>=0  && eM3>0 &&
-          eP0>=0 && eP1>=0 && eP2>=0 && eP3>0){ //check if this is an interiour patch
-        iint blk = fM + mesh->Nfaces*fP;
+    if(eM0>=0 && eM1>=0 && eM2>=0  && eM3>0 &&
+        eP0>=0 && eP1>=0 && eP2>=0 && eP3>0){ //check if this is an interiour patch
+      
+      //get the vertices
+      iint *vM = mesh->EToV + eM*mesh->Nverts;
+      iint *vP = mesh->EToV + eP*mesh->Nverts;
 
-        refPatchInvA = *patchesInvA + blk*patchNp*patchNp;
+      // intialize signature to -1
+      int signature[4];
+      for (int n=0;n<mesh->Nverts;n++) signature[n] = -1;
+
+      for (int n=0;n<mesh->Nverts;n++) {
+        for (int m=0;m<mesh->Nverts;m++) {
+          if (vP[m] == vM[n]) signature[m] = n; 
+        }
+      }
+
+      iint index = getFacePatchIndex(referencePatchList,numRefPatches,fM,signature);
+      if (index>=0) {      
+
+        refPatchInvA = *patchesInvA + index*patchNp*patchNp;
 
         //hit the patch with the reference inverse
         for(iint n=0;n<patchNp;++n){
@@ -595,36 +655,56 @@ void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
         dfloat cond = matrixConditionNumber(patchNp,invRefAA);
         dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-        //printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+        printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
+        //if the convergence rate is good, use the reference patch, and skip adding this patch
         if (rate < 1.0) {
-          (*patchesIndex)[eM] = blk;
+          (*patchesIndex)[eM] = index;
           refPatches++;
-          continue;
+        }
+      } else {
+        //build the reference patch for this signature
+        ++(*Npatches);
+        numRefPatches++;
+        *patchesInvA = (dfloat*) realloc(*patchesInvA, (*Npatches)*patchNp*patchNp*sizeof(dfloat));
+        referencePatchList = (refPatch_t *) realloc(referencePatchList,numRefPatches*sizeof(refPatch_t));
+
+        referencePatchList[numRefPatches-1].face = fM; 
+        referencePatchList[numRefPatches-1].id = (*Npatches)-1;
+        for (int n=0;n<mesh->Nverts;n++) 
+          referencePatchList[numRefPatches-1].signature[n] = signature[n];
+
+        refPatchInvA = *patchesInvA + ((*Npatches)-1)*patchNp*patchNp;
+
+        //printf("Building reference patch for the face %d, with signature [%d,%d,%d,%d] \n", fM, signature[0], signature[1], signature[2],signature[3]);
+
+        BuildReferenceFacePatch(mesh, basis, tau, lambda, BCType, MS, fM, signature, refPatchInvA); 
+        matrixInverse(patchNp, refPatchInvA);        
+
+        (*patchesIndex)[face] = (*Npatches)-1;
+        refPatches++;
+      }
+    } else {
+      //add this patch to the patch list
+      ++(*Npatches);
+      *patchesInvA = (dfloat*) realloc(*patchesInvA, (*Npatches)*patchNp*patchNp*sizeof(dfloat));
+
+      matrixInverse(patchNp, patchA);
+
+      //copy inverse into patchesInvA
+      for(iint n=0;n<patchNp;++n){
+        for(iint m=0;m<patchNp;++m){
+          iint id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
+          (*patchesInvA)[id] = patchA[n*patchNp+m];
         }
       }
+
+      (*patchesIndex)[face] = (*Npatches)-1;
     }
-
-    ++(*Npatches);
-    *patchesInvA = (dfloat*) realloc(*patchesInvA, (*Npatches)*patchNp*patchNp*sizeof(dfloat));
-
-    matrixInverse(patchNp, patchA);
-
-    //copy inverse into patchesInvA
-    for(iint n=0;n<patchNp;++n){
-      for(iint m=0;m<patchNp;++m){
-        iint id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
-        (*patchesInvA)[id] = patchA[n*patchNp+m];
-      }
-    }
-
-    (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
   printf("saving %d full patches\n",*Npatches);
   printf("using %d reference patches\n", refPatches);
-
-  free(refMesh);
 
   free(patchA); free(invRefAA);
   free(MS);

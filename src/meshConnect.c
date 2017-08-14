@@ -134,6 +134,6 @@ void meshConnect(mesh_t *mesh){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1)
 	++Nbcs;
 
-  printf("Nelements = %d, Nbcs = %d\n", mesh->Nelements, Nbcs);
+  //printf("Nelements = %d, Nbcs = %d\n", mesh->Nelements, Nbcs);
 }
 

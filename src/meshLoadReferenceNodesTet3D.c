@@ -140,11 +140,11 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   if (N<7) { //cubature data is only available for N<=6
     fgets(buf, BUFSIZ, fp); // read comment
-    printf("%s", buf);
+    //printf("%s", buf);
     fgets(buf, BUFSIZ, fp); // read number of cubature points
-    printf("%s", buf);
+    //printf("%s", buf);
     sscanf(buf, iintFormat, &(mesh->cubNp));
-    printf("cubNp = %d\n",mesh->cubNp);
+    //printf("cubNp = %d\n",mesh->cubNp);
 
     mesh->cubr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
     mesh->cubs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
@@ -406,12 +406,12 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   // IPDG OAS stuff
   fgets(buf, BUFSIZ, fp);
-  printf("%s", buf);
+  //printf("%s", buf);
   fgets(buf, BUFSIZ, fp);
   int NpPcheck;
   sscanf(buf, "%d", &NpPcheck);
   mesh->NpP = NpPcheck;
-  printf("NpP = %d\n", mesh->NpP);
+  //printf("NpP = %d\n", mesh->NpP);
 
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->oasForwardDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));
