@@ -91,8 +91,9 @@ int main(int argc, char **argv){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
       dfloat zn = mesh->z[n+e*mesh->Np];
-      //x[n+e*mesh->Np] = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+      x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -102,7 +103,8 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
-      x[id] = 0.;
+      //x[id] = 0.;
+
       mesh->q[id] = nrhs[n];
     }
   }
@@ -112,26 +114,26 @@ int main(int argc, char **argv){
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
   //add boundary condition contribution to rhs
-  if (strstr(options,"IPDG")) {
-    dfloat zero = 0.f;
-    solver->rhsBCIpdgKernel(mesh->Nelements,
-                           mesh->o_vmapM,
-                           mesh->o_vmapP,
-                           solver->tau,
-                           zero,
-                           mesh->o_x,
-                           mesh->o_y,
-                           mesh->o_z,
-                           mesh->o_vgeo,
-                           mesh->o_sgeo,
-                           mesh->o_EToB,
-                           mesh->o_DrT,
-                           mesh->o_DsT,
-                           mesh->o_DtT,
-                           mesh->o_LIFTT,
-                           mesh->o_MM,
-                           o_r);
-  }
+  // if (strstr(options,"IPDG")) {
+    // dfloat zero = 0.f;
+    // solver->rhsBCIpdgKernel(mesh->Nelements,
+                           // mesh->o_vmapM,
+                           // mesh->o_vmapP,
+                           // solver->tau,
+                           // zero,
+                           // mesh->o_x,
+                           // mesh->o_y,
+                           // mesh->o_z,
+                           // mesh->o_vgeo,
+                           // mesh->o_sgeo,
+                           // mesh->o_EToB,
+                           // mesh->o_DrT,
+                           // mesh->o_DsT,
+                           // mesh->o_DtT,
+                           // mesh->o_LIFTT,
+                           // mesh->o_MM,
+                           // o_r);
+  // }
 
   ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
 
