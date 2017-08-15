@@ -94,7 +94,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[n+e*mesh->Np];
 
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
-      x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+      //x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -104,7 +104,7 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
-      //x[id] = 0.;
+      x[id] = 0.;
 
       mesh->q[id] = nrhs[n];
     }
