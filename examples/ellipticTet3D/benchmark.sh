@@ -43,12 +43,12 @@ declare -a meshes=(
 
 numMeshes=${#meshes[@]}
 
-for (( i=1; i<${numTests}+1; i++ ));
+for (( m=1; m<${numMeshes}+1; m++ ));
 do
-  for (( m=1; m<${numMeshes}+1; m++ ));
-  do
-    echo ${meshes[$m-1]}
-    for (( p=1; p<9; p++ ));
+  echo ${meshes[$m-1]}
+  for (( p=1; p<9; p++ ));
+    do
+    for (( i=1; i<${numTests}+1; i++ ));
     do
       echo "Test " $i " : " ${testName[$i-1]}
       ./ellipticMainTet3D ${meshes[$m-1]} $p homogeneous3D.h "${options[$i-1]}" "${parAlmondOptions[$i-1]}" |& grep RAN

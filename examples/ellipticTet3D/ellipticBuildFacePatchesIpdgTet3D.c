@@ -655,11 +655,11 @@ void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat 
         dfloat cond = matrixConditionNumber(patchNp,invRefAA);
         dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-        printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+        //printf("Face pair %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
         //if the convergence rate is good, use the reference patch, and skip adding this patch
         if (rate < 1.0) {
-          (*patchesIndex)[eM] = index;
+          (*patchesIndex)[face] = index;
           refPatches++;
         }
       } else {

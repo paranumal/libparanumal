@@ -81,7 +81,9 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   }
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
-  //kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  if(mesh->device.mode()=="CUDA"){ 
+    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  }
 
   kernelInfo.addDefine("p_blockSize", blockSize);
 
@@ -96,15 +98,15 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
+  int NblockV = mymax(1,256/mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 512/(5*mesh->Np); // get close to 256 threads
+  int NblockP = mymax(1,512/(5*mesh->Np)); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
   if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-  else NblockG = 256/mesh->Np;
+  else NblockG = mymax(1,256/mesh->Np);
   kernelInfo.addDefine("p_NblockG", NblockG);
 
   mesh->haloExtractKernel =
