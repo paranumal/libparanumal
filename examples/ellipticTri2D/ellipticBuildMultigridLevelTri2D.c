@@ -153,6 +153,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   }
 
   kernelInfo.addDefine("p_G00ID", G00ID);
@@ -184,7 +185,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
 
   kernelInfo.addDefine("p_blockSize", blockSize);
 

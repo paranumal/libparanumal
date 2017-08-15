@@ -548,7 +548,7 @@ void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *bas
       dfloat cond = matrixConditionNumber(patchNp,invRefAA);
       dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-      //printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+      printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
       if (rate < 1.0) {
         (*patchesIndex)[eM] = blk;

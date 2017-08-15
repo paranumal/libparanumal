@@ -113,39 +113,21 @@ void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
-
-void ellipticBuildExactFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxBlockJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-
-void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
-                                   const char *options);
 
 //Multigrid function callbacks
 void AxTet3D        (void **args, occa::memory &o_x, occa::memory &o_Ax);

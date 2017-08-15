@@ -22,13 +22,12 @@ int main(int argc, char **argv){
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
   // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, or MULTIGRID
-  // MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
-  //                                     EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  // MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, or DAMPEDJACOBI, patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFACEPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
@@ -40,7 +39,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
 
