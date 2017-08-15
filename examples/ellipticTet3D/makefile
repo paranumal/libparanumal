@@ -59,7 +59,7 @@ ellipticBuildContinuousTet3D.o \
 ellipticBuildFullPatchesIpdgTet3D.o \
 ellipticBuildFacePatchesIpdgTet3D.o \
 ellipticBuildJacobiIpdgTet3D.o \
-ellipticBuildBlockJacobiIpdgTet3D.o \
+ellipticBuildLocalPatchIpdgTet3D.o \
 ellipticBuildMultigridLevelTet3D.o \
 ellipticMultiGridSetupTet3D.o \
 ellipticSetupSmoothersTet3D.o \

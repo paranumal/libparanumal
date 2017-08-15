@@ -95,7 +95,10 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   }
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  }
 
   kernelInfo.addDefine("p_blockSize", blockSize);
 
