@@ -229,15 +229,15 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
+  int NblockV = mymax(1,256/mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 512/(4*mesh->Np); // get close to 256 threads
+  int NblockP = mymax(1,512/(5*mesh->Np)); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
   if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-  else NblockG = 256/mesh->Np;
+  else NblockG = mymax(1,256/mesh->Np);
   kernelInfo.addDefine("p_NblockG", NblockG);
 
   solver->scaledAddKernel =
