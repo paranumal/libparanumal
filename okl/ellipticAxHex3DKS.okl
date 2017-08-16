@@ -1277,7 +1277,11 @@ for (iint k=0; k<p_Nq; k++){
 */
 
 
-
+#if (p_Nq==16 || p_Nq==8)
+#define p_pad 1
+#else
+#define p_pad 0
+#endif
 
 kernel void ellipticAxHex3D_e1i(const iint Nelements,
                                 const iint * restrict elementList,
@@ -1286,176 +1290,131 @@ kernel void ellipticAxHex3D_e1i(const iint Nelements,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
-	for(iint e=0; e<Nelements; ++e; outer0){
-		shared dfloat s_D[p_Nq][p_Nq];
+  for(iint e=0; e<Nelements; ++e; outer0){
+    shared dfloat s_D[p_Nq][p_Nq+p_pad];
 
-		exclusive double2 r_q[p_Nq];
+    exclusive double r_q[p_Nq];
 
+    shared dfloat s_qr[p_Nq][p_Nq];
+    shared dfloat s_qs[p_Nq][p_Nq];
+    //shared dfloat s_1[p_Nq][p_Nq];
+    //	double2 r_qrqs;
+    shared dfloat s_tmpq[p_Nq][p_Nq][p_Nq];
 
+    exclusive iint emap;
+    exclusive dfloat r_qt;
+    exclusive double qt, qr, qs ;
 
-			shared dfloat s_qr[p_Nq][p_Nq];
-			shared dfloat s_qs[p_Nq][p_Nq];
-		//shared dfloat s_1[p_Nq][p_Nq];
-	//	double2 r_qrqs;
-		shared dfloat s_tmpq[p_Nq][p_Nq][p_Nq];
-
-		exclusive iint emap;
-		exclusive dfloat r_qt;
-		exclusive double2 qt, qr, qs ;
-
-		// prefetch D and part of q
-		for(int b=0;b<MAXY;++b;inner1){
-			for(int a=0;a<MAXX;++a;inner0){
-				if (b<p_Nq && a<p_Nq){
-					emap = elementList[e];
-					s_D[b][a] = D[b*p_Nq+a];
-			
-
+    // prefetch D and part of q
+    for(int b=0;b<MAXY;++b;inner1){
+      for(int a=0;a<MAXX;++a;inner0){
+	if (b<p_Nq && a<p_Nq){
+	  emap = elementList[e];
+	  s_D[b][a] = D[b*p_Nq+a];
           
-					occaUnroll(p_Nq)
-					for(int c=0;c<p_Nq;++c){
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c){
 
-						s_tmpq[c][b][a] = q[emap*p_Np+(c*p_Nq*p_Nq+b*p_Nq+a)];
-	 
-						
-	          if (c<(p_Nq+1)/2)
-						{
-							r_q[c].x = 0.0f;
-							r_q[c].y = 0.0f;
-						}//if
-					}//c
-				
-				}//if
-
-			}//b
+	      s_tmpq[c][b][a] = q[emap*p_Np+(c*p_Nq*p_Nq+b*p_Nq+a)];
+	      
+	      r_q[c] = 0;
+	    }//c
 	}
+      }//b
+    }
 
-		barrier(localMemFence);
+    barrier(localMemFence);
 
+    // scan through k slices
 
-		// scan through k slices
+    occaUnroll(p_Nq)
+      for(int k=0;k<p_Nq;++k){
 
+	barrier(localMemFence);
 
+	for(int j=0;j<MAXY;++j;inner1){
+	  for(int i=0;i<MAXX;++i;inner0){
+	    if (i<p_Nq && j<p_Nq){
+	      const iint base = emap*4*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	      //+ +8*(k*p_Nq*p_Nq + j*p_Nq +i) ;
 
-		occaUnroll(p_Nq)
-		for(int k=0;k<p_Nq;++k){
+	      //just loading geofactors from global is 1/3 of cost of the kernel (very slow) --> every thread does it p_Nq (so up to MAXX) times
+	      // this equals up to 7*MAXX reads
 
-			barrier(localMemFence);
-
-			for(int j=0;j<MAXY;++j;inner1){
-				for(int i=0;i<MAXX;++i;inner0){
-					if (i<p_Nq && j<p_Nq){
-						const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-						//+ +8*(k*p_Nq*p_Nq + j*p_Nq +i) ;
-
-						//just loading geofactors from global is 1/3 of cost of the kernel (very slow) --> every thread does it p_Nq (so up to MAXX) times
-						// this equals up to 7*MAXX reads
-
-						// cant increase shared any more
-						// we use truckloads of registers already
-
-
-						//		const dfloat r_G00 = ggeo[base+p_G00ID*p_Np].x;
-						const double2 G00G01 = ggeo[base+p_Np*4+0];
-						const double2 G02G11 = ggeo[base+p_Np*4+1];
-						const double2 G12G22 = ggeo[base+p_Np*4+2];
-						const double2 GwJ =    ggeo[base+p_Np*4+3];
-
-						//	const dfloat r_G01 = ggeo[base+p_G00ID*p_Np].y;
+	      // cant increase shared any more
+	      // we use truckloads of registers already
 
 
-						// differentiate
-					//	dfloat qr = 0.0f, qs = 0.0f, qt = 0.0f;
+	      //		const dfloat r_G00 = ggeo[base+p_G00ID*p_Np].x;
+	      const double2 G00G01 = ggeo[base+0*p_Np];
+	      const double2 G02G11 = ggeo[base+1*p_Np];
+	      const double2 G12G22 = ggeo[base+2*p_Np];
+	      const double2 GwJ =    ggeo[base+3*p_Np];
+
+	      //	const dfloat r_G01 = ggeo[base+p_G00ID*p_Np].y;
+
+
+	      // differentiate
+	      //	dfloat qr = 0.0f, qs = 0.0f, qt = 0.0f;
 				
-					//, qt ;
-					qr.x = 0.0f;
-					qs.x = 0.0f;
-					qt.x = 0.0f;
-					occaUnroll(p_Nq)
-						for(int n=0;n<p_Nq;++n){
-							qr.x += s_D[i][n]*s_tmpq[k][j][n];
-							qs.x += s_D[j][n]*s_tmpq[k][n][i];
-							qt.x += s_D[k][n]*s_tmpq[n][j][i];
-						}
+	      //, qt ;
+	      qr = 0.0f;
+	      qs = 0.0f;
+	      qt = 0.0f;
+	      occaUnroll(p_Nq)
+		for(int n=0;n<p_Nq;++n){
+		  qr += s_D[i][n]*s_tmpq[k][j][n];
+		  qs += s_D[j][n]*s_tmpq[k][n][i];
+		  qt += s_D[k][n]*s_tmpq[n][j][i];
+		}
 
-						// apply chain rule (notice the swtich of indices in i,j)
-						s_qr[j][i] = G00G01.x*qr.x + G00G01.y*qs.x + G02G11.x*qt.x;
-						s_qs[j][i] = G00G01.y*qr.x + G02G11.y*qs.x + G12G22.x*qt.x;
-						r_qt = G02G11.x*qr.x + G12G22.x*qs.x + G12G22.y*qt.x;
+	      // apply chain rule (notice the swtich of indices in i,j)
+	      s_qr[j][i] = G00G01.x*qr + G00G01.y*qs + G02G11.x*qt;
+	      s_qs[j][i] = G00G01.y*qr + G02G11.y*qs + G12G22.x*qt;
+	      r_qt = G02G11.x*qr + G12G22.x*qs + G12G22.y*qt;
 
-						if (k%2 == 0){
-							     r_q[k/2].x += lambda*GwJ.x*s_tmpq[k][j][i];
-						}
-						else{
-										r_q[(k-1)/2].y += lambda*GwJ.x*s_tmpq[k][j][i];
-						}
-					}
-				}
-			}
-barrier(localMemFence);
-			for(int j=0;j<MAXY;++j;inner1){
-				for(int i=0;i<MAXX;i+=2;inner0){
-					if (i<p_Nq && j<p_Nq){
-						dfloat lapqr = 0.0f;
-						dfloat  lapqs = 0.0f;
-						occaUnroll(p_Nq)
-						for(int n=0;n<p_Nq;n+=2){
-							lapqr += s_D[n][i]*s_qr[j][n];
-							lapqs += s_D[n][i]*s_qs[n][i];
-							r_q[n/2].x += s_D[k][n]*r_qt;
-						}
+	      r_q[k] += lambda*GwJ.x*s_tmpq[k][j][i];
+	    }
+	  }
+	}
+	barrier(localMemFence);
+	for(int j=0;j<MAXY;++j;inner1){
+	  for(int i=0;i<MAXX;i+=2;inner0){
+	    if (i<p_Nq && j<p_Nq){
+	      dfloat lapqr = 0.0f;
+	      dfloat  lapqs = 0.0f;
+	      occaUnroll(p_Nq)
+		for(int n=0;n<p_Nq;++n){
+		  lapqr += s_D[n][i]*s_qr[j][n];
+		  lapqs += s_D[n][i]*s_qs[n][i];
+		  r_q[n] += s_D[k][n]*r_qt;
+		}
 
-						occaUnroll(p_Nq)
-						for(int n=1;n<p_Nq;n+=2){
+	      r_q[k] += lapqr+ lapqs;
+	    }
+	  }
+	}
+      }//k
 
-							lapqr += s_D[n][i]*s_qr[j][n];
-							lapqs += s_D[n][i]*s_qs[n][i];
-							r_q[(n-1)/2].y += s_D[k][n]*r_qt;
-						}
+    //new code
+    //end of new code
 
-						if (k%2 == 0){
-							r_q[k/2].x += lapqr+ lapqs;
-						
-						}
-						else{
-							r_q[(k-1)/2].y += lapqr+ lapqs;
-							
-						}
-						
+    barrier(localMemFence);
 
-					}
-				}
-			}
-		}//k
+      for(iint j=0; j<MAXY; ++j; inner1) {
+	for(iint i=0; i<MAXX; ++i; inner0) {
+	  if (i<p_Nq && j<p_Nq){
+	    occaUnroll(p_Nq)
 
-		//new code
-		//end of new code
+	    for (iint k=0; k<p_Nq; ++k){
+	      int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+	      Aq[base] = r_q[k];
+	    }
+	  }
+	}
+      }//k
 
-		barrier(localMemFence);
-
-		occaUnroll(p_Nq)
-		for (iint k=0; k<p_Nq; k+=2){
-			for(iint j=0; j<MAXY; ++j; inner1) {
-				for(iint i=0; i<MAXX; ++i; inner0) {
-					if (i<p_Nq && j<p_Nq){
-
-						int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-
-						if (k%2 == 0){
-
-							Aq[base] = r_q[k/2].x;
-						}
-
-						else{
-						 	Aq[base] =r_q[(k-1)/2].y;
-						}
-
-					}// if
-				}
-			}
-		}//k
-
-	}//e
+  }//e
 }
 
 
