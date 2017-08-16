@@ -11,8 +11,8 @@ occa::kernel saferBuildKernelFromSource(occa::device &device,
 
 
 // specialized version for geometric factors at Gauss (not GLL) nodes
-dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
-
+//dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
+dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 /* number of second order geometric factors */
 	iint NgjGeo = 7;
 	iint gjNq = mesh->gjNq;
@@ -20,6 +20,8 @@ dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 	dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
 //KS start
 	printf("Setup info: Nggeo = %d, gjNq = %d. gjNp = %d Nq = %d \n", NgjGeo, gjNq, gjNp, mesh->Nq);
+	dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*8*gjNp, sizeof(dfloat));
+	
 //KS end
 	for(iint e=0; e<mesh->Nelements; ++e) { /* for each element */
 
@@ -73,13 +75,38 @@ dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*GWJID] = JW;
+					
+				/*	gjGeod2[8*gjNp*e + n  ] = 1.0f;
+					//JW*(rx*rx + ry*ry + rz*rz);
+					gjGeod2[8*gjNp*e + 8*n + 1 ] = 1.0f;
+					//JW*(rx*sx + ry*sy + rz*sz);
+					
+					gjGeod2[8*gjNp*e + 8*n + 2 ] = 1.0;
+					//JW*(rx*tx + ry*ty + rz*tz);
+					gjGeod2[8*gjNp*e + 8*n + 3 ] = 1.0f;
+					//JW*(sx*sx + sy*sy + sz*sz);
+					
+					gjGeod2[8*gjNp*e + 8*n + 4 ] = 1.0f;
+					//JW*(sx*tx + sy*ty + sz*tz);
+					gjGeod2[8*gjNp*e + 8*n + 5 ] =1.0f;
+					//JW*(tx*tx + ty*ty + tz*tz);
+					
+					gjGeod2[8*gjNp*e + 8*n + 6 ] = 1.0f;
+					
+					//JW;
+					gjGeod2[8*gjNp*e + 8*n + 7 ] = 0.0;*/
+					
 
 				}
 			}
 		}
 	}
+	for (int n = 0; n< mesh->Nelements*8*gjNp; n++)
+		{
+		gjGeod2[n] = drand48();;
+		}
 
-	return gjGeo;
+	return gjGeod2;
 }
 
 
@@ -191,8 +218,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   // BP3 specific stuff starts here
   
-  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
-
+//  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
+dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
 #if 0
   // build a gjD that maps gjNq to gjNq
   dfloat *gjD2 = (dfloat*) calloc(gjNq*gjNq, sizeof(dfloat));
@@ -210,7 +237,9 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
   solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
   solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
-  solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
+ // solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
+ //KS
+  solver->o_gjGeo = mesh->device.malloc(8*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
   // BP3 specific stuff ends here
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
@@ -298,7 +327,7 @@ printf("p_blockSize = %d \n", blockSize);
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DKS.okl",
-						     "ellipticAxHex3D_e1h",
+						     "ellipticAxHex3D_e1i",
 						    //"ellipticAxHex3D_cuboid0",
 						     //						     "ellipticAxHex3D_cube1",
 						     kernelInfo);
