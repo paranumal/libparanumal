@@ -71,21 +71,22 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       // extra storage for smoothing op
       levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
 
+            dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+      if(strstr(options, "EXACT")){
+        rateTolerance = 0.0;
+      } else {
+        rateTolerance = 1.0;
+      }
+
       //set up the fine problem smoothing
       if(strstr(options, "OVERLAPPINGPATCH")){
         ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFACEPATCH")){
-        ellipticSetupSmootherExactFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFACEPATCH")){
-        ellipticSetupSmootherApproxFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTBLOCKJACOBI")){
-        ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXBLOCKJACOBI")){
-        ellipticSetupSmootherApproxBlockJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+      } else if(strstr(options, "FULLPATCH")){
+        ellipticSetupSmootherFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "FACEPATCH")){
+        ellipticSetupSmootherFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "LOCALPATCH")){
+        ellipticSetupSmootherLocalPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
       }
@@ -144,25 +145,24 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     // extra storage for smoothing op
     OASLevel->o_smootherResidual = mesh->device.malloc(OASLevel->Ncols*sizeof(dfloat));
 
+    dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+    if(strstr(options, "EXACT")){
+      rateTolerance = 0.0;
+    } else {
+      rateTolerance = 1.0;
+    }
+
     //set up the fine problem smoothing
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        ellipticSetupSmootherExactFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        ellipticSetupSmootherApproxFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFACEPATCH")){
-        ellipticSetupSmootherExactFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFACEPATCH")){
-        ellipticSetupSmootherApproxFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTBLOCKJACOBI")){
-        ellipticSetupSmootherExactBlockJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXBLOCKJACOBI")){
-        ellipticSetupSmootherApproxBlockJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
-      }
+    if(strstr(options, "OVERLAPPINGPATCH")){
+      ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+    } else if(strstr(options, "FULLPATCH")){
+      ellipticSetupSmootherFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "FACEPATCH")){
+      ellipticSetupSmootherFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "LOCALPATCH")){
+      ellipticSetupSmootherLocalPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+    } else { //default to damped jacobi
+      ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
     }
 
 

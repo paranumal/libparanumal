@@ -61,7 +61,7 @@ ellipticBuildContinuousTri2D.o \
 ellipticBuildFullPatchesIpdgTri2D.o \
 ellipticBuildFacePatchesIpdgTri2D.o \
 ellipticBuildJacobiIpdgTri2D.o \
-ellipticBuildBlockJacobiIpdgTri2D.o \
+ellipticBuildLocalPatchesIpdgTri2D.o \
 ellipticBuildMultigridLevelTri2D.o \
 ellipticMultiGridSetupTri2D.o \
 ellipticSetupSmoothersTri2D.o \

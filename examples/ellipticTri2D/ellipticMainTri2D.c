@@ -21,14 +21,14 @@ int main(int argc, char **argv){
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
   // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
-  // OAS and MULTIGRID: smoothers can be EXACTFULLPATCH, APPROXFULLPATCH, EXACTFACEPATCH, APPROXFACEPATCH,
-  //                                     EXACTBLOCKJACOBI, APPROXBLOCKJACOBI, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  //                      patch smoothers can include EXACT        
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=EXACTFULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=APPROXFULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=FULLPATCH,EXACT");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");

@@ -113,38 +113,19 @@ void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
-
-void ellipticBuildExactPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildExactBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
-                                   dfloat **patchesInvA, const char *options);
-
-void ellipticBuildApproxBlockJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType,
+void ellipticBuildLocalPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
                                    const char *options);
 
 //Multigrid function callbacks
@@ -152,14 +133,11 @@ void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
 void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
-void smoothChebyshevTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 
 //smoother ops
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactFullPatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxFullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactFacePatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxFacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactBlockJacobiIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxBlockJacobiIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void dampedJacobi        (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void FullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void FacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
+void dampedJacobi  (void **args, occa::memory &o_r, occa::memory &o_Sr);
