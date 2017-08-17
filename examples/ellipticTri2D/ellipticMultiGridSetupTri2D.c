@@ -239,22 +239,24 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->smootherArgs = (void **) calloc(1,sizeof(void*));
     levels[n]->smootherArgs[0] = (void *) solverL;
 
+    dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+    if(strstr(options, "EXACT")){
+      rateTolerance = 0.0;
+    } else {
+      rateTolerance = 1.0;
+    }
+
+
     //set up the fine problem smoothing
     if (strstr(options, "IPDG")) {
       if(strstr(options, "OVERLAPPINGPATCH")){
         ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        ellipticSetupSmootherExactFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        ellipticSetupSmootherApproxFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTFACEPATCH")){
-        ellipticSetupSmootherExactFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXFACEPATCH")){
-        ellipticSetupSmootherApproxFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "EXACTBLOCKJACOBI")){
-        ellipticSetupSmootherExactBlockJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "APPROXBLOCKJACOBI")){
-        ellipticSetupSmootherApproxBlockJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "FULLPATCH")){
+        ellipticSetupSmootherFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "FACEPATCH")){
+        ellipticSetupSmootherFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "LOCALPATCH")){
+        ellipticSetupSmootherLocalPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       }
@@ -304,27 +306,30 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){
         smootherString = strdup("OVERLAPPINGPATCH");
-      } else if(strstr(options, "EXACTFULLPATCH")){
-        smootherString = strdup("EXACTFULLPATCH");
-      } else if(strstr(options, "APPROXFULLPATCH")){
-        smootherString = strdup("APPROXFULLPATCH");
-      } else if(strstr(options, "EXACTFACEPATCH")){
-        smootherString = strdup("EXACTFACEPATCH");
-      } else if(strstr(options, "APPROXFACEPATCH")){
-        smootherString = strdup("APPROXFACEPATCH");
-      } else if(strstr(options, "EXACTBLOCKJACOBI")){
-        smootherString = strdup("EXACTBLOCKJACOBI");
-      } else if(strstr(options, "APPROXBLOCKJACOBI")){
-        smootherString = strdup("APPROXBLOCKJACOBI");
+      } else if(strstr(options, "FULLPATCH")){
+        smootherString = strdup("FULLPATCH");
+      } else if(strstr(options, "FACEPATCH")){
+        smootherString = strdup("FACEPATCH");
+      } else if(strstr(options, "LOCALPATCH")){
+        smootherString = strdup("LOCALPATCH");
       } else { //default to damped jacobi
         smootherString = strdup("DAMPEDJACOBI");
       }
 
+      char *smootherOptions1 = strdup(" ");
+      char *smootherOptions2 = strdup(" ");
+      if (strstr(options,"EXACT")) {
+        smootherOptions1 = strdup("EXACT");
+      }
+      if (strstr(options,"CHEBYSHEV")) {
+        smootherOptions2 = strdup("CHEBYSHEV");
+      }
+
       if (rank==0){
-        printf(" %3d |    %2d    |   %10.2f  |   %s  \n",
+        printf(" %3d |   %3d    |    %10.2f  |   %s  \n",
           lev, levelDegree[lev], (dfloat)minNrows, smootherString);
-        printf("     |          |   %10.2f  |   \n", (dfloat)maxNrows);
-        printf("     |          |   %10.2f  |   \n", avgNrows);
+        printf("     |          |    %10.2f  |   %s %s  \n", (dfloat)maxNrows, smootherOptions1, smootherOptions2);
+        printf("     |          |    %10.2f  |   \n", avgNrows);
       }
     }
     if(rank==0)

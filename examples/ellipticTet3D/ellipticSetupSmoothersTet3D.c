@@ -290,7 +290,7 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
   precon->o_zP = mesh->device.malloc(mesh->Nelements*NpP*sizeof(dfloat), precon->zP);
 
-  level->device_smoother = approxFullPatchIpdg;
+  level->device_smoother = FullPatchIpdg;
 
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
@@ -362,7 +362,7 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
   precon->o_zP = mesh->device.malloc(mesh->NfacePairs*NpP*sizeof(dfloat), precon->zP);
 
 
-  level->device_smoother = approxFacePatchIpdg;
+  level->device_smoother = FacePatchIpdg;
 
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
@@ -417,7 +417,7 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
   }
   precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
 
-  level->device_smoother = approxBlockJacobiIpdg;
+  level->device_smoother = LocalPatchIpdg;
 
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {

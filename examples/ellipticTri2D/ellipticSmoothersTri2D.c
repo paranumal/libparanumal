@@ -109,25 +109,7 @@ void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occaTimerToc(mesh->device,"restrictKernel");
 }
 
-void exactFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
-
-  solver_t *solver = (solver_t*) args[0];
-  mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
-  occa::memory o_zP = precon->o_zP;
-
-  occaTimerTic(mesh->device,"exactFullPatchSolveKernel");
-  precon->exactPatchSolverKernel(mesh->Nelements,
-                            precon->o_invAP,
-                            mesh->o_EToE,
-                            precon->o_invDegreeAP,
-                            o_r,
-                            o_zP);
-  solver->precon->patchGatherKernel(mesh->Nelements, mesh->o_EToE, mesh->o_EToF, o_zP, o_Sr);
-  occaTimerToc(mesh->device,"exactFullPatchSolveKernel");
-}
-
-void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
+void FullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;
@@ -146,25 +128,7 @@ void approxFullPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occaTimerToc(mesh->device,"approxFullPatchSolveKernel");
 }
 
-void exactFacePatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
-
-  solver_t *solver = (solver_t*) args[0];
-  mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
-  occa::memory o_zP = precon->o_zP;
-
-  occaTimerTic(mesh->device,"exactFacePatchSolveKernel");
-  precon->exactFacePatchSolverKernel(mesh->NfacePairs,
-                            precon->o_invAP,
-                            mesh->o_FPairsToE,
-                            precon->o_invDegreeAP,
-                            o_r,
-                            o_zP);
-  solver->precon->facePatchGatherKernel(mesh->Nelements, mesh->o_EToFPairs, o_zP, o_Sr);
-  occaTimerToc(mesh->device,"exactFacePatchSolveKernel");
-}
-
-void approxFacePatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
+void FacePatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;
@@ -183,22 +147,7 @@ void approxFacePatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occaTimerToc(mesh->device,"approxFacePatchSolveKernel");
 }
 
-void exactBlockJacobiIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
-
-  solver_t *solver = (solver_t*) args[0];
-  mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
-
-  occaTimerTic(mesh->device,"exactBlockJacobiSolveKernel");
-  precon->exactBlockJacobiSolverKernel(mesh->Nelements,
-                            precon->o_invAP,
-                            precon->o_invDegreeAP,
-                            o_r,
-                            o_Sr);
-  occaTimerToc(mesh->device,"exactBlockJacobiSolveKernel");
-}
-
-void approxBlockJacobiIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
+void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t*) args[0];
   mesh_t *mesh = solver->mesh;

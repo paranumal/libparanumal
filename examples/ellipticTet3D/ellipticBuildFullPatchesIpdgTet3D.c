@@ -153,6 +153,12 @@ void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis
       dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
       printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+      printf("Element %d has signature [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d] \n", eM,
+                  signature[0], signature[1], signature[2],signature[3],
+                  signature[4], signature[5], signature[6],signature[7],
+                  signature[8], signature[9], signature[10],signature[11],
+                  signature[12], signature[13], signature[14],signature[15]);
+
 
       if (rate < rateTolerance) {
         (*patchesIndex)[eM] = index;

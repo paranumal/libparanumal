@@ -138,10 +138,7 @@ void smoothChebyshevTet3D    (void **args, occa::memory &o_r, occa::memory &o_x,
 
 //smoother ops
 void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactFullPatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxFullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactFacePatchIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxFacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void exactBlockJacobiIpdg  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void approxBlockJacobiIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void FullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void FacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void LocalPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
 void dampedJacobi        (void **args, occa::memory &o_r, occa::memory &o_Sr);
