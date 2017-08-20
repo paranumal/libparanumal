@@ -23,8 +23,8 @@ void insRun2D(ins_t *ins, char *options){
   iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
-  occa::initTimer(mesh->device);
-  //ins->NtimeSteps = 10;
+ // occa::initTimer(mesh->device);
+  //ins->NtimeSteps = 1;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -64,51 +64,67 @@ void insRun2D(ins_t *ins, char *options){
       ins->g0 =  11.f/6.f;
     }
   #else 
-  //if(tstep<1){
+  // if(tstep<1){
        //advection, first order in time, increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.f;      
-  //  }
+      ins->g0 =  1.f; 
+      ins->ExplicitOrder = 1;     
+  // }
     // else {
     // //advection, second order in time, no increment
     // ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
     // ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
     // ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
     // ins->g0 =  1.5f;
+    // ins->ExplicitOrder=2;
     // }
     
   #endif
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
-    switch(subcycling){
+     switch(subcycling){
       case 1:
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
       break;
 
       case 0:
-       insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+      // VOLUME KERNELS
+      // mesh->device.finish();
+      // occa::tic("AdvectionStep");
+      insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+      // mesh->device.finish();
+      // occa::toc("AdvectionStep");  
       break;
     }
-
+    
+    // mesh->device.finish();
+    // occa::tic("HelmholtzStep");
     insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+    // mesh->device.finish();
+    // occa::toc("HelmholtzStep");  
+
+    // mesh->device.finish();
+    // occa::tic("PoissonStep");
     insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    // mesh->device.finish();
+    // occa::toc("PoissonStep");  
+    
+    // mesh->device.finish();
+    // occa::tic("UpdateStep");
     insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
+    // mesh->device.finish();
+    // occa::toc("UpdateStep");  
 
     printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
-      }
-    }
-    
-    if(strstr(options, "REPORT")){
-      if(((tstep+1)%ins->errorStep)==0){
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
-
+    
 #if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
       iint offset = (mesh->Nelements+mesh->totalHaloPairs);
@@ -155,6 +171,9 @@ free(vSendBuffer);
 free(vRecvBuffer);
 free(pSendBuffer);
 free(pRecvBuffer);
+
+// occa::printTimer();
+
 }
 
 

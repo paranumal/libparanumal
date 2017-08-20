@@ -1,7 +1,7 @@
-rf = DefineNumber[0.15];
+rf = DefineNumber[0.25];
 rd = DefineNumber[0.75];
 // trailing side resolution
-rf2 = DefineNumber[0.4];
+rf2 = DefineNumber[0.5];
 
 
 ffxmin = DefineNumber[-0.5];

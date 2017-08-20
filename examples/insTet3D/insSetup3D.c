@@ -70,16 +70,16 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   printf("Starting initial conditions for INS3D\n");
   //
  
-  dfloat nu   = 0.001;   // kinematic viscosity,
+  dfloat nu   = 0.00125;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 50.0;
+  ins->finalTime = 100.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 10.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
+  ins->tau       = 15.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -173,7 +173,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->dt   = ins->finalTime/ins->NtimeSteps;
 
   // errorStep
-  ins->errorStep =10000;
+  ins->errorStep =5000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -194,8 +194,8 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  //ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+  ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
   solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
