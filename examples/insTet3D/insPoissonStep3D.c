@@ -154,5 +154,12 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   printf("Solving for P \n");
   ellipticSolveTet3D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
 
-  //ins->o_PI.copyFrom(ins->rhsP); 
+  #if 1
+      char fname[BUFSIZ];
+      sprintf(fname, "/u0/outputs/ins3D/iterations.dat");
+      FILE *fp;
+      fp = fopen(fname, "a");
+      fprintf(fp,"\n");
+      fclose(fp);
+    #endif
 }

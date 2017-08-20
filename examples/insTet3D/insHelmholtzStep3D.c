@@ -106,6 +106,14 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
 
     #if 1
     printf("Solving for Ux \n");
+    #if 1
+      char fname[BUFSIZ];
+      sprintf(fname, "/u0/outputs/ins3D/iterations.dat");
+      FILE *fp;
+      fp = fopen(fname, "a");
+      fprintf(fp,"%d ",tstep);
+      fclose(fp);
+    #endif
     ellipticSolveTet3D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     
     printf("Solving for Uy \n");

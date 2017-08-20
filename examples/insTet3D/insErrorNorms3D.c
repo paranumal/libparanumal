@@ -147,8 +147,8 @@ if(rank==0){
 
   // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
   char fname[BUFSIZ];
-  //sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
-  sprintf(fname, "insTetErr.txt");
+  sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
+  //sprintf(fname, "insTetErr.txt");
   FILE *fp;
   fp = fopen(fname, "a");
   fprintf(fp,"%d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
