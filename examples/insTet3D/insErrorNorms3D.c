@@ -108,22 +108,6 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
  free(dW);
  free(dP);
 
-#if 0
-iint tstep = time/ins->dt+1; 
- int ranka;
- MPI_Comm_rank(MPI_COMM_WORLD, &ranka);
-if(strstr(options, "VTU")){ 
-    // output field files
-    char fname[BUFSIZ];
-    // sprintf(fname, "/u0/outputs/ins3D/");
-    // sprintf(fname, "%sfoo_%04d", fname,rank);
-    //sprintf(fname, "/u0/outputs/ins3D/Error_%04d_%04d.vtu",ranka,tstep/ins->errorStep);
-    sprintf(fname, "Error_%04d_%04d.vtu",ranka,tstep/ins->errorStep);
-    
-    insPlotVTU3D(ins, fname);
-  } 
-
-#endif
 
 // compute maximum over all processes
 dfloat gliu,gliv,gliw,glip;

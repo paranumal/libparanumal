@@ -137,29 +137,8 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  //ins->o_rhsP.copyTo(ins->rhsP);
-
-  // // 
-  // dfloat maxrhsp = 0; 
-  // for (iint e=0; e<mesh->Nelements; e++){
-  //   for (iint n=0; n<mesh->Np; n++){
-  //     maxrhsp = mymax(maxrhsp, ins->rhsP[n+e*mesh->Np]);
-  //     //ins->rhsP[n+e*mesh->Np] = 0.00000001; 
-  //   }
-  // }
   
-  // printf("maxRhsP = %.5e, dt= %.5e\n",maxrhsp, ins->dt);
-  // ins->o_rhsP.copyFrom(ins->rhsP);
-
   printf("Solving for P \n");
   ellipticSolveTet3D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
 
-  #if 1
-      char fname[BUFSIZ];
-      sprintf(fname, "/u0/outputs/ins3D/iterations.dat");
-      FILE *fp;
-      fp = fopen(fname, "a");
-      fprintf(fp,"\n");
-      fclose(fp);
-    #endif
 }

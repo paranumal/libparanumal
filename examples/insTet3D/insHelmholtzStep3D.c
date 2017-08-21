@@ -104,16 +104,7 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-    #if 1
     printf("Solving for Ux \n");
-    #if 1
-      char fname[BUFSIZ];
-      sprintf(fname, "/u0/outputs/ins3D/iterations.dat");
-      FILE *fp;
-      fp = fopen(fname, "a");
-      fprintf(fp,"%d ",tstep);
-      fclose(fp);
-    #endif
     ellipticSolveTet3D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     
     printf("Solving for Uy \n");
@@ -121,7 +112,6 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
     
     printf("Solving for Uz \n");
     ellipticSolveTet3D(solver, ins->lambda, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
-    #endif
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
     ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
