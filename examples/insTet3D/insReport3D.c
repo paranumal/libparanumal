@@ -23,7 +23,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     char fname[BUFSIZ];
     // sprintf(fname, "/u0/outputs/ins3D/");
     // sprintf(fname, "%sfoo_%04d", fname,rank);
-    sprintf(fname, "foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
+    sprintf(fname, "/u0/outputs/ins3D/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     
     insPlotVTU3D(ins, fname);
   } 

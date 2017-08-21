@@ -23,7 +23,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   ins->NVfields = 2; //  Total Number of Velocity Fields
   ins->NTfields = 3; // Total Velocity + Pressure
   ins->Nfields  = 1; // Each Velocity Field
-  ins->ExplicitOrder = 3; // Order Nonlinear Extrapolation
+  //ins->ExplicitOrder = 3; // Order Nonlinear Extrapolation
 
   mesh->Nfields = ins->Nfields;
 
@@ -73,13 +73,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 0.1f;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0f* (mesh->N+1)*(mesh->N+2)/2.0f;
-
-  // if(mesh->N==1){ins->tau *=10;} // tau is too small for low N
-  // if(mesh->N==2){ins->tau *= 5;} // tau is too small for low N
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -113,7 +110,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 
 
 #if 0 // Zero flow
-      ins->U[id] = 1.0;
+      ins->U[id] = 0.0;
       ins->V[id] = 0.0;
       ins->P[id] = 0.0;
 #endif
@@ -153,8 +150,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   // Maximum Velocity
   umax = sqrt(umax);
 
-  dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
-  //dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
+  //dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -192,7 +189,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   #endif
   
   // errorStep
-  ins->errorStep =1000000;
+  ins->errorStep =50;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -345,6 +342,42 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   ins->mesh = mesh;
 
   // ===========================================================================
+ 
+  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
+  ins->totalHaloExtractKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+             "insTotalHaloExtract2D",
+             kernelInfo);
+
+  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
+  ins->totalHaloScatterKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+             "insTotalHaloScatter2D",
+             kernelInfo);
+   printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->velocityHaloExtractKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+            "insVelocityHaloExtract2D",
+             kernelInfo);
+
+  printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->velocityHaloScatterKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+             "insVelocityHaloScatter2D",
+             kernelInfo);
+
+  printf("Compiling INS Poisson Halo Extract Kernel\n");
+  ins->pressureHaloExtractKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+             "insPressureHaloExtract",
+             kernelInfo);
+
+  printf("Compiling INS PoissonHalo Extract Kernel\n");
+  ins->pressureHaloScatterKernel=
+   mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+             "insPressureHaloScatter",
+             kernelInfo);  
+  // ===========================================================================
   printf("Compiling Advection volume kernel with cubature integration\n");
   ins->advectionCubatureVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
@@ -413,20 +446,6 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 				       "insHelmholtzRhsIpdgBC2D",
 				       kernelInfo);
 
-
-  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
-  ins->totalHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insTotalHaloExtract2D",
-				       kernelInfo);
-
-  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
-  ins->totalHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insTotalHaloScatter2D",
-				       kernelInfo);
-
-
   // ===========================================================================
   printf("Compiling Helmholtz volume update kernel\n");
   ins->poissonRhsForcingKernel =
@@ -446,35 +465,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
 				       "insPoissonPenalty2D",
 				       kernelInfo);
 
-  printf("Compiling INS Poisson Halo Extract Kernel\n");
-  ins->velocityHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insVelocityHaloExtract2D",
-				       kernelInfo);
-
-  printf("Compiling INS PoissonHalo Extract Kernel\n");
-  ins->velocityHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insVelocityHaloScatter2D",
-				       kernelInfo);
-
   printf("Compiling Poisson surface kernel with collocation integration\n");
   ins->updateUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
 				       "insUpdateUpdate2D",
-				       kernelInfo);
-
-
-  printf("Compiling INS Poisson Halo Extract Kernel\n");
-  ins->pressureHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloExtract",
-				       kernelInfo);
-
-  printf("Compiling INS PoissonHalo Extract Kernel\n");
-  ins->pressureHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloScatter",
 				       kernelInfo);
   // ===========================================================================//
 #if 0
