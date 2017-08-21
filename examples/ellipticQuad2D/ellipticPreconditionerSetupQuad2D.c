@@ -1,54 +1,13 @@
 #include "ellipticQuad2D.h"
 
-typedef struct{
 
-  iint localId;
-  iint baseId;
-  iint haloFlag;
-
-} preconGatherInfo_t;
-
-int parallelCompareBaseId(const void *a, const void *b){
-
-  preconGatherInfo_t *fa = (preconGatherInfo_t*) a;
-  preconGatherInfo_t *fb = (preconGatherInfo_t*) b;
-
-  if(fa->baseId < fb->baseId) return -1;
-  if(fa->baseId > fb->baseId) return +1;
-
-  return 0;
-
-}
-
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-}nonZero_t;
-
-// compare on global indices
-int parallelCompareRowColumn(const void *a, const void *b);
-
-void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint* BCType,
-                            nonZero_t **A, iint *nnzA, hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda,
-                            nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options);
-
-precon_t *ellipticPreconditionerSetupQuad2D(mesh2D *mesh, ogs_t *ogs, dfloat tau, dfloat lambda, iint* BCType, const char *options){
+void ellipticPreconditionerSetupQuad2D(solver_t solver,, ogs_t *ogs, dfloat tau, dfloat lambda, iint* BCType, const char *options){
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint Nlocal = mesh->Np*mesh->Nelements;
-  iint Nhalo  = mesh->Np*mesh->totalHaloPairs;
-  iint Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
-
-  precon_t *precon = (precon_t*) calloc(1, sizeof(precon_t));
+  precon_t *precon = solver->precon;
 
   if (strstr(options,"OAS")||strstr(options, "OMS")) {
     // offsets to extract second layer

@@ -8,7 +8,8 @@ CXXFLAGS =
 include ${OCCA_DIR}/scripts/makefile
 
 # define variables
-HDRDIR  = ../../include
+HDRDIR = ../../include
+GSDIR  = ../../3rdParty/gslib.github/src
 ALMONDDIR = ../parALMOND
 
 # set options for this machine
@@ -18,8 +19,8 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
-		 	-I$(ALMONDDIR)/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
+		 	
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
@@ -106,9 +107,13 @@ COBJS = \
 ../../src/gsParallelGatherScatterSetup.o\
 ../../src/xxtCoarseSolve.o
 
+
 ellipticMainTri2D:$(AOBJS) $(LOBJS) ellipticMainTri2D.o gslibInterface
 	cd ../parALMOND; make -j; cd ../ellipticTri2D
 	$(LD)  $(LDFLAGS)  -o ellipticMainTri2D ellipticMainTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
+lib:$(AOBJS)
+	ar -cr libellipticTri2D.a $(AOBJS)
 
 gslibInterface:
 	cd ../../3rdParty/gslib.github; make -j; cd ../../examples/ellipticTri2D
@@ -116,11 +121,13 @@ gslibInterface:
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
+all: lib ellipticMainTri2D
+
 # what to do if user types "make clean"
 clean :
 	cd ../parALMOND; make clean; cd ../ellipticTri2D
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
 	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
-	rm *.o ellipticMainTri2D
+	rm *.o ellipticMainTri2D libellipticTri2D.a
 
 

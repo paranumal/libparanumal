@@ -6,28 +6,48 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  if(argc!=3 && argc!=4){
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if(argc<3){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
     printf("usage 2: ./main meshes/cavityH005.msh N BoundaryConditions.h\n");
     exit(-1);
   }
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   // int specify polynomial degree
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
-  // preconditioner can be JACOBI, OAS, NONE
-  // method can be CONTINUOUS or IPDG
-  // opt: coarse=COARSEGRID with XXT or AMG
+  // can add FLEXIBLE and VERBOSE options
+  // method can be IPDG or CONTINUOUS
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  //                      patch smoothers can include EXACT        
+  // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
+  // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
+  // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE preconditioner=OAS method=IPDG coarse=COARSEGRID,ALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE preconditioner=OAS method=IPDG,PROJECT coarse=COARSEGRID,XXT");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,ALMOND coarse=COARSEGRID");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=FULLPATCH,EXACT");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
+
+  //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
+  // solver can be EXACT, KCYCLE, or VCYCLE
+  // smoother can be DAMPEDJACOBI or CHEBYSHEV
+  // can add GATHER to build a gsop
+  // partition can be STRONGNODES, DISTRIBUTED, SATURATE
+  char *parAlmondOptions =
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+
+  //this is strictly for testing, to do repeated runs. Will be removed later
+  if (argc==6) {
+    options = strdup(argv[4]);
+    parAlmondOptions = strdup(argv[5]);
+  }
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupQuad2D(argv[1], N);
@@ -127,7 +147,7 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU2D(mesh, "foo", 0);
+  meshPlotVTU2D(mesh, "foo.vtu", 0);
 
   // close down MPI
   MPI_Finalize();
