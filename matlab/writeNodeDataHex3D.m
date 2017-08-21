@@ -327,6 +327,8 @@ end
 gI = Vandermonde1D(N, gr)/Vandermonde1D(N, r1d);
 gD = GradVandermonde1D(N, gr)/Vandermonde1D(N, r1d);
 gNq = length(gr);
+gV2 = Vandermonde1D(N+1, gr);
+gD2 = Dmatrix1D(N+1, gr, gV2);
 
 fprintf(fid, '%% gNq (gauss quadrature count)\n');
 fprintf(fid, '%d\n', gNq);
@@ -348,6 +350,17 @@ for n=1:gNq
   end
   fprintf(fid, '\n');
 end
+
+fprintf(fid, '%% gjD2 [ 1D differentiation from GJ to GJ nodes  ]\n');
+for n=1:gNq
+  for m=1:gNq
+    fprintf(fid, '%17.15E ', gD2(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+gD2*gr
+
 
 fclose(fid);
 if(0)
