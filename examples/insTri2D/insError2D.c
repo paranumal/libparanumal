@@ -45,11 +45,11 @@ void insError2D(ins_t *ins, dfloat time,char *options){
       printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
 	     (int)(time/ins->dt), time, gMinU, gMaxU, gMinV, gMaxV,gMinP, gMaxP );
 
-    // if( isnan(gMinU) || isnan(gMaxU) || 
-    //     isnan(gMinV) || isnan(gMaxV) || 
-    //     isnan(gMinP) || isnan(gMaxP) )
-      //exit(EXIT_FAILURE);
-
- 
+    if( isnan(gMinU) || isnan(gMaxU) || 
+        isnan(gMinV) || isnan(gMaxV) || 
+        isnan(gMinP) || isnan(gMaxP) ){
+      occa::printTimer(); 
+      exit(EXIT_FAILURE);
+    }
   
 }

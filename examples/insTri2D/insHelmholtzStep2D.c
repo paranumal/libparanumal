@@ -90,6 +90,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     iint Ntotal = offset*mesh->Np;
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+
     
     printf("Solving for Ux \n");
     ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
