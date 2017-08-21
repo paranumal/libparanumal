@@ -3,7 +3,7 @@
 occa::kernel saferBuildKernelFromSource(occa::device &device,
                                         const char *fname, const char *kname, occa::kernelInfo &kernelInfo){
 
-// should really use root to build and non-root to load
+	// should really use root to build and non-root to load
 	return device.buildKernelFromSource(fname, kname, kernelInfo);
 
 }
@@ -13,16 +13,19 @@ occa::kernel saferBuildKernelFromSource(occa::device &device,
 // specialized version for geometric factors at Gauss (not GLL) nodes
 //dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
-/* number of second order geometric factors */
+	/* number of second order geometric factors */
 	iint NgjGeo = 7;
 	iint gjNq = mesh->gjNq;
 	iint gjNp = gjNq*gjNq*gjNq;
 	dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
-//KS start
+	//KS start
 	printf("Setup info: Nggeo = %d, gjNq = %d. gjNp = %d Nq = %d \n", NgjGeo, gjNq, gjNp, mesh->Nq);
+	#if 1
 	dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*8*gjNp, sizeof(dfloat));
-	
-//KS end
+	#else
+	dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*3*8+2*gjNp, sizeof(dfloat));
+	#endif
+	//KS end
 	for(iint e=0; e<mesh->Nelements; ++e) { /* for each element */
 
 		/* find vertex indices and physical coordinates */
@@ -42,7 +45,7 @@ dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 					dfloat rn = mesh->gjr[i];
 					dfloat sn = mesh->gjr[j];
 					dfloat tn = mesh->gjr[k];
-				//	printf("r,s,t=%g,%g,%g\n", rn,sn,tn);
+					//	printf("r,s,t=%g,%g,%g\n", rn,sn,tn);
 					/* Jacobian matrix */
 					dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
 					dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
@@ -75,44 +78,77 @@ dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
 					gjGeo[NgjGeo*gjNp*e + n + gjNp*GWJID] = JW;
+
 					
-				/*	gjGeod2[8*gjNp*e + n  ] = 1.0f;
-					//JW*(rx*rx + ry*ry + rz*rz);
-					gjGeod2[8*gjNp*e + 8*n + 1 ] = 1.0f;
-					//JW*(rx*sx + ry*sy + rz*sz);
-					
-					gjGeod2[8*gjNp*e + 8*n + 2 ] = 1.0;
-					//JW*(rx*tx + ry*ty + rz*tz);
-					gjGeod2[8*gjNp*e + 8*n + 3 ] = 1.0f;
-					//JW*(sx*sx + sy*sy + sz*sz);
-					
-					gjGeod2[8*gjNp*e + 8*n + 4 ] = 1.0f;
-					//JW*(sx*tx + sy*ty + sz*tz);
-					gjGeod2[8*gjNp*e + 8*n + 5 ] =1.0f;
-					//JW*(tx*tx + ty*ty + tz*tz);
-					
-					gjGeod2[8*gjNp*e + 8*n + 6 ] = 1.0f;
-					
-					//JW;
-					gjGeod2[8*gjNp*e + 8*n + 7 ] = 0.0;*/
-					
+					//emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+					//ggeo[base+p_Np*4+0];
+			/*			gjGeod2[8*gjNp*e + 8*n + 0 ] = JW*(rx*rx + ry*ry + rz*rz);
+						gjGeod2[8*gjNp*e + 8*n + 1 ] = JW*(rx*sx + ry*sy + rz*sz);
+						
+						gjGeod2[8*gjNp*e + 8*n + 2 ] = JW*(rx*tx + ry*ty + rz*tz);
+						gjGeod2[8*gjNp*e + 8*n + 3 ] = JW*(sx*sx + sy*sy + sz*sz);
+						
+						gjGeod2[8*gjNp*e + 8*n + 4 ] = JW*(sx*tx + sy*ty + sz*tz);
+						gjGeod2[8*gjNp*e + 8*n + 5 ] = JW*(tx*tx + ty*ty + tz*tz);
+						
+						gjGeod2[8*gjNp*e + 8*n + 6 ] = JW;
+						gjGeod2[8*gjNp*e + 8*n + 7 ] = 0.0;
+						*/
+				  gjGeod2[8*gjNp*e + n + gjNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+					gjGeod2[8*gjNp*e + n + gjNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+					gjGeod2[8*gjNp*e + n + gjNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+					gjGeod2[8*gjNp*e + n + gjNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+					gjGeod2[8*gjNp*e + n + gjNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+					gjGeod2[8*gjNp*e + n + gjNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+					gjGeod2[8*gjNp*e + n + gjNp*GWJID] = JW;
+					gjGeod2[8*gjNp*e + n + gjNp*7] = 0.0f;
+
 
 				}
 			}
 		}
 	}
+	/*
+#if 1
 	for (int n = 0; n< mesh->Nelements*8*gjNp; n++)
-		{
+	{
 		gjGeod2[n] = drand48();;
+	}
+#else
+for(iint k=0; k<gjNq; k++) {
+			// per element, load coordinated and weights
+			gjGeod2[2*k ]  = mesh->gjr[k];
+			gjGeod2[2*k +1]  = mesh->gjw[k];
 		}
 
-	return gjGeod2;
+	for(iint e=0; e<mesh->Nelements; ++e) {
+		
+		iint id = e*mesh->Nverts;
+		for (iint k= 0; k<8; k++)
+		{
+			// in the memory: first all x coordinates for all the elements
+			// then y coordinates
+			// then z coordinates 
+
+			gjGeod2[2*gjNq + e*mesh->Nelements + k] = mesh->EX[id+k]; 					
+			gjGeod2[2*gjNq + mesh->Nelements*8 + e*mesh->Nelements + k] = mesh->EY[id+k];		
+			gjGeod2[2*gjNq + mesh->Nelements*16+ e*mesh->Nelements + k] = mesh->EZ[id+k];
+
+		} 
+
+
+	}
+
+#endif
+*/
+
+	return gjGeo;
 }
 
 
 void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
 
-// build degree vector
+	// build degree vector
 	for(iint n=0; n<Ntotal; ++n)
 		deg[n] = 1;
 
@@ -153,7 +189,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 		else
 			NblockG = 1;
 	}
-//  NblockG = 512/gNq2;
+	//  NblockG = 512/gNq2;
 
 	iint Ntotal = mesh->Np*mesh->Nelements;
 	iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
@@ -214,110 +250,111 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 	}
 	mesh->device.setStream(solver->defaultStream);
 #endif
-  solver->Nblock = Nblock;
+	solver->Nblock = Nblock;
 
-  // BP3 specific stuff starts here
-  
-//  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
-dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
+	// BP3 specific stuff starts here
+
+	//  dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
+	dfloat *gjGeo = ellipticGeometricFactorsHex3D(mesh);
 #if 0
-  // build a gjD that maps gjNq to gjNq
-  dfloat *gjD2 = (dfloat*) calloc(gjNq*gjNq, sizeof(dfloat));
-  for(iint n=0;n<gjNq;++n){
-    for(iint m=0;m<gjNq;++m){
-      for(iint i=0;i<mesh->Nq;++i){
-	gjD2[n*gjNq+m] += mesh->gjD[n*mesh->Nq+i]*mesh->gjI[m*mesh->Nq+i];
-      }
-    }
-  }
+	// build a gjD that maps gjNq to gjNq
+	dfloat *gjD2 = (dfloat*) calloc(gjNq*gjNq, sizeof(dfloat));
+	for(iint n=0;n<gjNq;++n){
+		for(iint m=0;m<gjNq;++m){
+			for(iint i=0;i<mesh->Nq;++i){
+				gjD2[n*gjNq+m] += mesh->gjD[n*mesh->Nq+i]*mesh->gjI[m*mesh->Nq+i];
+
+			}
+		}
+	}
 #endif
 
-  // TW: temporarily resize gjD
-  mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat));
-  solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
-  solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
-  solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
- // solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
- //KS
-  solver->o_gjGeo = mesh->device.malloc(8*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
-  // BP3 specific stuff ends here
+	// TW: temporarily resize gjD
+	mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat));
+	solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
+	solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
+	solver->o_gjI = mesh->device.malloc(gjNq*mesh->Nq*sizeof(dfloat), mesh->gjI);
+	// solver->o_gjGeo = mesh->device.malloc(mesh->Nggeo*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
+	//KS
+	solver->o_gjGeo = mesh->device.malloc(8*gjNp*mesh->Nelements*sizeof(dfloat), gjGeo);
+	// BP3 specific stuff ends here
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+	kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
-  //  kernelInfo.addCompilerFlag("-G");
-  kernelInfo.addCompilerFlag("-O3");
+	kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+	//  kernelInfo.addCompilerFlag("-G");
+	kernelInfo.addCompilerFlag("-O3");
 
-  // generically used for blocked DEVICE reductions
-  kernelInfo.addDefine("p_blockSize", blockSize);
+	// generically used for blocked DEVICE reductions
+	kernelInfo.addDefine("p_blockSize", blockSize);
 
-printf("p_blockSize = %d \n", blockSize);
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-  kernelInfo.addDefine("p_Nmax", maxNodes);
+	printf("p_blockSize = %d \n", blockSize);
+	kernelInfo.addDefine("p_maxNodes", maxNodes);
+	kernelInfo.addDefine("p_Nmax", maxNodes);
 
-  kernelInfo.addDefine("p_NblockV", NblockV);
-  kernelInfo.addDefine("p_NblockV2", NblockV2);
-  kernelInfo.addDefine("p_NblockS", NblockS);
+	kernelInfo.addDefine("p_NblockV", NblockV);
+	kernelInfo.addDefine("p_NblockV2", NblockV2);
+	kernelInfo.addDefine("p_NblockS", NblockS);
 
-  kernelInfo.addDefine("p_NblockG", NblockG);
+	kernelInfo.addDefine("p_NblockG", NblockG);
 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+	kernelInfo.addDefine("p_Lambda2", 0.5f);
 
-  kernelInfo.addDefine("p_gjNq", mesh->gjNq);
-  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
-  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
-  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+	kernelInfo.addDefine("p_gjNq", mesh->gjNq);
+	kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
+	kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
+	kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-  int Nz = mymin(mesh->Nq, 64/mesh->Nq);
-  kernelInfo.addDefine("p_Nz", Nz);
-  printf("Nz = %d\n", Nz);
+	int Nz = mymin(mesh->Nq, 64/mesh->Nq);
+	kernelInfo.addDefine("p_Nz", Nz);
+	printf("Nz = %d\n", Nz);
 
-  //  occa::setVerboseCompilation(0);
+	//  occa::setVerboseCompilation(0);
 
-  for(iint r=0;r<size;++r){
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(r==rank){
-      printf("Building kernels for rank %d\n", rank);
-      fflush(stdout);
-      mesh->haloExtractKernel =
-	saferBuildKernelFromSource(mesh->device,
-				   DHOLMES "/okl/meshHaloExtract3D.okl",
-				   "meshHaloExtract3D",
-				   kernelInfo);
+	for(iint r=0;r<size;++r){
+		MPI_Barrier(MPI_COMM_WORLD);
+		if(r==rank){
+			printf("Building kernels for rank %d\n", rank);
+			fflush(stdout);
+			mesh->haloExtractKernel =
+			  saferBuildKernelFromSource(mesh->device,
+			                             DHOLMES "/okl/meshHaloExtract3D.okl",
+			                             "meshHaloExtract3D",
+			                             kernelInfo);
 
-      mesh->gatherKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
-				   "gather",
-				   kernelInfo);
+			mesh->gatherKernel =
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
+			                             "gather",
+			                             kernelInfo);
 
-      mesh->scatterKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
-				   "scatter",
-				   kernelInfo);
+			mesh->scatterKernel =
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
+			                             "scatter",
+			                             kernelInfo);
 
-      mesh->gatherScatterKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
-				   "gatherScatter",
-				   kernelInfo);
+			mesh->gatherScatterKernel =
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
+			                             "gatherScatter",
+			                             kernelInfo);
 
 
-      mesh->getKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
-				   "get",
-				   kernelInfo);
+			mesh->getKernel =
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
+			                             "get",
+			                             kernelInfo);
 
-      mesh->putKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
-				   "put",
-				   kernelInfo);
+			mesh->putKernel =
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
+			                             "put",
+			                             kernelInfo);
 
 #if 0
 			// WARNING
 			if(mesh->Nq<12) {
 				solver->AxKernel =
-					saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-					                           "ellipticAxHex3D_e3",
-					                           kernelInfo);
+				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
+				                             "ellipticAxHex3D_e3",
+				                             kernelInfo);
 			}
 #endif
 
@@ -326,74 +363,73 @@ printf("p_blockSize = %d \n", blockSize);
 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DKS.okl",
-						     "ellipticAxHex3D_e1i",
-						    //"ellipticAxHex3D_cuboid0",
-						     //						     "ellipticAxHex3D_cube1",
-						     kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DKS2.okl",
+			                             "ellipticAxHex3D_rDir",
+			                             //"ellipticAxHex3D_cuboid0",
+			                             //						     "ellipticAxHex3D_cube1",
+			                             kernelInfo);
 
 
 			mesh->weightedInnerProduct1Kernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct1.okl",
-				                           "weightedInnerProduct1",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct1.okl",
+			                             "weightedInnerProduct1",
+			                             kernelInfo);
 
-			mesh->weightedInnerProduct2Kernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct2.okl",
-				                           "weightedInnerProduct2",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct2.okl",
+			                             "weightedInnerProduct2",
+			                             kernelInfo);
 
 			mesh->innerProductKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/innerProduct.okl",
-				                           "innerProduct",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/innerProduct.okl",
+			                             "innerProduct",
+			                             kernelInfo);
 
 			mesh->scaledAddKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scaledAdd.okl",
-				                           "scaledAdd",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scaledAdd.okl",
+			                             "scaledAdd",
+			                             kernelInfo);
 
 			mesh->dotMultiplyKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotMultiply.okl",
-				                           "dotMultiply",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotMultiply.okl",
+			                             "dotMultiply",
+			                             kernelInfo);
 
 			mesh->dotDivideKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotDivide.okl",
-				                           "dotDivide",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotDivide.okl",
+			                             "dotDivide",
+			                             kernelInfo);
 
 			solver->gradientKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
-				                           "ellipticGradientHex3D",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+			                             "ellipticGradientHex3D",
+			                             kernelInfo);
 
 			solver->partialGradientKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
-				                           "ellipticPartialGradientHex3D",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+			                             "ellipticPartialGradientHex3D",
+			                             kernelInfo);
 
 			if(mesh->Nq<12) {
 				solver->ipdgKernel =
-					saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-					                           "ellipticAxIpdgHex3D",
-					                           kernelInfo);
+				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+				                             "ellipticAxIpdgHex3D",
+				                             kernelInfo);
 
 				solver->partialIpdgKernel =
-					saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-					                           "ellipticPartialAxIpdgHex3D",
-					                           kernelInfo);
+				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+				                             "ellipticPartialAxIpdgHex3D",
+				                             kernelInfo);
 			}
 
 			solver->combinedInnerProductKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
-				                           "ellipticCombinedInnerProduct",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
+			                             "ellipticCombinedInnerProduct",
+			                             kernelInfo);
 
 			solver->combinedUpdateKernel =
-				saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedUpdate.okl",
-				                           "ellipticCombinedUpdate",
-				                           kernelInfo);
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedUpdate.okl",
+			                             "ellipticCombinedUpdate",
+			                             kernelInfo);
 			usleep(8000);
 		}
 
@@ -402,13 +438,13 @@ printf("p_blockSize = %d \n", blockSize);
 
 	occaTimerTic(mesh->device,"GatherScatterSetup");
 
-// set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+	// set up gslib MPI gather-scatter and OCCA gather/scatter arrays
 	solver->ogs = meshParallelGatherScatterSetup(mesh,
-	                                             mesh->Np*mesh->Nelements,
-	                                             sizeof(dfloat),
-	                                             mesh->gatherLocalIds,
-	                                             mesh->gatherBaseIds,
-	                                             mesh->gatherHaloFlags);
+	              mesh->Np*mesh->Nelements,
+	              sizeof(dfloat),
+	              mesh->gatherLocalIds,
+	              mesh->gatherBaseIds,
+	              mesh->gatherHaloFlags);
 	occaTimerToc(mesh->device,"GatherScatterSetup");
 
 	occaTimerTic(mesh->device,"DegreeVectorSetup");
@@ -427,7 +463,7 @@ printf("p_blockSize = %d \n", blockSize);
 	solver->o_invDegree.copyFrom(invDegree);
 	occaTimerToc(mesh->device,"DegreeVectorSetup");
 
-//fill geometric factors in halo
+	//fill geometric factors in halo
 	if(mesh->totalHaloPairs) {
 		iint Nlocal = mesh->Nelements*mesh->Np;
 		iint Nhalo = mesh->totalHaloPairs*mesh->Np;
@@ -444,10 +480,10 @@ printf("p_blockSize = %d \n", blockSize);
 		                 mesh->vgeo + Nlocal*mesh->Nvgeo);
 
 		mesh->o_vgeo =
-			mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+		  mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
 	}
 
-// build weights for continuous SEM L2 project --->
+	// build weights for continuous SEM L2 project --->
 	dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
 	for(iint e=0; e<mesh->Nelements; ++e) {
@@ -460,7 +496,7 @@ printf("p_blockSize = %d \n", blockSize);
 	occa::memory o_localMM = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 	occa::memory o_MM      = mesh->device.malloc(Ntotal*sizeof(dfloat), localMM);
 
-// sum up all contributions at base nodes and scatter back
+	// sum up all contributions at base nodes and scatter back
 
 	ellipticParallelGatherScatter(mesh, solver->ogs, o_localMM, o_MM, dfloatString, "add");
 
@@ -472,8 +508,8 @@ printf("p_blockSize = %d \n", blockSize);
 	if(rank==0)
 		printf("starting elliptic parallel gather scatter setup\n");
 
-// set up separate gather scatter infrastructure for halo and non halo nodes
-//  mesh->device.setStream(solver->dataStream);
+	// set up separate gather scatter infrastructure for halo and non halo nodes
+	//  mesh->device.setStream(solver->dataStream);
 	ellipticParallelGatherScatterSetup(mesh,
 	                                   mesh->Np*mesh->Nelements,
 	                                   sizeof(dfloat),
@@ -482,10 +518,10 @@ printf("p_blockSize = %d \n", blockSize);
 	                                   mesh->gatherHaloFlags,
 	                                   &(solver->halo),
 	                                   &(solver->nonHalo));
-//  mesh->device.setStream(solver->defaultStream);
+	//  mesh->device.setStream(solver->defaultStream);
 
 
-// count elements that contribute to global C0 gather-scatter
+	// count elements that contribute to global C0 gather-scatter
 	iint globalCount = 0;
 	iint localCount = 0;
 	iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
@@ -508,7 +544,7 @@ printf("p_blockSize = %d \n", blockSize);
 		localCount += 1-isHalo;
 	}
 
-//  printf("local = %d, global = %d\n", localCount, globalCount);
+	//  printf("local = %d, global = %d\n", localCount, globalCount);
 
 	solver->globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
 	solver->localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
@@ -530,18 +566,18 @@ printf("p_blockSize = %d \n", blockSize);
 			solver->localGatherElementList[localCount++] = e;
 		}
 	}
-//  printf("local = %d, global = %d\n", localCount, globalCount);
+	//  printf("local = %d, global = %d\n", localCount, globalCount);
 
 	solver->NglobalGatherElements = globalCount;
 	solver->NlocalGatherElements = localCount;
 
 	if(globalCount)
 		solver->o_globalGatherElementList =
-			mesh->device.malloc(globalCount*sizeof(iint), solver->globalGatherElementList);
+		  mesh->device.malloc(globalCount*sizeof(iint), solver->globalGatherElementList);
 
 	if(localCount)
 		solver->o_localGatherElementList =
-			mesh->device.malloc(localCount*sizeof(iint), solver->localGatherElementList);
+		  mesh->device.malloc(localCount*sizeof(iint), solver->localGatherElementList);
 
 	free(localHaloFlags);
 
