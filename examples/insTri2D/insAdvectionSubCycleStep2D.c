@@ -5,8 +5,8 @@
 
 // complete a time step using LSERK4
 void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep, 
-				dfloat * tSendBuffer, dfloat * tRecvBuffer, 
-				dfloat * sendBuffer, dfloat * recvBuffer, 
+				dfloat * tsendBuffer, dfloat * trecvBuffer, 
+				dfloat * vsendBuffer, dfloat *  vrecvBuffer, 
 				char   * options){
 
 #if SUBSTEP_METHOD==1
@@ -18,16 +18,54 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 
  mesh2D *mesh = ins->mesh;
 
+const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+const iint Ntotal         =  NtotalElements*mesh->Np;  
 
- const iint Ntotal  =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+const iint voffset = 0; 
 
-	// // Extrapolate/Interpolate to RK stage time
-	// const iint offset0 = ((ins->index+0)%3)*Ntotal;
-	// const iint offset1 = ((ins->index+2)%3)*Ntotal;
-	// const iint offset2 = ((ins->index+1)%3)*Ntotal;
+   // field offset at this step
+  iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
-  const iint voffset = 0; 
-	//if(activate_advection){
+  //Exctract Halo On Device, Assumes History is already done!
+  if(mesh->totalHaloPairs>0){
+    ins->totalHaloExtractKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset0,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+
+    // copy extracted halo to HOST
+    ins->o_tHaloBuffer.copyTo(tsendBuffer);
+
+    // start halo exchange    
+    meshHaloExchangeStart(mesh,
+			  mesh->Np*(ins->NTfields)*sizeof(dfloat),
+			  tsendBuffer,
+			  trecvBuffer);
+  }
+
+  // COMPLETE HALO EXCHANGE
+  if(mesh->totalHaloPairs>0){
+
+    meshHaloExchangeFinish(mesh);
+
+    ins->o_tHaloBuffer.copyFrom(trecvBuffer);
+    ins->totalHaloScatterKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset0,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+  }
+
+
+
+if(activate_advection){
 	// 
 		const dfloat tn0 = tstep*ins->dt;
 		const dfloat tn1 = (tstep-1)*ins->dt;
@@ -41,11 +79,10 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 			const iint sindex = (ins->index + 3 - torder)%3; 
 			ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
-			// ins->o_Ue.copyFrom(ins->o_Ud);
-			// ins->o_Ve.copyFrom(ins->o_Vd);
-			// SubProblem  Starting Time
+			
+			// SubProblem  Starts here
 			const dfloat tsub = tstep*ins->dt - torder*ins->dt;
-			// Advance SubProblem to t(n+1) 
+			// Advance SubProblem to t^(n+1) 
 			for(iint ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
 
 				const dfloat tstage = tsub + ststep*ins->sdt;				
@@ -72,9 +109,9 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 
 		 
 					//printf("c0: %.5f, c1: %.5f c3: %.5f \n", c0,c1,c2);
-					ins->subCycleExtKernel(mesh->Nelements,
+					ins->subCycleExtKernel(NtotalElements,
 						                   ins->index,
-						                   mesh->Nelements+mesh->totalHaloPairs,
+						                   NtotalElements,
 					                     c0,
 					                     c1,
 					                     c2,
@@ -82,6 +119,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 					                     ins->o_V,
 					                     ins->o_Ue,
 					                     ins->o_Ve);
+
 					//
 					if(mesh->totalHaloPairs>0){
 
@@ -94,13 +132,13 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 						                         ins->o_vHaloBuffer);
 
 						// copy extracted halo to HOST 
-						ins->o_vHaloBuffer.copyTo(sendBuffer);            
+						ins->o_vHaloBuffer.copyTo(vsendBuffer);            
 
 						// start halo exchange
 						meshHaloExchangeStart(mesh,
 						                    mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-						                    sendBuffer,
-						                    recvBuffer);
+						                    vsendBuffer,
+						                    vrecvBuffer);
 						}
 
 							// Compute Volume Contribution
@@ -138,7 +176,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 
 							meshHaloExchangeFinish(mesh);
 
-							ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+							ins->o_vHaloBuffer.copyFrom(vrecvBuffer); 
 
 							ins->velocityHaloScatterKernel(mesh->Nelements,
 							                          mesh->totalHaloPairs,
@@ -204,17 +242,13 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 						                      ins->o_Vd);
 				}
   		}
-  	//Finish SubProblem
-    	// Use NU to store Lagrange Velocities
+  	// Finish SubProblem // Use NU to store Lagrange Velocities
 		ins->o_Ud.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),sindex*Ntotal*sizeof(dfloat),0);
 		ins->o_Vd.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),sindex*Ntotal*sizeof(dfloat),0);
   	}
 
-//	}
+}
 
-
- // field offset at this step
-iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
 
 dfloat tp1 = (tstep+1)*ins->dt;
 // Compute Volume Contribution for Pressure
@@ -222,7 +256,7 @@ ins->gradientVolumeKernel(mesh->Nelements,
                           mesh->o_vgeo,
                           mesh->o_DrT,
                           mesh->o_DsT,
-                          offset,
+                          offset0,
                           ins->o_P,
                           ins->o_Px,
                           ins->o_Py);
