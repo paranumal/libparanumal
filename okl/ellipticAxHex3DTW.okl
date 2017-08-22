@@ -1202,3 +1202,267 @@ kernel void ellipticAxHex3D_trilinear2(const iint Nelements,
 	}
 }
 
+
+kernel void ellipticAxHex3D_trilinear3(const iint Nelements,
+				       const iint * restrict elementList,
+				       const dfloat * restrict ggeo,
+				       const dfloat * restrict D,
+				       const dfloat lambda,
+				       const dfloat * restrict q,
+				       dfloat * restrict Aq, 
+				       const dfloat * restrict grad){
+  
+  // assume multiple of 4
+
+  for(iint e=0; e<Nelements; ++e; outer0) {
+
+    shared dfloat s_q[p_Nslabs][p_Nq][p_Nq+p_pad];
+    shared dfloat s_tmp1[p_Nslabs][p_Nq][p_Nq+p_pad];
+    shared dfloat s_tmp2[p_Nslabs][p_Nq][p_Nq+p_pad];
+    shared dfloat s_D[p_Nq][p_Nq+p_pad];
+    shared dfloat s_EXYZ[9][3];
+
+    exclusive int emap;
+
+    for(iint ks=0;ks<p_Nslab;++ks;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){
+	for(iint i=0;i<p_Nq;++i;inner0){
+	  emap = elementList[e];
+	  if(ks==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+	}
+      }
+    }
+
+    for(iint kslab=0;kslab<p_Nslabs;++kslab){
+
+      for(iint ks=0;ks<p_Nslab;++ks;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    const int t = i+j*p_Nq+ks*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = (t>>6)&3;	
+	    const int jB = (t>>8)&3;	
+	    const int kB = kslab;
+	    
+	    s_q[kT][jB*4+jT][iB*4+iT] = q[iT+jT*4+kT*16+iB*64+jB*256+kB*1024];
+	  }
+	}
+      }
+      
+      barrier(localMemFence);
+	    
+      for(iint ks=0;ks<p_Nslab;++ks;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    dfloat tmpr = 0, tmps = 0;
+	    
+	    for(iint n=0;n<p_Nq;++n){
+	      tmpr += s_D[i][n]*s_q[ks][j][n];
+	      tmps += s_D[j][n]*s_q[ks][n][i];
+	    }
+	    
+	    dfloat G00, G01, G11;
+	    // TW to-do: compute geofacs here by function call ? might need to move this earlier ?
+	    
+	    s_tmp1[ks][j][i] = G00*tmpr + G01*tmps;
+	    s_tmp2[ks][j][i] = G01*tmpr + G11*tmps;
+	  }
+	}
+      }
+      
+      barrier(localMemFence);
+      
+      for(iint ks=0;ks<p_Nslab;++ks;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    dfloat tmpr = 0, tmps = 0;
+	    for(iint n=0;n<p_Nq;++n){
+	      tmpr += s_D[n][i]*s_tmp1[ks][j][n];
+	      tmps += s_D[n][j]*s_tmp2[ks][n][i];
+	    }
+	    s_q[ks][j][i] = tmpr+tmps;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+      
+      for(iint ks=0;ks<p_Nslab;++ks;inner2){
+	for(iint j=0;j<p_Nq;++j;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+	    
+	    const int t = i+j*p_Nq+ks*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = (t>>6)&3;	
+	    const int jB = (t>>8)&3;	
+	    const int kB = kslab;
+	    
+	    Aq[iT+jT*4+kT*16+iB*64+jB*256+kB*1024] = s_q[kT][jB*4+jT][iB*4+iT];
+	  }
+	}
+      }
+    } // end of kslabbing 
+    
+    barrier(globalMemFence);
+
+    for(iint jslab=0;jslab<p_Nslabs;++jslab){
+
+      for(iint js=0;js<p_Nslab;++js;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){
+
+	    const int t = i+k*p_Nq+js*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = (t>>6)&3;	
+	    const int jB = jslab;
+	    const int kB = (t>>8)&3;	
+	    
+	    s_q[jT][kB*4+kT][iB*4+iT] = q[iT+jT*4+kT*16+iB*64+jB*256+kB*1024];
+	  }
+	}
+      }
+      
+      barrier(localMemFence);
+
+      for(iint js=0;js<p_Nslab;++js;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){	    
+	    dfloat tmpr = 0, tmpt = 0;
+	    
+	    for(iint n=0;n<p_Nq;++n){
+	      tmpr += s_D[i][n]*s_q[js][k][n];
+	      tmpt += s_D[k][n]*s_q[js][n][i];
+	    }
+	    
+	    dfloat G00, G02, G22;
+	    // TW to-do: compute geofacs here by function call ?
+	    
+	    s_tmp1[js][k][i] = G00*tmpr + G02*tmpt;
+	    s_tmp2[js][k][i] = G02*tmpr + G22*tmpt;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+
+      for(iint js=0;js<p_Nslab;++js;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){	          
+	    dfloat tmpr = 0, tmpt = 0;
+	    for(iint n=0;n<p_Nq;++n){
+	      tmpr += s_D[n][i]*s_tmp1[js][k][n];
+	      tmpt += s_D[n][k]*s_tmp2[js][n][i];
+	    }
+	    s_q[js][k][i] = tmpr+tmpt;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+      
+      for(iint js=0;js<p_Nslab;++js;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint i=0;i<p_Nq;++i;inner0){	          
+	    
+	    const int t = i+k*p_Nq+js*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = (t>>6)&3;	
+	    const int jB = jslab;
+	    const int kB = (t>>8)&3;	
+	    
+	    Aq[iT+jT*4+kT*16+iB*64+jB*256+kB*1024] += s_q[jT][kB*4+kT][iB*4+iT];
+	  }
+	}
+      }
+    } // end of jslabbing 
+    
+    barrier(globalMemFence);
+
+    for(iint islab=0;islab<p_Nslabs;++islab){
+
+      for(iint is=0;is<p_Nslab;++is;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint j=0;j<p_Nq;++j;inner0){
+
+	    const int t = j+k*p_Nq+is*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = islab;
+	    const int jB = (t>>6)&3;	
+	    const int kB = (t>>8)&3;	
+	    
+	    s_q[iT][kB*4+kT][jB*4+jT] = q[iT+jT*4+kT*16+iB*64+jB*256+kB*1024];
+	  }
+	}
+      }
+      
+      barrier(localMemFence);
+
+      for(iint is=0;is<p_Nslab;++is;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint j=0;j<p_Nq;++j;inner0){
+
+	    dfloat tmps = 0, tmpt = 0;
+	    
+	    for(iint n=0;n<p_Nq;++n){
+	      tmps += s_D[j][n]*s_q[is][k][n];
+	      tmpt += s_D[k][n]*s_q[is][n][j];
+	    }
+	    
+	    dfloat G11, G12, G22;
+	    // TW to-do: compute geofacs here by function call ?
+	    
+	    s_tmp1[is][k][j] = G11*tmps + G12*tmpt;
+	    s_tmp2[is][k][j] = G12*tmps + G22*tmpt;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+
+      for(iint is=0;is<p_Nslab;++is;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint j=0;j<p_Nq;++j;inner0){
+
+	    dfloat tmps = 0, tmpt = 0;
+	    for(iint n=0;n<p_Nq;++n){
+	      tmps += s_D[n][j]*s_tmp1[is][k][n];
+	      tmpt += s_D[n][k]*s_tmp2[is][n][j];
+	    }
+	    s_q[is][k][j] = tmps+tmpt;
+	  }
+	}
+      }
+
+      barrier(localMemFence);
+      
+      for(iint is=0;is<p_Nslab;++is;inner2){
+	for(iint k=0;k<p_Nq;++k;inner1){
+	  for(iint j=0;j<p_Nq;++j;inner0){
+	    
+	    const int t = j+k*p_Nq+is*p_Nq*p_Nq;
+	    const int iT = t&3;	
+	    const int jT = (t>>2)&3;	
+	    const int kT = (t>>4)&3;	
+	    const int iB = islab;
+	    const int jB = (t>>6)&3;	
+	    const int kB = (t>>8)&3;	
+	    
+	    Aq[iT+jT*4+kT*16+iB*64+jB*256+kB*1024] += s_q[iT][kB*4+kT][jB*4+jT];
+	  }
+	}
+      }
+    } // end of islabbing 
+  }
+}
+
