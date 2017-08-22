@@ -25,11 +25,9 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
   iint Nall   = Ntotal + Nhalo;
-  iint NallP  = NtotalP;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -38,23 +36,24 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
   solver->mesh = mesh;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  solver->r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  solver->zP  = (dfloat*) calloc(NallP,  sizeof(dfloat));
   solver->Ax   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->Ap  = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
+
   solver->grad = (dfloat*) calloc(Nall*4, sizeof(dfloat));
 
   // need to rename o_r, o_x to avoid confusion
   solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->r);
   solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
-  solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat),solver->zP); // CAUTION
+
   solver->o_res = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
+  solver->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
   solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
   solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
   solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
+
   solver->o_grad= mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 
   solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
@@ -81,6 +80,15 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+  }
+
+  kernelInfo.addDefine("p_blockSize", blockSize);
+
+
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
   kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
@@ -90,6 +98,15 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
 
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockP = 512/(5*mesh->Np); // get close to 256 threads
+  kernelInfo.addDefine("p_NblockP", NblockP);
+
+  int NblockG;
+  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+  else NblockG = 256/mesh->Np;
+  kernelInfo.addDefine("p_NblockG", NblockG);
+
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
@@ -179,31 +196,83 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
 					mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
-  occaTimerTic(mesh->device,"PreconditionerSetup");
-  solver->precon = ellipticPreconditionerSetupQuad2D(mesh, solver->ogs, tau, lambda, BCType,options);
+  solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-
-  solver->precon->preconKernel =
+  solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconQuad2D.okl",
-				       "ellipticOasPreconQuad2D",
-				       kernelInfo);
+               "ellipticOasPreconQuad2D",
+               kernelInfo);
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictQuad2D.okl",
-				       "ellipticFooQuad2D",
-				       kernelInfo);
+               "ellipticFooQuad2D",
+               kernelInfo);
 
   solver->precon->coarsenKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-				       "ellipticPreconCoarsen",
-				       kernelInfo);
+               "ellipticPreconCoarsen",
+               kernelInfo);
 
   solver->precon->prolongateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-				       "ellipticPreconProlongate",
-				       kernelInfo);
+               "ellipticPreconProlongate",
+               kernelInfo);
 
+
+  solver->precon->blockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconQuad2D.okl",
+               "ellipticBlockJacobiPreconQuad2D",
+               kernelInfo);
+
+  solver->precon->approxPatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxPatchSolver2D",
+               kernelInfo);
+
+  solver->precon->exactPatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactPatchSolver2D",
+               kernelInfo);
+
+  solver->precon->patchGatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticPatchGather",
+               kernelInfo);
+
+  solver->precon->approxFacePatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxFacePatchSolver2D",
+               kernelInfo);
+
+  solver->precon->exactFacePatchSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactFacePatchSolver2D",
+               kernelInfo);
+
+  solver->precon->facePatchGatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+               "ellipticFacePatchGather",
+               kernelInfo);
+
+  solver->precon->approxBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxBlockJacobiSolver2D",
+               kernelInfo);
+
+  solver->precon->exactBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactBlockJacobiSolver2D",
+               kernelInfo);
+
+  long long int pre = mesh->device.memoryAllocated();
+
+  occaTimerTic(mesh->device,"PreconditionerSetup");
+  ellipticPreconditionerSetupTri2D(solver, solver->ogs, tau, lambda, BCType,  options, parAlmondOptions);
   occaTimerToc(mesh->device,"PreconditionerSetup");
+
+  long long int usedBytes = mesh->device.memoryAllocated()-pre;
+
+  solver->precon->preconBytes = usedBytes;
 
 
   occaTimerTic(mesh->device,"DegreeVectorSetup");
@@ -244,19 +313,6 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint
 
   free(localMM); o_MM.free(); o_localMM.free();
 
-  //set matrix free function pointers
-  if (strstr(options,"MATRIXFREE")) {
-    //set matrix free A in parAlmond
-    void **args = (void **) calloc(2,sizeof(void *));
-    dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
-
-    *vlambda = lambda;
-
-    args[0] = (void *) solver;
-    args[1] = (void *) vlambda;
-
-    parAlmondSetMatFreeAX(solver->precon->parAlmond,ellipticMatrixFreeAx,args);
-  }
 
   return solver;
 }
