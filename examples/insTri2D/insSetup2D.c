@@ -180,7 +180,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt   = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 1
+  #if 0
   dfloat A[7]; 
   A[0] = 1e-5; A[1] = 4*1e-5;  A[2] = 1e-4; 
   A[3] = 4*1e-4; A[4] = 1e-3;  A[5] = 20*1e-4; A[6] = 1*1e-3;
@@ -228,7 +228,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   // SETUP PRESSURE and VELOCITY SOLVERS
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insPressureEllipticBC2D.h");
   kernelInfoP.addInclude(boundaryHeaderFileName);
-  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
+  dfloat zero =0.0;
+  solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
 

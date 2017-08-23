@@ -562,8 +562,8 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
   dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
   dfloat *Vx = (dfloat *) calloc(M, sizeof(dfloat));
 
-  occa::memory o_Vx  = mesh->device.malloc(M*sizeof(dfloat));
-  occa::memory o_AVx = mesh->device.malloc(M*sizeof(dfloat));
+  occa::memory o_Vx  = mesh->device.malloc(M*sizeof(dfloat),Vx);
+  occa::memory o_AVx = mesh->device.malloc(M*sizeof(dfloat),Vx);
 
   for(int i=0; i<=k; i++)
     V[i] = (dfloat *) calloc(N, sizeof(dfloat));
@@ -622,7 +622,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
       for (iint n=0;n<N;n++)
         norm_vj += V[j+1][n]*V[j+1][n];
 
-      dfloat gNorm_vj;
+      dfloat gNorm_vj =0.;
       MPI_Allreduce(&norm_vj, &gNorm_vj, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       gNorm_vj = sqrt(gNorm_vj);
 

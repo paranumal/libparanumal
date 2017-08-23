@@ -50,15 +50,15 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   for(iint i=0; i<6; i++){
-  //iint i=0; 
-  printf("Setup INS Solver: \n");
-  ins_t *ins = insSetup2D(mesh,i,options,
-                          velSolverOptions,velParAlmondOptions,
-                          prSolverOptions, prParAlmondOptions,
-                          boundaryHeaderFileName);
+    //iint i=0; 
+    printf("Setup INS Solver: \n");
+    ins_t *ins = insSetup2D(mesh,i,options,
+                            velSolverOptions,velParAlmondOptions,
+                            prSolverOptions, prParAlmondOptions,
+                            boundaryHeaderFileName);
 
-  printf("OCCA Run: \n");
-  insRun2D(ins,options);
+    printf("OCCA Run: \n");
+    insRun2D(ins,options);
   }
 
   // close down MPI
