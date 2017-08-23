@@ -300,26 +300,26 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
 
-  mesh->device.finish();
-  double toc = MPI_Wtime();
-  double localElapsed = toc-tic;
+  if((rank==0)&&strstr(options,"VERBOSE")){
+    mesh->device.finish();
+    double toc = MPI_Wtime();
+    double localElapsed = toc-tic;
 
-  iint size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+    iint size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  iint   localElements = mesh->Nelements;
-  double globalElapsed;
-  iint   globalDofs;
-  iint   globalElements;
+    iint   localDofs = mesh->Np*mesh->Nelements;
+    iint   localElements = mesh->Nelements;
+    double globalElapsed;
+    iint   globalDofs;
+    iint   globalElements;
 
-  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
-  if(rank==0){
     printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
-     size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
+           size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
   }
 
   occaTimerToc(mesh->device,"PCG");
