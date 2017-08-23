@@ -121,7 +121,7 @@ clean:
 	cd ../../src; rm *.o; cd ../examples/insTet3D
 	rm *.o insMainTet3D libinsTet3D.a
 
-reallyclean:
+realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/insTet3D
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/insTet3D
 	cd ../parALMOND; make clean; cd ../insTet3D

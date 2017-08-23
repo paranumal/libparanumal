@@ -125,7 +125,7 @@ clean :
 	cd ../../src; rm *.o; cd ../examples/ellipticTet3D
 	rm *.o ellipticMainTet3D libellipticTet3D.a
 
-reallyclean:
+realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTet3D
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTet3D
 	cd ../parALMOND; make clean; cd ../ellipticTet3D
