@@ -73,7 +73,7 @@ void insRun2D(ins_t *ins, char *options){
       ins->ExplicitOrder = 1;     
    }
     else 
-     // if(tstep<2) 
+      //if(tstep<2) 
     {
     //advection, second order in time, no increment
     ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
@@ -82,7 +82,6 @@ void insRun2D(ins_t *ins, char *options){
     ins->g0 =  1.5f;
     ins->ExplicitOrder=2;
     }
-
     // else{
     // //advection, second order in time, no increment
     // ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
@@ -106,11 +105,13 @@ void insRun2D(ins_t *ins, char *options){
       // VOLUME KERNELS
       // mesh->device.finish();
       // occa::tic("AdvectionStep");
+      printf("Without substepping.....\n");
       insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
       // mesh->device.finish();
       // occa::toc("AdvectionStep");  
       break;
     }
+
     
     // mesh->device.finish();
     // occa::tic("HelmholtzStep");
@@ -139,13 +140,9 @@ void insRun2D(ins_t *ins, char *options){
     }
     
 #if 1 // For time accuracy test fed history with exact solution
-    if(tstep<2){
+    if(tstep<1){
       iint offset = (mesh->Nelements+mesh->totalHaloPairs);
-      dfloat tt = 0.0;
-      // if(tstep<1)
-        tt = 1.0*ins->dt;
-      // else
-        // tt = 2.0*ins->dt;
+      dfloat tt = (tstep+1)*ins->dt;
      // Overwrite Velocity
      for(iint e=0;e<mesh->Nelements;++e){
         for(iint n=0;n<mesh->Np;++n){
@@ -155,7 +152,6 @@ void insRun2D(ins_t *ins, char *options){
           dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
           dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
           dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
-
           // Current time
           const int index0 = (ins->index+0)%3;
           const iint id0   = n + mesh->Np*(e+index0*offset);
@@ -177,7 +173,7 @@ void insRun2D(ins_t *ins, char *options){
 insReport2D(ins, ins->NtimeSteps+1,options);
 
 #if 1
-dfloat finalTime = (ins->NtimeSteps+1)*ins->dt;
+dfloat finalTime = ins->NtimeSteps*ins->dt;
 insErrorNorms2D(ins, finalTime, options);
 #endif
 

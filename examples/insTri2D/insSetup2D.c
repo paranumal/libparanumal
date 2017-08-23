@@ -150,7 +150,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
   // Maximum Velocity
   umax = sqrt(umax);
 
-  //dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
+  // dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
+   // dfloat cfl = pow(2,factor)*0.05;
   dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
@@ -176,20 +177,22 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, char *vSolverOption
     ins->dt   = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 0
-  // dfloat A[5]; 
-  // A[0] = 1e-4; A[1] = 0.333333*1e-4; A[2] = 1e-5; A[3] = 0.333333*1e-5; A[4] =1e-6;
-  // printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
-  // ins->dt = A[factor];
+  #if 1
+  dfloat A[7]; 
+  A[0] = 1e-5; A[1] = 4*1e-5;  A[2] = 1e-4; 
+  A[3] = 4*1e-4; A[4] = 1e-3;  A[5] = 20*1e-4; A[6] = 1*1e-3;
 
-  ins->dt = pow(2.0,factor)*1e-4;
+  printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
+  ins->dt = A[factor];
+
+  //ins->dt = pow(2.0,factor)*1e-4;
   ins->NtimeSteps = ins->finalTime/ins->dt;
   ins->dt   = ins->finalTime/ins->NtimeSteps;
   ins->sdt  = ins->dt/ins->Nsubsteps;
   #endif
   
   // errorStep
-  ins->errorStep =50;
+  ins->errorStep =500000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
