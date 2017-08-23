@@ -96,18 +96,10 @@ typedef struct {
 
 }ins_t;
 
-typedef struct{
-
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
-
-
-
-ins_t *insSetup2D(mesh2D *mesh, iint i, char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
+ins_t *insSetup2D(mesh2D *mesh, iint i, char *options, 
+                  char *velSolverOptions, char *velParAlmondOptions,
+                  char *prSolverOptions,  char *prParAlmondOptions,
+                  char *bdryHeaderFileName);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 

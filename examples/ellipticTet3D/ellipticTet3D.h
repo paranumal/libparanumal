@@ -1,3 +1,6 @@
+#ifndef ELLIPTICTET3D_H 
+#define ELLIPTICTET3D_H 1
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -91,4 +94,4 @@ void ellipticSetupSmootherTet3D(solver_t *solver, precon_t *precon,
                                 const char *options);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
 
-
+#endif

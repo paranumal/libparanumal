@@ -3,7 +3,10 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolverOptions, char *boundaryHeaderFileName){
+ins_t *insSetup3D(mesh3D *mesh,char * options, 
+                  char *vSolverOptions, char *vParAlmondOptions,
+                  char *pSolverOptions, char *pParAlmondOptions,
+                  char *boundaryHeaderFileName){
   
 
   printf("Volume Ncup: %d Surface Ncub: %d", mesh->cubNp, mesh->intNfp);
@@ -198,7 +201,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insVelocityEllipticBC3D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
-  solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions);
+  solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
   ins->vSolver        = vSolver;
   ins->vSolverOptions = vSolverOptions;
 
@@ -206,7 +209,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options, char *vSolverOptions, char *pSolv
   //SETUP PRESSURE and VELOCITY SOLVERS
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTet3D/insPressureEllipticBC3D.h");
   kernelInfoP.addInclude(boundaryHeaderFileName);
-  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions);
+  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
   

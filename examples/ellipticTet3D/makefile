@@ -9,6 +9,7 @@ include ${OCCA_DIR}/scripts/makefile
 
 # define variables
 HDRDIR  = ../../include
+GSDIR  = ../../3rdParty/gslib.github/src
 ALMONDDIR = ../parALMOND
 
 # set options for this machine
@@ -18,21 +19,20 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
-		 	-I$(ALMONDDIR)/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I$(GSDIR) -D DHOLMES='"${CURDIR}/../.."'  
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 
-INCLUDES = ellipticTet3D.h
+INCLUDES = ellipticTet3D.h ellipticPreconTet3D.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh2D.h \
+$(HDRDIR)/mesh3D.h \
 $(HDRDIR)/ogs_t.h \
 $(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
@@ -104,19 +104,30 @@ COBJS = \
 ../../src/xxtCoarseSolve.o
 
 ellipticMainTet3D:$(AOBJS) $(LOBJS) ellipticMainTet3D.o gslibInterface
-	cd ../parALMOND; make -j; cd ../ellipticTet3D
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/ellipticTet3D
+	cd ../parALMOND; make -j lib; cd ../ellipticTet3D
 	$(LD)  $(LDFLAGS)  -o ellipticMainTet3D ellipticMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
+lib:$(AOBJS)
+	ar -cr libellipticTet3D.a $(AOBJS)
+
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j; cd ../../examples/ellipticTri2D
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/ellipticTet3D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
+all: lib ellipticMainTet3D
+
 # what to do if user types "make clean"
 clean :
 	cd ../parALMOND; make clean; cd ../ellipticTet3D
-	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTet3D
 	cd ../../src; rm *.o; cd ../examples/ellipticTet3D
-	rm *.o ellipticMainTet3D
+	rm *.o ellipticMainTet3D libellipticTet3D.a
 
+reallyclean:
+	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTet3D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTet3D
+	cd ../parALMOND; make clean; cd ../ellipticTet3D
+	cd ../../src; rm *.o; cd ../examples/ellipticTet3D
+	rm *.o ellipticMainTet3D libellipticTet3D.a
