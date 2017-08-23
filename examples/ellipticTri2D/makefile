@@ -130,7 +130,7 @@ clean:
 	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
 	rm *.o ellipticMainTri2D libellipticTri2D.a
 
-reallyclean:
+realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTri2D
 	cd ../parALMOND; make clean; cd ../ellipticTri2D

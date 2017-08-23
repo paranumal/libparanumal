@@ -125,7 +125,7 @@ clean:
 	cd ../../src; rm *.o; cd ../examples/insTri2D
 	rm *.o insMainTri2D libinsTri2D.a
 
-reallyclean:
+realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/insTri2D
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/insTri2D
 	cd ../parALMOND; make clean; cd ../insTri2D
