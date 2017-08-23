@@ -92,18 +92,11 @@ typedef struct {
 
 }ins_t;
 
-typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
-
-
-
-ins_t *insSetup3D(mesh3D *mesh,char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
+ins_t *insSetup3D(mesh3D *mesh,char *options, 
+                  char *velSolverOptions, char *velParAlmondOptions, 
+                  char *prSolverOptions,  char *prParAlmondOptions,
+                  char *bdryHeaderFileName);
 
 void insRun3D(ins_t *solver, char *options);
 void insReport3D(ins_t *solver, iint tstep, char *options);

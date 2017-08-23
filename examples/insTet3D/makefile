@@ -10,6 +10,9 @@ include ${OCCA_DIR}/scripts/makefile
 
 # define variables
 HDRDIR  = ../../include
+GSDIR  = ../../3rdParty/gslib.github/src
+ALMONDDIR = ../parALMOND
+ELLIPTICDIR = ../ellipticTet3D
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -18,22 +21,31 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
-		 	-I../../utilities/parALMOND/include -I../ellipticTet3D
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I$(GSDIR) -I$(ELLIPTICDIR) -D DHOLMES='"${CURDIR}/../.."'  
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L../../utilities/parALMOND -lparALMOND 
+			-L$(ALMONDDIR) -lparALMOND -L$(ELLIPTICDIR) -lellipticTet3D
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
+
+INCLUDES = ins3D.h
+DEPS = $(INCLUDES) \
+$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh3D.h \
+$(HDRDIR)/ogs_t.h \
+$(HDRDIR)/hgs_t.h \
+$(ALMONDDIR)/parALMOND.h \
+$(ELLIPTICDIR)/ellipticTet3D.h \
+$(ELLIPTICDIR)/ellipticPreconTet3D.h  
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
 
 # rule for .c files
-.c.o:
+.c.o: $(DEPS)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 
 # list of objects to be compiled
@@ -48,15 +60,6 @@ insHelmholtzStep3D.o \
 insPoissonStep3D.o \
 insUpdateStep3D.o \
 insErrorNorms3D.o \
-../ellipticTet3D/ellipticSetupTet3D.o \
-../ellipticTet3D/ellipticPreconditionerSetupTet3D.o\
-../ellipticTet3D/ellipticCoarsePreconditionerSetupTet3D.o\
-../ellipticTet3D/ellipticSolveTet3D.o\
-../ellipticTet3D/ellipticSolveSetupTet3D.o\
-../ellipticTet3D/ellipticHaloExchange3D.o\
-../ellipticTet3D/ellipticParallelGatherScatterTet3D.o \
-../ellipticTet3D/ellipticBuildContinuousTet3D.o \
-../ellipticTet3D/ellipticBuildIpdgTet3D.o
 
 LOBJS = \
 ../../src/meshConnect.o \
@@ -94,22 +97,34 @@ COBJS = \
 ../../src/gsParallelGatherScatterSetup.o\
 ../../src/xxtCoarseSolve.o
 
-ins3D:$(AOBJS) $(LOBJS) insMainTet3D.o gslibInterface
-	$(LD)  $(LDFLAGS)  -o ins3D insMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+insMainTet3D:$(AOBJS) $(LOBJS) insMainTet3D.o gslibInterface
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/insTet3D
+	cd ../parALMOND; make -j lib; cd ../insTet3D
+	cd ../ellipticTet3D; make -j lib; cd ../insTet3D
+	$(LD)  $(LDFLAGS)  -o insMainTet3D insMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
+lib:$(AOBJS)
+	ar -cr libinsTet3D.a $(AOBJS)
 
 gslibInterface:
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/insTet3D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
+all: lib insMainTet3D
+
 # what to do if user types "make clean"
-clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) ins3D insMainTet3D.o
+clean:
+	cd ../parALMOND; make clean; cd ../insTet3D
+	cd ../ellipticTet3D; make clean; cd ../insTet3D
+	cd ../../src; rm *.o; cd ../examples/insTet3D
+	rm *.o insMainTet3D libinsTet3D.a
 
-
-#insMakePeriodic2D.o \
-#insErrorNorms2D.o \
-#insAdvectionSubCycleStep2D.o \
-
-#insUpdateStep2D.o \
-#insBuildVectorIpdgTri2D.o \
+reallyclean:
+	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/insTet3D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/insTet3D
+	cd ../parALMOND; make clean; cd ../insTet3D
+	cd ../ellipticTet3D; make clean; cd ../insTet3D
+	cd ../../src; rm *.o; cd ../examples/insTet3D
+	rm *.o insMainTet3D libinsTet3D.a

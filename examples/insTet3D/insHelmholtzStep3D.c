@@ -120,7 +120,7 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
   }else{
 
     printf("Solving for Ux,Uy and Uz \n");
-    parAlmondPrecon(ins->o_rhsV, ins->precon->parAlmond, ins->o_rhsU); // rhs in rhsU, solution in rhsV
+    parAlmondPrecon(ins->precon->parAlmond, ins->o_rhsV, ins->o_rhsU); // rhs in rhsU, solution in rhsV
 
     iint Ntotal = mesh->Np*offset;
     dfloat *tmp  = (dfloat*) calloc(3*Ntotal, sizeof(dfloat));

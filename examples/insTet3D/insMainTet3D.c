@@ -13,11 +13,15 @@ int main(int argc, char **argv){
   char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
-  char *velSolverOptions = 
-        strdup("solver=PCG method=IPDG preconditioner=BLOCKJACOBI");
+  char *velSolverOptions =
+    strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
+  char *velParAlmondOptions =
+    strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-      strdup("solver=PCG,FLEXIBLE method=IPDG,preconditioner=FULLALMOND"); // ,FORCESYMMETRY"); // ,FORCESYMMETRY");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+  char *prParAlmondOptions =
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
 
   if(argc!=3 && argc!=4){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
@@ -38,7 +42,10 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   printf("Setup INS Solver: \n");
-  ins_t *ins = insSetup3D(mesh,options,velSolverOptions,prSolverOptions,boundaryHeaderFileName);
+  ins_t *ins = insSetup3D(mesh,options,
+                          velSolverOptions,velParAlmondOptions,
+                          prSolverOptions, prParAlmondOptions,
+                          boundaryHeaderFileName);
 
   printf("OCCA Run: \n");
   insRun3D(ins,options);

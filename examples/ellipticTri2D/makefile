@@ -27,11 +27,11 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../utilities/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 #-llapack -lblas
 
-INCLUDES = ellipticTri2D.h
+INCLUDES = ellipticTri2D.h ellipticPreconTri2D.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
@@ -109,14 +109,15 @@ COBJS = \
 
 
 ellipticMainTri2D:$(AOBJS) $(LOBJS) ellipticMainTri2D.o gslibInterface
-	cd ../parALMOND; make -j; cd ../ellipticTri2D
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/ellipticTri2D
+	cd ../parALMOND; make -j lib; cd ../ellipticTri2D
 	$(LD)  $(LDFLAGS)  -o ellipticMainTri2D ellipticMainTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libellipticTri2D.a $(AOBJS)
 
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j; cd ../../examples/ellipticTri2D
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/ellipticTri2D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
@@ -124,10 +125,15 @@ gslibInterface:
 all: lib ellipticMainTri2D
 
 # what to do if user types "make clean"
-clean :
+clean:
 	cd ../parALMOND; make clean; cd ../ellipticTri2D
-	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
 	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
 	rm *.o ellipticMainTri2D libellipticTri2D.a
 
+reallyclean:
+	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTri2D
+	cd ../parALMOND; make clean; cd ../ellipticTri2D
+	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
+	rm *.o ellipticMainTri2D libellipticTri2D.a
 

@@ -29,9 +29,10 @@ endif
 
 #flags += -DINS_MPI=$(INS_MPI) -DINS_RENDER=$(INS_RENDER) -DINS_CLUSTER=$(INS_CLUSTER)
 
-all: $(objects) $(deps)
-	ar -cr libparALMOND.a $(objects)
+all: lib
 
+lib: $(objects) $(deps)
+	ar -cr libparALMOND.a $(objects)
 
 $(objDir)/%.o:$(sDir)/%.c $(deps) #$(wildcard $(subst $(sDir),$(iDir),$(<:.cpp=.hpp)))
 	$(CC) $(flags) -o $@ $(libs) -c $<
