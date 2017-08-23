@@ -312,8 +312,8 @@ kernel void insSubCycleRKUpdate2D(const iint Nelements,
 
       const iint id = n + e*p_Np;
 
-      dfloat resu = resU[id];
-      dfloat resv = resV[id];
+      dfloat resu =  resU[id];
+      dfloat resv =  resV[id];
       dfloat rhsu = -rhsU[id];// -Nu
       dfloat rhsv = -rhsV[id];// -Nu
 
@@ -355,9 +355,9 @@ kernel void insSubCycleExt2D(const iint Nelements,
   for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
 
-			const int index0 = (index+0)%3;
-			const int index1 = (index+2)%3; //back one step
-			const int index2 = (index+1)%3; //back two steps
+			const iint index0 = (index+0)%3;
+			const iint index1 = (index+2)%3; //back one step
+			const iint index2 = (index+1)%3; //back two steps
 
 			const iint id0   = n + p_Np*(e+index0*offset);
 			const iint id1   = n + p_Np*(e+index1*offset);
