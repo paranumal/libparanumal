@@ -3,6 +3,7 @@
 void insRun2D(ins_t *ins, char *options){
 
   mesh2D *mesh = ins->mesh;
+  
   // Write Initial Data
   insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver
