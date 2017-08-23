@@ -129,13 +129,4 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   printf("Solving for P \n");
   ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
-
-   // #if 1
-   //    char fname[BUFSIZ];
-   //    sprintf(fname, "/u0/outputs/ins2D/iterations.dat");
-   //    FILE *fp;
-   //    fp = fopen(fname, "a");
-   //    fprintf(fp,"\n");
-   //    fclose(fp);
-   //  #endif
 }

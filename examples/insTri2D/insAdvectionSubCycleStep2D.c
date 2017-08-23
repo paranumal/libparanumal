@@ -11,7 +11,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep,
 
 #if SUBSTEP_METHOD==1
  
- printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
+ //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
  // Solve Stokes Problem if Nonlinear solver is deactivated
  dfloat activate_advection = 0.f; 
  if(ins->a0){activate_advection  = 1.f;} 	
@@ -28,7 +28,7 @@ const iint voffset = 0;
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
-    ins->totalHaloExtractKernel(mesh->Nelements,
+		ins->totalHaloExtractKernel(mesh->Nelements,
 				mesh->totalHaloPairs,
 				mesh->o_haloElementList,
 				offset0,
@@ -37,11 +37,11 @@ const iint voffset = 0;
 				ins->o_P,
 				ins->o_tHaloBuffer);
 
-    // copy extracted halo to HOST
-    ins->o_tHaloBuffer.copyTo(tsendBuffer);
+		// copy extracted halo to HOST
+		ins->o_tHaloBuffer.copyTo(tsendBuffer);
 
-    // start halo exchange    
-    meshHaloExchangeStart(mesh,
+		// start halo exchange    
+		meshHaloExchangeStart(mesh,
 			  mesh->Np*(ins->NTfields)*sizeof(dfloat),
 			  tsendBuffer,
 			  trecvBuffer);
@@ -67,7 +67,7 @@ const iint voffset = 0;
 
 if(activate_advection){
 	// 
-		const dfloat tn0 = tstep*ins->dt;
+		const dfloat tn0 = (tstep-0)*ins->dt;
 		const dfloat tn1 = (tstep-1)*ins->dt;
 		const dfloat tn2 = (tstep-2)*ins->dt;
 		// construct interpolating lagrange polynomial
@@ -80,15 +80,15 @@ if(activate_advection){
 			ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			
-			// SubProblem  Starts here
+			// SubProblem  starts from here from t^(n-torder)
 			const dfloat tsub = tstep*ins->dt - torder*ins->dt;
 			// Advance SubProblem to t^(n+1) 
 			for(iint ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
 
-				const dfloat tstage = tsub + ststep*ins->sdt;				
+				const dfloat tstage = tsub + ststep*ins->sdt;			
 				// LSERK4 stages
 				for(iint rk=0;rk<mesh->Nrk;++rk){
-				// Extrapolate Velocity To SubProblem Stage Time
+				// Extrapolate velocity to subProblem stage time
 					dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
 
 					switch(ins->ExplicitOrder){
@@ -107,7 +107,6 @@ if(activate_advection){
 						break;
 					   }
 
-		 
 					//printf("c0: %.5f, c1: %.5f c3: %.5f \n", c0,c1,c2);
 					ins->subCycleExtKernel(NtotalElements,
 						                   ins->index,
@@ -289,6 +288,250 @@ const iint solverid = 0; // Pressure Solve
 
 
 #endif
+
+
+
+
+#if SUBSTEP_METHOD==2
+ 
+ //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
+ // Solve Stokes Problem if Nonlinear solver is deactivated
+ dfloat activate_advection = 0.f; 
+ if(ins->a0){activate_advection  = 1.f;} 	
+
+ mesh2D *mesh = ins->mesh;
+
+const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+const iint Ntotal         =  NtotalElements*mesh->Np;  
+
+const iint voffset = 0; 
+
+   // field offset at this step
+  iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  
+  //Exctract Halo On Device, Assumes History is already done!
+  if(mesh->totalHaloPairs>0){
+		ins->totalHaloExtractKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset0,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+
+		// copy extracted halo to HOST
+		ins->o_tHaloBuffer.copyTo(tsendBuffer);
+
+		// start halo exchange    
+		meshHaloExchangeStart(mesh,
+			  mesh->Np*(ins->NTfields)*sizeof(dfloat),
+			  tsendBuffer,
+			  trecvBuffer);
+  }
+
+  // COMPLETE HALO EXCHANGE
+  if(mesh->totalHaloPairs>0){
+
+    meshHaloExchangeFinish(mesh);
+
+    ins->o_tHaloBuffer.copyFrom(trecvBuffer);
+    ins->totalHaloScatterKernel(mesh->Nelements,
+				mesh->totalHaloPairs,
+				mesh->o_haloElementList,
+				offset0,
+				ins->o_U,
+				ins->o_V,
+				ins->o_P,
+				ins->o_tHaloBuffer);
+  }
+
+
+
+if(activate_advection){
+	// 
+		const dfloat tn0 = (tstep-0)*ins->dt;
+		const dfloat tn1 = (tstep-1)*ins->dt;
+		const dfloat tn2 = (tstep-2)*ins->dt;
+		// construct interpolating lagrange polynomial
+		dfloat c0 = 0.f, c1 = 0.f, c2 = 0.f;
+  
+		// Solve for Each SubProblem
+		for (iint torder=0; torder<ins->ExplicitOrder; torder++){
+		  // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
+			const iint sindex = (ins->index + 3 - torder)%3; 
+			ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
+			ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
+			
+			// SubProblem  starts from here from t^(n-torder)
+			const dfloat tsub = tstep*ins->dt - torder*ins->dt;
+			// Advance SubProblem to t^(n+1) 
+			for(iint ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
+
+				const dfloat tstage = tsub + ststep*ins->sdt;			
+				// LSERK4 stages
+				for(iint rk=0;rk<mesh->Nrk;++rk){
+				// Extrapolate velocity to subProblem stage time
+					dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
+					//
+					if(mesh->totalHaloPairs>0){
+
+						ins->velocityHaloExtractKernel(mesh->Nelements,
+						                         mesh->totalHaloPairs,
+						                         mesh->o_haloElementList,
+						                         voffset, // 0 offset
+						                         ins->o_Ud,
+						                         ins->o_Vd,
+						                         ins->o_vHaloBuffer);
+
+						// copy extracted halo to HOST 
+						ins->o_vHaloBuffer.copyTo(vsendBuffer);            
+
+						// start halo exchange
+						meshHaloExchangeStart(mesh,
+						                    mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+						                    vsendBuffer,
+						                    vrecvBuffer);
+						}
+
+											// Compute Volume Contribution
+						  if(strstr(options, "CUBATURE")){
+						    ins->advectionCubatureVolumeKernel(mesh->Nelements,
+										       mesh->o_vgeo,
+										       mesh->o_cubDrWT,
+										       mesh->o_cubDsWT,
+										       mesh->o_cubInterpT,
+										       voffset,
+										       ins->o_Ud,
+										       ins->o_Vd,
+										       ins->o_rhsU,
+										       ins->o_rhsV);
+						  } else {
+						    ins->advectionVolumeKernel(mesh->Nelements,
+									       mesh->o_vgeo,
+									       mesh->o_DrT,
+									       mesh->o_DsT,
+									       voffset,
+									       ins->o_Ud,
+									       ins->o_Vd,
+									       ins->o_rhsU,
+									       ins->o_rhsV);
+						  }
+
+
+
+						if(mesh->totalHaloPairs>0){
+
+							meshHaloExchangeFinish(mesh);
+
+							ins->o_vHaloBuffer.copyFrom(vrecvBuffer); 
+
+							ins->velocityHaloScatterKernel(mesh->Nelements,
+							                          mesh->totalHaloPairs,
+							                          mesh->o_haloElementList,
+							                          voffset, //0 offset
+							                          ins->o_Ud,
+							                          ins->o_Vd,
+							                          ins->o_vHaloBuffer);
+						}
+
+
+									 if(strstr(options, "CUBATURE")){
+							ins->advectionCubatureSurfaceKernel(mesh->Nelements,
+									mesh->o_sgeo,
+									mesh->o_intInterpT,
+									mesh->o_intLIFTT,
+									mesh->o_vmapM,
+									mesh->o_vmapP,
+									mesh->o_EToB,
+									t,
+									mesh->o_intx,
+									mesh->o_inty,
+									voffset,
+									ins->o_Ud,
+									ins->o_Vd,
+									ins->o_rhsU,
+									ins->o_rhsV);
+							} else {
+							ins->advectionSurfaceKernel(mesh->Nelements,
+								mesh->o_sgeo,
+								mesh->o_LIFTT,
+								mesh->o_vmapM,
+								mesh->o_vmapP,
+								mesh->o_EToB,
+								t,
+								mesh->o_x,
+								mesh->o_y,
+								voffset,
+								ins->o_Ud,
+								ins->o_Vd,
+								ins->o_rhsU,
+								ins->o_rhsV);
+							}
+
+
+						// Update Kernel
+						ins->subCycleRKUpdateKernel(mesh->Nelements,
+						                      activate_advection,
+						                      ins->sdt,
+						                      mesh->rka[rk],
+						                      mesh->rkb[rk],
+						                      ins->o_rhsU,
+						                      ins->o_rhsV,
+						                      ins->o_resU, 
+						                      ins->o_resV,
+						                      ins->o_Ud,
+						                      ins->o_Vd);
+				}
+  		}
+  	// Finish SubProblem // Use NU to store Lagrange Velocities
+		ins->o_Ud.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),sindex*Ntotal*sizeof(dfloat),0);
+		ins->o_Vd.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),sindex*Ntotal*sizeof(dfloat),0);
+  	}
+
+}
+
+
+dfloat tp1 = (tstep+1)*ins->dt;
+// Compute Volume Contribution for Pressure
+ins->gradientVolumeKernel(mesh->Nelements,
+                          mesh->o_vgeo,
+                          mesh->o_DrT,
+                          mesh->o_DsT,
+                          offset0,
+                          ins->o_P,
+                          ins->o_Px,
+                          ins->o_Py);
+
+	
+ 
+
+const iint solverid = 0; // Pressure Solve
+  // Compute Surface Conribution
+  ins->gradientSurfaceKernel(mesh->Nelements,
+												     mesh->o_sgeo,
+												     mesh->o_LIFTT,
+												     mesh->o_vmapM,
+												     mesh->o_vmapP,
+												     mesh->o_EToB,
+												     mesh->o_x,
+												     mesh->o_y,
+												     tp1,
+												     ins->dt,
+												     ins->c0,
+												     ins->c1,
+												     ins->c2,
+												     ins->index,
+												     mesh->Nelements+mesh->totalHaloPairs,
+												     solverid, // pressure BCs
+													   ins->o_PI, //not used
+												     ins->o_P,
+												     ins->o_Px,
+												     ins->o_Py);
+
+
+#endif
+
 
 // #if SUBSTEP_METHOD==2
 
