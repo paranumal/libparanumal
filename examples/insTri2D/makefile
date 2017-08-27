@@ -50,19 +50,21 @@ $(ELLIPTICDIR)/ellipticPreconTri2D.h
 # list of objects to be compiled
 AOBJS    = \
 insSetup2D.o \
-insRun2D.o \
 insMakePeriodic2D.o \
 insPlotVTU2D.o \
 insError2D.o \
 insErrorNorms2D.o \
 insReport2D.o \
+insRun2D.o \
 insAdvectionStep2D.o \
 insAdvectionSubCycleStep2D.o \
 insHelmholtzStep2D.o \
 insPoissonStep2D.o \
 insUpdateStep2D.o \
 insBuildVectorIpdgTri2D.o \
-
+insAdvectionStepSS2D.o \
+insPoissonStepSS2D.o \
+insHelmholtzStepSS2D.o \
 # library objects
 LOBJS = \
 ../../src/meshConnect.o \

@@ -84,8 +84,8 @@
     if(bc==2){								\
       *(pB)  = 0.f;							\
 									\
-      *(pxB) = 0.f; \
-      *(pyB) = 0.f; \
+      *(pxB) = 2.f*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
+      *(pyB) = 2.f*OCCA_PI*occaSin(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
     }									\
     if(bc==3){								\
       *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
@@ -95,3 +95,13 @@
     }									\
   }
 
+// Compute bcs for P increment
+#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
+  { \
+    if((bc==1)||(bc==4)||(bc==2) ){           \
+      *(dpdt) = p_nu*8.f*OCCA_PI*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
+    }                 \
+    if(bc==3){                \
+      *(dpdt) = 0.0; \
+    }                 \
+  }

@@ -5,7 +5,7 @@ void insRun2D(ins_t *ins, char *options){
   mesh2D *mesh = ins->mesh;
   
   // Write Initial Data
-  insReport2D(ins, 0, options);
+  // insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver
   iint  tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat  *tSendBuffer = (dfloat*) malloc(tHaloBytes);
@@ -24,8 +24,11 @@ void insRun2D(ins_t *ins, char *options){
   iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
+
+
+ 
  // occa::initTimer(mesh->device);
-  //ins->NtimeSteps = 1;
+ ins->NtimeSteps = 10;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -73,8 +76,8 @@ void insRun2D(ins_t *ins, char *options){
       ins->g0 =  1.f; 
       ins->ExplicitOrder = 1;     
    }
-    else 
-      //if(tstep<2) 
+    else
+     // if(tstep<2) 
     {
     //advection, second order in time, no increment
     ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
@@ -95,8 +98,9 @@ void insRun2D(ins_t *ins, char *options){
 
     
   #endif
-
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
+
+    if(strstr(options,"ALGEBRAIC")){
      switch(subcycling){
       case 1:
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
@@ -113,7 +117,6 @@ void insRun2D(ins_t *ins, char *options){
       break;
     }
 
-    
     // mesh->device.finish();
     // occa::tic("HelmholtzStep");
     insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
@@ -122,58 +125,78 @@ void insRun2D(ins_t *ins, char *options){
 
     // mesh->device.finish();
     // occa::tic("PoissonStep");
-    insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insPoissonStep2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     // mesh->device.finish();
     // occa::toc("PoissonStep");  
     
     // mesh->device.finish();
     // occa::tic("UpdateStep");
-    insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
+    insUpdateStep2D(ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
     // mesh->device.finish();
     // occa::toc("UpdateStep");  
+    } else {
 
-    printf("tstep = %d\n", tstep);
+    insAdvectionStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insPoissonStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insHelmholtzStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+
+
+
+
+
+    }
+
+    printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
+
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
-        //insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
+        insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
 #if 1 // For time accuracy test fed history with exact solution
     if(tstep<1){
-      iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+      iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt = (tstep+1)*ins->dt;
+      dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+      dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+      dfloat *tmpP = (dfloat*) calloc(Ntotal, sizeof(dfloat));
      // Overwrite Velocity
      for(iint e=0;e<mesh->Nelements;++e){
         for(iint n=0;n<mesh->Np;++n){
           const iint id = n + mesh->Np*e;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
+
           dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
           dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
           dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
-          // Current time
-          const int index0 = (ins->index+0)%3;
-          const iint id0   = n + mesh->Np*(e+index0*offset);
-          ins->U[id0] = u0; 
-          ins->V[id0] = v0; 
-          ins->P[id0] = p0;
+
+          tmpU[id] = u0; 
+          tmpV[id] = v0; 
+          tmpP[id] = p0;
         }
       }
-     
-       ins->o_U.copyFrom(ins->U);
-       ins->o_V.copyFrom(ins->V);
-       ins->o_P.copyFrom(ins->P);
+       ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat));
+       ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat));
+       ins->o_P.copyFrom(tmpP,Ntotal*sizeof(dfloat),Ntotal*sizeof(dfloat));
+
+       free(tmpU);
+       free(tmpV);
+       free(tmpP);       
     }
 #endif
+
+
+
   }
 
 
  // For Final Time
-insReport2D(ins, ins->NtimeSteps+1,options);
+insReport2D(ins, ins->NtimeSteps,options);
 
-#if 1
+#if 0
 dfloat finalTime = ins->NtimeSteps*ins->dt;
 insErrorNorms2D(ins, finalTime, options);
 #endif

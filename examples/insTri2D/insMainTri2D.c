@@ -12,10 +12,12 @@ int main(int argc, char **argv){
   MPI_Init(&argc, &argv);
 
   // SET OPTIONS
+  // method = ALGEBRAIC, STIFFLYSTABLE (default for now)
+  // grad-div   = WEAK, NODAL (default nodal)
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  char *options = strdup("out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("method= STIFFLYSTABLE, grad-div= BROKEN, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
   char *velSolverOptions =
@@ -24,10 +26,10 @@ int main(int argc, char **argv){
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
+   strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE method=IPDG, preconditioner=FULLALMOND"); // ,FORCESYMMETRY");
+
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
 
@@ -49,7 +51,7 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  for(iint i=0; i<6; i++){
+  for(iint i=0; i<1; i++){
     //iint i=0; 
     printf("Setup INS Solver: \n");
     ins_t *ins = insSetup2D(mesh,i,options,

@@ -31,7 +31,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   mesh->Nfields = ins->Nfields;
 
   ins->mesh = mesh;
+
+
   int Nstages = 4;
+  if(strstr(options, "ALGEBRAIC")){
   // compute samples of q at interpolation nodes
   ins->U     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->V     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -48,6 +51,24 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->Px     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Py     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  } else{
+
+  int NexpOrder = 3;
+  // compute samples of q at interpolation nodes
+  ins->U      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->V      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->P      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->NU     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->NV     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  // Hold history of n*curl(curl(u)) on face nodes
+  ins->WN     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
+  //rhs storage
+  ins->Ut    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Vt    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsU  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsP  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
+  }
 
 
   if(strstr(options,"SUBCYCLING")){
@@ -79,7 +100,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->finalTime = 0.1f;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.0f* (mesh->N+1)*(mesh->N+2)/2.0f;
+  ins->tau       = 6.0f* (mesh->N)*(mesh->N+1)/2.0f;
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -91,32 +112,32 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-#if 0
-      dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
-      //
-      ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
-      ins->V[id] = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
-      ins->P[id] = 0.5*(1.0- exp(2.*lambda*x));
-#endif
+      #if 0
+            dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
+            //
+            ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
+            ins->V[id] = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
+            ins->P[id] = 0.5*(1.0- exp(2.*lambda*x));
+      #endif
 
-#if 0
-      ins->U[id] = y*(4.5f-y)/(2.25f*2.25f);
-      ins->V[id] = 0;
-      ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
-#endif
+      #if 0
+            ins->U[id] = y*(4.5f-y)/(2.25f*2.25f);
+            ins->V[id] = 0;
+            ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
+      #endif
 
-#if 1
-      ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
-      ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
-      ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-nu*8.f*M_PI*M_PI*0.0);
-#endif
+      #if 1
+            ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
+            ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
+            ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
+      #endif
 
 
-#if 0 // Zero flow
-      ins->U[id] = 0.0;
-      ins->V[id] = 0.0;
-      ins->P[id] = 0.0;
-#endif
+      #if 0 // Zero flow
+            ins->U[id] = 0.0;
+            ins->V[id] = 0.0;
+            ins->P[id] = 0.0;
+      #endif
     }
   }
 
@@ -181,9 +202,19 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   }
   
   #if 0
-  dfloat A[7]; 
-  A[0] = 1e-5; A[1] = 4*1e-5;  A[2] = 1e-4; 
-  A[3] = 4*1e-4; A[4] = 1e-3;  A[5] = 20*1e-4; A[6] = 1*1e-3;
+  dfloat A[10]; 
+  A[0] = 1e-4; 
+  A[1] = 3*1e-4;  
+  A[2] = 8*1e-4; 
+  A[3] = 1e-3; 
+  A[4] = 3*1e-3; 
+  A[5] = 8*1e-3;  
+  A[6] = 1*1e-2;
+
+  A[7] = 4*1e-3;
+  A[8] = 8*1e-3;
+  A[9] = 1*1e-2;
+
 
   printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
   ins->dt = A[factor];
@@ -195,7 +226,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   #endif
   
   // errorStep
-  ins->errorStep =500000;
+  ins->errorStep =2;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -216,7 +247,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
-  //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
+  // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
   boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insVelocityEllipticBC2D.h");
   kernelInfoV.addInclude(boundaryHeaderFileName);
@@ -268,8 +299,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
    kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
 
 
-  printf("mesh nfields %d\n", mesh->Nfields);
+  // printf("mesh nfields %d\n", mesh->Nfields);
   // MEMORY ALLOCATION
+
+  if(strstr(options, "ALGEBRAIC")){ 
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);
   ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
@@ -285,10 +318,27 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->o_PI = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
   ins->o_PIx = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_PIy = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
-
   //storage for helmholtz solves. Fix this later
   ins->o_UH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+  } else{
+  int NexpOrder = 3;
+  ins->o_U  = mesh->device.malloc(NexpOrder*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),ins->U);
+  ins->o_V  = mesh->device.malloc(NexpOrder*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),ins->V);
+  ins->o_P  = mesh->device.malloc(NexpOrder*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),ins->P);
+  ins->o_NU = mesh->device.malloc(NexpOrder*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),ins->NU);
+  ins->o_NV = mesh->device.malloc(NexpOrder*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat),ins->NV);
+
+  ins->o_rhsU  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->rhsU);
+  ins->o_rhsV  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->rhsV);
+  ins->o_rhsP  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->rhsP);
+  
+  ins->o_PH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+  ins->o_Ut = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Ut);
+  ins->o_Vt = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Vt);
+  ins->o_WN = mesh->device.malloc(NexpOrder*mesh->Nfaces*mesh->Nfp*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->WN);
+
+  } 
 
 
   if(strstr(options,"SUBCYCLING")){
@@ -348,7 +398,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   ins->mesh = mesh;
 
-  // ===========================================================================
+   // ===========================================================================
  
   printf("Compiling INS Helmholtz Halo Extract Kernel\n");
   ins->totalHaloExtractKernel=
@@ -384,6 +434,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insPressureHaloScatter",
              kernelInfo);  
+
+
+if(strstr(options, "ALGEBRAIC")){
+ 
   // ===========================================================================
   printf("Compiling Advection volume kernel with cubature integration\n");
   ins->advectionCubatureVolumeKernel =
@@ -478,6 +532,96 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 				       "insUpdateUpdate2D",
 				       kernelInfo);
   // ===========================================================================//
+ } else {
+
+  printf("Compiling Advection volume kernel with cubature integration\n");
+  ins->advectionCubatureVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+               "insAdvectionCubatureVolume2D",
+               kernelInfo);
+
+  printf("Compiling Advection surface kernel with cubature integration\n");
+  ins->advectionCubatureSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+               "insAdvectionCubatureSurface2D",
+               kernelInfo);
+
+  printf("Compiling Advection volume kernel with collocation integration\n");
+  ins->advectionVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+               "insAdvectionVolume2D",
+               kernelInfo);
+
+  printf("Compiling Advection surface kernel with collocation integration\n");
+  ins->advectionSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+               "insAdvectionSurface2D",
+               kernelInfo);
+
+  printf("Compiling Advection surface kernel with collocation integration\n");
+  ins->advectionUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+               "insAdvectionUpdateSS2D",
+               kernelInfo);
+
+  // ===========================================================================//
+  printf("Compiling Poisson Curl kernel\n");
+  ins->poissonRhsCurlKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+               "insPoissonRhsCurlSS2D",
+               kernelInfo);
+
+  printf("Compiling Poisson Neumann kernel\n");
+  ins->poissonRhsNeumannKernel=
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+               "insPoissonRhsNeumann2D",
+               kernelInfo);
+
+  printf("Compiling divergence kernel\n");
+  ins->divergenceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
+               "insDivergence2D",
+               kernelInfo);
+
+  printf("Compiling Poisson Forcing kernel\n");
+  ins->poissonRhsForcingKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+               "insPoissonRhsForcingSS2D",
+               kernelInfo);
+
+  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
+  ins->poissonRhsIpdgBCKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+               "insPoissonRhsIpdgBC2D",
+               kernelInfo);
+
+   printf("Compiling Gradient kernel\n");
+  ins->gradientKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
+               "insGradient2D",
+               kernelInfo);
+
+  
+  printf("Compiling Poisson Update Kernel \n");
+  ins->poissonUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+               "insPoissonUpdate2D",
+               kernelInfo);
+   // ===========================================================================
+  printf("Compiling Helmholtz Rhs Forcing  kernel\n");
+  ins->helmholtzRhsForcingKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+               "insHelmholtzRhsForcingSS2D",
+               kernelInfo);
+
+  printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
+  ins->helmholtzRhsIpdgBCKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+               "insHelmholtzRhsIpdgBC2D",
+               kernelInfo);
+
+
+ }   
 #if 0
   void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
 			       iint *BCType, nonZero_t **A, iint *nnzA,
