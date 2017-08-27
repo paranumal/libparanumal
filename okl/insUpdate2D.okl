@@ -1,6 +1,6 @@
 
 kernel void insUpdateUpdate2D(const iint Nelements,
-				                      const dfloat dt,
+				      const dfloat dt,
                               const dfloat g0,
                               const dfloat a0,
                               const dfloat a1,

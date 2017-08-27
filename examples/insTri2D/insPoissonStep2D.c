@@ -82,7 +82,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->g0,
                               ins->o_rhsP);
 
-#if 0
+#if 1
   //add penalty from jumps in previous pressure
   ins->poissonPenaltyKernel(mesh->Nelements,
                                 mesh->o_sgeo,
@@ -109,7 +109,10 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   #if 1// if time dependent BC
+  //
+   const iint method =0; // ALGEBRAIC 
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                method,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
@@ -126,7 +129,8 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 mesh->o_MM,
                                 ins->o_rhsP);
   #endif
-
-  printf("Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
+  iint Niter;
+  printf("Solving for Pr: Niter= ");
+  Niter= ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
+  printf("%d\n", Niter); 
 }
