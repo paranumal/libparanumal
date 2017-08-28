@@ -103,7 +103,7 @@ void gmres(parAlmond_t *parAlmond,
 
     end = i+1;
     // Av = A*V(:.i)
-    axpy(A, 1.0, V[i], 0.0, Av);
+    axpy(A, 1.0, V[i], 0.0, Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
     //solve(parAlmond, Av, w);
@@ -225,7 +225,7 @@ void gmres(parAlmond_t *parAlmond,
     end = i+1;
 
     // Av = A*V(:.i)
-    axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_Av);
+    axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
     //solve(parAlmond, o_Av, o_w);

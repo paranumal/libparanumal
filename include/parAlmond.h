@@ -20,6 +20,8 @@ typedef struct csr_t {
   iint   *offdCols;
   dfloat *offdCoefs;
 
+  dfloat *diagInv;
+
   //storage for smoothing
   dfloat *scratch;
 
@@ -225,6 +227,9 @@ typedef struct {
   iint coarseOffset;
   dfloat *xCoarse, *rhsCoarse;
 
+  bool nullSpace;
+  dfloat nullSpacePenalty;
+
   occa::device device;
 
   occa::memory o_x;
@@ -239,6 +244,8 @@ typedef struct {
   occa::kernel vectorAddKernel;
   occa::kernel vectorAddKernel2;
   occa::kernel setVectorKernel;
+  occa::kernel sumVectorKernel;
+  occa::kernel addScalarKernel;
   occa::kernel dotStarKernel;
   occa::kernel simpleDotStarKernel;
   occa::kernel haloExtract;
@@ -258,6 +265,8 @@ void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        iint* Ai,
                        iint* Aj,
                        dfloat* Avals,
+                       bool nullSpace,
+                       dfloat nullSpacePenalty,
                        hgs_t *hgs);
 
 void parAlmondPrecon(parAlmond_t* parAlmond, occa::memory o_x, occa::memory o_rhs);

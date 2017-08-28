@@ -63,6 +63,10 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   } else{
 
     iint offset = 0;
+    dfloat alpha = 0., alphaG =0.;
+    iint Nblock = solver->Nblock;
+    dfloat *tmp = solver->tmp;
+    occa::memory &o_tmp = solver->o_tmp;
 
     ellipticStartHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
 
@@ -76,6 +80,11 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     ellipticInterimHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
 
+    //Start the rank 1 augmentation if all BCs are Neumann
+    //TODO this could probably be moved inside the Ax kernel for better performance
+    if(solver->allNeumann) 
+      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+
     if(mesh->NinternalElements)
       solver->partialIpdgKernel(mesh->NinternalElements,
                                 mesh->o_internalElementIds,
@@ -85,13 +94,23 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 solver->tau,
                                 mesh->o_vgeo,
                                 mesh->o_sgeo,
-                                mesh->o_EToB,
+                                solver->o_EToB,
                                 mesh->o_DrT,
                                 mesh->o_DsT,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 solver->o_grad,
                                 o_Aq);
+
+    if(solver->allNeumann) {
+      o_tmp.copyTo(tmp);
+
+      for(iint n=0;n<Nblock;++n)
+        alpha += tmp[n];
+      
+      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      alphaG *= solver->allNeumannPenalty;
+    }
 
     ellipticEndHaloExchange2D(solver, o_q, recvBuffer);
 
@@ -115,13 +134,16 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 solver->tau,
                                 mesh->o_vgeo,
                                 mesh->o_sgeo,
-                                mesh->o_EToB,
+                                solver->o_EToB,
                                 mesh->o_DrT,
                                 mesh->o_DsT,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 solver->o_grad,
                                 o_Aq);
+
+    if(solver->allNeumann) 
+      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
 
   }
 
