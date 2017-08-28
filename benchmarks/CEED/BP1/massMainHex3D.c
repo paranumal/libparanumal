@@ -227,9 +227,9 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
-  //  timeAxOperator(solver, lambda, o_r, o_x, options);
+  timeAxOperator(solver, lambda, o_r, o_x, options);
 
-  timeSolver(solver, lambda, o_r, o_x, options);
+  //  timeSolver(solver, lambda, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);

@@ -69,7 +69,7 @@ void massOperator3D(solver_t *solver, dfloat lambda,
     
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-#if 1
+#if 0
     if(nonHalo->Ngather)
       mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
 #endif
@@ -170,7 +170,7 @@ int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::mem
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-8;
+  const dfloat tol = 1e-10;
 
   occa::memory &o_p  = solver->o_p;
   occa::memory &o_z  = solver->o_z;
@@ -216,7 +216,7 @@ int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::mem
   iint Niter = 0;
   dfloat alpha, beta, pAp;
 
-  while(Niter<maxIterations){ // rdotr0>(tol*tol) &&
+  while(Niter<maxIterations && rdotr0>(tol*tol)){
     // A*p
     massOperator3D(solver, lambda, o_p, o_Ap, options);
 
