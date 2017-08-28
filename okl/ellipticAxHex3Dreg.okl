@@ -1,0 +1,203 @@
+
+//proof of concept: this kernel uses registers, not shared (thus reg)
+
+
+kernel void ellipticPartialAxHex3D_reg1(const iint Nelements,
+                                        const iint * restrict elementList,
+                                        const dfloat * restrict gjGeo,
+                                        const dfloat * restrict gllD,
+                                        const dfloat * restrict gjI,
+                                        const dfloat lambda,
+                                        dfloat * restrict q,
+                                        dfloat * restrict Ixq,
+                                        dfloat * restrict Aq
+                                       ){
+
+
+	// load q into shared first
+	//kernel 1 - interpolate to gj hex
+	for(int e=0; e<Nelements; ++e; outer0) {
+		//	exclusive iint emap;
+		//	exclusive dfloat r_res;
+		exclusive dfloat r_q[p_gjNq];
+		//save the SHARED
+		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+
+		shared dfloat s_gjD[p_gjNq][p_gjNq];
+		shared dfloat s_I[p_gjNq][p_Nq];
+		// LOAD TO SHAEWS
+		exclusive iint emap;
+
+		// prefetch D and I matrices and zero register storage
+		for(int b=0;b<p_gjNq;++b;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+
+				emap = elementList[e];
+
+				if(a<p_Nq)
+					s_I[b][a] = gjI[a+p_Nq*b];
+
+				if(a<p_Nq && b<p_Nq){
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c)
+						s_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+				}
+			}
+		}
+
+
+
+		//synch threads
+		barrier(localMemFence);
+
+
+
+		//============== interpolate in 3 dir ========================
+		// r --> s --> t
+		// rrrrrrr
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+				if(a<p_Nq && c<p_Nq){
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int b=0;b<p_Nq;++b)
+						r_q[b] = s_q[c][b][a];
+
+					// transform in b
+					occaUnroll(p_gjNq)
+					for(int j=0;j<p_gjNq;++j){
+						dfloat tmp = 0;
+						occaUnroll(p_Nq)
+						for(int b=0;b<p_Nq;++b)
+							tmp += s_I[j][b]*r_q[b];
+						s_q[c][j][a] = tmp; // ok since only this thread
+					}
+				}
+			}
+		}//for c
+
+		//now synch
+		barrier(localMemFence);
+
+		// transform in a
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int j=0;j<p_gjNq;++j;inner0){
+				if(c<p_Nq){
+
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int a=0;a<p_Nq;++a)
+						r_q[a] = s_q[c][j][a];
+
+					// transform in a
+					occaUnroll(p_gjNq)
+					for(int i=0;i<p_gjNq;++i){
+						dfloat tmp = 0;
+						occaUnroll(p_Nq)
+						for(int a=0;a<p_Nq;++a)
+							tmp += s_I[i][a]*r_q[a];
+						s_q[c][j][i] = tmp; // ok since only this thread
+					}
+				}
+			}
+		}
+
+		barrier(localMemFence);
+
+		// transform in c
+		for(int j=0;j<p_gjNq;++j;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+				// prefetch to registers
+				occaUnroll(p_Nq)
+				for(int c=0;c<p_Nq;++c)
+					r_q[c] = s_q[c][j][i];
+
+				// transform in c
+				occaUnroll(p_gjNq)
+				for(int k=0;k<p_gjNq;++k){
+					// prefetch integration weights
+					const iint id = p_Nggeo*emap*p_gjNp
+					                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
+					const dfloat r_GwJ = gjGeo[id];
+
+					dfloat tmp = 0;
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c)
+						tmp += s_I[k][c]*r_q[c];
+
+					s_q[k][j][i] = tmp; // ok since only this thread
+				}
+			}
+		}
+
+		barrier(localMemFence);
+
+		//now differentiate once interpolated
+// I think this can be done using a 3-dim blocks (with/without slabbing )
+
+
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					//load geofactors for my (k,j,i)
+					//		emap = elementList[e];
+					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					//geofactors for k j i thread
+					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
+					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+					r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+
+					r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+					r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+					r_G22 = gjGeo[base+p_G22ID*p_gjNp];
+					// now, put together dq/dr, qq/ds, dq/dt and dq/dI
+
+					dfloat dr = 0.0f;
+					dfloat ds = 0.0f;
+					dfloat dt = 0.0f;
+					occaUnroll(p_gjNq)
+					for (int n = 0; n<p_gjNq; ++n) {
+						dr += s_gjD[i][n]*s_q[k][j][n];
+						ds += s_gjD[j][n]*s_q[k][n][i];
+						dt += s_gjD[k][n]*s_q[n][j][i];
+					}
+					r_qr = r_G00*dr + r_G01*ds + r_G02*dt;
+					r_qs = r_G01*dr + r_G11*ds + r_G12*dt;
+					r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
+
+					r_tmp = r_GwJ*s_q[k][j][i]*lambda;
+				}
+			}
+		}
+
+
+
+		for(int k=0; k<p_gjNq; ++k; inner2) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+
+
+
+					dfloat tmp = 0.f;
+					occaUnroll(p_gjNq)
+					for(iint m=0; m<p_gjNq; ++m) {
+						tmp += s_gjD[m][i]*s_q[k][j][m];
+					}
+					r_tmp +=tmp;
+				}
+			}
+		}
+		barrier(localMemFence);
+
+
+		//no shared so no barrier needed!
+		//barrier(localMemFence);
+
+
+
+
+
+
+	}//e
+}//kernel
