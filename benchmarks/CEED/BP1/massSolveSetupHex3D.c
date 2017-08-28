@@ -305,28 +305,6 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 				   "dotDivide",
 				   kernelInfo);
 
-      solver->gradientKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
-				   "ellipticGradientHex3D",
-				   kernelInfo);
-
-      solver->partialGradientKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
-				   "ellipticPartialGradientHex3D",
-				   kernelInfo);
-
-      if(mesh->Nq<12) {
-	solver->ipdgKernel =
-	  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-				     "ellipticAxIpdgHex3D",
-				     kernelInfo);
-
-	solver->partialIpdgKernel =
-	  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
-				     "ellipticPartialAxIpdgHex3D",
-				     kernelInfo);
-      }
-
       solver->combinedInnerProductKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
 				   "ellipticCombinedInnerProduct",

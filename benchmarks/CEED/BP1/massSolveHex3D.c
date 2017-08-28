@@ -216,26 +216,12 @@ int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::mem
   iint Niter = 0;
   dfloat alpha, beta, pAp;
 
-  //  if(rank==0)
-  //    printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
-
   while(Niter<maxIterations){ // rdotr0>(tol*tol) &&
     // A*p
     massOperator3D(solver, lambda, o_p, o_Ap, options);
 
     // dot(p,A*p)
-    // these are only equivalent if p is continuous
-#if 0
-    if(strstr(options,"CONTINUOUS")){
-      dfloat localpAp = 0;
-      solver->o_pAp.copyTo(&localpAp);
-      MPI_Allreduce(&localpAp, &pAp, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      printf("pAp=%g\n", pAp);
-    }else
-#endif
-      {
-	pAp = massWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
-      }
+    pAp = massWeightedInnerProduct(solver, solver->o_invDegree, o_p, o_Ap, options);
 
     if(strstr(options,"PCG"))
       // alpha = dot(r,z)/dot(p,A*p)
@@ -252,8 +238,6 @@ int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::mem
 
     // dot(r,r)
     rdotr1 = massWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-
-    //    if(rdotr1 < tol*tol) break;
 
     occaTimerTic(mesh->device,"Preconditioner");
     if(strstr(options,"PCG")){
