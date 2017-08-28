@@ -69,7 +69,7 @@ void massOperator3D(solver_t *solver, dfloat lambda,
     
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-#if 0
+#if 1
     if(nonHalo->Ngather)
       mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
 #endif
