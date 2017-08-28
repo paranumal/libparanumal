@@ -35,9 +35,13 @@ typedef struct {
 
   dfloat tau;
 
+  bool allNeumann;
+  dfloat allNeumannPenalty;
+
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
 
+  int *EToB;
   dfloat *sendBuffer, *recvBuffer;
 
   occa::stream defaultStream;

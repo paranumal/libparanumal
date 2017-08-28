@@ -2,32 +2,36 @@
 
 // parAlmond's function call-backs
 void agmgAx(void **args, dfloat *x, dfloat *Ax){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
-  axpy(level->A, 1.0, x, 0.0, Ax);
+  axpy(level->A, 1.0, x, 0.0, Ax,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 }
 
 void agmgCoarsen(void **args, dfloat *r, dfloat *Rr){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
-  axpy(level->R, 1.0, r, 0.0, Rr);
+  axpy(level->R, 1.0, r, 0.0, Rr,false,0.);
 }
 
 void agmgProlongate(void **args, dfloat *x, dfloat *Px){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
-  axpy(level->P, 1.0, x, 1.0, Px);
+  axpy(level->P, 1.0, x, 1.0, Px,false,0.);
 }
 
 void agmgSmooth(void **args, dfloat *rhs, dfloat *x, bool x_is_zero){
+  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   if(level->stype == JACOBI){
-    smoothJacobi(level, level->A, rhs, x, x_is_zero);
+    smoothJacobi(parAlmond, level, level->A, rhs, x, x_is_zero);
   } else if(level->stype == DAMPED_JACOBI){
-    smoothDampedJacobi(level, level->A, rhs, x, x_is_zero);
+    smoothDampedJacobi(parAlmond, level, level->A, rhs, x, x_is_zero);
   } else if(level->stype == CHEBYSHEV){
-    smoothChebyshev(level, level->A, rhs, x, x_is_zero);
+    smoothChebyshev(parAlmond, level, level->A, rhs, x, x_is_zero);
   }
 }
 
@@ -35,14 +39,14 @@ void device_agmgAx(void **args, occa::memory &o_x, occa::memory &o_Ax){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
-  axpy(parAlmond,level->deviceA, 1.0, o_x, 0.0, o_Ax);
+  axpy(parAlmond,level->deviceA, 1.0, o_x, 0.0, o_Ax,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 }
 
 void device_agmgCoarsen(void **args, occa::memory &o_r, occa::memory &o_Rr){
   parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
-  axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr);
+  axpy(parAlmond, level->deviceR, 1.0, o_r, 0.0, o_Rr,false,0.);
 }
 
 void device_agmgProlongate(void **args, occa::memory &o_x, occa::memory &o_Px){
@@ -65,7 +69,7 @@ void device_agmgSmooth(void **args, occa::memory &o_rhs, occa::memory &o_x, bool
   }
 }
 
-dfloat rhoDinvA(csr *A, dfloat *invD);
+dfloat rhoDinvA(parAlmond_t *parAlmond, csr *A, dfloat *invD);
 
 void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s){
 
@@ -75,17 +79,18 @@ void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s){
     // estimate rho(invD * A)
     dfloat rho=0;
 
-    dfloat *invD;
     if(level->A->Nrows)
-      invD = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
+      level->A->diagInv = (dfloat *) calloc(level->A->Nrows, sizeof(dfloat));
 
-    for (iint i=0;i<level->A->Nrows;i++)
-      invD[i] = 1.0/level->A->diagCoefs[level->A->diagRowStarts[i]];
+    for (iint i=0;i<level->A->Nrows;i++) {
+      dfloat diag = level->A->diagCoefs[level->A->diagRowStarts[i]];
+      if (parAlmond->nullSpace) {
+        diag += parAlmond->nullSpacePenalty;
+      }
+      level->A->diagInv[i] = 1.0/diag;
+    }
 
-    rho = rhoDinvA(level->A, invD);
-
-    if(level->A->Nrows)
-      free(invD);
+    rho = rhoDinvA(parAlmond, level->A, level->A->diagInv);
 
     if (s == DAMPED_JACOBI) {
 
@@ -151,7 +156,7 @@ static void eig(const int Nrows, double *A, double *WR,
   delete [] WORK;
 }
 
-dfloat rhoDinvA(csr *A, dfloat *invD){
+dfloat rhoDinvA(parAlmond_t* parAlmond,csr *A, dfloat *invD){
 
   const iint N = A->Nrows;
   const iint M = A->Ncols;
@@ -203,7 +208,7 @@ dfloat rhoDinvA(csr *A, dfloat *invD){
       Vx[i] = V[j][i];
 
     // v[j+1] = invD*(A*v[j])
-    axpy(A, 1.0, Vx, 0., V[j+1]);
+    axpy(A, 1.0, Vx, 0., V[j+1],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     dotStar(N, invD, V[j+1]);
 

@@ -66,6 +66,8 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
        iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
        iint* Aj,                    //--
        dfloat* Avals,               //--
+       bool nullSpace,
+       dfloat nullSpacePenalty,
        hgs_t *hgs){                  // gs op for problem assembly (to be removed in future?)
 
   iint size, rank;
@@ -75,6 +77,10 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
+
+  //record if there is null space
+  parAlmond->nullSpace = nullSpace;
+  parAlmond->nullSpacePenalty = nullSpacePenalty;
 
   //populate null space vector
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
