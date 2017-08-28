@@ -14,7 +14,7 @@ occa::kernel saferBuildKernelFromSource(occa::device &device,
 //dfloat *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 	/* number of second order geometric factors */
-	iint NgjGeo = 7;
+	iint NgjGeo = 8;
 	iint gjNq = mesh->gjNq;
 	iint gjNp = gjNq*gjNq*gjNq;
 	dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
@@ -282,6 +282,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 	kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
 	kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+	kernelInfo.addCompilerFlag("--maxrregcount 64");
+
 	//  kernelInfo.addCompilerFlag("-G");
 	kernelInfo.addCompilerFlag("-O3");
 
@@ -364,7 +366,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DTW.okl",
-			                             "ellipticAxHex3D_trilinear3",
+			                             "ellipticAxHex3D_slab1",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
 			                             kernelInfo);

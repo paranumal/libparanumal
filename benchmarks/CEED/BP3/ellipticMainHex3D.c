@@ -52,6 +52,28 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   double localElapsed = toc-tic;
   //  localElapsed = mesh->device.timeBetween(start, end);
 
+  // time cudamemcpy for same amount of data movement
+  iint gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
+  iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 + gjNp*7))/2); // use 1/2 because of load+store
+  occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
+  occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
+
+  mesh->device.finish();
+  tic = MPI_Wtime();
+
+  occa::streamTag startCopy = mesh->device.tagStream();
+  for(int it=0;it<iterations;++it){
+    o_bah.copyTo(o_foo);
+  }
+  occa::streamTag endCopy = mesh->device.tagStream();
+
+  mesh->device.finish();
+  toc = MPI_Wtime();
+  double copyElapsed = (toc-tic);
+  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
+  double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2.)/(1024.*1024.*1024.*copyElapsed));
+
+
   iint   localDofs = mesh->Np*mesh->Nelements;
   iint localElements = mesh->Nelements;
   double globalElapsed;
@@ -100,8 +122,9 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   double gflops = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
 
   if(rank==root){
-    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
-	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size), gflops);
+    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E %17.15E\t"
+	   "[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s)]\n",
+	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size), gflops, copyBandwidth);
   }
 
 
