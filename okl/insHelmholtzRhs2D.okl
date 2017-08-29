@@ -150,7 +150,7 @@ kernel void insHelmholtzRhsForcingSS2D(const iint Nelements,
         if(e<Nelements){
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           
-          const iint id0 = e*p_Np + n; 
+          const iint id0    = e*p_Np + n; 
           //U
           const dfloat utt  = Ut[id0];
           const dfloat vtt  = Vt[id0];

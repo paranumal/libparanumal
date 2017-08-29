@@ -6,10 +6,10 @@ void insAdvectionStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 			char   * options){
 
   mesh2D *mesh = ins->mesh;
-  dfloat t = (tstep+1)*ins->dt;
-  // field offset at this step
+  dfloat t = (tstep+0)*ins->dt;
+  
   const iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs); 
-  iint offset = ins->index*Ntotal;
+  iint offset       = ins->index*Ntotal;
 
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){
@@ -26,7 +26,7 @@ void insAdvectionStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 
 		// start halo exchange
 		meshHaloExchangeStart(mesh,
-													mesh->Np*(ins->NTfields)*sizeof(dfloat),
+													mesh->Np*(ins->NVfields)*sizeof(dfloat),
 													sendBuffer,
 													recvBuffer);
   }
@@ -110,7 +110,7 @@ void insAdvectionStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 
 	ins->advectionUpdateKernel(mesh->Nelements,
 														ins->index,
-														ins->NtotalElements,
+														Ntotal,
 														ins->dt,
 														ins->g0,
 														ins->a0,
@@ -125,8 +125,4 @@ void insAdvectionStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 														ins->o_NV,
 														ins->o_Ut,
 														ins->o_Vt);
-
- 	
-
-
 }

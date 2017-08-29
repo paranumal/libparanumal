@@ -125,8 +125,7 @@ kernel void insPoissonRhsNeumann2D(const iint Nelements,
             // get boundary condition type
             iint bc = EToB[face+p_Nfaces*e];
 
-            if(bc!=3){
-
+            if((bc==1) || (bc==2)){ // Pressure Neumann 
               // load surface geofactors for this face
               iint sid    = p_Nsgeo*(e*p_Nfaces+face);
               dfloat nx   = sgeo[sid+p_NXID];
@@ -155,20 +154,19 @@ kernel void insPoissonRhsNeumann2D(const iint Nelements,
 
               //compute new normal of curl field
               dfloat wn0 = nx*WX[idm] + ny*WY[idm];
+              
               WN[idf0]   = wn0; // Update Normal of worticity, just for consistency
               dfloat wn1 = WN[idf1]; // read tn-1
               dfloat wn2 = WN[idf2]; // read tn-2
-
-              WN[idf2] = wn0; // Update Normal of worticity 
 
               dfloat dpdt = 0.f; 
 
               insPoissonNeumannTimeDerivative2D(bc, time, x[idm], y[idm],&dpdt);
              
-              const dfloat sc = invJ*sJ ; // in forcing kernel will be multiplied with M*J
-              s_fluxP[es][n] = sc*(- nx*( dpdt + a0*NU[idv0] + a1*NU[idv1] + a2*NU[idv2])
-                                   - ny*( dpdt + a0*NV[idv0] + a1*NV[idv1] + a2*NV[idv2]) 
-                                   -    ( a0*wn0 + a1*wn1 + a2*wn2)
+              const dfloat sc = invJ*sJ ; // multiplied with M^-1
+              s_fluxP[es][n] = -sc*(  nx*( dpdt + a0*NU[idv0] + a1*NU[idv1] + a2*NU[idv2])
+                                    + ny*( dpdt + a0*NV[idv0] + a1*NV[idv1] + a2*NV[idv2]) 
+                                    + p_nu*( a0*wn0 + a1*wn1 + a2*wn2)
                                    );
             }
          }
@@ -186,7 +184,6 @@ kernel void insPoissonRhsNeumann2D(const iint Nelements,
         iint e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-
             dfloat rhsp = 0.f;
             // Lift
             occaUnroll(p_NfacesNfp)
@@ -208,12 +205,12 @@ kernel void insPoissonRhsNeumann2D(const iint Nelements,
 
 // Computes volume contribution of div(UI)
 kernel void insPoissonRhsForcingSS2D(const iint Nelements,
-           const dfloat dt,
-           const dfloat g0,
-           const dfloat * restrict vgeo,
-           const dfloat * restrict MM,
-           const dfloat * restrict divU,
-                 dfloat * restrict rhsU){
+                                     const dfloat dt,
+                                     const dfloat g0,
+                                     const dfloat * restrict vgeo,
+                                     const dfloat * restrict MM,
+                                     const dfloat * restrict divU,
+                                           dfloat * restrict rhsU){
 
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -225,7 +222,6 @@ kernel void insPoissonRhsForcingSS2D(const iint Nelements,
         if(e<Nelements){
           const iint id = e*p_Np+n;
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
- 
           s_rhs[es][n] = J*(-g0/dt* divU[id] + rhsU[id]);
         }
       }
@@ -372,9 +368,9 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          dfloat pPm1, dpdxPm1, dpdyPm1;
           insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);
-          if(pressure_solve==0){
+          if(pressure_solve==0){ // if the pressure increment is in use
+            dfloat pPm1, dpdxPm1, dpdyPm1;
             insPoissonBoundaryConditions2D(bc,time-dt, dt, x[idM], y[idM], nx, ny, &pPm1, &dpdxPm1, &dpdyPm1);
             pP = pP - pPm1;
             dpdxP = dpdxP - dpdxPm1;

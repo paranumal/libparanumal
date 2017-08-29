@@ -41,7 +41,7 @@ typedef struct {
   
 
 
-  dfloat *Ut, *Vt, *WN; // For stiffly stable scheme
+  dfloat *Ut, *Vt, *Pt, *WN; // For stiffly stable scheme
   dfloat dtfactor;
 
   
@@ -63,10 +63,10 @@ typedef struct {
 
   occa::memory o_Px, o_Py;
 
-  occa::memory o_UH, o_VH, o_PH;
+  occa::memory o_UH, o_VH;
   occa::memory o_PI, o_PIx, o_PIy;
 
-  occa::memory o_Ut, o_Vt, o_WN; 
+  occa::memory o_Ut, o_Vt, o_Pt, o_WN; 
 
 
 
@@ -96,11 +96,9 @@ typedef struct {
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
   //
-  occa::kernel gradientKernel;
   occa::kernel gradientVolumeKernel;
   occa::kernel gradientSurfaceKernel;
 
-  occa::kernel divergenceKernel;
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
   //
