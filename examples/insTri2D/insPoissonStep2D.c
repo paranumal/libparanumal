@@ -127,6 +127,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  printf("Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
+  printf("Solving for P ... ");
+  int NiterP = ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
+  printf("%d iteration(s)\n", NiterP);
 }
