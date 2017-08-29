@@ -1,4 +1,4 @@
-
+f
 #if 0
 __constant__ dfloat c_D[10][9] = {
                                    {.1, .2, .3, .4, .5, .6, .7, .8, .9},
@@ -3319,12 +3319,7 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 					}
 
 					// apply chain rule (notice the swtich of indices in i,j)
-					s_qr[j][i] = r_G00*qr + r_G01*qs + r_G02*qt;
-					s_qs[j][i] = r_G01*qr + r_G11*qs + r_G12*qt;
-					r_qt = r_G02*qr + r_G12*qs + r_G22*qt;
-
-					r_lapq[k] += lambda*r_GwJ*s_tmpq[k][j][i];
-
+				
 #if 0
 					occaUnroll(p_gjNq)
 					for(int n=0;n<p_gjNq;++n){
