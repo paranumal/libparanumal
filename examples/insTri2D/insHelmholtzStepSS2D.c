@@ -7,12 +7,14 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
   
   mesh2D *mesh = ins->mesh; 
   solver_t *solver = ins->vSolver; 
- // dfloat t = tstep*ins->dt;
+
   dfloat t = tstep*ins->dt + ins->dt;
   
-  iint offset = mesh->Nelements+mesh->totalHaloPairs;
+  iint Ntotal = mesh->Nelements+mesh->totalHaloPairs;
   iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
-    
+  
+  // if(strstr(options,"BROKEN")){
+
   if(strstr(options,"SUBCYCLING")){
      // compute all forcing i.e. f^(n+1) - grad(Pr)
     ins->helmholtzRhsForcingKernel(mesh->Nelements,
@@ -36,6 +38,16 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
                                    ins->o_rhsU,
                                    ins->o_rhsV);
   }
+
+// } else{
+
+
+// // *(pxB) = 2.f*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
+// // *(pyB) = 2.f*OCCA_PI*occaSin(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
+
+
+
+// }
   
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
 				                        rhsPackingMode,
@@ -56,7 +68,11 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
                                 ins->o_rhsV);
 
   
-    iint Niter;
+   
+    ins->o_Ut.copyFrom(ins->o_U,Ntotal*mesh->Np*sizeof(dfloat),0,ins->index*Ntotal*mesh->Np*sizeof(dfloat));
+    ins->o_Vt.copyFrom(ins->o_V,Ntotal*mesh->Np*sizeof(dfloat),0,ins->index*Ntotal*mesh->Np*sizeof(dfloat));
+
+    int Niter = 0; 
     printf("Solving for Ux: Niter= ");
     Niter = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_Ut, ins->vSolverOptions);
     printf("%d \n",Niter);
@@ -64,10 +80,11 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
     printf("Solving for Uy: Niter= ");
     Niter = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_Vt, ins->vSolverOptions);
     printf("%d \n",Niter);
+   
     //copy into next stage's storage
     ins->index = (ins->index+1)%3; //hard coded for 3 stages
-    const iint Ntotal = (mesh->Nelements + mesh->totalHaloPairs)*mesh->Np; 
-    ins->o_Ut.copyTo(ins->o_U,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);
-    ins->o_Vt.copyTo(ins->o_V,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);  
+    //
+    ins->o_Ut.copyTo(ins->o_U,Ntotal*mesh->Np*sizeof(dfloat),ins->index*Ntotal*mesh->Np*sizeof(dfloat),0);
+    ins->o_Vt.copyTo(ins->o_V,Ntotal*mesh->Np*sizeof(dfloat),ins->index*Ntotal*mesh->Np*sizeof(dfloat),0);  
 
 }

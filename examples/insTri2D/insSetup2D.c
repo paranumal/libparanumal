@@ -63,6 +63,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   // Hold history of n*curl(curl(u)) on face nodes
   ins->WN     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
   //rhs storage
+  ins->Pt    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
   ins->Ut    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Vt    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->rhsU  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -91,16 +92,16 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.025;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.1f;
+  ins->finalTime = 0.1;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 6.0f* (mesh->N)*(mesh->N+1)/2.0f;
+  ins->tau       = 10.0* (mesh->N+1)*(mesh->N+1)/2.0f;
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -112,7 +113,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-      #if 0
+      #if 1
             dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
             //
             ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -126,7 +127,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 1
+      #if 0
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
@@ -176,7 +177,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
    // dfloat cfl = pow(2,factor)*0.05;
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.01; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -198,22 +199,21 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   }
   else{
     ins->NtimeSteps = ins->finalTime/ins->dt;
-    ins->dt   = ins->finalTime/ins->NtimeSteps;
+    ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
   
   #if 0
   dfloat A[10]; 
-  A[0] = 1e-4; 
-  A[1] = 3*1e-4;  
-  A[2] = 8*1e-4; 
-  A[3] = 1e-3; 
-  A[4] = 3*1e-3; 
-  A[5] = 8*1e-3;  
-  A[6] = 1*1e-2;
-
-  A[7] = 4*1e-3;
-  A[8] = 8*1e-3;
-  A[9] = 1*1e-2;
+  A[0] = 1e-6; 
+  A[1] = 3*1e-6;  
+  A[2] = 8*1e-6; 
+  A[3] = 1e-5; 
+  A[4] = 3*1e-5; 
+  A[5] = 8*1e-5;  
+  A[6] = 1*1e-4;
+  A[7] = 3*1e-4;
+  A[8] = 8*1e-4;
+  A[9] = 1*1e-3;
 
 
   printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
@@ -226,7 +226,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   #endif
   
   // errorStep
-  ins->errorStep =2;
+  ins->errorStep =100000000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -333,7 +333,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->o_rhsV  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->rhsV);
   ins->o_rhsP  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->rhsP);
   
-  ins->o_PH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
+  ins->o_Pt = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Pt);
   ins->o_Ut = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Ut);
   ins->o_Vt = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Vt);
   ins->o_WN = mesh->device.malloc(NexpOrder*mesh->Nfaces*mesh->Nfp*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->WN);
@@ -576,12 +576,21 @@ if(strstr(options, "ALGEBRAIC")){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
                "insPoissonRhsNeumann2D",
                kernelInfo);
+ // ===========================================================================
 
-  printf("Compiling divergence kernel\n");
-  ins->divergenceKernel =
+  printf("Compiling Divergence volume kernel with collocation integration\n");
+  ins->divergenceVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
-               "insDivergence2D",
+               "insDivergenceVolume2D",
                kernelInfo);
+
+    printf("Compiling Divergencesurface kernel with collocation integration\n");
+  ins->divergenceSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
+               "insDivergenceSurface2D",
+               kernelInfo);
+
+  // ===========================================================================
 
   printf("Compiling Poisson Forcing kernel\n");
   ins->poissonRhsForcingKernel =
@@ -595,18 +604,32 @@ if(strstr(options, "ALGEBRAIC")){
                "insPoissonRhsIpdgBC2D",
                kernelInfo);
 
-   printf("Compiling Gradient kernel\n");
-  ins->gradientKernel =
+  // ===========================================================================
+  printf("Compiling Gradient volume kernel with collocation integration\n");
+  ins->gradientVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
-               "insGradient2D",
+               "insGradientVolume2D",
                kernelInfo);
 
+  printf("Compiling Gradient volume kernel with collocation integration\n");
+  ins->gradientSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
+               "insGradientSurface2D",
+               kernelInfo);
+
+  // ===========================================================================
   
   printf("Compiling Poisson Update Kernel \n");
   ins->poissonUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
                "insPoissonUpdate2D",
                kernelInfo);
+  printf("Compiling Poisson penalty surface kernel\n");
+  ins->poissonPenaltyKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
+               "insPoissonPenalty2D",
+               kernelInfo);
+
    // ===========================================================================
   printf("Compiling Helmholtz Rhs Forcing  kernel\n");
   ins->helmholtzRhsForcingKernel =

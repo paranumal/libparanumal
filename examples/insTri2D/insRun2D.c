@@ -28,7 +28,7 @@ void insRun2D(ins_t *ins, char *options){
 
  
  // occa::initTimer(mesh->device);
- ins->NtimeSteps = 10;
+ //ins->NtimeSteps = 100;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -139,11 +139,6 @@ void insRun2D(ins_t *ins, char *options){
     insAdvectionStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insPoissonStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insHelmholtzStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
-
-
-
-
-
     }
 
     printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
@@ -151,21 +146,18 @@ void insRun2D(ins_t *ins, char *options){
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
-        insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
+        //insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
-#if 1 // For time accuracy test fed history with exact solution
+#if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
       iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt = (tstep+1)*ins->dt;
-      dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-      dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-      dfloat *tmpP = (dfloat*) calloc(Ntotal, sizeof(dfloat));
      // Overwrite Velocity
      for(iint e=0;e<mesh->Nelements;++e){
         for(iint n=0;n<mesh->Np;++n){
-          const iint id = n + mesh->Np*e;
+          iint id = n + mesh->Np*e;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
 
@@ -173,18 +165,16 @@ void insRun2D(ins_t *ins, char *options){
           dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
           dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
 
-          tmpU[id] = u0; 
-          tmpV[id] = v0; 
-          tmpP[id] = p0;
+          id += ins->index*Ntotal; 
+
+          ins->U[id] = u0; 
+          ins->V[id] = v0; 
+          ins->P[id] = p0;
         }
       }
-       ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat));
-       ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat));
-       ins->o_P.copyFrom(tmpP,Ntotal*sizeof(dfloat),Ntotal*sizeof(dfloat));
-
-       free(tmpU);
-       free(tmpV);
-       free(tmpP);       
+       ins->o_U.copyFrom(ins->U);
+       ins->o_V.copyFrom(ins->V);
+       ins->o_P.copyFrom(ins->P);
     }
 #endif
 
@@ -196,7 +186,7 @@ void insRun2D(ins_t *ins, char *options){
  // For Final Time
 insReport2D(ins, ins->NtimeSteps,options);
 
-#if 0
+#if 1
 dfloat finalTime = ins->NtimeSteps*ins->dt;
 insErrorNorms2D(ins, finalTime, options);
 #endif

@@ -7,30 +7,32 @@ void insPoissonStepSS2D(ins_t *ins, iint tstep, iint haloBytes,
 
   mesh2D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
+
+  // dfloat t0 = tstep*ins->dt;
   dfloat t = tstep*ins->dt + ins->dt;
 
   //hard coded for 3 stages.
-  int index0 = (ins->index+0)%3; // Still in current time
+  iint index0 = (ins->index+0)%3; // Still in current time
+  iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs);
+  iint offset = index0*Ntotal;
 
-  iint offset = index0*(mesh->Nelements+mesh->totalHaloPairs);
 
-
-  // Compute Curl(Curl(U))  Nodal not in weak sense
+// Compute Curl(Curl(U)) and store in rhsU 
   ins->poissonRhsCurlKernel(mesh->Nelements,
-                        offset,
-                        mesh->o_vgeo,
-                        mesh->o_DrT,
-                        mesh->o_DsT,
-                        ins->o_U,
-                        ins->o_V,
-                        ins->o_rhsU,
-                        ins->o_rhsV);
+                      offset,
+                      mesh->o_vgeo,
+                      mesh->o_DrT,
+                      mesh->o_DsT,
+                      ins->o_U,
+                      ins->o_V,
+                      ins->o_rhsU,
+                      ins->o_rhsV);
 
 
   // Compute derived Neumann data : result is lifted and multiplied with invJ
   ins->poissonRhsNeumannKernel(mesh->Nelements,
                                 ins->index,
-                                ins->NtotalElements,
+                                Ntotal,
                                 ins->dt,
                                 ins->a0,
                                 ins->a1,
@@ -52,15 +54,23 @@ void insPoissonStepSS2D(ins_t *ins, iint tstep, iint haloBytes,
 
 
 if(strstr(options,"BROKEN")){
+  const iint voffset = 0; 
   // compute div(ut) and store on rhsU
-  ins->divergenceKernel(mesh->Nelements,
-                        mesh->o_vgeo,
-                        mesh->o_DrT,
-                        mesh->o_DsT,
-                        ins->o_Ut,
-                        ins->o_Vt,
-                        ins->o_rhsU);  
+  ins->divergenceVolumeKernel(mesh->Nelements,
+                             mesh->o_vgeo,
+                             mesh->o_DrT,
+                             mesh->o_DsT,
+                             voffset,
+                             ins->o_Ut,
+                             ins->o_Vt,
+                             ins->o_rhsU);
 }
+
+
+
+
+
+
   
  // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->poissonRhsForcingKernel(mesh->Nelements,
@@ -70,7 +80,6 @@ if(strstr(options,"BROKEN")){
                               mesh->o_MM,
                               ins->o_rhsU, // div(Ut)
                               ins->o_rhsP);
-
  //
   const iint pressure_solve = 1; // Solve for Pressure
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
@@ -93,28 +102,27 @@ if(strstr(options,"BROKEN")){
 
 
 
-
-  iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  ins->o_PH.copyFrom(ins->o_P,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  ins->o_Pt.copyFrom(ins->o_P,Ntotal*mesh->Np*sizeof(dfloat),0,ins->index*Ntotal*mesh->Np*sizeof(dfloat));
   iint Niter;
   printf("Solving for Pr: Niter= ");
-  Niter= ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PH,  ins->pSolverOptions); 
+  Niter= ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_Pt,  ins->pSolverOptions); 
   printf("%d\n", Niter); 
 
   int index1 = (ins->index+1)%3; //hard coded for 3 stages
-  ins->o_PH.copyTo(ins->o_P,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+  ins->o_Pt.copyTo(ins->o_P,Ntotal*mesh->Np*sizeof(dfloat),index1*Ntotal*mesh->Np*sizeof(dfloat),0);
 
 
 if(strstr(options,"BROKEN")){
-  // compute div(ut) and store on rhsU
-  ins->gradientKernel(mesh->Nelements,
-                        mesh->o_vgeo,
-                        mesh->o_DrT,
-                        mesh->o_DsT,
-                        ins->o_PH,
-                        ins->o_rhsU, // Store dP/dx
-                        ins->o_rhsV  // Store dP/dy
-                        );  
+  const iint poffset = index1*Ntotal*mesh->Np; 
+  // Compute Volume Contribution of gradient of pressure gradient
+  ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            poffset,  
+                            ins->o_P,
+                            ins->o_rhsU,
+                            ins->o_rhsV);
 }
   
 

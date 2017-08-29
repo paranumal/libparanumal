@@ -110,9 +110,9 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   #if 1// if time dependent BC
   //
-   const iint method =0; // ALGEBRAIC 
+   const iint pressure_solve = 0; // ALGEBRAIC 
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
-                                method,
+                                pressure_solve,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
