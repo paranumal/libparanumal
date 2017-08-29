@@ -55,7 +55,7 @@ void pcg(parAlmond_t *parAlmond,
   iint Niter = 0;
   while(rdotr0>(tol*tol)){
     //   Ap = A*p;
-    axpy(A, 1.0, p, 0.0, Ap);
+    axpy(A, 1.0, p, 0.0, Ap,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     dfloat pApLocal = innerProd(m, p, Ap);
     pAp = 0;
@@ -171,7 +171,7 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
   iint Niter = 0;
   while(rdotr0>(tol*tol)){
     //   Ap = A*p;
-    axpy(parAlmond, A, 1.0, o_p, 0.0, o_Ap);
+    axpy(parAlmond, A, 1.0, o_p, 0.0, o_Ap,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     dfloat pApLocal = innerProd(parAlmond, m, o_p, o_Ap);
     pAp = 0;

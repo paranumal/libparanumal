@@ -28,8 +28,8 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
@@ -39,7 +39,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,HOST smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
 
@@ -76,8 +76,7 @@ int main(int argc, char **argv){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   // Boundary Type translation. Just default from the mesh file.
-  //int BCType[3] = {0,1,2};
-  int BCType[4] = {0,1,1,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  int BCType[3] = {0,2,2};
 
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
@@ -124,7 +123,7 @@ int main(int argc, char **argv){
                            mesh->o_y,
                            mesh->o_vgeo,
                            mesh->o_sgeo,
-                           mesh->o_EToB,
+                           solver->o_EToB,
                            mesh->o_DrT,
                            mesh->o_DsT,
                            mesh->o_LIFTT,
