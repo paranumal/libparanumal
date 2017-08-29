@@ -74,6 +74,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  iint TotalRows = globalRowStarts[size];
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
@@ -84,7 +85,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
 
   //populate null space vector
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1;
+  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
 

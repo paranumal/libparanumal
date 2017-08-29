@@ -37,6 +37,7 @@ typedef struct {
 
   bool allNeumann;
   dfloat allNeumannPenalty;
+  dfloat allNeumannScale;
 
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;

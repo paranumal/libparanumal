@@ -10,4 +10,6 @@ void device_agmgProlongate(void **args, occa::memory &o_x, occa::memory &o_Px);
 void device_agmgSmooth    (void **args, occa::memory &o_r, occa::memory &o_x, bool x_is_zero);
 
 void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s);
-void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level);
+void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, dfloat nullSpacePenalty);
+void exactCoarseSolve(parAlmond_t *parAlmond, int N, dfloat *rhs, dfloat *x);
+void device_exactCoarseSolve(parAlmond_t *parAlmond, int N, occa::memory o_rhs, occa::memory o_x);
