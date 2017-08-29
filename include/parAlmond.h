@@ -22,6 +22,8 @@ typedef struct csr_t {
 
   dfloat *diagInv;
 
+  dfloat *null;
+
   //storage for smoothing
   dfloat *scratch;
 
@@ -82,6 +84,8 @@ typedef struct hyb_t {
   ell *E;
 
   occa::memory o_diagInv;
+
+  occa::memory o_null;
 
   // MPI halo exchange info
   iint  NHalo;
@@ -183,8 +187,6 @@ typedef struct agmgLevel_t {
   dcoo  *dcsrP;
   hyb  *deviceR;
 
-  dfloat *nullA;
-
   dfloat *rhs, *res, *x;
 
   dfloat *ckp1, *vkp1, *wkp1;
@@ -225,6 +227,9 @@ typedef struct {
   void *ExactSolve;
   iint coarseTotal;
   iint coarseOffset;
+  iint *coarseOffsets;
+  iint *coarseCounts;
+  dfloat *invCoarseA;
   dfloat *xCoarse, *rhsCoarse;
 
   bool nullSpace;
