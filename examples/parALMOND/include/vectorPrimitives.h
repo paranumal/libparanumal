@@ -18,6 +18,10 @@ void scaleVector(iint m, dfloat *a, dfloat alpha);
 
 void setVector(iint m, dfloat *a, dfloat alpha);
 
+dfloat sumVector(iint m, dfloat *a);
+
+void addScalar(iint m, dfloat alpha, dfloat *a);
+
 void randomize(iint m, dfloat *a);
 
 dfloat maxEntry(iint n, dfloat *a);
@@ -25,6 +29,10 @@ dfloat maxEntry(iint n, dfloat *a);
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha);
 
 void setVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha);
+
+dfloat sumVector(parAlmond_t *parAlmond, iint N, occa::memory o_a);
+
+void addScalar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a);
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b);
 

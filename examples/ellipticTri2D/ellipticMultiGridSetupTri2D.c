@@ -197,6 +197,8 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
                          Rows,
                          Cols,
                          Vals,
+                         solver->allNeumann,
+                         solver->allNeumannPenalty,
                          coarsehgs);
 
       free(coarseA); free(Rows); free(Cols); free(Vals);

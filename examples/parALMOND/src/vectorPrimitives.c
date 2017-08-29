@@ -97,6 +97,22 @@ void setVector(iint m, dfloat *a, dfloat alpha){
     a[i] = alpha;
 }
 
+void addScalar(iint m, dfloat alpha, dfloat *a){
+  #pragma omp parallel for
+  for(iint i=0; i<m; i++)
+    a[i] += alpha;
+}
+
+dfloat sumVector(iint m, dfloat *a){
+  dfloat alpha = 0.;
+
+  #pragma omp parallel for reduction(+:alpha)
+  for (iint i=0; i<m; i++) {
+    alpha += a[i];
+  }
+  return alpha;
+}
+    
 void randomize(iint m, dfloat *a){
   for(iint i=0; i<m; i++)
     a[i] = (dfloat) drand48();
@@ -117,12 +133,33 @@ dfloat maxEntry(iint n, dfloat *a){
   return maxVal;
 }
 
+#define RDIMX 32
+#define RDIMY 8
+#define RLOAD 1
+
 void scaleVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
   if (N) parAlmond->scaleVectorKernel(N, alpha, o_a);
 }
 
 void setVector(parAlmond_t *parAlmond, iint N, occa::memory o_a, dfloat alpha){
   if (N) parAlmond->setVectorKernel(N, alpha, o_a);
+}
+
+dfloat sumVector(parAlmond_t *parAlmond, iint N, occa::memory o_a){
+  iint numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
+  if(!numBlocks) numBlocks = 1;
+
+  dfloat alpha =0., zero = 0.;
+
+  parAlmond->setVectorKernel(1, zero, parAlmond->o_rho);
+  if (N) parAlmond->sumVectorKernel(numBlocks,N,o_a,parAlmond->o_rho);
+  parAlmond->o_rho.copyTo(&alpha,1*sizeof(dfloat),0);
+
+  return alpha;
+}
+
+void addScalar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a){
+  if (N) parAlmond->addScalarKernel(N, alpha, o_a);
 }
 
 void dotStar(parAlmond_t *parAlmond, iint N, occa::memory o_a, occa::memory o_b){
@@ -133,10 +170,6 @@ void dotStar(parAlmond_t *parAlmond, iint N, dfloat alpha, occa::memory o_a,
 	           occa::memory o_b, dfloat beta, occa::memory o_c){
   if (N) parAlmond->dotStarKernel(N, alpha, beta, o_a, o_b, o_c);
 }
-
-#define RDIMX 32
-#define RDIMY 8
-#define RLOAD 1
 dfloat innerProd(parAlmond_t *parAlmond, iint N,
                   occa::memory o_x, occa::memory o_y){
 

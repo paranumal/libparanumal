@@ -42,6 +42,8 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Rows,
                        Cols,
                        Vals,
+                       solver->allNeumann,
+                       solver->allNeumannPenalty,
                        hgs);
 
     free(A); free(Rows); free(Cols); free(Vals);
@@ -199,6 +201,8 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Rows,
                        Cols,
                        Vals,
+                       solver->allNeumann,
+                       solver->allNeumannPenalty,
                        coarsehgs);
 
     free(coarseA); free(Rows); free(Cols); free(Vals);

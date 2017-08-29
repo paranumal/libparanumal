@@ -53,6 +53,12 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   parAlmond->scaleVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/scaleVector.okl",
 			   "scaleVectorKernel", defs);
 
+  parAlmond->sumVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/sumVector.okl",
+         "sumVectorKernel", defs);
+
+  parAlmond->addScalarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/addScalar.okl",
+         "addScalarKernel", defs);
+
   parAlmond->vectorAddKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
 			   "vectorAddKernel", defs);
 
