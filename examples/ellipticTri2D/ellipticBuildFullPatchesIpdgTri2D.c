@@ -4,10 +4,10 @@ void matrixInverse(int N, dfloat *A);
 
 dfloat matrixConditionNumber(int N, dfloat *A);
 
-void BuildFullPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildFullPatchesIpdgTri2D(solver_t *solver, mesh2D* mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -122,7 +122,7 @@ void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
 
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  BuildFullPatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+  BuildFullPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   matrixInverse(patchNp, refPatchInvA);
 
   //store the permutations of the reference patch
@@ -159,7 +159,7 @@ void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
-    BuildFullPatchAx(mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+    BuildFullPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
@@ -222,7 +222,7 @@ void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
 }
 
 
-void BuildFullPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {
 
   int NpatchElements = mesh->Nfaces+1;
@@ -268,6 +268,15 @@ void BuildFullPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
         A[id] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
         A[id] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
         A[id] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
+      }
+    }
+
+    //add the rank boost for the allNeumann Poisson problem
+    if (solver->allNeumann) {
+      for(iint n=0;n<mesh->Np;++n){
+        for(iint m=0;m<mesh->Np;++m){ 
+          A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        }
       }
     }
 

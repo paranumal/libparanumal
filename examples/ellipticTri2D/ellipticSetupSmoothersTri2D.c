@@ -286,7 +286,7 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
   int NpP = mesh->Np*(mesh->Nfaces+1);
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFullPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFullPatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -348,7 +348,7 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
   mesh_t *mesh = solver->mesh;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFacePatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFacePatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   int NpP = 2*mesh->Np;
@@ -422,7 +422,7 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
   int NpP = mesh->Np;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildLocalPatchesIpdgTri2D(mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildLocalPatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -472,7 +472,7 @@ void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, a
   dfloat *invDiagA;
   mesh_t *mesh = solver->mesh;
 
-  ellipticBuildJacobiIpdgTri2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+  ellipticBuildJacobiIpdgTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 
