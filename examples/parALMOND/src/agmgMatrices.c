@@ -269,21 +269,9 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->NlocalCols = csrA->NlocalCols;
   A->NHalo = csrA->NHalo;
 
-
-  dfloat *diagInv;
   iint *rowCounters;
-  if (csrA->Nrows) {
-    diagInv = (dfloat *) calloc(csrA->Nrows, sizeof(dfloat));
+  if (csrA->Nrows)   
     rowCounters = (iint*) calloc(csrA->Nrows, sizeof(iint));
-  }
-
-  for (iint i=0;i<csrA->Nrows;i++) {
-    dfloat diag = csrA->diagCoefs[csrA->diagRowStarts[i]];
-    if (parAlmond->nullSpace) {
-      diag += parAlmond->nullSpacePenalty;
-    }
-    diagInv[i] = 1.0/diag;
-  }
 
   iint maxNnzPerRow = 0;
   iint minNnzPerRow = csrA->Ncols;
@@ -407,9 +395,15 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   // copy the data to device memory
   if(csrA->Nrows) {
-    A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), diagInv);
-    free(diagInv); free(rowCounters); free(bins);
+    free(rowCounters); free(bins);
   }
+
+  //copy null vector if present
+  if(csrA->null) 
+    A->o_null = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->null);
+
+  if (csrA->diagInv)
+    A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->diagInv);
 
   if(A->E->nnzPerRow){
     A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(iint), Ecols);
@@ -465,11 +459,7 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, bool nullSpac
 
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
-    dfloat alphaL=0.;
-    #pragma omp parallel for reduction(+:alphaL)
-    for (iint i=0; i<A->Nrows; i++) {
-      alphaL += x[i];
-    }
+    dfloat alphaL = innerProd(A->Nrows, A->null, x);
     MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
     alphaG *= nullSpacePenalty;
   }
@@ -487,12 +477,8 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, bool nullSpac
   }
 
   //add the correction
-  if (nullSpace) {
-    #pragma omp parallel for
-    for (iint i=0; i<A->Nrows; i++) {
-      y[i] += alpha*alphaG;
-    }
-  }
+  if (nullSpace) 
+    vectorAdd(A->Nrows, alpha*alphaG, A->null, 1., y);
 }
 
 void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloat beta, occa::memory o_y) {
@@ -545,7 +531,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
 
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
-    dfloat alphaL = sumVector(parAlmond,A->Nrows,o_x);
+    dfloat alphaL = innerProd(parAlmond, A->Nrows, A->o_null, o_x);
     MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
     alphaG *= nullSpacePenalty;
   }
@@ -562,9 +548,8 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
     ax(parAlmond, A->C, alpha, o_x, o_y);
 
   //add the correction
-  if (nullSpace) {
-    addScalar(parAlmond,A->Nrows,alphaG,o_y);
-  }
+  if (nullSpace) 
+    vectorAdd(parAlmond, A->Nrows, alpha*alphaG, A->o_null, 1., o_y);
 
   occaTimerToc(parAlmond->device,"hyb axpy");
 }
@@ -591,9 +576,7 @@ void ax(parAlmond_t *parAlmond, coo *C, dfloat alpha, occa::memory o_x, occa::me
 
 void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
-  dfloat alphaG = 0.;
-
-  // x = inv(D)*(b-R*x)  where R = A-D
+  // x = x + inv(D)*(b-A*x)
   if(x_is_zero){
     #pragma omp parallel for
     for(iint i=0; i<A->Nrows; i++){
@@ -602,49 +585,18 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, d
     return;
   }
 
-  if (A->NsendTotal + A->NrecvTotal)
-    csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
-
-  dfloat *y = level->smootherResidual;
+  dfloat *res = level->smootherResidual;
   #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
-    dfloat result = r[i];
-    for(iint jj = A->diagRowStarts[i]; jj<A->diagRowStarts[i+1]; jj++)
-      result -= A->diagCoefs[jj]*x[A->diagCols[jj]];
-
-    y[i] = result;
+    res[i] = r[i];
   }
 
-  //rank 1 correction if there is a nullspace
-  if (parAlmond->nullSpace) {
-    dfloat alpha = sumVector(A->Nrows,x);
-    MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-    alphaG *= parAlmond->nullSpacePenalty;
-  }
+  axpy(A, -1.0, x, 1.0, res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
-  if (A->NsendTotal + A->NrecvTotal)
-    csrHaloExchangeFinish(A);
-
-  #pragma omp parallel for
-  for(iint i=0; i<A->Nrows; i++){
-    dfloat result = y[i];
-    for(iint jj = A->offdRowStarts[i]; jj<A->offdRowStarts[i+1]; jj++)
-      result -= A->offdCoefs[jj]*x[A->offdCols[jj]];
-
-    y[i] = A->diagInv[i]*result;
-  }
-
-  if (parAlmond->nullSpace) {
-    #pragma omp parallel for
-    for(iint i=0; i<A->Nrows; i++){
-      y[i] -= A->diagInv[i]*alphaG;
-    }
-  }
-
-  // copy the buffer vector to x
+  // update x
   #pragma omp parallel for
   for (iint i=0;i<A->Nrows;i++)
-    x[i] = y[i];
+    x[i] = x[i] + A->diagInv[i]*res[i];
 
 }
 
@@ -662,53 +614,18 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat
     return;
   }
 
-  if (A->NsendTotal + A->NrecvTotal)
-    csrHaloExchangeStart(A, sizeof(dfloat), x, A->sendBuffer, x+A->NlocalCols);
-
-  // x = (1-alpha)*x + alpha*inv(D) * (b-R*x) where R = A-D
-  dfloat *y = level->smootherResidual;
-
-  const dfloat oneMalpha = 1. - alpha;
+  dfloat *res = level->smootherResidual;
   #pragma omp parallel for
   for(iint i=0; i<A->Nrows; i++){
-    dfloat result = r[i];
-
-    for(iint jj =A->diagRowStarts[i]; jj<A->diagRowStarts[i+1]; jj++)
-      result -= A->diagCoefs[jj]*x[A->diagCols[jj]];
-
-    y[i] = result;
+    res[i] = r[i];
   }
 
-  //rank 1 correction if there is a nullspace
-  if (parAlmond->nullSpace) {
-    dfloat alphaL = sumVector(A->Nrows,x);
-    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-    alphaG *= parAlmond->nullSpacePenalty;
-  }
-
-  if (A->NsendTotal + A->NrecvTotal)
-    csrHaloExchangeFinish(A);
-
-  #pragma omp parallel for
-  for(iint i=0; i<A->Nrows; i++){
-    dfloat result = y[i];
-    for(iint jj =A->offdRowStarts[i]; jj<A->offdRowStarts[i+1]; jj++)
-      result -= A->offdCoefs[jj]*x[A->offdCols[jj]];
-
-    y[i] = oneMalpha*x[i] + alpha*A->diagInv[i]*result;
-  }
-
-  if (parAlmond->nullSpace) {
-    #pragma omp parallel for
-    for(iint i=0; i<A->Nrows; i++){
-      y[i] -= alpha*A->diagInv[i]*alphaG;
-    }
-  }
+  axpy(A, -1.0, x, 1.0, res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
   // copy the buffer vector to x
   #pragma omp parallel for
   for (iint i=0;i<A->Nrows;i++)
-    x[i] = y[i];
+    x[i] = x[i] + alpha*A->diagInv[i]*res[i];
 }
 
 void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
@@ -782,47 +699,11 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory
 
   occa::memory o_res = level->o_smootherResidual;
 
-  if (A->NsendTotal) {
-    parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+  o_res.copyFrom(o_r);
+  axpy(parAlmond, A, -1.0, o_x, 1.0, o_res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
-    //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
-  }
-
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
-
-  occaTimerTic(parAlmond->device,"ellJacobi1");
-  if (A->Nrows)
-    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
-                            A->E->o_cols, A->E->o_coefs, o_x, o_r, o_res);
-  occaTimerToc(parAlmond->device,"ellJacobi1");
-
-  //rank 1 correction if there is a nullspace
-  if (parAlmond->nullSpace) {
-    dfloat alpha = sumVector(parAlmond,A->Nrows,o_x);
-    MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-    alphaG *= parAlmond->nullSpacePenalty;
-  }
-
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeFinish(A);
-
-  //copy back to device
-  if (A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
-
-  // temp1 += -C*x
-  ax(parAlmond, A->C, -1.0, o_x, o_res);
-
-  //add the correction
-  if (parAlmond->nullSpace) {
-    addScalar(parAlmond,A->Nrows,-alphaG,o_res);
-  }
-
-  // x = invD*temp1
-  if (A->Nrows)
-    dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_res, 0., o_x);
+  // x = x + inv(D)*(r-A*x)
+  dotStar(parAlmond, A->Nrows, 1.0, A->o_diagInv, o_res, 1.0, o_x);
   occaTimerToc(parAlmond->device,"hyb smoothJacobi");
 }
 
@@ -841,49 +722,11 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::
 
   occa::memory o_res = level->o_smootherResidual;
 
-  if (A->NsendTotal) {
-    parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
+  o_res.copyFrom(o_r);
+  axpy(parAlmond, A, -1.0, o_x, 1.0, o_res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
-    //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
-  }
-
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
-
-  occaTimerTic(parAlmond->device,"ellJacobi1");
-  if (A->Nrows)
-    parAlmond->ellJacobiKernel(A->Nrows, A->E->nnzPerRow, A->E->strideLength,
-                              A->E->o_cols, A->E->o_coefs, o_x, o_r, o_res);
-  occaTimerToc(parAlmond->device,"ellJacobi1");
-
-  //rank 1 correction if there is a nullspace
-  if (parAlmond->nullSpace) {
-    dfloat alphaL = sumVector(parAlmond,A->Nrows,o_x);
-    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-    alphaG *= parAlmond->nullSpacePenalty;
-  }
-
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeFinish(A);
-
-  //copy back to device
-  if (A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
-
-
-  // temp1 += -C*x
-  ax(parAlmond, A->C, -1.0, o_x, o_res);
-
-  //add the correction
-  if (parAlmond->nullSpace) {
-    addScalar(parAlmond,A->Nrows,-alphaG,o_res);
-  }
-
-  // x = alpha*invD*temp1 + (1-alpha)*x
-  const dfloat beta = 1.0 - alpha;
-  dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, o_res, beta, o_x);
-
+  // x = x + alpha*inv(D)*(r-A*x)
+  dotStar(parAlmond, A->Nrows, alpha, A->o_diagInv, o_res, 1.0, o_x);
   occaTimerToc(parAlmond->device,"hyb smoothDampedJacobi");
 }
 

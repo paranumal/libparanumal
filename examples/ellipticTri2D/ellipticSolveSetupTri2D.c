@@ -96,7 +96,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
-  solver->allNeumannPenalty = 1.;
+  solver->allNeumannPenalty = 1;
+  iint totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+  
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
   for (iint e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -109,6 +113,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     }
   }
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
+  printf("allNeumann = %d \n", solver->allNeumann);
+
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");

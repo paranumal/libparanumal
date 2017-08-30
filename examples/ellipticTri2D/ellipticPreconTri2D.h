@@ -97,36 +97,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
-void ellipticBuildPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
-                                   const char *options);
-
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildJacobiIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
-                                   const char *options);
-
-void ellipticBuildFullPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildLocalPatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
 
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);

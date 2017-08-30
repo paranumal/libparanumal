@@ -17,7 +17,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // approximate Nrows at coarsest level
-  int gCoarseSize = 100;
+  int gCoarseSize = 1000;
 
   double seed = (double) rank;
   srand48(seed);
@@ -31,8 +31,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
 
   //copy A matrix and null vector
   levels[lev]->A = A;
-  levels[lev]->nullA = nullA;
-  levels[lev]->deviceA = newHYB(parAlmond, levels[lev]->A);
+  levels[lev]->A->null = nullA;
 
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
@@ -44,6 +43,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     smoothType = DAMPED_JACOBI;
   }
   setupSmoother(parAlmond, levels[lev], smoothType);
+
+  levels[lev]->deviceA = newHYB(parAlmond, levels[lev]->A);
 
   //set operator callback
   void **args = (void **) calloc(2,sizeof(void*));
@@ -69,10 +70,10 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    setupExactSolve(parAlmond, levels[lev]);
+    setupExactSolve(parAlmond, levels[lev],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
+    //setupSmoother(parAlmond, levels[lev], smoothType);
     done = true;
   }
-
 
   while(!done){
     // create coarse MG level
@@ -89,15 +90,16 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
 
     parAlmond->numLevels++;
 
-    levels[lev+1]->nullA = nullCoarseA;
+    levels[lev+1]->A->null = nullCoarseA;
     levels[lev+1]->Nrows = levels[lev+1]->A->Nrows;
     levels[lev+1]->Ncols = mymax(levels[lev+1]->A->Ncols, levels[lev+1]->P->Ncols);
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
+    
+    setupSmoother(parAlmond, levels[lev+1], smoothType);
+
     levels[lev+1]->deviceA = newHYB (parAlmond, levels[lev+1]->A);
     levels[lev+1]->deviceR = newHYB (parAlmond, levels[lev+1]->R);
     levels[lev+1]->dcsrP   = newDCOO(parAlmond, levels[lev+1]->P);
-
-    setupSmoother(parAlmond, levels[lev+1], smoothType);
 
     //set operator callback
     void **args = (void **) calloc(2,sizeof(void*));
@@ -124,7 +126,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      setupExactSolve(parAlmond, levels[lev+1]);
+      setupExactSolve(parAlmond, levels[lev+1],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
+      //setupSmoother(parAlmond, levels[lev+1], smoothType);
       break;
     }
 
@@ -138,7 +141,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     iint N = levels[n]->Nrows;
     iint M = levels[n]->Ncols;
 
-    if ((n>0)&&(n<parAlmond->numLevels-1)) { //kcycle vectors
+    if ((n>0)&&(n<parAlmond->numLevels)) { //kcycle vectors
       if (M) levels[n]->ckp1 = (dfloat *) calloc(M,sizeof(dfloat));
       if (N) levels[n]->vkp1 = (dfloat *) calloc(N,sizeof(dfloat));
       if (N) levels[n]->wkp1 = (dfloat *) calloc(N,sizeof(dfloat));
@@ -936,10 +939,10 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
     iint col = FineToCoarse[i];
     if ((col>globalAggStarts[rank]-1)&&(col<globalAggStarts[rank+1])) {
       P->diagCols[diagCnt] = col - globalAggOffset; //local index
-      P->diagCoefs[diagCnt++] = level->nullA[i];
+      P->diagCoefs[diagCnt++] = level->A->null[i];
     } else {
       P->offdCols[offdCnt] = col;
-      P->offdCoefs[offdCnt++] = level->nullA[i];
+      P->offdCoefs[offdCnt++] = level->A->null[i];
     }
   }
 

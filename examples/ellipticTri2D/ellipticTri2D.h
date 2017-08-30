@@ -37,6 +37,7 @@ typedef struct {
 
   bool allNeumann;
   dfloat allNeumannPenalty;
+  dfloat allNeumannScale;
 
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
@@ -85,7 +86,6 @@ typedef struct {
 
 }solver_t;
 
-
 void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
@@ -118,6 +118,26 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
           ogs_t **halo,
           ogs_t **nonHalo);   // 1 for halo node, 0 for not
 
+void ellipticBuildJacobiIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda,
+                                   iint *BCType, dfloat **invDiagA,
+                                   const char *options);
+
+void ellipticBuildFullPatchesIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFacePatchesIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildLocalPatchesIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
 //smoother setups
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
 void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
@@ -131,5 +151,6 @@ void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
+
 
 #endif
