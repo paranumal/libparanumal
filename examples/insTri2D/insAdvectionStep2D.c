@@ -6,7 +6,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			char   * options){
 
   mesh2D *mesh = ins->mesh;
-  dfloat t = (tstep+1)*ins->dt;
+  dfloat t = (tstep+0)*ins->dt;
   // field offset at this step
   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
 
@@ -117,7 +117,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
  
   // Solve pressure gradient for  t^(n+1)
-  // t += ins->dt;
+   t += ins->dt;
 
   const iint solverid = 0; // Pressure Solve
   // Compute Surface Conribution

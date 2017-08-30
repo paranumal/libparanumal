@@ -26,12 +26,8 @@ int main(int argc, char **argv){
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-<<<<<<< HEAD
-   strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-=======
     strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
->>>>>>> 53cd5ee060db1fa797adbcc67b60bcdb7fdb77c2
     //strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
@@ -56,7 +52,7 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  for(iint i=0; i<1; i++){
+  for(iint i=3; i<10; i++){
     //iint i=0; 
     printf("Setup INS Solver: \n");
     ins_t *ins = insSetup2D(mesh,i,options, velSolverOptions,velParAlmondOptions,

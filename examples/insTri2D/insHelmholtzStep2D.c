@@ -13,60 +13,39 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
 
   iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
-  
-  if(strstr(options,"SUBCYCLING")){
-     // compute all forcing i.e. f^(n+1) - grad(Pr)
-    ins->helmholtzRhsForcingKernel(mesh->Nelements,
-				                          rhsPackingMode,
-                                   mesh->o_vgeo,
-                                   mesh->o_MM,
-                                   ins->a0,
-                                   ins->a1,
-                                   ins->a2,
-                                   ins->b0,
-                                   ins->b1,
-                                   ins->b2,
-                                   ins->c0,
-                                   ins->c1,
-                                   ins->c2,
-                                   ins->index,
-                                   offset,
-                                   ins->o_U,
-                                   ins->o_V,
-                                   ins->o_NU,
-                                   ins->o_NV,
-                                   ins->o_Px,
-                                   ins->o_Py,
-                                   ins->o_rhsU,
-                                   ins->o_rhsV);
-  }
-  else{
-    // compute all forcing i.e. f^(n+1) - grad(Pr)
-    ins->helmholtzRhsForcingKernel(mesh->Nelements,
-				                          rhsPackingMode,
-                                   mesh->o_vgeo,
-                                   mesh->o_MM,
-                                   ins->a0,
-                                   ins->a1,
-                                   ins->a2,
-                                   ins->b0,
-                                   ins->b1,
-                                   ins->b2,
-    			                         ins->c0,
-                                   ins->c1,
-                                   ins->c2,
-                                   ins->index,
-                                   offset,
-                                   ins->o_U,
-                                   ins->o_V,
-                                   ins->o_NU,
-                                   ins->o_NV,
-                                   ins->o_Px,
-                                   ins->o_Py,
-                                   ins->o_rhsU,
-                                   ins->o_rhsV);
-  }
-  
+
+  iint subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
+
+    
+   // compute all forcing i.e. f^(n+1) - grad(Pr)
+  ins->helmholtzRhsForcingKernel(mesh->Nelements,
+                                 subcycling,
+			                           rhsPackingMode,
+                                 mesh->o_vgeo,
+                                 mesh->o_MM,
+                                 ins->idt,
+                                 ins->inu,
+                                 ins->a0,
+                                 ins->a1,
+                                 ins->a2,
+                                 ins->b0,
+                                 ins->b1,
+                                 ins->b2,
+                                 ins->c0,
+                                 ins->c1,
+                                 ins->c2,
+                                 ins->index,
+                                 offset,
+                                 ins->o_U,
+                                 ins->o_V,
+                                 ins->o_NU,
+                                 ins->o_NV,
+                                 ins->o_Px,
+                                 ins->o_Py,
+                                 ins->o_rhsU,
+                                 ins->o_rhsV);
+
+    
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
 				                        rhsPackingMode,
                                 mesh->o_vmapM,
@@ -91,17 +70,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-<<<<<<< HEAD
-    iint Niter;
-    printf("Solving for Ux: Niter= ");
-    Niter = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
-    printf("%d \n",Niter);
 
-    printf("Solving for Uy: Niter= ");
-    Niter = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
-    printf("%d \n",Niter);
-=======
-    
     printf("Solving for Ux ... ");
     int NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     printf("%d iteration(s)\n", NiterU);
@@ -109,8 +78,6 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     printf("Solving for Uy ... ");
     int NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     printf("%d iteration(s)\n", NiterV);
-
->>>>>>> 53cd5ee060db1fa797adbcc67b60bcdb7fdb77c2
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
     ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
