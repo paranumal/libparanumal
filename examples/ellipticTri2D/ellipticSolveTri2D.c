@@ -109,7 +109,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
         alpha += tmp[n];
       
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      alphaG *= solver->allNeumannPenalty;
+      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
 
     ellipticEndHaloExchange2D(solver, o_q, recvBuffer);

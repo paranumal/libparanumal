@@ -109,7 +109,7 @@ void pcg(parAlmond_t *parAlmond,
 
     Niter++;
 
-    //printf("Almond PCG iter %d, res = %g\n", Niter, sqrt(rdotr0));
+    printf("Almond PCG iter %d, res = %g\n", Niter, sqrt(rdotr0));
 
     if(Niter==maxIt) break;
   }

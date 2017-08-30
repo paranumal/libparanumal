@@ -4,11 +4,11 @@ void matrixInverse(int N, dfloat *A);
 
 dfloat matrixConditionNumber(int N, dfloat *A);
 
-void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFacePatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint face, dfloat *A);
 
 
-void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildFacePatchesIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -166,7 +166,7 @@ void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
 
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  BuildFacePatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+  BuildFacePatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   matrixInverse(patchNp, refPatchInvA);
 
   //store the permutations of the reference patch
@@ -198,7 +198,7 @@ void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
   for(iint face=0;face<mesh->NfacePairs;++face){
 
     //build the patch A matrix for this element
-    BuildFacePatchAx(mesh, basis, tau, lambda, BCType, MS, face, patchA);
+    BuildFacePatchAx(solver, mesh, basis, tau, lambda, BCType, MS, face, patchA);
 
     iint eM = mesh->FPairsToE[2*face+0];
     iint eP = mesh->FPairsToE[2*face+1];
@@ -266,7 +266,7 @@ void ellipticBuildFacePatchesIpdgTri2D(mesh2D *mesh, iint basisNp, dfloat *basis
   free(MS);
 }
 
-void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFacePatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint face, dfloat *A) {
 
   int NpatchElements = 2;
@@ -309,6 +309,15 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
         A[id] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
         A[id] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
         A[id] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
+      }
+    }
+
+    //add the rank boost for the allNeumann Poisson problem
+    if (solver->allNeumann) {
+      for(iint n=0;n<mesh->Np;++n){
+        for(iint m=0;m<mesh->Np;++m){ 
+          A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        }
       }
     }
 
