@@ -162,6 +162,11 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       //build ops for this level
       printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", levelDegree[n]);
       solverL = ellipticBuildMultigridLevelTri2D(solver,levelDegree,n,options);
+
+      //set the normalization constatnt for the allNeumann POisson problem on this coarse mesh
+      iint totalElements = 0;
+      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      solverL->allNeumannScale = 1.0/sqrt(solverL->mesh->Np*totalElements);
     }
 
     //check if we're at the degree 1 problem
