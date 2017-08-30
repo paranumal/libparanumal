@@ -31,7 +31,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
       dfloat y = mesh->y[id];
 
       // Compute Exact Solution
-      #if 0
+      #if 1
       dfloat uex = -sin(2.0 *M_PI*y)*exp(-nu*4.0*M_PI*M_PI*time);
       dfloat vex =  sin(2.0 *M_PI*x)*exp(-nu*4.0*M_PI*M_PI*time);
       dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-nu*8.0*M_PI*M_PI*time);

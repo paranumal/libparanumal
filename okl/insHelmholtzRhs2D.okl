@@ -1,9 +1,12 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
 kernel void insHelmholtzRhsForcing2D(const iint Nelements,
+             const iint subcycling,  
 				     const iint rhsPackingMode,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict MM,
+             const dfloat idt,
+             const dfloat inu,
 				     const dfloat a0,
 				     const dfloat a1,
 				     const dfloat a2,
@@ -70,24 +73,25 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
           const dfloat Pym2 = Py[id2];
 
       	  // // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
-          // if(p_SUBSCYCLE==0){
-          s_rhsU[es][n]  = J*p_inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*p_idt 
+          if(subcycling==0){
+          s_rhsU[es][n]  = J*inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*idt 
                                      - (c0*Pxm0+c1*Pxm1+c2*Pxm2) 
-                                     - (a0*NUm0+a1*NUm1+a2*NUm2));
-                                     //-(a0+a1+a2)*NUm0) ; 
-          s_rhsV[es][n]  = J*p_inu*( + (b0*Vm0 +b1*Vm1 +b2*Vm2 )*p_idt 
+                                     - (a0*NUm0+a1*NUm1+a2*NUm2)
+                                     );
+
+          s_rhsV[es][n]  = J*inu*( + (b0*Vm0 +b1*Vm1 +b2*Vm2 )*idt 
                                      - (c0*Pym0+c1*Pym1+c2*Pym2) 
-                                     - (a0*NVm0+a1*NVm1+a2*NVm2));
-                                     //-(a0+a1+a2)*NVm0); 
-          // }
-          // else{
-          // // New Substepiing Update
-          // s_rhsU[es][n]  = J*p_inu*( + (b0*NUm0 + b1*NUm1 + b2*NUm2 )*p_idt 
-          //                            - (c0*Pxm0+c1*Pxm1+c2*Pxm2)); 
+                                     - (a0*NVm0+a1*NVm1+a2*NVm2)
+                                     );
+          }
+          else{
+          // New Substepiing Update
+          s_rhsU[es][n]  = J*inu*( + (b0*NUm0 + b1*NUm1 + b2*NUm2 )*idt 
+                                     - (c0*Pxm0+c1*Pxm1+c2*Pxm2)); 
                                      
-          // s_rhsV[es][n]  = J*p_inu*( + (b0*NVm0+b1*NVm1+b2*NVm2 )*p_idt 
-          //                            - (c0*Pym0+c1*Pym1+c2*Pym2));                                                
-          // }
+          s_rhsV[es][n]  = J*inu*( + (b0*NVm0+b1*NVm1+b2*NVm2 )*idt 
+                                     - (c0*Pym0+c1*Pym1+c2*Pym2));                                                
+          }
 
       	}
       }
@@ -150,7 +154,7 @@ kernel void insHelmholtzRhsForcingSS2D(const iint Nelements,
         if(e<Nelements){
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           
-          const iint id0    = e*p_Np + n; 
+          const iint id0 = e*p_Np + n; 
           //U
           const dfloat utt  = Ut[id0];
           const dfloat vtt  = Vt[id0];
@@ -178,9 +182,10 @@ kernel void insHelmholtzRhsForcingSS2D(const iint Nelements,
             rhsv  += M*s_rhsV[es][i];
           }
           // Update
-        const iint id = e*p_Np+n;
-        rhsU[id] = rhsu;
-        rhsV[id] = rhsv;
+      const iint id = e*p_Np+n;
+      rhsU[id] = rhsu;
+      rhsV[id] = rhsv;
+   
         }
       }
     }

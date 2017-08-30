@@ -34,6 +34,8 @@ typedef struct {
 
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
+
+  dfloat idt, ig0, inu; // hold some inverses
   
   dfloat *U, *V, *P, *NU, *NV;   
   dfloat *rhsU, *rhsV, *rhsP;   

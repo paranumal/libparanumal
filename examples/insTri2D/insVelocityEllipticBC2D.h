@@ -23,7 +23,7 @@
 #define ellipticHomogeneousBC2D(bc,uM,uxM,uyM,uB,uxB,uyB)  \
   {                 \
     if     (bc==1) ellipticHomogeneousDirichlet2D(uM,uxM,uyM,uB,uxB,uyB) \
-    else if(bc==2) ellipticHomogeneousDirichlet2D(uM,uxM,uyM,uB,uxB,uyB) \
+    else if(bc==2) ellipticHomogeneousNeumann2D(uM,uxM,uyM,uB,uxB,uyB) \
     else if(bc==3) ellipticHomogeneousNeumann2D(uM,uxM,uyM,uB,uxB,uyB)  \
   }
 

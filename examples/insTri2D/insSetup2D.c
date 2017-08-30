@@ -92,13 +92,13 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.025;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.1;
+  ins->finalTime = 0.01;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 10.0* (mesh->N+1)*(mesh->N+1)/2.0f;
@@ -113,7 +113,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-      #if 1
+      #if 0
             dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
             //
             ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
@@ -127,7 +127,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 0
+      #if 1
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
@@ -202,7 +202,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 0
+  #if 1
   dfloat A[10]; 
   A[0] = 1e-6; 
   A[1] = 3*1e-6;  
@@ -215,15 +215,17 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   A[8] = 8*1e-4;
   A[9] = 1*1e-3;
 
-
   printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
   ins->dt = A[factor];
-
   //ins->dt = pow(2.0,factor)*1e-4;
   ins->NtimeSteps = ins->finalTime/ins->dt;
   ins->dt   = ins->finalTime/ins->NtimeSteps;
   ins->sdt  = ins->dt/ins->Nsubsteps;
   #endif
+
+  // Hold some inverses for kernels
+  ins->inu = 1.0/ins->nu; 
+  ins->idt = 1.0/ins->dt;
   
   // errorStep
   ins->errorStep =100000000;
@@ -290,8 +292,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NTfields", ins->NTfields);
   kernelInfo.addDefine("p_NVfields", ins->NVfields);
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
+  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
    iint substep = 0; 
