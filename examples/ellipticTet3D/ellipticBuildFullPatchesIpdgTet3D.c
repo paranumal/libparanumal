@@ -12,17 +12,17 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 
-void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void BuildReferenceFullPatch(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, int *signature, dfloat *A);
 
 iint getFullPatchIndex(refPatch_t *referencePatchList, iint numRefPatches, int *signature);
 
 
 
-void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -83,7 +83,7 @@ void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
-    BuildFullPatchAx(mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+    BuildFullPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
@@ -132,7 +132,7 @@ void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis
                   // signature[8], signature[9], signature[10],signature[11],
                   // signature[12], signature[13], signature[14],signature[15]);
 
-        BuildReferenceFullPatch(mesh, basis, tau, lambda, BCType, MS, signature, refPatchInvA); 
+        BuildReferenceFullPatch(solver, mesh, basis, tau, lambda, BCType, MS, signature, refPatchInvA); 
         matrixInverse(patchNp, refPatchInvA);        
         index = (*Npatches)-1;
       }
@@ -152,12 +152,12 @@ void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis
       dfloat cond = matrixConditionNumber(patchNp,invRefAA);
       dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-      printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
-      printf("Element %d has signature [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d] \n", eM,
-                  signature[0], signature[1], signature[2],signature[3],
-                  signature[4], signature[5], signature[6],signature[7],
-                  signature[8], signature[9], signature[10],signature[11],
-                  signature[12], signature[13], signature[14],signature[15]);
+      // printf("Element %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+      // printf("Element %d has signature [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d] \n", eM,
+      //             signature[0], signature[1], signature[2],signature[3],
+      //             signature[4], signature[5], signature[6],signature[7],
+      //             signature[8], signature[9], signature[10],signature[11],
+      //             signature[12], signature[13], signature[14],signature[15]);
 
 
       if (rate < rateTolerance) {
@@ -191,7 +191,7 @@ void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis
   free(MS);
 }
 
-void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {;
 
   int NpatchElements = mesh->Nfaces+1;
@@ -247,16 +247,25 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
 
         int id = N*mesh->Np*patchNp + n*patchNp + N*mesh->Np + m;
 
-	A[id]  = J*lambda*mesh->MM[n*mesh->Np+m];
-	A[id] += J*G00*mesh->Srr[n*mesh->Np+m];
-	A[id] += J*G01*mesh->Srs[n*mesh->Np+m];
-	A[id] += J*G02*mesh->Srt[n*mesh->Np+m];
-	A[id] += J*G10*mesh->Ssr[n*mesh->Np+m];
-	A[id] += J*G11*mesh->Sss[n*mesh->Np+m];
-	A[id] += J*G12*mesh->Sst[n*mesh->Np+m];
-	A[id] += J*G20*mesh->Str[n*mesh->Np+m];
-	A[id] += J*G21*mesh->Sts[n*mesh->Np+m];
-	A[id] += J*G22*mesh->Stt[n*mesh->Np+m];
+      	A[id]  = J*lambda*mesh->MM[n*mesh->Np+m];
+      	A[id] += J*G00*mesh->Srr[n*mesh->Np+m];
+      	A[id] += J*G01*mesh->Srs[n*mesh->Np+m];
+      	A[id] += J*G02*mesh->Srt[n*mesh->Np+m];
+      	A[id] += J*G10*mesh->Ssr[n*mesh->Np+m];
+      	A[id] += J*G11*mesh->Sss[n*mesh->Np+m];
+      	A[id] += J*G12*mesh->Sst[n*mesh->Np+m];
+      	A[id] += J*G20*mesh->Str[n*mesh->Np+m];
+      	A[id] += J*G21*mesh->Sts[n*mesh->Np+m];
+      	A[id] += J*G22*mesh->Stt[n*mesh->Np+m];
+      }
+    }
+
+    //add the rank boost for the allNeumann Poisson problem
+    if (solver->allNeumann) {
+      for(iint n=0;n<mesh->Np;++n){
+        for(iint m=0;m<mesh->Np;++m){ 
+          A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        }
       }
     }
 
@@ -475,7 +484,7 @@ void BuildFullPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, ii
   }
 }
 
-void BuildReferenceFullPatch(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, int *signature, dfloat *A) {
   //build a mini mesh struct for the reference patch
   mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
@@ -541,7 +550,7 @@ void BuildReferenceFullPatch(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lam
   meshSurfaceGeometricFactorsTet3D(refMesh);
 
   //build this reference patch
-  BuildFullPatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, A);
+  BuildFullPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, A);
 ;
   free(refMesh->EX);
   free(refMesh->EY);

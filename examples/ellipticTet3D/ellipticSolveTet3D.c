@@ -29,7 +29,27 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
   } else{
 
+    dfloat alpha = 0., alphaG =0.;
+    iint Nblock = solver->Nblock;
+    dfloat *tmp = solver->tmp;
+    occa::memory &o_tmp = solver->o_tmp;
+
     ellipticStartHaloExchange3D(mesh, o_q, sendBuffer, recvBuffer);
+
+    //Start the rank 1 augmentation if all BCs are Neumann
+    //TODO this could probably be moved inside the Ax kernel for better performance
+    if(solver->allNeumann) 
+      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+
+    if(solver->allNeumann) {
+      o_tmp.copyTo(tmp);
+
+      for(iint n=0;n<Nblock;++n)
+        alpha += tmp[n];
+      
+      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+    }
 
     ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
 
@@ -54,7 +74,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
          solver->tau,
          mesh->o_vgeo,
          mesh->o_sgeo,
-         mesh->o_EToB,
+         solver->o_EToB,
          mesh->o_DrT,
          mesh->o_DsT,
          mesh->o_DtT,
@@ -62,6 +82,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
          mesh->o_MM,
          solver->o_grad,
          o_Aq);
+
+    if(solver->allNeumann) 
+      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
 
     occaTimerToc(mesh->device,"ipdgKernel");
   }
@@ -151,15 +174,13 @@ dfloat ellipticInnerProduct(solver_t *solver,
   return globalab;
 }
 
-int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
+int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol, 
+                      occa::memory &o_r, occa::memory &o_x, const char *options){
 
   mesh_t *mesh = solver->mesh;
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method

@@ -93,11 +93,11 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
     
     printf("Solving for Ux ... ");
-    int NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+    int NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     printf("%d iteration(s)\n", NiterU);
 
     printf("Solving for Uy ... ");
-    int NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    int NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     printf("%d iteration(s)\n", NiterV);
 
     //copy into next stage's storage

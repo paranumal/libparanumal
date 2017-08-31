@@ -97,37 +97,9 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
-void ellipticBuildPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
-                                   const char *options);
-
 void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
                                    hgs_t **hgs, iint *globalStarts, const char *options);
-
-void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
-                                   const char *options);
-
-void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildFacePatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildFullPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
 
 //Multigrid function callbacks
 void AxTet3D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
