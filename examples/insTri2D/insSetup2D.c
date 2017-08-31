@@ -74,7 +74,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   if(strstr(options,"SUBCYCLING")){
 
-    ins->Nsubsteps = 8; //was 3
+    ins->Nsubsteps = 16; 
 
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -98,7 +98,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.01;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 10.0* (mesh->N+1)*(mesh->N+1)/2.0f;
@@ -204,16 +204,17 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   
   #if 1
   dfloat A[10]; 
-  A[0] = 1e-6; 
-  A[1] = 3*1e-6;  
-  A[2] = 8*1e-6; 
-  A[3] = 1e-5; 
-  A[4] = 3*1e-5; 
-  A[5] = 8*1e-5;  
-  A[6] = 1*1e-4;
-  A[7] = 3*1e-4;
-  A[8] = 8*1e-4;
-  A[9] = 1*1e-3;
+  A[0] = 1e-2; 
+  A[1] = 2*1e-2;  
+  A[2] = 4*1e-2; 
+  A[3] = 8*1e-2; 
+  A[4] = 1*1e-1; 
+  A[5] = 2*1e-1;  
+  A[6] = 4*1e-1;
+  A[7] = 8*1e-1;
+  A[8] = 10*1e-1;
+  
+  A[9] = 1*1e-1;
 
   printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
   ins->dt = A[factor];

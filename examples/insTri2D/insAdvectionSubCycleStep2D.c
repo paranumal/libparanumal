@@ -22,8 +22,7 @@ const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
 const iint Ntotal         =  NtotalElements*mesh->Np;  
 
 const iint voffset = 0; 
-
-   // field offset at this step
+// field offset at this step
   iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
@@ -93,7 +92,7 @@ if(activate_advection){
 
 					switch(ins->ExplicitOrder){
 						case 1:
-							c0 = 1; c1 = 0; c2 = 0;
+							c0 = 1.f; c1 = 0.f; c2 = 0.f;
 						break;
 						case 2:
 							c0 = (t-tn1)/(tn0-tn1);
@@ -250,6 +249,7 @@ if(activate_advection){
 
 
 dfloat tp1 = (tstep+1)*ins->dt;
+ 
 // Compute Volume Contribution for Pressure
 ins->gradientVolumeKernel(mesh->Nelements,
                           mesh->o_vgeo,
