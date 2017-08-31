@@ -8,9 +8,78 @@
 #define p_gllPad 0
 #define p_gjPad 0
 
+
+
+
+// [ Dr' Ds' Dt' ] [G00 G01 G02]  [ Dr ]
+//               ] [G01 G11 G12]  [ Ds ]
+//               ] [G02 G12 G22]  [ Dt ]
+
+// [ Dr' Ds' ] [G00 G01]  [ Dr ]
+//           ] [G01   0]  [ Ds ]
+
+// [ Dr' Dt' ] [  0 G02]  [ Dr ]
+//           ] [G02 G22]  [ Dt ]
+
+
+// [ Ds' Dt' ] [G11 G12]  [ Ds ]
+//           ] [G12   0]  [ Dt ]
+
+#define UNROLL0(a) a
+#define UNROLL1(a) a UNROLL0(a)
+#define UNROLL2(a) a UNROLL1(a)
+#define UNROLL3(a) a UNROLL2(a)
+#define UNROLL4(a) a UNROLL3(a)
+#define UNROLL5(a) a UNROLL4(a)
+#define UNROLL6(a) a UNROLL5(a)
+#define UNROLL7(a) a UNROLL6(a)
+#define UNROLL8(a) a UNROLL7(a)
+#define UNROLL9(a) a UNROLL8(a)
+#define UNROLL10(a) a UNROLL9(a)
+#define UNROLL11(a) a UNROLL10(a)
+#define UNROLL12(a) a UNROLL11(a)
+#define UNROLL13(a) a UNROLL12(a)
+#define UNROLL14(a) a UNROLL13(a)
+#define UNROLL15(a) a UNROLL14(a)
+#define UNROLL16(a) a UNROLL15(a)
+
+#define UNROLLN(n,a) UNROLL##n(a)
+
+
+#if p_Nq==4
+#define UNROLLNq(a) UNROLL3(a)
+#define p_Bskip 1
+#define p_Bmask 1
+#define p_Nslabs 1
+#define p_Nslab 4
+#define p_Bsize 2
+#endif
+
+#if p_Nq==8
+#define UNROLLNq(a) UNROLL7(a)
+#define p_Bskip 1
+#define p_Bmask 1
+#define p_Nslabs 2
+#define p_Nslab 4
+#define p_Bsize 2
+#endif
+
+
+#if p_Nq==16
+#define UNROLLNq(a) UNROLL15(a)
+#define p_Bskip 2
+#define p_Bmask 3
+#define p_Nslabs 4
+#define p_Nslab 4
+#define p_Bsize 4
+#endif
+
+#define p_pad 0
+
 //reg1 is a full 2d version without kernel splitting
 // interpolation/projection is based on barrier eliminating idea by TW
 // the derivative part based on one of the e6 kernels from ellipticAxJex3D.okl
+
 
 
 
@@ -34,18 +103,364 @@ kernel void ellipticAxHex3D_reg1(const iint Nelements,
 		//	exclusive iint emap;
 		//	exclusive dfloat r_res;
 		exclusive dfloat r_q[p_gjNq];
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_qt;
+		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_qt, r_tmp;
 		//save the SHARED
-		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+		volatile shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
-		shared dfloat s_gllD[p_gjNq][p_gjNq];
-		shared dfloat s_I[p_gjNq][p_Nq];
+		volatile shared dfloat s_gllD[p_gjNq][p_gjNq];
+		volatile shared dfloat s_I[p_gjNq][p_Nq];
 		shared dfloat s_qr[p_gjNq][p_gjNq+p_gjPad];
 		shared dfloat s_qs[p_gjNq][p_gjNq+p_gjPad];
 		// LOAD TO SHAEWS
 		exclusive iint emap;
 
 		// prefetch D and I matrices and zero register storage
+		for(int b=0;b<p_gjNq;++b;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+
+				emap = elementList[e];
+				//a<p_Nq && b<p_gjNq
+				if(a<p_Nq){
+					s_I[b][a] = gjI[a+p_Nq*b];
+					//    s_I[b][a] =-12.0;
+				}
+
+
+				s_gllD[b][a] = gllD[b*p_gjNq+a];
+
+
+
+
+				if(a<p_Nq && b<p_Nq){
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c){
+						s_q[c][b][a] = q[emap*p_Np+c*p_Nq*p_Nq+b*p_Nq+a];
+						
+					}
+				}
+			}
+		}
+
+
+
+		//synch threads
+		barrier(localMemFence);
+
+
+		//============== interpolate in 3 dir ========================
+		// b --> a --> c
+		// rrrrrrr
+
+
+
+
+
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+				if(a<p_Nq && c<p_Nq){
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int b=0;b<p_Nq;++b)
+						r_q[b] = s_q[c][b][a];
+
+					// transform in b
+					occaUnroll(p_gjNq)
+					for(int j=0;j<p_gjNq;++j){
+						dfloat tmp = 0;
+						occaUnroll(p_Nq)
+						for(int b=0;b<p_Nq;++b)
+							tmp += s_I[j][b]*r_q[b];
+						s_q[c][j][a] = tmp; // ok since only this thread
+					}
+				}
+			}
+		}//for c
+
+		barrier(localMemFence);
+
+		// transform in a
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int j=0;j<p_gjNq;++j;inner0){
+				if(c<p_Nq){
+
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int a=0;a<p_Nq;++a)
+						r_q[a] = s_q[c][j][a];
+
+					// transform in a
+					occaUnroll(p_gjNq)
+					for(int i=0;i<p_gjNq;++i){
+						dfloat tmp = 0;
+						occaUnroll(p_Nq)
+						for(int a=0;a<p_Nq;++a)
+							tmp += s_I[i][a]*r_q[a];
+						s_q[c][j][i] = tmp; // ok since only this thread
+					}
+				}
+			}
+		}
+
+
+
+		//now synch
+		barrier(localMemFence);
+
+
+		// transform in c
+		for(int j=0;j<p_gjNq;++j;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+				// prefetch to registers
+				occaUnroll(p_Nq)
+				for(int c=0;c<p_Nq;++c)
+					r_q[c] = s_q[c][j][i];
+
+				// transform in c
+				occaUnroll(p_gjNq)
+				for(int k=0;k<p_gjNq;++k){
+
+
+
+					dfloat tmp = 0;
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c){
+						tmp += s_I[k][c]*r_q[c];
+
+					}
+
+
+
+					s_q[k][j][i] = tmp; // ok since only this thread
+					//		Ixq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i]=s_q[k][j][i] ;
+					// result is deterministic if saved here
+				//		Aq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i] =tmp;
+				}
+			}
+		}
+
+
+
+		//===============================================now differentiate once interpolated
+		// I think this can be done using a 3-dim blocks (with/without slabbing )
+
+		//for(int e=0; e<Nelements; ++e; outer0){
+		/*
+		exclusive dfloat r_q[p_gjNq];
+			exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_tmp, r_qs, r_qt, r_qr;
+			save the SHARED
+			shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+
+			shared dfloat s_gllD[p_gjNq][p_gjNq];
+			shared dfloat s_I[p_gjNq][p_Nq];
+			// LOAD TO SHAEWS
+			exclusive iint emap;
+		*/
+		barrier(localMemFence);
+		occaUnroll(p_gjNq)
+		for(int k=0; k<p_gjNq; ++k)
+			for(int j=0;j<p_gjNq;++j;inner1)
+				for(int i=0;i<p_gjNq;++i;inner0)
+					r_q[k] =0.0f;
+
+		barrier(localMemFence);
+
+	//	occaUnroll(p_gjNq)
+		for(int k=0; k<p_gjNq; ++k) {
+			for(int j=0; j<p_gjNq; ++j; inner1) {
+				for(int i=0; i<p_gjNq; ++i; inner0) {
+					//load geofactors for my (k,j,i)
+					//		emap = elementList[e];
+
+					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					//geofactors for k j i thread
+					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
+					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
+					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
+					r_G02 = gjGeo[base+p_G02ID*p_gjNp];
+
+					r_G11 = gjGeo[base+p_G11ID*p_gjNp];
+					r_G12 = gjGeo[base+p_G12ID*p_gjNp];
+					r_G22 = gjGeo[base+p_G22ID*p_gjNp];
+					// now, put together dq/dr, qq/ds, dq/dt and dq/dI
+
+					dfloat dr = 0.0f;
+					dfloat ds = 0.0f;
+					dfloat dt = 0.0f;
+					occaUnroll(p_gjNq)
+					for (int n = 0; n<p_gjNq; ++n) {
+						dr += s_gllD[i][n]*s_q[k][j][n];
+						ds += s_gllD[j][n]*s_q[k][n][i];
+						dt += s_gllD[k][n]*s_q[n][j][i];
+					}
+
+
+					s_qr[j][i] = r_G00*dr + r_G01*ds + r_G02*dt;
+					s_qs[j][i] = r_G01*dr + r_G11*ds + r_G12*dt;
+					r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
+
+					//	r_q[k] += lambda*r_GwJ*s_q[k][j][i];
+
+
+					r_q[k] += lambda*r_GwJ*s_q[k][j][i];
+
+				}
+			}
+
+			barrier(localMemFence);
+
+			// weak diff
+			for(int j=0;j<p_gjNq;++j;inner1){
+				for(int i=0;i<p_gjNq;++i;inner0){
+					dfloat lapqr = 0.0f, lapqs = 0.0f;
+
+					occaUnroll(p_gjNq)
+					for(int n=0;n<p_gjNq;++n){
+						lapqr += s_gllD[n][i]*s_qr[j][n];
+						lapqs += s_gllD[n][j]*s_qs[n][i];
+						r_q[n] += s_gllD[k][n]*r_qt;
+					}
+
+
+
+					r_q[k] += lapqr + lapqs;
+
+
+				}
+			}
+		}//k
+
+		barrier(localMemFence);
+
+
+		for(int j=0;j<p_gjNq;++j;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+
+				occaUnroll(p_gjNq)
+				for(int k=0; k<p_gjNq; ++k) {
+					s_q[k][j][i] = r_q[k];
+					//	Aq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i] = r_q[k];
+				}
+			}
+		}
+
+// ALL CORRECT UNTIL THIS POINT
+		barrier(localMemFence);
+		//=========== now project =================================================
+		// b -> c -> a
+
+
+		// transform back in b
+		for(int k=0;k<p_gjNq;++k;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+				occaUnroll(p_gjNq)
+				for(int j=0;j<p_gjNq;++j){
+					r_q[j] = s_q[k][j][i];
+
+				}
+
+				occaUnroll(p_Nq)
+				for(int b=0;b<p_Nq;++b){
+					dfloat tmp = 0.0f;
+					occaUnroll(p_gjNq)
+					for(int j=0;j<p_gjNq;++j){
+						tmp += s_I[j][b]*r_q[j];
+					}
+					s_q[k][b][i] = tmp; // ok since only this thread
+		//			if (k<p_Nq && i<p_Nq)
+		//			Aq[emap*p_Np+k*p_Nq2+b*p_Nq+i] = tmp;
+				}
+			}
+		}
+
+		barrier(localMemFence);
+
+		// transform back in a
+		for(int k=0;k<p_gjNq;++k;inner1){
+			for(int b=0;b<p_gjNq;++b;inner0){
+				if(b<p_Nq){
+					occaUnroll(p_gjNq)
+					for(int i=0;i<p_gjNq;++i)
+						r_q[i] = s_q[k][b][i];
+
+					occaUnroll(p_Nq)
+					for(int a=0;a<p_Nq;++a){
+						dfloat tmp = 0.0f;
+						occaUnroll(p_gjNq)
+						for(int i=0;i<p_gjNq;++i){
+							tmp += s_I[i][a]*r_q[i];
+						}
+						s_q[k][b][a] =tmp;;
+					
+
+					//		if (k<p_Nq)
+						//				Aq[emap*p_Np+k*p_Nq2+b*p_Nq+a] = tmp;
+					}
+				}
+			}
+		}
+
+		barrier(localMemFence);
+		//shared dfloat s_I[p_gjNq][p_Nq];
+		// transform back in c
+		for(int b=0;b<p_gjNq;++b;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+				if(a<p_Nq && b<p_Nq){
+					//occaUnroll(p_gjNq)
+					for(int k=0;k<p_gjNq;++k){
+						r_q[k] = s_q[k][b][a];
+					}
+
+					//occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c){
+						dfloat tmp = 0.0f;
+						occaUnroll(p_gjNq)
+						for(int k=0;k<p_gjNq;++k){
+							tmp += s_I[k][c]*r_q[k];
+
+						}
+
+						//		Aq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = tmp;
+						Aq[emap*p_Np+c*p_Nq*p_Nq+b*p_Nq+a] = tmp;
+					}//c
+				}//if
+			}//a
+		}//b
+		
+		
+		
+
+	}//e
+}//kernel
+
+//reg2 is a splitting version combining best strategy for intepolation with smart slabbing
+// intepolation and projection is based on the idea of eliminating barriers
+// differentiation is based on our best skinny Ax kernel
+
+/*
+kernel void ellipticAxHex3D_reg2(const iint Nelements,
+                                 const iint * restrict elementList,
+                                 const dfloat * restrict gjGeo,
+                                 const dfloat * restrict gllD,
+                                 const dfloat * restrict gjI,
+                                 const dfloat lambda,
+                                 dfloat * restrict q,
+                                 dfloat * restrict Ixq,
+                                 dfloat * restrict Aq
+                                )
+{
+	for(int e=0; e<Nelements; ++e; outer0) {
+		//	exclusive iint emap;
+		//	exclusive dfloat r_res;
+		exclusive dfloat r_q[p_gjNq];
+		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_qt;
+		//save the SHARED
+		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
+
+		shared dfloat s_gllD[p_gjNq][p_gjNq];
+		shared dfloat s_I[p_gjNq][p_Nq];
+
+		// LOAD TO SHAEWS
+		exclusive iint emap;
 		for(int b=0;b<p_gjNq;++b;inner1){
 			for(int a=0;a<p_gjNq;++a;inner0){
 
@@ -69,9 +484,7 @@ kernel void ellipticAxHex3D_reg1(const iint Nelements,
 		barrier(localMemFence);
 
 
-		//============== interpolate in 3 dir ========================
-		// r --> s --> t
-		// rrrrrrr
+		// transform in b
 		for(int c=0;c<p_gjNq;++c;inner1){
 			for(int a=0;a<p_gjNq;++a;inner0){
 				if(a<p_Nq && c<p_Nq){
@@ -91,9 +504,8 @@ kernel void ellipticAxHex3D_reg1(const iint Nelements,
 					}
 				}
 			}
-		}//for c
+		}
 
-		//now synch
 		barrier(localMemFence);
 
 		// transform in a
@@ -132,182 +544,354 @@ kernel void ellipticAxHex3D_reg1(const iint Nelements,
 				// transform in c
 				occaUnroll(p_gjNq)
 				for(int k=0;k<p_gjNq;++k){
-
-
+					// prefetch integration weights
+					const iint id = p_Nggeo*emap*p_gjNp
+					                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
+					const dfloat r_GwJ = gjGeo[id];
 
 					dfloat tmp = 0;
 					occaUnroll(p_Nq)
-					for(int c=0;c<p_Nq;++c){
+					for(int c=0;c<p_Nq;++c)
 						tmp += s_I[k][c]*r_q[c];
-					
-					}
-					
-							occaUnroll(p_Nq)
-					for(int c=0;c<p_Nq;++c){
-						
-						r_q[c] = 0.0f;
-					}
 
-					s_q[k][j][i] = tmp; // ok since only this thread
-					//		Ixq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i]=s_q[k][j][i] ;
-					// result is deterministic if saved here
-					//	Aq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i] = tmp;
-				}
-			}
-		}
-barrier(localMemFence);
-
-
-		//===============================================now differentiate once interpolated
-		// I think this can be done using a 3-dim blocks (with/without slabbing )
-
-		//for(int e=0; e<Nelements; ++e; outer0){
-		/*
-		exclusive dfloat r_q[p_gjNq];
-			exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_tmp, r_qs, r_qt, r_qr;
-			save the SHARED
-			shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
-
-			shared dfloat s_gllD[p_gjNq][p_gjNq];
-			shared dfloat s_I[p_gjNq][p_Nq];
-			// LOAD TO SHAEWS
-			exclusive iint emap;
-		*/
-
-		for(int k=0; k<p_gjNq; ++k) {
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
-					//load geofactors for my (k,j,i)
-					//		emap = elementList[e];
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					//geofactors for k j i thread
-					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
-					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
-					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
-					r_G02 = gjGeo[base+p_G02ID*p_gjNp];
-
-					r_G11 = gjGeo[base+p_G11ID*p_gjNp];
-					r_G12 = gjGeo[base+p_G12ID*p_gjNp];
-					r_G22 = gjGeo[base+p_G22ID*p_gjNp];
-					// now, put together dq/dr, qq/ds, dq/dt and dq/dI
-
-					dfloat dr = 0.0f;
-					dfloat ds = 0.0f;
-					dfloat dt = 0.0f;
-					occaUnroll(p_gjNq)
-					for (int n = 0; n<p_gjNq; ++n) {
-						dr += s_gllD[i][n]*s_q[k][j][n];
-						ds += s_gllD[j][n]*s_q[k][n][i];
-						dt += s_gllD[k][n]*s_q[n][j][i];
-					}
-
-
-					s_qr[j][i] = r_G00*dr + r_G01*ds + r_G02*dt;
-					s_qs[j][i] = r_G01*dr + r_G11*ds + r_G12*dt;
-					r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
-
-					r_q[k] += lambda*r_GwJ*s_q[k][j][i];
-				}
-			}
-			barrier(localMemFence);
-
-			// weak diff
-			for(int j=0;j<p_gjNq;++j;inner1){
-				for(int i=0;i<p_gjNq;++i;inner0){
-					dfloat lapqr = 0.0f, lapqs = 0.0f;
-
-					occaUnroll(p_gjNq)
-					for(int n=0;n<p_gjNq;++n){
-						lapqr += s_gllD[n][i]*s_qr[j][n];
-						lapqs += s_gllD[n][j]*s_qs[n][i];
-					}
-					occaUnroll(p_gjNq)
-					for(int n=0;n<p_gjNq;++n){
-						r_q[n] += s_gllD[k][n]*r_qt;
-					}
-
-					r_q[k] += lapqr + lapqs;
-					
-					 
-				}
-			}
-		}//k
-		
-		
-		
-		
-	barrier(localMemFence);
-		//=========== now project =================================================
-		// b -> a -> c
-		for(int k=0;k<p_gjNq;++k;inner1){
-			for(int i=0;i<p_gjNq;++i;inner0){
-
-
-				occaUnroll(p_Nq)
-				for(int b=0;b<p_Nq;++b){
-					dfloat tmp = 0.0f;
-					occaUnroll(p_gjNq)
-					for(int j=0;j<p_gjNq;++j)
-						tmp += s_I[j][b]*r_q[j];
-					s_q[k][b][i] = tmp; // ok since only this thread
-					
-					
-					
-				}
-			}
-		}
-
-		barrier(localMemFence);
-
-		// transform back in a
-		for(int k=0;k<p_gjNq;++k;inner1){
-			for(int b=0;b<p_gjNq;++b;inner0){
-				if(b<p_Nq){
-					occaUnroll(p_gjNq)
-					for(int i=0;i<p_gjNq;++i)
-						r_q[i] = s_q[k][b][i];
-
-					occaUnroll(p_Nq)
-					for(int a=0;a<p_Nq;++a){
-						dfloat tmp = 0.0f;
-						occaUnroll(p_gjNq)
-						for(int i=0;i<p_gjNq;++i)
-							tmp += s_I[i][a]*r_q[i];
-						s_q[k][b][a] = tmp; // ok since only this thread
-						     
-					}
-				}
-			}
-		}
-
-		barrier(localMemFence);
-
-		// transform back in c
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
-				if(a<p_Nq && b<p_Nq){
-					occaUnroll(p_gjNq)
-					for(int k=0;k<p_gjNq;++k)
-						r_q[k] = s_q[k][b][a];
-
-					occaUnroll(p_Nq)
-					for(int c=0;c<p_Nq;++c){
-						dfloat tmp = 0.0f;
-						occaUnroll(p_gjNq)
-						for(int k=0;k<p_gjNq;++k)
-							tmp += s_I[k][c]*r_q[k];
-
-					Aq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = tmp;
-					}
+					//			s_q[k][j][i] = tmp; // ok since only this thread
+					Aq[emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i] = tmp;
 				}
 			}
 		}
 	}//e
-}//kernel
+	for(int e=0; e<Nelements; ++e; outer0) {
+		// load
 
-//reg2 is a splitting version combining best strategy for intepolation with smart slabbing
-// intepolation and projection is based on the idea of eliminating barriers
-// differentiation is based on our best skinny Ax kernel
+		shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad]; //
+		shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_D[p_Nq][p_Nq+p_pad];
+		shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+
+		exclusive int emap, r_nodeId, r_smemId;
+		exclusive dfloat r_res;
+
+		for(iint ks=0;ks<p_Nslab;++ks;inner2){
+			for(iint j=0;j<p_Nq;++j;inner1){
+				for(iint i=0;i<p_Nq;++i;inner0){
+					emap = elementList[e];
+					if(ks==0){
+						s_D[j][i] = D[j*p_Nq+i];
+						s_DT[i][j] = D[j*p_Nq+i];
+					}
+				}
+			}
+		}
+
+		occaUnroll(p_Nslabs)
+		for(iint kslab=0;kslab<p_Nslabs;++kslab){
+
+			barrier(localMemFence);
+
+			for(iint ks=0;ks<p_Nslab;++ks;inner2){
+				for(iint j=0;j<p_Nq;++j;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						const unsigned int t = i+j*p_Nq+ks*p_Nq*p_Nq;
+						const unsigned int iT = t&3;
+						const unsigned int jT = (t>>2)&3;
+						const unsigned int kT = (t>>4)&3;
+						const unsigned int iB = (t>>6)&p_Bmask;
+						const unsigned int jB = (t>>(6+p_Bskip))&p_Bmask;
+						const unsigned int kB = kslab;
+						const unsigned int id = iT+jT*4+kT*16+64*(iB+jB*p_Bsize+kB*p_Bsize*p_Bsize);
+						r_nodeId = id+emap*p_Np;
+						r_smemId = iB*4+iT + (p_Nq+p_pad)*(jB*4+jT) + kT*p_Nq*(p_Nq+p_pad);
+						s_q[0][0][r_smemId] = Aq[r_nodeId];
+
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint ks=0;ks<p_Nslab;++ks;inner2){
+				for(iint j=0;j<p_Nq;++j;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						// assume specific data layout for G00 and G01
+						const unsigned int base = emap*p_Np*p_Nggeo+(ks+kslab*p_Nslab)*p_Nq*p_Nq+j*p_Nq+i;
+						const dfloat r_G00 = ggeo[base+p_G00ID*p_Np];
+						const dfloat r_G01 = ggeo[base+p_G01ID*p_Np];
+						r_res = lambda*ggeo[base+p_GWJID*p_Np]; // lambda*GwJ
+
+						dfloat tmpr = 0, tmps = 0;
+						int n;
+
+						n=0;
+						UNROLLNq(tmpr += s_DT[n][i]*s_q[ks][j][n];++n;);
+
+						n=0;
+						UNROLLNq(tmps += s_D[j][n]*s_q[ks][n][i];++n;);
+
+						s_tmp1[ks][j][i] = r_G00*tmpr + r_G01*tmps;
+						s_tmp2[ks][j][i] = r_G01*tmpr;
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint ks=0;ks<p_Nslab;++ks;inner2){
+				for(iint j=0;j<p_Nq;++j;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+						dfloat tmpr = 0, tmps = 0;
+						int n;
+						n=0;
+						UNROLLNq(tmpr += s_D[n][i]*s_tmp1[ks][j][n]; ++n;);
+
+						n=0;
+						UNROLLNq(tmps += s_D[n][j]*s_tmp2[ks][n][i]; ++n;);
+
+						s_q[ks][j][i] = tmpr+tmps+r_res;
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint ks=0;ks<p_Nslab;++ks;inner2){
+				for(iint j=0;j<p_Nq;++j;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						Aq[r_nodeId] = s_q[0][0][r_smemId];
+					}
+				}
+			}
+		} // end of kslabbing
+	}
+
+	// cannot merge kernels because of different ordering of access and output
+	for(iint e=0; e<Nelements; ++e; outer0) {
+
+		shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_D[p_Nq][p_Nq+p_pad];
+		shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+
+		exclusive int emap, r_nodeId, r_smemId, r_res;
+
+		for(iint ks=0;ks<p_Nslab;++ks;inner2){
+			for(iint j=0;j<p_Nq;++j;inner1){
+				for(iint i=0;i<p_Nq;++i;inner0){
+					emap = elementList[e];
+					if(ks==0){
+						s_D[j][i] = D[j*p_Nq+i];
+						s_DT[i][j] = D[j*p_Nq+i];
+					}
+				}
+			}
+		}
+
+		occaUnroll(p_Nslabs)
+		for(iint jslab=0;jslab<p_Nslabs;++jslab){
+
+			barrier(localMemFence);
+
+			for(iint js=0;js<p_Nslab;++js;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						const unsigned int t = i+k*p_Nq+js*p_Nq*p_Nq;
+						const unsigned int iT = t&3;
+						const unsigned int jT = (t>>2)&3;
+						const unsigned int kT = (t>>4)&3;
+						const unsigned int iB = (t>>6)&p_Bmask;
+						const unsigned int jB = jslab;
+						const unsigned int kB = (t>>(6+p_Bskip))&p_Bmask;
+						const unsigned int id = iT+jT*4+kT*16+64*(iB+jB*p_Bsize+kB*p_Bsize*p_Bsize);
+						r_nodeId = id+emap*p_Np;
+						r_smemId = iB*4+iT + (p_Nq+p_pad)*(kB*4+kT) + p_Nq*(p_Nq+p_pad)*jT;
+						s_q[0][0][r_smemId] = q[r_nodeId];
+						r_res = Aq[r_nodeId];
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint js=0;js<p_Nslab;++js;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						const unsigned int base = emap*p_Np*p_Nggeo+(js+jslab*p_Nslab)*p_Nq*p_Nq+k*p_Nq+i; // assume ordering (j,k,i) with i fastest
+						const dfloat r_G02 = ggeo[base+p_G02ID*p_Np];
+						const dfloat r_G22 = ggeo[base+p_G22ID*p_Np];
+
+						dfloat tmpr = 0, tmpt = 0;
+
+						int n=0;
+						UNROLLNq(tmpr += s_DT[n][i]*s_q[js][k][n]; tmpt += s_D[k][n]*s_q[js][n][i]; ++n;);
+
+						s_tmp1[js][i][k] =              r_G02*tmpt;
+						s_tmp2[js][k][i] = r_G02*tmpr + r_G22*tmpt;
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint js=0;js<p_Nslab;++js;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+						dfloat tmpr = 0, tmpt = 0;
+						int n=0;
+						UNROLLNq(tmpt += s_D[n][k]*s_tmp2[js][n][i]; tmpr += s_D[n][i]*s_tmp1[js][n][k]; ++n;);
+
+						s_q[js][k][i] = tmpr+tmpt;
+
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint js=0;js<p_Nslab;++js;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint i=0;i<p_Nq;++i;inner0){
+
+						Aq[r_nodeId] = r_res + s_q[0][0][r_smemId];
+					}
+				}
+			}
+		} // end of jslabbing
+	}
+
+	for(iint e=0; e<Nelements; ++e; outer0) {
+
+		shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+		shared dfloat s_D[p_Nq][p_Nq+p_pad];
+		shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+
+		exclusive int emap, r_nodeId, r_smemId;
+		exclusive dfloat r_res;
+
+		for(iint ks=0;ks<p_Nslab;++ks;inner2){
+			for(iint j=0;j<p_Nq;++j;inner1){
+				for(iint i=0;i<p_Nq;++i;inner0){
+					emap = elementList[e];
+					if(ks==0){
+						s_D[j][i] = D[j*p_Nq+i];
+						s_DT[i][j] = D[j*p_Nq+i];
+					}
+				}
+			}
+		}
+
+		occaUnroll(p_Nslabs)
+		for(iint islab=0;islab<p_Nslabs;++islab){
+
+			for(iint is=0;is<p_Nslab;++is;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint j=0;j<p_Nq;++j;inner0){
+
+						const unsigned int t = j+k*p_Nq+is*p_Nq*p_Nq;
+						const unsigned int iT = t&3;
+						const unsigned int jT = (t>>2)&3;
+						const unsigned int kT = (t>>4)&3;
+						const unsigned int iB = islab;
+						const unsigned int jB = (t>>6)&p_Bmask;
+						const unsigned int kB = (t>>(6+p_Bskip))&p_Bmask;
+						const unsigned int id = iT+jT*4+kT*16+64*(iB+jB*p_Bsize+kB*p_Bsize*p_Bsize);
+						r_nodeId = id+emap*p_Np;
+						r_smemId = jB*4+jT + (p_Nq+p_pad)*(kB*4+kT) + p_Nq*(p_Nq+p_pad)*iT;
+						s_q[0][0][r_smemId] = q[r_nodeId];
+
+						r_res = Aq[r_nodeId];
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint is=0;is<p_Nslab;++is;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint j=0;j<p_Nq;++j;inner0){
+
+						const unsigned int base = emap*p_Np*p_Nggeo+k*p_Nq+j + p_Nq*p_Nq*(is+islab*p_Nslab); // assume ordering (i,k,j)
+						const dfloat r_G11 = ggeo[base+p_G11ID*p_Np];
+						const dfloat r_G12 = ggeo[base+p_G12ID*p_Np];
+
+						dfloat tmps = 0, tmpt = 0;
+						int n=0;
+
+						UNROLLNq(tmps += s_DT[n][j]*s_q[is][k][n]; tmpt += s_D[k][n]*s_q[is][n][j];++n;);
+
+						s_tmp1[is][k][j] = r_G11*tmps + r_G12*tmpt;
+						s_tmp2[is][k][j] = r_G12*tmps;
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint is=0;is<p_Nslab;++is;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint j=0;j<p_Nq;++j;inner0){
+
+						dfloat tmps = 0, tmpt = 0;
+						int n=0;
+						UNROLLNq(tmps += s_D[n][j]*(s_tmp1[is][k][n]); tmpt += s_D[n][k]*(s_tmp2[is][n][j]);++n;);
+						s_q[is][k][j] = tmps+tmpt;
+					}
+				}
+			}
+
+			barrier(localMemFence);
+
+			for(iint is=0;is<p_Nslab;++is;inner2){
+				for(iint k=0;k<p_Nq;++k;inner1){
+					for(iint j=0;j<p_Nq;++j;inner0){
+
+						Aq[r_nodeId] = r_res + s_q[0][0][r_smemId];
+					}
+				}
+			}
+		} // end of islabbing
+	}
+
+
+
+	//=== kernel 3
+	
+	
+	 for(int e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+    volatile shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
+    
+    exclusive dfloat r_q[p_gjNq];
+    
+    exclusive iint emap;
+    
+    // prefetch D and I matrices and zero register storage
+    for(int b=0;b<p_gjNq;++b;inner1){
+      for(int a=0;a<p_gjNq;++a;inner0){
+	
+	emap = elementList[e];
+	
+	if(a<p_Nq)
+	  s_I[b][a] = gjI[a+p_Nq*b];
+	
+	if(a<p_Nq && b<p_Nq){
+	  occaUnroll(p_Nq)
+	    for(int c=0;c<p_Nq;++c)
+	      s_q[c][b][a] = Aq[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+	}
+      }
+    }
+}
+}
+*/
 
 
 //=========== this is here for comparison and testing
@@ -424,6 +1008,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 					emap = elementList[e];
 					const iint id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
 					Ixq[id] = Iq;
+					//	Aq[id] = Iq;
 					//s_q[k][j][i];
 				}
 			}
@@ -563,6 +1148,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 					r_tmp +=tmp;
 					iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					Ixq[base] = r_tmp;
+					//		Aq[base] = r_tmp;
 				}
 			}
 		}
@@ -621,7 +1207,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 		}
 
 
-
+		// shared dfloat s_I[p_gjNq][p_Nq];
 
 		// r direction
 		barrier(localMemFence);
