@@ -32,6 +32,8 @@ typedef struct {
   iint   index;       // Index of current state
   iint   errorStep; 
 
+  //solver tolerances
+  dfloat presTOL, velTOL;
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
   dfloat *rhsU, *rhsV, *rhsP;

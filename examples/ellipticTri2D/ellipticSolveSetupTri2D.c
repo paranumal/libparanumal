@@ -117,6 +117,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
+  //add standard boundary functions
+  char *boundaryHeaderFileName;
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -240,11 +245,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->partialIpdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
                "ellipticPartialAxIpdgTri2D",
-               kernelInfo);
-
-  solver->rhsBCIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
-               "ellipticRhsBCIpdgTri2D",
                kernelInfo);
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays

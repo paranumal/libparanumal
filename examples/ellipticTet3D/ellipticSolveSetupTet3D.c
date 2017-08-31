@@ -80,6 +80,35 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  //check all the bounaries for a Dirichlet
+  bool allNeumann = (lambda==0) ? true :false;
+  solver->allNeumannPenalty = 1;
+  iint totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+  
+  solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
+      if (bc>0) {
+        int BC = BCType[bc]; //get the type of boundary
+        solver->EToB[e*mesh->Nfaces+f] = BC; //record it
+        if (BC!=2) allNeumann = false; //check if its a Dirchlet
+      }
+    }
+  }
+  MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
+  printf("allNeumann = %d \n", solver->allNeumann);
+
+  solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
+
+
+  //add standard boundary functions
+  char *boundaryHeaderFileName;
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
   if(mesh->device.mode()=="CUDA"){ 
     kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
@@ -134,6 +163,16 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 				       "put",
 				       kernelInfo);
 
+  mesh->sumKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+               "sum",
+               kernelInfo);
+
+  mesh->addScalarKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+               "addScalar",
+               kernelInfo);
+
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
                "ellipticAxTet3D",
@@ -179,11 +218,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
 				       "ellipticAxIpdgTet3D",
 				       kernelInfo);
-
-  solver->rhsBCIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTet3D.okl",
-               "ellipticRhsBCIpdgTet3D",
-               kernelInfo);
 
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays

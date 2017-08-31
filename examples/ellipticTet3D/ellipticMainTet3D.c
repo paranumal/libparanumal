@@ -27,7 +27,7 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=FULLPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
@@ -59,19 +59,6 @@ int main(int argc, char **argv){
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupTet3D(mesh, kernelInfo);
-
-  // capture header file
-  char *boundaryHeaderFileName;
-  if(argc==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/homogeneous3D.h"); // default
-  else
-    boundaryHeaderFileName = strdup(argv[3]);
-  //add user defined boundary data
-  kernelInfo.addInclude(boundaryHeaderFileName);
-
-  //add standard boundary functions
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
-  kernelInfo.addInclude(boundaryHeaderFileName);
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
@@ -113,8 +100,22 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
+  // capture header file
+  char *boundaryHeaderFileName;
+  if(argc==3)
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/homogeneous3D.h"); // default
+  else
+    boundaryHeaderFileName = strdup(argv[3]);
+  //add user defined boundary data
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
+    solver->rhsBCIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTet3D.okl",
+               "ellipticRhsBCIpdgTet3D",
+               kernelInfo);
+
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
                            mesh->o_vmapM,
@@ -135,7 +136,9 @@ int main(int argc, char **argv){
                            o_r);
   }
 
-  ellipticSolveTet3D(solver, lambda, o_r, o_x, options);
+  // convergence tolerance
+  dfloat tol = 1e-8;
+  ellipticSolveTet3D(solver, lambda, tol, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);

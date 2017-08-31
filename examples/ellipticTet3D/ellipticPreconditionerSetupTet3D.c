@@ -41,6 +41,8 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Rows,
                        Cols,
                        Vals,
+                       solver->allNeumann,
+                       solver->allNeumannPenalty,
                        hgs);
 
     free(A); free(Rows); free(Cols); free(Vals);
@@ -125,7 +127,7 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     dfloat *invDiagA;
 
-    ellipticBuildJacobiIpdgTet3D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+    ellipticBuildJacobiIpdgTet3D(solver, mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
   }

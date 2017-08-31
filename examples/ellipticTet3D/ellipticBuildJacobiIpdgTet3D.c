@@ -1,9 +1,9 @@
 #include "ellipticTet3D.h"
 
-void BuildLocalPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options){
@@ -44,7 +44,7 @@ void ellipticBuildJacobiIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
-    BuildLocalPatchAx(mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+    BuildLocalPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
     // compute the diagonal entries
     for(iint n=0;n<mesh->Np;++n){
