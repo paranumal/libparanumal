@@ -17,7 +17,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, SUBCYCLING adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
   char *velSolverOptions =
@@ -52,7 +52,7 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  for(iint i=3; i<10; i++){
+  for(iint i=0; i<9; i++){
     //iint i=0; 
     printf("Setup INS Solver: \n");
     ins_t *ins = insSetup2D(mesh,i,options, velSolverOptions,velParAlmondOptions,
