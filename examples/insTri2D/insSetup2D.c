@@ -98,7 +98,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 0.1;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 10.0* (mesh->N+1)*(mesh->N+1)/2.0f;
@@ -177,7 +177,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
    // dfloat cfl = pow(2,factor)*0.05;
-  dfloat cfl = 0.01; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -202,7 +202,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 1
+  #if 0
   dfloat A[10]; 
   A[0] = 1e-2; 
   A[1] = 2*1e-2;  
@@ -295,7 +295,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
-  kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
+  //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
    iint substep = 0; 
    if(strstr(options,"SUBCYCLING")){ substep = 1;}
@@ -439,7 +439,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
              kernelInfo);  
 
 
-if(strstr(options, "ALGEBRAIC")){
+// if(strstr(options, "ALGEBRAIC")){
  
   // ===========================================================================
   printf("Compiling Advection volume kernel with cubature integration\n");
@@ -534,120 +534,120 @@ if(strstr(options, "ALGEBRAIC")){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
 				       "insUpdateUpdate2D",
 				       kernelInfo);
-  // ===========================================================================//
- } else {
+ //  // ===========================================================================//
+ // } else {
 
-  printf("Compiling Advection volume kernel with cubature integration\n");
-  ins->advectionCubatureVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-               "insAdvectionCubatureVolume2D",
-               kernelInfo);
+ //  printf("Compiling Advection volume kernel with cubature integration\n");
+ //  ins->advectionCubatureVolumeKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+ //               "insAdvectionCubatureVolume2D",
+ //               kernelInfo);
 
-  printf("Compiling Advection surface kernel with cubature integration\n");
-  ins->advectionCubatureSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-               "insAdvectionCubatureSurface2D",
-               kernelInfo);
+ //  printf("Compiling Advection surface kernel with cubature integration\n");
+ //  ins->advectionCubatureSurfaceKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+ //               "insAdvectionCubatureSurface2D",
+ //               kernelInfo);
 
-  printf("Compiling Advection volume kernel with collocation integration\n");
-  ins->advectionVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-               "insAdvectionVolume2D",
-               kernelInfo);
+ //  printf("Compiling Advection volume kernel with collocation integration\n");
+ //  ins->advectionVolumeKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+ //               "insAdvectionVolume2D",
+ //               kernelInfo);
 
-  printf("Compiling Advection surface kernel with collocation integration\n");
-  ins->advectionSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-               "insAdvectionSurface2D",
-               kernelInfo);
+ //  printf("Compiling Advection surface kernel with collocation integration\n");
+ //  ins->advectionSurfaceKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+ //               "insAdvectionSurface2D",
+ //               kernelInfo);
 
-  printf("Compiling Advection surface kernel with collocation integration\n");
-  ins->advectionUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-               "insAdvectionUpdateSS2D",
-               kernelInfo);
+ //  printf("Compiling Advection surface kernel with collocation integration\n");
+ //  ins->advectionUpdateKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
+ //               "insAdvectionUpdateSS2D",
+ //               kernelInfo);
 
-  // ===========================================================================//
-  printf("Compiling Poisson Curl kernel\n");
-  ins->poissonRhsCurlKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-               "insPoissonRhsCurlSS2D",
-               kernelInfo);
+ //  // ===========================================================================//
+ //  printf("Compiling Poisson Curl kernel\n");
+ //  ins->poissonRhsCurlKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+ //               "insPoissonRhsCurlSS2D",
+ //               kernelInfo);
 
-  printf("Compiling Poisson Neumann kernel\n");
-  ins->poissonRhsNeumannKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-               "insPoissonRhsNeumann2D",
-               kernelInfo);
- // ===========================================================================
+ //  printf("Compiling Poisson Neumann kernel\n");
+ //  ins->poissonRhsNeumannKernel=
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+ //               "insPoissonRhsNeumann2D",
+ //               kernelInfo);
+ // // ===========================================================================
 
-  printf("Compiling Divergence volume kernel with collocation integration\n");
-  ins->divergenceVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
-               "insDivergenceVolume2D",
-               kernelInfo);
+ //  printf("Compiling Divergence volume kernel with collocation integration\n");
+ //  ins->divergenceVolumeKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
+ //               "insDivergenceVolume2D",
+ //               kernelInfo);
 
-    printf("Compiling Divergencesurface kernel with collocation integration\n");
-  ins->divergenceSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
-               "insDivergenceSurface2D",
-               kernelInfo);
+ //    printf("Compiling Divergencesurface kernel with collocation integration\n");
+ //  ins->divergenceSurfaceKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
+ //               "insDivergenceSurface2D",
+ //               kernelInfo);
 
-  // ===========================================================================
+ //  // ===========================================================================
 
-  printf("Compiling Poisson Forcing kernel\n");
-  ins->poissonRhsForcingKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-               "insPoissonRhsForcingSS2D",
-               kernelInfo);
+ //  printf("Compiling Poisson Forcing kernel\n");
+ //  ins->poissonRhsForcingKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+ //               "insPoissonRhsForcingSS2D",
+ //               kernelInfo);
 
-  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
-  ins->poissonRhsIpdgBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-               "insPoissonRhsIpdgBC2D",
-               kernelInfo);
+ //  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
+ //  ins->poissonRhsIpdgBCKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+ //               "insPoissonRhsIpdgBC2D",
+ //               kernelInfo);
 
-  // ===========================================================================
-  printf("Compiling Gradient volume kernel with collocation integration\n");
-  ins->gradientVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
-               "insGradientVolume2D",
-               kernelInfo);
+ //  // ===========================================================================
+ //  printf("Compiling Gradient volume kernel with collocation integration\n");
+ //  ins->gradientVolumeKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
+ //               "insGradientVolume2D",
+ //               kernelInfo);
 
-  printf("Compiling Gradient volume kernel with collocation integration\n");
-  ins->gradientSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
-               "insGradientSurface2D",
-               kernelInfo);
+ //  printf("Compiling Gradient volume kernel with collocation integration\n");
+ //  ins->gradientSurfaceKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
+ //               "insGradientSurface2D",
+ //               kernelInfo);
 
-  // ===========================================================================
+ //  // ===========================================================================
   
-  printf("Compiling Poisson Update Kernel \n");
-  ins->poissonUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
-               "insPoissonUpdate2D",
-               kernelInfo);
-  printf("Compiling Poisson penalty surface kernel\n");
-  ins->poissonPenaltyKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
-               "insPoissonPenalty2D",
-               kernelInfo);
+ //  printf("Compiling Poisson Update Kernel \n");
+ //  ins->poissonUpdateKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
+ //               "insPoissonUpdate2D",
+ //               kernelInfo);
+ //  printf("Compiling Poisson penalty surface kernel\n");
+ //  ins->poissonPenaltyKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
+ //               "insPoissonPenalty2D",
+ //               kernelInfo);
 
-   // ===========================================================================
-  printf("Compiling Helmholtz Rhs Forcing  kernel\n");
-  ins->helmholtzRhsForcingKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-               "insHelmholtzRhsForcingSS2D",
-               kernelInfo);
+ //   // ===========================================================================
+ //  printf("Compiling Helmholtz Rhs Forcing  kernel\n");
+ //  ins->helmholtzRhsForcingKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+ //               "insHelmholtzRhsForcingSS2D",
+ //               kernelInfo);
 
-  printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
-  ins->helmholtzRhsIpdgBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
-               "insHelmholtzRhsIpdgBC2D",
-               kernelInfo);
+ //  printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
+ //  ins->helmholtzRhsIpdgBCKernel =
+ //    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
+ //               "insHelmholtzRhsIpdgBC2D",
+ //               kernelInfo);
 
 
- }   
+ // }   
 #if 0
   void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
 			       iint *BCType, nonZero_t **A, iint *nnzA,
