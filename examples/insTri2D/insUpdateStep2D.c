@@ -79,7 +79,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
   // V <= V - dt/g0 * d(pressure increment)/dy
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,
-                              ins->g0,
+                              ins->ig0,
                               ins->a0,
                               ins->a1,
                               ins->a2,

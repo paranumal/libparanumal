@@ -11,15 +11,15 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
-  int index1 = (ins->index+1)%3;
-
-  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  int index1   = (ins->index+1)%3;
+  iint offset  = mesh->Nelements+mesh->totalHaloPairs;
+  iint ioffset = index1*offset;
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                mesh->totalHaloPairs,
                                mesh->o_haloElementList,
-                               offset,
+                               ioffset,
                                ins->o_U,
                                ins->o_V,
                                ins->o_vHaloBuffer);
@@ -39,7 +39,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                              mesh->o_vgeo,
                              mesh->o_DrT,
                              mesh->o_DsT,
-                             offset,
+                             ioffset,
                              ins->o_U,
                              ins->o_V,
                              ins->o_rhsP);
@@ -52,7 +52,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
-                                  offset,
+                                  ioffset,
                                   ins->o_U,
                                   ins->o_V,
                                   ins->o_vHaloBuffer);
@@ -69,7 +69,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               t,
                               mesh->o_x,
                               mesh->o_y,
-                              offset,
+                              ioffset,
                               ins->o_U,
                               ins->o_V,
                               ins->o_rhsP);

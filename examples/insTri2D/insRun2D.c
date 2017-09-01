@@ -99,6 +99,8 @@ void insRun2D(ins_t *ins, char *options){
     
   #endif
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
+    ins->idt = 1.0/ins->dt; 
+    ins->ig0 = 1.0/ins->g0;
 
     if(strstr(options,"ALGEBRAIC")){
      switch(subcycling){
@@ -151,7 +153,7 @@ void insRun2D(ins_t *ins, char *options){
     }
     
 #if 1 // For time accuracy test fed history with exact solution
-    if(tstep<2){
+    if(tstep<1){
       iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt = (tstep+1)*ins->dt;
      // Overwrite Velocity
