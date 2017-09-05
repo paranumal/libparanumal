@@ -70,14 +70,27 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-
     printf("Solving for Ux ... ");
+    mesh->device.finish();
+    occa::tic("Ux-Solve");
+    
     int NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
-    printf("%d iteration(s)\n", NiterU);
+    mesh->device.finish();
+    occa::toc("Ux-Solve"); 
+
+     printf("%d iteration(s)\n", NiterU);
+   
+
 
     printf("Solving for Uy ... ");
+    mesh->device.finish();
+    occa::tic("Uy-Solve");
     int NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    mesh->device.finish();
+    occa::toc("Uy-Solve");
     printf("%d iteration(s)\n", NiterV);
+
+    
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
     ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);

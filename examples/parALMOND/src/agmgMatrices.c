@@ -748,7 +748,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
 
   dfloat alphaG = 0.;
 
-  occaTimerToc(parAlmond->device,"hyb smoothChebyshev");
+  occaTimerTic(parAlmond->device,"hyb smoothChebyshev");
 
   if(x_is_zero){ //skip the Ax if x is zero
     //res = D^{-1}r
