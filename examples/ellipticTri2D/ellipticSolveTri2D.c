@@ -273,7 +273,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   iint Niter = 0;
   //sanity check
   if (rdotr0<=(tol*tol)) {
-    printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
+   // printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
+    occaTimerToc(mesh->device,"PCG");
     return 0;
   }
 
@@ -402,7 +403,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   occaTimerToc(mesh->device,"PCG");
 
-  occa::printTimer();
+ //occa::printTimer();
 
   return Niter;
 

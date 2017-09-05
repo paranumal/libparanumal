@@ -98,10 +98,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.1;
+  ins->finalTime = 0.5;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 10.0* (mesh->N+1)*(mesh->N+1)/2.0f;
+  ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f;
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -127,14 +127,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 1
+      #if 0
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
       #endif
 
 
-      #if 0 // Zero flow
+      #if 1 // Zero flow
             ins->U[id] = 0.0;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
@@ -175,22 +175,22 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   // Maximum Velocity
   umax = sqrt(umax);
 
-  // dfloat cfl = pow(2,factor)*0.05*ins->Nsubsteps; // pretty good estimate (at least for subcycling LSERK4)
-   // dfloat cfl = pow(2,factor)*0.05;
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+ 
+  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
-  dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
+  dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
-  printf("cfl = %g\n", cfl);
-  printf("dt = %g\n", dt);
+  printf("cfl = %g\n",  cfl);
+  printf("dt = %g\n",   dt);
 
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   if(strstr(options,"SUBCYCLING")){
+    ins->dt         = ins->Nsubsteps*ins->dt;
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
     ins->sdt        = ins->dt/ins->Nsubsteps;
@@ -229,7 +229,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->idt = 1.0/ins->dt;
   
   // errorStep
-  ins->errorStep =100000000;
+  ins->errorStep =10;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 

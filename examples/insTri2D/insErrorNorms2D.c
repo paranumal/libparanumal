@@ -10,7 +10,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_P.copyTo(ins->P);
 
 
-  #if 1
+  #if 0
 
   const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
   //
@@ -328,13 +328,17 @@ for(iint e=0;e<mesh->Nelements;++e){
 }
 }
 
-// Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
-char fname[BUFSIZ];
-sprintf(fname, "/u0/outputs/ins2D/DragLift.dat");
-FILE *fp;
-fp = fopen(fname, "a");
-fprintf(fp,"%d %.5e %.5e %.5e\n", mesh->N, time, cd, cl);
-fclose(fp);
+int rank;
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+if(rank==0){
+  // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
+  char fname[BUFSIZ];
+  sprintf(fname, "/u0/outputs/ins2D/DragLift.dat");
+  FILE *fp;
+  fp = fopen(fname, "a");
+  fprintf(fp,"%d %.5e %.5e %.5e\n", mesh->N, time, cd, cl);
+  fclose(fp);
+}
 
 free(dUdx);
 free(dVdx);
