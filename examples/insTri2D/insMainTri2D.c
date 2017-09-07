@@ -17,7 +17,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, SUBCYCLING adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, SUBCYCLING adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
  
   char *velSolverOptions =
@@ -34,9 +34,10 @@ int main(int argc, char **argv){
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
 
-  if(argc!=3 && argc!=4){
+  if(argc!=3 && argc!=4 && argc!=5){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
     printf("usage 2: ./main meshes/cavityH005.msh N insUniformFlowBoundaryConditions.h\n");
+    printf("usage 3: ./main meshes/cavityH005.msh N insUniformFlowBoundaryConditions.h Nsubstep\n");
     exit(-1);
   }
   // int specify polynomial degree
@@ -53,9 +54,13 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   //for(iint i=0; i<9; i++){
-    iint i=0; 
+  int Ns = 1;
+  if(argc==5)
+   Ns = atoi(argv[4]); // Number of substeps
+  
+    
     printf("Setup INS Solver: \n");
-    ins_t *ins = insSetup2D(mesh,i,options, velSolverOptions,velParAlmondOptions,
+    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,velParAlmondOptions,
                             prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
 
     printf("OCCA Run: \n");
