@@ -4,10 +4,10 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -88,7 +88,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basi
 
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  BuildLocalPatchAx(refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+  BuildLocalPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   matrixInverse(mesh->Np, refPatchInvA);
 
   dfloat maxRate =0.;
@@ -98,7 +98,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basi
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
-    BuildLocalPatchAx(mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+    BuildLocalPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
@@ -164,7 +164,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(mesh3D *mesh, iint basisNp, dfloat *basi
 }
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {
 
   iint vbase = eM*mesh->Nvgeo;
@@ -206,6 +206,15 @@ void BuildLocalPatchAx(mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, i
       A[n*mesh->Np+m] += J*G20*mesh->Str[n*mesh->Np+m];
       A[n*mesh->Np+m] += J*G21*mesh->Sts[n*mesh->Np+m];
       A[n*mesh->Np+m] += J*G22*mesh->Stt[n*mesh->Np+m];
+    }
+  }
+
+  //add the rank boost for the allNeumann Poisson problem
+  if (solver->allNeumann) {
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){ 
+        A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+      }
     }
   }
 

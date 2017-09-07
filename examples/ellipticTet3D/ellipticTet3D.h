@@ -29,9 +29,14 @@ typedef struct {
 
   dfloat tau;
 
+  bool allNeumann;
+  dfloat allNeumannPenalty;
+  dfloat allNeumannScale;
+
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
 
+  int *EToB;
   dfloat *sendBuffer, *recvBuffer;
 
   occa::memory o_p; // search direction
@@ -74,11 +79,32 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticPreconditioner3D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 
-int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
+int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
 
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
 solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
+
+void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda,
+                                   iint *BCType, dfloat **invDiagA,
+                                   const char *options);
+
+void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
 
 //smoother setups
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);

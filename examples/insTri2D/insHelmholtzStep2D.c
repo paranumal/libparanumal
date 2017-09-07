@@ -74,7 +74,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     mesh->device.finish();
     occa::tic("Ux-Solve");
     
-    ins->NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+    ins->NiterU = ellipticSolveTri2D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     mesh->device.finish();
     occa::toc("Ux-Solve"); 
 
@@ -85,7 +85,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     //  printf("Solving for Uy ... ");
     mesh->device.finish();
     occa::tic("Uy-Solve");
-    ins->NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    ins->NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     mesh->device.finish();
     occa::toc("Uy-Solve");
     //  printf("%d iteration(s)\n", ins->NiterV);
