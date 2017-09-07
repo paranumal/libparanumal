@@ -333,10 +333,13 @@ MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 if(rank==0){
   // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
   char fname[BUFSIZ];
-  sprintf(fname, "/u0/outputs/ins2D/DragLift.dat");
+  //sprintf(fname, "/u0/outputs/ins2D/Report.dat");
+  sprintf(fname, "report_Ns%d_N%d.dat",ins->Nsubsteps, mesh->N);
+
+
   FILE *fp;
   fp = fopen(fname, "a");
-  fprintf(fp,"%d %.5e %.5e %.5e\n", mesh->N, time, cd, cl);
+  fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e\n", mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, cd, cl);
   fclose(fp);
 }
 

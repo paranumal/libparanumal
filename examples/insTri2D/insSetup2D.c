@@ -74,7 +74,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   if(strstr(options,"SUBCYCLING")){
 
-    ins->Nsubsteps = 16; 
+    ins->Nsubsteps = factor; 
 
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -98,10 +98,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.5;
+  ins->finalTime = 250.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f;
+  ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -229,7 +229,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->idt = 1.0/ins->dt;
   
   // errorStep
-  ins->errorStep =10;
+  ins->errorStep =10*16/ins->Nsubsteps;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 

@@ -28,6 +28,9 @@ void insRun2D(ins_t *ins, char *options){
 
  
   occa::initTimer(mesh->device);
+
+  occaTimerTic(mesh->device,"INS");
+
  //ins->NtimeSteps = 100;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
@@ -106,51 +109,44 @@ void insRun2D(ins_t *ins, char *options){
     if(strstr(options,"ALGEBRAIC")){
      switch(subcycling){
       case 1:
+        occaTimerTic(mesh->device,"AdvectionSubStep");
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
+         occaTimerToc(mesh->device,"AdvectionSubStep");
       break;
 
       case 0:
-      // VOLUME KERNELS
-      mesh->device.finish();
-      occa::tic("AdvectionStep");
-      occaTimerTic(mesh->device,"AdvectionStep");
 
-      printf("Without substepping.....\n");
+      occaTimerTic(mesh->device,"AdvectionStep");
       insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-      mesh->device.finish();
-      occa::toc("AdvectionStep");  
-     // occaTimerToc(mesh->device,"AdvectionStep");
+      occaTimerToc(mesh->device,"AdvectionStep");
       break;
     }
 
-    mesh->device.finish();
-    occa::tic("HelmholtzStep");
-    // occaTimerTic(mesh->device,"HelmholtzStep");
-    insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-    mesh->device.finish();
-    occa::toc("HelmholtzStep");  
-    // occaTimerToc(mesh->device,"HelmholtzStep");
 
-    // mesh->device.finish();
-    // occa::tic("PoissonStep");
+    occaTimerTic(mesh->device,"HelmholtzStep");
+    insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options); 
+    occaTimerToc(mesh->device,"HelmholtzStep");
+
+    occaTimerTic(mesh->device,"PoissonStep");
     insPoissonStep2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
-    // mesh->device.finish();
-    // occa::toc("PoissonStep");  
+    occaTimerToc(mesh->device,"PoissonStep");
     
-    // mesh->device.finish();
-    // occa::tic("UpdateStep");
+    occaTimerTic(mesh->device,"UpdateStep");
     insUpdateStep2D(ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
-    // mesh->device.finish();
-    // occa::toc("UpdateStep");  
-    } else {
+    occaTimerToc(mesh->device,"UpdateStep"); 
+    
+    } 
 
+    else {
     insAdvectionStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insPoissonStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insHelmholtzStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     }
 
-    printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
+    // printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
+    
 
+    occaTimerTic(mesh->device,"Report");
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(10*ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
@@ -161,10 +157,13 @@ void insRun2D(ins_t *ins, char *options){
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
+        //printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
+    occaTimerToc(mesh->device,"Report");
+
     
 #if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
@@ -212,6 +211,8 @@ free(vSendBuffer);
 free(vRecvBuffer);
 free(pSendBuffer);
 free(pRecvBuffer);
+
+occaTimerToc(mesh->device,"INS");
 
 occa::printTimer();
 

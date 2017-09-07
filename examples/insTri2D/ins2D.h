@@ -31,7 +31,8 @@ typedef struct {
   iint   Nstages;     // Number of history states to store
   iint   index;       // Index of current state
   iint   errorStep; 
-
+  
+  iint NiterU, NiterV, NiterP;
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
 
