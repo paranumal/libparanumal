@@ -74,11 +74,11 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 
     int Niter = 0; 
     printf("Solving for Ux: Niter= ");
-    Niter = ellipticSolveTri2D( solver, ins->lambda, ins->o_rhsU, ins->o_Ut, ins->vSolverOptions);
+    Niter = ellipticSolveTri2D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_Ut, ins->vSolverOptions);
     printf("%d \n",Niter);
 
     printf("Solving for Uy: Niter= ");
-    Niter = ellipticSolveTri2D(solver, ins->lambda, ins->o_rhsV, ins->o_Vt, ins->vSolverOptions);
+    Niter = ellipticSolveTri2D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_Vt, ins->vSolverOptions);
     printf("%d \n",Niter);
    
     //copy into next stage's storage

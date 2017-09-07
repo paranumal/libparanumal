@@ -105,13 +105,13 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
     printf("Solving for Ux \n");
-    ellipticSolveTet3D( solver, ins->lambda, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+    ellipticSolveTet3D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
     
     printf("Solving for Uy \n");
-    ellipticSolveTet3D(solver, ins->lambda, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+    ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     
     printf("Solving for Uz \n");
-    ellipticSolveTet3D(solver, ins->lambda, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
+    ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
     //copy into next stage's storage
     int index1 = (ins->index+1)%3; //hard coded for 3 stages
     ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);

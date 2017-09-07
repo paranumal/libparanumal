@@ -139,6 +139,6 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
 
   
   printf("Solving for P \n");
-  ellipticSolveTet3D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
+  ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
 
 }

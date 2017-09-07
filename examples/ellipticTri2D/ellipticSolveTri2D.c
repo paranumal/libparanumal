@@ -230,15 +230,13 @@ dfloat ellipticInnerProduct(solver_t *solver,
   return globalab;
 }
 
-int ellipticSolveTri2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
+int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, 
+                        occa::memory &o_r, occa::memory &o_x, const char *options){
 
   mesh_t *mesh = solver->mesh;
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-8;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method

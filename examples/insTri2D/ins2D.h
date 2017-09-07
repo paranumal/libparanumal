@@ -34,8 +34,11 @@ typedef struct {
   
   iint NiterU, NiterV, NiterP;
 
-  dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
+//solver tolerances
+  dfloat presTOL, velTOL;
 
+
+  dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
   dfloat idt, ig0, inu; // hold some inverses
   
   dfloat *U, *V, *P, *NU, *NV;   
@@ -91,7 +94,6 @@ typedef struct {
   occa::kernel poissonUpdateKernel; //SS
   occa::kernel poissonRhsCurlKernel; // SS
   occa::kernel poissonRhsNeumannKernel; // SS
-
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
   occa::kernel poissonPenaltyKernel;
@@ -118,6 +120,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint i, char *options,
                   char *bdryHeaderFileName);
 
 void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
+
+void insRun2D(ins_t *solver, char *options);
 void insPlotVTU2D(ins_t *solver, char *fileNameBase);
 void insReport2D(ins_t *solver, iint tstep, char *options);
 void insError2D(ins_t *solver, dfloat time, char *options);

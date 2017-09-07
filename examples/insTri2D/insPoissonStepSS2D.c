@@ -105,7 +105,7 @@ if(strstr(options,"BROKEN")){
   ins->o_Pt.copyFrom(ins->o_P,Ntotal*mesh->Np*sizeof(dfloat),0,ins->index*Ntotal*mesh->Np*sizeof(dfloat));
   iint Niter;
   printf("Solving for Pr: Niter= ");
-  Niter= ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_Pt,  ins->pSolverOptions); 
+  Niter= ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_Pt,  ins->pSolverOptions); 
   printf("%d\n", Niter); 
 
   int index1 = (ins->index+1)%3; //hard coded for 3 stages
