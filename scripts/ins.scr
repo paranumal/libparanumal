@@ -9,6 +9,9 @@ make realclean; make -j;
 ./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  1 insUniform2D.h 16 >> output.dat
 
 
+
+
+
 #./insMainTri2D ../../meshes/insVortex2D.msh 3 insVortex2D.h
 #./insMainTri2D ../../meshes/insVortex2D.msh 4 insVortex2D.h
 #./insMainTri2D ../../meshes/insVortex2D.msh 5 insVortex2D.h
