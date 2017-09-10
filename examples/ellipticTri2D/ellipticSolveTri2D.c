@@ -267,10 +267,17 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  
+  // Store initial residual norm for relative residual
+  // If absolute initial error  is too low (1e-12) skip relative residual
+  dfloat n2b = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
+
+  printf("initial error norm2: %.5e\n",n2b);
+
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
-  if (rdotr0<=(tol*tol)) {
+  if (rdotr0<=(tol*tol*n2b)) {
    // printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
     occaTimerToc(mesh->device,"PCG");
     return 0;
@@ -302,7 +309,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
-  while(rdotr0>(tol*tol)){
+  while(rdotr0>(tol*tol*n2b)){
 
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options);
@@ -326,7 +333,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if(rdotr1 < tol*tol) {
+    if(rdotr1 < tol*tol*n2b) {
       rdotr0 = rdotr1;
       break;
     }
@@ -367,11 +374,13 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     rdotr0 = rdotr1;
 
     if((rank==0)&&(strstr(options,"VERBOSE")))
-      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
     ++Niter;
 
   }
+
+   
 
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
