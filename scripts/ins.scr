@@ -2,28 +2,12 @@
 cd ../examples/insTri2D;
 make realclean; make -j; 
 
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  1 insUniform2D.h 16  >> Ns16.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  2 insUniform2D.h 16  >> Ns16.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  3 insUniform2D.h 16  >> Ns16.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  4 insUniform2D.h 16  >> Ns16.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  5 insUniform2D.h 16  >> Ns16.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  6 insUniform2D.h 16  >> Ns16.dat
-
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  1 insUniform2D.h 8  >> Ns8.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  2 insUniform2D.h 8  >> Ns8.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  3 insUniform2D.h 8  >> Ns8.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  4 insUniform2D.h 8  >> Ns8.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  5 insUniform2D.h 8  >> Ns8.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  6 insUniform2D.h 8  >> Ns8.dat
-
-
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  1 insUniform2D.h 4  >> Ns4.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  2 insUniform2D.h 4  >> Ns4.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  3 insUniform2D.h 4  >> Ns4.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  4 insUniform2D.h 4  >> Ns4.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  5 insUniform2D.h 4  >> Ns4.dat
-./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  6 insUniform2D.h 4  >> Ns4.dat
-
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  1 insUniform2D.h 0  >> Ns0.dat
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  2 insUniform2D.h 0  >> Ns0.dat
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  3 insUniform2D.h 0  >> Ns0.dat
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  4 insUniform2D.h 0  >> Ns0.dat
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  5 insUniform2D.h 0  >> Ns0.dat
+./insMainTri2D  ../../meshes/insSquareCylinder2D.msh  6 insUniform2D.h 0  >> Ns0.dat
 
 
 
