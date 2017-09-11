@@ -21,7 +21,7 @@
 #endif
 
 // previously 'reg1'
-kernel void ellipticAxHex3D_e1(const iint Nelements,
+kernel void ellipticAxHex3D_v1(const iint Nelements,
                                const iint * restrict elementList,
                                const dfloat * restrict gjGeo,
                                const dfloat * restrict gllD,
@@ -289,10 +289,10 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 }//kernel
 
 
-//e2 is a splitting version of e1 (split in 3 kernels)
+//v2 is a splitting version of v1 (split in 3 kernels)
 // previously known as "reg3"
 
-kernel void ellipticAxHex3D_e2(const iint Nelements,
+kernel void ellipticAxHex3D_v2(const iint Nelements,
                                const iint * restrict elementList,
                                const dfloat * restrict gjGeo,
                                const dfloat * restrict gllD,
@@ -604,10 +604,10 @@ kernel void ellipticAxHex3D_e2(const iint Nelements,
 	}//e
 }
 
-//e3, previously known as 'reg4'
+//v3, previously known as 'reg4'
 
 //reg4 is one kernel version of reg 3
-kernel void ellipticAxHex3D_e3(const iint Nelements,
+kernel void ellipticAxHex3D_v3(const iint Nelements,
                                const iint * restrict elementList,
                                const dfloat * restrict gjGeo,
                                const dfloat * restrict gllD,
@@ -884,9 +884,9 @@ kernel void ellipticAxHex3D_e3(const iint Nelements,
 	}//e
 }
 
-//e4, previously 'reg7'; here we get rid of one of the shmem arrays in cost of extra copy/synchronization
+//v4, previously 'reg7'; here we get rid of one of the shmem arrays in cost of extra copy/synchronization
 
-kernel void ellipticAxHex3D_e4(const iint Nelements,
+kernel void ellipticAxHex3D_v4(const iint Nelements,
                                const iint * restrict elementList,
                                const dfloat * restrict gjGeo,
                                const dfloat * restrict gllD,
@@ -1167,9 +1167,9 @@ kernel void ellipticAxHex3D_e4(const iint Nelements,
 	}//e
 }//kernel
 
-//e5, previously 'e6a'
+//v5, previously 'e6a'
 
-kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
+kernel void ellipticPartialAxHex3D_v5(const iint Nelements,
                                       const iint * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
@@ -1394,7 +1394,7 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 
 
 //previously known as e6b
-kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
+kernel void ellipticPartialAxHex3D_v6(const iint Nelements,
                                       const iint * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
@@ -1631,9 +1631,9 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 	}
 }
 
-//e7, previously e9 (our 'standard' kernel)
+//v7, previously e9 (our 'standard' kernel)
 
-kernel void ellipticAxHex3D_e7(const iint Nelements,
+kernel void ellipticAxHex3D_v7(const iint Nelements,
                                const iint * restrict elementList,
                                const dfloat * restrict gjGeo,
                                const dfloat * restrict gllD,
