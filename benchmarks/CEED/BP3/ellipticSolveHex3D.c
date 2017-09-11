@@ -35,7 +35,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     solver->o_pAp.copyFrom(&zero);
     {
       if(solver->NglobalGatherElements){
-      	printf("collocation\n");
+ //     	printf("collocation\n");
 	//	mesh->device.setStream(solver->dataStream);
 	if(strstr(options, "COLLOCATION")){
 	  solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
@@ -44,7 +44,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 	}
 	else{
 	  //e9-e12, changed for e6 to e8
-	  printf("no collocation\n");
+	//  printf("no collocation\n");
 	  solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
 				  solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq,
 				  solver->o_grad);
@@ -67,13 +67,13 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
       if(solver->NlocalGatherElements){
 	//	mesh->device.setStream(solver->defaultStream);
 	if(strstr(options, "COLLOCATION")){
-		printf("collocation\n");
+//		printf("collocation\n");
 	  solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
 				  solver->o_gjGeo, solver->o_gjD, lambda, o_q, o_Aq, solver->o_grad);
 	  
 	}
 	else{
-		printf("no collocation\n");
+//		printf("no collocation\n");
 	  //e9-e12, changed for e6 to e8
 	  solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
 				  solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q,

@@ -21,9 +21,9 @@ dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 	//KS start
 	printf("Setup info: Nggeo = %d, gjNq = %d. gjNp = %d Nq = %d \n", NgjGeo, gjNq, gjNp, mesh->Nq);
 	#if 1
-	dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*8*gjNp, sizeof(dfloat));
+	//dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*8*gjNp, sizeof(dfloat));
 	#else
-	dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*3*8+2*gjNp, sizeof(dfloat));
+	//dfloat *gjGeod2 = (dfloat*) calloc(mesh->Nelements*3*8+2*gjNp, sizeof(dfloat));
 	#endif
 	//KS end
 	for(iint e=0; e<mesh->Nelements; ++e) { /* for each element */
@@ -94,14 +94,14 @@ dfloat  *ellipticGeometricFactorsHex3D(mesh3D *mesh){
 						gjGeod2[8*gjNp*e + 8*n + 6 ] = JW;
 						gjGeod2[8*gjNp*e + 8*n + 7 ] = 0.0;
 						*/
-				  gjGeod2[8*gjNp*e + n + gjNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+			/*	  gjGeod2[8*gjNp*e + n + gjNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
 					gjGeod2[8*gjNp*e + n + gjNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
 					gjGeod2[8*gjNp*e + n + gjNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
 					gjGeod2[8*gjNp*e + n + gjNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
 					gjGeod2[8*gjNp*e + n + gjNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
 					gjGeod2[8*gjNp*e + n + gjNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
 					gjGeod2[8*gjNp*e + n + gjNp*GWJID] = JW;
-					gjGeod2[8*gjNp*e + n + gjNp*7] = 0.0f;
+					gjGeod2[8*gjNp*e + n + gjNp*7] = 0.0f;*/
 
 
 				}
