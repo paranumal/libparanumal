@@ -148,7 +148,7 @@ void insRun2D(ins_t *ins, char *options){
 
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "REPORT")){
-      if(((tstep+1)%(10*ins->errorStep))==0){
+      if(((tstep+1)%(100*ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
         //insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
