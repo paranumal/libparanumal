@@ -230,7 +230,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->idt = 1.0/ins->dt;
   
   // errorStep
-  ins->errorStep =10*16/ins->Nsubsteps;
+  //ins->errorStep =10*16/ins->Nsubsteps;
+  ins->errorStep =10*16;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
