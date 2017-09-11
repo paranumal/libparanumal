@@ -54,7 +54,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 
   // time cudamemcpy for same amount of data movement
   int gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-  iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 + gjNp))/2); // use 1/2 because of load+store
+  iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 +7*gjNp)/2)); // use 1/2 because of load+store
   occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
   occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 
@@ -175,7 +175,8 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // int specify polynomial degree
+  
+// int specify polynomial degree
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
@@ -187,6 +188,7 @@ int main(int argc, char **argv){
 
   // set up mesh stuff
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
+
   ogs_t *ogs;
   precon_t *precon;
 
@@ -260,7 +262,8 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %17.15g\n", globalMaxError);
 
-  // close down MPI
+  
+// close down MPI
   MPI_Finalize();
 
   exit(0);
