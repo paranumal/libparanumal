@@ -22,7 +22,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
 
     //    solver->AxKernel(mesh->Nelements, solver->o_gjGeo, solver->o_gjD2, solver->o_gjI, lambda, o_q, o_Aq);
     ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo
+    ogs_t *halo = solver->halo;
 
     // Ax for C0 halo elements  (on default stream - otherwise local Ax swamps)
 #if 1
