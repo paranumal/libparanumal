@@ -71,6 +71,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->rhsP  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
   }
 
+  ins->Nsubsteps = factor;
 
   if(strstr(options,"SUBCYCLING")){
 
@@ -98,7 +99,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 250.0;
+  ins->finalTime = 200.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
