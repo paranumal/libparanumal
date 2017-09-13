@@ -33,11 +33,10 @@ LIBS	=  $(links) -L../../../utilities/BlasLapack -lBlasLapack
 .c.o:
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 
-testInnerProduct: testInnerProduct.o
-	$(LD)  $(LDFLAGS)  -o testInnerProduct testInnerProduct.o $(paths) $(LIBS)
+registersAndSharedExec: registersAndShared.o
+	$(LD)  $(LDFLAGS)  -o registersAndShared registersAndShared.o $(paths) $(LIBS)
 
-testScaledAdd: testScaledAdd.o
-	$(LD)  $(LDFLAGS)  -o testScaledAdd testScaledAdd.o $(paths) $(LIBS)
+
 
 # what to do if user types "make clean"
 clean :
