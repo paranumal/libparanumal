@@ -20,10 +20,8 @@ int main(int argc, char **argv){
 	  int Ntests = 10;
 	  // N regulates the size of an array
 	  int  N = atoi(argv[1]);
-  //size of shared (in doubles)
-    int sh = atoi(argv[2]);
     //size of register array (in doubles) per thread
-    int reg = atoi(argv[3]);
+    int reg = atoi(argv[2]);
     
     int gjNq = N+2;
     int Nq = N+1;
@@ -32,8 +30,8 @@ int main(int argc, char **argv){
    
     
   
-     int Nelements = 4192;
-        iint Nbytes =((Np*2 +7*gjNp))*Nelements;
+     int Nelements = 512;
+        iint Nbytes =((Np*2 +7*gjNp))*Nelements/2;
          printf("N =%d Nq=%d Np=%d gjNp = %d Nbytes %d\n", N, Nq, Np, gjNp, Nbytes);
   //Nbytes =((sizeof(dfloat)*(mesh->Np*2 +7*gjNp)/2));
   double *h_in = (double*) calloc(Nbytes, sizeof(double));
@@ -56,7 +54,6 @@ int main(int argc, char **argv){
 
  
   occa::kernelInfo kernelInfo;
-  kernelInfo.addDefine("p_shared", sh);
   kernelInfo.addDefine("p_reg", reg);
     kernelInfo.addDefine("p_Nq", N+1);
       kernelInfo.addDefine("p_Np", (N+1)*(N+1)*(N+1));
@@ -69,7 +66,7 @@ kernelInfo.addDefine("elPerBlock", Np*2+7*gjNp);
   
   occa::kernel testSharedKernel
     = device.buildKernelFromSource(DHOLMES "/okl/testRegistersAndShared.okl",
-				   "testSharedRegisters_v2",
+				   "testSharedRegisters_v0",
 				   kernelInfo);
 	
 	
@@ -80,11 +77,17 @@ kernelInfo.addDefine("elPerBlock", Np*2+7*gjNp);
     }
     
     occa::streamTag stopTag = device.tagStream();
-   
-    
+ /*   o_out.copyTo(h_out);
+
+for (int n=0; n<Nbytes; ++n)
+{
+	if (h_in[n]!=h_out[n])
+	printf("n=%d in %f out %f \n", n, h_in[n], h_out[n]);
+}
+  */  
      double copyElapsed = device.timeBetween(startTag, stopTag);
      
-    Nbytes =(sizeof(double))*(Np*2 +7*gjNp); 
+    Nbytes =(sizeof(double)/2)*(Np*2 +7*gjNp); 
      double copyBandwidth = Nelements*((Nbytes*Ntests*2.)/(1024.*1024.*1024.*copyElapsed));
      
      printf("time %8.8f bw %17.15E \n", copyElapsed, copyBandwidth);
