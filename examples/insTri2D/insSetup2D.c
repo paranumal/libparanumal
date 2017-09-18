@@ -128,14 +128,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 1
+      #if 0
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
       #endif
 
 
-      #if 0 // Zero flow
+      #if 1 // Zero flow
             ins->U[id] = 0.0;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
@@ -231,7 +231,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   
   // errorStep
   //ins->errorStep =10*16/ins->Nsubsteps;
-  ins->errorStep = 50;
+  ins->errorStep = 2000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
