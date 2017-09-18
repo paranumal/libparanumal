@@ -28,7 +28,7 @@ void insRun2D(ins_t *ins, char *options){
 
   occaTimerTic(mesh->device,"INS");
 
- //ins->NtimeSteps = 100;
+   ins->NtimeSteps = 1000;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -145,16 +145,14 @@ void insRun2D(ins_t *ins, char *options){
 
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "REPORT")){
-      if(((tstep+1)%(100*ins->errorStep))==0){
+      if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
-        //insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
 
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
-        //printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
@@ -192,7 +190,7 @@ void insRun2D(ins_t *ins, char *options){
   }
 
 
-#if 1
+#if 0
 dfloat finalTime = ins->NtimeSteps*ins->dt;
 insReport2D(ins, ins->NtimeSteps,options);
 insErrorNorms2D(ins, finalTime, options);
@@ -211,7 +209,7 @@ occaTimerToc(mesh->device,"INS");
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank==1) occa::printTimer();
+  if(rank==0) occa::printTimer();
 
 }
 
