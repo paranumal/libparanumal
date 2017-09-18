@@ -381,12 +381,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
 
 
-   
-
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-
-
 
 
   if(strstr(options,"VERBOSE")){
