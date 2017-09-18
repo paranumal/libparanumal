@@ -275,8 +275,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   //
   dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
-  printf("TOL: %g\n",sqrt(TOL));
-
+  
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
@@ -384,7 +383,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
 
 
-   printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
+   //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
