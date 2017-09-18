@@ -10,7 +10,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_P.copyTo(ins->P);
 
 
-  #if 0
+  #if 1
 
   const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
   //
@@ -188,14 +188,19 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0){
       char fname[BUFSIZ];
-      sprintf(fname, "insErrors.txt");
+      // sprintf(fname, "insErrors.txt");
+      sprintf(fname, "vortex_pamg_Ns%d_N%d.dat",ins->Nsubsteps, mesh->N);
       FILE *fp;
       fp = fopen(fname, "a");
       // fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
                   // mesh->N, ins->dt, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p, gh1u, gh1v, gh1p);
-      fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
-                  mesh->N, ins->dt, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p);
-      fclose(fp);
+      // fprintf(fp,"%d %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+                  // mesh->N, ins->dt, ginfu, ginfv, ginfp,gl2u, gl2v, gl2p);
+     fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+                 mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, 
+                                                   ginfu, ginfv, ginfp, gl2u, gl2v, gl2p);
+     fclose(fp);
+
     }
 
 
