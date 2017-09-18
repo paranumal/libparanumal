@@ -226,7 +226,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
-
+    
     if (strstr(options,"CHEBYSHEV")) {
       levels[n]->device_smooth = smoothChebyshevTri2D;
 
@@ -267,6 +267,33 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       } else { //default to damped jacobi
         ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
       }
+    }
+
+    //reallocate vectors at N=1 since we're using the matrix free ops
+    if (n==numLevels-1) {
+      if (n>0) {//kcycle vectors
+        if (levels[n]->Ncols) levels[n]->ckp1 = (dfloat *) realloc(levels[n]->ckp1,levels[n]->Ncols*sizeof(dfloat));
+        if (levels[n]->Nrows) levels[n]->vkp1 = (dfloat *) realloc(levels[n]->vkp1,levels[n]->Nrows*sizeof(dfloat));
+        if (levels[n]->Nrows) levels[n]->wkp1 = (dfloat *) realloc(levels[n]->wkp1,levels[n]->Nrows*sizeof(dfloat));
+
+        if (levels[n]->Ncols) levels[n]->o_ckp1.free();
+        if (levels[n]->Nrows) levels[n]->o_vkp1.free();
+        if (levels[n]->Nrows) levels[n]->o_wkp1.free();
+        if (levels[n]->Ncols) levels[n]->o_ckp1 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->ckp1);
+        if (levels[n]->Nrows) levels[n]->o_vkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->vkp1);
+        if (levels[n]->Nrows) levels[n]->o_wkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->wkp1);
+      }
+
+      if (levels[n]->Ncols) levels[n]->x    = (dfloat *) realloc(levels[n]->x  ,levels[n]->Ncols*sizeof(dfloat));
+      if (levels[n]->Ncols) levels[n]->res  = (dfloat *) realloc(levels[n]->res,levels[n]->Ncols*sizeof(dfloat));
+      if (levels[n]->Nrows) levels[n]->rhs  = (dfloat *) realloc(levels[n]->rhs,levels[n]->Nrows*sizeof(dfloat));
+
+      if (levels[n]->Ncols) levels[n]->o_x.free();
+      if (levels[n]->Ncols) levels[n]->o_res.free();
+      if (levels[n]->Nrows) levels[n]->o_rhs.free();
+      if (levels[n]->Ncols) levels[n]->o_x   = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->x);
+      if (levels[n]->Ncols) levels[n]->o_res = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->res);
+      if (levels[n]->Nrows) levels[n]->o_rhs = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->rhs);
     }
 
     if (n==0) continue; //dont need restriction and prolongation ops at top level
