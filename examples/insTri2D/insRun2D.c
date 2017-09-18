@@ -24,9 +24,6 @@ void insRun2D(ins_t *ins, char *options){
   iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
-
-
- 
   occa::initTimer(mesh->device);
 
   occaTimerTic(mesh->device,"INS");
@@ -111,7 +108,7 @@ void insRun2D(ins_t *ins, char *options){
       case 1:
         occaTimerTic(mesh->device,"AdvectionSubStep");
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
-         occaTimerToc(mesh->device,"AdvectionSubStep");
+        occaTimerToc(mesh->device,"AdvectionSubStep");
       break;
 
       case 0:
@@ -165,36 +162,33 @@ void insRun2D(ins_t *ins, char *options){
     occaTimerToc(mesh->device,"Report");
 
     
-#if 0 // For time accuracy test fed history with exact solution
-    if(tstep<1){
-      iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-      dfloat tt = (tstep+1)*ins->dt;
-     // Overwrite Velocity
-     for(iint e=0;e<mesh->Nelements;++e){
-        for(iint n=0;n<mesh->Np;++n){
-          iint id = n + mesh->Np*e;
-          dfloat x = mesh->x[id];
-          dfloat y = mesh->y[id];
+    #if 0 // For time accuracy test fed history with exact solution
+        if(tstep<1){
+          iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+          dfloat tt = (tstep+1)*ins->dt;
+         // Overwrite Velocity
+         for(iint e=0;e<mesh->Nelements;++e){
+            for(iint n=0;n<mesh->Np;++n){
+              iint id = n + mesh->Np*e;
+              dfloat x = mesh->x[id];
+              dfloat y = mesh->y[id];
 
-          dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
-          dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
-          dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
+              dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
+              dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
+              dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
 
-          id += ins->index*Ntotal; 
+              id += ins->index*Ntotal; 
 
-          ins->U[id] = u0; 
-          ins->V[id] = v0; 
-          ins->P[id] = p0;
+              ins->U[id] = u0; 
+              ins->V[id] = v0; 
+              ins->P[id] = p0;
+            }
+          }
+           ins->o_U.copyFrom(ins->U);
+           ins->o_V.copyFrom(ins->V);
+           ins->o_P.copyFrom(ins->P);
         }
-      }
-       ins->o_U.copyFrom(ins->U);
-       ins->o_V.copyFrom(ins->V);
-       ins->o_P.copyFrom(ins->P);
-    }
-#endif
-
-
-
+    #endif
   }
 
 
@@ -214,7 +208,10 @@ free(pRecvBuffer);
 
 occaTimerToc(mesh->device,"INS");
 
-occa::printTimer();
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank==1) occa::printTimer();
 
 }
 
