@@ -213,7 +213,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
   //  kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   //  kernelInfo.addCompilerFlag("-g");
-  kernelInfo.addCompilerFlag("-O3");
+  kernelInfo.addCompilerFlag("-O0");
 
   // generically used for blocked DEVICE reductions
   kernelInfo.addDefine("p_blockSize", blockSize);
@@ -284,8 +284,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
       // CPU version is e8, GPU version is e6
       solver->partialAxKernel =
-	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
-				   "ellipticPartialAxHex3D_e6a", 
+	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DReg.okl",
+				   "ellipticAxHex3D_e7", 
 				   //				   "ellipticPartialAxHex3D_incremental", 
 				   kernelInfo);
       
