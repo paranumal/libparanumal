@@ -28,7 +28,7 @@ void insRun2D(ins_t *ins, char *options){
 
   occaTimerTic(mesh->device,"INS");
 
-   ins->NtimeSteps = 1000;
+  ins->NtimeSteps = 100;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -189,6 +189,9 @@ void insRun2D(ins_t *ins, char *options){
     #endif
   }
 
+occaTimerToc(mesh->device,"INS");
+
+
 
 #if 0
 dfloat finalTime = ins->NtimeSteps*ins->dt;
@@ -204,7 +207,7 @@ free(vRecvBuffer);
 free(pSendBuffer);
 free(pRecvBuffer);
 
-occaTimerToc(mesh->device,"INS");
+
 
 
   int rank;

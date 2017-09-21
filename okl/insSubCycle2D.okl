@@ -11,21 +11,20 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 					dfloat * restrict rhsU,
 					dfloat * restrict rhsV){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_NblockV][p_Np];
-    shared dfloat s_V[p_NblockV][p_Np];
-    shared dfloat s_Ud[p_NblockV][p_Np];
-    shared dfloat s_Vd[p_NblockV][p_Np];
+    shared dfloat s_U[p_cubNblockV][p_Np];
+    shared dfloat s_V[p_cubNblockV][p_Np];
+    shared dfloat s_Ud[p_cubNblockV][p_Np];
+    shared dfloat s_Vd[p_cubNblockV][p_Np];
 
-
-    shared dfloat s_cF11[p_NblockV][p_cubNp];
-    shared dfloat s_cF12[p_NblockV][p_cubNp];
-    shared dfloat s_cF21[p_NblockV][p_cubNp];
-    shared dfloat s_cF22[p_NblockV][p_cubNp];
+    shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    shared dfloat s_cF22[p_cubNblockV][p_cubNp];
     //
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
 			iint e = eo+es; // element in block
 			if(e<Nelements && n<p_Np){ 
@@ -41,8 +40,7 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 
     barrier(localMemFence);
 
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
 			iint e = eo+es; // element in block
 			if(e<Nelements){
@@ -70,7 +68,7 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_cubNblockV;++es;inner1){
       for(iint n=0;n<p_cubNp;++n;inner0){    	
 	iint e = eo+es;
 
@@ -137,24 +135,24 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
 					 dfloat * restrict rhsU,
 					 dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
-    shared dfloat s_UM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_NblockS][p_NfacesNfp];
+    shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_UdM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VdM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_UdP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VdP[p_NblockS][p_NfacesNfp];
+    shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
+    shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_iFluxU[p_NblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
+    shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
+    shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
 
 			iint e = eo + es;
@@ -187,7 +185,7 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
 
 	iint e = eo + es;
@@ -262,7 +260,7 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
 
 	const iint e = eo + es;

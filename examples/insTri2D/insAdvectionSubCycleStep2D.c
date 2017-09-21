@@ -138,7 +138,9 @@ if(activate_advection){
 						                    vsendBuffer,
 						                    vrecvBuffer);
 						}
+            
 
+            occaTimerTic(mesh->device,"AdvectionVolume");
 							// Compute Volume Contribution
 						if(strstr(options, "CUBATURE")){
 
@@ -169,6 +171,10 @@ if(activate_advection){
 
 						}
 
+						occaTimerToc(mesh->device,"AdvectionVolume");
+
+
+
 
 						if(mesh->totalHaloPairs>0){
 
@@ -185,7 +191,7 @@ if(activate_advection){
 							                          ins->o_vHaloBuffer);
 						}
 
-
+            occaTimerTic(mesh->device,"AdvectionSurface");
 							  // Compute Volume Contribution
 						if(strstr(options, "CUBATURE")){
 							ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
@@ -225,7 +231,12 @@ if(activate_advection){
 
 						}
 
+						occaTimerToc(mesh->device,"AdvectionSurface");
+            
 
+
+
+            occaTimerTic(mesh->device,"AdvectionUpdate");
 						// Update Kernel
 						ins->subCycleRKUpdateKernel(mesh->Nelements,
 						                      activate_advection,
@@ -238,6 +249,7 @@ if(activate_advection){
 						                      ins->o_resV,
 						                      ins->o_Ud,
 						                      ins->o_Vd);
+					occaTimerToc(mesh->device,"AdvectionUpdate");
 				}
   		}
   	// Finish SubProblem // Use NU to store Lagrange Velocities
@@ -249,6 +261,8 @@ if(activate_advection){
 
 
 dfloat tp1 = (tstep+1)*ins->dt;
+
+occaTimerTic(mesh->device,"GradientVolume");
  
 // Compute Volume Contribution for Pressure
 ins->gradientVolumeKernel(mesh->Nelements,
@@ -259,10 +273,11 @@ ins->gradientVolumeKernel(mesh->Nelements,
                           ins->o_P,
                           ins->o_Px,
                           ins->o_Py);
+occaTimerToc(mesh->device,"GradientVolume");
 
 	
  
-
+occaTimerTic(mesh->device,"GradientSurface");
 const iint solverid = 0; // Pressure Solve
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
@@ -286,7 +301,7 @@ const iint solverid = 0; // Pressure Solve
 												     ins->o_Px,
 												     ins->o_Py);
 
-
+occaTimerToc(mesh->device,"GradientSurface");
 #endif
 
 
