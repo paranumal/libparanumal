@@ -17,9 +17,10 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-  //  char *options = strdup("out=REPORT+VTU, adv=COLLOCATION, disc = DISCONT_GALERKIN");
- 
+  //char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  
+
+
   char *velSolverOptions =
     strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
   char *velParAlmondOptions =
@@ -28,7 +29,7 @@ int main(int argc, char **argv){
   char *prSolverOptions =
     strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS  smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
+   // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
   char *prParAlmondOptions =
@@ -58,9 +59,16 @@ int main(int argc, char **argv){
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
-    
+   char *options; 
+   
+  if(Ns==0)
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  else
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+
+      
     printf("Setup INS Solver: \n");
-    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,velParAlmondOptions,
+    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
                             prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
 
     printf("OCCA Run: \n");

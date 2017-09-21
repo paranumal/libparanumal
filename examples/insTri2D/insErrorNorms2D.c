@@ -10,7 +10,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_P.copyTo(ins->P);
 
 
-  #if 1
+  #if 0
 
     dfloat *dU = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
     dfloat *dV = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
@@ -250,8 +250,6 @@ if(rank==0){
   char fname[BUFSIZ];
   //sprintf(fname, "/u0/outputs/ins2D/Report.dat");
   sprintf(fname, "report_Ns%d_N%d.dat",ins->Nsubsteps, mesh->N);
-
-
   FILE *fp;
   fp = fopen(fname, "a");
   fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e\n", mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, cd, cl);
