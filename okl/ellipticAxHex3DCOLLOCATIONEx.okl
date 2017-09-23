@@ -988,6 +988,7 @@ kernel void ellipticAxHex3D_Ref2D6(const iint Nelements,
 				for (iint k=0; k<p_Nq; k++){
 				
 					s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
+					r_tmpq[k] =0.0f;
 					
 				}
 				
@@ -997,12 +998,13 @@ kernel void ellipticAxHex3D_Ref2D6(const iint Nelements,
 		}
 		
 		barrier(localMemFence);
-		occaUnroll(p_Nq)
-		for(int k=0; k<p_Nq; ++k)
-			for(int j=0;j<p_Nq;++j;inner1)
-				for(int i=0;i<p_Nq;++i;inner0)
-					r_tmpq[k] =0.0f;
-					
+		
+		//occaUnroll(p_Nq)
+		//for(int k=0; k<p_Nq; ++k)
+		//for(int j=0;j<p_Nq;++j;inner1)
+		//	for(int i=0;i<p_Nq;++i;inner0)
+		
+		
 		barrier(localMemFence);
 		
 		
@@ -1055,10 +1057,6 @@ kernel void ellipticAxHex3D_Ref2D6(const iint Nelements,
 			for(iint j=0; j<p_Nq; ++j; inner1) {
 				for(iint i=0; i<p_Nq; ++i; inner0) {
 				
-				
-					int emap = elementList[e];
-					
-					iint base = i + j*p_Nq + emap*p_Np;
 					dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 					occaUnroll(p_Nq)
 					for(iint n=0; n<p_Nq; ++n) {
@@ -1068,12 +1066,9 @@ kernel void ellipticAxHex3D_Ref2D6(const iint Nelements,
 					}
 					r_tmpq[k] += Aq1 + Aq2;
 					
-					
-					
-					
 				}
 			}
-		}
+		}//k
 		//	}//for k ()
 		
 		barrier(localMemFence);
@@ -1084,8 +1079,7 @@ kernel void ellipticAxHex3D_Ref2D6(const iint Nelements,
 			
 				for (iint k=0; k<p_Nq; k++){
 					int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-					Aq[base] = 11.0;
-					//r_tmpq[k];
+					Aq[base] = r_tmpq[k];
 				}
 			}
 		}
