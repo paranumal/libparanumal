@@ -290,7 +290,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  int cubNblockV = 256/ mymax(mesh->cubNp,mesh->Np); // works for CUDA
+  int cubNblockV = 256/ mymax(mesh->cubNp,mesh->Np); 
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
 
   int cubNblockS = 256/mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp); // works for CUDA

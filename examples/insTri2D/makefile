@@ -65,6 +65,7 @@ insBuildVectorIpdgTri2D.o \
 insAdvectionStepSS2D.o \
 insPoissonStepSS2D.o \
 insHelmholtzStepSS2D.o \
+insRunTimer2D.o \
 # library objects
 LOBJS = \
 ../../src/meshConnect.o \
