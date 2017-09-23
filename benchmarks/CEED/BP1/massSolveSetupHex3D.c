@@ -271,7 +271,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
-				   "massPartialAxHex3D_v1",
+				   "massPartialAxHex3D_v2",
 				   kernelInfo);
       
 
