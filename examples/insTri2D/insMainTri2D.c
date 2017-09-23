@@ -60,7 +60,7 @@ int main(int argc, char **argv){
    Ns = atoi(argv[4]); // Number of substeps
   
    char *options; 
-   
+
   if(Ns==0)
       options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   else
@@ -72,7 +72,8 @@ int main(int argc, char **argv){
                             prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
 
     printf("OCCA Run: \n");
-    insRun2D(ins,options);
+    insRunTimer2D(ins,options);
+    //insRun2D(ins,options);
   //}
 
   // close down MPI

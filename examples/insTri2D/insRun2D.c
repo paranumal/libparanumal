@@ -28,7 +28,7 @@ void insRun2D(ins_t *ins, char *options){
 
   occaTimerTic(mesh->device,"INS");
 
-  ins->NtimeSteps = 100;
+  ins->NtimeSteps = 5;
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
