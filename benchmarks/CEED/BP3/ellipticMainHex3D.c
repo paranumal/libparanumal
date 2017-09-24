@@ -102,7 +102,8 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]\n",
 	   size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size, (globalDofs*iterations)/(globalElapsed*size), gflops);
-  }
+printf("NUMBER OF INTEREST: %d  %17.15E \n", Nq-1, gflops);  
+}
 
 
 }
@@ -177,8 +178,8 @@ int main(int argc, char **argv){
   // preconditioner can be JACOBI, OAS, NONE
   // method can be CONTINUOUS or IPDG
   char *options =
-  //  strdup("solver=CG method=CONTINUOUS preconditioner=NONE matvec=COLLOCATION");
     strdup("solver=CG method=CONTINUOUS preconditioner=NONE");
+  ///  strdup("solver=CG method=CONTINUOUS preconditioner=NONE");
 
   // set up mesh stuff
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
