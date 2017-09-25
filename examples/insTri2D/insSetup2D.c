@@ -256,7 +256,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   //Solver tolerances 
   ins->presTOL = 1E-10;
   ins->velTOL  = 1E-6;
-
+#if 0
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
@@ -271,8 +271,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-  
-   
+#endif
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
