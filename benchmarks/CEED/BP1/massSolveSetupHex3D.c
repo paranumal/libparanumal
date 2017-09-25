@@ -127,8 +127,9 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
   }
   //  NblockG = 512/gNq2;
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+ // iint Ntotal = mesh->Np*mesh->Nelements;
+iint Ntotal = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements;  
+iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
 
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
 
@@ -271,7 +272,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 
       solver->partialAxKernel =
 	saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
-				   "massPartialAxHex3D_v2",
+				   "massPartialAxHex3D_vRef0",
 				   kernelInfo);
       
 
