@@ -116,7 +116,9 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 		       "[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]\n",
 		       size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size,
 		       (globalDofs*iterations)/(globalElapsed*size), gflops, copyBandwidth, bw );
-	}
+	
+printf("NUMBER OF INTEREST: %d %17.15E \n", mesh->Nq-1, gflops);
+}
 	
 	
 }
@@ -184,7 +186,7 @@ int main(int argc, char **argv){
 	// preconditioner can be JACOBI, OAS, NONE
 	// method can be CONTINUOUS or IPDG
 	char *options =
-	  strdup("solver=CG method=CONTINUOUS preconditioner=NONE COLLOCATION");
+	  strdup("solver=CG method=CONTINUOUS preconditioner=NONE");
 	//strdup("solver=CG method=IPDG preconditioner=NONE");
 	
 	// set up mesh stuff
