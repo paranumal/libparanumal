@@ -273,10 +273,10 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
   dfloat REL_TOL = tol*tol*n2b; // 
   //
-  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
+  //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
-  printf("TOL: %g\n",sqrt(TOL));
-
+  dfloat TOL     = tol*tol; 
+  
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
@@ -384,12 +384,12 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
 
 
-   printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
+   //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
 
-  if((rank==0)&&strstr(options,"VERBOSE")){
+  if(strstr(options,"VERBOSE")){
     mesh->device.finish();
     double toc = MPI_Wtime();
     double localElapsed = toc-tic;
@@ -407,7 +407,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
-    printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+    if (rank==0)
+      printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
            size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
   }
 

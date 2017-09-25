@@ -1,5 +1,5 @@
-coarse = DefineNumber[5];
-fine   = DefineNumber[0.75];
+coarse = DefineNumber[4];
+fine   = DefineNumber[0.4];
 fineC  = DefineNumber[0.1];
 
 xmax  = DefineNumber[25];
