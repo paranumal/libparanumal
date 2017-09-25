@@ -128,6 +128,7 @@ void insError2D(ins_t *solver, dfloat time, char *options);
 void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
 
+void insRunTimer2D(mesh2D *mesh, char *options, char *bdryHeaderFileName);
 
 
 void insRun2D(ins_t *solver, char *options);
