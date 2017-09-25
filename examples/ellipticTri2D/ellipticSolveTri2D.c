@@ -268,16 +268,19 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
   
-  // Store initial residual norm for relative residual
-  // If absolute initial error  is too low (1e-12) skip relative residual
-  dfloat n2b = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
+  // 
+  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
+  dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
+  dfloat REL_TOL = tol*tol*n2b; // 
+  //
+  //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
-  printf("initial error norm2: %.5e\n",n2b);
-
+  dfloat TOL     = tol*tol; 
+  
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
-  if (rdotr0<=(tol*tol*n2b)) {
+  if (rdotr0<=(TOL)) {
    // printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
     occaTimerToc(mesh->device,"PCG");
     return 0;
@@ -309,7 +312,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
-  while(rdotr0>(tol*tol*n2b)){
+  while(rdotr0>(TOL)){
 
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options);
@@ -333,7 +336,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if(rdotr1 < tol*tol*n2b) {
+    if(rdotr1 < TOL) {
       rdotr0 = rdotr1;
       break;
     }
@@ -372,7 +375,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-
+     
     if((rank==0)&&(strstr(options,"VERBOSE")))
       printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
@@ -380,13 +383,13 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   }
 
-   
 
+   //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
 
-  if((rank==0)&&strstr(options,"VERBOSE")){
+  if(strstr(options,"VERBOSE")){
     mesh->device.finish();
     double toc = MPI_Wtime();
     double localElapsed = toc-tic;
@@ -404,7 +407,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
-    printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+    if (rank==0)
+      printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
            size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
   }
 

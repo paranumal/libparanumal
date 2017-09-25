@@ -74,6 +74,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->Nsubsteps = factor;
 
   if(strstr(options,"SUBCYCLING")){
+  //if(ins->Nsubsteps){
 
     ins->Nsubsteps = factor; 
 
@@ -99,7 +100,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 200.0;
+  ins->finalTime = 5.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -128,14 +129,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 0
+      #if 1
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
       #endif
 
 
-      #if 1 // Zero flow
+      #if 0 // Zero flow
             ins->U[id] = 0.0;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
@@ -230,7 +231,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->idt = 1.0/ins->dt;
   
   // errorStep
-  ins->errorStep =10*16/ins->Nsubsteps;
+   if(strstr(options,"SUBCYCLING"))
+     ins->errorStep =50000000*16/ins->Nsubsteps;
+   else
+     ins->errorStep = 80000000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -250,9 +254,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances 
-  ins->presTOL = 1E-6;
+  ins->presTOL = 1E-10;
   ins->velTOL  = 1E-6;
-
+#if 0
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
@@ -267,8 +271,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-
-
+#endif
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -284,6 +287,15 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
+
+
+  int cubNblockV = 256/ mymax(mesh->cubNp,mesh->Np); 
+  kernelInfo.addDefine("p_cubNblockV",cubNblockV);
+
+  int cubNblockS = 256/mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp); // works for CUDA
+  kernelInfo.addDefine("p_cubNblockS",cubNblockS);
+
+
 
   printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
 

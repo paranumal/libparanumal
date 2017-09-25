@@ -23,8 +23,21 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesTri2D(mesh);
 
+  // create halo extension for x,y arrays
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  iint localNodes     = mesh->Nelements*mesh->Np;
+  // temporary send buffer
+  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+
+  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
+  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
+
 
   // global nodes
   //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
@@ -32,6 +45,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
+  free(sendBuffer);
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
