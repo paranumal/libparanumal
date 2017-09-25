@@ -23,6 +23,20 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesTet3D(mesh);
 
+  // create halo extension for x,y arrays
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  iint localNodes     = mesh->Nelements*mesh->Np;
+  // temporary send buffer
+  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+
+  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
+  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->z = (dfloat*) realloc(mesh->z, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
 
@@ -33,6 +47,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   free(mesh->x);
   free(mesh->y);
   free(mesh->z);
+  free(sendBuffer);
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));

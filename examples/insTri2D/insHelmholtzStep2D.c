@@ -16,7 +16,8 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   iint subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
 
-    
+   
+   occaTimerTic(mesh->device,"HelmholtzRhsForcing"); 
    // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->helmholtzRhsForcingKernel(mesh->Nelements,
                                  subcycling,
@@ -44,8 +45,10 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                  ins->o_Py,
                                  ins->o_rhsU,
                                  ins->o_rhsV);
+ occaTimerToc(mesh->device,"HelmholtzRhsForcing"); 
 
-    
+
+   occaTimerTic(mesh->device,"HelmholtzRhsIpdg");   
   ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
 				                        rhsPackingMode,
                                 mesh->o_vmapM,
@@ -63,6 +66,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
                                 mesh->o_MM,
                                 ins->o_rhsU,
                                 ins->o_rhsV);
+    occaTimerToc(mesh->device,"HelmholtzRhsIpdg");   
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
   if(rhsPackingMode==0){
@@ -70,7 +74,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-    //  printf("Solving for Ux ... ");
+    // printf("Solving for Ux ... ");
     mesh->device.finish();
     occa::tic("Ux-Solve");
     
@@ -78,17 +82,17 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     mesh->device.finish();
     occa::toc("Ux-Solve"); 
 
-     // printf("%d iteration(s)\n", ins->NiterU);
+    // printf("%d iteration(s)\n", ins->NiterU);
    
 
 
-    //  printf("Solving for Uy ... ");
+     // printf("Solving for Uy ... ");
     mesh->device.finish();
     occa::tic("Uy-Solve");
     ins->NiterV = ellipticSolveTri2D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
     mesh->device.finish();
     occa::toc("Uy-Solve");
-    //  printf("%d iteration(s)\n", ins->NiterV);
+     // printf("%d iteration(s)\n", ins->NiterV);
 
 
     //copy into next stage's storage
