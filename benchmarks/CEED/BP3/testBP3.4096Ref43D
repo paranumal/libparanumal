@@ -1,0 +1,1042 @@
+mpicc -O3  -fopenmp -DOCCA_OPENMP_ENABLED=1  -O3 -D __extern_always_inline=inline -DOCCA_DEBUG_ENABLED=0 -DNDEBUG=1 -DOCCA_SHOW_WARNINGS=0 -DOCCA_CHECK_ENABLED=1 -DOCCA_OPENCL_ENABLED=1 -DOCCA_CUDA_ENABLED=1  -D LINUX_OS=1 -D OSX_OS=2 -D WINDOWS_OS=4 -D WINUX_OS=5  -D OCCA_OS=LINUX_OS -I../../../include -O3 -I../../../3rdParty/gslib.github/src -D DHOLMES='"/home/kswirydo/holmes/benchmarks/CEED/BP3/../../.."'  -I../../../utilities/parALMOND/include -c -o ../../../src/gsParallelGatherScatter.o ../../../src/gsParallelGatherScatter.c -I/home/kswirydo/holmes/occa//lib -I/home/kswirydo/holmes/occa//include -L/home/kswirydo/holmes/occa//lib   -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include
+mpicc -O3  -fopenmp -DOCCA_OPENMP_ENABLED=1  -O3 -D __extern_always_inline=inline -DOCCA_DEBUG_ENABLED=0 -DNDEBUG=1 -DOCCA_SHOW_WARNINGS=0 -DOCCA_CHECK_ENABLED=1 -DOCCA_OPENCL_ENABLED=1 -DOCCA_CUDA_ENABLED=1  -D LINUX_OS=1 -D OSX_OS=2 -D WINDOWS_OS=4 -D WINUX_OS=5  -D OCCA_OS=LINUX_OS -I../../../include -O3 -I../../../3rdParty/gslib.github/src -D DHOLMES='"/home/kswirydo/holmes/benchmarks/CEED/BP3/../../.."'  -I../../../utilities/parALMOND/include -c -o ../../../src/gsParallelGatherScatterSetup.o ../../../src/gsParallelGatherScatterSetup.c -I/home/kswirydo/holmes/occa//lib -I/home/kswirydo/holmes/occa//include -L/home/kswirydo/holmes/occa//lib   -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include 
+mpicc -O3  -fopenmp -DOCCA_OPENMP_ENABLED=1  -O3 -D __extern_always_inline=inline -DOCCA_DEBUG_ENABLED=0 -DNDEBUG=1 -DOCCA_SHOW_WARNINGS=0 -DOCCA_CHECK_ENABLED=1 -DOCCA_OPENCL_ENABLED=1 -DOCCA_CUDA_ENABLED=1  -D LINUX_OS=1 -D OSX_OS=2 -D WINDOWS_OS=4 -D WINUX_OS=5  -D OCCA_OS=LINUX_OS -I../../../include -O3 -I../../../3rdParty/gslib.github/src -D DHOLMES='"/home/kswirydo/holmes/benchmarks/CEED/BP3/../../.."'  -I../../../utilities/parALMOND/include -c -o ../../../src/xxtCoarseSolve.o ../../../src/xxtCoarseSolve.c -I/home/kswirydo/holmes/occa//lib -I/home/kswirydo/holmes/occa//include -L/home/kswirydo/holmes/occa//lib   -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include
+mpic++  -O3  -fopenmp -DOCCA_OPENMP_ENABLED=1  -O3 -D __extern_always_inline=inline -DOCCA_DEBUG_ENABLED=0 -DNDEBUG=1 -DOCCA_SHOW_WARNINGS=0 -DOCCA_CHECK_ENABLED=1 -DOCCA_OPENCL_ENABLED=1 -DOCCA_CUDA_ENABLED=1  -D LINUX_OS=1 -D OSX_OS=2 -D WINDOWS_OS=4 -D WINUX_OS=5  -D OCCA_OS=LINUX_OS -O3 -L../../../3rdParty/gslib.github -lgs -L../../../utilities/parALMOND -lparALMOND  -o ellipticMainHex3D ellipticMainHex3D.o ../../../src/gsParallelGatherScatter.o ../../../src/gsParallelGatherScatterSetup.o ../../../src/xxtCoarseSolve.o  ellipticSetupHex3D.o ellipticSolveSetupHex3D.o ellipticHaloExchange3D.o ellipticParallelGatherScatter.o ellipticParallelGatherScatterSetup.o ellipticSolveHex3D.o ../../../src/meshConnect.o ../../../src/meshConnectBoundary.o ../../../src/meshConnectFaceNodes3D.o ../../../src/meshGeometricPartition3D.o ../../../src/meshHaloExchange.o ../../../src/meshHaloSetup.o ../../../src/meshParallelConnectOpt.o ../../../src/meshParallelPrint3D.o ../../../src/meshParallelReaderHex3D.o ../../../src/meshPartitionStatistics.o ../../../src/meshParallelConnectNodes.o ../../../src/meshPlotVTU3D.o ../../../src/meshPrint3D.o ../../../src/meshVTU3D.o ../../../src/meshSetupHex3D.o ../../../src/meshPhysicalNodesHex3D.o ../../../src/meshGeometricFactorsHex3D.o ../../../src/meshLoadReferenceNodesHex3D.o ../../../src/meshSurfaceGeometricFactorsHex3D.o ../../../src/meshParallelGather.o ../../../src/meshParallelScatter.o ../../../src/meshParallelGatherScatter.o ../../../src/meshParallelGatherSetup.o ../../../src/meshParallelGatherScatterSetup.o ../../../src/meshParallelConsecutiveGlobalNumbering.o ../../../src/meshOccaSetup3D.o ../../../src/mysort.o ../../../src/parallelSort.o ../../../src/hash.o ../../../src/timer.o  -I/home/kswirydo/holmes/occa//lib -I/home/kswirydo/holmes/occa//include -L/home/kswirydo/holmes/occa//lib   -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include -O3  -fopenmp -DOCCA_OPENMP_ENABLED=1  -O3 -D __extern_always_inline=inline -DOCCA_DEBUG_ENABLED=0 -DNDEBUG=1 -DOCCA_SHOW_WARNINGS=0 -DOCCA_CHECK_ENABLED=1 -DOCCA_OPENCL_ENABLED=1 -DOCCA_CUDA_ENABLED=1  -D LINUX_OS=1 -D OSX_OS=2 -D WINDOWS_OS=4 -D WINUX_OS=5  -D OCCA_OS=LINUX_OS -O3 -L../../../3rdParty/gslib.github -lgs -L../../../utilities/parALMOND -lparALMOND -locca -lm -lrt -ldl -L/opt/apps/cuda/8.0.61/lib64 -lOpenCL -L/lib -lcuda -L../../../utilities/BlasLapack -lBlasLapack
+/bin/ld: skipping incompatible /lib/librt.so when searching for -lrt
+/bin/ld: skipping incompatible /lib/libdl.so when searching for -ldl
+/bin/ld: skipping incompatible /lib/libcuda.so when searching for -lcuda
+/bin/ld: skipping incompatible /lib/libm.so when searching for -lm
+/bin/ld: skipping incompatible /lib/libpthread.so when searching for -lpthread
+/bin/ld: skipping incompatible /lib/libc.so when searching for -lc
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.774597
+gjr[1] = -4.51028e-17
+gjr[2] = 0.774597
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 3. gjNp = 27 Nq = 2 
+D[0][0] = -0.5000000000000001 
+D[0][1] = 0.5000000000000001 
+D[0][2] = -0.5000000000000001 
+D[1][0] = 0.5000000000000001 
+D[1][1] = -0.5000000000000001 
+D[1][2] = 0.5000000000000001 
+D[2][0] = 0.0000000000000000 
+D[2][1] = 0.0000000000000000 
+D[2][2] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 2
+Building kernels for rank 0
+Found cached binary of [565dbb72cedac858/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [565dbb72cedac858/parsedSource.occa] in [1ed01d1f55cc45bf/binary]
+Found cached binary of [a42016ec619ec446/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [a42016ec619ec446/parsedSource.occa] in [bf9ee2ef3463c717/binary]
+Found cached binary of [fff945294cb96dc6/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [fff945294cb96dc6/parsedSource.occa] in [1c88b8a18eaa7ca3/binary]
+Found cached binary of [f47c89987f024e26/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [f47c89987f024e26/parsedSource.occa] in [67e0ba6fdfd06dc9/binary]
+Found cached binary of [b300673d5736a115/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [b300673d5736a115/parsedSource.occa] in [4da6fa63c9f12e51/binary]
+Found cached binary of [9be59dd6eb9505da/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [9be59dd6eb9505da/parsedSource.occa] in [834a54efa360f261/binary]
+building e9 kernel 
+Found cached binary of [b62a336c8c3428fc/parsedSource.occa] in [e0065463b4cec809/binary]
+Found cached binary of [b62a336c8c3428fc/parsedSource.occa] in [7b572ce33aa8e697/binary]
+Found cached binary of [e67c2c308ee99432/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [e67c2c308ee99432/parsedSource.occa] in [cdc2506d3f91c169/binary]
+Found cached binary of [9e845d43a435a295/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [9e845d43a435a295/parsedSource.occa] in [b3bacdc011d753f6/binary]
+Found cached binary of [d2d5aa61e1a66b91/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [d2d5aa61e1a66b91/parsedSource.occa] in [9c8879797148b2e9/binary]
+Found cached binary of [4bc3c45761b61267/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [4bc3c45761b61267/parsedSource.occa] in [5f433f5faa349fdd/binary]
+Found cached binary of [e7065b40ddf7b8c8/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [e7065b40ddf7b8c8/parsedSource.occa] in [b378b6a72c147b31/binary]
+Found cached binary of [d6a57e7b53a0bf93/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [d6a57e7b53a0bf93/parsedSource.occa] in [f5e60cf6fba1de8c/binary]
+Found cached binary of [b33c49f51400485f/parsedSource.occa] in [8ee6b0cb845357d9/binary]
+Found cached binary of [b33c49f51400485f/parsedSource.occa] in [16d0cf8bf46bb1e7/binary]
+Found cached binary of [b33c49f51400485f/parsedSource.occa] in [8ee6b0cb845357d9/binary]
+Found cached binary of [b33c49f51400485f/parsedSource.occa] in [16d0cf8bf46bb1e7/binary]
+Found cached binary of [e8376de1d700e6bd/parsedSource.occa] in [278cd4df878d928f/binary]
+Found cached binary of [e8376de1d700e6bd/parsedSource.occa] in [e3e9d2576fc4b921/binary]
+Found cached binary of [e8376de1d700e6bd/parsedSource.occa] in [278cd4df878d928f/binary]
+Found cached binary of [e8376de1d700e6bd/parsedSource.occa] in [e3e9d2576fc4b921/binary]
+Found cached binary of [8f60b54a353e939c/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [8f60b54a353e939c/parsedSource.occa] in [5c25b90ba1c1f2df/binary]
+Found cached binary of [b8f1ca1a616130a6/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [b8f1ca1a616130a6/parsedSource.occa] in [7adfa3539da2366b/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 301588 301588 301588
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 301588 301588 301588
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 32768, mesh->Np = 8 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 01 32768 0.000643014907836914 10 3.276800000000000E+04 5.095993825435669E+08 1.151501668520578E+02 	 [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]
+NUMBER OF INTEREST: 1  1.151501668520578E+02 
+globalMaxError = 0.999947654393355
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.861136
+gjr[1] = -0.339981
+gjr[2] = 0.339981
+gjr[3] = 0.861136
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=46800
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 4. gjNp = 64 Nq = 3 
+D[0][0] = -1.3611363115940520 
+D[0][1] = 1.7222726231881049 
+D[0][2] = -0.3611363115940524 
+D[0][3] = -0.8399810435848563 
+D[1][0] = 0.6799620871697123 
+D[1][1] = 0.1600189564151440 
+D[1][2] = -0.1600189564151440 
+D[1][3] = -0.6799620871697123 
+D[2][0] = 0.8399810435848563 
+D[2][1] = 0.3611363115940525 
+D[2][2] = -1.7222726231881049 
+D[2][3] = 1.3611363115940520 
+D[3][0] = 0.0000000000000000 
+D[3][1] = 0.0000000000000000 
+D[3][2] = 0.0000000000000000 
+D[3][3] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 3
+Building kernels for rank 0
+Found cached binary of [283b94be38b5fc28/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [283b94be38b5fc28/parsedSource.occa] in [f99272a361f53d8b/binary]
+Found cached binary of [6cecf3ac9ff3610e/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [6cecf3ac9ff3610e/parsedSource.occa] in [1563cd33bff93067/binary]
+Found cached binary of [3bbefa1e35d74e6c/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [3bbefa1e35d74e6c/parsedSource.occa] in [76d8c99993a61ad3/binary]
+Found cached binary of [9b79f560ed8c5b8a/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [9b79f560ed8c5b8a/parsedSource.occa] in [55dda9b3c79a2381/binary]
+Found cached binary of [6d97000f813b5c81/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [6d97000f813b5c81/parsedSource.occa] in [91cc551ff6744fa9/binary]
+Found cached binary of [3ccd179aa9339fe2/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [3ccd179aa9339fe2/parsedSource.occa] in [375d0b337c1d7299/binary]
+building e9 kernel 
+Found cached binary of [e27a032c781094cc/parsedSource.occa] in [99d1fe363169e6d8/binary]
+Found cached binary of [e27a032c781094cc/parsedSource.occa] in [82e7ec56ad93b646/binary]
+Found cached binary of [284c9028e2ab403a/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [284c9028e2ab403a/parsedSource.occa] in [77e41b70237b46da/binary]
+Found cached binary of [b6c6eb297b682001/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [b6c6eb297b682001/parsedSource.occa] in [7d214796dc255bfa/binary]
+Found cached binary of [3615eb4beccf900d/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [3615eb4beccf900d/parsedSource.occa] in [4ae7b241e057c9e1/binary]
+Found cached binary of [1f4e40a5221a790b/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [1f4e40a5221a790b/parsedSource.occa] in [21f8cd63db3f8df5/binary]
+Found cached binary of [912050b8e4d70df8/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [912050b8e4d70df8/parsedSource.occa] in [1210d1fb32921ac9/binary]
+Found cached binary of [bee51591c9682c47/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [bee51591c9682c47/parsedSource.occa] in [e365ba0bdf2f78b4/binary]
+Found cached binary of [b4954957577b2c43/parsedSource.occa] in [fccf2be3480edde9/binary]
+Found cached binary of [b4954957577b2c43/parsedSource.occa] in [556ee61f1dd577c7/binary]
+Found cached binary of [b4954957577b2c43/parsedSource.occa] in [fccf2be3480edde9/binary]
+Found cached binary of [b4954957577b2c43/parsedSource.occa] in [556ee61f1dd577c7/binary]
+Found cached binary of [4519fbcba3ab5e9f/parsedSource.occa] in [a7bc39039f866ef2/binary]
+Found cached binary of [4519fbcba3ab5e9f/parsedSource.occa] in [43c5a2bf4da8b239/binary]
+Found cached binary of [4519fbcba3ab5e9f/parsedSource.occa] in [a7bc39039f866ef2/binary]
+Found cached binary of [4519fbcba3ab5e9f/parsedSource.occa] in [43c5a2bf4da8b239/binary]
+Found cached binary of [d11105867111282c/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [d11105867111282c/parsedSource.occa] in [97bb2877b112028f/binary]
+Found cached binary of [97306296fb1b2aec/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [97306296fb1b2aec/parsedSource.occa] in [13527f4f59f521bb/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.07919e+06 1079188 1079188
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.07919e+06 1079188 1079188
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 110592, mesh->Np = 27 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 02 110592 0.00100994110107422 10 1.105920000000000E+05 1.095034154787535E+09 2.290462700661001E+02 	 [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]
+NUMBER OF INTEREST: 2  2.290462700661001E+02 
+globalMaxError =  1.00010756536899
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.90618
+gjr[1] = -0.538469
+gjr[2] = -9.62592e-17
+gjr[3] = 0.538469
+gjr[4] = 0.90618
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=116640
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 5. gjNp = 125 Nq = 4 
+D[0][0] = -2.5474033946459929 
+D[0][1] = 3.1780083060166762 
+D[0][2] = -0.9125586911700165 
+D[0][3] = 0.2819537797993339 
+D[0][4] = -1.0917413837427730 
+D[1][0] = 0.4911931202885811 
+D[1][1] = 0.8549801549756264 
+D[1][2] = -0.2544318915214344 
+D[1][3] = 0.1249999999999998 
+D[1][4] = -1.3975424859373680 
+D[2][0] = 1.3975424859373691 
+D[2][1] = -0.1250000000000000 
+D[2][2] = 0.2544318915214345 
+D[2][3] = -0.8549801549756270 
+D[2][4] = -0.4911931202885803 
+D[3][0] = 1.0917413837427730 
+D[3][1] = -0.2819537797993347 
+D[3][2] = 0.9125586911700175 
+D[3][3] = -3.1780083060166771 
+D[3][4] = 2.5474033946459942 
+D[4][0] = 18641639814211776971761305934806878811444250138315822768922909556565760243079281271625234751679360674411345539123593981436598251927590242172590388279753100521716933944322377604278913979480000947028972889205073701557352551123749918857740478496899072.0000000000000000 
+D[4][1] = 0.0000000000000000 
+D[4][2] = 0.0000000000000000 
+D[4][3] = 0.0000000000000000 
+D[4][4] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 4
+Building kernels for rank 0
+Found cached binary of [5666950bbfa733d1/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [5666950bbfa733d1/parsedSource.occa] in [3321f5dc6d605236/binary]
+Found cached binary of [a839bebd93e4dfbf/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [a839bebd93e4dfbf/parsedSource.occa] in [7dede7acbc606872/binary]
+Found cached binary of [8c528aeb9079cb75/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [8c528aeb9079cb75/parsedSource.occa] in [fbc0e04e538e0f9e/binary]
+Found cached binary of [8f9e1f89ec7b7a9b/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [8f9e1f89ec7b7a9b/parsedSource.occa] in [2b45372cb2a6e524/binary]
+Found cached binary of [b05949a425cb3a34/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [b05949a425cb3a34/parsedSource.occa] in [fc9685e055891b4c/binary]
+Found cached binary of [4a91ac7f3ad1a93f/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [4a91ac7f3ad1a93f/parsedSource.occa] in [f57079ac827f4edc/binary]
+building e9 kernel 
+Found cached binary of [2d2da33d5dd45e95/parsedSource.occa] in [6170af59fcec9937/binary]
+Found cached binary of [2d2da33d5dd45e95/parsedSource.occa] in [24f8163623f8fd94/binary]
+Found cached binary of [96c52241c67856ab/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [96c52241c67856ab/parsedSource.occa] in [a764cb115d9219b3/binary]
+Found cached binary of [62b6c9323de517b4/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [62b6c9323de517b4/parsedSource.occa] in [226ef40b87cde793/binary]
+Found cached binary of [597899c89bc4c040/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [597899c89bc4c040/parsedSource.occa] in [cb63cf66e33553c4/binary]
+Found cached binary of [4264e46b8d0bb061/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [4264e46b8d0bb061/parsedSource.occa] in [cad4821cabea4cd8/binary]
+Found cached binary of [54373f1113488a81/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [54373f1113488a81/parsedSource.occa] in [e2c9f564f29254ac/binary]
+Found cached binary of [b548722a34594182/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [b548722a34594182/parsedSource.occa] in [ddef7e01fc3b0249/binary]
+Found cached binary of [bfafd95ceeda579e/parsedSource.occa] in [fbcbd5ff4cc4e329/binary]
+Found cached binary of [bfafd95ceeda579e/parsedSource.occa] in [df297cb4b58d4652/binary]
+Found cached binary of [bfafd95ceeda579e/parsedSource.occa] in [fbcbd5ff4cc4e329/binary]
+Found cached binary of [bfafd95ceeda579e/parsedSource.occa] in [df297cb4b58d4652/binary]
+Found cached binary of [10ae954870b9ecbc/parsedSource.occa] in [fc61935d7e3036c3/binary]
+Found cached binary of [10ae954870b9ecbc/parsedSource.occa] in [ce1ddf62c86967d0/binary]
+Found cached binary of [10ae954870b9ecbc/parsedSource.occa] in [fc61935d7e3036c3/binary]
+Found cached binary of [10ae954870b9ecbc/parsedSource.occa] in [ce1ddf62c86967d0/binary]
+Found cached binary of [5f531c4379ccb935/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [5f531c4379ccb935/parsedSource.occa] in [b257f9a83f0f7a3a/binary]
+Found cached binary of [76ace253aaf8c31f/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [76ace253aaf8c31f/parsedSource.occa] in [b9b49710bb894f06/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 2.40975e+06 2409748 2409748
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 2.40975e+06 2409748 2409748
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 262144, mesh->Np = 64 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174136] *** Process received signal ***
+[nr155:174136] Signal: Aborted (6)
+[nr155:174136] Signal code:  (-6)
+[nr155:174136] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7f5a12f1d100]
+[nr155:174136] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7f5a12b815f7]
+[nr155:174136] [ 2] /lib64/libc.so.6(abort+0x148)[0x7f5a12b82ce8]
+[nr155:174136] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7f5a153df725]
+[nr155:174136] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174136] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174136] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174136] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7f5a12b6db15]
+[nr155:174136] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174136] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174136 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.93247
+gjr[1] = -0.661209
+gjr[2] = -0.238619
+gjr[3] = 0.238619
+gjr[4] = 0.661209
+gjr[5] = 0.93247
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=209520
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 6. gjNp = 216 Nq = 5 
+D[0][0] = -4.0458196503358552 
+D[0][1] = 4.9636937240963306 
+D[0][2] = -1.3508322368530710 
+D[0][3] = 0.6639059901075752 
+D[0][4] = -0.2309478270149803 
+D[0][5] = -1.2885149575586390 
+D[1][0] = 0.0773472955856764 
+D[1][1] = 1.7099888859438530 
+D[1][2] = -0.7555949933554938 
+D[1][3] = 0.2567737693846034 
+D[1][4] = 0.3569455308697994 
+D[1][5] = -1.9716758364096860 
+D[2][0] = 1.4639847624767679 
+D[2][1] = 0.2448696533665309 
+D[2][2] = -0.0941241103034122 
+D[2][3] = 0.0941241103034127 
+D[2][4] = -0.2448696533665329 
+D[2][5] = -1.4639847624767659 
+D[3][0] = 1.9716758364096860 
+D[3][1] = -0.3569455308697999 
+D[3][2] = -0.2567737693846033 
+D[3][3] = 0.7555949933554937 
+D[3][4] = -1.7099888859438510 
+D[3][5] = -0.0773472955856790 
+D[4][0] = 1.2885149575586401 
+D[4][1] = 0.2309478270149803 
+D[4][2] = -0.6639059901075772 
+D[4][3] = 1.3508322368530741 
+D[4][4] = -4.9636937240963350 
+D[4][5] = 4.0458196503358579 
+D[5][0] = 0.0000000000000000 
+D[5][1] = 0.0000000000000000 
+D[5][2] = 0.0000000000000000 
+D[5][3] = 0.0000000000000000 
+D[5][4] = 0.0000000000000000 
+D[5][5] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 5
+Building kernels for rank 0
+Found cached binary of [3453ae07f6c25dcb/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [3453ae07f6c25dcb/parsedSource.occa] in [b0a49d8548d02845/binary]
+Found cached binary of [bc545bf9ad7016a5/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [bc545bf9ad7016a5/parsedSource.occa] in [31ed22e8b2b7b4f8/binary]
+Found cached binary of [687a8a67f76a0f17/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [687a8a67f76a0f17/parsedSource.occa] in [4302f17a938d91dc/binary]
+Found cached binary of [68656357ee1ef59a/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [68656357ee1ef59a/parsedSource.occa] in [610f0f682a6c21ec/binary]
+Found cached binary of [df90664f57434abf/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [df90664f57434abf/parsedSource.occa] in [ee0a45ac7e1a4996/binary]
+Found cached binary of [d0d5cf8b6f46b2a1/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [d0d5cf8b6f46b2a1/parsedSource.occa] in [cc0c20e8e72e6e06/binary]
+building e9 kernel 
+Found cached binary of [d882db796a06eef7/parsedSource.occa] in [40e9daccc3535f96/binary]
+Found cached binary of [d882db796a06eef7/parsedSource.occa] in [b743958b778332a7/binary]
+Found cached binary of [1883fc8da0384cc9/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [1883fc8da0384cc9/parsedSource.occa] in [237f34bd5b7ddada/binary]
+Found cached binary of [46346e94cf953eca/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [46346e94cf953eca/parsedSource.occa] in [58bfeaf5a263064d/binary]
+Found cached binary of [523bb7da2b7e202e/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [523bb7da2b7e202e/parsedSource.occa] in [b92f6312690b9c7e/binary]
+Found cached binary of [809cf6782d88d230/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [809cf6782d88d230/parsedSource.occa] in [e808c898b9a5ce9a/binary]
+Found cached binary of [3ad2abdd76d9b91b/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [3ad2abdd76d9b91b/parsedSource.occa] in [32503860ba8b78b6/binary]
+Found cached binary of [e52862acee4b01e4/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [e52862acee4b01e4/parsedSource.occa] in [4fd8c7bbee45c05f/binary]
+Found cached binary of [35f11bed3c689386/parsedSource.occa] in [1e29560b33f6d9e1/binary]
+Found cached binary of [35f11bed3c689386/parsedSource.occa] in [40e82c3419296d50/binary]
+Found cached binary of [35f11bed3c689386/parsedSource.occa] in [1e29560b33f6d9e1/binary]
+Found cached binary of [35f11bed3c689386/parsedSource.occa] in [40e82c3419296d50/binary]
+Found cached binary of [81e2585a666b3fa2/parsedSource.occa] in [8a7cbe637ec62ca7/binary]
+Found cached binary of [81e2585a666b3fa2/parsedSource.occa] in [b5bbe92c6b1ed7fe/binary]
+Found cached binary of [81e2585a666b3fa2/parsedSource.occa] in [8a7cbe637ec62ca7/binary]
+Found cached binary of [81e2585a666b3fa2/parsedSource.occa] in [b5bbe92c6b1ed7fe/binary]
+Found cached binary of [8ced629f8b7737d7/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [8ced629f8b7737d7/parsedSource.occa] in [5c2c39f49987d790/binary]
+Found cached binary of [525f1d6fbb6c91c5/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [525f1d6fbb6c91c5/parsedSource.occa] in [3413595c9c044af4/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 4.29327e+06 4293268 4293268
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 4.29327e+06 4293268 4293268
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 512000, mesh->Np = 125 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174195] *** Process received signal ***
+[nr155:174195] Signal: Aborted (6)
+[nr155:174195] Signal code:  (-6)
+[nr155:174195] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7ffa3c203100]
+[nr155:174195] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7ffa3be675f7]
+[nr155:174195] [ 2] /lib64/libc.so.6(abort+0x148)[0x7ffa3be68ce8]
+[nr155:174195] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7ffa3e6c5725]
+[nr155:174195] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174195] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174195] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174195] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7ffa3be53b15]
+[nr155:174195] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174195] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174195 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.949108
+gjr[1] = -0.741531
+gjr[2] = -0.405845
+gjr[3] = 3.71956e-16
+gjr[4] = 0.405845
+gjr[5] = 0.741531
+gjr[6] = 0.949108
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=325440
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 7. gjNp = 343 Nq = 6 
+D[0][0] = -5.8506441565060801 
+D[0][1] = 7.0748466678565949 
+D[0][2] = -1.8005084631972039 
+D[0][3] = 0.9136186505789311 
+D[0][4] = -0.5327341779530487 
+D[0][5] = 0.1954214792208065 
+D[0][6] = -1.4462820677339190 
+D[1][0] = -0.5310840059400219 
+D[1][1] = 2.7393466528774408 
+D[1][2] = -1.1838210811071239 
+D[1][3] = 0.6615180061229802 
+D[1][4] = -0.2396775042193566 
+D[1][5] = 0.5511102402143104 
+D[1][6] = -2.4526165291209279 
+D[2][0] = 1.3372206638518580 
+D[2][1] = 0.8647177185150524 
+D[2][2] = -0.4678877342179852 
+D[2][3] = 0.1674556407576919 
+D[2][4] = -0.0625000000000008 
+D[2][5] = 0.2544242700698987 
+D[2][6] = -2.2162650542747380 
+D[3][0] = 2.2162650542747349 
+D[3][1] = -0.2544242700698944 
+D[3][2] = 0.0624999999999990 
+D[3][3] = -0.1674556407576921 
+D[3][4] = 0.4678877342179861 
+D[3][5] = -0.8647177185150537 
+D[3][6] = -1.3372206638518569 
+D[4][0] = 2.4526165291209270 
+D[4][1] = -0.5511102402143094 
+D[4][2] = 0.2396775042193569 
+D[4][3] = -0.6615180061229806 
+D[4][4] = 1.1838210811071239 
+D[4][5] = -2.7393466528774439 
+D[4][6] = 0.5310840059400290 
+D[5][0] = 1.4462820677339150 
+D[5][1] = -0.1954214792208074 
+D[5][2] = 0.5327341779530473 
+D[5][3] = -0.9136186505789282 
+D[5][4] = 1.8005084631972019 
+D[5][5] = -7.0748466678565869 
+D[5][6] = 5.8506441565060729 
+D[6][0] = 0.0000000000000000 
+D[6][1] = 0.0000000000000000 
+D[6][2] = 0.0000000000000000 
+D[6][3] = 0.0000000000000000 
+D[6][4] = 0.0000000000000000 
+D[6][5] = 0.0000000000000000 
+D[6][6] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 6
+Building kernels for rank 0
+Found cached binary of [ea4b0085baa96ae7/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [ea4b0085baa96ae7/parsedSource.occa] in [25d1f2c62d4253a8/binary]
+Found cached binary of [7ed227d797d2b621/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [7ed227d797d2b621/parsedSource.occa] in [5fb66116dbad4f8c/binary]
+Found cached binary of [f8e87c65fa260ec3/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [f8e87c65fa260ec3/parsedSource.occa] in [9f96d04814dde960/binary]
+Found cached binary of [90861bf370a251c5/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [90861bf370a251c5/parsedSource.occa] in [8ed84d965b3b6792/binary]
+Found cached binary of [34788a0c49b1b3a6/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [34788a0c49b1b3a6/parsedSource.occa] in [bbcabb0a7ecb0b6a/binary]
+Found cached binary of [3ea41b29cb64f8d8/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [3ea41b29cb64f8d8/parsedSource.occa] in [f9d55f16629e29a1/binary]
+building e9 kernel 
+Found cached binary of [9b00a757ae73fda3/parsedSource.occa] in [e179dbe99e00e741/binary]
+Found cached binary of [9b00a757ae73fda3/parsedSource.occa] in [3cd46403970a9e43/binary]
+Found cached binary of [a769f1cb6842c1f5/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [a769f1cb6842c1f5/parsedSource.occa] in [c45cbb9ee295f18c/binary]
+Found cached binary of [7686b36ac9efaf26/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [7686b36ac9efaf26/parsedSource.occa] in [5cbfbea39b901611/binary]
+Found cached binary of [100a61508b663eea/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [100a61508b663eea/parsedSource.occa] in [47a32180b0448572/binary]
+Found cached binary of [d6a26a4ed58cf11c/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [d6a26a4ed58cf11c/parsedSource.occa] in [f4500a8643cb3ede/binary]
+Found cached binary of [31bf51b668966773/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [31bf51b668966773/parsedSource.occa] in [b05ba7ae499c050a/binary]
+Found cached binary of [49574fe247ca6c10/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [49574fe247ca6c10/parsedSource.occa] in [ad627a69a2432913/binary]
+Found cached binary of [97aaeb44bcbb9604/parsedSource.occa] in [1167cbcf8834ef51/binary]
+Found cached binary of [97aaeb44bcbb9604/parsedSource.occa] in [e6b4a5ee517a2554/binary]
+Found cached binary of [97aaeb44bcbb9604/parsedSource.occa] in [1167cbcf8834ef51/binary]
+Found cached binary of [97aaeb44bcbb9604/parsedSource.occa] in [e6b4a5ee517a2554/binary]
+Found cached binary of [3fb101d0581a171e/parsedSource.occa] in [10cc032dfd208aab/binary]
+Found cached binary of [3fb101d0581a171e/parsedSource.occa] in [67c68b8c7b61126e/binary]
+Found cached binary of [3fb101d0581a171e/parsedSource.occa] in [10cc032dfd208aab/binary]
+Found cached binary of [3fb101d0581a171e/parsedSource.occa] in [67c68b8c7b61126e/binary]
+Found cached binary of [99f2cbfd81dfe783/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [99f2cbfd81dfe783/parsedSource.occa] in [d6f6e4d2b5f2e0c4/binary]
+Found cached binary of [b5a1cbcdd8308741/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [b5a1cbcdd8308741/parsedSource.occa] in [404f7d3a2b18dd58/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 6.72975e+06 6729748 6729748
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 6.72975e+06 6729748 6729748
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 884736, mesh->Np = 216 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174267] *** Process received signal ***
+[nr155:174267] Signal: Aborted (6)
+[nr155:174267] Signal code:  (-6)
+[nr155:174267] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7fc9d6010100]
+[nr155:174267] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7fc9d5c745f7]
+[nr155:174267] [ 2] /lib64/libc.so.6(abort+0x148)[0x7fc9d5c75ce8]
+[nr155:174267] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7fc9d84d2725]
+[nr155:174267] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174267] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174267] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174267] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7fc9d5c60b15]
+[nr155:174267] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174267] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174267 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.96029
+gjr[1] = -0.796666
+gjr[2] = -0.525532
+gjr[3] = -0.183435
+gjr[4] = 0.183435
+gjr[5] = 0.525532
+gjr[6] = 0.796666
+gjr[7] = 0.96029
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=464400
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 8. gjNp = 512 Nq = 7 
+D[0][0] = -7.9589668224807211 
+D[0][1] = 9.5074004243069705 
+D[0][2] = -2.2688859138467330 
+D[0][3] = 1.1504946903824940 
+D[0][4] = -0.7092700580216597 
+D[0][5] = 0.4485171293485197 
+D[0][6] = -0.1692894496888704 
+D[0][7] = -1.5734499124927099 
+D[1][0] = -1.3178642857325940 
+D[1][1] = 3.9337729295082560 
+D[1][2] = -1.6222129496824120 
+D[1][3] = 0.9458841679080487 
+D[1][4] = -0.5856280929422989 
+D[1][5] = 0.2194981434337103 
+D[1][6] = 0.7184732800515370 
+D[1][7] = -2.8673133312794681 
+D[2][0] = 1.0558136909189191 
+D[2][1] = 1.6296289574388900 
+D[2][2] = -0.8600453540814836 
+D[2][3] = 0.5138138938629647 
+D[2][4] = -0.1903711369113598 
+D[2][5] = -0.2058291939831718 
+D[2][6] = 0.6800141103019953 
+D[2][7] = -2.8460946617056830 
+D[3][0] = 2.2652275479369459 
+D[3][1] = 0.2077774139648471 
+D[3][2] = -0.1650747543661309 
+D[3][3] = 0.0639795378511976 
+D[3][4] = -0.0639795378511971 
+D[3][5] = 0.1650747543661301 
+D[3][6] = -0.2077774139648439 
+D[3][7] = -2.2652275479369499 
+D[4][0] = 2.8460946617056839 
+D[4][1] = -0.6800141103019944 
+D[4][2] = 0.2058291939831708 
+D[4][3] = 0.1903711369113605 
+D[4][4] = -0.5138138938629647 
+D[4][5] = 0.8600453540814832 
+D[4][6] = -1.6296289574388900 
+D[4][7] = -1.0558136909189200 
+D[5][0] = 2.8673133312794650 
+D[5][1] = -0.7184732800515338 
+D[5][2] = -0.2194981434337115 
+D[5][3] = 0.5856280929422982 
+D[5][4] = -0.9458841679080480 
+D[5][5] = 1.6222129496824129 
+D[5][6] = -3.9337729295082582 
+D[5][7] = 1.3178642857325931 
+D[6][0] = 1.5734499124927130 
+D[6][1] = 0.1692894496888737 
+D[6][2] = -0.4485171293485248 
+D[6][3] = 0.7092700580216661 
+D[6][4] = -1.1504946903825080 
+D[6][5] = 2.2688859138467632 
+D[6][6] = -9.5074004243069936 
+D[6][7] = 7.9589668224807237 
+D[7][0] = 0.0000000000000000 
+D[7][1] = 0.0000000000000000 
+D[7][2] = 0.0000000000000000 
+D[7][3] = 0.0000000000000000 
+D[7][4] = 0.0000000000000000 
+D[7][5] = 0.0000000000000000 
+D[7][6] = 0.0000000000000000 
+D[7][7] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 7
+Building kernels for rank 0
+Found cached binary of [58fd9eda4a84475a/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [58fd9eda4a84475a/parsedSource.occa] in [d37d6117e5832fe1/binary]
+Found cached binary of [16326ffc295a5214/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [16326ffc295a5214/parsedSource.occa] in [62027e677841a505/binary]
+Found cached binary of [884a63ba5b7c3696/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [884a63ba5b7c3696/parsedSource.occa] in [e72822b194807b9a/binary]
+Found cached binary of [72b82ce86e921118/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [72b82ce86e921118/parsedSource.occa] in [91246ae7f7a8a34b/binary]
+Found cached binary of [bbcf644f21596693/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [bbcf644f21596693/parsedSource.occa] in [f8a2ddeb74e6e503/binary]
+Found cached binary of [ff0c408ecb09c820/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [ff0c408ecb09c820/parsedSource.occa] in [fc217c67bbcbe334/binary]
+building e9 kernel 
+Found cached binary of [3260ef7c258aef69/parsedSource.occa] in [ec21d516fd147344/binary]
+Found cached binary of [3260ef7c258aef69/parsedSource.occa] in [853b92ca57662290/binary]
+Found cached binary of [f87f5ca0a8957548/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [f87f5ca0a8957548/parsedSource.occa] in [429640f8b758cbd8/binary]
+Found cached binary of [d02c2dbda1976213/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [d02c2dbda1976213/parsedSource.occa] in [ca7dfcaad6af88f8/binary]
+Found cached binary of [bb0c08a39e99e037/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [bb0c08a39e99e037/parsedSource.occa] in [aebb06a9380faeab/binary]
+Found cached binary of [4fc25a11ad0ee29c/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [4fc25a11ad0ee29c/parsedSource.occa] in [a7d0c0d73a6f99f7/binary]
+Found cached binary of [4d1822f08b37a86a/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [4d1822f08b37a86a/parsedSource.occa] in [69cbe6bfcc9e8ca3/binary]
+Found cached binary of [54c2455d82d2b5db/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [54c2455d82d2b5db/parsedSource.occa] in [efc7ed28d580e4fa/binary]
+Found cached binary of [f890536745791611/parsedSource.occa] in [18f8e97313356bb1/binary]
+Found cached binary of [f890536745791611/parsedSource.occa] in [d8ac5f9b227c2c4d/binary]
+Found cached binary of [f890536745791611/parsedSource.occa] in [18f8e97313356bb1/binary]
+Found cached binary of [f890536745791611/parsedSource.occa] in [d8ac5f9b227c2c4d/binary]
+Found cached binary of [eab2a9233b9d92cb/parsedSource.occa] in [a55267a7cf5d6fef/binary]
+Found cached binary of [eab2a9233b9d92cb/parsedSource.occa] in [6fd411d7ce773453/binary]
+Found cached binary of [eab2a9233b9d92cb/parsedSource.occa] in [a55267a7cf5d6fef/binary]
+Found cached binary of [eab2a9233b9d92cb/parsedSource.occa] in [6fd411d7ce773453/binary]
+Found cached binary of [79d06b239756d567/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [79d06b239756d567/parsedSource.occa] in [f95c84334f93e99d/binary]
+Found cached binary of [16cb2a426428dbb4/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [16cb2a426428dbb4/parsedSource.occa] in [55f09cdb60093e51/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 9.71919e+06 9719188 9719188
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 9.71919e+06 9719188 9719188
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 1404928, mesh->Np = 343 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174324] *** Process received signal ***
+[nr155:174324] Signal: Aborted (6)
+[nr155:174324] Signal code:  (-6)
+[nr155:174324] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7fb1d046c100]
+[nr155:174324] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7fb1d00d05f7]
+[nr155:174324] [ 2] /lib64/libc.so.6(abort+0x148)[0x7fb1d00d1ce8]
+[nr155:174324] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7fb1d292e725]
+[nr155:174324] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174324] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174324] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174324] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7fb1d00bcb15]
+[nr155:174324] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174324] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174324 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.96816
+gjr[1] = -0.836031
+gjr[2] = -0.613371
+gjr[3] = -0.324253
+gjr[4] = 1.88315e-16
+gjr[5] = 0.324253
+gjr[6] = 0.613371
+gjr[7] = 0.836031
+gjr[8] = 0.96816
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=626400
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 9. gjNp = 729 Nq = 8 
+D[0][0] = -10.3691614850103999 
+D[0][1] = 12.2587589916110904 
+D[0][2] = -2.7567429134341208 
+D[0][3] = 1.3866006849771391 
+D[0][4] = -0.8672163539736529 
+D[0][5] = 0.5872583599722523 
+D[0][6] = -0.3887745526249814 
+D[0][7] = 0.1492772684826648 
+D[0][8] = -1.6748025559458690 
+D[1][0] = -2.2735825431231391 
+D[1][1] = 5.2864185760080744 
+D[1][2] = -2.0757576837568119 
+D[1][3] = 1.2153184166208471 
+D[1][4] = -0.8014122899686558 
+D[1][5] = 0.5242704170863955 
+D[1][6] = -0.2004523369208403 
+D[1][7] = 0.8661442182075747 
+D[1][8] = -3.2322421721134300 
+D[2][0] = 0.6391244857206667 
+D[2][1] = 2.5199681807117038 
+D[2][2] = -1.2739613853286831 
+D[2][3] = 0.7978124447673802 
+D[2][4] = -0.5105690913003051 
+D[2][5] = 0.1937233193350918 
+D[2][6] = -0.3358182273928726 
+D[2][7] = 1.0521527472148799 
+D[2][8] = -3.3926390882104158 
+D[3][0] = 2.1704205577357532 
+D[3][1] = 0.8150228408907091 
+D[3][2] = -0.5096578822344930 
+D[3][3] = 0.3220829227479370 
+D[3][4] = -0.1215638707514975 
+D[3][5] = 0.0390625000000005 
+D[3][6] = -0.1248537463656929 
+D[3][7] = 0.3448188117424298 
+D[3][8] = -3.0303592933933978 
+D[4][0] = 3.0303592933933978 
+D[4][1] = -0.3448188117424294 
+D[4][2] = 0.1248537463656918 
+D[4][3] = -0.0390624999999996 
+D[4][4] = 0.1215638707514959 
+D[4][5] = -0.3220829227479358 
+D[4][6] = 0.5096578822344914 
+D[4][7] = -0.8150228408907055 
+D[4][8] = -2.1704205577357589 
+D[5][0] = 3.3926390882104180 
+D[5][1] = -1.0521527472148771 
+D[5][2] = 0.3358182273928715 
+D[5][3] = -0.1937233193350919 
+D[5][4] = 0.5105690913003051 
+D[5][5] = -0.7978124447673780 
+D[5][6] = 1.2739613853286791 
+D[5][7] = -2.5199681807117038 
+D[5][8] = -0.6391244857206652 
+D[6][0] = 3.2322421721134291 
+D[6][1] = -0.8661442182075746 
+D[6][2] = 0.2004523369208402 
+D[6][3] = -0.5242704170863954 
+D[6][4] = 0.8014122899686538 
+D[6][5] = -1.2153184166208451 
+D[6][6] = 2.0757576837568168 
+D[6][7] = -5.2864185760080797 
+D[6][8] = 2.2735825431231440 
+D[7][0] = 1.6748025559458650 
+D[7][1] = -0.1492772684826651 
+D[7][2] = 0.3887745526249805 
+D[7][3] = -0.5872583599722501 
+D[7][4] = 0.8672163539736504 
+D[7][5] = -1.3866006849771411 
+D[7][6] = 2.7567429134341230 
+D[7][7] = -12.2587589916110904 
+D[7][8] = 10.3691614850103893 
+D[8][0] = 0.0000000000000000 
+D[8][1] = 0.0000000000000000 
+D[8][2] = 0.0000000000000000 
+D[8][3] = 0.0000000000000000 
+D[8][4] = 0.0000000000000000 
+D[8][5] = 0.0000000000000000 
+D[8][6] = 0.0000000000000000 
+D[8][7] = 0.0000000000000000 
+D[8][8] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 8
+Building kernels for rank 0
+Found cached binary of [2da047602f07fec0/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [2da047602f07fec0/parsedSource.occa] in [4e898055b5351513/binary]
+Found cached binary of [120779fe7eabb0be/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [120779fe7eabb0be/parsedSource.occa] in [9d20d2e59a0b4957/binary]
+Found cached binary of [92eae40d2f0673ce/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [92eae40d2f0673ce/parsedSource.occa] in [9eb6cc9ba604741b/binary]
+Found cached binary of [60924ddac596be22/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [60924ddac596be22/parsedSource.occa] in [dda987651663fde9/binary]
+Found cached binary of [d07d61dde93e201a/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [d07d61dde93e201a/parsedSource.occa] in [22ebfc59b2613571/binary]
+Found cached binary of [d39bf42445137b7a/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [d39bf42445137b7a/parsedSource.occa] in [f70fb0e554381de1/binary]
+building e9 kernel 
+Found cached binary of [2495f17effafd49c/parsedSource.occa] in [b74775c184da83f3/binary]
+Found cached binary of [2495f17effafd49c/parsedSource.occa] in [ab68bf4b476fad6d/binary]
+Found cached binary of [43e7cd025b1c8ad2/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [43e7cd025b1c8ad2/parsedSource.occa] in [e60199f659600442/binary]
+Found cached binary of [bd92e0c7f5f94981/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [bd92e0c7f5f94981/parsedSource.occa] in [db5665344ee0762b/binary]
+Found cached binary of [4de2ee41dc841945/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [4de2ee41dc841945/parsedSource.occa] in [e322d63c8b494c9e/binary]
+Found cached binary of [a358115b615ebc0b/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [a358115b615ebc0b/parsedSource.occa] in [d74dfc1534484e65/binary]
+Found cached binary of [bc2fb7924a2bed50/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [bc2fb7924a2bed50/parsedSource.occa] in [c6acb6ad44d18591/binary]
+Found cached binary of [374a9e6fe5c1d0bf/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [374a9e6fe5c1d0bf/parsedSource.occa] in [6a99352677a626a0/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [a0687357f167f11a/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [e817c36585a0dafa/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [a0687357f167f11a/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [e817c36585a0dafa/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1466b18ba4a006d7/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1bd18691a64d399d/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1466b18ba4a006d7/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1bd18691a64d399d/binary]
+Found cached binary of [53f94da8fd5b49fc/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [53f94da8fd5b49fc/parsedSource.occa] in [8b141ed1a14b91fd/binary]
+Found cached binary of [c9b507782feafd5e/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [c9b507782feafd5e/parsedSource.occa] in [d4094889177e5203/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.32616e+07 13261588 13261588
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.32616e+07 13261588 13261588
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 2097152, mesh->Np = 512 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174386] *** Process received signal ***
+[nr155:174386] Signal: Aborted (6)
+[nr155:174386] Signal code:  (-6)
+[nr155:174386] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7faf2d594100]
+[nr155:174386] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7faf2d1f85f7]
+[nr155:174386] [ 2] /lib64/libc.so.6(abort+0x148)[0x7faf2d1f9ce8]
+[nr155:174386] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7faf2fa56725]
+[nr155:174386] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174386] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174386] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174386] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7faf2d1e4b15]
+[nr155:174386] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174386] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174386 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 4096, Nbcs = 1536
+gjr[0] = -0.973907
+gjr[1] = -0.865063
+gjr[2] = -0.67941
+gjr[3] = -0.433395
+gjr[4] = -0.148874
+gjr[5] = 0.148874
+gjr[6] = 0.433395
+gjr[7] = 0.67941
+gjr[8] = 0.865063
+gjr[9] = 0.973907
+J in range [0.000244141,0.000244141] and max Skew = 1
+gatherChange=811440
+gatherChange=0
+rank 0 hostid 520788746 
+Setup info: Nggeo = 7, gjNq = 10. gjNp = 1000 Nq = 9 
+D[0][0] = -13.0802505406220995 
+D[0][1] = 15.3272754813094796 
+D[0][2] = -3.2638787642734912 
+D[0][3] = 1.6250756295280970 
+D[0][4] = -1.0197339609928411 
+D[0][5] = 0.7057957874872628 
+D[0][6] = -0.5045747259926198 
+D[0][7] = 0.3437605130851169 
+D[0][8] = -0.1334694195289103 
+D[0][9] = -1.7532419683255569 
+D[1][0] = -3.3924647768564031 
+D[1][1] = 6.7927233197581840 
+D[1][2] = -2.5443957620585191 
+D[1][3] = 1.4818710474417229 
+D[1][4] = -0.9948166692634811 
+D[1][5] = 0.7007586189132360 
+D[1][6] = -0.4739551533557766 
+D[1][7] = 0.1835213437465932 
+D[1][8] = 0.9987463298546828 
+D[1][9] = -3.5579418692021729 
+D[2][0] = 0.0989608521125082 
+D[2][1] = 3.5254062328293729 
+D[2][2] = -1.7060435359504880 
+D[2][3] = 1.0748479607770560 
+D[2][4] = -0.7356881052639488 
+D[2][5] = 0.4908034547486043 
+D[2][6] = -0.1890913199056146 
+D[2][7] = -0.4543183120746974 
+D[2][8] = 1.3840745586083270 
+D[2][9] = -3.8778665099084240 
+D[3][0] = 1.9551167452658049 
+D[3][1] = 1.5355371299103511 
+D[3][2] = -0.8932101385678881 
+D[3][3] = 0.5889042608780932 
+D[3][4] = -0.3859951430391070 
+D[3][5] = 0.1477574089275400 
+D[3][6] = 0.1373043268778431 
+D[3][7] = -0.3955106800735742 
+D[3][8] = 0.8263518967234251 
+D[3][9] = -3.6909794645240281 
+D[4][0] = 3.0715776562295520 
+D[4][1] = 0.1447347528633005 
+D[4][2] = -0.1664826963218275 
+D[4][3] = 0.1201555416769218 
+D[4][4] = -0.0471513334516132 
+D[4][5] = 0.0471513334516116 
+D[4][6] = -0.1201555416769182 
+D[4][7] = 0.1664826963218208 
+D[4][8] = -0.1447347528632889 
+D[4][9] = -3.0715776562295609 
+D[5][0] = 3.6909794645240259 
+D[5][1] = -0.8263518967234205 
+D[5][2] = 0.3955106800735713 
+D[5][3] = -0.1373043268778416 
+D[5][4] = -0.1477574089275395 
+D[5][5] = 0.3859951430391061 
+D[5][6] = -0.5889042608780910 
+D[5][7] = 0.8932101385678852 
+D[5][8] = -1.5355371299103451 
+D[5][9] = -1.9551167452658129 
+D[6][0] = 3.8778665099084302 
+D[6][1] = -1.3840745586083281 
+D[6][2] = 0.4543183120746958 
+D[6][3] = 0.1890913199056145 
+D[6][4] = -0.4908034547486024 
+D[6][5] = 0.7356881052639456 
+D[6][6] = -1.0748479607770549 
+D[6][7] = 1.7060435359504840 
+D[6][8] = -3.5254062328293609 
+D[6][9] = -0.0989608521125322 
+D[7][0] = 3.5579418692021840 
+D[7][1] = -0.9987463298546780 
+D[7][2] = -0.1835213437465952 
+D[7][3] = 0.4739551533557745 
+D[7][4] = -0.7007586189132320 
+D[7][5] = 0.9948166692634781 
+D[7][6] = -1.4818710474417200 
+D[7][7] = 2.5443957620585169 
+D[7][8] = -6.7927233197581964 
+D[7][9] = 3.3924647768564231 
+D[8][0] = 1.7532419683255500 
+D[8][1] = 0.1334694195289050 
+D[8][2] = -0.3437605130851004 
+D[8][3] = 0.5045747259925988 
+D[8][4] = -0.7057957874872293 
+D[8][5] = 1.0197339609927880 
+D[8][6] = -1.6250756295280260 
+D[8][7] = 3.2638787642733882 
+D[8][8] = -15.3272754813092806 
+D[8][9] = 13.0802505406219591 
+D[9][0] = 0.0000000000000000 
+D[9][1] = 0.0000000000000000 
+D[9][2] = 0.0000000000000000 
+D[9][3] = 0.0000000000000000 
+D[9][4] = 0.0000000000000000 
+D[9][5] = 0.0000000000000000 
+D[9][6] = 0.0000000000000000 
+D[9][7] = 0.0000000000000000 
+D[9][8] = 0.0000000000000000 
+D[9][9] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 7
+Building kernels for rank 0
+Found cached binary of [3163dd49ad0be97b/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [3163dd49ad0be97b/parsedSource.occa] in [e2bf0d8aa145a084/binary]
+Found cached binary of [71f351e75e5a1765/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [71f351e75e5a1765/parsedSource.occa] in [a0a3839a293a6c30/binary]
+Found cached binary of [834e1fa942f0ca6f/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [834e1fa942f0ca6f/parsedSource.occa] in [79c09cc8c59fd46c/binary]
+Found cached binary of [619991f3a64ebd91/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [619991f3a64ebd91/parsedSource.occa] in [8fa83b1a8c99bd16/binary]
+Found cached binary of [468c50627354714e/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [468c50627354714e/parsedSource.occa] in [a5d95eae844a019e/binary]
+Found cached binary of [338b420d4b987ec9/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [338b420d4b987ec9/parsedSource.occa] in [ded7759ab5f473ee/binary]
+building e9 kernel 
+Found cached binary of [45ef8e67f465568f/parsedSource.occa] in [b3d5002c715c1f32/binary]
+Found cached binary of [45ef8e67f465568f/parsedSource.occa] in [69211dd7ca9f021f/binary]
+Found cached binary of [91ff03cb2e441a1f/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [91ff03cb2e441a1f/parsedSource.occa] in [d337fcb739f900e1/binary]
+Found cached binary of [cea83b14f74722ce/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [cea83b14f74722ce/parsedSource.occa] in [fc436751ad7e6c1e/binary]
+Found cached binary of [82f05d0657554d2a/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [82f05d0657554d2a/parsedSource.occa] in [a90b03807c316ab6/binary]
+Found cached binary of [93ced6387cbe4c2c/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [93ced6387cbe4c2c/parsedSource.occa] in [7870eaca90e75eda/binary]
+Found cached binary of [d73e039bdd762ab4/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [d73e039bdd762ab4/parsedSource.occa] in [d9bc8c32df885d7e/binary]
+Found cached binary of [7332028cc18e18c2/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [7332028cc18e18c2/parsedSource.occa] in [60e576a7bed49c9b/binary]
+Found cached binary of [60a92d9a60236e84/parsedSource.occa] in [22be79eb595f5ba1/binary]
+Found cached binary of [60a92d9a60236e84/parsedSource.occa] in [24dd3b96904f1b98/binary]
+Found cached binary of [60a92d9a60236e84/parsedSource.occa] in [22be79eb595f5ba1/binary]
+Found cached binary of [60a92d9a60236e84/parsedSource.occa] in [24dd3b96904f1b98/binary]
+Found cached binary of [89800864ac405364/parsedSource.occa] in [27c300d7258618cf/binary]
+Found cached binary of [89800864ac405364/parsedSource.occa] in [5d429d9af85ac36e/binary]
+Found cached binary of [89800864ac405364/parsedSource.occa] in [27c300d7258618cf/binary]
+Found cached binary of [89800864ac405364/parsedSource.occa] in [5d429d9af85ac36e/binary]
+Found cached binary of [ae5d146198fa122f/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [ae5d146198fa122f/parsedSource.occa] in [1648d6f6f702b898/binary]
+Found cached binary of [b245bfb167891b45/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [b245bfb167891b45/parsedSource.occa] in [bbf0481e90cdb014/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.73569e+07 17356948 17356948
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.73569e+07 17356948 17356948
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 2985984, mesh->Np = 729 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+Error
+    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
+    Line    : 1147
+    Error   : CUDA Error [ 700 ]: UNKNOWN ERROR
+    Message : Device: Finish
+[nr155:174449] *** Process received signal ***
+[nr155:174449] Signal: Aborted (6)
+[nr155:174449] Signal code:  (-6)
+[nr155:174449] [ 0] /lib64/libpthread.so.0(+0xf100)[0x7fdc418e3100]
+[nr155:174449] [ 1] /lib64/libc.so.6(gsignal+0x37)[0x7fdc415475f7]
+[nr155:174449] [ 2] /lib64/libc.so.6(abort+0x148)[0x7fdc41548ce8]
+[nr155:174449] [ 3] /home/kswirydo/holmes/occa/lib/libocca.so(_ZN4occa8device_tILi8388608EE6finishEv+0x185)[0x7fdc43da5725]
+[nr155:174449] [ 4] ./ellipticMainHex3D[0x418139]
+[nr155:174449] [ 5] ./ellipticMainHex3D[0x40c6b7]
+[nr155:174449] [ 6] ./ellipticMainHex3D[0x40bc00]
+[nr155:174449] [ 7] /lib64/libc.so.6(__libc_start_main+0xf5)[0x7fdc41533b15]
+[nr155:174449] [ 8] ./ellipticMainHex3D[0x40c531]
+[nr155:174449] *** End of error message ***
+/opt/torque/torque/spool/mom_priv/jobs/239963.master.cluster.SC: line 17: 174449 Aborted                 ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh $n
+
+Usage:
+ kill [options] <pid|name> [...]
+
+Options:
+ -a, --all              do not restrict the name-to-pid conversion to processes
+                        with the same uid as the present process
+ -s, --signal <sig>     send specified signal
+ -q, --queue <sig>      use sigqueue(2) rather than kill(2)
+ -p, --pid              print pids without signaling them
+ -l, --list [=<signal>] list signal names, or convert one to a name
+ -L, --table            list signal names and numbers
+
+ -h, --help     display this help and exit
+ -V, --version  output version information and exit
+
+For more details see kill(1).

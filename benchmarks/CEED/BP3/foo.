@@ -193,7 +193,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 
 	iint Ntotal = mesh->Np*mesh->Nelements;
 	iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
-printf("NqP = %d \n", mesh->NqP);
+
 	iint Nblock = (Ntotal+blockSize-1)/blockSize;
 
 	iint Nhalo = mesh->Np*mesh->totalHaloPairs;
@@ -208,20 +208,20 @@ printf("NqP = %d \n", mesh->NqP);
 	solver->r   = (dfloat*) calloc(Nall, sizeof(dfloat));
 	solver->z   = (dfloat*) calloc(Nall, sizeof(dfloat));
 	solver->zP  = (dfloat*) calloc(NallP, sizeof(dfloat));
-	solver->Ax  = (dfloat*) calloc((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements, sizeof(dfloat));
+	solver->Ax  = (dfloat*) calloc(Nall, sizeof(dfloat));
 
 
 	solver->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
-//	solver->grad = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
-solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements+Nhalo), sizeof(dfloat));
+	solver->grad = (dfloat*) calloc(4*(Ntotal+Nhalo), sizeof(dfloat));
+
 	solver->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
 	solver->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), solver->r);
 	solver->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
 	solver->o_zP  = mesh->device.malloc(NallP*sizeof(dfloat), solver->zP);// CAUTION
-	solver->o_Ax  = mesh->device.malloc((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements*sizeof(dfloat), solver->Ax);
+	solver->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
 	solver->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), solver->Ap);
 	solver->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), solver->tmp);
-	solver->o_grad  = mesh->device.malloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements +Nhalo )*sizeof(dfloat), solver->grad);
+	solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 	solver->o_pAp  = mesh->device.malloc(sizeof(dfloat));
 
 	solver->o_Aw  = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
@@ -368,8 +368,8 @@ solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->
 
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DCOLLOCATIONEx.okl",
-"ellipticAxHex3D_Ref2D10",
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DNOCOLLOCATIONEx.okl",
+"ellipticAxHex3D_Ref2",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
 			                             kernelInfo);
