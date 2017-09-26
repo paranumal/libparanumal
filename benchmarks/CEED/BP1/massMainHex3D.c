@@ -203,8 +203,8 @@ int main(int argc, char **argv){
 	massSetupHex3D(mesh, kernelInfo);
 	
 	solver_t *solver = massSolveSetupHex3D(mesh, lambda, kernelInfo, options);
-	
-	iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+	iint Nall = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nelements+mesh->totalHaloPairs);
+	//iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 	printf("Nall = %d, mesh->Np = %d mesh->Nelements = %d mesh->totalHaloPairs = %d \n", Nall, mesh->Np, mesh->Nelements, mesh->totalHaloPairs);
 	dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 	dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
