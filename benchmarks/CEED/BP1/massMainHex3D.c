@@ -54,7 +54,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	
 	// time cudamemcpy for same amount of data movement
 	int gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-	iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 +7*mesh->Np)/2)); // use 1/2 because of load+store
+	iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 +mesh->Np)/2)); // use 1/2 because of load+store
 	occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
 	occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 	
