@@ -1,11 +1,5 @@
 #include "ellipticTri2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-
-void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
-
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
   mesh_t *mesh = solver->mesh;
@@ -14,6 +8,8 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
+  dfloat *gradSendBuffer = solver->gradSendBuffer;
+  dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
   if(strstr(options, "CONTINUOUS")){
     ogs_t *nonHalo = solver->nonHalo;
@@ -68,41 +64,34 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
-    ellipticStartHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
+    dfloat BRPenalty = 1.0;
 
-    solver->partialGradientKernel(mesh->Nelements,
-                                  offset,
-                                  mesh->o_vgeo,
-                                  mesh->o_DrT,
-                                  mesh->o_DsT,
-                                  o_q,
-                                  solver->o_grad);
+    ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);    
 
-    ellipticInterimHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
+    solver->BRGradientVolumeKernel(mesh->Nelements,
+                                          mesh->o_vgeo,
+                                          mesh->o_DrT,
+                                          mesh->o_DsT,
+                                          o_q,
+                                          solver->o_grad);
+
+    ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
+    
+    solver->BRGradientSurfaceKernel(mesh->Nelements,
+                                mesh->o_vmapM,
+                                mesh->o_vmapP,
+                                mesh->o_sgeo,
+                                solver->o_EToB,
+                                mesh->o_LIFTT,
+                                o_q,
+                                solver->o_grad);
 
     //Start the rank 1 augmentation if all BCs are Neumann
     //TODO this could probably be moved inside the Ax kernel for better performance
-    if(solver->allNeumann) 
+    if(solver->allNeumann)  {
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-
-    if(mesh->NinternalElements)
-      solver->partialIpdgKernel(mesh->NinternalElements,
-                                mesh->o_internalElementIds,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                solver->o_EToB,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                solver->o_grad,
-                                o_Aq);
-
-    if(solver->allNeumann) {
+    
       o_tmp.copyTo(tmp);
 
       for(iint n=0;n<Nblock;++n)
@@ -111,40 +100,34 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
+    
+    ellipticStartHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, sendBuffer, recvBuffer);
+    ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, sendBuffer, recvBuffer);    
 
-    ellipticEndHaloExchange2D(solver, o_q, recvBuffer);
+    solver->BRDivergenceVolumeKernel(mesh->Nelements,
+                                          mesh->o_vgeo,
+                                          mesh->o_DrT,
+                                          mesh->o_DsT,
+                                          solver->o_grad,
+                                          o_Aq);
 
-    if(mesh->totalHaloPairs){
-      offset = mesh->Nelements;
-      solver->partialGradientKernel(mesh->totalHaloPairs,
-                                    offset,
-                                    mesh->o_vgeo,
-                                    mesh->o_DrT,
-                                    mesh->o_DsT,
-                                    o_q,
-                                    solver->o_grad);
-    }
-
-    if(mesh->NnotInternalElements)
-      solver->partialIpdgKernel(mesh->NnotInternalElements,
-                                mesh->o_notInternalElementIds,
+    ellipticEndHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, recvBuffer);
+    
+    solver->BRDivergenceSurfaceKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
+                                BRPenalty,
                                 mesh->o_sgeo,
                                 solver->o_EToB,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
+                                o_q,
                                 solver->o_grad,
                                 o_Aq);
 
     if(solver->allNeumann) 
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-
   }
 
   if(strstr(options, "CONTINUOUS"))
