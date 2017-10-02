@@ -65,6 +65,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
     solver->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
     solver->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+
+    occa::memory o_gradSendBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+    occa::memory o_gradRecvBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+
+    solver->gradSendBuffer = (dfloat*) o_gradSendBuffer.getMappedPointer();
+    solver->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
   }else{
     solver->sendBuffer = NULL;
     solver->recvBuffer = NULL;
@@ -245,6 +251,26 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->partialIpdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
                "ellipticPartialAxIpdgTri2D",
+               kernelInfo);
+
+  solver->BRGradientVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+               "ellipticBRGradientVolume2D",
+               kernelInfo);
+
+  solver->BRGradientSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+               "ellipticBRGradientSurface2D",
+               kernelInfo);
+
+  solver->BRDivergenceVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+               "ellipticBRDivergenceVolume2D",
+               kernelInfo);
+
+  solver->BRDivergenceSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+               "ellipticBRDivergenceSurface2D",
                kernelInfo);
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays

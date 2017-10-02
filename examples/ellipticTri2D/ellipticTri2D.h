@@ -44,6 +44,7 @@ typedef struct {
 
   int *EToB;
   dfloat *sendBuffer, *recvBuffer;
+  dfloat *gradSendBuffer, *gradRecvBuffer;
 
   occa::stream defaultStream;
   occa::stream dataStream;
@@ -84,6 +85,11 @@ typedef struct {
   occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
 
+  occa::kernel BRGradientVolumeKernel;
+  occa::kernel BRGradientSurfaceKernel;
+  occa::kernel BRDivergenceVolumeKernel;
+  occa::kernel BRDivergenceSurfaceKernel;
+
 }solver_t;
 
 void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
@@ -103,11 +109,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
 solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
 
-void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
-void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
-void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *recvBuffer);
+void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
 void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
           iint Nlocal,     // number of local nodes
