@@ -28,9 +28,9 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -55,8 +55,8 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
   //dfloat lambda = 0;
+  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -74,6 +74,7 @@ int main(int argc, char **argv){
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *nrhstmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(iint n=0;n<mesh->Np;++n){
@@ -81,6 +82,25 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[n+e*mesh->Np];
       nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
     }
+#if USE_BERN
+    for(iint n=0;n<mesh->Np;++n){
+      nrhstmp[n] = 0.;
+      for(iint m=0;m<mesh->Np;++m){
+        nrhstmp[n] += mesh->invVB[n*mesh->Np+m]*nrhs[m];
+      }
+    }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat rhs = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
+      }
+      iint id = n+e*mesh->Np;
+
+      r[id] = -rhs*J;
+      x[id] = 0;
+      mesh->q[id] = rhs;
+    }
+#else
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
       for(iint m=0;m<mesh->Np;++m){
@@ -90,10 +110,12 @@ int main(int argc, char **argv){
 
       r[id] = -rhs*J;
       x[id] = 0;
-      mesh->q[id] = nrhs[n];
+      mesh->q[id] = rhs;
     }
+#endif
   }
   free(nrhs);
+  free(nrhstmp);
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
@@ -140,6 +162,24 @@ int main(int argc, char **argv){
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
+#if USE_BERN
+  dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for (iint e =0;e<mesh->Nelements;e++){
+    iint id = e*mesh->Np;
+
+    for (iint n=0; n<mesh->Np; n++){
+      qtmp[n] = mesh->q[id+n];
+      mesh->q[id+n] = 0.0;
+    }
+    for (iint n=0;n<mesh->Np;n++){
+      for (iint m=0; m<mesh->Np; m++){
+        mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
+      }
+    }
+  }
+  free(qtmp);
+#endif
+
   dfloat maxError = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
@@ -150,7 +190,7 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 

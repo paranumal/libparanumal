@@ -1,8 +1,10 @@
 
-kernel void ellipticBRGradientVolume2D(const iint Nelements,
+kernel void ellipticBBBRGradientVolume2D(const iint Nelements,
         const dfloat * restrict vgeo,
-        const dfloat * restrict DrT,
-        const dfloat * restrict DsT,
+        const iint * restrict D1ids,
+        const iint * restrict D2ids,
+        const iint * restrict D3ids,
+        const dfloat * restrict Dvals,
         const dfloat * restrict q,
         dfloat * restrict gradq){
 
@@ -33,15 +35,27 @@ kernel void ellipticBRGradientVolume2D(const iint Nelements,
           const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-          dfloat dqdr  = 0.f, dqds  = 0.f;
-          occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
-              const dfloat Drni = DrT[n+i*p_Np];
-              const dfloat Dsni = DsT[n+i*p_Np];
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
+          const dfloat Dval2 = Dvals[n+p_Np];
 
-              dqdr  += Drni*s_q[es][i];
-              dqds  += Dsni*s_q[es][i];
-            }
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];    
+          const dfloat Dval3 = Dvals[n+2*p_Np];
+
+          const dfloat dqdr = .5f*(Dval1*(s_q[es][D2i1] - s_q[es][D1i1]) +
+                  Dval2*(s_q[es][D2i2] - s_q[es][D1i2]) +
+                  Dval3*(s_q[es][D2i3] - s_q[es][D1i3]));
+          const dfloat dqds = .5f*(Dval1*(s_q[es][D3i1] - s_q[es][D1i1]) +
+                  Dval2*(s_q[es][D3i2] - s_q[es][D1i2]) +
+                  Dval3*(s_q[es][D3i3] - s_q[es][D1i3]));
 
           const iint id = e*2*p_Np;
           gradq[id+     n] = drdx*dqdr + dsdx*dqds;
@@ -52,12 +66,14 @@ kernel void ellipticBRGradientVolume2D(const iint Nelements,
   }
 }
 
-kernel void ellipticBRGradientSurface2D(const iint Nelements,
+kernel void ellipticBBBRGradientSurface2D(const iint Nelements,
          const iint   * restrict vmapM,
          const iint   * restrict vmapP,
          const dfloat * restrict sgeo,
          const iint   * restrict EToB,
-         const dfloat * restrict LIFTT,
+         const dfloat * restrict L0vals,
+         const iint   * restrict ELids,
+         const dfloat * restrict ELvals,
          const dfloat * restrict q,
          dfloat * restrict gradq){
 
@@ -66,6 +82,8 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
 
     shared dfloat s_fluxqx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxqy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxqx_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxqy_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
     for(iint es=0;es<p_NblockS;++es;inner1){
@@ -112,7 +130,37 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
     // wait for all flux functions are written to shared
     barrier(localMemFence);
 
-    // for each node in the element
+    // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+
+            iint id = n % p_Nfp;  // warning: redundant reads
+            dfloat L0val = L0vals[id+p_Nfp]; 
+            
+            dfloat qxfluxtmp = L0val * s_fluxqx[es][n];
+            dfloat qyfluxtmp = L0val * s_fluxqy[es][n];
+
+            if (id > 0){    
+              qxfluxtmp += L0vals[id]*s_fluxqx[es][n-1]; // add previous term
+              qyfluxtmp += L0vals[id]*s_fluxqy[es][n-1]; // add previous term
+            }
+            if (id < p_Nfp-1){
+              qxfluxtmp += L0vals[id+2*p_Nfp]*s_fluxqx[es][n+1];// add next term
+              qyfluxtmp += L0vals[id+2*p_Nfp]*s_fluxqy[es][n+1];// add next term
+            }
+            s_fluxqx_copy[es][n] = qxfluxtmp;
+            s_fluxqy_copy[es][n] = qyfluxtmp;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // apply lift reduction and accumulate RHS
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
         iint e = eo + es;
@@ -120,19 +168,21 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
           if(n<p_Np){
             iint id = e*2*p_Np;
 
-            dfloat qx  = gradq[id+     n];
-            dfloat qy  = gradq[id+p_Np+n];
-            
-            // Lift
-            occaUnroll(p_NfacesNfp)
-              for(int m=0;m<p_Nfaces*p_Nfp;++m){
-                dfloat L = LIFTT[n+m*p_Np];
-                qx += L*s_fluxqx[es][m];
-                qy += L*s_fluxqy[es][m];
-              }
+            dfloat qxn  = gradq[id+     n];
+            dfloat qyn  = gradq[id+p_Np+n];
 
-            gradq[id+     n] = qx;
-            gradq[id+p_Np+n] = qy;
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            occaUnroll(p_max_EL_nnz)
+              for (int m = 0; m < p_max_EL_nnz; ++m){
+                iint iid = n + m*p_Np;
+                dfloat ELval = ELvals[iid];
+                iint ELid = ELids[iid];
+                qxn += ELval * s_fluxqx_copy[es][ELid];
+                qyn += ELval * s_fluxqy_copy[es][ELid];
+              }
+            
+            gradq[id+     n] = qxn;
+            gradq[id+p_Np+n] = qyn;
           }
         }
       }
@@ -140,10 +190,12 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
   }
 }
 
-kernel void ellipticBRDivergenceVolume2D(const iint Nelements,
+kernel void ellipticBBBRDivergenceVolume2D(const iint Nelements,
         const dfloat * restrict vgeo,
-        const dfloat * restrict DrT,
-        const dfloat * restrict DsT,
+        const iint * restrict D1ids,
+        const iint * restrict D2ids,
+        const iint * restrict D3ids,
+        const dfloat * restrict Dvals,    
         const dfloat * restrict gradq,
         dfloat * restrict Aq){
 
@@ -176,18 +228,34 @@ kernel void ellipticBRDivergenceVolume2D(const iint Nelements,
           const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-          dfloat dqxdr  = 0.f, dqxds  = 0.f;
-          dfloat dqydr  = 0.f, dqyds  = 0.f;
-          occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
-              const dfloat Drni = DrT[n+i*p_Np];
-              const dfloat Dsni = DsT[n+i*p_Np];
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+          
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
+          const dfloat Dval2 = Dvals[n+p_Np];
 
-              dqxdr  += Drni*s_qx[es][i];
-              dqxds  += Dsni*s_qx[es][i];
-              dqydr  += Drni*s_qy[es][i];
-              dqyds  += Dsni*s_qy[es][i];
-            }
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];    
+          const dfloat Dval3 = Dvals[n+2*p_Np];
+
+          const dfloat dqxdr = .5f*(Dval1*(s_qx[es][D2i1] - s_qx[es][D1i1]) +
+                  Dval2*(s_qx[es][D2i2] - s_qx[es][D1i2]) +
+                  Dval3*(s_qx[es][D2i3] - s_qx[es][D1i3]));
+          const dfloat dqxds = .5f*(Dval1*(s_qx[es][D3i1] - s_qx[es][D1i1]) +
+                  Dval2*(s_qx[es][D3i2] - s_qx[es][D1i2]) +
+                  Dval3*(s_qx[es][D3i3] - s_qx[es][D1i3]));
+
+          const dfloat dqydr = .5f*(Dval1*(s_qy[es][D2i1] - s_qy[es][D1i1]) +
+                  Dval2*(s_qy[es][D2i2] - s_qy[es][D1i2]) +
+                  Dval3*(s_qy[es][D2i3] - s_qy[es][D1i3]));
+          const dfloat dqyds = .5f*(Dval1*(s_qy[es][D3i1] - s_qy[es][D1i1]) +
+                  Dval2*(s_qy[es][D3i2] - s_qy[es][D1i2]) +
+                  Dval3*(s_qy[es][D3i3] - s_qy[es][D1i3]));
 
           const iint id = e*p_Np;
           Aq[id+n] = drdx*dqxdr + dsdx*dqxds + drdy*dqydr + dsdy*dqyds;
@@ -197,7 +265,7 @@ kernel void ellipticBRDivergenceVolume2D(const iint Nelements,
   }
 }
 
-kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
+kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
          const iint   * restrict vmapM,
          const iint   * restrict vmapP,
          const dfloat lambda,
@@ -205,7 +273,9 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
          const dfloat * restrict vgeo,
          const dfloat * restrict sgeo,
          const iint   * restrict EToB,
-         const dfloat * restrict LIFTT,
+         const dfloat * restrict L0vals,
+         const iint   * restrict ELids,
+         const dfloat * restrict ELvals,   
          const dfloat * restrict MM,
          const dfloat * restrict q,
          const dfloat * restrict gradq,
@@ -215,6 +285,7 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_Aq[p_NblockS][p_Np];
 
     // for all face nodes of all elements
@@ -264,7 +335,33 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
     // wait for all flux functions are written to shared
     barrier(localMemFence);
 
-    // for each node in the element
+    // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+
+            iint id = n % p_Nfp;  // warning: redundant reads
+            dfloat L0val = L0vals[id+p_Nfp]; 
+
+            dfloat tmpflux = L0val * s_flux[es][n];
+
+            if (id > 0)
+              tmpflux += L0vals[id]*s_flux[es][n-1]; // add previous term
+            
+            if (id < p_Nfp-1)
+              tmpflux += L0vals[id+2*p_Nfp]*s_flux[es][n+1];// add next term
+            
+            s_flux_copy[es][n] = tmpflux;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // apply lift reduction and accumulate RHS
     for(iint es=0;es<p_NblockS;++es;inner1){
       for(iint n=0;n<p_maxNodes;++n;inner0){
         iint e = eo + es;
@@ -275,13 +372,15 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
             dfloat Aqn = Aq[id+n];
             dfloat qn  = q[id+n];
             
-            // Lift
-            occaUnroll(p_NfacesNfp)
-              for(int m=0;m<p_Nfaces*p_Nfp;++m){
-                dfloat L = LIFTT[n+m*p_Np];
-                Aqn += L*s_flux[es][m];
-              }
 
+            occaUnroll(p_max_EL_nnz)
+              for (int m = 0; m < p_max_EL_nnz; ++m){
+                iint iid = n + m*p_Np;
+                dfloat ELval = ELvals[iid];
+                iint ELid = ELids[iid];
+                Aqn += ELval * s_flux_copy[es][ELid];
+              }
+            
             s_Aq[es][n] = -Aqn+lambda*qn;
           }
         }
