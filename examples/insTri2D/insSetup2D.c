@@ -211,9 +211,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   
   // errorStep
    if(strstr(options,"SUBCYCLING"))
-     ins->errorStep =50*16/ins->Nsubsteps;
+     ins->errorStep =100*16/ins->Nsubsteps;
    else
-     ins->errorStep = 1;
+     ins->errorStep = 1000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -233,8 +233,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances 
-  ins->presTOL = 1E-10;
-  ins->velTOL  = 1E-6;
+  ins->presTOL = 1E-8;
+  ins->velTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");

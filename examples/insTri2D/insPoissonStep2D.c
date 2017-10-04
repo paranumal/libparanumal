@@ -143,10 +143,8 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
 
   // printf("Solving for P ... ");
-   printf("%.5e\n",ins->presTOL);
   occaTimerTic(mesh->device,"Pr Solve");
   ins->NiterP = ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
   occaTimerToc(mesh->device,"Pr Solve"); 
-
   // printf("%d iteration(s)\n", ins->NiterP);
 }

@@ -268,7 +268,7 @@ kernel void insSubCycleCubatureVolume2D_v1(const iint Nelements,
 
 
 // fetch precomputed cU and cV on cubature nodes 
-kernel void insSubCycleCubatureVolume2D_v_21(const iint Nelements,
+kernel void insSubCycleCubatureVolume2D_v_2(const iint Nelements,
 					const dfloat * restrict vgeo,
 					const dfloat * restrict cubDrWT,
 					const dfloat * restrict cubDsWT,
@@ -634,7 +634,7 @@ kernel void insSubCycleCubatureSurface2D(const iint Nelements,
 
 //       const iint idm = n+e*p_Nfaces*p_intNfp; 
 
-      
+
 
 // 			dfloat iUM  = U[idm];
 // 			dfloat iUP  = U[idp];
