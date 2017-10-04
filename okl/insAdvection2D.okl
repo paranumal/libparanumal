@@ -53,14 +53,18 @@ kernel void insAdvectionVolume2D(const iint Nelements,
       	      const dfloat Drni = DrT[n+i*p_Np];
       	      const dfloat Dsni = DsT[n+i*p_Np];
 
-      	      df11dr += Drni*s_F11[es][i];
-      	      df11ds += Dsni*s_F11[es][i];
+              const dfloat f11 = s_F11[es][i];
+              const dfloat f12 = s_F12[es][i];
+              const dfloat f22 = s_F22[es][i];
 
-      	      df12dr += Drni*s_F12[es][i];
-      	      df12ds += Dsni*s_F12[es][i];
+      	      df11dr += Drni*f11;
+      	      df11ds += Dsni*f11;
 
-      	      df22dr += Drni*s_F22[es][i];
-      	      df22ds += Dsni*s_F22[es][i];
+      	      df12dr += Drni*f12;
+      	      df12ds += Dsni*f12;
+
+      	      df22dr += Drni*f22;
+      	      df22ds += Dsni*f22;
       	    }
 
       	  // NU = del(u1xu1)/ dx + del(u1xu2)/dy

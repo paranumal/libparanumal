@@ -100,7 +100,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 5.0;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -204,37 +204,16 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 0
-  dfloat A[10]; 
-  A[0] = 1e-2; 
-  A[1] = 2*1e-2;  
-  A[2] = 4*1e-2; 
-  A[3] = 8*1e-2; 
-  A[4] = 1*1e-1; 
-  A[5] = 2*1e-1;  
-  A[6] = 4*1e-1;
-  A[7] = 8*1e-1;
-  A[8] = 10*1e-1;
   
-  A[9] = 1*1e-1;
-
-  printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
-  ins->dt = A[factor];
-  //ins->dt = pow(2.0,factor)*1e-4;
-  ins->NtimeSteps = ins->finalTime/ins->dt;
-  ins->dt   = ins->finalTime/ins->NtimeSteps;
-  ins->sdt  = ins->dt/ins->Nsubsteps;
-  #endif
-
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
   ins->idt = 1.0/ins->dt;
   
   // errorStep
    if(strstr(options,"SUBCYCLING"))
-     ins->errorStep =50000000*16/ins->Nsubsteps;
+     ins->errorStep =50*16/ins->Nsubsteps;
    else
-     ins->errorStep = 80000000;
+     ins->errorStep = 1;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -256,7 +235,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   //Solver tolerances 
   ins->presTOL = 1E-10;
   ins->velTOL  = 1E-6;
-#if 0
+
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
@@ -271,7 +250,6 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-#endif
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
