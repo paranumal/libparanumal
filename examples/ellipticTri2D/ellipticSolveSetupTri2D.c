@@ -150,13 +150,13 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockP = 512/(4*mesh->Np); // get close to 256 threads
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;

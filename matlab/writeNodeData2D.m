@@ -92,7 +92,7 @@ plotNelements = size(plotEToV,1);
 [plotR,plotS] = xytors(plotR,plotS);
 
 %% check triangulation
-before = plotNelements
+before = plotNelements;
 sk = 0;
 for e=1:plotNelements
   v1 = plotEToV(e,1)+1;
@@ -112,7 +112,7 @@ for e=1:plotNelements
 end
 plotNelements = sk;
 plotEToV = plotEToV(1:sk,:);
-after = plotNelements
+after = plotNelements;
 %% create interpolation matrix from warp & blend to plot nodes
 plotInterp = Vandermonde2D(N, plotR,plotS)/V;
 
@@ -292,12 +292,13 @@ V = Vandermonde2D(N,r,s);
 [VB Vr Vs V1 V2 V3] = bern_basis_tri(N,r,s);
 VB1D = bern_basis_1D(N,r1D);
 
-inv(VB1D)
+inv(VB1D);
 
-invVB = inv(VB)
+invVB = inv(VB);
 
-BBMM = VB' * MM * VB
-
+BBMM = VB' * MM * VB;
+BBMM./BBMM(1,1)
+pause
 cond(BBMM)
 
 %% write VDM for conversion
@@ -620,7 +621,7 @@ gauss = GaussFaceMesh2D(NGauss);
 % build weak Poisson operator matrices
 [A, M] = CurvedPoissonIPDG2D();
 
-full(A)
+full(A);
 
 %% hack since we know W&B face 1 nodes are first
 vmapP = reshape(vmapP, Nfp*Nfaces, K);
@@ -630,7 +631,7 @@ subind = [(1:Np)';idsP];
 subA = full(A(subind,subind));
 subM = full(M(subind,subind));
 
-condSubA = cond(subA)
+condSubA = cond(subA);
 
 [B,d] = eig(subA, subM);
 
@@ -669,11 +670,11 @@ end
 
 [rG,sG,shiftIds] = GroupNodes2D(N);
 
-shiftIds
+shiftIds;
 
-A = full(A)
+A = full(A);
 
-condA = cond(A)
+condA = cond(A);
 
 spy(abs(A)>1e-10);
 
@@ -702,7 +703,7 @@ VP1 = Vandermonde2D(N, rP1, sP1);
 IP1 = VP1/V;
 NpP1 = length(rP1);
 
-fprintf(fid, '%% degree raising interpolation matrix\n')
+fprintf(fid, '%% degree raising interpolation matrix\n');
 fprintf(fid, '%d %d\n', NpP1, Np);
 for n=1:NpP1
   for m=1:Np
@@ -725,7 +726,7 @@ VM1 = Vandermonde2D(N, rM1, sM1);
 IM1 = VM1/V;
 NpM1 = length(rM1);
 
-fprintf(fid, '%% degree lowering interpolation matrix\n')
+fprintf(fid, '%% degree lowering interpolation matrix\n');
 fprintf(fid, '%d %d\n', NpM1, Np);
 for n=1:NpM1
   for m=1:Np
@@ -736,3 +737,5 @@ end
 
 
 fclose(fid)
+
+end
