@@ -3,7 +3,7 @@
 #include "ellipticTri2D.h"
 
 // 1 Advection Volume 2 Advection Surface 3 Ax 4 Gradient
-#define KERNEL_TEST 1
+#define KERNEL_TEST 2
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
@@ -24,16 +24,18 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  printf("Here \n");
-  iint index = 0; 
+  iint index = 0, iterations = 1000,  Nbytes=0; 
   dfloat lambda = 0.0; 
-  iint  Ntotal   = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  iint cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
+  dfloat time = 0.0; 
+  iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  iint  cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
 
   dfloat *Z     = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  dfloat *cZ  = (dfloat*) calloc(cubNtotal,sizeof(dfloat));
+  dfloat *cZ    = (dfloat*) calloc(cubNtotal,sizeof(dfloat));
 
-  dfloat *G  = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
+  dfloat *G     = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
+  
+
   occa::memory o_U, o_V, o_X, o_Y, o_Ud, o_Vd, o_G;
   occa::memory o_cU, o_cV, o_cUd, o_cVd; 
   o_U   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
@@ -78,39 +80,58 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   int cubNblockS = 256/mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp); // works for CUDA
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
-  occa::kernel TestKernel, TestKernel0, TestKernel1, TestKernel2; 
+
+
+
+
+
+  occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
 
-  // TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
-  //                           "/okl/insSubCycle2D.okl","insSubCycleCubatureVolume2D_v0"
-  //                           ,kernelInfo);
-  
-  // iint KernelNumber = 0; 
-
-
-  // TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
-  //                           "/okl/insSubCycle2D.okl","insSubCycleCubatureVolume2D_v1"
-  //                           ,kernelInfo);
-  
-  // iint KernelNumber = 1; 
-
-
- TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
-                            "/okl/insSubCycle2D.okl","insSubCycleCubatureVolume2D_v2"
+  TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
+                            "/okl/insSubCycle2D.okl","insSubCycleCubatureVolume2D"
                             ,kernelInfo);
+  iint KernelId = 0; 
+  // TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
+  //                           "/okl/insAdvection2D.okl","insAdvectionVolume2D"
+  //                           ,kernelInfo);
+  // iint KernelId = 1; 
   
-  iint KernelNumber = 2; 
+
+  printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
+  #endif
+
+   #if KERNEL_TEST==2
+
+  TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
+                            "/okl/insSubCycle2D.okl","insSubCycleCubatureSurface2D"
+                            ,kernelInfo);
+  iint KernelId = 0; // Cubature Integration
+
+
+  // TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
+  //                           "/okl/insAdvection2D.okl","insAdvectionSurface2D"
+  //                           ,kernelInfo);
+  // iint KernelId = 1; // Cubature Integration
+
+  printf("Nblock: %d cubNblock: %d N: %d Nfp: %d cubNfp: %d\n", NblockS, cubNblockS, mesh->N, mesh->Nfp, mesh->intNfp);
   
   #endif
 
 
-  dfloat time = 0.0; 
-  iint iterations = 10, Nbytes=0;
+ 
+ 
+ double memory_used = mesh->device.memoryAllocated()/(1024.*1024.*1024);
+ printf("Memory Allocated (GB) = %g\n", memory_used);
 
-  double tic = 0.0, toc = 0.0, localElapsed;
 
- if(KernelNumber==0){
+  #if 1
+  
+
+  double tic = 0.0, toc = 0.0, kernelElapsed=0.0;
+
+ if(KernelId==0){
     // sync processes
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -136,16 +157,34 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
                 o_Y);
       #endif
 
+      #if KERNEL_TEST==2
+       TestKernel(mesh->Nelements,
+                mesh->o_sgeo,
+                mesh->o_intInterpT,
+                mesh->o_intLIFTT,
+                mesh->o_vmapM,
+                mesh->o_vmapP,
+                mesh->o_EToB,
+                time,
+                mesh->o_intx,
+                mesh->o_inty,
+                o_U,
+                o_V,
+                o_Ud,
+                o_Vd,
+                o_X,
+                o_Y);
+        #endif
+
     }
 
     occa::streamTag end = mesh->device.tagStream();
     mesh->device.finish();  
     toc = MPI_Wtime();
-    localElapsed    = toc-tic;
-
-    Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
+    kernelElapsed    = toc-tic;
+    kernelElapsed    = mesh->device.timeBetween(start, end);
 }
-if(KernelNumber==1){
+if(KernelId==1){
     // sync processes
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -157,18 +196,34 @@ if(KernelNumber==1){
     // assume 1 mpi process
     for(int it=0;it<iterations;++it){
       #if KERNEL_TEST==1
-      //printf("Cubature Points: %d", mesh->cubNp);
-      TestKernel(mesh->Nelements,
-                mesh->o_vgeo,
-                mesh->o_cubDrWT,
-                mesh->o_cubDsWT,
-                mesh->o_cubInterpT,
-                o_U,
-                o_V,
-                o_Ud,
-                o_Vd,
-                o_X,
-                o_Y);
+        TestKernel(mesh->Nelements,
+                  mesh->o_vgeo,
+                  mesh->o_DrT,
+                  mesh->o_DsT,
+                  zero,
+                  o_U,
+                  o_V,
+                  o_X,
+                  o_Y);
+
+      #endif
+
+
+      #if KERNEL_TEST==2
+       TestKernel(mesh->Nelements,
+        mesh->o_sgeo,
+        mesh->o_LIFTT,
+        mesh->o_vmapM,
+        mesh->o_vmapP,
+        mesh->o_EToB,
+        time,
+        mesh->o_x,
+        mesh->o_y,
+        index,
+        o_U,
+        o_V,
+        o_X,
+        o_Y);
       #endif
 
     }
@@ -176,48 +231,59 @@ if(KernelNumber==1){
     occa::streamTag end = mesh->device.tagStream();
     mesh->device.finish();  
     toc = MPI_Wtime();
-    localElapsed    = toc-tic;
-
-    Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
+    kernelElapsed    = toc-tic;
 }
-else if(KernelNumber==2){
 
-  // sync processes
-    mesh->device.finish();
-    MPI_Barrier(MPI_COMM_WORLD);
+  
+  double flops;
+ 
+  iint Np      = mesh->Np;
+  iint Nc      = mesh->cubNp;
+  iint Nfp     = mesh->Nfp; 
+  iint Ntfp    = mesh->Nfaces*mesh->Nfp; 
+  iint intNtfp = mesh->Nfaces*mesh->intNfp;
+  
 
-    //occaTimerTic(mesh->device,"KernelTime");
-    tic = MPI_Wtime();  
-    occa::streamTag start = mesh->device.tagStream();
-
-    // assume 1 mpi process
-    for(int it=0;it<iterations;++it){
-      #if KERNEL_TEST==1
-      //printf("Cubature Points: %d", mesh->cubNp);
-      TestKernel(mesh->Nelements,
-                mesh->o_vgeo,
-                mesh->o_cubDrWT,
-                mesh->o_cubDsWT,
-                mesh->o_cubInterpT,
-                o_cU,
-                o_cV,
-                o_cUd,
-                o_cVd,
-                o_X,
-                o_Y);
-      #endif
+  #if KERNEL_TEST==1
+    if(KernelId==0){ // Cubature Integration
+     flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
+     Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
 
     }
+    else{
+    flops =  3*Np + Np*Np*12 + Np*14;
+    Nbytes =(sizeof(dfloat)*(2*mesh->Np  + 4*mesh->Np+ 2*mesh->Np)/2);
 
-    occa::streamTag end = mesh->device.tagStream();
-    mesh->device.finish();  
-    toc = MPI_Wtime();
-    localElapsed    = toc-tic;
+    }
+  #endif
 
-    Nbytes =(sizeof(dfloat)*(4*mesh->cubNp +2*mesh->Np + 4*mesh->Np)/2);
+  #if KERNEL_TEST==2
+    if(KernelId==0){ 
+     flops = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;  // All float ops only  
+      //Nbytes = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp + 4*mesh->Np))/2;  
+      Nbytes = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Nfaces + 4*mesh->Np))/2;  //?????  
+     
+    }
+
+    if(KernelId==1){ 
+     flops = Ntfp*(6 + 28 + 1) + Np*Ntfp*4;  // All float ops only  
+      Nbytes = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Np))/2;   
+     
+    }
+
+  #endif
+  
+   #if KERNEL_TEST==3
+   flops = 1*Np + 21*Ntfp + Np*(4*Ntfp + 8) +6*Ntfp+ Np*(4*Np + 2)+ Np*(1+2*Ntfp) + Np*(1+2*Np);  // All float ops only      
+  #endif
+
+  #if KERNEL_TEST==4
+   flops = Np*(Np*2 + Np*2 + 6);  // All float ops only      
+  
+  #endif
 
 
-}
+
 
 
 
@@ -237,87 +303,40 @@ else if(KernelNumber==2){
   toc = MPI_Wtime();
   double copyElapsed = (toc-tic);
   copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
+   
   
-  
-  double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  iint   localElements = mesh->Nelements;
-  double globalElapsed;
-  iint   globalDofs;
-  iint   globalElements;
-  int    root = 0;
-  
-  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
-  
-  iint Np      = mesh->Np;
-  iint Nc      = mesh->cubNp;
-  iint Nfp     = mesh->Nfaces*mesh->Nfp; 
-  iint Ntfp    = mesh->Nfaces*mesh->Nfp; 
-  iint intNtfp = mesh->Nfaces*mesh->intNfp;
-  
-  double flops;
-  double bw;
-  
-
-  #if KERNEL_TEST==1
-    if(KernelNumber!=2)
-    flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
-    else
-    flops = 4*Np + Np*Nc*16 + Np*14 + Np*2;
-
-    bw = 2.0*Nbytes;
-  #endif
-
-  #if KERNEL_TEST==2
-   flops = intNtfp*Nfp*16 + intNtfp*6 + intNtfp*1 + intNtfp*28 + Np*intNtfp*4;  // All float ops only      
-   bw = 2.0*Nbytes;
-  #endif
-  
-   #if KERNEL_TEST==3
-   flops = 1*Np + 21*Ntfp + Np*(4*Ntfp + 8) +6*Ntfp+ Np*(4*Np + 2)+ Np*(1+2*Ntfp) + Np*(1+2*Np);  // All float ops only      
-   bw = 2.0*Nbytes;
-  #endif
-
-  #if KERNEL_TEST==4
-   flops = Np*(Np*2 + Np*2 + 6);  // All float ops only      
-   bw = 2.0*Nbytes;
-  #endif
-
-
-
+  // Compute Data
+ double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
+ double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
 
   
-  double gflops   = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
-  double d2dbound = copyBandwidth*flops/bw;
-  double bwth     = 549*flops/bw;
+  double gflops   = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+  double d2dbound = copyBandwidth*gflops/bw;
 
 
-  bw *= (globalElements*iterations)/(1024.*1024*1024*globalElapsed);
+  // Intensity = flops/bytes
+  double intensity = gflops/bw; 
 
+  double max_thg_p100 = 4700; 
+  double ach_thg     = mymin(549*intensity, max_thg_p100);
 
-  if(rank==root){
-    printf("[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Kernel GFLOPS) (d2dbound GB/s) (copy GB/s) (achieved GP/s)]\n");
-    printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E %17.15E %17.15E %17.15E %17.15E\t\n",
-           size, mesh->N, globalDofs, globalElapsed, iterations, globalDofs/(double)size,
-           (globalDofs*iterations)/(globalElapsed*size), gflops, d2dbound, copyBandwidth, bw);
-
-     printf("%02d\t%02d\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\n",
-              mesh->N, globalDofs, globalElapsed, gflops, d2dbound, bwth, bw);
+  printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\tTH_peak\t(GFLOPS/s)]\n");
+  printf("%02d %02d\t%02d\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\n",
+              mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
+              kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, ach_thg);
 
     char fname[BUFSIZ];
     sprintf(fname, "KernelData.dat");
     FILE *fp;
     fp = fopen(fname, "a");
 
-    fprintf(fp,"%02d\t%02d\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\n",
-              mesh->N, globalDofs, globalElapsed, gflops, d2dbound, bwth, bw);
+    fprintf(fp,"%02d %02d\t%02d\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\t%17.15E\n",
+              mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
+              kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, ach_thg);
     fclose(fp);
-  }
+  // }
 
-
+#endif
   
 
 

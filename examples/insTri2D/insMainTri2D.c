@@ -27,7 +27,7 @@ int main(int argc, char **argv){
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS  smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
    // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
@@ -67,13 +67,16 @@ int main(int argc, char **argv){
       options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
       
-    // printf("Setup INS Solver: \n");
-    // ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
-    //                         prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
-    //insRun2D(ins,options);
+    printf("Setup INS Solver: \n");
+    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
+                            prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
 
-    printf("OCCA Run Timer: \n");
-    insRunTimer2D(mesh,options,boundaryHeaderFileName);
+    //
+    printf("Running INS solver\n");
+    insRun2D(ins,options);
+
+    // printf("OCCA Run Timer: \n");
+    // insRunTimer2D(mesh,options,boundaryHeaderFileName);
     
   //}
 
