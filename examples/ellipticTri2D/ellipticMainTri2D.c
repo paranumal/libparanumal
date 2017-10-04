@@ -156,7 +156,7 @@ int main(int argc, char **argv){
   }
 
   // convergence tolerance
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-6;
   ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
