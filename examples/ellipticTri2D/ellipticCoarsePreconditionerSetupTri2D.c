@@ -557,75 +557,101 @@ void ellipticBuildCoarseBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint 
     V[2*mesh->Np+n] = +0.5*(1.+sn);
   }
 
-  iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
-
-  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
-
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-12;
 
-  dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *BP = (dfloat *) calloc(mesh->Np*mesh->Np*mesh->Nfaces,sizeof(dfloat));
-
   dfloat *qmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
   dfloat *qmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *ndotgradqmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *ndotgradqmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-
-  //Second derivative matrices
-  dfloat *Drr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *Drs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *Dsr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  dfloat *Dss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Np;m++) {
-      for (iint i=0;i<mesh->Np;i++) {
-        Drr[n+m*mesh->Np] += Dr[i+m*mesh->Np]*Dr[n+i*mesh->Np];
-        Drs[n+m*mesh->Np] += Dr[i+m*mesh->Np]*Ds[n+i*mesh->Np];
-        Dsr[n+m*mesh->Np] += Ds[i+m*mesh->Np]*Dr[n+i*mesh->Np];
-        Dss[n+m*mesh->Np] += Ds[i+m*mesh->Np]*Ds[n+i*mesh->Np];
-      }
-    }
-  }
-
-  // Dr*LIFT, Ds*LIFT
-  dfloat *DrLIFT = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  dfloat *DsLIFT = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint i=0;i<mesh->Nfp;i++) {
-        DrLIFT[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        DsLIFT[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        for (iint m=0;m<mesh->Np;m++) {
-          DrLIFT[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
-            += mesh->Dr[m+n*mesh->Np]*LIFT[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
-          DsLIFT[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
-            += mesh->Ds[m+n*mesh->Np]*LIFT[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
-        }
-      }
-    }
-  }
-
+  
+  /* Construct gradient as block matrix and load it to the halo */
   //storage for gradient operator
   iint gradNNZ = mesh->Np*mesh->Np*(1+mesh->Nfaces)*(mesh->Nelements+mesh->totalHaloPairs);
   nonZero_t *Gx = (nonZero_t *) calloc(gradNNZ,sizeof(nonZero_t));
   nonZero_t *Gy = (nonZero_t *) calloc(gradNNZ,sizeof(nonZero_t));
 
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (iint eM=0;eM<mesh->Nelements;eM++) {
+    iint id = eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
 
-    iint id = e*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+    iint vbase = eM*mesh->Nvgeo;
+    dfloat drdx = mesh->vgeo[vbase+RXID];
+    dfloat drdy = mesh->vgeo[vbase+RYID];
+    dfloat dsdx = mesh->vgeo[vbase+SXID];
+    dfloat dsdy = mesh->vgeo[vbase+SYID];
 
     for(iint n=0;n<mesh->Np;++n){
       for(iint m=0;m<mesh->Np;++m){
-        Gx[n+m*mesh->Np]
+        Gx[n+m*mesh->Np+id] = drdx*Dr[n+m*mesh->Np]+dsdx*Ds[n+m*mesh->Np];
+        Gy[n+m*mesh->Np+id] = drdy*Dr[n+m*mesh->Np]+dsdy*Ds[n+m*mesh->Np];
       }
     }
 
+    for (iint m=0;m<mesh->Np;m++) {
+      for (iint fM=0;fM<mesh->Nfaces;fM++) {
+
+        id = (fM+1)*mesh->Np*mesh->Np + e*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+
+        // load surface geofactors for this face
+        iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+        dfloat nx = mesh->sgeo[sid+NXID];
+        dfloat ny = mesh->sgeo[sid+NYID];
+        dfloat sJ = mesh->sgeo[sid+SJID];
+
+        iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      
+        // extract trace nodes
+        for (iint i=0;i<mesh->Nfp;i++) {
+          // double check vol geometric factors are in halo storage of vgeo
+          iint idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+          iint vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
+          iint vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+
+          qmM[i] =0;
+          if (vidM == m) qmM[i] =1;
+          qmP[i] =0;
+          if (vidP == m) qmP[i] =1;
+        }
+
+        id = mesh->Np*mesh->Np + e*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+        iint fid = (fM+1)*mesh->Np*mesh->Np + e*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+
+        int bcD = 0;
+        int bcN = 0;
+        if (eP < 0) {
+          int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+          iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+          if(bcType==1){ // Dirichlet
+            bcD = 1;
+            bcN = 0;
+          } else if (bcType==2){ // Neumann
+            bcD = 0;
+            bcN = 1;
+          } else { // Neumann for now
+            bcD = 0;
+            bcN = 1;
+          }
+        }
+
+        for (iint n=0;n<mesh->Np;n++) {
+          for (iint i=0;i<mesh->Nfp;i++) {
+            Gx[m+n*mesh->Np+id] += -0.5*(1-bcN)*(1+bcD)*sJ*nx*LIFT[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
+            Gy[m+n*mesh->Np+id] += -0.5*(1-bcN)*(1+bcD)*sJ*ny*LIFT[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i];
+            
+            Gx[m+n*mesh->Np+fid] += 0.5*(1-bcN)*(1-bcD)sJ*nx*LIFT[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i];
+            Gy[m+n*mesh->Np+fid] += 0.5*(1-bcN)*(1-bcD)sJ*ny*LIFT[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i];           
+          }
+        }
+      }
+    }
   }
 
+  //halo exchange the grad operator
 
 
-  // reset non-zero counter
+  iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
+
+  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+
+  // set non-zero counter
   iint nnz = 0;
 
   // loop over all elements
