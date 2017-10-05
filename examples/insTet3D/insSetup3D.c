@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup3D(mesh3D *mesh,char * options, 
+ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -56,33 +56,40 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
 
-//   if(strstr(options,"SUBCYCLING")){
+    ins->Nsubsteps = Ns;
 
-//     ins->Nsubsteps = 8; //was 3
+  if(strstr(options,"SUBCYCLING")){
+  //if(ins->Nsubsteps){
 
-//     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-//     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-//     ins->Ue   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-//     ins->Ve   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-//     ins->resU = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-//     ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    
+    ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->Wd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->Ue   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->Ve   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->We   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->resU = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->resW = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
-//   }
+  }
  
   // SET SOLVER OPTIONS
   printf("Starting initial conditions for INS3D\n");
   //
- 
-  dfloat nu   = 0.00125;   // kinematic viscosity,
+  dfloat ux   = 0.0  ;
+  dfloat uy   = 0.0  ;
+  dfloat pr   = 0.0  ;
+  dfloat nu   = 1.0  ;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 100.0;
+  ins->finalTime = 0.1;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 15.f*(mesh->N+1)*(mesh->N+3)/3.f; // (mesh->N)*(mesh->N+1);
+  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+3); 
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -96,7 +103,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
 
-     #if 0 //Beltrami Flow
+     #if 1 //Beltrami Flow
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*t);
       v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*t);
@@ -117,7 +124,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
 
      #endif
 
-     #if 1 // Uniform Channel Flow
+     #if 0 // Uniform Channel Flow
       u = 0.f;
       v = 0.f;
       w = 0.f;
@@ -160,7 +167,7 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 0.25; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -172,11 +179,29 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-  ins->NtimeSteps = ins->finalTime/ins->dt;
-  ins->dt   = ins->finalTime/ins->NtimeSteps;
+   if(strstr(options,"SUBCYCLING")){
+    ins->dt         = ins->Nsubsteps*ins->dt;
+    ins->NtimeSteps = ins->finalTime/ins->dt;
+    ins->dt         = ins->finalTime/ins->NtimeSteps;
+    ins->sdt        = ins->dt/ins->Nsubsteps;
 
+    printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
+  }
+  else{
+    ins->NtimeSteps = ins->finalTime/ins->dt;
+    ins->dt         = ins->finalTime/ins->NtimeSteps;
+  }
+  
+
+  // Hold some inverses for kernels
+  ins->inu = 1.0/ins->nu; 
+  ins->idt = 1.0/ins->dt;
+  
   // errorStep
-  ins->errorStep =5000;
+   if(strstr(options,"SUBCYCLING"))
+     ins->errorStep =100*16/ins->Nsubsteps;
+   else
+     ins->errorStep = 100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -196,8 +221,8 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
   
   //Solver tolerances 
-  ins->presTOL = 1E-6;
-  ins->velTOL = 1E-6;
+  ins->presTOL = 1E-8;
+  ins->velTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
@@ -209,18 +234,17 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
 
   printf("==================PRESSURE SOLVE SETUP========================\n");
   //SETUP PRESSURE and VELOCITY SOLVERS
-  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
+  dfloat zero =0.0;
+  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
   
-  #if 1
-   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+
+
+  
+ 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
-  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
-  printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
 
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -228,45 +252,35 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
 
-  printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
+  int cubNblockV = 256/maxNodesVolumeCub; 
+  //
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  //
+  kernelInfo.addDefine("p_cubNblockV",cubNblockV);
+  kernelInfo.addDefine("p_cubNblockS",cubNblockS);
+
+
+
+   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
+
+   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
   // ADD-DEFINES
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NTfields", ins->NTfields);
   kernelInfo.addDefine("p_NVfields", ins->NVfields);
   kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_nu",      (float) ins->nu);
+  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   kernelInfo.addDefine("p_idt", (float) 1.f/ins->dt);
 
-  #else // Just for fast local reduction
-  int maxVolumeNodes  = mymax(mesh->cubNp,mesh->Np);
-  //
-  int  p1 = log(mesh->Nfp-1)/log(2);   iint Nfp = pow(2, p1 + 1);  
-  int maxNodes        = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*Nfp, mesh->Nfaces*mesh->intNfp));
-  int NblockV         = 256/mesh->Np; // works for CUDA
-  int NblockS         = 256/maxNodes; // works for CUDA
-
-  kernelInfo.addDefine("p_S", Nfp);
-   printf("NblockS: %d maxSurfaceNodes=%d SN = %d , mesh->Nfp = %d\n",NblockS, maxSurfaceNodes,Nfp, mesh->Nfp); 
-
-    // ADD-DEFINES
-  kernelInfo.addDefine("p_maxNodesVolume", maxVolumeNodes);
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
-  kernelInfo.addDefine("p_NblockV", NblockV);
-  kernelInfo.addDefine("p_NblockS", NblockS);
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
-  kernelInfo.addDefine("p_NTfields", ins->NTfields);
-  kernelInfo.addDefine("p_NVfields", ins->NVfields);
-  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
-  kernelInfo.addDefine("p_nu",      (float) ins->nu);
-  kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
-  #endif 
+  
 
   
 
@@ -301,6 +315,59 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_WH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
 
+
+  if(strstr(options,"SUBCYCLING")){
+    // Note that resU and resV can be replaced with already introduced buffer
+    ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
+    ins->o_Ve   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ve);
+    ins->o_We   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->We);
+    ins->o_Ud   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ud);
+    ins->o_Vd   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Vd);
+    ins->o_Wd   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Wd);
+    ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
+    ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
+    ins->o_resW = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resW);
+
+
+    printf("Compiling SubCycle Advection volume kernel \n");
+    ins->subCycleVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleVolume2D",
+           kernelInfo);
+
+    printf("Compiling SubCycle Advection surface kernel\n");
+    ins->subCycleSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleSurface2D",
+           kernelInfo);
+
+    printf("Compiling SubCycle Advection cubature  volume kernel \n");
+    ins->subCycleCubatureVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleCubatureVolume2D",
+           kernelInfo);
+
+    printf("Compiling SubCycle Advection cubature surface kernel\n");
+    ins->subCycleCubatureSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleCubatureSurface2D",
+           kernelInfo);
+
+
+    printf("Compiling SubCycle Advection RK update kernel\n");
+    ins->subCycleRKUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleRKUpdate2D",
+           kernelInfo);
+
+    ins->subCycleExtKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+           "insSubCycleExt2D",
+           kernelInfo);
+
+  }
+
+
   if(mesh->totalHaloPairs){
     ins->o_tHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
     ins->o_vHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
@@ -316,20 +383,12 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
 				       "insAdvectionCubatureVolume3D",
 				       kernelInfo);
   
-  #if 1
   printf("Compiling Advection surface kernel with cubature integration\n");
   ins->advectionCubatureSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
 				       "insAdvectionCubatureSurface3D",
 				       kernelInfo);
-  #else
-
-  printf("Compiling Advection surface kernel with cubature integration\n");
-  ins->advectionCubatureSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-               "insAdvectionCubatureSurface3D_0",
-               kernelInfo);
-  #endif
+  
 
   printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel =
@@ -343,11 +402,6 @@ ins_t *insSetup3D(mesh3D *mesh,char * options,
 				       "insAdvectionSurface3D",
 				       kernelInfo);
 
-//    printf("Compiling SubCycle Advection RK update kernel\n");
-//     ins->subCycleRKUpdateKernel =
-//       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-//            "insSubCycleRKUpdate2D",
-//            kernelInfo);
   // ===========================================================================
   printf("Compiling Gradient volume kernel with collocation integration\n");
   ins->gradientVolumeKernel =
