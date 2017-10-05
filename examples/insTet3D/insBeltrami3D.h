@@ -138,3 +138,13 @@
     }									\
   }
 
+  // Compute bcs for P increment
+#define insPoissonNeumannTimeDerivative3D(bc,t,x,y,z,dpdt)  \
+  { \
+    if((bc==1)||(bc==4)||(bc==2) ){           \
+      *(dpdt) = 2.f*d*d*a*a*occaExp(-2.f*d*d*t)*( occaExp(2.f*a*x)+occaExp(2.f*a*y)+occaExp(2.f*a*z))*(occaSin(a*x+d*y)*occaCos(a*z+d*x)*occaExp(a*(y+z))+occaSin(a*y+d*z)*occaCos(a*x+d*y)*occaExp(a*(x+z))+occaSin(a*z+d*x)*occaCos(a*y+d*z)*occaExp(a*(x+y))); \
+    }                 \
+    if(bc==3){                \
+      *(dpdt) = 0.f; \
+    }                 \
+  }

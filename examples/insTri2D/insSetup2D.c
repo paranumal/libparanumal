@@ -288,9 +288,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-   iint substep = 0; 
-   if(strstr(options,"SUBCYCLING")){ substep = 1;}
-   kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
+   // iint substep = 0; 
+   // if(strstr(options,"SUBCYCLING")){ substep = 1;}
+   // kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
 
 
   // printf("mesh nfields %d\n", mesh->Nfields);
