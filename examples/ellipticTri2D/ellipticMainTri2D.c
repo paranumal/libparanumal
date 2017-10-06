@@ -29,8 +29,8 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup

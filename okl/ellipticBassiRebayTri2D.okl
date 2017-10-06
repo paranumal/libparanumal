@@ -44,8 +44,8 @@ kernel void ellipticBRGradientVolume2D(const iint Nelements,
             }
 
           const iint id = e*2*p_Np;
-          gradq[id+     n] = drdx*dqdr + dsdx*dqds;
-          gradq[id+p_Np+n] = drdy*dqdr + dsdy*dqds;
+          gradq[id+     n] = 0.;//drdx*dqdr + dsdx*dqds;
+          gradq[id+p_Np+n] = 0.;//drdy*dqdr + dsdy*dqds;
         }
       }
     }
@@ -102,8 +102,8 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
             const dfloat sc = invJ * sJ ;
 
             // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
-            s_fluxqx[es][n]  = sc*(.5f*nx*(qP-qM));
-            s_fluxqy[es][n]  = sc*(.5f*ny*(qP-qM));
+            s_fluxqx[es][n]  = 0.;//sc*(.5f*nx*(qP-qM));
+            s_fluxqy[es][n]  = 0.;//sc*(.5f*ny*(qP-qM));
           }
         }
       }
@@ -190,7 +190,7 @@ kernel void ellipticBRDivergenceVolume2D(const iint Nelements,
             }
 
           const iint id = e*p_Np;
-          Aq[id+n] = drdx*dqxdr + dsdx*dqxds + drdy*dqydr + dsdy*dqyds;
+          Aq[id+n] = 0.;//drdx*dqxdr + dsdx*dqxds + drdy*dqydr + dsdy*dqyds;
         }
       }
     }
@@ -255,7 +255,8 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
             const dfloat sc = 0.5f*invJ * sJ ;
 
             // Central Flux + penalty
-            s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));
+            //s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));
+            s_flux[es][n]  = sc*(tau*(qP-qM));
           }
         }
       }

@@ -296,11 +296,12 @@ inv(VB1D);
 
 invVB = inv(VB);
 
-BBMM = VB' * MM * VB;
-BBMM./BBMM(1,1)
-pause
-cond(BBMM)
+BBMM = VB' * MM * VB
+normBB2 = sqrt(diag(diag(BBMM)));
+BBMM2 = normBB2\(BBMM/normBB2)
 
+cond(BBMM2)
+pause
 %% write VDM for conversion
 
 % VB(abs(VB)<tol) = 0;

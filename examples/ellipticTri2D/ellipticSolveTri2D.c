@@ -312,6 +312,21 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   //
   //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
+
+  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
+    x[i] = 1.;
+    o_x.copyFrom(x);
+    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
+    o_Ax.copyTo(Ax);
+    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
+      printf("%4.2f \t", Ax[j]);
+    }
+    printf("\n");
+    x[i] = 0.;
+  }
+
   dfloat TOL     = tol*tol; 
   
   dfloat rdotz0 = 0;
