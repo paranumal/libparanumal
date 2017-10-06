@@ -94,6 +94,9 @@ extern "C"
 void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                               iint *nnzA, iint *globalStarts, const char *options);
 
+void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              iint *nnzA, iint *globalStarts, const char *options);
+
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
                               hgs_t **hgs, iint *globalStarts, const char* options);
 
