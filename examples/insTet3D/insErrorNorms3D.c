@@ -132,12 +132,13 @@ if(rank==0){
 
   char fname[BUFSIZ];
     // sprintf(fname, "insErrors.txt");
-    sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
+    //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
+    sprintf(fname, "BeltramiTemporal3D.txt");
     FILE *fp;
     fp = fopen(fname, "a");
 
-    fprintf(fp,"%d %.5e %d %d %d %d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
-             mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, 
+    fprintf(fp,"%d %.5e %.5e %d %d %d %d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+             mesh->N,ins->dt, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, 
              gliu, gliv, gliw, glip, gl2u, gl2v, gl2w, gl2p);
     fclose(fp);  
  }

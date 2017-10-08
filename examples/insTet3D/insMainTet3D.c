@@ -14,9 +14,9 @@ int main(int argc, char **argv){
   char *velParAlmondOptions = strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-   // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
+     strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
   char *prParAlmondOptions =
@@ -48,10 +48,10 @@ int main(int argc, char **argv){
   
   
   char *options; 
-  if(Ns==0)
+ //if(Ns==0)
       options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-  else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  // else
+  //     options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
   printf("Setup INS Solver: \n");
   ins_t *ins = insSetup3D(mesh, Ns, options,

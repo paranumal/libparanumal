@@ -198,7 +198,7 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 					 dfloat * restrict NU,
 					 dfloat * restrict NV){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
     shared dfloat s_U[p_NblockV][p_Np];
@@ -207,8 +207,8 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
     shared dfloat s_cF12[p_NblockV][p_cubNp];
     shared dfloat s_cF22[p_NblockV][p_cubNp];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){      // for all nodes in this element
+    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){      // for all nodes in this element
       	iint e = eo+es; // element in block
       	if(e<Nelements){
           if(n<p_Np){ 
@@ -223,8 +223,8 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
     barrier(localMemFence);
 
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; // element in block
       	if(e<Nelements && n<p_cubNp){
         	  dfloat cU = 0, cV = 0;
@@ -245,8 +245,8 @@ kernel void insAdvectionCubatureVolume2D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
       	iint e = eo+es; 
       	if(e<Nelements && n<p_Np){	  
       	  // prefetch geometric factors (constant on triangle)
@@ -305,7 +305,7 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 					  dfloat * restrict NV){
 
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
@@ -316,8 +316,8 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       	iint e = eo + es;
       	if(e<Nelements && n<(p_Nfaces*p_Nfp)){
     	    const iint id  = e*p_Nfp*p_Nfaces + n;
@@ -338,8 +338,8 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
       	iint e = eo + es;
       	if(e<Nelements && n<(p_Nfaces*p_intNfp)){
       	    const iint face = n/p_intNfp; // find face that owns this integration node
@@ -395,8 +395,8 @@ kernel void insAdvectionCubatureSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+    for(iint es=0;es<p_cubNblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       	const iint e = eo + es;
       	if(e<Nelements && n<p_Np ){
       	    iint id = n + p_Np*(e+offset);

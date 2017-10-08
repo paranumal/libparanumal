@@ -251,14 +251,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
 
-  kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+  
+
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
-  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
-  printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
-
 
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -267,17 +264,23 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  int cubNblockV = 256/ mymax(mesh->cubNp,mesh->Np); 
+  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
+  int cubNblockV = 256/maxNodesVolumeCub; 
+  //
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  //
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
-
-  int cubNblockS = 256/mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp); // works for CUDA
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
 
 
-  printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
-  printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
   // ADD-DEFINES
   kernelInfo.addDefine("p_Lambda2", 0.5f);

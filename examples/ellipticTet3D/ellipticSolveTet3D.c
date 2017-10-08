@@ -217,6 +217,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
   dfloat REL_TOL = tol*tol*n2b; // 
   //
   dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
+  //dfloat TOL     = tol*tol; 
 
   dfloat rdotz0 = 0;
   iint Niter = 0;
