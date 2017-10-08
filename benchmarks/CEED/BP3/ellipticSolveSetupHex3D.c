@@ -369,7 +369,7 @@ solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->
 			printf("building e9 kernel \n");
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DCOLLOCATIONEx.okl",
-"ellipticAxHex3D_Ref2D10",
+"ellipticAxHex3D_Ref2D0",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
 			                             kernelInfo);

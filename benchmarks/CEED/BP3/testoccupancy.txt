@@ -1,0 +1,152 @@
+found OCD: /home/tcew/._occa_cache_rank_00000
+Nelements = 512, Nbcs = 384
+gjr[0] = -0.96816
+gjr[1] = -0.836031
+gjr[2] = -0.613371
+gjr[3] = -0.324253
+gjr[4] = 1.88315e-16
+gjr[5] = 0.324253
+gjr[6] = 0.613371
+gjr[7] = 0.836031
+gjr[8] = 0.96816
+J in range [0.00195312,0.00195313] and max Skew = 1
+gatherChange=73584
+gatherChange=0
+rank 0 hostid 520785930 
+NqP = 10 
+Setup info: Nggeo = 7, gjNq = 9. gjNp = 729 Nq = 8 
+D[0][0] = -10.3691614850103999 
+D[0][1] = 12.2587589916110904 
+D[0][2] = -2.7567429134341208 
+D[0][3] = 1.3866006849771391 
+D[0][4] = -0.8672163539736529 
+D[0][5] = 0.5872583599722523 
+D[0][6] = -0.3887745526249814 
+D[0][7] = 0.1492772684826648 
+D[0][8] = -1.6748025559458690 
+D[1][0] = -2.2735825431231391 
+D[1][1] = 5.2864185760080744 
+D[1][2] = -2.0757576837568119 
+D[1][3] = 1.2153184166208471 
+D[1][4] = -0.8014122899686558 
+D[1][5] = 0.5242704170863955 
+D[1][6] = -0.2004523369208403 
+D[1][7] = 0.8661442182075747 
+D[1][8] = -3.2322421721134300 
+D[2][0] = 0.6391244857206667 
+D[2][1] = 2.5199681807117038 
+D[2][2] = -1.2739613853286831 
+D[2][3] = 0.7978124447673802 
+D[2][4] = -0.5105690913003051 
+D[2][5] = 0.1937233193350918 
+D[2][6] = -0.3358182273928726 
+D[2][7] = 1.0521527472148799 
+D[2][8] = -3.3926390882104158 
+D[3][0] = 2.1704205577357532 
+D[3][1] = 0.8150228408907091 
+D[3][2] = -0.5096578822344930 
+D[3][3] = 0.3220829227479370 
+D[3][4] = -0.1215638707514975 
+D[3][5] = 0.0390625000000005 
+D[3][6] = -0.1248537463656929 
+D[3][7] = 0.3448188117424298 
+D[3][8] = -3.0303592933933978 
+D[4][0] = 3.0303592933933978 
+D[4][1] = -0.3448188117424294 
+D[4][2] = 0.1248537463656918 
+D[4][3] = -0.0390624999999996 
+D[4][4] = 0.1215638707514959 
+D[4][5] = -0.3220829227479358 
+D[4][6] = 0.5096578822344914 
+D[4][7] = -0.8150228408907055 
+D[4][8] = -2.1704205577357589 
+D[5][0] = 3.3926390882104180 
+D[5][1] = -1.0521527472148771 
+D[5][2] = 0.3358182273928715 
+D[5][3] = -0.1937233193350919 
+D[5][4] = 0.5105690913003051 
+D[5][5] = -0.7978124447673780 
+D[5][6] = 1.2739613853286791 
+D[5][7] = -2.5199681807117038 
+D[5][8] = -0.6391244857206652 
+D[6][0] = 3.2322421721134291 
+D[6][1] = -0.8661442182075746 
+D[6][2] = 0.2004523369208402 
+D[6][3] = -0.5242704170863954 
+D[6][4] = 0.8014122899686538 
+D[6][5] = -1.2153184166208451 
+D[6][6] = 2.0757576837568168 
+D[6][7] = -5.2864185760080797 
+D[6][8] = 2.2735825431231440 
+D[7][0] = 1.6748025559458650 
+D[7][1] = -0.1492772684826651 
+D[7][2] = 0.3887745526249805 
+D[7][3] = -0.5872583599722501 
+D[7][4] = 0.8672163539736504 
+D[7][5] = -1.3866006849771411 
+D[7][6] = 2.7567429134341230 
+D[7][7] = -12.2587589916110904 
+D[7][8] = 10.3691614850103893 
+D[8][0] = 22264172441289821892513936593586031928603448771219286257098721113747339168572877537815884471868473898942816764404764242044148973728314514591373157043602403266361793468050014245687880387476187526507032120132168170037271831644321397970247265816674304.0000000000000000 
+D[8][1] = 0.0000000000000000 
+D[8][2] = 0.0000000000000000 
+D[8][3] = 0.0000000000000000 
+D[8][4] = 0.0000000000000000 
+D[8][5] = 0.0000000000000000 
+D[8][6] = 0.0000000000000000 
+D[8][7] = 0.0000000000000000 
+D[8][8] = 0.0000000000000000 
+p_blockSize = 1024 
+Nz = 8
+Building kernels for rank 0
+Found cached binary of [2da047602f07fec0/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [2da047602f07fec0/parsedSource.occa] in [4e898055b5351513/binary]
+Found cached binary of [120779fe7eabb0be/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [120779fe7eabb0be/parsedSource.occa] in [9d20d2e59a0b4957/binary]
+Found cached binary of [92eae40d2f0673ce/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [92eae40d2f0673ce/parsedSource.occa] in [9eb6cc9ba604741b/binary]
+Found cached binary of [60924ddac596be22/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [60924ddac596be22/parsedSource.occa] in [dda987651663fde9/binary]
+Found cached binary of [d07d61dde93e201a/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [d07d61dde93e201a/parsedSource.occa] in [22ebfc59b2613571/binary]
+Found cached binary of [d39bf42445137b7a/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [d39bf42445137b7a/parsedSource.occa] in [f70fb0e554381de1/binary]
+building e9 kernel 
+Found cached binary of [e212efdaabde2068/parsedSource.occa] in [e211328d61be5211/binary]
+Found cached binary of [e212efdaabde2068/parsedSource.occa] in [ecd6e3cf559db8af/binary]
+Found cached binary of [43e7cd025b1c8ad2/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [43e7cd025b1c8ad2/parsedSource.occa] in [e60199f659600442/binary]
+Found cached binary of [bd92e0c7f5f94981/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [bd92e0c7f5f94981/parsedSource.occa] in [db5665344ee0762b/binary]
+Found cached binary of [4de2ee41dc841945/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [4de2ee41dc841945/parsedSource.occa] in [e322d63c8b494c9e/binary]
+Found cached binary of [a358115b615ebc0b/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [a358115b615ebc0b/parsedSource.occa] in [d74dfc1534484e65/binary]
+Found cached binary of [bc2fb7924a2bed50/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [bc2fb7924a2bed50/parsedSource.occa] in [c6acb6ad44d18591/binary]
+Found cached binary of [374a9e6fe5c1d0bf/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [374a9e6fe5c1d0bf/parsedSource.occa] in [6a99352677a626a0/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [a0687357f167f11a/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [e817c36585a0dafa/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [a0687357f167f11a/binary]
+Found cached binary of [3c824853fbbc763c/parsedSource.occa] in [e817c36585a0dafa/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1466b18ba4a006d7/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1bd18691a64d399d/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1466b18ba4a006d7/binary]
+Found cached binary of [b67b96c14b4f2069/parsedSource.occa] in [1bd18691a64d399d/binary]
+Found cached binary of [53f94da8fd5b49fc/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [53f94da8fd5b49fc/parsedSource.occa] in [8b141ed1a14b91fd/binary]
+Found cached binary of [c9b507782feafd5e/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [c9b507782feafd5e/parsedSource.occa] in [d4094889177e5203/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.57896e+06 1578964 1578964
+   buffer bytes (avg, min, max): 0 0 0
+starting elliptic parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 1.57896e+06 1578964 1578964
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 373248, mesh->Np = 512 mesh->Nelements = 512 mesh->totalHaloPairs = 0 
+01 07 262144 0.0843319892883301 10 2.621440000000000E+05 3.108476418168351E+07 3.213443629599054E+00 	 [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS)]
+NUMBER OF INTEREST: 7  3.213443629599054E+00 
+globalMaxError =  1.00001666197059
