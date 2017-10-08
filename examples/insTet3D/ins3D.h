@@ -31,7 +31,7 @@ typedef struct {
   //solver tolerances
   iint NiterU, NiterV, NiterW, NiterP;
 
-  dfloat presTOL, velTOL;
+  dfloat presTOL, velTOL, prtime ; // delete prtime
 
   dfloat inu, idt;
 

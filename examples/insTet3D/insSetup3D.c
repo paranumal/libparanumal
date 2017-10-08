@@ -56,7 +56,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
 
-    ins->Nsubsteps = Ns;
+  ins->Nsubsteps = 0; // Change it later ==Ns!!!!!!!!!!!!!!!!!!
 
   if(strstr(options,"SUBCYCLING")){
   //if(ins->Nsubsteps){
@@ -86,10 +86,10 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.1;
+  ins->finalTime = 0.05;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.f*(mesh->N+1)*(mesh->N+3); 
+  ins->tau       = 2.0*(mesh->N+1)*(mesh->N+3); 
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -167,7 +167,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.1; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -191,7 +191,26 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
-  
+
+  #if 0
+
+ dfloat A[10]; 
+ A[0] = 1E-2;
+ A[1] = 8.0E-3;
+ A[2] = 3.0E-3;
+ A[3] = 1E-3;
+ A[4] = 8.0E-4;
+ A[5] = 3.0E-4;
+ A[6] = 1.0E-4;
+ A[7] = 8.0E-5;
+ A[8] = 3.0E-5;
+ A[9] = 1.0E-5;
+
+ // printf("INS substeps: %d\n". Ns);
+ ins->dt         = A[Ns]; 
+ ins->NtimeSteps = ins->finalTime/ins->dt;
+ ins->dt         = ins->finalTime/ins->NtimeSteps;
+#endif
 
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
@@ -201,7 +220,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
    if(strstr(options,"SUBCYCLING"))
      ins->errorStep =100*16/ins->Nsubsteps;
    else
-     ins->errorStep = 100;
+     ins->errorStep = 10000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
