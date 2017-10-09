@@ -54,8 +54,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 
   dfloat *qmP = (dfloat *) calloc(Nfp,sizeof(dfloat));
   dfloat *qmM = (dfloat *) calloc(Nfp,sizeof(dfloat));
-  dfloat *QmP = (dfloat *) calloc(Nfp*(Nfaces+1)*Np,sizeof(dfloat));
-  dfloat *QmM = (dfloat *) calloc(Nfp*(Nfaces+1)*Np,sizeof(dfloat));
+  dfloat *QmP = (dfloat *) calloc(Nfp*(Nfaces+1),sizeof(dfloat));
+  dfloat *QmM = (dfloat *) calloc(Nfp*(Nfaces+1),sizeof(dfloat));
   
   /* Construct gradient as block matrix and load it to the halo */
   //storage for gradient operator
@@ -74,28 +74,23 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 
     for(iint n=0;n<Np;++n){
       for(iint m=0;m<Np;++m){
-        Gx[n+m*Np+id].row = globalIds[eM*Np + m];
-        Gx[n+m*Np+id].col = globalIds[eM*Np + n];
-        Gx[n+m*Np+id].ownerRank = rankM;
-        Gy[n+m*Np+id].row = globalIds[eM*Np + m];
-        Gy[n+m*Np+id].col = globalIds[eM*Np + n];
-        Gy[n+m*Np+id].ownerRank = rankM;
+        Gx[m+n*Np+id].row = globalIds[eM*Np + n];
+        Gx[m+n*Np+id].col = globalIds[eM*Np + m];
+        Gx[m+n*Np+id].ownerRank = rankM;
 
-        Gx[n+m*Np+id].val = drdx*mesh->Dr[n+m*Np]+dsdx*mesh->Ds[n+m*Np];
-        Gy[n+m*Np+id].val = drdy*mesh->Dr[n+m*Np]+dsdy*mesh->Ds[n+m*Np];
+        //Gx[m+n*Np+id].val = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
+        //Gy[m+n*Np+id].val = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
       }
     }
 
     for (iint m=0;m<Np;m++) {
       for (iint fM=0;fM<Nfaces;fM++) {
-
-        id = (fM+1)*Np*Np + eM*Np*Np*(Nfaces+1);
-
         // load surface geofactors for this face
         iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
         dfloat nx = mesh->sgeo[sid+NXID];
         dfloat ny = mesh->sgeo[sid+NYID];
         dfloat sJ = mesh->sgeo[sid+SJID];
+        dfloat invJ = mesh->sgeo[sid+IJID];
 
         iint eP = mesh->EToE[eM*Nfaces+fM];
       
@@ -112,7 +107,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           if (vidP == m) qmP[i] =1;
         }
 
-        id = Np*Np + eM*Np*Np*(Nfaces+1);
+        iint id = Np*Np + eM*Np*Np*(Nfaces+1);
         iint fid = (fM+1)*Np*Np + eM*Np*Np*(Nfaces+1);
 
         int bcD = 0;
@@ -138,11 +133,12 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           Gx[m+n*Np+fid].col = globalIds[eP*Np + m];
           
           for (iint i=0;i<Nfp;i++) {
-            Gx[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*nx*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmM[i];
-            Gy[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*ny*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmM[i];
+
+            Gx[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
+            Gy[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
             
-            Gx[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*nx*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmP[i];
-            Gy[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*ny*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmP[i];           
+            //Gx[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];
+            //Gy[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];           
           }
         }
       }
@@ -183,8 +179,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         for (int fP = 0; fP<Nfaces+1;fP++) {
           iint id = fP*Np*Np + eM*GblockSize;          
           for (int k=0;k<Np;k++) {
-            //Ae[n+m*Np+fP*(Nfaces+1)*Np*Np] += (drdx*mesh->Dr[k+m*Np]+dsdx*mesh->Ds[k+m*Np])*Gx[n+k*Np+id].val;
-            //Ae[n+m*Np+fP*(Nfaces+1)*Np*Np] += (drdy*mesh->Dr[k+m*Np]+dsdy*mesh->Ds[k+m*Np])*Gy[n+k*Np+id].val;
+            Ae[m+n*Np+fP*Np*Np*(Nfaces+1)] += (drdx*mesh->Dr[k+n*Np]+dsdx*mesh->Ds[k+n*Np])*Gx[m+k*Np+id].val;
+            Ae[m+n*Np+fP*Np*Np*(Nfaces+1)] += (drdy*mesh->Dr[k+n*Np]+dsdy*mesh->Ds[k+n*Np])*Gy[m+k*Np+id].val;
           }  
         }
       }
@@ -198,10 +194,16 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         dfloat nx = mesh->sgeo[sid+NXID];
         dfloat ny = mesh->sgeo[sid+NYID];
         dfloat sJ = mesh->sgeo[sid+SJID];
+        dfloat invJ = mesh->sgeo[sid+IJID];
 
         iint eP = mesh->EToE[eM*Nfaces+fM];
         if (eP<0) eP = eM;
       
+        for (int i=0;i<Nfp*(Nfaces+1);i++) {
+          QmM[i] = 0;
+          QmP[i] = 0;
+        }
+
         // extract trace matrix from Gx and Gy
         for (iint i=0;i<Nfp;i++) {
           // double check vol geometric factors are in halo storage of vgeo
@@ -210,31 +212,20 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           iint vidP   = mesh->vmapP[idM]%Np; // only use this to identify location of positive trace vgeo
 
           qmM[i] = 0;          
+          if (vidM == m) qmM[i] = 1;
+          
           for (int fP=0;fP<Nfaces+1;fP++) {
-            for (int j=0;j<Np;j++) 
-              QmM[j+fP*Np+i*(Nfaces+1)*Np] = 0;
-          }
-          if (vidM == m) {
-            qmM[i] = 1;
-            for (int fP=0;fP<Nfaces+1;fP++) {
-              iint id = fP*Np*Np + eM*Np*Np*(Nfaces+1);
-              for (int j=0;j<Np;j++) 
-                QmM[j+fP*Np+i*Np] = nx*Gx[j+m*Np+id].val+ny*Gy[j+m*Np+id].val;              
-            }
+            iint id = fP*Np*Np + eM*GblockSize;
+            QmM[i+fP*Nfp] = nx*Gx[m+vidM*Np+id].val+ny*Gy[m+vidM*Np+id].val;              
           }
           
+          
           qmP[i] = 0;          
+          if (vidP == m) qmP[i] = 1;
+          
           for (int fP=0;fP<Nfaces+1;fP++) {
-            for (int j=0;j< Np;j++) 
-              QmP[j+fP*Np+i*(Nfaces+1)*Np] = 0;
-          }
-          if (vidP == m) {
-            qmP[i] = 1;
-            for (int fP=0;fP<Nfaces+1;fP++) {
-              iint id = fP*Np*Np + eP*Np*Np*(Nfaces+1);
-              for (int j=0;j<Np;j++) 
-                QmP[j+fP*Np+i*Np] = nx*Gx[j+m*Np+id].val + ny*Gy[j+m*Np+id].val;
-            }
+            iint id = fP*Np*Np + eP*Np*Np*(Nfaces+1);
+            QmP[i+fP*Nfp] = nx*Gx[m+vidP*Np+id].val + ny*Gy[m+vidP*Np+id].val;
           }
         }
 
@@ -258,15 +249,15 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         }
 
         for (int n=0;n<Np;n++) {
-          for (int fP=0;fP<Nfaces;fP++) {
+          for (int fP=0;fP<Nfaces+1;fP++) {
             for (iint i=0;i<Nfp;i++) {
-              //Ae[m+n*Np+             fP*(Nfaces+1)*Np*Np] += -0.5*(1+bcN)*(1-bcD)*sJ*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*QmM[n+fP*Np+i*Np];
-              //Ae[m+n*Np+(fM+1)*Np*Np+fP*(Nfaces+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*QmP[n+fP*Np+i*Np];
+              //Ae[m+n*Np+             fP*(Nfaces+1)*Np*Np] += -0.5*(1+bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmM[i+fP*Nfp];
+              //Ae[m+n*Np+(fM+1)*Np*Np+fP*(Nfaces+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmP[i+fP*Nfp];
             }
           }
           for (iint i=0;i<Nfp;i++) {
-            Ae[m+n*Np             ] += -0.5*(1-bcN)*(1+bcD)*sJ*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmM[i];
-            Ae[m+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*mesh->LIFT[i+n*Nfp+fM*Nfp*Np]*qmP[i];
+            //Ae[m+n*Np             ] += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmM[i];
+            //Ae[m+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmP[i];
           }
         }
       }
@@ -274,7 +265,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
     
     //multiply by mass matrix 
     for (int fM=0;fM<Nfaces+1;fM++) {
-      iint eP = (fM==0) ? eM : mesh->EToE[eM*Nfaces+fM];
+      iint eP = (fM==0) ? eM : mesh->EToE[eM*Nfaces+fM-1];
       if (eP<0) eP = eM;
 
       for (int fP=0;fP<Nfaces+1;fP++) {
