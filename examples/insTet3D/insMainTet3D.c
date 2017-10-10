@@ -14,9 +14,9 @@ int main(int argc, char **argv){
   char *velParAlmondOptions = strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-     strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
   char *prParAlmondOptions =
