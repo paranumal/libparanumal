@@ -8,7 +8,7 @@ void BuildFacePatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
                         dfloat *MS, iint face, dfloat *A);
 
 
-void ellipticBuildFacePatchesIpdgTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){

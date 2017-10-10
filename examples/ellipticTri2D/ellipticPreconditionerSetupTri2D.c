@@ -21,7 +21,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"BRDG")) {
-      ellipticBuildBRdgTri2D(mesh, 1.0, lambda, BCType, &A, &nnz,globalStarts, options);
+      ellipticBuildBRdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
@@ -38,15 +38,15 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     }
 
     precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
-    parAlmondAgmgSetup(precon->parAlmond,
-                       globalStarts,
-                       nnz,
-                       Rows,
-                       Cols,
-                       Vals,
-                       solver->allNeumann,
-                       solver->allNeumannPenalty,
-                       hgs);
+    // parAlmondAgmgSetup(precon->parAlmond,
+    //                    globalStarts,
+    //                    nnz,
+    //                    Rows,
+    //                    Cols,
+    //                    Vals,
+    //                    solver->allNeumann,
+    //                    solver->allNeumannPenalty,
+    //                    hgs);
 
     free(A); free(Rows); free(Cols); free(Vals);
 
@@ -84,15 +84,15 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
       //set up the fine problem smoothing
       if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherOverlappingPatch(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFullPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFacePatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherLocalPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherDampedJacobi(solver, precon, levels[0], tau, lambda, BCType, options);
       }
     }
 
@@ -158,15 +158,15 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     //set up the fine problem smoothing
     if(strstr(options, "OVERLAPPINGPATCH")){
-      ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      ellipticSetupSmootherOverlappingPatch(solver, precon, OASLevel, tau, lambda, BCType, options);
     } else if(strstr(options, "FULLPATCH")){
-      ellipticSetupSmootherFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherFullPatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else if(strstr(options, "FACEPATCH")){
-      ellipticSetupSmootherFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherFacePatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else if(strstr(options, "LOCALPATCH")){
-      ellipticSetupSmootherLocalPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherLocalPatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else { //default to damped jacobi
-      ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      ellipticSetupSmootherDampedJacobi(solver, precon, OASLevel, tau, lambda, BCType, options);
     }
 
 
@@ -223,7 +223,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     dfloat *invDiagA;
 
-    ellipticBuildJacobiIpdgTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+    ellipticBuildJacobiTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
   }

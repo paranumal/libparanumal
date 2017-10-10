@@ -19,7 +19,7 @@ int parallelCompareBaseId(const void *a, const void *b){
   return 0;
 }
 
-void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   iint rank, size;
@@ -275,7 +275,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   }
 }
 
-void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+void ellipticSetupSmootherFullPatch(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
@@ -286,7 +286,7 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
   int NpP = mesh->Np*(mesh->Nfaces+1);
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFullPatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFullPatchesTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -339,7 +339,7 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
   free(invDegree);
 }
 
-void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+void ellipticSetupSmootherFacePatch(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
@@ -348,7 +348,7 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
   mesh_t *mesh = solver->mesh;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFacePatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFacePatchesTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   int NpP = 2*mesh->Np;
@@ -411,7 +411,7 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
   free(invDegree);
 }
 
-void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
@@ -422,7 +422,7 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
   int NpP = mesh->Np;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildLocalPatchesIpdgTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildLocalPatchesTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -466,13 +466,13 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
   free(invDegree);
 }
 
-void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
+void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
   dfloat *invDiagA;
   mesh_t *mesh = solver->mesh;
 
-  ellipticBuildJacobiIpdgTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+  ellipticBuildJacobiTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 
@@ -490,6 +490,8 @@ void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, a
       level->ChebyshevIterations = 2;
       level->smoother_params[0] = rho;
       level->smoother_params[1] = rho/10.;
+
+      printf("weight = %g \n", rho);
 
     } else {
 
