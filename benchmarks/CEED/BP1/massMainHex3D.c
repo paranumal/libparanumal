@@ -54,7 +54,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	
 	// time cudamemcpy for same amount of data movement
 	int gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-	iint Nbytes =((sizeof(dfloat)*(mesh->Np*2 +7*mesh->Np)/2)); // use 1/2 because of load+store
+	iint Nbytes =((sizeof(dfloat)*(2*mesh->Np*2+ 7*gjNp)/2)); // use 1/2 because of load+store
 	occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
 	occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 	
@@ -118,6 +118,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 		       (globalDofs*iterations)/(globalElapsed*size), gflops, copyBandwidth, bw );
 	
 printf("NUMBER OF INTEREST: %d %17.15E \n", mesh->Nq-1, gflops);
+printf("COPYBW %d % 17.15E \n", mesh->Nq-1,copyBandwidth );
 }
 	
 	
@@ -203,8 +204,8 @@ int main(int argc, char **argv){
 	massSetupHex3D(mesh, kernelInfo);
 	
 	solver_t *solver = massSolveSetupHex3D(mesh, lambda, kernelInfo, options);
-	
-	iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+	iint Nall = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nelements+mesh->totalHaloPairs);
+	//iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 	printf("Nall = %d, mesh->Np = %d mesh->Nelements = %d mesh->totalHaloPairs = %d \n", Nall, mesh->Np, mesh->Nelements, mesh->totalHaloPairs);
 	dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 	dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));

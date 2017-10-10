@@ -27,7 +27,7 @@ void massOperator3D(solver_t *solver, dfloat lambda,
     {
       if(solver->NglobalGatherElements){
 	solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-				solver->o_gjGeo, solver->o_gjI, o_q, o_Aq);
+				solver->o_gjGeo, solver->o_gjI, o_q, o_Aq, solver->o_grad, solver->o_Aw);
       }
       
       if(halo->Ngather){
@@ -41,7 +41,7 @@ void massOperator3D(solver_t *solver, dfloat lambda,
       // Ax for C0 internal elements
       if(solver->NlocalGatherElements){
 	solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-				solver->o_gjGeo, solver->o_gjI, o_q, o_Aq);
+				solver->o_gjGeo, solver->o_gjI, o_q, o_Aq, solver->o_grad, solver->o_Aw);
       }
     }
 
