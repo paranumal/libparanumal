@@ -312,30 +312,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   //
   //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
-
-  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
-  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
-    x[i] = 1.;
-    o_x.copyFrom(x);
-    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
-    o_Ax.copyTo(Ax);
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      Ap[i+j*mesh->Np*mesh->Nelements] = Ax[j];
-      //printf("%4.2f \t", Ax[j]);
-    }
-    //printf("\n");
-    x[i] = 0.;
-  }
-
-  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
-    }
-    printf("\n");
-  }
-
   dfloat TOL     = tol*tol; 
   
   dfloat rdotz0 = 0;
@@ -437,8 +413,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
      
-    //if((rank==0)&&(strstr(options,"VERBOSE")))
-    //  printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
+    if((rank==0)&&(strstr(options,"VERBOSE")))
+     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
     ++Niter;
 
@@ -446,8 +422,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
 
    //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
-  //if((rank==0)&&strstr(options,"VERBOSE"))
-  //  printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+  if((rank==0)&&strstr(options,"VERBOSE"))
+   printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
 
   if(strstr(options,"VERBOSE")){

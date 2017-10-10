@@ -213,8 +213,14 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
 
   int NblockP = 512/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
@@ -263,6 +269,48 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
                "ellipticPartialAxIpdgTri2D",
                kernelInfo);
+
+  #if USE_BERN
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceSurface2D",
+                 kernelInfo);
+  #else 
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceSurface2D",
+                 kernelInfo);
+  #endif
 
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));

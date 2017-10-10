@@ -78,8 +78,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         Gx[m+n*Np+id].col = globalIds[eM*Np + m];
         Gx[m+n*Np+id].ownerRank = rankM;
 
-        //Gx[m+n*Np+id].val = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
-        //Gy[m+n*Np+id].val = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
+        Gx[m+n*Np+id].val = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
+        Gy[m+n*Np+id].val = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
       }
     }
 
@@ -107,7 +107,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           if (vidP == m) qmP[i] =1;
         }
 
-        iint id = Np*Np + eM*Np*Np*(Nfaces+1);
+        iint id = eM*Np*Np*(Nfaces+1);
         iint fid = (fM+1)*Np*Np + eM*Np*Np*(Nfaces+1);
 
         int bcD = 0;
@@ -137,8 +137,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
             Gx[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
             Gy[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
             
-            //Gx[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];
-            //Gy[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];           
+            Gx[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];
+            Gy[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];           
           }
         }
       }
@@ -251,13 +251,13 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         for (int n=0;n<Np;n++) {
           for (int fP=0;fP<Nfaces+1;fP++) {
             for (iint i=0;i<Nfp;i++) {
-              //Ae[m+n*Np+             fP*(Nfaces+1)*Np*Np] += -0.5*(1+bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmM[i+fP*Nfp];
-              //Ae[m+n*Np+(fM+1)*Np*Np+fP*(Nfaces+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmP[i+fP*Nfp];
+              Ae[m+n*Np+             fP*(Nfaces+1)*Np*Np] += -0.5*(1+bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmM[i+fP*Nfp];
+              Ae[m+n*Np+(fM+1)*Np*Np+fP*(Nfaces+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmP[i+fP*Nfp];
             }
           }
           for (iint i=0;i<Nfp;i++) {
-            //Ae[m+n*Np             ] += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmM[i];
-            //Ae[m+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmP[i];
+            Ae[m+n*Np             ] += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmM[i];
+            Ae[m+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmP[i];
           }
         }
       }
@@ -277,7 +277,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
             }
             Anm *= J;
             
-            if(fabs(Anm)>tol){
+            if(fabs(Anm)>tol){              
               (*A)[nnz].row = globalIds[eM*Np+n];
               (*A)[nnz].col = Gx[m+fP*Np*Np+eP*GblockSize].col;
               (*A)[nnz].val = -Anm;
@@ -306,22 +306,6 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
     }
   }
   *nnzA = cnt+1;
-
-
-  printf("BR matrix \n");
-  dfloat *Ap = (dfloat*) calloc(Np*Nelements*Np*Nelements,sizeof(dfloat));
-  for (int n=0;n<*nnzA;n++){
-    int row = (*A)[n].row;
-    int col = (*A)[n].col;
-    Ap[col+row*mesh->Np*Nelements] = (*A)[n].val;
-  }
-
-  for (int n=0;n<Np*Nelements;n++) {
-    for (int m=0;m<Np*Nelements;m++) {
-      printf("%4.2f \t", Ap[m + n*Np*Nelements]);
-    }
-    printf("\n");
-  }
 
   printf("nnz = %d\n", *nnzA);
   
