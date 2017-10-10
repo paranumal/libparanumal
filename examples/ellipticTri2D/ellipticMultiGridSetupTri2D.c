@@ -175,14 +175,31 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       nonZero_t *coarseA;
       iint nnzCoarseA;
       hgs_t *coarsehgs;
-      dfloat *V1;
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-      ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
-                                             &V1, &coarseA, &nnzCoarseA,
-                                             &coarsehgs, coarseGlobalStarts, options);
+      if (strstr(options,"IPDG")) {
+        ellipticBuildIpdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      } else if (strstr(options,"BRDG")) {
+        ellipticBuildBRdgTri2D(solverL->mesh, 1.0, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      } else if (strstr(options,"CONTINUOUS")) {
+        ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
+      }
 
+      // ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+      //                                        &V1, &coarseA, &nnzCoarseA,
+      //                                        &coarsehgs, coarseGlobalStarts, options);
+
+      // Build coarse grid element basis functions
+      dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat rn = mesh->r[n];
+        dfloat sn = mesh->s[n];
+
+        V1[0*mesh->Np+n] = -0.5*(rn+sn);
+        V1[1*mesh->Np+n] = +0.5*(1.+rn);
+        V1[2*mesh->Np+n] = +0.5*(1.+sn);
+      }      
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
       iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
@@ -252,21 +269,18 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     } else {
       rateTolerance = 1.0;
     }
-
-
+    
     //set up the fine problem smoothing
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      }
+    if(strstr(options, "OVERLAPPINGPATCH")){
+      ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+    } else if(strstr(options, "FULLPATCH")){
+      ellipticSetupSmootherFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "FACEPATCH")){
+      ellipticSetupSmootherFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "LOCALPATCH")){
+      ellipticSetupSmootherLocalPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else { //default to damped jacobi
+      ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
     }
 
     //reallocate vectors at N=1 since we're using the matrix free ops
