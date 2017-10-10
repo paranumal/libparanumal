@@ -36,7 +36,7 @@ mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 6  in
 
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 0
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 1
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 2
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 2
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 3
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 4
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 5
@@ -49,7 +49,7 @@ mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  in
 
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 0
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 1
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 2
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 2
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 3
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 4
 #mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 5

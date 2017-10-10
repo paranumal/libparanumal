@@ -26,7 +26,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  ins->NtimeSteps = 300; // !!!!!!!!!!!!!
+  ins->NtimeSteps = 1000; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -133,7 +133,7 @@ void insRun3D(ins_t *ins, char *options){
     }
 #endif
 
-   if(tstep>100){
+   if(tstep>0){
     char fname[BUFSIZ];
     // sprintf(fname, "insErrors.txt");
     //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
