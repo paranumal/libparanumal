@@ -80,6 +80,7 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 				}
 			}
 		}
+		
 		//error starts here
 		for(int k=0;k<p_gjNq;++k){
 		
@@ -151,7 +152,7 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 						}
 						
 						for(int c=0;c<p_Nq;++c){
-							qtmp2[emap*p_Np+c*p_Nq2+b*p_Nq+a] += s_I[k][c]*tmp;
+							qtmp2[emap*p_gjNp+c*p_gjNq2+b*p_gjNq+a] += s_I[k][c]*tmp;
 						}
 					}
 				}
@@ -168,6 +169,7 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 						//r_Mq[c];
 					}
 				}
+				
 			}
 		}
 	}
@@ -829,6 +831,280 @@ kernel void massPartialAxHex3D_v2(const iint Nelements,
 		}
 	}
 }
+
+/*
+#if p_gjNq%2 == 1
+#define p_halfI ((p_gjNq+1)/2)
+#else
+#define p_halfI ((p_gjNq+1)/2)
+#endif
+*/
+
+//#define p_halfI (p_gjNq+p_gjNq%2)/2
+
+//written by Kasia to reduce the shmem use
+
+kernel void massPartialAxHex3D_redShmem(const iint Nelements,
+                                        const iint * restrict elementList,
+                                        const dfloat * restrict gjGeo,
+                                        const dfloat * restrict gjI,
+                                        const dfloat * restrict q,
+                                        dfloat * restrict Mq){
+                                        
+                                        
+	for(int e=0;e<Nelements;++e;outer0){
+	
+		//	  shared dfloat s_I[p_halfI][p_Nq+p_gllPad];
+		shared dfloat s_I[p_halfI][p_Nq+p_gllPad];
+		volatile shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
+		
+		exclusive dfloat r_q[p_gjNq];
+		
+		exclusive iint emap;
+		
+		// prefetch D and I matrices and zero register storage
+		for(int b=0;b<p_gjNq;++b;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+			
+				emap = elementList[e];
+				
+				if(a<p_Nq && b<p_halfI)
+					s_I[b][a] = gjI[a+p_Nq*b];
+					
+				if(a<p_Nq && b<p_Nq){
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c)
+						s_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
+				}
+				//		for (int c=0;c<p_gjNq; ++c)
+				//	{
+				//	Mq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = 0.0f;
+				//}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform in b
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+				if(a<p_Nq && c<p_Nq){
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int b=0;b<p_Nq;++b)
+						r_q[b] = s_q[c][b][a];
+						
+					// transform in b
+					occaUnroll(p_halfI)
+					for(int j=0;j<p_halfI;++j){
+						dfloat tmp = 0;
+						dfloat tmp2 = 0;
+						occaUnroll(p_Nq)
+						for(int b=0;b<p_Nq;++b)
+						{
+							dfloat tmpI = s_I[j][b];
+							tmp  += tmpI*r_q[b];
+							tmp2 += tmpI*r_q[p_Nq-1-b];
+							
+						}
+						s_q[c][j][a] = tmp; // ok since only this thread
+						s_q[c][p_gjNq-1-j][a] = tmp2;
+						
+						
+					}
+				}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform in a
+		for(int c=0;c<p_gjNq;++c;inner1){
+			for(int j=0;j<p_gjNq;++j;inner0){
+				if(c<p_Nq){
+				
+					// prefetch to registers
+					occaUnroll(p_Nq)
+					for(int a=0;a<p_Nq;++a)
+						r_q[a] = s_q[c][j][a];
+						
+					// transform in a
+					occaUnroll(p_halfI)
+					
+					for(int i=0;i<p_halfI;++i){
+						dfloat tmp = 0;
+						dfloat tmp2 = 0;
+						occaUnroll(p_Nq)
+						for(int a=0;a<p_Nq;++a)
+						{
+							dfloat tmpI = s_I[i][a];
+							tmp += tmpI*r_q[a];
+							tmp2+=tmpI*r_q[p_Nq-1-a];
+						}
+						s_q[c][j][i] = tmp; // ok since only this thread
+						s_q[c][p_gjNq-1-j][i] = tmp2;
+						
+						
+					}
+				}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform in c
+		for(int j=0;j<p_gjNq;++j;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+				// prefetch to registers
+				occaUnroll(p_Nq)
+				for(int c=0;c<p_Nq;++c)
+					r_q[c] = s_q[c][j][i];
+					
+				// transform in c
+				occaUnroll(p_halfI)
+				for(int k=0;k<p_halfI;++k){
+					// prefetch integration weights
+					const iint id = p_Nggeo*emap*p_gjNp
+					                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
+					const iint id2 = p_Nggeo*emap*p_gjNp
+					                 +(p_gjNq-1-k)*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
+					const dfloat r_GwJ = gjGeo[id];
+					const dfloat r_GwJ2 = gjGeo[id2];
+					dfloat tmp = 0;
+					dfloat tmp2 = 0;
+					occaUnroll(p_Nq)
+					for(int c=0;c<p_Nq;++c){
+						dfloat tmpI = s_I[k][c];
+						tmp += tmpI*r_q[c];
+						tmp2 += tmpI*r_q[p_Nq-1-c];
+					}
+					
+					s_q[k][j][i] = r_GwJ*tmp; // ok since only this thread
+					s_q[p_gjNq-k-1][j][i] = r_GwJ2*tmp2;
+					
+					
+				}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform back in b
+		for(int k=0;k<p_gjNq;++k;inner1){
+			for(int i=0;i<p_gjNq;++i;inner0){
+				occaUnroll(p_gjNq)
+				for(int j=0;j<p_gjNq;++j)
+					r_q[j] = s_q[k][j][i];
+					
+				//	occaUnroll(p_Nq)
+				//	for(int b=0;b<p_Nq;++b){
+				occaUnroll(p_halfI)
+				for(int b=0;b<p_halfI;++b){
+					dfloat tmp = 0;
+					dfloat tmp2 = 0;
+					occaUnroll(p_halfI)
+					for(int j=0;j<p_halfI;++j){
+						//be careful with middle values
+						dfloat tmpI = s_I[j][b];
+						dfloat tmpI2 = s_I[j][p_Nq-1-b];
+						tmp += tmpI*r_q[j] ;
+						tmp2 += tmpI*r_q[p_gjNq-1-j];
+						//+ tmpI2*r_q[];
+						
+						if ((p_gjNq%2 == 0)|| (j!=(p_halfI-1)))
+						{
+							tmp += tmpI2*r_q[p_gjNq-1-j];
+							tmp2 += tmpI2*r_q[j];
+							
+						}
+						
+					}
+					s_q[k][b][i] = tmp; // ok since only this thread
+					s_q[k][p_Nq-1-b][i] = tmp2;
+					
+					
+				}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform back in a
+		for(int k=0;k<p_gjNq;++k;inner1){
+			for(int b=0;b<p_gjNq;++b;inner0){
+				if(b<p_Nq){
+					occaUnroll(p_gjNq)
+					for(int i=0;i<p_gjNq;++i)
+						r_q[i] = s_q[k][b][i];
+						
+					occaUnroll(p_halfI)
+					for(int a=0;a<p_halfI;++a){
+						dfloat tmp = 0;
+						dfloat tmp2 = 0;
+						occaUnroll(p_halfI)
+						for(int i=0;i<p_halfI;++i){
+							dfloat tmpI = s_I[i][a];
+							dfloat tmpI2 = s_I[i][p_Nq-1-a];
+							tmp += tmpI*r_q[i] ;
+							tmp2 += tmpI*r_q[p_gjNq-1-i];
+							if ((p_gjNq%2 == 0)|| (i!=(p_halfI-1)))
+							{
+								tmp += tmpI2*r_q[p_gjNq-1-i];
+								tmp2 += tmpI2*r_q[i];
+								
+							}
+							
+							
+						}
+						s_q[k][b][a] = tmp; // ok since only this thread
+						s_q[k][b][p_Nq-1-a] = tmp2;
+						
+						
+					}
+				}
+			}
+		}
+		
+		barrier(localMemFence);
+		
+		// transform back in c
+		for(int b=0;b<p_gjNq;++b;inner1){
+			for(int a=0;a<p_gjNq;++a;inner0){
+				if(a<p_Nq && b<p_Nq){
+					occaUnroll(p_gjNq)
+					for(int k=0;k<p_gjNq;++k)
+						r_q[k] = s_q[k][b][a];
+						
+					occaUnroll(p_halfI)
+					for(int c=0;c<p_halfI;++c){
+						dfloat tmp = 0;
+						dfloat tmp2 = 0;
+						occaUnroll(p_halfI)
+						for(int k=0;k<p_halfI;++k){
+							dfloat tmpI = s_I[k][c];
+							dfloat tmpI2 = s_I[k][p_Nq-1-c];
+							tmp += tmpI*r_q[k] ;
+							tmp2 += tmpI*r_q[p_gjNq-1-k];
+							
+							if ((p_gjNq%2 == 0)|| (k!=(p_halfI-1)))
+							{
+								tmp += tmpI2*r_q[p_gjNq-1-k];
+								tmp2 += tmpI2*r_q[k];
+								
+							}
+						}
+						
+						Mq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = tmp;
+						Mq[emap*p_Np+(p_Nq-1-c)*p_Nq2+b*p_Nq+a] = tmp2;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+//end of redShmem
 
 //v3 is the same as v1 just the loop is not unrolled --- we look at the effects of unrolling
 
