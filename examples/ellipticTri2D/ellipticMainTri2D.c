@@ -39,8 +39,8 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-    //strdup("solver=EXACT,HOST,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 
   //this is strictly for testing, to do repeated runs. Will be removed later
@@ -55,8 +55,8 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
+  dfloat lambda = 0;
   //dfloat lambda = 0;
-  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -65,7 +65,12 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  dfloat tau; 
+  if (strstr(options,"IPDG")) {
+    tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;  
+  } else if (strstr(options,"BRDG")) {
+    tau = 1.0;
+  }
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);

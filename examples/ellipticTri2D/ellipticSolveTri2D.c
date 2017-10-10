@@ -64,8 +64,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
-    dfloat BRPenalty = 1.0;
-
     ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
     ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);    
 
@@ -153,7 +151,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 lambda,
-                                BRPenalty,
+                                solver->tau,
                                 mesh->o_vgeo,
                                 mesh->o_sgeo,
                                 solver->o_EToB,
@@ -169,7 +167,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 lambda,
-                                BRPenalty,
+                                solver->tau,
                                 mesh->o_vgeo,
                                 mesh->o_sgeo,
                                 solver->o_EToB,
@@ -313,6 +311,29 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
   dfloat TOL     = tol*tol; 
+  
+  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
+  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
+    x[i] = 1.;
+    o_x.copyFrom(x);
+    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
+    o_Ax.copyTo(Ax);
+    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
+      Ap[i+j*mesh->Np*mesh->Nelements] = Ax[j];
+      //printf("%4.2f \t", Ax[j]);
+    }
+    //printf("\n");
+    x[i] = 0.;
+  }
+
+  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
+    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
+      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
+    }
+    printf("\n");
+  }
   
   dfloat rdotz0 = 0;
   iint Niter = 0;
