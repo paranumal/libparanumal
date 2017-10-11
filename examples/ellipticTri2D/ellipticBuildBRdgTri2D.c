@@ -48,108 +48,109 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
     free(idSendBuffer);
   }
 
+  // surface mass matrices MS = MM*LIFT
+  dfloat *MS = (dfloat *) calloc(Nfaces*Nfp*Nfp,sizeof(dfloat));
+  for (iint f=0;f<Nfaces;f++) {
+    for (iint n=0;n<Nfp;n++) {
+      iint fn = mesh->faceNodes[f*Nfp+n];
+      
+      for (iint m=0;m<Nfp;m++) {
+        dfloat MSnm = 0;
+        
+        for (iint i=0;i<Np;i++){
+          MSnm += mesh->MM[fn+i*Np]*mesh->LIFT[i*Nfp*Nfaces+f*Nfp+m];
+        } 
+        MS[m+n*Nfp + f*Nfp*Nfp]  = MSnm;
+      }
+    }
+  }
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-10;
 
-  dfloat *qmP = (dfloat *) calloc(Nfp,sizeof(dfloat));
-  dfloat *qmM = (dfloat *) calloc(Nfp,sizeof(dfloat));
-  dfloat *QmP = (dfloat *) calloc(Nfp*(Nfaces+1),sizeof(dfloat));
-  dfloat *QmM = (dfloat *) calloc(Nfp*(Nfaces+1),sizeof(dfloat));
-  
   /* Construct gradient as block matrix and load it to the halo */
-  //storage for gradient operator
-  iint gradNNZ = Np*Np*(1+Nfaces)*(Nelements+mesh->totalHaloPairs);
-  nonZero_t *Gx = (nonZero_t *) calloc(gradNNZ,sizeof(nonZero_t));
-  nonZero_t *Gy = (nonZero_t *) calloc(gradNNZ,sizeof(nonZero_t));
+  int GblockSize = Np*Np*(Nfaces+1);
+  iint gradNNZ = GblockSize*(Nelements+mesh->totalHaloPairs);
+  iint *Gids = (iint *) calloc(Np*(Nfaces+1)*(Nelements+mesh->totalHaloPairs),sizeof(iint));
+  dfloat  *Gx = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
+  dfloat  *Gy = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
 
   for (iint eM=0;eM<Nelements;eM++) {
-    iint id = eM*Np*Np*(Nfaces+1);
+
+    iint blockId = eM*GblockSize;
 
     iint vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
+    dfloat J = mesh->vgeo[vbase+JID];
 
     for(iint n=0;n<Np;++n){
-      for(iint m=0;m<Np;++m){
-        Gx[m+n*Np+id].row = globalIds[eM*Np + n];
-        Gx[m+n*Np+id].col = globalIds[eM*Np + m];
-        Gx[m+n*Np+id].ownerRank = rankM;
-
-        //Gx[m+n*Np+id].val = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
-        //Gy[m+n*Np+id].val = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
+      for(iint m=0;m<Np;++m){       
+        Gx[m+n*Np+blockId] = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
+        Gy[m+n*Np+blockId] = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
       }
+      Gids[n+eM*(Nfaces+1)*Np] = globalIds[eM*Np+n];
     }
 
-    for (iint m=0;m<Np;m++) {
-      for (iint fM=0;fM<Nfaces;fM++) {
-        // load surface geofactors for this face
-        iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
-        dfloat nx = mesh->sgeo[sid+NXID];
-        dfloat ny = mesh->sgeo[sid+NYID];
-        dfloat sJ = mesh->sgeo[sid+SJID];
-        dfloat invJ = mesh->sgeo[sid+IJID];
+    for (iint fM=0;fM<Nfaces;fM++) {
+      // load surface geofactors for this face
+      iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
+      dfloat nx = mesh->sgeo[sid+NXID];
+      dfloat ny = mesh->sgeo[sid+NYID];
+      dfloat sJ = mesh->sgeo[sid+SJID];
+      dfloat invJ = mesh->sgeo[sid+IJID];
 
-        iint eP = mesh->EToE[eM*Nfaces+fM];
-      
-        // extract trace nodes
-        for (iint i=0;i<Nfp;i++) {
-          // double check vol geometric factors are in halo storage of vgeo
-          iint idM    = eM*Nfp*Nfaces+fM*Nfp+i;
-          iint vidM   = mesh->faceNodes[i+fM*Nfp];
-          iint vidP   = mesh->vmapP[idM]%Np; // only use this to identify location of positive trace vgeo
+      iint eP = mesh->EToE[eM*Nfaces+fM];
+      if (eP < 0) eP = eM;
 
-          qmM[i] =0;
-          if (vidM == m) qmM[i] =1;
-          qmP[i] =0;
-          if (vidP == m) qmP[i] =1;
-        }
+      int bcD = 0, bcN =0;
+      int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
+      iint bcType = 0;
 
-        iint id = eM*Np*Np*(Nfaces+1);
-        iint fid = (fM+1)*Np*Np + eM*Np*Np*(Nfaces+1);
+      if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
-        int bcD = 0;
-        int bcN = 0;
-        if (eP < 0) {
-          int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
-          iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
-          if(bcType==1){ // Dirichlet
-            bcD = 1;
-            bcN = 0;
-          } else if (bcType==2){ // Neumann
-            bcD = 0;
-            bcN = 1;
-          } else { // Neumann for now
-            bcD = 0;
-            bcN = 1;
-          }
-          eP=eM;
-        }
+      // this needs to be double checked (and the code where these are used)
+      if(bcType==1){ // Dirichlet
+        bcD = 1;
+        bcN = 0;
+      } else if(bcType==2){ // Neumann
+        bcD = 0;
+        bcN = 1;
+      }        
 
-        for (iint n=0;n<Np;n++) {
-          Gx[m+n*Np+fid].row = globalIds[eM*Np + n];
-          Gx[m+n*Np+fid].col = globalIds[eP*Np + m];
-          
-          for (iint i=0;i<Nfp;i++) {
+      // lift term 
+      for(iint n=0;n<Np;++n){
+        for(iint m=0;m<Nfp;++m){
+          iint idM = eM*Nfp*Nfaces+fM*Nfp+m;
+          //iint nM = mesh->faceNodes[fM*Nfp+n];
+          iint mM = mesh->faceNodes[fM*Nfp+m];
+          iint mP = mesh->vmapP[idM]%Np; 
 
-            Gx[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
-            Gy[m+n*Np+id].val += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmM[i];
-            
-            Gx[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*nx*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];
-            Gy[m+n*Np+fid].val += 0.5*(1-bcN)*(1-bcD)*sJ*invJ*ny*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*qmP[i];           
-          }
+          dfloat LIFTfnm = sJ*invJ*mesh->LIFT[m + fM*Nfp + n*Nfp*Nfaces];
+
+          // G = sJ/J*LIFT*n*[[ uP-uM ]] 
+          Gx[mM+n*Np+             blockId] += -0.5*(1.-bcN)*(1.+bcD)*nx*LIFTfnm;
+          Gy[mM+n*Np+             blockId] += -0.5*(1.-bcN)*(1.+bcD)*ny*LIFTfnm;
+
+          Gx[mP+n*Np+(fM+1)*Np*Np+blockId] +=  0.5*(1.-bcN)*(1.-bcD)*nx*LIFTfnm;
+          Gy[mP+n*Np+(fM+1)*Np*Np+blockId] +=  0.5*(1.-bcN)*(1.-bcD)*ny*LIFTfnm;
         }
       }
+
+        //record column indices
+      for (int m=0;m<Np;m++) 
+        Gids[m+(fM+1)*Np+eM*(Nfaces+1)*Np] = globalIds[eP*Np+m];
     }
   }
 
-  //halo exchange the grad operator
-  int GblockSize = Np*Np*(Nfaces+1);
-  nonZero_t *GSendBuffer = (nonZero_t *) calloc(GblockSize*mesh->totalHaloPairs,sizeof(nonZero_t));
-  meshHaloExchange(mesh, GblockSize*sizeof(nonZero_t), Gx, GSendBuffer, Gx + Nelements*GblockSize);
-  meshHaloExchange(mesh, GblockSize*sizeof(nonZero_t), Gy, GSendBuffer, Gy + Nelements*GblockSize);
+  //halo exchange the grad operators
+  dfloat *GSendBuffer = (dfloat *) calloc(GblockSize*mesh->totalHaloPairs,sizeof(dfloat));
+  iint   *GidsSendBuffer  = (iint *)   calloc(Np*Nfaces*mesh->totalHaloPairs,sizeof(iint));
+  meshHaloExchange(mesh, GblockSize*sizeof(dfloat), Gx, GSendBuffer, Gx + Nelements*GblockSize);
+  meshHaloExchange(mesh, GblockSize*sizeof(dfloat), Gy, GSendBuffer, Gy + Nelements*GblockSize);
+  meshHaloExchange(mesh, Np*(Nfaces+1)*sizeof(iint), Gids, GidsSendBuffer, Gids + Np*(Nfaces+1)*Nelements);
 
 
   int AblockSize = Np*Np*(Nfaces+1)*(Nfaces+1);
@@ -164,9 +165,6 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   // loop over all elements
   for(iint eM=0;eM<Nelements;++eM){
 
-    //zero out Ae
-    for (int n=0;n<AblockSize;n++) Ae[n] = 0.;
-
     iint vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
@@ -174,95 +172,122 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
     dfloat dsdy = mesh->vgeo[vbase+SYID];
     dfloat J = mesh->vgeo[vbase+JID];
 
+    //zero out Ae
+    for (int n=0;n<AblockSize;n++) Ae[n] = 0;
+
+    /* start with stiffness matrix  */
     for(int n=0;n<Np;++n){
       for(int m=0;m<Np;++m){
-        for (int fP = 0; fP<Nfaces+1;fP++) {
-          iint id = fP*Np*Np + eM*GblockSize;          
-          for (int k=0;k<Np;k++) {
-            //Ae[m+n*Np+fP*Np*Np*(Nfaces+1)] += (drdx*mesh->Dr[k+n*Np]+dsdx*mesh->Ds[k+n*Np])*Gx[m+k*Np+id].val;
-            //Ae[m+n*Np+fP*Np*Np*(Nfaces+1)] += (drdy*mesh->Dr[k+n*Np]+dsdy*mesh->Ds[k+n*Np])*Gy[m+k*Np+id].val;
-          }  
-        }
+        Ae[n*Np+m]  = J*lambda*mesh->MM[n*Np+m];
+        Ae[n*Np+m] += J*drdx*drdx*mesh->Srr[n*Np+m];
+        Ae[n*Np+m] += J*drdx*dsdx*mesh->Srs[n*Np+m];
+        Ae[n*Np+m] += J*dsdx*drdx*mesh->Ssr[n*Np+m];
+        Ae[n*Np+m] += J*dsdx*dsdx*mesh->Sss[n*Np+m];
+                                     
+        Ae[n*Np+m] += J*drdy*drdy*mesh->Srr[n*Np+m];
+        Ae[n*Np+m] += J*drdy*dsdy*mesh->Srs[n*Np+m];
+        Ae[n*Np+m] += J*dsdy*drdy*mesh->Ssr[n*Np+m];
+        Ae[n*Np+m] += J*dsdy*dsdy*mesh->Sss[n*Np+m];
       }
-      //Ae[n+n*Np] -= lambda;  
     }
 
-    for (iint m=0;m<Np;m++) {
-      for (iint fM=0;fM<Nfaces;fM++) {
-        // load surface geofactors for this face
-        iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
-        dfloat nx = mesh->sgeo[sid+NXID];
-        dfloat ny = mesh->sgeo[sid+NYID];
-        dfloat sJ = mesh->sgeo[sid+SJID];
-        dfloat invJ = mesh->sgeo[sid+IJID];
+    for (iint fM=0;fM<Nfaces;fM++) {
 
-        iint eP = mesh->EToE[eM*Nfaces+fM];
-        if (eP<0) eP = eM;
+      dfloat *AeP = Ae + (fM+1)*Np*Np*(Nfaces+1);
       
-        for (int i=0;i<Nfp*(Nfaces+1);i++) {
-          QmM[i] = 0;
-          QmP[i] = 0;
-        }
+      // load surface geofactors for this face
+      iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
+      dfloat nx = mesh->sgeo[sid+NXID];
+      dfloat ny = mesh->sgeo[sid+NYID];
+      dfloat sJ = mesh->sgeo[sid+SJID];
+      dfloat hinv = mesh->sgeo[sid+IHID]; 
+      
+      iint eP = mesh->EToE[eM*Nfaces+fM];
+      if (eP < 0) eP = eM;
+      
+      int bcD = 0, bcN =0;
+      int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
+      int bcType = 0;
 
-        // extract trace matrix from Gx and Gy
-        for (iint i=0;i<Nfp;i++) {
-          // double check vol geometric factors are in halo storage of vgeo
-          iint idM    = eM*Nfp*Nfaces+fM*Nfp+i;
-          iint vidM   = mesh->faceNodes[i+fM*Nfp];
-          iint vidP   = mesh->vmapP[idM]%Np; // only use this to identify location of positive trace vgeo
+      if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
-          qmM[i] = 0;          
-          if (vidM == m) qmM[i] = 1;
+      // this needs to be double checked (and the code where these are used)
+      if(bcType==1){ // Dirichlet
+        bcD = 1;
+        bcN = 0;
+      } else if(bcType==2){ // Neumann
+        bcD = 0;
+        bcN = 1;
+      }
+      
+      // mass matrix for this face
+      dfloat *MSf = MS + fM*Nfp*Nfp;
+
+      // penalty term just involves face nodes
+      for(iint n=0;n<Nfp;++n){
+        for(iint m=0;m<Nfp;++m){
+          iint idM = eM*Nfp*Nfaces+fM*Nfp+m;
+          int nM = mesh->faceNodes[fM*Nfp+n];
+          int mM = mesh->faceNodes[fM*Nfp+m];
+          int mP = mesh->vmapP[idM]%Np; 
           
-          for (int fP=0;fP<Nfaces+1;fP++) {
-            iint id = fP*Np*Np + eM*GblockSize;
-            QmM[i+fP*Nfp] = nx*Gx[m+vidM*Np+id].val+ny*Gy[m+vidM*Np+id].val;              
-          }
-        
-          qmP[i] = 0;          
-          if (vidP == m) qmP[i] = 1;
+          dfloat MSfnm = sJ*MSf[n*Nfp+m];
+          Ae [nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*tau*MSfnm;
+          AeP[nM*Np+mP] += -0.5*(1.-bcN)*(1.-bcD)*tau*MSfnm;
+        }
+      }
+
+      // now add differential surface terms
+      for(iint n=0;n<Nfp;++n){
+        for(iint m=0;m<Np;++m){
+          int nM = mesh->faceNodes[fM*Nfp+n];
           
-          for (int fP=0;fP<Nfaces+1;fP++) {
-            iint id = fP*Np*Np + eP*GblockSize;
-            QmP[i+fP*Nfp] = nx*Gx[m+vidP*Np+id].val + ny*Gy[m+vidP*Np+id].val;
-          }
-        }
+          for(iint i=0;i<Nfp;++i){
+            int iM = mesh->faceNodes[fM*Nfp+i];
+            int iP = mesh->vmapP[i + fM*Nfp+eM*Nfp*Nfaces]%Np;
+              
+            dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
+            
+            for (int fP=0;fP<Nfaces+1;fP++) {
+              dfloat DxMim = Gx[m+iM*Np+fP*Np*Np+eM*GblockSize];
+              dfloat DyMim = Gy[m+iM*Np+fP*Np*Np+eM*GblockSize];
 
-        int bcD = 0;
-        int bcN = 0;
-        eP = mesh->EToE[eM*Nfaces+fM];
-        if (eP < 0) {
-          int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
-          iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
-          if(bcType==1){ // Dirichlet
-            bcD = 1;
-            bcN = 0;
-          } else if (bcType==2){ // Neumann
-            bcD = 0;
-            bcN = 1;
-          } else { // Neumann for now
-            bcD = 0;
-            bcN = 1;
-          }
-          eP=eM;
-        }
+              dfloat DxPim = Gx[m+iP*Np+fP*Np*Np+eP*GblockSize];
+              dfloat DyPim = Gy[m+iP*Np+fP*Np*Np+eP*GblockSize];
 
-        for (int n=0;n<Np;n++) {
-          for (int fP=0;fP<Nfaces+1;fP++) {
-            for (iint i=0;i<Nfp;i++) {
-              Ae[m+n*Np+             fP*(Nfaces+1)*Np*Np] += -0.5*(1+bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmM[i+fP*Nfp];
-              Ae[m+n*Np+(fM+1)*Np*Np+fP*(Nfaces+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*QmP[i+fP*Nfp];
+              Ae [m+nM*Np+fP*Np*Np] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+              Ae [m+nM*Np+fP*Np*Np] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+              
+              AeP[m+nM*Np+fP*Np*Np] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
+              AeP[m+nM*Np+fP*Np*Np] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
             }
           }
-          for (iint i=0;i<Nfp;i++) {
-            //Ae[m+n*Np             ] += -0.5*(1-bcN)*(1+bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmM[i];
-            //Ae[m+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*sJ*invJ*mesh->LIFT[i+fM*Nfp+n*Nfp*Nfaces]*tau*qmP[i];
+        }
+      }
+
+      for(iint n=0;n<Np;++n){
+        for(iint m=0;m<Nfp;++m){
+          int mM = mesh->faceNodes[fM*Nfp+m];
+          int mP = mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np;
+          
+          for(iint i=0;i<Nfp;++i){
+            int iM = mesh->faceNodes[fM*Nfp+i];  
+
+            dfloat MSfim = sJ*MSf[i*Nfp+m];
+            
+            dfloat DxMin = drdx*mesh->Dr[iM*Np+n] + dsdx*mesh->Ds[iM*Np+n];
+            dfloat DyMin = drdy*mesh->Dr[iM*Np+n] + dsdy*mesh->Ds[iM*Np+n];
+          
+            Ae [mM+n*Np] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+            Ae [mM+n*Np] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+
+            AeP[mP+n*Np] +=  +0.5*nx*(1-bcD)*(1-bcN)*DxMin*MSfim;
+            AeP[mP+n*Np] +=  +0.5*ny*(1-bcD)*(1-bcN)*DyMin*MSfim;
           }
         }
       }
     }
     
-    //multiply by mass matrix 
     for (int fM=0;fM<Nfaces+1;fM++) {
       iint eP = (fM==0) ? eM : mesh->EToE[eM*Nfaces+fM-1];
       if (eP<0) eP = eM;
@@ -270,16 +295,12 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
       for (int fP=0;fP<Nfaces+1;fP++) {
         for (int n=0;n<Np;n++) {
           for (int m=0;m<Np;m++) {
-            dfloat Anm = 0.;
-            for (int k=0;k<Np;k++) {
-              Anm += mesh->MM[k+n*Np]*Ae[m+k*Np+fM*Np*Np+fP*(Nfaces+1)*Np*Np]; 
-            }
-            Anm *= J;
+            dfloat Anm = Ae[m+n*Np+fP*Np*Np+fM*(Nfaces+1)*Np*Np];
             
             if(fabs(Anm)>tol){   
               (*A)[nnz].row = globalIds[eM*Np+n];
-              (*A)[nnz].col = Gx[m+fP*Np*Np+eP*GblockSize].col;
-              (*A)[nnz].val = -Anm;
+              (*A)[nnz].col = Gids[m+fP*Np+eP*(Nfaces+1)*Np]; //use the column ids from the gradient lift
+              (*A)[nnz].val = Anm;
               (*A)[nnz].ownerRank = rankM;
               ++nnz;
             }
@@ -308,16 +329,16 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 
   printf("nnz = %d\n", *nnzA);
   
-  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
+  dfloat *Ap = (dfloat*) calloc(Np*mesh->Nelements*Np*mesh->Nelements,sizeof(dfloat));
   for (int i=0;i<nnz;i++) {
     iint n = (*A)[i].row;
     iint m = (*A)[i].col;
-    Ap[m+n*mesh->Np*mesh->Nelements] = (*A)[i].val;
+    Ap[m+n*Np*mesh->Nelements] = (*A)[i].val;
   }
 
-  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
+  for (int i=0;i<Np*mesh->Nelements;i++) {
+    for (int j =0;j<mesh->Nelements*Np;j++) {
+      printf("%4.2f \t", Ap[j+i*Np*mesh->Nelements]);
     }
     printf("\n");
   }
@@ -326,8 +347,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
 
   free(globalIds);
 
-  free(Gx); free(Gy); free(Ae);
+  free(Gx); free(Gy); 
+  free(Gids);
 
-  free(qmM); free(qmP);
-  free(QmM); free(QmP);
+
 }
