@@ -226,6 +226,10 @@ int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
 	kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
 	kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
 	kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+	kernelInfo.addDefine("p_gjHalfI",  (mesh->gjNq+1)/2);
+	kernelInfo.addDefine("p_halfNq", (mesh->Nq+1)/2);
+	int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
+	kernelInfo.addDefine("p_halfI", halfI);
 	
 	int Nz = mymin(mesh->Nq, 64/mesh->Nq);
 	kernelInfo.addDefine("p_Nz", Nz);
@@ -272,7 +276,11 @@ int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
 			                             
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
+<<<<<<< HEAD
 			                             "massPartialAxHex3D_redShmem",
+=======
+"massPartialAxHex3D_v2",
+>>>>>>> 4d11d8b3d4e3fd528f9d6e53d18c2c96398776e1
 			                             kernelInfo);
 			                             
 			                             

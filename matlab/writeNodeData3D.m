@@ -197,7 +197,7 @@ if N < 7
     
     
     % Surface Cubature
-    [cubx,cuby,cubw] = Cubature2D(3*N);
+    [cubx,cuby,cubw] = Cubature2D(2*N); % should be 3N
     Nfi = length(cubx);
     ir = [cubx,         cubx,        cubx,                  -ones(Nfi,1)];
     is = [cuby,        -ones(Nfi,1), cuby,                   cubx];

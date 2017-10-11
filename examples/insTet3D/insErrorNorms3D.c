@@ -29,7 +29,7 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
       //
       id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
-      #if 0
+      #if 1
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       dfloat uex = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*time);
       dfloat vex = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*time);
@@ -97,12 +97,7 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
     //
   }
  
- // Get Square Root
-  l2u  = sqrt(l2u);
-  l2v  = sqrt(l2v);
-  l2w  = sqrt(l2w);
-  l2p  = sqrt(l2p);
-
+ 
  free(dU);
  free(dV);
  free(dW);
@@ -117,11 +112,17 @@ MPI_Allreduce(&liw, &gliw, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 MPI_Allreduce(&lip, &glip, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 //
 dfloat gl2u,gl2v,gl2w,gl2p;
-MPI_Allreduce(&l2u, &gl2u, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-MPI_Allreduce(&l2v, &gl2v, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-MPI_Allreduce(&l2w, &gl2w, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-MPI_Allreduce(&l2p, &gl2p, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-     //
+MPI_Allreduce(&l2u, &gl2u, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+MPI_Allreduce(&l2v, &gl2v, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+MPI_Allreduce(&l2w, &gl2w, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+MPI_Allreduce(&l2p, &gl2p, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+//
+// Get Square Root
+  gl2u  = sqrt(gl2u);
+  gl2v  = sqrt(gl2v);
+  gl2w  = sqrt(gl2w);
+  gl2p  = sqrt(gl2p);
+
 
 int rank;
 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -129,17 +130,17 @@ if(rank==0){
   printf("Step: %d Time: %g Uerr: %g Verr: %g Werr: %g Perr: %g\n", 
          (int)(time/ins->dt), time, gliu, gliv, gliw, glip);
 
-  // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
   char fname[BUFSIZ];
-  sprintf(fname, "/u0/outputs/ins3D/InfErr.dat");
-  //sprintf(fname, "insTetErr.txt");
-  FILE *fp;
-  fp = fopen(fname, "a");
-  fprintf(fp,"%d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
-         (int)(time/ins->dt), mesh->N, ins->dt, time, gliu, gliv, gliw, glip, gl2u, gl2v, gl2w, gl2p);
- 
-  fclose(fp);
-  
+    // sprintf(fname, "insErrors.txt");
+    //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
+    sprintf(fname, "BeltramiTemporal3D.txt");
+    FILE *fp;
+    fp = fopen(fname, "a");
+
+    fprintf(fp,"%d %.5e %.5e %d %d %d %d %d %.5e %.5e %.5e %.5e %.5e %.5e %.5e %.5e\n", 
+             mesh->N,ins->dt, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, 
+             gliu, gliv, gliw, glip, gl2u, gl2v, gl2w, gl2p);
+    fclose(fp);  
  }
 
 
