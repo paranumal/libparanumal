@@ -884,10 +884,10 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 					for(int c=0;c<p_Nq;++c)
 						s_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 				}
-				for (int c=0; c<p_gjNq; ++c)
+		/*		for (int c=0; c<p_gjNq; ++c)
 				{
 					Mq[emap*p_gjNp+c*p_gjNq2+b*p_gjNq+a]  =0.0;
-				}
+				}*/
 			}
 		}
 		
@@ -951,8 +951,8 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						
 						s_q[c][j][i] = tmp; // ok since only this thread
 						s_q[c][j][p_gjNq-1-i] = tmp2;
-						Mq[emap*p_gjNp+c*p_gjNq2+j*p_gjNq+i] = tmp;
-						Mq[emap*p_gjNp+c*p_gjNq2+j*p_gjNq+p_gjNq-1-i] = tmp2;
+				//		Mq[emap*p_gjNp+c*p_gjNq2+j*p_gjNq+i] = tmp;
+					//	Mq[emap*p_gjNp+c*p_gjNq2+j*p_gjNq+p_gjNq-1-i] = tmp2;
 					}
 				}
 			}
