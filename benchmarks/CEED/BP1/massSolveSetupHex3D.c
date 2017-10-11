@@ -226,6 +226,10 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
 	kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
 	kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+	kernelInfo.addDefine("p_gjHalfI",  (mesh->gjNq+1)/2);
+	kernelInfo.addDefine("p_halfNq", (mesh->Nq+1)/2);
+	int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
+	kernelInfo.addDefine("p_halfI", halfI);
 	
 	int Nz = mymin(mesh->Nq, 64/mesh->Nq);
 	kernelInfo.addDefine("p_Nz", Nz);
@@ -272,7 +276,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 			                             
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
-			                             "massPartialAxHex3D_vRef0",
+"massPartialAxHex3D_v2",
 			                             kernelInfo);
 			                             
 			                             
