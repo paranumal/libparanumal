@@ -27,7 +27,7 @@ int main(int argc, char **argv){
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS  smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
    // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
@@ -54,29 +54,29 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  //for(iint i=0; i<9; i++){
-  int Ns = 1;
+  int Ns = 0; // Default no-subcycling 
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
-   char *options; 
-
+  
+  char *options; 
   if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
       
     // printf("Setup INS Solver: \n");
     // ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
     //                         prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
-    //insRun2D(ins,options);
+
+    // //
+    // printf("Running INS solver\n");
+    // insRun2D(ins,options);
 
     printf("OCCA Run Timer: \n");
     insRunTimer2D(mesh,options,boundaryHeaderFileName);
     
-  //}
-
   // close down MPI
   MPI_Finalize();
 

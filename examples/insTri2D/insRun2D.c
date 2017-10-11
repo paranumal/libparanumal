@@ -30,7 +30,8 @@ void insRun2D(ins_t *ins, char *options){
 
   occaTimerTic(mesh->device,"INS");
 
-  ins->NtimeSteps = 5;
+
+
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -162,7 +163,7 @@ void insRun2D(ins_t *ins, char *options){
     occaTimerToc(mesh->device,"Report");
 
     
-    #if 0 // For time accuracy test fed history with exact solution
+    #if 1 // For time accuracy test fed history with exact solution
         if(tstep<1){
           iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
           dfloat tt = (tstep+1)*ins->dt;
@@ -195,7 +196,7 @@ occaTimerToc(mesh->device,"INS");
 
 
 
-#if 0
+#if 1
 dfloat finalTime = ins->NtimeSteps*ins->dt;
 insReport2D(ins, ins->NtimeSteps,options);
 insErrorNorms2D(ins, finalTime, options);

@@ -100,7 +100,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 5.0;
+  ins->finalTime = 1.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -204,37 +204,16 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
   
-  #if 0
-  dfloat A[10]; 
-  A[0] = 1e-2; 
-  A[1] = 2*1e-2;  
-  A[2] = 4*1e-2; 
-  A[3] = 8*1e-2; 
-  A[4] = 1*1e-1; 
-  A[5] = 2*1e-1;  
-  A[6] = 4*1e-1;
-  A[7] = 8*1e-1;
-  A[8] = 10*1e-1;
   
-  A[9] = 1*1e-1;
-
-  printf("Factor= %d, A[%d] = %e \n", factor,factor,A[factor]);
-  ins->dt = A[factor];
-  //ins->dt = pow(2.0,factor)*1e-4;
-  ins->NtimeSteps = ins->finalTime/ins->dt;
-  ins->dt   = ins->finalTime/ins->NtimeSteps;
-  ins->sdt  = ins->dt/ins->Nsubsteps;
-  #endif
-
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
   ins->idt = 1.0/ins->dt;
   
   // errorStep
    if(strstr(options,"SUBCYCLING"))
-     ins->errorStep =50000000*16/ins->Nsubsteps;
+     ins->errorStep =100*16/ins->Nsubsteps;
    else
-     ins->errorStep = 80000000;
+     ins->errorStep = 1000;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -254,9 +233,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances 
-  ins->presTOL = 1E-10;
-  ins->velTOL  = 1E-6;
-#if 0
+  ins->presTOL = 1E-8;
+  ins->velTOL  = 1E-8;
+
   // Use third Order Velocity Solve: full rank should converge for low orders
   printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
@@ -271,16 +250,12 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-#endif
 
-  kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+  
+
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int maxSurfaceNodes = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
-  kernelInfo.addDefine("p_maxSurfaceNodes", maxSurfaceNodes);
-  printf("maxSurfaceNodes=%d\n", maxSurfaceNodes);
-
 
   int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
@@ -289,17 +264,23 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  int cubNblockV = 256/ mymax(mesh->cubNp,mesh->Np); 
+  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
+  int cubNblockV = 256/maxNodesVolumeCub; 
+  //
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  //
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
-
-  int cubNblockS = 256/mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp); // works for CUDA
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
 
 
-  printf("maxNodes: %d \t NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
-  printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
   // ADD-DEFINES
   kernelInfo.addDefine("p_Lambda2", 0.5f);
@@ -310,9 +291,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-   iint substep = 0; 
-   if(strstr(options,"SUBCYCLING")){ substep = 1;}
-   kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
+   // iint substep = 0; 
+   // if(strstr(options,"SUBCYCLING")){ substep = 1;}
+   // kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
 
 
   // printf("mesh nfields %d\n", mesh->Nfields);

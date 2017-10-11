@@ -10,7 +10,7 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_P.copyTo(ins->P);
 
 
-  #if 0
+  #if 1
 
     dfloat *dU = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
     dfloat *dV = (dfloat*) calloc(mesh->Np,sizeof(dfloat));

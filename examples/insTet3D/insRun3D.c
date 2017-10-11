@@ -26,9 +26,9 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  //ins->NtimeSteps = 10; // !!!!!!!!!!!!!
+  ins->NtimeSteps = 1000; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-  #if 1
+  #if 0
     // ok it seems 
     if(tstep<100){
       // no advection, first order in time
@@ -91,27 +91,24 @@ void insRun3D(ins_t *ins, char *options){
     insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
     
-    printf("tstep = %d\n", tstep);
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport3D(ins, tstep+1,options);
-        //insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
+        insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
-#if 0 // For time accuracy test fed history with exact solution
+#if 1 // For time accuracy test fed history with exact solution
     if(tstep<1){
-      iint offset = (mesh->Nelements+mesh->totalHaloPairs);
-     // Overwrite Velocity
+      iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+      dfloat tt   = (tstep+1)*ins->dt;
      for(iint e=0;e<mesh->Nelements;++e){
         for(iint n=0;n<mesh->Np;++n){
-          const iint id = n + mesh->Np*e;
-          dfloat tt = ins->dt;
+          iint id = n + mesh->Np*e;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
           dfloat z = mesh->z[id];
 
-          #if 0
           dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
           dfloat u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*tt);
           dfloat v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*tt);
@@ -120,24 +117,12 @@ void insRun3D(ins_t *ins, char *options){
                       sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+
                       sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+
                       sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))   );   
-          #endif
-
-          #if 1
-           dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
-               //
-           dfloat u = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
-           dfloat v = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
-           dfloat w = 0; 
-           dfloat p = 0.5*(1.0- exp(2.*lambda*x));
-          #endif
-
           // Current time
-          const int index0 = (ins->index+0)%3;
-          const iint id0   = n + mesh->Np*(e+index0*offset);
-          ins->U[id0] = u; 
-          ins->V[id0] = v; 
-          ins->W[id0] = w; 
-          ins->P[id0] = p;
+          id += ins->index*Ntotal; 
+          ins->U[id] = u; 
+          ins->V[id] = v; 
+          ins->W[id] = w; 
+          ins->P[id] = p;
         }
       }
      
@@ -147,6 +132,21 @@ void insRun3D(ins_t *ins, char *options){
        ins->o_P.copyFrom(ins->P);
     }
 #endif
+
+   if(tstep>0){
+    char fname[BUFSIZ];
+    // sprintf(fname, "insErrors.txt");
+    //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
+    sprintf(fname, "BeltramiPrSolveAMG.txt");
+    FILE *fp;
+    fp = fopen(fname, "a");
+
+    fprintf(fp," %d %.5e %d %d %d %d %.5e %.5e\n", 
+                 mesh->N, ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, double(ins->pSolver->precon->preconBytes), ins->prtime);
+    fclose(fp); 
+    } 
+
+
   }
 
 
@@ -155,8 +155,8 @@ void insRun3D(ins_t *ins, char *options){
 #if 1
 // For Final Time
 insReport3D(ins, ins->NtimeSteps+1,options);
-//dfloat finaltime = (ins->NtimeSteps+1)*ins->dt;
-//insErrorNorms3D(ins, finaltime, options);
+dfloat finaltime = (ins->NtimeSteps)*ins->dt;
+insErrorNorms3D(ins, ins->finalTime, options);
 #endif
 
 //Deallocate Halo MPI storage

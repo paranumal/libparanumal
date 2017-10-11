@@ -211,10 +211,18 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  // 
+  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
+  dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
+  dfloat REL_TOL = tol*tol*n2b; // 
+  //
+  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
+  //dfloat TOL     = tol*tol; 
+
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
-  if (rdotr0<=(tol*tol)) {
+  if (rdotr0<=(TOL)) {
     printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
     return 0;
   }
@@ -238,6 +246,8 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
 
   // dot(r,r)
   rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
+
+  
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
 
@@ -246,7 +256,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
-  while(rdotr0>(tol*tol)){
+  while(rdotr0>(TOL)){
 
     // A*p
     ellipticOperator3D(solver, lambda, o_p, o_Ap, options);
@@ -270,7 +280,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if(rdotr1 < tol*tol) {
+    if(rdotr1 < TOL) {
       rdotr0 = rdotr1;
       break;
     }

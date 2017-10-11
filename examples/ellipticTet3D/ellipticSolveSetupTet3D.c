@@ -232,10 +232,13 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
+  #if 0
+
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl",
                "ellipticOasPreconTet3D",
                kernelInfo);
+  #endif
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl",

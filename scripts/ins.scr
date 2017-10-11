@@ -1,34 +1,103 @@
 
-cd ../examples/insTri2D;
-make clean; make -j; 
+cd ../examples/insTet3D;
+make -j; 
 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 0 >>Ns00.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 0 >>Ns00.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 0 >>Ns00.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 0 >>Ns00.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 0 >>Ns00.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 0 >>Ns00.dat 
 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 4 >>Ns04.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 4 >>Ns04.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 4 >>Ns04.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 4 >>Ns04.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 4 >>Ns04.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 4 >>Ns04.dat 
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 1  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 2  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 6  insBeltrami3D.h 0
 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 8 >>Ns08.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 8 >>Ns08.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 8 >>Ns08.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 8 >>Ns08.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 8 >>Ns08.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 8 >>Ns08.dat 
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 1  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 2  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 3  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 4  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 5  insBeltrami3D.h 0
+mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 6  insBeltrami3D.h 0
 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 16 >>Ns16.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 16 >>Ns16.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 16 >>Ns16.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 16 >>Ns16.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 16 >>Ns16.dat 
-./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 16 >>Ns16.dat 
+
+
+
+
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 0
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 1
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 2
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 3
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 4
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 5
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 6
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 7
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 8
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 9
+
+
+
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 0
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 1
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 2
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 3
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 4
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 5
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 6
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 7
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 8
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 9
+
+
+
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 0
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 1
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 2
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 3
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 4
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 5
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 6
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 7
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 8
+#mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 9
+
+
+
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 1  insBeltrami3D.h 0
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 2  insBeltrami3D.h 0
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 3  insBeltrami3D.h 0
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 4  insBeltrami3D.h 0
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 5  insBeltrami3D.h 0
+#mpiexec -np 8 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h4.msh 6  insBeltrami3D.h 0
+
+
+
+
+
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 0 >>Ns00.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 0 >>Ns00.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 0 >>Ns00.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 0 >>Ns00.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 0 >>Ns00.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 0 >>Ns00.dat 
+
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 4 >>Ns04.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 4 >>Ns04.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 4 >>Ns04.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 4 >>Ns04.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 4 >>Ns04.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 4 >>Ns04.dat 
+
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 8 >>Ns08.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 8 >>Ns08.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 8 >>Ns08.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 8 >>Ns08.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 8 >>Ns08.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 8 >>Ns08.dat 
+
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 1 insVortex2D.h 16 >>Ns16.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 2 insVortex2D.h 16 >>Ns16.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 3 insVortex2D.h 16 >>Ns16.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 4 insVortex2D.h 16 >>Ns16.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 5 insVortex2D.h 16 >>Ns16.dat 
+#./insMainTri2D ../../meshes/insVortex2D_h1.msh 6 insVortex2D.h 16 >>Ns16.dat 
 
 
 
