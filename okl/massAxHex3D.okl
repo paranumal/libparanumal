@@ -14,6 +14,7 @@
 #define p_gjNp (p_gjNq*p_gjNq*p_gjNq)
 #define p_gjNq2 (p_gjNq*p_gjNq)
 
+
 //dumb starts here =======================
 //absolute worst kernel I can think of
 
@@ -902,7 +903,7 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						occaUnroll(p_Nq)
 						for(int b=0;b<p_Nq;++b)
 						{
-							dfloat tmpI = s_I[j][b];
+							const dfloat tmpI = s_I[j][b];
 							tmp  += tmpI*r_q[b];
 							tmp2 += tmpI*r_q[p_Nq-1-b];
 							
@@ -930,16 +931,15 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						
 					// transform in a
 					occaUnroll(p_halfI)
-					
 					for(int i=0;i<p_halfI;++i){
 						dfloat tmp = 0;
 						dfloat tmp2 = 0;
 						occaUnroll(p_Nq)
 						for(int a=0;a<p_Nq;++a)
 						{
-							dfloat tmpI = s_I[i][a];
+							const dfloat tmpI = s_I[i][a];
 							tmp += tmpI*r_q[a];
-							tmp2+=tmpI*r_q[p_Nq-1-a];
+							tmp2+= tmpI*r_q[p_Nq-1-a];
 						}
 						s_q[c][j][i] = tmp; // ok since only this thread
 						s_q[c][p_gjNq-1-j][i] = tmp2;
@@ -996,33 +996,33 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 				for(int j=0;j<p_gjNq;++j)
 					r_q[j] = s_q[k][j][i];
 					
-				//	occaUnroll(p_Nq)
-				//	for(int b=0;b<p_Nq;++b){
+					
+					
+					
 				occaUnroll(p_halfI)
 				for(int b=0;b<p_halfI;++b){
-					dfloat tmp = 0;
-					dfloat tmp2 = 0;
-					occaUnroll(p_halfI)
-					for(int j=0;j<p_halfI;++j){
-						//be careful with middle values
-						dfloat tmpI = s_I[j][b];
-						dfloat tmpI2 = s_I[j][p_Nq-1-b];
-						tmp += tmpI*r_q[j] ;
-						tmp2 += tmpI*r_q[p_gjNq-1-j];
-						//+ tmpI2*r_q[];
+					if (b<floor((double) p_gjNq/2.0)){
+						dfloat tmp = 0;
+						dfloat tmp2 = 0;
+						for (int j=0; j<p_gjNq; ++j){
 						
-						if ((p_gjNq%2 == 0)|| (j!=(p_halfI-1)))
-						{
-							tmp += tmpI2*r_q[p_gjNq-1-j];
-							tmp2 += tmpI2*r_q[j];
+							if (j<p_halfI){
+								const dfloat tmpI = s_I[j][b];
+								tmp += tmpI*r_q[j];
+								tmp2+= tmpI*r_q[p_gjNq-1-j];
+							}
+							else {
+								const dfloat tmpI = s_I[p_gjNq-j-1][p_Nq-1-b];
+								tmp += tmpI*r_q[j];
+								tmp2+= tmpI*r_q[p_gjNq-1-j];
+							}
 							
 						}
 						
+						
+						s_q[k][b][i] = tmp;
+						s_q[k][p_Nq-b-1][i] = tmp2;
 					}
-					s_q[k][b][i] = tmp; // ok since only this thread
-					s_q[k][p_Nq-1-b][i] = tmp2;
-					
-					
 				}
 			}
 		}
@@ -1039,26 +1039,28 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						
 					occaUnroll(p_halfI)
 					for(int a=0;a<p_halfI;++a){
-						dfloat tmp = 0;
-						dfloat tmp2 = 0;
-						occaUnroll(p_halfI)
-						for(int i=0;i<p_halfI;++i){
-							dfloat tmpI = s_I[i][a];
-							dfloat tmpI2 = s_I[i][p_Nq-1-a];
-							tmp += tmpI*r_q[i] ;
-							tmp2 += tmpI*r_q[p_gjNq-1-i];
-							if ((p_gjNq%2 == 0)|| (i!=(p_halfI-1)))
-							{
-								tmp += tmpI2*r_q[p_gjNq-1-i];
-								tmp2 += tmpI2*r_q[i];
+						if (a<floor((double) p_gjNq/2.0)){
+							dfloat tmp = 0;
+							dfloat tmp2 = 0;
+							occaUnroll(p_gjNq)
+							for(int i=0;i<p_gjNq;++i){
+								if (i<p_halfI){
+									const dfloat tmpI = s_I[i][a];
+									tmp += tmpI*r_q[i];
+									tmp2+= tmpI*r_q[p_gjNq-1-i];
+								}
+								else {
+									const dfloat tmpI = s_I[p_gjNq-i-1][p_Nq-1-a];
+									tmp += tmpI*r_q[i];
+									tmp2+= tmpI*r_q[p_gjNq-1-i];
+								}
+								
 								
 							}
 							
-							
+							s_q[k][b][a] = tmp; // ok since only this thread
+							s_q[k][b][p_Nq-1-a] = tmp2;
 						}
-						s_q[k][b][a] = tmp; // ok since only this thread
-						s_q[k][b][p_Nq-1-a] = tmp2;
-						
 						
 					}
 				}
@@ -1077,25 +1079,29 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						
 					occaUnroll(p_halfI)
 					for(int c=0;c<p_halfI;++c){
-						dfloat tmp = 0;
-						dfloat tmp2 = 0;
-						occaUnroll(p_halfI)
-						for(int k=0;k<p_halfI;++k){
-							dfloat tmpI = s_I[k][c];
-							dfloat tmpI2 = s_I[k][p_Nq-1-c];
-							tmp += tmpI*r_q[k] ;
-							tmp2 += tmpI*r_q[p_gjNq-1-k];
+						if (c<floor((double)p_gjNq/2.0)){
+							dfloat tmp = 0;
+							dfloat tmp2 = 0;
+							occaUnroll(p_gjNq)
+							for(int k=0;k<p_gjNq;++k){
 							
-							if ((p_gjNq%2 == 0)|| (k!=(p_halfI-1)))
-							{
-								tmp += tmpI2*r_q[p_gjNq-1-k];
-								tmp2 += tmpI2*r_q[k];
-								
+								if (k<p_halfI){
+									const dfloat tmpI = s_I[k][c];
+									tmp += tmpI*r_q[k];
+									tmp2+= tmpI*r_q[p_gjNq-1-k];
+								}
+								else {
+									const dfloat tmpI = s_I[p_gjNq-k-1][p_Nq-1-c];
+									tmp += tmpI*r_q[k];
+									tmp2+= tmpI*r_q[p_gjNq-1-k];
+								}
 							}
+							
+							
+							
+							Mq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = tmp;
+							Mq[emap*p_Np+(p_Nq-1-c)*p_Nq2+b*p_Nq+a] = tmp2;
 						}
-						
-						Mq[emap*p_Np+c*p_Nq2+b*p_Nq+a] = tmp;
-						Mq[emap*p_Np+(p_Nq-1-c)*p_Nq2+b*p_Nq+a] = tmp2;
 					}
 				}
 			}
