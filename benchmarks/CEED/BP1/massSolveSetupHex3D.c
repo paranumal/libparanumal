@@ -206,7 +206,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	//  kernelInfo.addCompilerFlag("-G");
 	kernelInfo.addCompilerFlag("-O3");
-int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;	
+	
 	// generically used for blocked DEVICE reductions
 	kernelInfo.addDefine("p_blockSize", blockSize);
 	
@@ -221,7 +221,7 @@ int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
 	kernelInfo.addDefine("p_NblockG", NblockG);
 	
 	kernelInfo.addDefine("p_Lambda2", 0.5f);
-	kernelInfo.addDefine("p_halfI", halfI);
+	
 	kernelInfo.addDefine("p_gjNq", mesh->gjNq);
 	kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
 	kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
@@ -276,11 +276,7 @@ int halfI = (int) (mesh->gjNq+mesh->gjNq%2)/2;
 			                             
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
-<<<<<<< HEAD
 			                             "massPartialAxHex3D_redShmem",
-=======
-"massPartialAxHex3D_v2",
->>>>>>> 4d11d8b3d4e3fd528f9d6e53d18c2c96398776e1
 			                             kernelInfo);
 			                             
 			                             
