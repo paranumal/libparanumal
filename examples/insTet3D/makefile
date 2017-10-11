@@ -60,6 +60,7 @@ insHelmholtzStep3D.o \
 insPoissonStep3D.o \
 insUpdateStep3D.o \
 insErrorNorms3D.o \
+insRunTimer3D.o \
 
 LOBJS = \
 ../../src/meshConnect.o \
