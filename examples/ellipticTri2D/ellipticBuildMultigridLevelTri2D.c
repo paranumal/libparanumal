@@ -222,7 +222,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockP = 512/(4*mesh->Np); // get close to 256 threads
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -290,7 +290,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
                  "ellipticBBBRDivergenceSurface2D",
                  kernelInfo);
-  #else 
+  #else
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
                  "ellipticBRGradientVolume2D",
@@ -315,10 +315,12 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
+#if 0
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
                "ellipticOasPreconTri2D",
                kernelInfo);
+#endif
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
