@@ -4,7 +4,7 @@
 
 // CUDA experimental cubature nonlinear term
 
-#define dfloat double
+#define dfloat float
 #define p_N 5
 #define p_Np ((int)((p_N+1)*(p_N+2))/2) 
 #define p_cubNp ((int)(3*p_Np))
@@ -29,9 +29,8 @@ __global__ void experimentalVolumeKernel(const int Nelements,
 					 dfloat * __restrict__ Nu,
 					 dfloat * __restrict__ Nv){
   
-#define mask 0xFFFFFFFF
+  const unsigned int mask  = 0xFFFFFFFF;
 
-#if 1
   const int e = blockIdx.x; 
   const int t = threadIdx.x;
   dfloat r_u[p_BSIMD];
@@ -39,8 +38,6 @@ __global__ void experimentalVolumeKernel(const int Nelements,
   dfloat r_Nu[p_BSIMD];
   dfloat r_Nv[p_BSIMD];
   
-
-#pragma unroll
   for(int b=0;b<p_BSIMD;++b){ // loop over blocks of 32
     const int n = t + b*p_NSIMD;
     const int id = e*p_Np+n;
@@ -50,8 +47,7 @@ __global__ void experimentalVolumeKernel(const int Nelements,
     r_Nu[b] = 0;
     r_Nv[b] = 0;
   }
-  
-#pragma unroll
+
   for(int c=0;c<p_CSIMD;++c){ // for each cubature node on this thread
     
     // compute u,v,dudr,duds,dvdr,dvds at each cubature node in this block then use them immediately
@@ -64,11 +60,10 @@ __global__ void experimentalVolumeKernel(const int Nelements,
     dfloat cubvs = 0;
     
     const int i = t + c*p_NSIMD;
-    
-#pragma unroll
+
+#if 1
     for(int b=0;b<p_BSIMD;++b){ // loop over blocks of 32
       
-#pragma unroll
       for(int s=0;s<p_NSIMD;++s){
 	
 	const int m = s + b*p_NSIMD;
@@ -89,6 +84,7 @@ __global__ void experimentalVolumeKernel(const int Nelements,
 	}
       }
     }
+#endif
     
     const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
     const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
@@ -102,11 +98,10 @@ __global__ void experimentalVolumeKernel(const int Nelements,
     const dfloat cubvy = ry*cubvr + sy*cubvs;
     const dfloat cubNu = cubu*cubux + cubv*cubuy;
     const dfloat cubNv = cubu*cubvx + cubv*cubvy;
-    
-#pragma unroll
+
+#if 1
     for(int b=0;b<p_BSIMD;++b){ 
       
-#pragma unroll
       for(int s=0;s<p_NSIMD;++s){
 	
 	// not sure about this part
@@ -123,9 +118,10 @@ __global__ void experimentalVolumeKernel(const int Nelements,
 	}
       }
     }
+#endif
   }
-  
-#pragma unroll
+ 
+#if 0
   for(int b=0;b<p_BSIMD;++b){ // loop over blocks of 32
     const int id = t + b*p_NSIMD;
     if(id<p_Np){
@@ -134,12 +130,13 @@ __global__ void experimentalVolumeKernel(const int Nelements,
     }
   }
 #endif
+
 }
 
 unsigned long long Nbytes = 0;
 
-void randAlloc(size_t Nrand, dfloat **h_v, dfloat **c_v){
-
+void randAlloc(int Nrand, dfloat **h_v, dfloat **c_v){
+  
   *h_v = (dfloat*) calloc(Nrand, sizeof(dfloat));
   for(int n=0;n<Nrand;++n) h_v[0][n] = drand48();
   
@@ -180,6 +177,7 @@ int main(int argc, char **argv){
   dim3 B(p_NSIMD,1,1);
 
   printf("p_Np = %d\n", p_Np);
+  printf("p_cubNp = %d\n", p_cubNp);
   printf("p_NSIMD = %d\n", p_NSIMD);
   printf("p_CSIMD = %d\n", p_CSIMD);
   printf("p_BSIMD = %d\n", p_BSIMD);
