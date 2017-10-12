@@ -65,7 +65,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     occa::memory &o_tmp = solver->o_tmp;
 
     ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
-    ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);    
+    ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
 #if USE_BERN
     solver->BRGradientVolumeKernel(mesh->Nelements,
@@ -86,7 +86,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 #endif
 
     ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
-    
+
 #if USE_BERN
     solver->BRGradientSurfaceKernel(mesh->Nelements,
                                mesh->o_vmapM,
@@ -97,7 +97,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                mesh->o_ELids,
                                mesh->o_ELvals,
                                o_q,
-                               solver->o_grad);    
+                               solver->o_grad);
 #else
     solver->BRGradientSurfaceKernel(mesh->Nelements,
                                mesh->o_vmapM,
@@ -113,18 +113,18 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     //TODO this could probably be moved inside the Ax kernel for better performance
     if(solver->allNeumann)  {
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-    
+
       o_tmp.copyTo(tmp);
 
       for(iint n=0;n<Nblock;++n)
         alpha += tmp[n];
-      
+
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
-    
+
     ellipticStartHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
-    ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);    
+    ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
 
 #if USE_BERN
     solver->BRDivergenceVolumeKernel(mesh->Nelements,
@@ -145,7 +145,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 #endif
 
     ellipticEndHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradRecvBuffer);
-    
+
 #if USE_BERN
     solver->BRDivergenceSurfaceKernel(mesh->Nelements,
                                 mesh->o_vmapM,
@@ -178,7 +178,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 o_Aq);
 #endif
 
-    if(solver->allNeumann) 
+    if(solver->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
   }
 
@@ -265,7 +265,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   return globalab;
 }
 
-int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, 
+int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
                         occa::memory &o_r, occa::memory &o_x, const char *options){
 
   mesh_t *mesh = solver->mesh;
@@ -302,39 +302,16 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-  
-  // 
-  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
-  dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
-  dfloat REL_TOL = tol*tol*n2b; // 
+
   //
-  //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
+  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0;
+  dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
+  dfloat REL_TOL = tol*tol*n2b; //
+  //
+  //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
 
-  dfloat TOL     = tol*tol; 
-  
-  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
-  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
-    x[i] = 1.;
-    o_x.copyFrom(x);
-    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
-    o_Ax.copyTo(Ax);
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      Ap[i+j*mesh->Np*mesh->Nelements] = Ax[j];
-      //printf("%4.2f \t", Ax[j]);
-    }
-    //printf("\n");
-    x[i] = 0.;
-  }
+  dfloat TOL     = tol*tol;
 
-  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
-    }
-    printf("\n");
-  }
-  
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
@@ -433,7 +410,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-     
+
     if((rank==0)&&(strstr(options,"VERBOSE")))
      printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
