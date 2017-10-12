@@ -28,8 +28,8 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
@@ -39,8 +39,8 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    //strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-    strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 
   //this is strictly for testing, to do repeated runs. Will be removed later

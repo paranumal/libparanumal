@@ -178,24 +178,29 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-      if (strstr(options,"IPDG")) {
-        ellipticBuildIpdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
-      } else if (strstr(options,"BRDG")) {
-        ellipticBuildBRdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
-      } else if (strstr(options,"CONTINUOUS")) {
-        ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
-      }
+      // if (strstr(options,"IPDG")) {
+      //   ellipticBuildIpdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      // } else if (strstr(options,"BRDG")) {
+      //   ellipticBuildBRdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      // } else if (strstr(options,"CONTINUOUS")) {
+      //   ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
+      // }
+
+      dfloat *V1;
+      ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+                                             &V1, &coarseA, &nnzCoarseA,
+                                             &coarsehgs, coarseGlobalStarts, options);
 
       // Build coarse grid element basis functions
-      dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rn = mesh->r[n];
-        dfloat sn = mesh->s[n];
+      // dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+      // for(iint n=0;n<mesh->Np;++n){
+      //   dfloat rn = mesh->r[n];
+      //   dfloat sn = mesh->s[n];
 
-        V1[0*mesh->Np+n] = -0.5*(rn+sn);
-        V1[1*mesh->Np+n] = +0.5*(1.+rn);
-        V1[2*mesh->Np+n] = +0.5*(1.+sn);
-      }      
+      //   V1[0*mesh->Np+n] = -0.5*(rn+sn);
+      //   V1[1*mesh->Np+n] = +0.5*(1.+rn);
+      //   V1[2*mesh->Np+n] = +0.5*(1.+sn);
+      // }
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
       iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
@@ -239,7 +244,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
-    
+
     if (strstr(options,"CHEBYSHEV")) {
       levels[n]->device_smooth = smoothChebyshevTri2D;
 
@@ -265,7 +270,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     } else {
       rateTolerance = 1.0;
     }
-    
+
     //set up the fine problem smoothing
     if(strstr(options, "OVERLAPPINGPATCH")){
       ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
