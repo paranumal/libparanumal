@@ -298,7 +298,9 @@ printf("\n");
 	kernelInfo.addDefine("p_maxNodes", maxNodes);
 	kernelInfo.addDefine("p_Nmax", maxNodes);
 	
-	kernelInfo.addDefine("p_halfD", (int) (mesh->Nq+mesh->Nq%2)/2);
+	//kernelInfo.addDefine("p_halfD", (int) (mesh->Nq+mesh->Nq%2)/2);
+	kernelInfo.addDefine("p_halfD", (mesh->gjNq+1)/2);
+	printf("p_halfD = %f \n", (float) (mesh->gjNq+1)/2.0);
 	kernelInfo.addDefine("p_NblockV", NblockV);
 	kernelInfo.addDefine("p_NblockV2", NblockV2);
 	kernelInfo.addDefine("p_NblockS", NblockS);
@@ -370,8 +372,8 @@ printf("\n");
 
 			printf("building e9 kernel, halfD = %d \n", (mesh->Nq+mesh->Nq%2)/2);
 			solver->partialAxKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DCOLLOCATIONEx.okl",
-"ellipticAxHex3D_Ref2D11",
+			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DNOCOLLOCATIONEx.okl",
+"ellipticAxHex3D_Ref8",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
 			                             kernelInfo);
