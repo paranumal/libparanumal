@@ -257,8 +257,6 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
 
             // Central Flux + penalty
             s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));
-            //s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM));
-            //s_flux[es][n]  = sc*(nx*(-2*qxM)+ny*(-2*qyM)+tau*(qP-qM));
           }
         }
       }

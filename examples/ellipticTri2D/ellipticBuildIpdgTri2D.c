@@ -229,20 +229,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
 
-  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
-  for (int i=0;i<nnz;i++) {
-    iint n = (*A)[i].row;
-    iint m = (*A)[i].col;
-    Ap[m+n*mesh->Np*mesh->Nelements] = (*A)[i].val;
-  }
-
-  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
-    }
-    printf("\n");
-  }
-
   // sort by row block (just in case)
 
   free(globalIds);

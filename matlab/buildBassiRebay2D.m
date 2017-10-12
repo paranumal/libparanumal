@@ -1,7 +1,7 @@
 Globals2D
 
 %% degree
-N = 1;
+N = 2;
 
 %% Read in Mesh
 [Nv, VX, VY, K, EToV] = MeshReaderGmsh2D('../meshes/tri.msh');
