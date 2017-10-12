@@ -273,8 +273,9 @@ solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->
 	mesh->gjD = (dfloat*) realloc(mesh->gjD, gjNq*gjNq*sizeof(dfloat));
 	for (int i=0; i<gjNq; ++i){
 		for (int j=0; j<gjNq; ++j){
-			printf("D[%d][%d] = %16.16f \n",i,j, mesh->gjD[i*gjNq+j]);
+			printf(" %16.16f ",i,j, mesh->gjD[i*gjNq+j]);
 		}
+printf("\n");
 		}
 	solver->o_gjD = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD);
 	solver->o_gjD2 = mesh->device.malloc(gjNq*gjNq*sizeof(dfloat), mesh->gjD2);
@@ -296,7 +297,8 @@ solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->
 	printf("p_blockSize = %d \n", blockSize);
 	kernelInfo.addDefine("p_maxNodes", maxNodes);
 	kernelInfo.addDefine("p_Nmax", maxNodes);
-
+	
+	kernelInfo.addDefine("p_halfD", (int) (mesh->Nq+mesh->Nq%2)/2);
 	kernelInfo.addDefine("p_NblockV", NblockV);
 	kernelInfo.addDefine("p_NblockV2", NblockV2);
 	kernelInfo.addDefine("p_NblockS", NblockS);
@@ -366,10 +368,10 @@ solver->grad = (dfloat*) calloc(4*((mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->
 			// CPU version is e8, GPU version is e6
 			// KS
 
-			printf("building e9 kernel \n");
+			printf("building e9 kernel, halfD = %d \n", (mesh->Nq+mesh->Nq%2)/2);
 			solver->partialAxKernel =
 			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DCOLLOCATIONEx.okl",
-"ellipticAxHex3D_Ref2D0",
+"ellipticAxHex3D_Ref2D11",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
 			                             kernelInfo);
