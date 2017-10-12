@@ -122,7 +122,7 @@ kernel void ellipticBRGradientSurface2D(const iint Nelements,
 
             dfloat qx  = gradq[id+     n];
             dfloat qy  = gradq[id+p_Np+n];
-            
+
             // Lift
             occaUnroll(p_NfacesNfp)
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -256,9 +256,9 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
             const dfloat sc = 0.5f*invJ * sJ ;
 
             // Central Flux + penalty
-            s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));            
-            //s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM));            
-            //s_flux[es][n]  = sc*(nx*(-2*qxM)+ny*(-2*qyM)+tau*(qP-qM));            
+            s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));
+            //s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM));
+            //s_flux[es][n]  = sc*(nx*(-2*qxM)+ny*(-2*qyM)+tau*(qP-qM));
           }
         }
       }
@@ -277,7 +277,7 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
 
             dfloat Aqn = Aq[id+n];
             dfloat qn  = q[id+n];
-            
+
             // Lift
             occaUnroll(p_NfacesNfp)
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -309,7 +309,7 @@ kernel void ellipticBRDivergenceSurface2D(const iint Nelements,
               for(int i=0;i<p_Np;++i){
                 MAqn += MM[n+i*p_Np]*s_Aq[es][i];
               }
-            
+
             Aq[id+n] = J*MAqn;
           }
         }

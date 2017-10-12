@@ -25,7 +25,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     } else if (strstr(options,"CONTINUOUS")) {
       ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
-    
+
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
@@ -38,15 +38,15 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     }
 
     precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
-    // parAlmondAgmgSetup(precon->parAlmond,
-    //                    globalStarts,
-    //                    nnz,
-    //                    Rows,
-    //                    Cols,
-    //                    Vals,
-    //                    solver->allNeumann,
-    //                    solver->allNeumannPenalty,
-    //                    hgs);
+    parAlmondAgmgSetup(precon->parAlmond,
+                       globalStarts,
+                       nnz,
+                       Rows,
+                       Cols,
+                       Vals,
+                       solver->allNeumann,
+                       solver->allNeumannPenalty,
+                       hgs);
 
     free(A); free(Rows); free(Cols); free(Vals);
 
