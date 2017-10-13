@@ -95,6 +95,15 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
   } else if (strstr(options,"BRDG")) {
     BuildLocalBRdgPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   }
+
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {
+      printf("%4.2f \t", refPatchInvA[m+n*mesh->Np]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+
   matrixInverse(mesh->Np, refPatchInvA);
 
   // loop over all elements
@@ -107,6 +116,13 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
       BuildLocalBRdgPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
     }
 
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        printf("%4.2f \t", patchA[m+n*mesh->Np]);
+      }
+      printf("\n");
+    }
+    printf("\n");
 
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
@@ -320,7 +336,8 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
 
     iint eP = mesh->EToE[eM*Nfaces+fM];
     iint fP = mesh->EToF[eM*Nfaces+fM];
-    if (eP < 0) eP = eM;
+    dfloat sw = 1.f; //guard against unconnected elements (happens in reference patch)
+    if (eP < 0) {eP = eM; sw = 0;}
     if (fP < 0) fP = fM;
 
     // load surface geofactors for neighbor's face
@@ -360,8 +377,8 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
         Gx[mM+n*Np] += -0.5*(1-bcN)*(1+bcD)*nx*LIFTfnmM;
         Gy[mM+n*Np] += -0.5*(1-bcN)*(1+bcD)*ny*LIFTfnmM;
 
-        Gx[mP+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*nxP*LIFTfnmP;
-        Gy[mP+n*Np+(fM+1)*Np*Np] +=  0.5*(1-bcN)*(1-bcD)*nyP*LIFTfnmP;
+        Gx[mP+n*Np+(fM+1)*Np*Np] +=  0.5*sw*(1-bcN)*(1-bcD)*nxP*LIFTfnmP;
+        Gy[mP+n*Np+(fM+1)*Np*Np] +=  0.5*sw*(1-bcN)*(1-bcD)*nyP*LIFTfnmP;
       }
     }
   }
