@@ -133,3 +133,4 @@ void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 //                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
 
 
+void insRunTimer3D(mesh3D *mesh, char *options, char *bdryHeaderFileName);

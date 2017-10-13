@@ -864,7 +864,7 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 	
 		//	  shared dfloat s_I[p_halfI][p_Nq+p_gllPad];
 		shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
-		volatile shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
+		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
 		
 		exclusive dfloat r_q[p_gjNq];
 		
