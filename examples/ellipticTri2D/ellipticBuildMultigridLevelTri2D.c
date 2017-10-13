@@ -230,6 +230,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   else NblockG = 256/mesh->Np;
   kernelInfo.addDefine("p_NblockG", NblockG);
 
+
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
            "scaledAdd",

@@ -13,7 +13,6 @@ int parallelCompareRowColumn(const void *a, const void *b){
   if(fa->col > fb->col) return +1;
 
   return 0;
-
 }
 
 void ellipticBuildCoarseIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,

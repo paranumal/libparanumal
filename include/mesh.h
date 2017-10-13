@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -102,8 +102,8 @@ typedef struct {
   dfloat *gllw; // 1D GLL quadrature weights
 
   iint gjNq;
-  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
-  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
+  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
   dfloat *gjD2;     // 1D GJ to GJ node differentiation
 
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
@@ -315,7 +315,7 @@ typedef struct {
   occa::memory o_notInternalElementIds;
 
   // Bernstein-Bezier occa arrays
-  occa::memory o_BBMM; 
+  occa::memory o_BBMM;
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
   occa::memory o_invVB1DT, o_invVB2DT;
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices

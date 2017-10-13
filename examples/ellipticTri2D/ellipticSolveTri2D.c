@@ -57,7 +57,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
 
   } else if(strstr(options, "IPDG")) {
-
     iint offset = 0;
     dfloat alpha = 0., alphaG =0.;
     iint Nblock = solver->Nblock;
@@ -398,6 +397,31 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
 
   dfloat TOL     = tol*tol;
+
+#if 1
+  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
+  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
+    x[i] = 1.;
+    o_x.copyFrom(x);
+    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
+    o_Ax.copyTo(Ax);
+    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
+      Ap[i+j*mesh->Np*mesh->Nelements] = Ax[j];
+      //printf("%4.2f \t", Ax[j]);
+    }
+    //printf("\n");
+    x[i] = 0.;
+  }
+
+  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
+    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
+      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
+    }
+    printf("\n");
+  }
+#endif
 
   dfloat rdotz0 = 0;
   iint Niter = 0;
