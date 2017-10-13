@@ -91,7 +91,8 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                               iint *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,

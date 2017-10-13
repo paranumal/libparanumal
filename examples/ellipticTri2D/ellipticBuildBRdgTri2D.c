@@ -3,7 +3,8 @@
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                            dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                             iint *nnzA, iint *globalStarts, const char *options){
 
   iint size, rankM;
@@ -14,6 +15,14 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   int Nfp = mesh->Nfp;
   int Nfaces = mesh->Nfaces;
   iint Nelements = mesh->Nelements;
+
+  if(!basis) { // default to degree N Lagrange basis
+    basisNp = Np;
+    basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
+    for(iint n=0;n<basisNp;++n){
+      basis[n+n*basisNp] = 1;
+    }
+  }
 
   iint Nnum = Np*Nelements;
 

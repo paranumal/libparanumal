@@ -176,10 +176,13 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       iint nnzCoarseA;
       hgs_t *coarsehgs;
 
+      int basisNp = solverL->mesh->Np;
+      dfloat *basis = NULL;
+
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
       if (strstr(options,"IPDG")) {
-        ellipticBuildIpdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+        ellipticBuildIpdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
       } else if (strstr(options,"BRDG")) {
         ellipticBuildBRdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
       } else if (strstr(options,"CONTINUOUS")) {

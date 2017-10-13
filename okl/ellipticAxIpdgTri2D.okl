@@ -191,14 +191,15 @@ kernel void ellipticPartialAxIpdgTri2D(const int Nelements,
     shared  dfloat s_lapflux[p_NfacesNfp];
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
+    exclusive iint element;
     exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
+      element = elementList[e];
 
       if(n<p_Np){
         // assume that this stores (qx, qy, qz, q) as dfloat4
-        const iint element = elementList[e];
         const dfloat4 gradqn = gradq[element*p_Np+n];
 
         s_dqdx[n] = gradqn.x;
@@ -207,7 +208,6 @@ kernel void ellipticPartialAxIpdgTri2D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const iint element = elementList[e];
         const iint id  = n + element*p_Nfaces*p_Nfp;
         idM = vmapM[id];
         const iint idP = vmapP[id];
@@ -249,7 +249,6 @@ kernel void ellipticPartialAxIpdgTri2D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-        const iint element = elementList[e];
         const int gid = element*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
@@ -318,7 +317,6 @@ kernel void ellipticPartialAxIpdgTri2D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-        const iint element = elementList[e];
         const dfloat J = vgeo[element*p_Nvgeo + p_JID];
 
         dfloat Mlapq = 0;

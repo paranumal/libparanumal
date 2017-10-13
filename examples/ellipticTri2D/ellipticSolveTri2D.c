@@ -65,13 +65,25 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
-    solver->partialGradientKernel(mesh->Nelements,
-                                  offset,
-                                  mesh->o_vgeo,
-                                  mesh->o_DrT,
-                                  mesh->o_DsT,
-                                  o_q,
-                                  solver->o_grad);
+    if(strstr(options, "NODAL")) {
+      solver->partialGradientKernel(mesh->Nelements,
+                                    offset,
+                                    mesh->o_vgeo,
+                                    mesh->o_DrT,
+                                    mesh->o_DsT,
+                                    o_q,
+                                    solver->o_grad);
+    } else if(strstr(options, "BERN")) {
+      solver->partialGradientKernel(mesh->Nelements,
+                                    offset,
+                                    mesh->o_vgeo,
+                                    mesh->o_D1ids,
+                                    mesh->o_D2ids,
+                                    mesh->o_D3ids,
+                                    mesh->o_Dvals,
+                                    o_q,
+                                    solver->o_grad);
+    }
 
     ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
@@ -80,22 +92,45 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann)
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(mesh->NinternalElements)
-      solver->partialIpdgKernel(mesh->NinternalElements,
-                                mesh->o_internalElementIds,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                solver->o_EToB,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                solver->o_grad,
-                                o_Aq);
+    if(mesh->NinternalElements) {
+      if(strstr(options, "NODAL")) {
+        solver->partialIpdgKernel(mesh->NinternalElements,
+                                  mesh->o_internalElementIds,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_DrT,
+                                  mesh->o_DsT,
+                                  mesh->o_LIFTT,
+                                  mesh->o_MM,
+                                  solver->o_grad,
+                                  o_Aq);
+      } else if(strstr(options, "BERN")) {
+        solver->partialIpdgKernel(mesh->NinternalElements,
+                                  mesh->o_internalElementIds,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_D1ids,
+                                  mesh->o_D2ids,
+                                  mesh->o_D3ids,
+                                  mesh->o_Dvals,
+                                  mesh->o_L0vals,
+                                  mesh->o_ELids,
+                                  mesh->o_ELvals,
+                                  mesh->o_BBMM,
+                                  solver->o_grad,
+                                  o_Aq);
+      }
+    }
 
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
@@ -111,31 +146,66 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     if(mesh->totalHaloPairs){
       offset = mesh->Nelements;
-      solver->partialGradientKernel(mesh->totalHaloPairs,
-                                    offset,
-                                    mesh->o_vgeo,
-                                    mesh->o_DrT,
-                                    mesh->o_DsT,
-                                    o_q,
-                                    solver->o_grad);
+      if(strstr(options, "NODAL")) {
+        solver->partialGradientKernel(mesh->Nelements,
+                                      offset,
+                                      mesh->o_vgeo,
+                                      mesh->o_DrT,
+                                      mesh->o_DsT,
+                                      o_q,
+                                      solver->o_grad);
+      } else if(strstr(options, "BERN")) {
+        solver->partialGradientKernel(mesh->Nelements,
+                                      offset,
+                                      mesh->o_vgeo,
+                                      mesh->o_D1ids,
+                                      mesh->o_D2ids,
+                                      mesh->o_D3ids,
+                                      mesh->o_Dvals,
+                                      o_q,
+                                      solver->o_grad);
+      }
     }
 
-    if(mesh->NnotInternalElements)
-      solver->partialIpdgKernel(mesh->NnotInternalElements,
-                                mesh->o_notInternalElementIds,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                solver->o_EToB,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                solver->o_grad,
-                                o_Aq);
+    if(mesh->NnotInternalElements) {
+      if(strstr(options, "NODAL")) {
+        solver->partialIpdgKernel(mesh->NnotInternalElements,
+                                  mesh->o_notInternalElementIds,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_DrT,
+                                  mesh->o_DsT,
+                                  mesh->o_LIFTT,
+                                  mesh->o_MM,
+                                  solver->o_grad,
+                                  o_Aq);
+      } else if(strstr(options, "BERN")) {
+        solver->partialIpdgKernel(mesh->NnotInternalElements,
+                                  mesh->o_notInternalElementIds,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_D1ids,
+                                  mesh->o_D2ids,
+                                  mesh->o_D3ids,
+                                  mesh->o_Dvals,
+                                  mesh->o_L0vals,
+                                  mesh->o_ELids,
+                                  mesh->o_ELvals,
+                                  mesh->o_BBMM,
+                                  solver->o_grad,
+                                  o_Aq);
+      }
+    }
 
     if(solver->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
@@ -151,47 +221,47 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
     ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
-#if USE_BERN
-    solver->BRGradientVolumeKernel(mesh->Nelements,
-                                          mesh->o_vgeo,
-                                          mesh->o_D1ids,
-                                          mesh->o_D2ids,
-                                          mesh->o_D3ids,
-                                          mesh->o_Dvals,
-                                          o_q,
-                                          solver->o_grad);
-#else
-    solver->BRGradientVolumeKernel(mesh->Nelements,
-                                          mesh->o_vgeo,
-                                          mesh->o_DrT,
-                                          mesh->o_DsT,
-                                          o_q,
-                                          solver->o_grad);
-#endif
+    if(strstr(options, "NODAL")) {
+      solver->BRGradientVolumeKernel(mesh->Nelements,
+                                            mesh->o_vgeo,
+                                            mesh->o_DrT,
+                                            mesh->o_DsT,
+                                            o_q,
+                                            solver->o_grad);
+    } else if(strstr(options, "BERN")) {
+      solver->BRGradientVolumeKernel(mesh->Nelements,
+                                            mesh->o_vgeo,
+                                            mesh->o_D1ids,
+                                            mesh->o_D2ids,
+                                            mesh->o_D3ids,
+                                            mesh->o_Dvals,
+                                            o_q,
+                                            solver->o_grad);
+    }
 
     ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
 
-#if USE_BERN
-    solver->BRGradientSurfaceKernel(mesh->Nelements,
-                               mesh->o_vmapM,
-                               mesh->o_vmapP,
-                               mesh->o_sgeo,
-                               solver->o_EToB,
-                               mesh->o_L0vals,
-                               mesh->o_ELids,
-                               mesh->o_ELvals,
-                               o_q,
-                               solver->o_grad);
-#else
-    solver->BRGradientSurfaceKernel(mesh->Nelements,
-                               mesh->o_vmapM,
-                               mesh->o_vmapP,
-                               mesh->o_sgeo,
-                               solver->o_EToB,
-                               mesh->o_LIFTT,
-                               o_q,
-                               solver->o_grad);
-#endif
+    if(strstr(options, "NODAL")) {
+      solver->BRGradientSurfaceKernel(mesh->Nelements,
+                                 mesh->o_vmapM,
+                                 mesh->o_vmapP,
+                                 mesh->o_sgeo,
+                                 solver->o_EToB,
+                                 mesh->o_LIFTT,
+                                 o_q,
+                                 solver->o_grad);
+    } else if(strstr(options, "BERN")) {
+      solver->BRGradientSurfaceKernel(mesh->Nelements,
+                                 mesh->o_vmapM,
+                                 mesh->o_vmapP,
+                                 mesh->o_sgeo,
+                                 solver->o_EToB,
+                                 mesh->o_L0vals,
+                                 mesh->o_ELids,
+                                 mesh->o_ELvals,
+                                 o_q,
+                                 solver->o_grad);
+    }
 
     //Start the rank 1 augmentation if all BCs are Neumann
     //TODO this could probably be moved inside the Ax kernel for better performance
@@ -210,62 +280,60 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ellipticStartHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
     ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
 
-#if USE_BERN
-    solver->BRDivergenceVolumeKernel(mesh->Nelements,
-                                          mesh->o_vgeo,
-                                          mesh->o_D1ids,
-                                          mesh->o_D2ids,
-                                          mesh->o_D3ids,
-                                          mesh->o_Dvals,
-                                          solver->o_grad,
-                                          o_Aq);
-#else
-    solver->BRDivergenceVolumeKernel(mesh->Nelements,
-                                          mesh->o_vgeo,
-                                          mesh->o_DrT,
-                                          mesh->o_DsT,
-                                          solver->o_grad,
-                                          o_Aq);
-#endif
+    if(strstr(options, "NODAL")) {
+      solver->BRDivergenceVolumeKernel(mesh->Nelements,
+                                            mesh->o_vgeo,
+                                            mesh->o_DrT,
+                                            mesh->o_DsT,
+                                            solver->o_grad,
+                                            o_Aq);
+    } else if(strstr(options, "BERN")) {
+      solver->BRDivergenceVolumeKernel(mesh->Nelements,
+                                            mesh->o_vgeo,
+                                            mesh->o_D1ids,
+                                            mesh->o_D2ids,
+                                            mesh->o_D3ids,
+                                            mesh->o_Dvals,
+                                            solver->o_grad,
+                                            o_Aq);
+    }
 
     ellipticEndHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradRecvBuffer);
 
-#if USE_BERN
-    solver->BRDivergenceSurfaceKernel(mesh->Nelements,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                solver->o_EToB,
-                                mesh->o_L0vals,
-                                mesh->o_ELids,
-                                mesh->o_ELvals,
-                                mesh->o_BBMM,
-                                o_q,
-                                solver->o_grad,
-                                o_Aq);
-#else
-    solver->BRDivergenceSurfaceKernel(mesh->Nelements,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                lambda,
-                                solver->tau,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                solver->o_EToB,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                o_q,
-                                solver->o_grad,
-                                o_Aq);
-#endif
+    if(strstr(options, "NODAL")) {
+      solver->BRDivergenceSurfaceKernel(mesh->Nelements,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_LIFTT,
+                                  mesh->o_MM,
+                                  o_q,
+                                  solver->o_grad,
+                                  o_Aq);
+    } else if(strstr(options, "BERN")) {
+      solver->BRDivergenceSurfaceKernel(mesh->Nelements,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  lambda,
+                                  solver->tau,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  solver->o_EToB,
+                                  mesh->o_L0vals,
+                                  mesh->o_ELids,
+                                  mesh->o_ELvals,
+                                  mesh->o_BBMM,
+                                  o_q,
+                                  solver->o_grad,
+                                  o_Aq);
+    }
 
     if(solver->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-
-
   }
 
   if(strstr(options, "CONTINUOUS"))
@@ -394,11 +462,11 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
   dfloat REL_TOL = tol*tol*n2b; //
   //
-  //dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
+  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
 
-  dfloat TOL     = tol*tol;
+  //dfloat TOL     = tol*tol;
 
-#if 1
+#if 0
   dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
@@ -522,8 +590,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
 
-    if((rank==0)&&(strstr(options,"VERBOSE")))
-     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
+    // if((rank==0)&&(strstr(options,"VERBOSE")))
+    //  printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
     ++Niter;
 
@@ -531,8 +599,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
 
    //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
-  if((rank==0)&&strstr(options,"VERBOSE"))
-   printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+  // if((rank==0)&&strstr(options,"VERBOSE"))
+  //  printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
 
   if(strstr(options,"VERBOSE")){
