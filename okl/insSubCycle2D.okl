@@ -1795,7 +1795,6 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
 						occaUnroll(p_intNfpNfaces)
 						for(int m=0;m<p_intNfpNfaces;++m){
-						// RefMassMatrix^{-1}*cInterp^t*cWeight
 							const dfloat L = intLIFTT[n+m*p_Np];
 
 							rhsu += L*s_iFluxU[es][m];
