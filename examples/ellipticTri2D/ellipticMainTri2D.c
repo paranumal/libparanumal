@@ -8,7 +8,7 @@ int main(int argc, char **argv){
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if(argc!=3 && argc!=4){
+  if(argc<3){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
     printf("usage 2: ./main meshes/cavityH005.msh N BoundaryConditions.h\n");
     exit(-1);
@@ -18,15 +18,36 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // solver can be CG or PCG
-  // preconditioner can be JACOBI, OAS, NONE, BLOCKJACOBI
-  // method can be IPDG
+  // can add FLEXIBLE and VERBOSE options
+  // method can be IPDG or CONTINUOUS
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
+  //                      patch smoothers can include EXACT        
+  // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
+  // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
+  // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS,APPROXSOLVE coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OMS");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=BLOCKJACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
+
+  //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
+  // solver can be EXACT, KCYCLE, or VCYCLE
+  // smoother can be DAMPEDJACOBI or CHEBYSHEV
+  // can add GATHER to build a gsop
+  // partition can be STRONGNODES, DISTRIBUTED, SATURATE
+  char *parAlmondOptions =
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    //strdup("solver=EXACT,HOST,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+
+
+  //this is strictly for testing, to do repeated runs. Will be removed later
+  if (argc==6) {
+    options = strdup(argv[4]);
+    parAlmondOptions = strdup(argv[5]);
+  }
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
@@ -34,31 +55,18 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
   //dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
 
-  // capture header file
-  char *boundaryHeaderFileName;
-  if(argc==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/homogeneous2D.h"); // default
-  else
-    boundaryHeaderFileName = strdup(argv[3]);
-  //add user defined boundary data
-  kernelInfo.addInclude(boundaryHeaderFileName);
-
-  //add standard boundary functions
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
-  kernelInfo.addInclude(boundaryHeaderFileName);
-
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = (mesh->N)*(mesh->N+2-1);
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options);
+  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -90,8 +98,23 @@ int main(int argc, char **argv){
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
+  // capture header file
+  char *boundaryHeaderFileName;
+  if(argc==3)
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/homogeneous2D.h"); // default
+  else
+    boundaryHeaderFileName = strdup(argv[3]);
+  //add user defined boundary data
+  kernelInfo.addInclude(boundaryHeaderFileName);
+
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
+    
+    solver->rhsBCIpdgKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
+               "ellipticRhsBCIpdgTri2D",
+               kernelInfo);
+
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
                            mesh->o_vmapM,
@@ -102,7 +125,7 @@ int main(int argc, char **argv){
                            mesh->o_y,
                            mesh->o_vgeo,
                            mesh->o_sgeo,
-                           mesh->o_EToB,
+                           solver->o_EToB,
                            mesh->o_DrT,
                            mesh->o_DsT,
                            mesh->o_LIFTT,
@@ -110,7 +133,9 @@ int main(int argc, char **argv){
                            o_r);
   }
 
-  ellipticSolveTri2D(solver, lambda, o_r, o_x, options);
+  // convergence tolerance
+  dfloat tol = 1e-8;
+  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);

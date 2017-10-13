@@ -1,89 +1,17 @@
+#ifndef ELLIPTICTET3D_H 
+#define ELLIPTICTET3D_H 1
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "mpi.h"
 #include "mesh3D.h"
+#include "parAlmond.h"
+#include "ellipticPreconTet3D.h"
 
 // block size for reduction (hard coded)
 #define blockSize 256
-
-typedef struct {
-
-  occa::memory o_vmapPP;
-  occa::memory o_faceNodesP;
-
-  occa::memory o_oasForward;
-  occa::memory o_oasBack;
-  occa::memory o_oasDiagInvOp;
-
-  occa::memory o_oasForwardDg;
-  occa::memory o_oasBackDg;
-  occa::memory o_oasDiagInvOpDg;
-  occa::memory o_invDegreeDGP;
-
-  occa::memory o_oasForwardDgT;
-  occa::memory o_oasBackDgT;
-  
-  occa::kernel restrictKernel;
-  occa::kernel preconKernel;
-
-  occa::kernel coarsenKernel;
-  occa::kernel prolongateKernel;  
-
-  ogs_t *ogsP, *ogsDg;
-
-  occa::memory o_diagA;
-
-  // coarse grid basis for preconditioning
-  occa::memory o_V1, o_Vr1, o_Vs1, o_Vt1;
-  occa::memory o_r1, o_z1;
-  dfloat *r1, *z1;
-
-  void *xxt;
-  void *almond;
-
-  occa::memory o_coarseInvDegree;
-  occa::memory o_ztmp;
-
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
-  dfloat *B, *tmp2;
-  occa::memory *o_B, o_tmp2;
-  void *xxt2;
-  void *parAlmond;
-  
-  // block Jacobi precon
-  occa::memory o_invMM;
-  occa::kernel blockJacobiKernel;
-} precon_t;
-
-void ellipticRunTet3D(mesh3D *mesh);
-
-void ellipticOccaRunTet3D(mesh3D *mesh);
-
-void ellipticSetupTet3D(mesh3D *mesh, occa::kernelInfo &kernelInfo);
-
-void ellipticVolumeTet3D(mesh3D *mesh);
-
-void ellipticSurfaceTet3D(mesh3D *mesh, dfloat time);
-
-void ellipticUpdateTet3D(mesh3D *mesh, dfloat rka, dfloat rkb);
-
-void ellipticErrorTet3D(mesh3D *mesh, dfloat time);
-
-void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
-					const char *type, const char *op);
-
-precon_t *ellipticPreconditionerSetupTet3D(mesh3D *mesh, ogs_t *ogs, dfloat tau,  dfloat lambda, iint *BCType, const char *options);
-
-void diagnostic(int N, occa::memory &o_x, const char *message);
-
-void ellipticCoarsePreconditionerTet3D(mesh_t *mesh, precon_t *precon, dfloat *x, dfloat *b);
-
-void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dfloat lambda, const char *options);
-
 
 typedef struct {
 
@@ -98,20 +26,21 @@ typedef struct {
   char *type;
 
   iint Nblock;
-  
+
   dfloat tau;
 
+  bool allNeumann;
+  dfloat allNeumannPenalty;
+  dfloat allNeumannScale;
+
   // HOST shadow copies
-  dfloat *Ax, *p, *r, *z, *zP, *Ap, *tmp, *grad;
+  dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
 
+  int *EToB;
   dfloat *sendBuffer, *recvBuffer;
-
-  occa::stream defaultStream;
-  occa::stream dataStream;
 
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
-  occa::memory o_zP; // extended OAS preconditioner patch solution
   occa::memory o_res;
   occa::memory o_Sres;
   occa::memory o_Ax; // A*initial guess
@@ -122,16 +51,8 @@ typedef struct {
   occa::memory o_invDegree;
   occa::memory o_EToB;
 
-  // list of elements that are needed for global gather-scatter
-  iint NglobalGatherElements;
-  occa::memory o_globalGatherElementList;
-
-  // list of elements that are not needed for global gather-scatter
-  iint NlocalGatherElements;
-  occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
-  occa::kernel partialAxKernel;
   occa::kernel rhsBCKernel;
   occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
@@ -142,15 +63,61 @@ typedef struct {
 
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
-  occa::kernel partialGradientKernel;
-  occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
-  
+
 }solver_t;
 
 
-void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
+void ellipticSetupTet3D(mesh3D *mesh, occa::kernelInfo &kernelInfo);
 
-int ellipticSolveTet3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
+void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+          const char *type, const char *op);
 
-solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint* BCType, occa::kernelInfo &kernelInfo, const char *options);
+void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+
+void diagnostic(int N, occa::memory &o_x, const char *message);
+
+void ellipticPreconditioner3D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
+
+int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
+
+solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
+
+solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
+
+void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda,
+                                   iint *BCType, dfloat **invDiagA,
+                                   const char *options);
+
+void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
+                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+
+//smoother setups
+void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherFullPatchIpdg (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherFacePatchIpdg (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
+
+
+void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticSetupSmootherTet3D(solver_t *solver, precon_t *precon,
+                                dfloat tau, dfloat lambda, int* BCType,
+                                const char *options);
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
+
+#endif

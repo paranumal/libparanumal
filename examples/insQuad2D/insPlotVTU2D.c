@@ -17,6 +17,8 @@ void insPlotVTU2D(ins_t *ins, char *fileNameBase){
   char fileName[BUFSIZ];
   sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
   
+  printf("FILE = %s\n", fileName);
+
   fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");

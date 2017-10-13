@@ -5,7 +5,6 @@ void insReport2D(ins_t *ins, iint tstep, char *options){
   dfloat t = (tstep+1)*ins->dt;
   
   // copy data back to host
-  
   ins->o_U.copyTo(ins->U);
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);
@@ -17,18 +16,15 @@ void insReport2D(ins_t *ins, iint tstep, char *options){
   // do error stuff on host
   insError2D(ins, t, options);
 
+
  
   if(strstr(options, "VTU")){ 
-  // compute vorticity
-  //insComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
-  // output field files
-  char fname[BUFSIZ];
-  sprintf(fname, "fooT_%04d", tstep/ins->errorStep);
-  insPlotVTU2D(ins, fname);
- }
-
-  
-  
-    
+    // compute vorticity
+    //insComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
+    // output field files
+    char fname[BUFSIZ];
+    sprintf(fname, "fooT_%04d", tstep/ins->errorStep);
+    printf("FILE = %s\n", fname);
+    insPlotVTU2D(ins, fname);
+  }
 }
-

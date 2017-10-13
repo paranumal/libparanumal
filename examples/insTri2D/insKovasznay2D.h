@@ -102,4 +102,13 @@
 
 
 
-
+// Compute bcs for P increment
+#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
+  { \
+    if((bc==1)||(bc==4)||(bc==2) ){           \
+      *(dpdt) =0.f; \
+    }                 \
+    if(bc==3){                \
+      *(dpdt) = 0.0; \
+    }                 \
+  }

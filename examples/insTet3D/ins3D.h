@@ -27,13 +27,21 @@ typedef struct {
   iint   Nstages;     // Number of history states to store
   iint   index;       // Index of current state
   iint   errorStep; 
+  iint   Nsubsteps;  
+  //solver tolerances
+  iint NiterU, NiterV, NiterW, NiterP;
 
+  dfloat presTOL, velTOL, prtime ; // delete prtime
+
+  dfloat inu, idt;
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
   dfloat *rhsU, *rhsV, *rhsW, *rhsP;
   dfloat *U, *V, *W, *P; 
-
-  dfloat dtfactor;
+  
+  dfloat *Ud, *Vd, *Wd, *Ue, *Ve, *We, *resU, *resV, *resW, sdt;
+  occa::memory o_Ud, o_Vd, o_Wd, o_Ue, o_Ve, o_We,  o_resU, o_resV, o_resW;
+  //dfloat dtfactor;
 
   dfloat *NU, *NV, *NW;
   dfloat *Px, *Py, *Pz;
@@ -92,18 +100,11 @@ typedef struct {
 
 }ins_t;
 
-typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
-  dfloat val;
-
-} nonZero_t;
-
-
-
-ins_t *insSetup3D(mesh3D *mesh,char *options, char *velSolverOptions, char *prSolverOptions, char *bdryHeaderFileName);
+ins_t *insSetup3D(mesh3D *mesh, iint Ns, char *options, 
+                  char *velSolverOptions, char *velParAlmondOptions, 
+                  char *prSolverOptions,  char *prParAlmondOptions,
+                  char *bdryHeaderFileName);
 
 void insRun3D(ins_t *solver, char *options);
 void insReport3D(ins_t *solver, iint tstep, char *options);
@@ -132,3 +133,4 @@ void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 //                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
 
 
+void insRunTimer3D(mesh3D *mesh, char *options, char *bdryHeaderFileName);
