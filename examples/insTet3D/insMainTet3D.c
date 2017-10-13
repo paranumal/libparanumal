@@ -53,14 +53,18 @@ int main(int argc, char **argv){
   // else
   //     options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
-  printf("Setup INS Solver: \n");
-  ins_t *ins = insSetup3D(mesh, Ns, options,
-                          velSolverOptions,velParAlmondOptions,
-                          prSolverOptions, prParAlmondOptions,
-                          boundaryHeaderFileName);
+  // printf("Setup INS Solver: \n");
+  // ins_t *ins = insSetup3D(mesh, Ns, options,
+  //                         velSolverOptions,velParAlmondOptions,
+  //                         prSolverOptions, prParAlmondOptions,
+  //                         boundaryHeaderFileName);
 
-  printf("OCCA Run: \n");
-  insRun3D(ins,options);
+  // printf("OCCA Run: \n");
+  // insRun3D(ins,options);
+
+
+   printf("OCCA Run Timer: \n");
+   insRunTimer3D(mesh,options,boundaryHeaderFileName);
 
   // close down MPI
   MPI_Finalize();

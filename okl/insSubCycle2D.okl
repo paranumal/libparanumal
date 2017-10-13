@@ -36,10 +36,10 @@ kernel void insSubCycleCubatureVolume2D_v0(
 			  cVd += cIni*Vd[id];				
 			}
 		//
-		s_cF11[es][n] = cU*cUd;
-		s_cF12[es][n] = cV*cUd;
-		s_cF21[es][n] = cU*cVd;
-		s_cF22[es][n] = cV*cVd;
+		s_cF11[n] = cU*cUd;
+		s_cF12[n] = cV*cUd;
+		s_cF21[n] = cU*cVd;
+		s_cF22[n] = cV*cVd;
 		}
 	}
 
@@ -66,10 +66,10 @@ kernel void insSubCycleCubatureVolume2D_v0(
 				dfloat cDrWni = cubDrWT[n+i*p_Np];
 				dfloat cDsWni = cubDsWT[n+i*p_Np];
 				// Fetch to shared, used twice
-				dfloat cF11 = s_cF11[es][i];  // makew them global
-				dfloat cF12 = s_cF12[es][i];
-				dfloat cF21 = s_cF21[es][i];
-				dfloat cF22 = s_cF22[es][i];
+				dfloat cF11 = s_cF11[i];  // makew them global
+				dfloat cF12 = s_cF12[i];
+				dfloat cF21 = s_cF21[i];
+				dfloat cF22 = s_cF22[i];
 
 				df11dr += cDrWni*cF11;
 				df11ds += cDsWni*cF11;
@@ -130,10 +130,10 @@ kernel void insSubCycleCubatureVolume2D_v1(
 		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 			if(e<Nelements && n<p_Np){ 
 			  iint id = e*p_Np+n;
-			  s_U[es][n]  = U[id];
-			  s_V[es][n]  = V[id];
-			  s_Ud[es][n] = Ud[id];
-			  s_Vd[es][n] = Vd[id];	
+			  s_U[n]  = U[id];
+			  s_V[n]  = V[id];
+			  s_Ud[n] = Ud[id];
+			  s_Vd[n] = Vd[id];	
 			}
 		}
 
@@ -153,10 +153,10 @@ kernel void insSubCycleCubatureVolume2D_v1(
 			  cVd += cIni*s_Vd[i];				
 			}
 		//
-		s_cF11[es][n] = cU*cUd;
-		s_cF12[es][n] = cV*cUd;
-		s_cF21[es][n] = cU*cVd;
-		s_cF22[es][n] = cV*cVd;
+		s_cF11[n] = cU*cUd;
+		s_cF12[n] = cV*cUd;
+		s_cF21[n] = cU*cVd;
+		s_cF22[n] = cV*cVd;
 		}
 	}
 
@@ -183,10 +183,10 @@ kernel void insSubCycleCubatureVolume2D_v1(
 				dfloat cDrWni = cubDrWT[n+i*p_Np];
 				dfloat cDsWni = cubDsWT[n+i*p_Np];
 				// Fetch to shared, used twice
-				dfloat cF11 = s_cF11[es][i];  // makew them global
-				dfloat cF12 = s_cF12[es][i];
-				dfloat cF21 = s_cF21[es][i];
-				dfloat cF22 = s_cF22[es][i];
+				dfloat cF11 = s_cF11[i];  // makew them global
+				dfloat cF12 = s_cF12[i];
+				dfloat cF21 = s_cF21[i];
+				dfloat cF22 = s_cF22[i];
 
 				df11dr += cDrWni*cF11;
 				df11ds += cDsWni*cF11;
@@ -249,10 +249,10 @@ kernel void insSubCycleCubatureVolume2D_v2(
 		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 			if(e<Nelements && n<p_Np){ 
 			  const iint id = e*p_Np+n;
-			  s_U[es][n]  = U[id];
-			  s_V[es][n]  = V[id];
-			  s_Ud[es][n] = Ud[id];
-			  s_Vd[es][n] = Vd[id];	
+			  s_U[n]  = U[id];
+			  s_V[n]  = V[id];
+			  s_Ud[n] = Ud[id];
+			  s_Vd[n] = Vd[id];	
 			}
 		}
 
@@ -272,10 +272,10 @@ kernel void insSubCycleCubatureVolume2D_v2(
 			  cVd += cIni*s_Vd[i];				
 			}
 		//
-		s_cF11[es][n] = cU*cUd;
-		s_cF12[es][n] = cV*cUd;
-		s_cF21[es][n] = cU*cVd;
-		s_cF22[es][n] = cV*cVd;
+		s_cF11[n] = cU*cUd;
+		s_cF12[n] = cV*cUd;
+		s_cF21[n] = cU*cVd;
+		s_cF22[n] = cV*cVd;
 		}
 	}
 
@@ -302,10 +302,10 @@ kernel void insSubCycleCubatureVolume2D_v2(
 				const dfloat cDrWni = cubDrWT[n+i*p_Np];
 				const dfloat cDsWni = cubDsWT[n+i*p_Np];
 				// Fetch to shared, used twice
-				const dfloat cF11 = s_cF11[es][i];  // makew them global
-				const dfloat cF12 = s_cF12[es][i];
-				const dfloat cF21 = s_cF21[es][i];
-				const dfloat cF22 = s_cF22[es][i];
+				const dfloat cF11 = s_cF11[i];  // makew them global
+				const dfloat cF12 = s_cF12[i];
+				const dfloat cF21 = s_cF21[i];
+				const dfloat cF22 = s_cF22[i];
 
 				df11dr += cDrWni*cF11;
 				df11ds += cDsWni*cF11;
@@ -367,10 +367,10 @@ kernel void insSubCycleCubatureVolume2D_v3(
 		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 			if(e<Nelements && n<p_Np){ 
 			  const iint id = e*p_Np+n;
-			  s_U[es][n]  = U[id];
-			  s_V[es][n]  = V[id];
-			  s_Ud[es][n] = Ud[id];
-			  s_Vd[es][n] = Vd[id];	
+			  s_U[n]  = U[id];
+			  s_V[n]  = V[id];
+			  s_Ud[n] = Ud[id];
+			  s_Vd[n] = Vd[id];	
 			}
 		}
 
@@ -391,10 +391,10 @@ kernel void insSubCycleCubatureVolume2D_v3(
 			  cVd += cIni*s_Vd[i];				
 			}
 		//
-		s_cF11[es][n] = cU*cUd;
-		s_cF12[es][n] = cV*cUd;
-		s_cF21[es][n] = cU*cVd;
-		s_cF22[es][n] = cV*cVd;
+		s_cF11[n] = cU*cUd;
+		s_cF12[n] = cV*cUd;
+		s_cF21[n] = cU*cVd;
+		s_cF22[n] = cV*cVd;
 		}
 	}
 
@@ -421,10 +421,10 @@ kernel void insSubCycleCubatureVolume2D_v3(
 				const dfloat cDrWni = cubDrWT[n+i*p_Np];
 				const dfloat cDsWni = cubDsWT[n+i*p_Np];
 				// Fetch to shared, used twice
-				const dfloat cF11 = s_cF11[es][i];  // makew them global
-				const dfloat cF12 = s_cF12[es][i];
-				const dfloat cF21 = s_cF21[es][i];
-				const dfloat cF22 = s_cF22[es][i];
+				const dfloat cF11 = s_cF11[i];  // makew them global
+				const dfloat cF12 = s_cF12[i];
+				const dfloat cF21 = s_cF21[i];
+				const dfloat cF22 = s_cF22[i];
 
 				df11dr += cDrWni*cF11;
 				df11ds += cDsWni*cF11;
@@ -610,111 +610,111 @@ kernel void insSubCycleCubatureVolume2D_v5(const iint Nelements,
 
     exclusive dfloat cU, cV, cUd, cVd;
 
-    //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_Np){ 
-	  const iint id = e*p_Np+n;
-	  s_U[es][n]  = U[id];
-	  s_V[es][n]  = V[id];
-	  s_Ud[es][n] = Ud[id];
-	  s_Vd[es][n] = Vd[id];
-	}		
-      }
-    }
+	//
+	for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+		iint e = eo+es; // element in block
+			if(e<Nelements && n<p_Np){ 
+				const iint id = e*p_Np+n;
+				s_U[es][n]  = U[id];
+				s_V[es][n]  = V[id];
+				s_Ud[es][n] = Ud[id];
+				s_Vd[es][n] = Vd[id];
+			}		
+		}
+	}
     
     barrier(localMemFence);
     
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_cubNp){
-	  
-	  cU = 0.f;  cV = 0.f;
-	  cUd = 0.f; cVd = 0.f;
+	for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			iint e = eo+es; // element in block
+			if(e<Nelements && n<p_cubNp){
 
-	  occaUnroll(p_Np)
-	    for(iint i=0;i<p_Np;++i){
-	      dfloat cIni = cubInterpT[n+i*p_cubNp];
-	      cU  += cIni*s_U[es][i];
-	      cV  += cIni*s_V[es][i];
-	      cUd += cIni*s_Ud[es][i];
-	      cVd += cIni*s_Vd[es][i];				
-	    }
+				cU = 0.f;  cV = 0.f;
+				cUd = 0.f; cVd = 0.f;
+
+				occaUnroll(p_Np)
+				for(iint i=0;i<p_Np;++i){
+					dfloat cIni = cubInterpT[n+i*p_cubNp];
+					cU  += cIni*s_U[es][i];
+					cV  += cIni*s_V[es][i];
+					cUd += cIni*s_Ud[es][i];
+					cVd += cIni*s_Vd[es][i];				
+				}
+			}
+		}
 	}
-      }
-    }
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_cubNp){
-	  //
-	  s_cF11[es][n] = cU*cUd;
-	  s_cF12[es][n] = cV*cUd;
-	  s_cF21[es][n] = cU*cVd;
-	  s_cF22[es][n] = cV*cVd;
+	for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			iint e = eo+es; // element in block
+			if(e<Nelements && n<p_cubNp){
+				//
+				s_cF11[es][n] = cU*cUd;
+				s_cF12[es][n] = cV*cUd;
+				s_cF21[es][n] = cU*cVd;
+				s_cF22[es][n] = cV*cVd;
+			}
+		}
 	}
-      }
-    }
 
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
-	iint e = eo+es;
+	for(iint es=0;es<p_cubNblockV;++es;inner1){
+		for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+		iint e = eo+es;
 
-	if(e<Nelements && n<p_Np){	  
-	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+			if(e<Nelements && n<p_Np){	  
+			// prefetch geometric factors (constant on triangle)
+			const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+			const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+			const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+			const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-	  // compute 'r' and 's' derivatives of (q_m) at node n
-	  dfloat df11dr = 0.f, df11ds = 0.f; 
-	  dfloat df12dr = 0.f, df12ds = 0.f; 
-	  dfloat df21dr = 0.f, df21ds = 0.f; 
-	  dfloat df22dr = 0.f, df22ds = 0.f; 
+			// compute 'r' and 's' derivatives of (q_m) at node n
+			dfloat df11dr = 0.f, df11ds = 0.f; 
+			dfloat df12dr = 0.f, df12ds = 0.f; 
+			dfloat df21dr = 0.f, df21ds = 0.f; 
+			dfloat df22dr = 0.f, df22ds = 0.f; 
 
-	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
-	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
+			occaUnroll(p_cubNp)
+				for(iint i=0;i<p_cubNp;++i){
+					const dfloat cDrWni = cubDrWT[n+i*p_Np];
+					const dfloat cDsWni = cubDsWT[n+i*p_Np];
 
-	      const dfloat cF11 = s_cF11[es][i];
-	      const dfloat cF12 = s_cF12[es][i];
-	      const dfloat cF21 = s_cF21[es][i];
-	      const dfloat cF22 = s_cF22[es][i];
+					const dfloat cF11 = s_cF11[es][i];
+					const dfloat cF12 = s_cF12[es][i];
+					const dfloat cF21 = s_cF21[es][i];
+					const dfloat cF22 = s_cF22[es][i];
 
-	      df11dr += cDrWni*cF11;
-	      df11ds += cDsWni*cF11;
-	      
-	      df12dr += cDrWni*cF12;
-	      df12ds += cDsWni*cF12;
+					df11dr += cDrWni*cF11;
+					df11ds += cDsWni*cF11;
 
-	      df21dr += cDrWni*cF21;
-	      df21ds += cDsWni*cF21;
+					df12dr += cDrWni*cF12;
+					df12ds += cDsWni*cF12;
 
-	      df22dr += cDrWni*cF22;
-	      df22ds += cDsWni*cF22;
-	    }
-	  
-	  dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
-	  dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
-	  
-	  const iint id = e*p_Np+n;
-	  
-	  rhsU[id]   = -rhsu; // note  change in sign
-	  rhsV[id]   = -rhsv;		  
+					df21dr += cDrWni*cF21;
+					df21ds += cDsWni*cF21;
+
+					df22dr += cDrWni*cF22;
+					df22ds += cDsWni*cF22;
+				}
+
+				const dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
+				const dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
+
+				const iint id = e*p_Np+n;
+
+				rhsU[id]   = -rhsu; // note  change in sign
+				rhsV[id]   = -rhsv;		  
+				}
+			}
+		}
 	}
-      }
-    }
-  }
 
 #undef s_cF11
 #undef s_cF12
@@ -876,155 +876,6 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
   }
 
 }
-
-
-// Use less shared memory, 
-kernel void insSubCycleCubatureVolume2D_v1(const iint Nelements,
-					const dfloat * restrict vgeo,
-					const dfloat * restrict cubDrWT,
-					const dfloat * restrict cubDsWT,
-					const dfloat * restrict cubInterpT,
-					const dfloat * restrict U,
-					const dfloat * restrict V,
-					const dfloat * restrict Ud,
-					const dfloat * restrict Vd,
-					dfloat * restrict rhsU,
-					dfloat * restrict rhsV){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
-    
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_cubNblockV][p_cubNp];
-    shared dfloat s_V[p_cubNblockV][p_cubNp];
-    shared dfloat s_Ud[p_cubNblockV][p_cubNp];
-    shared dfloat s_Vd[p_cubNblockV][p_cubNp];
-
-		#define s_cF11 s_U
-		#define s_cF12 s_V
-		#define s_cF21 s_Ud
-		#define s_cF22 s_Vd
-
-    exclusive dfloat cU, cV, cUd, cVd;
-
-    //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_Np){ 
-	  const iint id = e*p_Np+n;
-	  s_U[es][n]  = U[id];
-	  s_V[es][n]  = V[id];
-	  s_Ud[es][n] = Ud[id];
-	  s_Vd[es][n] = Vd[id];
-	}		
-      }
-    }
-    
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_cubNp){
-	  
-	  cU = 0.f;  cV = 0.f;
-	  cUd = 0.f; cVd = 0.f;
-
-	  occaUnroll(p_Np)
-	    for(iint i=0;i<p_Np;++i){
-	      dfloat cIni = cubInterpT[n+i*p_cubNp];
-	      cU  += cIni*s_U[es][i];
-	      cV  += cIni*s_V[es][i];
-	      cUd += cIni*s_Ud[es][i];
-	      cVd += cIni*s_Vd[es][i];				
-	    }
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_cubNp){
-	  //
-	  s_cF11[es][n] = cU*cUd;
-	  s_cF12[es][n] = cV*cUd;
-	  s_cF21[es][n] = cU*cVd;
-	  s_cF22[es][n] = cV*cVd;
-	}
-      }
-    }
-
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
-	iint e = eo+es;
-
-	if(e<Nelements && n<p_Np){	  
-	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-	  // compute 'r' and 's' derivatives of (q_m) at node n
-	  dfloat df11dr = 0.f, df11ds = 0.f; 
-	  dfloat df12dr = 0.f, df12ds = 0.f; 
-	  dfloat df21dr = 0.f, df21ds = 0.f; 
-	  dfloat df22dr = 0.f, df22ds = 0.f; 
-
-	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
-	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
-
-	      const dfloat cF11 = s_cF11[es][i];
-	      const dfloat cF12 = s_cF12[es][i];
-	      const dfloat cF21 = s_cF21[es][i];
-	      const dfloat cF22 = s_cF22[es][i];
-
-	      df11dr += cDrWni*cF11;
-	      df11ds += cDsWni*cF11;
-	      
-	      df12dr += cDrWni*cF12;
-	      df12ds += cDsWni*cF12;
-
-	      df21dr += cDrWni*cF21;
-	      df21ds += cDsWni*cF21;
-
-	      df22dr += cDrWni*cF22;
-	      df22ds += cDsWni*cF22;
-	    }
-	  
-	  dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
-	  dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
-	  
-	  const iint id = e*p_Np+n;
-	  
-	  rhsU[id]   = -rhsu; // note  change in sign
-	  rhsV[id]   = -rhsv;		  
-	}
-      }
-    }
-  }
-
-#undef s_cF11
-#undef s_cF12
-#undef s_cF21
-#undef s_cF22
-}
-
-
-
-
-
-
-
-
 
 
 
