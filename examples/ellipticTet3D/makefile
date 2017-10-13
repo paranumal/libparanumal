@@ -3,12 +3,14 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = 
+CXXFLAGS =
 
 include ${OCCA_DIR}/scripts/makefile
 
 # define variables
 HDRDIR  = ../../include
+GSDIR  = ../../3rdParty/gslib.github/src
+ALMONDDIR = ../parALMOND
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -17,21 +19,29 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../.."'  \
-		 	-I../../utilities/parALMOND/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I$(GSDIR) -D DHOLMES='"${CURDIR}/../.."'  
 
-# link flags to be used 
+# link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L../../utilities/parALMOND -lparALMOND
+			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -llapack -lblas
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+
+
+INCLUDES = ellipticTet3D.h ellipticPreconTet3D.h
+DEPS = $(INCLUDES) \
+$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh3D.h \
+$(HDRDIR)/ogs_t.h \
+$(HDRDIR)/hgs_t.h \
+$(ALMONDDIR)/parALMOND.h \
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c 
+.SUFFIXES: .c
 
 # rule for .c files
-.c.o:
+.c.o: $(DEPS)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 
 # list of objects to be compiled
@@ -39,12 +49,21 @@ AOBJS    = \
 ellipticSetupTet3D.o \
 ellipticPreconditionerSetupTet3D.o\
 ellipticCoarsePreconditionerSetupTet3D.o\
+ellipticPreconditionerTet3D.o\
 ellipticSolveTet3D.o\
 ellipticSolveSetupTet3D.o\
 ellipticHaloExchange3D.o\
 ellipticParallelGatherScatterTet3D.o \
+ellipticBuildIpdgTet3D.o \
 ellipticBuildContinuousTet3D.o \
-ellipticBuildIpdgTet3D.o
+ellipticBuildFullPatchesIpdgTet3D.o \
+ellipticBuildFacePatchesIpdgTet3D.o \
+ellipticBuildJacobiIpdgTet3D.o \
+ellipticBuildLocalPatchIpdgTet3D.o \
+ellipticBuildMultigridLevelTet3D.o \
+ellipticMultiGridSetupTet3D.o \
+ellipticSetupSmoothersTet3D.o \
+ellipticSmoothersTet3D.o
 
 # library objects
 LOBJS = \
@@ -85,21 +104,30 @@ COBJS = \
 ../../src/xxtCoarseSolve.o
 
 ellipticMainTet3D:$(AOBJS) $(LOBJS) ellipticMainTet3D.o gslibInterface
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/ellipticTet3D
+	cd ../parALMOND; make -j lib; cd ../ellipticTet3D
 	$(LD)  $(LDFLAGS)  -o ellipticMainTet3D ellipticMainTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
+lib:$(AOBJS)
+	ar -cr libellipticTet3D.a $(AOBJS)
+
 gslibInterface:
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/ellipticTet3D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
+	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
-ellipticMainSplitPml3D:$(POBJS) $(LOBJS) 
-	$(LD)  $(LDFLAGS)  -o ellipticMainSplitPml3D $(POBJS) $(LOBJS) $(paths) $(LIBS) 
-
-test3D: $(LOBJS) $(AOBJS) testMainTet3D.o
-	$(LD)  $(LDFLAGS)  -o testMain3D testMainTet3D.o $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
+all: lib ellipticMainTet3D
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(AOBJS) $(LOBJS) $(POBJS) $(COBJS) ellipticMainTet3D.o
+	cd ../parALMOND; make clean; cd ../ellipticTet3D
+	cd ../../src; rm *.o; cd ../examples/ellipticTet3D
+	rm *.o ellipticMainTet3D libellipticTet3D.a
 
-
+realclean:
+	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTet3D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTet3D
+	cd ../parALMOND; make clean; cd ../ellipticTet3D
+	cd ../../src; rm *.o; cd ../examples/ellipticTet3D
+	rm *.o ellipticMainTet3D libellipticTet3D.a

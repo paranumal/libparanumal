@@ -11,15 +11,15 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
-  int index1 = (ins->index+1)%3;
-
-  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  int index1   = (ins->index+1)%3;
+  iint offset  = mesh->Nelements+mesh->totalHaloPairs;
+  iint ioffset = index1*offset;
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                mesh->totalHaloPairs,
                                mesh->o_haloElementList,
-                               offset,
+                               ioffset,
                                ins->o_U,
                                ins->o_V,
                                ins->o_vHaloBuffer);
@@ -33,16 +33,19 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                          sendBuffer,
                          recvBuffer);
   }
-
+  
+  occaTimerTic(mesh->device,"DivergenceVolume");
   // computes div u^(n+1) volume term
   ins->divergenceVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
                              mesh->o_DrT,
                              mesh->o_DsT,
-                             offset,
+                             ioffset,
                              ins->o_U,
                              ins->o_V,
                              ins->o_rhsP);
+
+   occaTimerToc(mesh->device,"DivergenceVolume");
 
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
@@ -52,13 +55,13 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
                                   mesh->o_haloElementList,
-                                  offset,
+                                  ioffset,
                                   ins->o_U,
                                   ins->o_V,
                                   ins->o_vHaloBuffer);
   }
 
-
+ occaTimerTic(mesh->device,"DivergenceSurface");
   //computes div u^(n+1) surface term
   ins->divergenceSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
@@ -69,11 +72,15 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               t,
                               mesh->o_x,
                               mesh->o_y,
-                              offset,
+                              ioffset,
                               ins->o_U,
                               ins->o_V,
                               ins->o_rhsP);
 
+  occaTimerToc(mesh->device,"DivergenceSurface");
+
+  
+  occaTimerTic(mesh->device,"PoissonRhsForcing");
   // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->poissonRhsForcingKernel(mesh->Nelements,
                               mesh->o_vgeo,
@@ -82,7 +89,9 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->g0,
                               ins->o_rhsP);
 
-#if 1
+  occaTimerToc(mesh->device,"PoissonRhsForcing");
+
+#if 0
   //add penalty from jumps in previous pressure
   ins->poissonPenaltyKernel(mesh->Nelements,
                                 mesh->o_sgeo,
@@ -108,8 +117,12 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  #if 0// if time dependent BC
+  #if 1 // if time dependent BC
+  //
+   const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
+  occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                pressure_solve,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
@@ -125,8 +138,13 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 ins->o_rhsP);
+  occaTimerToc(mesh->device,"PoissonRhsIpdg");
   #endif
 
-  printf("Solving for P \n");
-  ellipticSolveTri2D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions);  
+
+  // printf("Solving for P ... ");
+  occaTimerTic(mesh->device,"Pr Solve");
+  ins->NiterP = ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
+  occaTimerToc(mesh->device,"Pr Solve"); 
+  // printf("%d iteration(s)\n", ins->NiterP);
 }

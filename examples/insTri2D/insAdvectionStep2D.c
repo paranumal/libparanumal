@@ -6,18 +6,18 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			char   * options){
 
   mesh2D *mesh = ins->mesh;
-  dfloat t = tstep*ins->dt;
-  // dfloat t = tstep*ins->dt + ins->dt;
+  dfloat t = (tstep+0)*ins->dt;  // to compute N(U^n) set t=tn 
+  
+  // field ioffset at this step
+  iint  offset  = mesh->Nelements+mesh->totalHaloPairs;  
+  iint ioffset  = ins->index*offset;
 
-  // field offset at this step
-  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
-
-  //Exctract Halo On Device
+  //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     ins->totalHaloExtractKernel(mesh->Nelements,
 				mesh->totalHaloPairs,
 				mesh->o_haloElementList,
-				offset,
+				ioffset,
 				ins->o_U,
 				ins->o_V,
 				ins->o_P,
@@ -33,6 +33,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			  recvBuffer);
   }
 
+  occaTimerTic(mesh->device,"AdvectionVolume");
   // Compute Volume Contribution
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
@@ -40,7 +41,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				       mesh->o_cubDrWT,
 				       mesh->o_cubDsWT,
 				       mesh->o_cubInterpT,
-				       offset,
+				       ioffset,
 				       ins->o_U,
 				       ins->o_V,
 				       ins->o_NU,
@@ -50,22 +51,32 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			       mesh->o_vgeo,
 			       mesh->o_DrT,
 			       mesh->o_DsT,
-			       offset,
+			       ioffset,
 			       ins->o_U,
 			       ins->o_V,
 			       ins->o_NU,
 			       ins->o_NV);
   }
 
+  occaTimerToc(mesh->device,"AdvectionVolume");
+
+
+
+
+
+
+  occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
                             mesh->o_DsT,
-                            offset,
+                            ioffset,
                             ins->o_P,
                             ins->o_Px,
                             ins->o_Py);
+
+  occaTimerToc(mesh->device,"GradientVolume");
 
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
@@ -76,14 +87,14 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->totalHaloScatterKernel(mesh->Nelements,
 				mesh->totalHaloPairs,
 				mesh->o_haloElementList,
-				offset,
+				ioffset,
 				ins->o_U,
 				ins->o_V,
 				ins->o_P,
 				ins->o_tHaloBuffer);
   }
 
-
+  occaTimerTic(mesh->device,"AdvectionSurface");
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
 					mesh->o_sgeo,
@@ -95,7 +106,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 					t,
 					mesh->o_intx,
 					mesh->o_inty,
-					offset,
+					ioffset,
 					ins->o_U,
 					ins->o_V,
 					ins->o_NU,
@@ -110,15 +121,21 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 				t,
 				mesh->o_x,
 				mesh->o_y,
-				offset,
+				ioffset,
 				ins->o_U,
 				ins->o_V,
 				ins->o_NU,
 				ins->o_NV);
   }
 
+  occaTimerToc(mesh->device,"AdvectionSurface");
+  // Solve pressure gradient for t^(n+1) grad(p^(n+1))
+   t += ins->dt;
+  
 
-  const iint solverid = 0; // Pressure Solve
+  const iint solverid = 0; // Pressure Solve, use BCs for pressure
+
+  occaTimerTic(mesh->device,"GradientSurface");
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
 			     mesh->o_sgeo,
@@ -134,10 +151,12 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 			     ins->c1,
 			     ins->c2,
 			     ins->index,
-			     mesh->Nelements+mesh->totalHaloPairs,
+			     offset,
 			     solverid, // pressure BCs
 				 ins->o_PI, //not used
 			     ins->o_P,
 			     ins->o_Px,
 			     ins->o_Py);
+  occaTimerToc(mesh->device,"GradientSurface");
+
 }

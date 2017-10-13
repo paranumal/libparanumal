@@ -45,49 +45,11 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda,
 
   }
 
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options, "CONTINUOUS"))
     // parallel gather scatter
     ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 
   occaTimerToc(mesh->device,"AxKernel");
-}
-
-void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options) {
-
-  solver_t *solver = (solver_t *) args[0];
-  dfloat  *lambda  = (dfloat *)  args[1];
-
-  mesh_t *mesh = solver->mesh;
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-
-  if(strstr(options, "CONTINUOUS")){
-    // compute local element operations and store result in o_Aq
-    solver->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_D, lambda, o_q, o_Aq);
-
-  } else{
-
-    ellipticStartHaloExchange2D(mesh, o_q, sendBuffer, recvBuffer);
-
-    ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
-
-    // need start/end elements then can split into two parts
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
-    solver->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
-
-    solver->ipdgKernel(mesh->Nelements,
-         mesh->o_vmapM,
-         mesh->o_vmapP,
-         lambda,
-         solver->tau,
-         mesh->o_vgeo,
-         mesh->o_sgeo,
-         mesh->o_EToB,
-         mesh->o_D,
-         solver->o_grad,
-         o_Aq);
-
-  }
 }
 
 void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
@@ -117,7 +79,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   occaTimerTic(mesh->device,"weighted inner product2");
 
-  if(strstr(options,"CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options,"CONTINUOUS"))
     solver->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
@@ -161,232 +123,6 @@ dfloat ellipticLocalInnerProduct(solver_t *solver,
   return ab;
 }
 
-void ellipticPreconditioner2D(solver_t *solver,
-            dfloat lambda,
-            occa::memory &o_r,
-            occa::memory &o_zP,
-            occa::memory &o_z,
-            const char *options){
-
-  mesh_t *mesh = solver->mesh;
-  precon_t *precon = solver->precon;
-  ogs_t    *ogs = solver->ogs; // C0 Gather ScatterTri info
-
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-
-
-  if(strstr(options, "OAS")){
-    //L2 project weighting
-    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-      ellipticParallelGatherScatterQuad2D(mesh,ogs,o_r,o_r,dfloatString,"add");
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
-    }
-
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
-
-    // compute local precon on DEVICE
-    occaTimerTic(mesh->device,"OASpreconKernel");
-    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) {
-      precon->preconKernel(mesh->Nelements,
-         precon->o_vmapPP,
-         precon->o_faceNodesP,
-         precon->o_oasForward,
-         precon->o_oasDiagInvOp,
-         precon->o_oasBack,
-         o_r,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeP,o_zP,o_zP);
-    }
-    else{
-      precon->preconKernel(mesh->Nelements,
-         mesh->o_vmapP,
-         precon->o_faceNodesP,
-         precon->o_oasForwardDg,
-         precon->o_oasDiagInvOpDg,
-         precon->o_oasBackDg,
-         o_r,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
-    }
-    occaTimerToc(mesh->device,"OASpreconKernel");
-
-    // extract block interiors on DEVICE
-    occaTimerTic(mesh->device,"restrictKernel");
-    precon->restrictKernel(mesh->Nelements, o_zP, o_z);
-    occaTimerToc(mesh->device,"restrictKernel");
-
-    if(strstr(options, "COARSEGRID")){ // should split into two parts
-      occaTimerTic(mesh->device,"coarseGrid");
-
-      // Z1*Z1'*PL1*(Z1*z1) = (Z1*rL)  HMMM
-      occaTimerTic(mesh->device,"coarsenKernel");
-      precon->coarsenKernel(mesh->Nelements, precon->o_V1, o_r, precon->o_r1);
-      occaTimerToc(mesh->device,"coarsenKernel");
-
-      if(strstr(options,"XXT")){
-        precon->o_r1.copyTo(precon->r1);
-        xxtSolve(precon->z1, precon->xxt,precon->r1);
-        precon->o_z1.copyFrom(precon->z1);
-      }
-
-      if(strstr(options,"ALMOND")){
-        occaTimerTic(mesh->device,"parAlmond");
-        parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
-        occaTimerToc(mesh->device,"parAlmond");
-      }
-
-      occaTimerTic(mesh->device,"prolongateKernel");
-      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
-      occaTimerToc(mesh->device,"prolongateKernel");
-
-      // do we have to DG gatherscatter here
-      dfloat one = 1.;
-      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
-      occaTimerToc(mesh->device,"coarseGrid");
-    }
-
-    //project weighting
-    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
-      ellipticParallelGatherScatterQuad2D(mesh, ogs, o_z, o_z, dfloatString, "add");
-    }
-  } else if(strstr(options, "OMS")){
-    //L2 project weighting
-    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-      ellipticParallelGatherScatterQuad2D(mesh,ogs,o_r,o_r,dfloatString,"add");
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
-    }
-
-    ellipticStartHaloExchange2D(mesh, o_r, sendBuffer, recvBuffer);
-
-    ellipticEndHaloExchange2D(mesh, o_r, recvBuffer);
-
-    // compute local precon on DEVICE
-    occaTimerTic(mesh->device,"OMSpreconKernel");
-    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) {
-      precon->preconKernel(mesh->Nelements,
-         precon->o_vmapPP,
-         precon->o_faceNodesP,
-         precon->o_oasForward,
-         precon->o_oasDiagInvOp,
-         precon->o_oasBack,
-         o_r,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeP,o_zP,o_zP);
-    }
-    else{
-      precon->preconKernel(mesh->Nelements,
-         mesh->o_vmapP,
-         precon->o_faceNodesP,
-         precon->o_oasForwardDg,
-         precon->o_oasDiagInvOpDg,
-         precon->o_oasBackDg,
-         o_r,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
-    }
-    occaTimerToc(mesh->device,"OMSpreconKernel");
-
-    // extract the degrees of freedom
-    occaTimerTic(mesh->device,"restrictKernel");
-    precon->restrictKernel(mesh->Nelements, o_zP, o_z);
-    occaTimerToc(mesh->device,"restrictKernel");
-
-    dfloat one = 1.; dfloat mone = -1.;
-    if(strstr(options, "COARSEGRID")){
-      occaTimerTic(mesh->device,"coarseGrid");
-      //res = r-Az
-      ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
-      ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
-
-      // restrict to coarse problem
-      occaTimerTic(mesh->device,"coarsenKernel");
-      precon->coarsenKernel(mesh->Nelements, precon->o_V1, solver->o_res, precon->o_r1);
-      occaTimerToc(mesh->device,"coarsenKernel");
-
-      occaTimerTic(mesh->device,"ALMOND");
-      parAlmondPrecon(precon->o_z1, precon->parAlmond, precon->o_r1);
-      occaTimerToc(mesh->device,"ALMOND");
-
-      // prolongate back to fine problem
-      occaTimerTic(mesh->device,"prolongateKernel");
-      precon->prolongateKernel(mesh->Nelements, precon->o_V1, precon->o_z1, solver->o_res);
-      occaTimerToc(mesh->device,"prolongateKernel");
-      ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
-    }
-
-    //do another fine smoothing
-    //res = r-Az
-    ellipticOperator2D(solver, lambda, o_z, solver->o_res, options);
-    ellipticScaledAdd(solver, one, o_r, mone, solver->o_res);
-
-    //L2 project weighting
-    if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-      ellipticParallelGatherScatterQuad2D(mesh,ogs,solver->o_res,solver->o_res,dfloatString,"add");
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,solver->o_res,solver->o_res);
-    }
-
-    // compute local precon on DEVICE
-    occaTimerTic(mesh->device,"OMSpreconKernel");
-    if(strstr(options, "CONTINUOUS")||strstr(options,"PROJECT")) {
-      precon->preconKernel(mesh->Nelements,
-         precon->o_vmapPP,
-         precon->o_faceNodesP,
-         precon->o_oasForward,
-         precon->o_oasDiagInvOp,
-         precon->o_oasBack,
-         solver->o_res,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsP, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeP,o_zP,o_zP);
-    }
-    else{
-      precon->preconKernel(mesh->Nelements,
-         mesh->o_vmapP,
-         precon->o_faceNodesP,
-         precon->o_oasForwardDg,
-         precon->o_oasDiagInvOpDg,
-         precon->o_oasBackDg,
-         solver->o_res,
-         o_zP);
-      ellipticParallelGatherScatterQuad2D(mesh, precon->ogsDg, o_zP, o_zP, dfloatString, "add");
-      solver->dotMultiplyKernel(mesh->NqP*mesh->NqP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
-    }
-    occaTimerToc(mesh->device,"OMSpreconKernel");
-
-    // extract the degrees of freedom
-    occaTimerTic(mesh->device,"restrictKernel");
-    precon->restrictKernel(mesh->Nelements, o_zP, solver->o_res);
-    occaTimerToc(mesh->device,"restrictKernel");
-
-    ellipticScaledAdd(solver, one, solver->o_res, one, o_z);
-
-  } else if (strstr(options, "FULLALMOND")) {
-
-    occaTimerTic(mesh->device,"parALMOND");
-    parAlmondPrecon(o_z, precon->parAlmond, o_r);
-    occaTimerToc(mesh->device,"parALMOND");
-
-  } else if(strstr(options, "JACOBI")){
-
-    iint Ntotal = mesh->Np*mesh->Nelements;
-    // Jacobi preconditioner
-    occaTimerTic(mesh->device,"dotDivideKernel");
-    mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
-    occaTimerToc(mesh->device,"dotDivideKernel");
-  }
-  else {// turn off preconditioner
-    o_z.copyFrom(o_r);
-  }
-}
-
 
 int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options){
 
@@ -396,7 +132,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
-  const dfloat tol = 1e-6;
+  const dfloat tol = 1e-8;
 
   // placeholder conjugate gradient:
   // https://en.wikipedia.org/wiki/Conjugate_gradient_method
@@ -406,14 +142,18 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   occa::memory &o_p  = solver->o_p;
   occa::memory &o_z  = solver->o_z;
-  occa::memory &o_zP = solver->o_zP;
   occa::memory &o_Ap = solver->o_Ap;
   occa::memory &o_Ax = solver->o_Ax;
 
   occaTimerTic(mesh->device,"PCG");
 
+  //start timer
+  mesh->device.finish();
+  MPI_Barrier(MPI_COMM_WORLD);
+  double tic = MPI_Wtime();
+
   // gather-scatter rhs
-  if(strstr(options, "CONTINUOUS")||strstr(options, "PROJECT"))
+  if(strstr(options, "CONTINUOUS"))
     ellipticParallelGatherScatterQuad2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   // compute A*x
@@ -423,6 +163,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
+  dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
   if (rdotr0<=(tol*tol)) {
@@ -430,11 +171,12 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
     return 0;
   }
 
+
   occaTimerTic(mesh->device,"Preconditioner");
   if(strstr(options,"PCG")){
 
     // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(solver, lambda, o_r, o_zP, o_z, options); // r => rP => zP => z
+    ellipticPreconditioner2D(solver, lambda, o_r, o_z, options); // r => rP => zP => z
 
     // p = z
     o_p.copyFrom(o_z); // PCG
@@ -446,15 +188,14 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   occaTimerToc(mesh->device,"Preconditioner");
 
 
-  // dot(r,r)
-  dfloat rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
+  /// dot(r,r)
+  rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  dfloat pAp = 0;
 
-  dfloat alpha, beta;
+  dfloat alpha, beta, pAp = 0;
 
-  if(rank==0)
+  if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
   while(rdotr0>(tol*tol)){
@@ -529,8 +270,31 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   }
 
-  if(rank==0)
+  if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
+
+
+  mesh->device.finish();
+  double toc = MPI_Wtime();
+  double localElapsed = toc-tic;
+
+  iint size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  iint   localDofs = mesh->Np*mesh->Nelements;
+  iint   localElements = mesh->Nelements;
+  double globalElapsed;
+  iint   globalDofs;
+  iint   globalElements;
+
+  MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+
+  if(rank==0){
+    printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+     size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
+  }
 
   occaTimerToc(mesh->device,"PCG");
 

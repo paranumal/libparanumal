@@ -27,7 +27,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                          sendBuffer,
                          recvBuffer);
   }
-
+  
+  occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution of gradient of pressure gradient
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
@@ -37,6 +38,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                             ins->o_PI,
                             ins->o_PIx,
                             ins->o_PIy);
+
+  occaTimerToc(mesh->device,"GradientVolume");
 
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
@@ -51,6 +54,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
   }
   
   const iint solverid =1 ;
+
+  occaTimerTic(mesh->device,"GradientSurface");
   // Compute Surface Contribution of gradient of pressure increment
   ins->gradientSurfaceKernel(mesh->Nelements,
                               mesh->o_sgeo,
@@ -72,14 +77,18 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_PI,
                               ins->o_PIx,
                               ins->o_PIy);
+  
+  occaTimerToc(mesh->device,"GradientSurface");
 
 
   
   // U <= U - dt/g0 * d(pressure increment)/dx
   // V <= V - dt/g0 * d(pressure increment)/dy
+
+  occaTimerTic(mesh->device,"UpdateUpdate");
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,
-                              ins->g0,
+                              ins->ig0,
                               ins->a0,
                               ins->a1,
                               ins->a2,
@@ -94,6 +103,8 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                               ins->o_U,
                               ins->o_V,
                               ins->o_P);
+
+  occaTimerToc(mesh->device,"UpdateUpdate");
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
 }

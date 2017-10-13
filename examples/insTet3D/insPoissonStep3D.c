@@ -116,7 +116,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  #if 0// if time dependent BC or Pressure Solve not Increment
+  #if 1// if time dependent BC or Pressure Solve not Increment
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
@@ -137,22 +137,15 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  //ins->o_rhsP.copyTo(ins->rhsP);
+  //occaTimerTic(mesh->device,"Pr Solve");
+  //occaTimerTic(mesh->device,"KernelTime");
+  mesh->device.finish();  
+  double tic = MPI_Wtime();  
+  ins->NiterP= ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
+  mesh->device.finish(); 
+  double toc = MPI_Wtime();
 
-  // // 
-  // dfloat maxrhsp = 0; 
-  // for (iint e=0; e<mesh->Nelements; e++){
-  //   for (iint n=0; n<mesh->Np; n++){
-  //     maxrhsp = mymax(maxrhsp, ins->rhsP[n+e*mesh->Np]);
-  //     //ins->rhsP[n+e*mesh->Np] = 0.00000001; 
-  //   }
-  // }
-  
-  // printf("maxRhsP = %.5e, dt= %.5e\n",maxrhsp, ins->dt);
-  // ins->o_rhsP.copyFrom(ins->rhsP);
+  ins->prtime = toc-tic; 
+  //occaTimerToc(mesh->device,"Pr Solve"); 
 
-  printf("Solving for P \n");
-  ellipticSolveTet3D(solver, 0.0, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
-
-  //ins->o_PI.copyFrom(ins->rhsP); 
 }

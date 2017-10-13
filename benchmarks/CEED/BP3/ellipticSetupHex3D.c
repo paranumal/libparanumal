@@ -3,7 +3,7 @@
 void ellipticSetupHex3D(mesh3D *mesh, occa::kernelInfo &kernelInfo){
 
   mesh->Nfields = 1;
-
+  
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
@@ -24,7 +24,7 @@ void ellipticSetupHex3D(mesh3D *mesh, occa::kernelInfo &kernelInfo){
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = 0", rank%2);
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
-
+  
   void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
 }

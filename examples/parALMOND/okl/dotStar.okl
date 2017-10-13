@@ -1,0 +1,24 @@
+// b = b.*a
+kernel void simpleDotStarKernel(const iint   N,
+				      const dfloat *restrict a,
+				            dfloat *restrict b){
+
+  for(iint i=0;i<N;++i;tile(256)){
+    if(i<N)
+      b[i] *= a[i];
+  }
+}
+
+// c = alpha*(a.*b) + beta *c
+kernel void dotStarKernel(const iint   N,
+			        const dfloat   alpha,
+			        const dfloat   beta,
+			        const dfloat *restrict a,
+			        const dfloat *restrict b,
+			              dfloat *restrict c){
+
+  for(iint i=0;i<N;++i;tile(256)){
+    if(i<N)
+      c[i] = alpha * a[i] * b[i] + beta * c[i];
+  }
+}

@@ -1,14 +1,17 @@
 #include "ins2D.h"
 
+
+
 void insRun2D(ins_t *ins, char *options){
 
   mesh2D *mesh = ins->mesh;
+  
   // Write Initial Data
-  insReport2D(ins, 0, options);
-  // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
-  iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
-  dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
-  dfloat *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
+  // insReport2D(ins, 0, options);
+  // Allocate MPI buffer for velocity step solver
+  iint  tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  dfloat  *tSendBuffer = (dfloat*) malloc(tHaloBytes);
+  dfloat  *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
 
   iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
   dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
@@ -24,7 +27,11 @@ void insRun2D(ins_t *ins, char *options){
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  
+
+  occaTimerTic(mesh->device,"INS");
+
+
+
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -49,7 +56,8 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else if(tstep<400)
+    else
+     // if(tstep<400)
     {
       // advection, second order in time, first order increment
       ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
@@ -57,95 +65,141 @@ void insRun2D(ins_t *ins, char *options){
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
     }
-    else{
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-    }
-  #else
+    // else{
+    //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
+    //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+    //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+    //   ins->g0 =  11.f/6.f;
+    // }
+  #else 
    if(tstep<1){
        //advection, first order in time, increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.f;      
-    }
-    else {
+      ins->g0 =  1.f; 
+      ins->ExplicitOrder = 1;     
+   }
+    else  
+      // if(tstep<2) 
+    {
     //advection, second order in time, no increment
     ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
     ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
     ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
     ins->g0 =  1.5f;
-     }
+    ins->ExplicitOrder=2;
+    }
+    // else{
+    // //advection, second order in time, no increment
+    // ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
+    // ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+    // ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+    // ins->g0 =  11.f/6.f;
+    // ins->ExplicitOrder=3;
+    // }
+
+
     
   #endif
-
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
+    ins->idt = 1.0/ins->dt; 
+    ins->ig0 = 1.0/ins->g0;
 
-    switch(subcycling){
+    if(strstr(options,"ALGEBRAIC")){
+     switch(subcycling){
       case 1:
+        occaTimerTic(mesh->device,"AdvectionSubStep");
         insAdvectionSubCycleStep2D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
+        occaTimerToc(mesh->device,"AdvectionSubStep");
       break;
 
       case 0:
-       insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+
+      occaTimerTic(mesh->device,"AdvectionStep");
+      insAdvectionStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+      occaTimerToc(mesh->device,"AdvectionStep");
       break;
     }
 
-    insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
-    insPoissonStep2D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
-    insUpdateStep2D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
 
-    printf("tstep = %d\n", tstep);
+    occaTimerTic(mesh->device,"HelmholtzStep");
+    insHelmholtzStep2D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options); 
+    occaTimerToc(mesh->device,"HelmholtzStep");
+
+    occaTimerTic(mesh->device,"PoissonStep");
+    insPoissonStep2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    occaTimerToc(mesh->device,"PoissonStep");
+    
+    occaTimerTic(mesh->device,"UpdateStep");
+    insUpdateStep2D(ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
+    occaTimerToc(mesh->device,"UpdateStep"); 
+    
+    } 
+
+    else {
+    insAdvectionStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insPoissonStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insHelmholtzStepSS2D(ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    }
+
+    // printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
+    
+
+    occaTimerTic(mesh->device,"Report");
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
       }
     }
-    
-    if(strstr(options, "REPORT")){
-      if(((tstep+1)%ins->errorStep)==0){
+
+
+     if(strstr(options, "REPORT")){
+      if(((tstep+1)%(ins->errorStep))==0){
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
+    
+    occaTimerToc(mesh->device,"Report");
 
-#if 0 // For time accuracy test fed history with exact solution
-    if(tstep<1){
-      iint offset = (mesh->Nelements+mesh->totalHaloPairs);
-     // Overwrite Velocity
-     for(iint e=0;e<mesh->Nelements;++e){
-        for(iint n=0;n<mesh->Np;++n){
-          const iint id = n + mesh->Np*e;
-          dfloat x = mesh->x[id];
-          dfloat y = mesh->y[id];
-          dfloat tt = 1.0*ins->dt;
-          dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
-          dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
-          dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
+    
+    #if 1 // For time accuracy test fed history with exact solution
+        if(tstep<1){
+          iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+          dfloat tt = (tstep+1)*ins->dt;
+         // Overwrite Velocity
+         for(iint e=0;e<mesh->Nelements;++e){
+            for(iint n=0;n<mesh->Np;++n){
+              iint id = n + mesh->Np*e;
+              dfloat x = mesh->x[id];
+              dfloat y = mesh->y[id];
 
-          // Current time
-          const int index0 = (ins->index+0)%3;
-          const iint id0   = n + mesh->Np*(e+index0*offset);
-          ins->U[id0] = u0; 
-          ins->V[id0] = v0; 
-          ins->P[id0] = p0;
+              dfloat u0 = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*tt); ;
+              dfloat v0 =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*tt); 
+              dfloat p0 = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*tt);
+
+              id += ins->index*Ntotal; 
+
+              ins->U[id] = u0; 
+              ins->V[id] = v0; 
+              ins->P[id] = p0;
+            }
+          }
+           ins->o_U.copyFrom(ins->U);
+           ins->o_V.copyFrom(ins->V);
+           ins->o_P.copyFrom(ins->P);
         }
-      }
-     
-       ins->o_U.copyFrom(ins->U);
-       ins->o_V.copyFrom(ins->V);
-       ins->o_P.copyFrom(ins->P);
-    }
-#endif
+    #endif
   }
 
+occaTimerToc(mesh->device,"INS");
 
- // For Final Time
-insReport2D(ins, ins->NtimeSteps+1,options);
+
 
 #if 1
-insErrorNorms2D(ins, ins->finalTime, options);
+dfloat finalTime = ins->NtimeSteps*ins->dt;
+insReport2D(ins, ins->NtimeSteps,options);
+insErrorNorms2D(ins, finalTime, options);
 #endif
 
 // Deallocate Halo MPI storage
@@ -155,6 +209,14 @@ free(vSendBuffer);
 free(vRecvBuffer);
 free(pSendBuffer);
 free(pRecvBuffer);
+
+
+
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank==0) occa::printTimer();
+
 }
 
 
