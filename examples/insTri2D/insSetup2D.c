@@ -266,12 +266,16 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
-  int cubNblockV = 256/maxNodesVolumeCub; 
+  int cubNblockV = mymax(1,256/maxNodesVolumeCub); 
   //
   iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
-  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  int cubNblockS = mymax(1,256/maxNodesSurfaceCub); // works for CUDA
   //
+
+  printf("p_cubNblockV=%d\n", cubNblockV);
+  printf("p_cubNblockS=%d\n", cubNblockS);
+
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
