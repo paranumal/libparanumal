@@ -17,14 +17,14 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -O3 -I../../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../../.."'  -I../../../utilities/parALMOND/include
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -O3 -I../../../3rdParty/gslib.github/src -D DHOLMES='"${CURDIR}/../../.."'  -I../../../examples/parALMOND/include
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -O3 -L../../../3rdParty/gslib.github -lgs\
-			-L../../../utilities/parALMOND -lparALMOND
+			-L../../../examples/parALMOND -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../../utilities/BlasLapack -lBlasLapack
+LIBS	=  $(links) -L../../../3rdParty/BlasLapack -lBlasLapack
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
