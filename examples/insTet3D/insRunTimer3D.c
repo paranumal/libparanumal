@@ -1,11 +1,11 @@
 #include <mpi.h>
-#include "mesh2D.h"
-#include "ellipticTri2D.h"
+#include "mesh3D.h"
+#include "ellipticTet3D.h"
 
 // 1 Advection Volume 2 Advection Surface 3 Ax 4 Gradient
-#define KERNEL_TEST 2
+#define KERNEL_TEST 1
 
-void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
+void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
 
   char deviceConfig[BUFSIZ];
   int rank, size;
@@ -19,7 +19,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
 
   occa::kernelInfo kernelInfo;
-  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+  meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
   
   kernelInfo.addInclude(boundaryHeaderFileName);
 
@@ -36,28 +36,31 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   dfloat *G     = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
   
 
-  occa::memory o_U, o_V, o_X, o_Y,  o_Ud, o_Vd,  o_G;
-  occa::memory o_cU, o_cV,   o_cUd, o_cVd; 
+  occa::memory o_U, o_V, o_W, o_X, o_Y, o_Z, o_Ud, o_Vd, o_Wd, o_G;
+  occa::memory o_cU, o_cV, o_cW,  o_cUd, o_cVd, o_cWd; 
   o_U   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_V   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
+  o_W   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Ud  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Vd  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
+  o_Wd  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
 
-  // o_cU   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  //o_cV   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  // o_cUd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  // o_cVd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cU   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cV   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cW   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cUd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cVd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
+  o_cWd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
 
 
   o_X   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Y   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
-  // o_G   = mesh->device.malloc(Ntotal*4*sizeof(dfloat),G); 
-  // free(G); 
-  free(Z); 
-  
-  free(cZ);
+  o_Z   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
+  o_G   = mesh->device.malloc(Ntotal*4*sizeof(dfloat),G); 
 
- 
+  free(Z); free(G); free(cZ);
+
+  [printf("Nelements: %d\n", mesh->Nelements);
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -86,9 +89,8 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   iint Nfp     = mesh->Nfp; 
   iint Ntfp    = mesh->Nfaces*mesh->Nfp; 
   iint intNtfp = mesh->Nfaces*mesh->intNfp;
-  double tic   = 0.0, toc = 0.0, kernelElapsed=0.0;
-  int NbytesShared = 0;  
-
+  double tic = 0.0, toc = 0.0, kernelElapsed=0.0;
+  int NbytesShared = 0; 
 
 
   occa::kernel TestKernel; 
@@ -102,9 +104,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   for(iint i=0; i<NKernels; i++)
   {
     
-    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);
+    sprintf(kernelNames[i], "insSubCycleCubatureVolume3D_v%d", i);
 
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",kernelNames[i], kernelInfo);
 
     printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
 
@@ -117,18 +119,22 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     tic = MPI_Wtime();  
       // assume 1 mpi process
       for(int it=0;it<iterations;++it){
-        //printf("Cubature Points: %d", mesh->cubNp);
-        testKernels[i](mesh->Nelements,
+          testKernels[i](mesh->Nelements,
                   mesh->o_vgeo,
                   mesh->o_cubDrWT,
                   mesh->o_cubDsWT,
+                  mesh->o_cubDtWT,
                   mesh->o_cubInterpT,
                   o_U,
                   o_V,
+                  o_W,
                   o_Ud,
                   o_Vd,
+                  o_Wd,
                   o_X,
-                  o_Y);
+                  o_Y,
+                  o_Z);
+
       }
 
       occa::streamTag end = mesh->device.tagStream();
@@ -136,146 +142,20 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       toc = MPI_Wtime();
       kernelElapsed    = toc-tic;
 
-
-      if(i==0){
-        Nbytes       = (sizeof(dfloat)*(4*Np*Nc +4*Np + 2*Np)/2);
-
-        NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
-
-        flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
+       if(i==0){
+        Nbytes =(sizeof(dfloat)*(6*Np*Nc + 9*Np + 3*Np)/2);
+        flops = Nc*Np*12 + Nc*9 + Np*Nc*54 + Np*42 + Np*3;  // All float ops only
+        NbytesShared     = (sizeof(dfloat)*(9*Nc + 9*Np*Nc)); 
       }
       else
       {
-        Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
-
-        NbytesShared     = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
-
-        flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
+        Nbytes =(sizeof(dfloat)*(9*mesh->Np +9*mesh->Np)/2);
+        flops = Nc*Np*12 + Nc*9 + Np*Nc*54 + Np*42 + Np*3;  // All float ops only
+        NbytesShared     = (sizeof(dfloat)*(6*Np + 6*Np*Nc + 9*Nc + 9*Np*Nc)); 
       }
-      
-      
-      occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
-      occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
-
-      mesh->device.finish(); 
-      tic = MPI_Wtime();
-
-      // occa::streamTag startCopy = mesh->device.tagStream();
-      for(int it=0;it<iterations;++it){
-         o_bah.copyTo(o_foo);
-      }
-      // occa::streamTag endCopy = mesh->device.tagStream();
-
-      mesh->device.finish();
-      toc = MPI_Wtime();
-      double copyElapsed = (toc-tic);
-      //double copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
-
-
-      // Compute Data
-      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
-
-
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
-      double d2dbound      = copyBandwidth*gflops/bw;
-
      
-
-      double smbound       = 7340.5*flops/( (double) NbytesShared);
-  
-      double intensity    = gflops/bw; 
-
-      double roofline     = mymin(d2dbound, smbound);
-
-      double max_thg_p100 = 4670; 
-      double ach_thg      = mymin(549*intensity, max_thg_p100);
-
-
-
-      printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\tTH_peak]\n");
-      printf("%02d %02d\t%02d\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\n",
-              mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-              kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
-
-      char fname[BUFSIZ];
-      sprintf(fname, "KernelData.dat");
-      FILE *fp;
-      fp = fopen(fname, "a");
-
-      fprintf(fp, "%02d %02d\t%02d\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\n",
-              mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-              kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
-      fclose(fp);
-
-    }
-
-  #endif
-
-
-
-
-
-
-
-   // SURFACE KERNEL
-  #if KERNEL_TEST==2
-  int NKernels = 5;
-
-  occa::kernel *testKernels = new occa::kernel[NKernels];
-  char kernelNames[NKernels][BUFSIZ];
-
-  for(iint i=0; i<NKernels; i++)
-  {
-    
-    sprintf(kernelNames[i], "insSubCycleCubatureSurface2D_v%d", i);
-
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
-
-    printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
-
-
-    // sync processes
-    mesh->device.finish();
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    //occaTimerTic(mesh->device,"KernelTime");
-    tic = MPI_Wtime();  
-      // assume 1 mpi process
-      for(int it=0;it<iterations;++it){
-
-
-        //printf("Cubature Points: %d", mesh->cubNp);
-        testKernels[i](mesh->Nelements,
-                mesh->o_sgeo,
-                mesh->o_intInterpT,
-                mesh->o_intLIFTT,
-                mesh->o_vmapM,
-                mesh->o_vmapP,
-                mesh->o_EToB,
-                time,
-                mesh->o_intx,
-                mesh->o_inty,
-                o_U,
-                o_V,
-                o_Ud,
-                o_Vd,
-                o_X,
-                o_Y);
-      }
-
-      occa::streamTag end = mesh->device.tagStream();
-      mesh->device.finish();  
-      toc = MPI_Wtime();
-      kernelElapsed    = toc-tic;
-
-
-       Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp + 4*mesh->Np))/2;
-
-       NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
-
-       flops            = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;
-            
+     
+      
       
       occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
       occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
@@ -294,8 +174,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       double copyElapsed = (toc-tic);
       //copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
 
-
-      // Compute Data
+ // Compute Data
       double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
       double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
 
@@ -307,9 +186,12 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       double smbound       = 7340.5*flops/( (double) NbytesShared);
 
-      double intensity    = gflops/bw; 
+      printf("SMBOUND: %17.15e\n",smbound);
 
-      double roofline     = mymin(d2dbound, smbound);
+  
+      double intensity     = gflops/bw; 
+
+      double roofline      = mymin(d2dbound, smbound);
 
       double max_thg_p100 = 4670; 
       double ach_thg      = mymin(549*intensity, max_thg_p100);
@@ -322,11 +204,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
               kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
 
       char fname[BUFSIZ];
-      sprintf(fname, "KernelData.dat");
+      sprintf(fname, "KernelData.txt");
       FILE *fp;
       fp = fopen(fname, "a");
-
-      fprintf(fp, "%02d %02d\t%02d\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\n",
+      fprintf(fp,"%02d %02d\t%02d\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
               kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
       fclose(fp);
@@ -335,6 +216,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   #endif
 
+
+
+  
 
 
 
