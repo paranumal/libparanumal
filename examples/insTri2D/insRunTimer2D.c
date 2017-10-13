@@ -24,7 +24,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 2,  Nbytes=0,  zero = 0;  
+  iint index = 0, iterations = 100,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
   dfloat time = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
