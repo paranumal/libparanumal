@@ -768,35 +768,36 @@ kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
     for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block      
       for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 
-	  occaUnroll(p_Nmult)
-	    for(iint em=0;em<p_Nmult;++em){
-	      const int e = eo + es*p_Nmult + em;
-	      const int id = e*p_Np + n;
-	      
-	      if(e<Nelements && n<p_Np){
-		
-		// prefetch geometric factors (constant on triangle)
-		const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-		const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-		const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-		const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-		
-		const dfloat Un = U[id];
-		const dfloat Vn = V[id];
-		
-		s_Ud[em][es][n] = Ud[id];
-		s_Vd[em][es][n] = Vd[id];
-		
-		s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-		s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
-	      }else{
-		s_U[em][es][n] = 0;
-		s_V[em][es][n] = 0;
-		s_Ud[em][es][n] = 0;
-		s_Vd[em][es][n] = 0;
-	      }
-	    }
-      }
+			occaUnroll(p_Nmult)
+			for(iint em=0;em<p_Nmult;++em){
+				const int e = eo + es*p_Nmult + em;
+				const int id = e*p_Np + n;
+
+				if(e<Nelements && n<p_Np){
+
+					// prefetch geometric factors (constant on triangle)
+					const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+					const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+					const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+					const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+					const dfloat Un = U[id];
+					const dfloat Vn = V[id];
+
+					s_Ud[em][es][n] = Ud[id];
+					s_Vd[em][es][n] = Vd[id];
+
+					s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+					s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
+				}
+				else{
+				s_U[em][es][n] = 0;
+				s_V[em][es][n] = 0;
+				s_Ud[em][es][n] = 0;
+				s_Vd[em][es][n] = 0;
+				}
+			}
+    }
     }
     
     barrier(localMemFence);
@@ -804,37 +805,36 @@ kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
     for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 
-	dfloat cU[p_Nmult], cV[p_Nmult], cUd[p_Nmult], cVd[p_Nmult];
+			dfloat cU[p_Nmult], cV[p_Nmult], cUd[p_Nmult], cVd[p_Nmult];
 
-	occaUnroll(p_Nmult)
-	  for(iint em=0;em<p_Nmult;++em){
-	    cU[em] = 0.f;
-	    cV[em] = 0.f;
-	    cUd[em] = 0.f; 
-	    cVd[em] = 0.f;
-	  }
-	
-	occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
-	    const dfloat cIni = cubInterpT[n+i*p_cubNp];
+			occaUnroll(p_Nmult)
+			  for(iint em=0;em<p_Nmult;++em){
+			    cU[em] = 0.f;
+			    cV[em] = 0.f;
+			    cUd[em] = 0.f; 
+			    cVd[em] = 0.f;
+			  }
 
-	    occaUnroll(p_Nmult)
-	      for(iint em=0;em<p_Nmult;++em){
-		cU[em]  += cIni*s_U[em][es][i];
-		cV[em]  += cIni*s_V[em][es][i];
-		cUd[em] += cIni*s_Ud[em][es][i];
-		cVd[em] += cIni*s_Vd[em][es][i];				
-	      }
-	  }
-	
-	//
-	occaUnroll(p_Nmult)
-	  for(iint em=0;em<p_Nmult;++em){
-	    s_cF11[em][es][n] = cU[em]*cUd[em];
-	    s_cF12[em][es][n] = cV[em]*cUd[em];
-	    s_cF21[em][es][n] = cU[em]*cVd[em];
-	    s_cF22[em][es][n] = cV[em]*cVd[em];
-	  }
+			occaUnroll(p_Np)
+			  for(iint i=0;i<p_Np;++i){
+			    const dfloat cIni = cubInterpT[n+i*p_cubNp];
+					occaUnroll(p_Nmult)
+					for(iint em=0;em<p_Nmult;++em){
+						cU[em]  += cIni*s_U[em][es][i];
+						cV[em]  += cIni*s_V[em][es][i];
+						cUd[em] += cIni*s_Ud[em][es][i];
+						cVd[em] += cIni*s_Vd[em][es][i];				
+		      }
+			  }
+
+			//
+			occaUnroll(p_Nmult)
+			  for(iint em=0;em<p_Nmult;++em){
+			    s_cF11[em][es][n] = cU[em]*cUd[em];
+			    s_cF12[em][es][n] = cV[em]*cUd[em];
+			    s_cF21[em][es][n] = cU[em]*cVd[em];
+			    s_cF22[em][es][n] = cV[em]*cVd[em];
+			  }
       }
     }
     
@@ -887,6 +887,10 @@ kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
     }
   }
 }
+
+
+
+
 
 
 #define p_NblockV 4
@@ -979,15 +983,15 @@ kernel void insSubCycleCubatureVolume2D_v7(const iint Nelements,
 	    
 	    occaUnroll(p_Nout)
 	      for(iint nout=0;nout<p_Nout;++nout){
-		const int n = p_Np*nout + t;
-		if(n<p_cubNp){
-		  const dfloat cIni = cubInterpT[n+i*p_cubNp];
-		  
-		  cU[nout]  += cIni*Ui;
-		  cV[nout]  += cIni*Vi;
-		  cUd[nout] += cIni*Udi;
-		  cVd[nout] += cIni*Vdi;
-		}
+					const int n = p_Np*nout + t;
+					if(n<p_cubNp){
+		 			 const dfloat cIni = cubInterpT[n+i*p_cubNp];
+					  
+					  cU[nout]  += cIni*Ui;
+					  cV[nout]  += cIni*Vi;
+					  cUd[nout] += cIni*Udi;
+					  cVd[nout] += cIni*Vdi;
+					}
 	      }
 	  }
 	
