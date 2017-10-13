@@ -13,8 +13,6 @@
 // block size for reduction (hard coded)
 #define blockSize 256
 
-#define USE_BERN 0
-
 typedef struct {
 
   mesh_t *mesh;
