@@ -3,7 +3,7 @@
 #include "ellipticTri2D.h"
 
 // 1 Advection Volume 2 Advection Surface 3 Ax 4 Gradient
-#define KERNEL_TEST 2
+#define KERNEL_TEST 1
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 

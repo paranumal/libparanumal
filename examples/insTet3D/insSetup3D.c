@@ -278,7 +278,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   //
   iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
-  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
   //
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
