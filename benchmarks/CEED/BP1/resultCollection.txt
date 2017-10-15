@@ -3,7 +3,7 @@ gj[1]=-4.51028e-17
 gj[2]=0.774597
 J in range [0.000244141,0.000244141] and max Skew = 1
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 4
 p_blockSize = 1024 
 Nz = 2
@@ -39,26 +39,26 @@ Found cached binary of [fdcaefbab3008db6/parsedSource.occa] in [8426fd3ba4a5245d
 Found cached binary of [c012f0aadd071954/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [c012f0aadd071954/parsedSource.occa] in [4b209a239c8d6871/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 600724 600724 600724
+   handle bytes (avg, min, max): 301588 301588 301588
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 600724 600724 600724
+   handle bytes (avg, min, max): 301588 301588 301588
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 221184, mesh->Np = 8 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 01 65536 0.000576972961425781 10 6.553600000000000E+04 1.135859119603306E+09 6.386776859504132E+01 3.221922008370869E+02 4.548760330578513E+01	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 1 6.386776859504132E+01 
-COPYBW 1  3.221922008370869E+02 
+Nall = 110592, mesh->Np = 8 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 01 32768 0.000417947769165039 10 3.276800000000000E+04 7.840214117056475E+08 4.408442669709070E+01 2.812785581093145E+02 3.139760410724472E+01	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 1 4.408442669709070E+01 
+COPYBW 1  2.812785581093145E+02 
 globalMaxError = 0.999999944818339
 gj[0]=-0.861136
 gj[1]=-0.339981
 gj[2]=0.339981
 gj[3]=0.861136
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=94400
+gatherChange=46800
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 5
 p_blockSize = 1024 
 Nz = 3
@@ -94,17 +94,17 @@ Found cached binary of [3ef0529b11de2471/parsedSource.occa] in [54d763305bab5f5e
 Found cached binary of [777394b962fdc5b7/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [777394b962fdc5b7/parsedSource.occa] in [957996a8aaa0c1e2/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 2.15976e+06 2159764 2159764
+   handle bytes (avg, min, max): 1.07919e+06 1079188 1079188
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 2.15976e+06 2159764 2159764
+   handle bytes (avg, min, max): 1.07919e+06 1079188 1079188
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 524288, mesh->Np = 27 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 02 221184 0.00053715705871582 10 2.211840000000000E+05 4.117678366338216E+09 2.613404349755881E+02 3.503653444130400E+02 1.340790057700843E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 2 2.613404349755881E+02 
-COPYBW 2  3.503653444130400E+02 
+Nall = 262144, mesh->Np = 27 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 02 110592 0.000428915023803711 10 1.105920000000000E+05 2.578412829171762E+09 1.636464702612562E+02 3.270278265214981E+02 8.395775430794886E+01	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 2 1.636464702612562E+02 
+COPYBW 2  3.270278265214981E+02 
 globalMaxError = 0.999999999147691
 gj[0]=-0.90618
 gj[1]=-0.538469
@@ -112,9 +112,9 @@ gj[2]=-9.62592e-17
 gj[3]=0.538469
 gj[4]=0.90618
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=235392
+gatherChange=116640
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 6
 p_blockSize = 1024 
 Nz = 4
@@ -150,17 +150,17 @@ Found cached binary of [610ace3c4d55e35c/parsedSource.occa] in [6d97865e15f61fb7
 Found cached binary of [41ec772c9fa5edfe/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [41ec772c9fa5edfe/parsedSource.occa] in [2f98adade9f49623/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 4.83701e+06 4837012 4837012
+   handle bytes (avg, min, max): 2.40975e+06 2409748 2409748
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 4.83701e+06 4837012 4837012
+   handle bytes (avg, min, max): 2.40975e+06 2409748 2409748
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 1024000, mesh->Np = 64 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 03 524288 0.000710010528564453 10 5.242880000000000E+05 7.384228527709872E+09 5.378106111484218E+02 3.605387086063213E+02 2.174882471457354E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 3 5.378106111484218E+02 
-COPYBW 3  3.605387086063213E+02 
+Nall = 512000, mesh->Np = 64 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 03 262144 0.00050806999206543 10 2.621440000000000E+05 5.159604072153918E+09 3.757860159549508E+02 3.491989232984956E+02 1.519662130455185E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 3 3.757860159549508E+02 
+COPYBW 3  3.491989232984956E+02 
 globalMaxError = 0.999999999998547
 gj[0]=-0.93247
 gj[1]=-0.661209
@@ -169,9 +169,9 @@ gj[3]=0.238619
 gj[4]=0.661209
 gj[5]=0.93247
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=422976
+gatherChange=209520
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 7
 p_blockSize = 1024 
 Nz = 5
@@ -207,17 +207,17 @@ Found cached binary of [e2eb8d79d95b9627/parsedSource.occa] in [e8670e0ead400aa0
 Found cached binary of [2ee39869c507a6bd/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [2ee39869c507a6bd/parsedSource.occa] in [d0c51e163ea13cdc/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 8.63247e+06 8632468 8632468
+   handle bytes (avg, min, max): 4.29327e+06 4293268 4293268
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 8.63247e+06 8632468 8632468
+   handle bytes (avg, min, max): 4.29327e+06 4293268 4293268
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 1769472, mesh->Np = 125 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 04 1024000 0.00105500221252441 10 1.024000000000000E+06 9.706140781920904E+09 8.053152542372882E+02 3.659688060533437E+02 2.695954802259887E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 4 8.053152542372882E+02 
-COPYBW 4  3.659688060533437E+02 
+Nall = 884736, mesh->Np = 125 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 04 512000 0.000693082809448242 10 5.120000000000000E+05 7.387284650842793E+09 6.129205366357069E+02 3.572904604018657E+02 2.051874785001720E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 4 6.129205366357069E+02 
+COPYBW 4  3.572904604018657E+02 
 globalMaxError = 0.999999999999812
 gj[0]=-0.949108
 gj[1]=-0.741531
@@ -227,9 +227,9 @@ gj[4]=0.405845
 gj[5]=0.741531
 gj[6]=0.949108
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=657152
+gatherChange=325440
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 8
 p_blockSize = 1024 
 Nz = 6
@@ -265,17 +265,17 @@ Found cached binary of [ce324e9b783e8d13/parsedSource.occa] in [639f08608c9672d4
 Found cached binary of [cfd24b8b8acc4b39/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [cfd24b8b8acc4b39/parsedSource.occa] in [5913aaa851d7b250/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 1.35461e+07 13546132 13546132
+   handle bytes (avg, min, max): 6.72975e+06 6729748 6729748
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 1.35461e+07 13546132 13546132
+   handle bytes (avg, min, max): 6.72975e+06 6729748 6729748
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 2809856, mesh->Np = 216 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 05 1769472 0.00153017044067383 10 1.769472000000000E+06 1.156388826345902E+10 1.080909940791524E+03 3.684514828426554E+02 3.091305702711125E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 5 1.080909940791524E+03 
-COPYBW 5  3.684514828426554E+02 
+Nall = 1404928, mesh->Np = 216 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 05 884736 0.000922203063964844 10 8.847360000000000E+05 9.593722191685625E+09 8.967528438469493E+02 3.637299482682226E+02 2.564632885211996E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 5 8.967528438469493E+02 
+COPYBW 5  3.637299482682226E+02 
 globalMaxError = 0.999999999999994
 gj[0]=-0.96029
 gj[1]=-0.796666
@@ -286,9 +286,9 @@ gj[5]=0.525532
 gj[6]=0.796666
 gj[7]=0.96029
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=937920
+gatherChange=464400
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 9
 p_blockSize = 1024 
 Nz = 7
@@ -324,17 +324,17 @@ Found cached binary of [420969118f9abd95/parsedSource.occa] in [963fe8a6693a833a
 Found cached binary of [d61d8ec1161f27df/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [d61d8ec1161f27df/parsedSource.occa] in [10b6a12eaa41a78e/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 1.9578e+07 19578004 19578004
+   handle bytes (avg, min, max): 9.71919e+06 9719188 9719188
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 1.9578e+07 19578004 19578004
+   handle bytes (avg, min, max): 9.71919e+06 9719188 9719188
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 4194304, mesh->Np = 343 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 06 2809856 0.00217318534851074 10 2.809856000000000E+06 1.292966567221503E+10 1.346984092155787E+03 3.700617107863846E+02 3.364651673066375E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 6 1.346984092155787E+03 
-COPYBW 6  3.700617107863846E+02 
+Nall = 2097152, mesh->Np = 343 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 06 1404928 0.00128293037414551 10 1.404928000000000E+06 1.095092943711578E+10 1.140843709347705E+03 3.664935016915938E+02 2.849730533358112E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 6 1.140843709347705E+03 
+COPYBW 6  3.664935016915938E+02 
 globalMaxError = 0.999999999999998
 gj[0]=-0.96816
 gj[1]=-0.836031
@@ -346,9 +346,9 @@ gj[6]=0.613371
 gj[7]=0.836031
 gj[8]=0.96816
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=1265280
+gatherChange=626400
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 10
 p_blockSize = 1024 
 Nz = 8
@@ -384,17 +384,17 @@ Found cached binary of [3e5710834d2884a7/parsedSource.occa] in [2bab7fd89c7906e0
 Found cached binary of [1bbae13339a89d1d/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [1bbae13339a89d1d/parsedSource.occa] in [8f6f54506f4354dc/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 2.67281e+07 26728084 26728084
+   handle bytes (avg, min, max): 1.32616e+07 13261588 13261588
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 2.67281e+07 26728084 26728084
+   handle bytes (avg, min, max): 1.32616e+07 13261588 13261588
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 5971968, mesh->Np = 512 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 07 4194304 0.0030820369720459 10 4.194304000000000E+06 1.360886984173900E+10 1.565096310048735E+03 3.711697852950055E+02 3.471555658698848E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 7 1.565096310048735E+03 
-COPYBW 7  3.711697852950055E+02 
+Nall = 2985984, mesh->Np = 512 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 07 2097152 0.00173401832580566 10 2.097152000000000E+06 1.209417437399697E+10 1.390897841330950E+03 3.688850300370348E+02 3.085164306338512E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 7 1.390897841330950E+03 
+COPYBW 7  3.688850300370348E+02 
 globalMaxError =                 1
 gj[0]=-0.973907
 gj[1]=-0.865063
@@ -407,9 +407,9 @@ gj[7]=0.67941
 gj[8]=0.865063
 gj[9]=0.973907
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=1639232
+gatherChange=811440
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 11
 p_blockSize = 1024 
 Nz = 7
@@ -445,17 +445,17 @@ Found cached binary of [ac4199af7c0bd94d/parsedSource.occa] in [17c1f5649cb49ea2
 Found cached binary of [fb58b3df817e1ddf/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [fb58b3df817e1ddf/parsedSource.occa] in [fca3b74cda4a67ee/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 3.49964e+07 34996372 34996372
+   handle bytes (avg, min, max): 1.73569e+07 17356948 17356948
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 3.49964e+07 34996372 34996372
+   handle bytes (avg, min, max): 1.73569e+07 17356948 17356948
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 8192000, mesh->Np = 729 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 08 5971968 0.0042569637298584 10 5.971968000000000E+06 1.402870303571661E+10 1.766407168860263E+03 3.719628238799776E+02 3.524211705404649E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 8 1.766407168860263E+03 
-COPYBW 8  3.719628238799776E+02 
+Nall = 4096000, mesh->Np = 729 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 08 2985984 0.00235795974731445 10 2.985984000000000E+06 1.266342228021840E+10 1.594499494438827E+03 3.699084286853896E+02 3.181233569261881E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 8 1.594499494438827E+03 
+COPYBW 8  3.699084286853896E+02 
 globalMaxError =                 1
 gj[0]=-0.978229
 gj[1]=-0.887063
@@ -469,9 +469,9 @@ gj[8]=0.730152
 gj[9]=0.887063
 gj[10]=0.978229
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=2059776
+gatherChange=1019520
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 12
 p_blockSize = 1024 
 Nz = 6
@@ -507,17 +507,17 @@ Found cached binary of [23b1ad53b5b895a3/parsedSource.occa] in [3e40478348ad1444
 Found cached binary of [a7623c438db66d71/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [a7623c438db66d71/parsedSource.occa] in [a8ba18c09f310980/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 4.43829e+07 44382868 44382868
+   handle bytes (avg, min, max): 2.20053e+07 22005268 22005268
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 4.43829e+07 44382868 44382868
+   handle bytes (avg, min, max): 2.20053e+07 22005268 22005268
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 10903552, mesh->Np = 1000 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 09 8192000 0.00565290451049805 10 8.192000000000000E+06 1.449166527541122E+10 1.983581611134542E+03 3.723872556914271E+02 3.596524673133699E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 9 1.983581611134542E+03 
-COPYBW 9  3.723872556914271E+02 
+Nall = 5451776, mesh->Np = 1000 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 09 4096000 0.00307393074035645 10 4.096000000000000E+06 1.332495864732801E+10 1.823885829519895E+03 3.707284396606285E+02 3.306972775924921E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 9 1.823885829519895E+03 
+COPYBW 9  3.707284396606285E+02 
 globalMaxError =                 1
 gj[0]=-0.981561
 gj[1]=-0.904117
@@ -532,9 +532,9 @@ gj[9]=0.769903
 gj[10]=0.904117
 gj[11]=0.981561
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=2526912
+gatherChange=1250640
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 13
 p_blockSize = 1024 
 Nz = 5
@@ -570,17 +570,17 @@ Found cached binary of [c2dc52735393aa2f/parsedSource.occa] in [40eab5181e33dcf8
 Found cached binary of [130d0fe3c4ef9e25/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [130d0fe3c4ef9e25/parsedSource.occa] in [47805720482ea4bc/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 5.48876e+07 54887572 54887572
+   handle bytes (avg, min, max): 2.72065e+07 27206548 27206548
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 5.48876e+07 54887572 54887572
+   handle bytes (avg, min, max): 2.72065e+07 27206548 27206548
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 14155776, mesh->Np = 1331 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 10 10903552 0.00746679306030273 10 1.090355200000000E+07 1.460272423775720E+10 2.159463567277604E+03 3.722335562567877E+02 3.588479468676160E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 10 2.159463567277604E+03 
-COPYBW 10  3.722335562567877E+02 
+Nall = 7077888, mesh->Np = 1331 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 10 5451776 0.0040130615234375 10 5.451776000000000E+06 1.358507954129278E+10 2.008973384030418E+03 3.711988970576974E+02 3.338403041825095E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 10 2.008973384030418E+03 
+COPYBW 10  3.711988970576974E+02 
 globalMaxError =                 1
 gj[0]=-0.984183
 gj[1]=-0.917598
@@ -596,9 +596,9 @@ gj[10]=0.801578
 gj[11]=0.917598
 gj[12]=0.984183
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=3040640
+gatherChange=1504800
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 14
 p_blockSize = 1024 
 Nz = 5
@@ -634,17 +634,17 @@ Found cached binary of [2054de2d8deb9739/parsedSource.occa] in [7a8118a2107348f6
 Found cached binary of [49aea99d1ff43983/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [49aea99d1ff43983/parsedSource.occa] in [28501e8ae02eebb2/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 6.65105e+07 66510484 66510484
+   handle bytes (avg, min, max): 3.29608e+07 32960788 32960788
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 6.65105e+07 66510484 66510484
+   handle bytes (avg, min, max): 3.29608e+07 32960788 32960788
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 17997824, mesh->Np = 1728 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 11 14155776 0.00940990447998047 10 1.415577600000000E+07 1.504348532986318E+10 2.390619235836627E+03 3.725124389801154E+02 3.666686936252153E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 11 2.390619235836627E+03 
-COPYBW 11  3.725124389801154E+02 
+Nall = 8998912, mesh->Np = 1728 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 11 7077888 0.00501608848571777 10 7.077888000000000E+06 1.411037309280479E+10 2.242334711725843E+03 3.716768361532465E+02 3.439250914967441E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 11 2.242334711725843E+03 
+COPYBW 11  3.716768361532465E+02 
 globalMaxError =                 1
 gj[0]=-0.986284
 gj[1]=-0.928435
@@ -661,9 +661,9 @@ gj[11]=0.827201
 gj[12]=0.928435
 gj[13]=0.986284
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=3600960
+gatherChange=1782000
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 15
 p_blockSize = 1024 
 Nz = 4
@@ -699,17 +699,17 @@ Found cached binary of [d26a4f5f78fa73d3/parsedSource.occa] in [f9e26d8455f78c34
 Found cached binary of [3757588f46ea4215/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [3757588f46ea4215/parsedSource.occa] in [d6e30b1ce3e5e1a0/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 7.92516e+07 79251604 79251604
+   handle bytes (avg, min, max): 3.9268e+07 39267988 39267988
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 7.92516e+07 79251604 79251604
+   handle bytes (avg, min, max): 3.9268e+07 39267988 39267988
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 22478848, mesh->Np = 2197 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-01 12 17997824 0.0135879516601562 10 1.799782400000000E+07 1.324542833985402E+10 2.251319483436272E+03 3.730727891550234E+02 3.206288601909040E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
-NUMBER OF INTEREST: 12 2.251319483436272E+03 
-COPYBW 12  3.730727891550234E+02 
+Nall = 11239424, mesh->Np = 2197 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 12 8998912 0.00720596313476562 10 8.998912000000000E+06 1.248814604196930E+10 2.122604552673372E+03 3.720641872521069E+02 3.022975119110641E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 12 2.122604552673372E+03 
+COPYBW 12  3.720641872521069E+02 
 globalMaxError =                 1
 gj[0]=-0.987993
 gj[1]=-0.937273
@@ -727,9 +727,9 @@ gj[12]=0.848207
 gj[13]=0.937273
 gj[14]=0.987993
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=4207872
+gatherChange=2082240
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 16
 p_blockSize = 1024 
 Nz = 4
@@ -765,19 +765,18 @@ Found cached binary of [ab93438b963f514b/parsedSource.occa] in [f2f8923022d7aa7c
 Found cached binary of [6758227bd68fddc9/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [6758227bd68fddc9/parsedSource.occa] in [55426c78dc7aea58/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 9.31109e+07 93110932 93110932
+   handle bytes (avg, min, max): 4.61281e+07 46128148 46128148
    buffer bytes (avg, min, max): 0 0 0
 starting mass parallel gather scatter setup
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 9.31109e+07 93110932 93110932
+   handle bytes (avg, min, max): 4.61281e+07 46128148 46128148
    buffer bytes (avg, min, max): 0 0 0
 finished temporary GS setup
-Nall = 27648000, mesh->Np = 2744 mesh->Nelements = 8192 mesh->totalHaloPairs = 0 
-Error
-    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
-    Line    : 1384
-    Error   : CUDA Error [ 2 ]: CUDA_ERROR_OUT_OF_MEMORY
-    Message : Device: malloc
+Nall = 13824000, mesh->Np = 2744 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 13 11239424 0.00890612602233887 10 1.123942400000000E+07 1.261987981284861E+10 2.284738321509838E+03 3.715201526409783E+02 3.036980323919154E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 13 2.284738321509838E+03 
+COPYBW 13  3.715201526409783E+02 
+globalMaxError =                 1
 gj[0]=-0.989401
 gj[1]=-0.944575
 gj[2]=-0.865631
@@ -795,9 +794,9 @@ gj[13]=0.865631
 gj[14]=0.944575
 gj[15]=0.989401
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=4861376
+gatherChange=2405520
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 17
 p_blockSize = 1024 
 Nz = 4
@@ -833,13 +832,18 @@ Found cached binary of [8b11a06f93e9b1bd/parsedSource.occa] in [740adae4725aaf12
 Found cached binary of [14c0f9df79f64f9f/parsedSource.occa] in [41712433a736094d/binary]
 Found cached binary of [14c0f9df79f64f9f/parsedSource.occa] in [d211b80ccc790dee/binary]
 gs_setup: 0 unique labels shared
-   handle bytes (avg, min, max): 1.08088e+08 108088468 108088468
+   handle bytes (avg, min, max): 5.35413e+07 53541268 53541268
    buffer bytes (avg, min, max): 0 0 0
-Error
-    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
-    Line    : 1384
-    Error   : CUDA Error [ 2 ]: CUDA_ERROR_OUT_OF_MEMORY
-    Message : Device: malloc
+starting mass parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 5.35413e+07 53541268 53541268
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 16777216, mesh->Np = 3375 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 14 13824000 0.0133719444274902 10 1.382400000000000E+07 1.033806270655779E+10 1.986252540741005E+03 3.720586774082450E+02 2.475284384694933E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 14 1.986252540741005E+03 
+COPYBW 14  3.720586774082450E+02 
+globalMaxError =                 1
 gj[0]=-0.990575
 gj[1]=-0.950676
 gj[2]=-0.880239
@@ -858,12 +862,53 @@ gj[14]=0.880239
 gj[15]=0.950676
 gj[16]=0.990575
 J in range [0.000244141,0.000244141] and max Skew = 1
-gatherChange=5561472
+gatherChange=2751840
 gatherChange=0
-rank 0 hostid 520789770 
+rank 0 hostid 520783882 
 mesh_>NqP= 18
-Error
-    File    : /home/kswirydo/holmes/occa//src/CUDA.cpp
-    Line    : 1384
-    Error   : CUDA Error [ 2 ]: CUDA_ERROR_OUT_OF_MEMORY
-    Message : Device: malloc
+p_blockSize = 1024 
+Nz = 4
+Building kernels for rank 0
+Found cached binary of [f6dbaeb04fc05dc0/parsedSource.occa] in [ba0f316756d2b7fd/binary]
+Found cached binary of [f6dbaeb04fc05dc0/parsedSource.occa] in [8c4d40252b05ac13/binary]
+Found cached binary of [380c3b76eb9579ce/parsedSource.occa] in [2754ead725a27689/binary]
+Found cached binary of [380c3b76eb9579ce/parsedSource.occa] in [a44ffd55556212b7/binary]
+Found cached binary of [f5f02f50e659a23c/parsedSource.occa] in [e537f071d8e936d5/binary]
+Found cached binary of [f5f02f50e659a23c/parsedSource.occa] in [a0b994c367940c7b/binary]
+Found cached binary of [8dea6302f59c0c12/parsedSource.occa] in [258af757bcf489c7/binary]
+Found cached binary of [8dea6302f59c0c12/parsedSource.occa] in [edf359d55861fd59/binary]
+Found cached binary of [55580971a87805a9/parsedSource.occa] in [dddb3ae32528537f/binary]
+Found cached binary of [55580971a87805a9/parsedSource.occa] in [fc436b4926407781/binary]
+Found cached binary of [2daf42943cc91a6a/parsedSource.occa] in [842f68d79305074f/binary]
+Found cached binary of [2daf42943cc91a6a/parsedSource.occa] in [4b333b5520a2b111/binary]
+Found cached binary of [60f49f1e57384bc2/parsedSource.occa] in [7d76262c5f73f128/binary]
+Found cached binary of [60f49f1e57384bc2/parsedSource.occa] in [7586a44a878bc30e/binary]
+Found cached binary of [5b9c91ca83a6f562/parsedSource.occa] in [d41b7c0c52664ac7/binary]
+Found cached binary of [5b9c91ca83a6f562/parsedSource.occa] in [2f50e8ead888a70a/binary]
+Found cached binary of [55d8986b55480929/parsedSource.occa] in [631c51f6db9845cc/binary]
+Found cached binary of [55d8986b55480929/parsedSource.occa] in [1f204a28c41c5eaa/binary]
+Found cached binary of [b112439579cf407d/parsedSource.occa] in [72aa57a99a7d0127/binary]
+Found cached binary of [b112439579cf407d/parsedSource.occa] in [c305742b674573f9/binary]
+Found cached binary of [a56e9b1f7c69a343/parsedSource.occa] in [1c58d6a71326c5fb/binary]
+Found cached binary of [a56e9b1f7c69a343/parsedSource.occa] in [ff553ce54e39e235/binary]
+Found cached binary of [ab20e27a46b7db70/parsedSource.occa] in [45fc2f0f5dd7011f/binary]
+Found cached binary of [ab20e27a46b7db70/parsedSource.occa] in [4b1b1afd25cc87e1/binary]
+Found cached binary of [7e465233db1ece47/parsedSource.occa] in [2059cddc8628c2ae/binary]
+Found cached binary of [7e465233db1ece47/parsedSource.occa] in [8c9c17aa979b1b86/binary]
+Found cached binary of [4b18981821b950fc/parsedSource.occa] in [b2ca9b4ba97c84a1/binary]
+Found cached binary of [4b18981821b950fc/parsedSource.occa] in [7e2e99e1e331fdff/binary]
+Found cached binary of [1a6fd548205b9aae/parsedSource.occa] in [41712433a736094d/binary]
+Found cached binary of [1a6fd548205b9aae/parsedSource.occa] in [24562e1928de47e3/binary]
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 6.15073e+07 61507348 61507348
+   buffer bytes (avg, min, max): 0 0 0
+starting mass parallel gather scatter setup
+gs_setup: 0 unique labels shared
+   handle bytes (avg, min, max): 6.15073e+07 61507348 61507348
+   buffer bytes (avg, min, max): 0 0 0
+finished temporary GS setup
+Nall = 20123648, mesh->Np = 4096 mesh->Nelements = 4096 mesh->totalHaloPairs = 0 
+01 15 16777216 0.0175790786743164 10 1.677721600000000E+07 9.543853981672001E+09 1.939584440948299E+03 3.723840638322390E+02 2.275050181739272E+02	[ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) (Ax GFLOPS) (copy GB/s) (achieved GB/s)]
+NUMBER OF INTEREST: 15 1.939584440948299E+03 
+COPYBW 15  3.723840638322390E+02 
+globalMaxError =                 1
