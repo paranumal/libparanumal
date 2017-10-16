@@ -144,7 +144,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
-      if(i==6 || i==7){
+      if(i==6){
        
         Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
 
