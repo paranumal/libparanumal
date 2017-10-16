@@ -144,6 +144,22 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
+      if(i==6 || i==7){
+       
+        Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
+
+        NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
+        flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+
+      }
+      if(i==7){
+       
+        Nbytes        = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
+
+        NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
+        flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+
+      }
       else
       {
         Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
