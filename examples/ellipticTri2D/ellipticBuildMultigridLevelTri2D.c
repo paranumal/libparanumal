@@ -65,20 +65,75 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   }
 
   //build element stiffness matrices
-  if (mesh->Nverts == 3) {
-    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
-        for (iint k=0;k<mesh->Np;k++) {
-          for (iint l=0;l<mesh->Np;l++) {
-            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-          }
+  mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (iint n=0;n<mesh->Np;n++) {
+    for (iint m=0;m<mesh->Np;m++) {
+      for (iint k=0;k<mesh->Np;k++) {
+        for (iint l=0;l<mesh->Np;l++) {
+          mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+        }
+      }
+    }
+  }
+
+
+  // deriv operators: transpose from row major to column major
+  iint *D1ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
+  iint *D2ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
+  iint *D3ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
+  dfloat *Dvals = (dfloat*) calloc(mesh->Np*3,sizeof(dfloat));
+
+  dfloat *VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+  dfloat *PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+
+  dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*3,sizeof(dfloat)); // tridiag
+  iint *ELids = (iint*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(iint));
+  dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
+
+
+  for (iint i = 0; i < mesh->Np; ++i){
+    for (iint j = 0; j < 3; ++j){
+      D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
+      D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
+      D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];
+      Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];
+    }
+  }
+
+  for (iint i = 0; i < mesh->cubNp; ++i){
+    for (iint j = 0; j < mesh->Np; ++j){
+      VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
+      PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
+    }
+  }
+
+
+  for (iint i = 0; i < mesh->Nfp; ++i){
+    for (iint j = 0; j < 3; ++j){
+      L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
+    }
+  }
+
+  for (iint i = 0; i < mesh->Np; ++i){
+    for (iint j = 0; j < mesh->max_EL_nnz; ++j){
+      ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
+      ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
+    }
+  }
+
+  //BB mass matrix
+  mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n = 0; n < mesh->Np; ++n){
+    for (int m = 0; m < mesh->Np; ++m){
+      for (int i = 0; i < mesh->Np; ++i){
+        for (int j = 0; j < mesh->Np; ++j){
+          mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
         }
       }
     }
@@ -115,6 +170,22 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
       mesh->vmapP);
+
+  mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D1ids);
+  mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D2ids);
+  mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D3ids);
+  mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
+
+  mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
+
+  mesh->o_VBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),VBq);
+  mesh->o_PBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),PBq);
+
+  mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*3*sizeof(dfloat),L0vals);
+  mesh->o_ELids =
+    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(iint),ELids);
+  mesh->o_ELvals =
+    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
 
   // info for kernel construction
   occa::kernelInfo kernelInfo;
@@ -251,27 +322,28 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                "ellipticPartialAxTri2D",
                kernelInfo);
 
-  solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+  if (strstr(options,"BERN")) {
+
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+               "ellipticGradientBBTri2D",
            kernelInfo);
 
-  solver->partialGradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticPartialGradientTri2D",
-                kernelInfo);
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+                 "ellipticPartialGradientBBTri2D",
+                  kernelInfo);
 
-  solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticAxIpdgTri2D",
-               kernelInfo);
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticAxIpdgBBTri2D",
+                 kernelInfo);
 
-  solver->partialIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticPartialAxIpdgTri2D",
-               kernelInfo);
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticPartialAxIpdgBBTri2D",
+                 kernelInfo);
 
-  #if USE_BERN
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
                  "ellipticBBBRGradientVolume2D",
@@ -291,7 +363,29 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
                  "ellipticBBBRDivergenceSurface2D",
                  kernelInfo);
-  #else
+
+  } else if (strstr(options,"NODAL")) {
+
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+               "ellipticGradientTri2D",
+           kernelInfo);
+
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+                 "ellipticPartialGradientTri2D",
+                  kernelInfo);
+
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticAxIpdgTri2D",
+                 kernelInfo);
+
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticPartialAxIpdgTri2D",
+                 kernelInfo);
+
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
                  "ellipticBRGradientVolume2D",
@@ -311,7 +405,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
                  "ellipticBRDivergenceSurface2D",
                  kernelInfo);
-  #endif
+  }
 
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
@@ -384,6 +478,10 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                kernelInfo);
 
   free(DrT); free(DsT); free(LIFTT);
+  free(D1ids); free(D2ids); free(D3ids); free(Dvals);
+
+  free(VBq); free(PBq);
+  free(L0vals); free(ELids ); free(ELvals);
 
   return solver;
 }
