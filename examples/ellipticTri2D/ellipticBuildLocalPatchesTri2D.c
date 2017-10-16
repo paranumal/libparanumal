@@ -4,15 +4,15 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the ipdg patch A matrix for element eM
-void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
 //returns the BRdg patch A matrix for element eM
-void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
 
-void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp, dfloat *basis,
+void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
@@ -91,11 +91,11 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
   if (strstr(options,"IPDG")) {
-    BuildLocalIpdgPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+    BuildLocalIpdgPatchAx(solver, refMesh, basisNp, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   } else if (strstr(options,"BRDG")) {
-    BuildLocalBRdgPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+    BuildLocalBRdgPatchAx(solver, refMesh, basisNp, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
   }
-
+#if 0
   for (int n=0;n<mesh->Np;n++) {
     for (int m=0;m<mesh->Np;m++) {
       printf("%4.2f \t", refPatchInvA[m+n*mesh->Np]);
@@ -103,7 +103,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
     printf("\n");
   }
   printf("\n");
-
+#endif
   matrixInverse(mesh->Np, refPatchInvA);
 
   // loop over all elements
@@ -111,11 +111,11 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
 
     //build the patch A matrix for this element
     if (strstr(options,"IPDG")) {
-      BuildLocalIpdgPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+      BuildLocalIpdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
     } else if (strstr(options,"BRDG")) {
-      BuildLocalBRdgPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+      BuildLocalBRdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
     }
-
+#if 0
     for (int n=0;n<mesh->Np;n++) {
       for (int m=0;m<mesh->Np;m++) {
         printf("%4.2f \t", patchA[m+n*mesh->Np]);
@@ -123,7 +123,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
       printf("\n");
     }
     printf("\n");
-
+#endif
     iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
     iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
     iint eP2 = mesh->EToE[eM*mesh->Nfaces+2];
@@ -183,7 +183,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, iint basisNp
 
 
 //returns the ipdg patch A matrix for element eM
-void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {
 
   iint vbase = eM*mesh->Nvgeo;
@@ -193,19 +193,21 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
   dfloat dsdy = mesh->vgeo[vbase+SYID];
   dfloat J = mesh->vgeo[vbase+JID];
 
+  dfloat *Ae = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+
   /* start with stiffness matrix  */
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->Np;++m){
-      A[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*drdx*drdx*mesh->Srr[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+m];
+      Ae[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*drdx*drdx*mesh->Srr[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*dsdx*drdx*mesh->Ssr[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*dsdx*dsdx*mesh->Sss[n*mesh->Np+m];
 
-      A[n*mesh->Np+m] += J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
-      A[n*mesh->Np+m] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*drdy*drdy*mesh->Srr[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*drdy*dsdy*mesh->Srs[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*dsdy*drdy*mesh->Ssr[n*mesh->Np+m];
+      Ae[n*mesh->Np+m] += J*dsdy*dsdy*mesh->Sss[n*mesh->Np+m];
     }
   }
 
@@ -213,7 +215,7 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
   if (solver->allNeumann) {
     for(iint n=0;n<mesh->Np;++n){
       for(iint m=0;m<mesh->Np;++m){
-        A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        Ae[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
       }
     }
   }
@@ -255,7 +257,7 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
 
         // OP11 = OP11 + 0.5*( gtau*mmE )
         dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
-        A[nM*mesh->Np+mM] += 0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
+        Ae[nM*mesh->Np+mM] += 0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
       }
     }
 
@@ -273,8 +275,8 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
           dfloat DyMim = drdy*mesh->Dr[iM*mesh->Np+m] + dsdy*mesh->Ds[iM*mesh->Np+m];
 
           // OP11 = OP11 + 0.5*( - mmE*Dn1)
-          A[nM*mesh->Np+m] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
-          A[nM*mesh->Np+m] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+          Ae[nM*mesh->Np+m] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+          Ae[nM*mesh->Np+m] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
         }
       }
     }
@@ -292,16 +294,31 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
           dfloat DyMin = drdy*mesh->Dr[iM*mesh->Np+n] + dsdy*mesh->Ds[iM*mesh->Np+n];
 
           // OP11 = OP11 + (- Dn1'*mmE );
-          A[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
-          A[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+          Ae[n*mesh->Np+mM] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+          Ae[n*mesh->Np+mM] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
         }
       }
     }
   }
+
+  for(int j=0;j<basisNp;++j){
+    for(int i=0;i<basisNp;++i){
+      dfloat val = 0;
+      for (int n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          val += basis[n*basisNp+j]*Ae[n*mesh->Np+m]*basis[m*basisNp+i];
+        }
+      }
+
+      A[i+j*basisNp] = val;
+    }
+  }
+
+  free(Ae);
 }
 
 //returns the ipdg patch A matrix for element eM
-void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A) {
 
   int Np = mesh->Np;
@@ -383,19 +400,21 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
     }
   }
 
+  dfloat *Ae = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+
   /* start with stiffness matrix  */
   for(int n=0;n<Np;++n){
     for(int m=0;m<Np;++m){
-      A[n*Np+m]  = J*lambda*mesh->MM[n*Np+m];
-      A[n*Np+m] += J*drdx*drdx*mesh->Srr[n*Np+m];
-      A[n*Np+m] += J*drdx*dsdx*mesh->Srs[n*Np+m];
-      A[n*Np+m] += J*dsdx*drdx*mesh->Ssr[n*Np+m];
-      A[n*Np+m] += J*dsdx*dsdx*mesh->Sss[n*Np+m];
+      Ae[n*Np+m]  = J*lambda*mesh->MM[n*Np+m];
+      Ae[n*Np+m] += J*drdx*drdx*mesh->Srr[n*Np+m];
+      Ae[n*Np+m] += J*drdx*dsdx*mesh->Srs[n*Np+m];
+      Ae[n*Np+m] += J*dsdx*drdx*mesh->Ssr[n*Np+m];
+      Ae[n*Np+m] += J*dsdx*dsdx*mesh->Sss[n*Np+m];
 
-      A[n*Np+m] += J*drdy*drdy*mesh->Srr[n*Np+m];
-      A[n*Np+m] += J*drdy*dsdy*mesh->Srs[n*Np+m];
-      A[n*Np+m] += J*dsdy*drdy*mesh->Ssr[n*Np+m];
-      A[n*Np+m] += J*dsdy*dsdy*mesh->Sss[n*Np+m];
+      Ae[n*Np+m] += J*drdy*drdy*mesh->Srr[n*Np+m];
+      Ae[n*Np+m] += J*drdy*dsdy*mesh->Srs[n*Np+m];
+      Ae[n*Np+m] += J*dsdy*drdy*mesh->Ssr[n*Np+m];
+      Ae[n*Np+m] += J*dsdy*dsdy*mesh->Sss[n*Np+m];
     }
   }
 
@@ -432,7 +451,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
         int mM = mesh->faceNodes[fM*Nfp+m];
 
         dfloat MSfnm = sJ*MSf[n*Nfp+m];
-        A[nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*tau*MSfnm;
+        Ae[nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*tau*MSfnm;
       }
     }
 
@@ -453,11 +472,11 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
           dfloat DxPim = Gx[m+iP*Np+(fM+1)*Np*Np];
           dfloat DyPim = Gy[m+iP*Np+(fM+1)*Np*Np];
 
-          A[m+nM*Np] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
-          A[m+nM*Np] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+          Ae[m+nM*Np] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+          Ae[m+nM*Np] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
 
-          A[m+nM*Np] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
-          A[m+nM*Np] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
+          Ae[m+nM*Np] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
+          Ae[m+nM*Np] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
         }
       }
     }
@@ -475,8 +494,8 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
           dfloat DxMin = drdx*mesh->Dr[iM*Np+n] + dsdx*mesh->Ds[iM*Np+n];
           dfloat DyMin = drdy*mesh->Dr[iM*Np+n] + dsdy*mesh->Ds[iM*Np+n];
 
-          A[mM+n*Np] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
-          A[mM+n*Np] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+          Ae[mM+n*Np] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+          Ae[mM+n*Np] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
         }
       }
     }
@@ -486,10 +505,25 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat
   if (solver->allNeumann) {
     for(iint n=0;n<Np;++n){
       for(iint m=0;m<Np;++m){
-        A[n*Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        Ae[n*Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
       }
     }
   }
+
+  for(int j=0;j<basisNp;++j){
+    for(int i=0;i<basisNp;++i){
+      dfloat val = 0;
+      for (int n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          val += basis[n*basisNp+j]*Ae[n*mesh->Np+m]*basis[m*basisNp+i];
+        }
+      }
+
+      A[i+j*basisNp] = val;
+    }
+  }
+
+  free(Ae);
 
   free(Gx); free(Gy);
 }
