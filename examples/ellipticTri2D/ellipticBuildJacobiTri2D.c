@@ -1,12 +1,12 @@
 
 #include "ellipticTri2D.h"
 
-void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
-void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options){
@@ -48,9 +48,9 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, iint basisNp, dflo
   for(iint eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
     if (strstr(options,"IPDG")) {
-      BuildLocalIpdgPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+      BuildLocalIpdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
     } else if (strstr(options,"BRDG")) {
-      BuildLocalBRdgPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
+      BuildLocalBRdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
     }
 
     // compute the diagonal entries

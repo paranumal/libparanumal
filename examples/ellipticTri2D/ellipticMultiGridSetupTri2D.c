@@ -34,7 +34,7 @@ void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
   precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
 }
 
-dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
+dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* options) {
 
   //TODO We can build the coarsen matrix either from the interRaise or interpLower matrices. Need to check which is better
 
@@ -66,6 +66,26 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
         }
       }
     }
+  }
+
+  if (strstr(options,"BERN")) {
+    printf("TEST\n");
+    dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+    for (iint j=0;j<NpFine;j++) {
+      for (iint i=0;i<NpCoarse;i++) {
+        for (iint k=0;k<NpCoarse;k++) {
+          for (iint l=0;l<NpFine;l++) {
+            BBP[i+j*NpCoarse] += meshLevels[N]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
+          }
+        }
+      }
+    }
+    for (iint j=0;j<NpFine;j++) {
+      for (iint i=0;i<NpCoarse;i++) {
+        P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
+      }
+    }
+    free(BBP);
   }
 
   //the coarsen matrix is P^T
@@ -178,6 +198,8 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       int basisNp = solverL->mesh->Np;
       dfloat *basis = NULL;
+
+      if (strstr(options,"BERN")) basis = solverL->mesh->VB;
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
@@ -316,7 +338,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     int N = levelDegree[n-1];
     int Nc = levelDegree[n];
 
-    R[n] = buildCoarsenerTri2D(meshLevels, N, Nc);
+    R[n] = buildCoarsenerTri2D(meshLevels, N, Nc, options);
     o_R[n] = mesh->device.malloc(meshLevels[N]->Np*meshLevels[Nc]->Np*sizeof(dfloat), R[n]);
 
     levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));

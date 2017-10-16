@@ -21,8 +21,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     int basisNp = mesh->Np;
     dfloat *basis = NULL;
 
-    if (strstr(options,"BERN"))
-      basis = mesh->VB;
+    if (strstr(options,"BERN")) basis = mesh->VB;
 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTri2D(mesh, basisNp, basis, tau, lambda, BCType, &A, &nnz, globalStarts, options);

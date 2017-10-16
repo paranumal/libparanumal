@@ -421,8 +421,13 @@ void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLev
 
   int NpP = mesh->Np;
 
+  int basisNp = mesh->Np;
+  dfloat *basis = NULL;
+
+  if (strstr(options,"BERN")) basis = mesh->VB;
+
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildLocalPatchesTri2D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildLocalPatchesTri2D(solver, mesh, basisNp, basis, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -472,7 +477,12 @@ void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgL
   dfloat *invDiagA;
   mesh_t *mesh = solver->mesh;
 
-  ellipticBuildJacobiTri2D(solver,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+  int basisNp = mesh->Np;
+  dfloat *basis = NULL;
+
+  if (strstr(options,"BERN")) basis = mesh->VB;
+
+  ellipticBuildJacobiTri2D(solver,mesh,basisNp,basis,tau, lambda, BCType, &invDiagA,options);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 
