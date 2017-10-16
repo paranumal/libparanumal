@@ -38,7 +38,7 @@ kernel void ellipticBBBRGradientVolume2D(const iint Nelements,
           const iint D2i1 = D2ids[n];
           const iint D3i1 = D3ids[n];
           const dfloat Dval1 = Dvals[n];
-          
+
           const iint D1i2 = D1ids[n+p_Np];
           const iint D2i2 = D2ids[n+p_Np];
           const iint D3i2 = D3ids[n+p_Np];
@@ -46,15 +46,15 @@ kernel void ellipticBBBRGradientVolume2D(const iint Nelements,
 
           const iint D1i3 = D1ids[n+2*p_Np];
           const iint D2i3 = D2ids[n+2*p_Np];
-          const iint D3i3 = D3ids[n+2*p_Np];    
+          const iint D3i3 = D3ids[n+2*p_Np];
           const dfloat Dval3 = Dvals[n+2*p_Np];
 
           const dfloat dqdr = .5f*(Dval1*(s_q[es][D2i1] - s_q[es][D1i1]) +
-                  Dval2*(s_q[es][D2i2] - s_q[es][D1i2]) +
-                  Dval3*(s_q[es][D2i3] - s_q[es][D1i3]));
+                                   Dval2*(s_q[es][D2i2] - s_q[es][D1i2]) +
+                                   Dval3*(s_q[es][D2i3] - s_q[es][D1i3]));
           const dfloat dqds = .5f*(Dval1*(s_q[es][D3i1] - s_q[es][D1i1]) +
-                  Dval2*(s_q[es][D3i2] - s_q[es][D1i2]) +
-                  Dval3*(s_q[es][D3i3] - s_q[es][D1i3]));
+                                   Dval2*(s_q[es][D3i2] - s_q[es][D1i2]) +
+                                   Dval3*(s_q[es][D3i3] - s_q[es][D1i3]));
 
           const iint id = e*2*p_Np;
           gradq[id+     n] = drdx*dqdr + dsdx*dqds;
@@ -116,11 +116,11 @@ kernel void ellipticBBBRGradientSurface2D(const iint Nelements,
             }
 
             // evaluate "flux" terms: LLF
-            const dfloat sc = invJ * sJ ;
+            const dfloat sc = 0.5*invJ * sJ ;
 
             // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
-            s_fluxqx[es][n]  = sc*(.5f*nx*(qP-qM));
-            s_fluxqy[es][n]  = sc*(.5f*ny*(qP-qM));
+            s_fluxqx[es][n]  = sc*nx*(qP-qM);
+            s_fluxqy[es][n]  = sc*ny*(qP-qM);
           }
         }
       }
@@ -137,12 +137,12 @@ kernel void ellipticBBBRGradientSurface2D(const iint Nelements,
           if(n<p_Nfp*p_Nfaces){
 
             iint id = n % p_Nfp;  // warning: redundant reads
-            dfloat L0val = L0vals[id+p_Nfp]; 
-            
+            dfloat L0val = L0vals[id+p_Nfp];
+
             dfloat qxfluxtmp = L0val * s_fluxqx[es][n];
             dfloat qyfluxtmp = L0val * s_fluxqy[es][n];
 
-            if (id > 0){    
+            if (id > 0){
               qxfluxtmp += L0vals[id]*s_fluxqx[es][n-1]; // add previous term
               qyfluxtmp += L0vals[id]*s_fluxqy[es][n-1]; // add previous term
             }
@@ -179,7 +179,7 @@ kernel void ellipticBBBRGradientSurface2D(const iint Nelements,
                 qxn += ELval * s_fluxqx_copy[es][ELid];
                 qyn += ELval * s_fluxqy_copy[es][ELid];
               }
-            
+
             gradq[id+     n] = qxn;
             gradq[id+p_Np+n] = qyn;
           }
@@ -194,7 +194,7 @@ kernel void ellipticBBBRDivergenceVolume2D(const iint Nelements,
         const iint * restrict D1ids,
         const iint * restrict D2ids,
         const iint * restrict D3ids,
-        const dfloat * restrict Dvals,    
+        const dfloat * restrict Dvals,
         const dfloat * restrict gradq,
         dfloat * restrict Aq){
 
@@ -231,7 +231,7 @@ kernel void ellipticBBBRDivergenceVolume2D(const iint Nelements,
           const iint D2i1 = D2ids[n];
           const iint D3i1 = D3ids[n];
           const dfloat Dval1 = Dvals[n];
-          
+
           const iint D1i2 = D1ids[n+p_Np];
           const iint D2i2 = D2ids[n+p_Np];
           const iint D3i2 = D3ids[n+p_Np];
@@ -239,7 +239,7 @@ kernel void ellipticBBBRDivergenceVolume2D(const iint Nelements,
 
           const iint D1i3 = D1ids[n+2*p_Np];
           const iint D2i3 = D2ids[n+2*p_Np];
-          const iint D3i3 = D3ids[n+2*p_Np];    
+          const iint D3i3 = D3ids[n+2*p_Np];
           const dfloat Dval3 = Dvals[n+2*p_Np];
 
           const dfloat dqxdr = .5f*(Dval1*(s_qx[es][D2i1] - s_qx[es][D1i1]) +
@@ -274,7 +274,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
          const iint   * restrict EToB,
          const dfloat * restrict L0vals,
          const iint   * restrict ELids,
-         const dfloat * restrict ELvals,   
+         const dfloat * restrict ELvals,
          const dfloat * restrict MM,
          const dfloat * restrict q,
          const dfloat * restrict gradq,
@@ -310,9 +310,9 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
             const iint eM = vmapM[id]/p_Np;
             const iint eP = vmapP[id]/p_Np;
 
-            const dfloat  qM  = q[idM+p_Np*eM];            
-            const dfloat  qxM = gradq[idM+     2*p_Np*eM]; 
-            const dfloat  qyM = gradq[idM+p_Np+2*p_Np*eM]; 
+            const dfloat  qM  = q[idM+p_Np*eM];
+            const dfloat  qxM = gradq[idM+     2*p_Np*eM];
+            const dfloat  qyM = gradq[idM+p_Np+2*p_Np*eM];
 
             dfloat qP  = q[idP+p_Np*eP];
             dfloat qxP = gradq[idP+     2*p_Np*eP];
@@ -322,6 +322,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
             iint bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
               ellipticHomogeneousBC2D(bc, qM, qxM, qyM, qP, qxP, qyP);
+              qP  = 2*qP  - qM;
               qxP = 2*qxP - qxM;
               qyP = 2*qyP - qyM;
             }
@@ -351,7 +352,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
               tmpflux += L0vals[id]*s_flux[es][n-1]; // add previous term
             if (id < p_Nfp-1)
               tmpflux += L0vals[id+2*p_Nfp]*s_flux[es][n+1];// add next term
-            
+
             s_flux_copy[es][n] = tmpflux;
           }
         }
@@ -370,7 +371,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
 
             dfloat Aqn = Aq[id+n];
             dfloat qn  = q[id+n];
-            
+
 
             occaUnroll(p_max_EL_nnz)
               for (int m = 0; m < p_max_EL_nnz; ++m){
@@ -379,7 +380,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
                 iint ELid = ELids[iid];
                 Aqn += ELval * s_flux_copy[es][ELid];
               }
-            
+
             s_Aq[es][n] = -Aqn+lambda*qn;
           }
         }
@@ -404,7 +405,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
               for(int i=0;i<p_Np;++i){
                 MAqn += MM[n+i*p_Np]*s_Aq[es][i];
               }
-            
+
             Aq[id+n] = J*MAqn;
           }
         }

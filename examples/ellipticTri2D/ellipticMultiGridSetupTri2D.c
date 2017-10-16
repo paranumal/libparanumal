@@ -184,7 +184,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       if (strstr(options,"IPDG")) {
         ellipticBuildIpdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
       } else if (strstr(options,"BRDG")) {
-        ellipticBuildBRdgTri2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+        ellipticBuildBRdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
       } else if (strstr(options,"CONTINUOUS")) {
         ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
       }
