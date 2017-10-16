@@ -323,6 +323,7 @@ kernel void insSubCycleCubatureVolume2D_v2(
 				}
 
 			const dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
+			
 			const dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
 
 			const iint id = e*p_Np+n;
@@ -706,9 +707,7 @@ kernel void insSubCycleCubatureVolume2D_v5(const iint Nelements,
 					df22ds += cDsWni*cF22;
 				}
 
-				// const dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
-				// const dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
-
+				
 				const iint id = e*p_Np+n;
 
 				rhsU[id]   = -(drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds); // note  change in sign
