@@ -6,11 +6,11 @@ int parallelCompareRowColumn(const void *a, const void *b);
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                             dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                             iint *nnzA, iint *globalStarts, const char *options){
-  
+
   iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
-  
+
   int Np = mesh->Np;
   int Nfp = mesh->Nfp;
   int Nfaces = mesh->Nfaces;
@@ -32,8 +32,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
   // every degree of freedom has its own global id
   MPI_Allgather(&(Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-    for(iint r=0;r<size;++r)
-      globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*Np;
+  for(iint r=0;r<size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*Np;
 
   /* so find number of elements on each rank */
   iint *rankNelements = (iint*) calloc(size, sizeof(iint));
@@ -79,8 +79,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
     }
   }
-  
-  
+
+
   // reset non-zero counter
   int nnz = 0;
 
@@ -107,7 +107,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
         SM[n*Np+m] += J*drdx*dsdx*mesh->Srs[n*Np+m];
         SM[n*Np+m] += J*dsdx*drdx*mesh->Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdx*dsdx*mesh->Sss[n*Np+m];
-                                      
+
         SM[n*Np+m] += J*drdy*drdy*mesh->Srr[n*Np+m];
         SM[n*Np+m] += J*drdy*dsdy*mesh->Srs[n*Np+m];
         SM[n*Np+m] += J*dsdy*drdy*mesh->Ssr[n*Np+m];
@@ -115,7 +115,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
     }
 
-    for (iint fM=0;fM<Nfaces;fM++) {  
+    for (iint fM=0;fM<Nfaces;fM++) {
 
       for (int n=0;n<Np*Np;n++) SP[n] =0;
 
@@ -125,17 +125,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
       dfloat hinv = mesh->sgeo[sid+IHID];
-      dfloat penalty = tau*hinv; 
-      
+      dfloat penalty = tau*hinv;
+
       iint eP = mesh->EToE[eM*Nfaces+fM];
       if (eP < 0) eP = eM;
-      
+
       iint vbaseP = eP*mesh->Nvgeo;
       dfloat drdxP = mesh->vgeo[vbaseP+RXID];
       dfloat drdyP = mesh->vgeo[vbaseP+RYID];
       dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
       dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
-      
+
       int bcD = 0, bcN =0;
       int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
       iint bcType = 0;
@@ -150,7 +150,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
         bcD = 0;
         bcN = 1;
       }
-      
+
       // reset eP
       eP = mesh->EToE[eM*Nfaces+fM];
 
@@ -163,12 +163,12 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
           iint idM = eM*Nfp*Nfaces+fM*Nfp+m;
           iint nM = mesh->faceNodes[fM*Nfp+n];
           iint mM = mesh->faceNodes[fM*Nfp+m];
-          iint mP  = mesh->vmapP[idM]%Np; 
-          
+          iint mP  = mesh->vmapP[idM]%Np;
+
           dfloat MSfnm = sJ*MSf[n*Nfp+m];
-          
+
           SM[nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*penalty*MSfnm;
-          SP[nM*Np+mP] += -0.5*(1.-bcN)*(1.-bcD)*penalty*MSfnm;            
+          SP[nM*Np+mP] += -0.5*(1.-bcN)*(1.-bcD)*penalty*MSfnm;
         }
       }
 
@@ -176,23 +176,23 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       for(iint n=0;n<Nfp;++n){
         for(iint m=0;m<Np;++m){
           iint nM = mesh->faceNodes[fM*Nfp+n];
-          
+
           for(iint i=0;i<Nfp;++i){
             iint iM = mesh->faceNodes[fM*Nfp+i];
             iint iP = mesh->vmapP[i + fM*Nfp+eM*Nfp*Nfaces]%Np;
-              
+
             dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
-            
+
             dfloat DxMim = drdx*mesh->Dr[iM*Np+m] + dsdx*mesh->Ds[iM*Np+m];
             dfloat DyMim = drdy*mesh->Dr[iM*Np+m] + dsdy*mesh->Ds[iM*Np+m];
 
             dfloat DxPim = drdxP*mesh->Dr[iP*Np+m] + dsdxP*mesh->Ds[iP*Np+m];
             dfloat DyPim = drdyP*mesh->Dr[iP*Np+m] + dsdyP*mesh->Ds[iP*Np+m];
 
-            // OP11 = OP11 + 0.5*( - mmE*Dn1)       
+            // OP11 = OP11 + 0.5*( - mmE*Dn1)
             SM[nM*Np+m] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
             SM[nM*Np+m] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
-            
+
             SP[nM*Np+m] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
             SP[nM*Np+m] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
           }
@@ -203,15 +203,15 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
         for(iint m=0;m<Nfp;++m){
           iint mM = mesh->faceNodes[fM*Nfp+m];
           iint mP = mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np;
-          
+
           for(iint i=0;i<Nfp;++i){
-            iint iM = mesh->faceNodes[fM*Nfp+i];  
+            iint iM = mesh->faceNodes[fM*Nfp+i];
 
             dfloat MSfim = sJ*MSf[i*Nfp+m];
-            
+
             dfloat DxMin = drdx*mesh->Dr[iM*Np+n] + dsdx*mesh->Ds[iM*Np+n];
             dfloat DyMin = drdy*mesh->Dr[iM*Np+n] + dsdy*mesh->Ds[iM*Np+n];
-          
+
             SM[n*Np+mM] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
             SM[n*Np+mM] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
 
@@ -250,7 +250,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
             val += basis[n*Np+j]*SM[n*Np+m]*basis[m*Np+i];
           }
         }
-        
+
         if(fabs(val)>tol){
           (*A)[nnz].row = globalIds[eM*Np + j];
           (*A)[nnz].col = globalIds[eM*Np + i];
@@ -261,9 +261,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
     }
   }
-  
+
   printf("nnz = %d\n", nnz);
-  
+
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;

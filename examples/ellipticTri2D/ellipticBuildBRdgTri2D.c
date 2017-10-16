@@ -26,34 +26,30 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
   iint Nnum = Np*Nelements;
 
-  // create a global numbering system
-  iint *globalIds = (iint *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(iint));
+  // create a global element numbering system
+  iint *globalIds = (iint *) calloc(Nelements+mesh->totalHaloPairs,sizeof(iint));
 
   // every degree of freedom has its own global id
   MPI_Allgather(&(Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-    for(iint r=0;r<size;++r)
-      globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*Np;
+  for(iint r=0;r<size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*Np;
 
   /* so find number of elements on each rank */
   iint *rankNelements = (iint*) calloc(size, sizeof(iint));
   iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(Nelements), 1, MPI_IINT,
-    rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Allgather(&(Nelements), 1, MPI_IINT, rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
   //find offsets
-  for(iint r=0;r<size;++r){
+  for(iint r=0;r<size;++r)
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
-  }
+
   //use the offsets to set a global id
-  for (iint e =0;e<Nelements;e++) {
-    for (int n=0;n<Np;n++) {
-      globalIds[e*Np +n] = n + (e + rankStarts[rankM])*Np;
-    }
-  }
+  for (iint e =0;e<Nelements;e++)
+    globalIds[e] = e + rankStarts[rankM];
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    iint *idSendBuffer = (iint *) calloc(Np*mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, Np*sizeof(iint), globalIds, idSendBuffer, globalIds + Nelements*Np);
+    iint *idSendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, sizeof(iint), globalIds, idSendBuffer, globalIds + Nelements);
     free(idSendBuffer);
   }
 
@@ -80,7 +76,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   /* Construct gradient as block matrix and load it to the halo */
   int GblockSize = Np*Np*(Nfaces+1);
   iint gradNNZ = GblockSize*(Nelements+mesh->totalHaloPairs);
-  iint *Gids = (iint *) calloc(Np*(Nfaces+1)*(Nelements+mesh->totalHaloPairs),sizeof(iint));
+  iint *Gids = (iint *) calloc((Nfaces+1)*(Nelements+mesh->totalHaloPairs),sizeof(iint));
   dfloat  *Gx = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
   dfloat  *Gy = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
 
@@ -95,12 +91,12 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
     dfloat dsdy = mesh->vgeo[vbase+SYID];
     dfloat J = mesh->vgeo[vbase+JID];
 
+    Gids[eM*(Nfaces+1)] = globalIds[eM]; //record global element number
     for(iint n=0;n<Np;++n){
       for(iint m=0;m<Np;++m){
         Gx[m+n*Np+blockId] = drdx*mesh->Dr[m+n*Np]+dsdx*mesh->Ds[m+n*Np];
         Gy[m+n*Np+blockId] = drdy*mesh->Dr[m+n*Np]+dsdy*mesh->Ds[m+n*Np];
       }
-      Gids[n+eM*(Nfaces+1)*Np] = globalIds[eM*Np+n];
     }
 
     for (iint fM=0;fM<Nfaces;fM++) {
@@ -113,6 +109,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
       iint eP = mesh->EToE[eM*Nfaces+fM];
       if (eP < 0) eP = eM;
+
+      Gids[fM+1 + eM*(Nfaces+1)] = globalIds[eP]; //record global element number
 
       int bcD = 0, bcN =0;
       int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
@@ -146,20 +144,21 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
           Gx[mP+n*Np+(fM+1)*Np*Np+blockId] +=  0.5*(1-bcN)*(1-bcD)*nx*LIFTfnm;
           Gy[mP+n*Np+(fM+1)*Np*Np+blockId] +=  0.5*(1-bcN)*(1-bcD)*ny*LIFTfnm;
         }
-        Gids[n+(fM+1)*Np+eM*(Nfaces+1)*Np] = globalIds[eP*Np+n];
       }
     }
   }
 
   //halo exchange the grad operators
   dfloat *GSendBuffer = (dfloat *) calloc(GblockSize*mesh->totalHaloPairs,sizeof(dfloat));
-  iint   *GidsSendBuffer  = (iint *)   calloc(Np*Nfaces*mesh->totalHaloPairs,sizeof(iint));
+  iint   *GidsSendBuffer  = (iint *)   calloc((Nfaces+1)*mesh->totalHaloPairs,sizeof(iint));
   meshHaloExchange(mesh, GblockSize*sizeof(dfloat), Gx, GSendBuffer, Gx + Nelements*GblockSize);
   meshHaloExchange(mesh, GblockSize*sizeof(dfloat), Gy, GSendBuffer, Gy + Nelements*GblockSize);
-  meshHaloExchange(mesh, Np*(Nfaces+1)*sizeof(iint), Gids, GidsSendBuffer, Gids + Np*(Nfaces+1)*Nelements);
+  meshHaloExchange(mesh, (Nfaces+1)*sizeof(iint), Gids, GidsSendBuffer, Gids + (Nfaces+1)*Nelements);
 
+  iint *globalPatchIds = (iint*) calloc((Nfaces+1)*(Nfaces+1),sizeof(iint));
+  int *patchIds = (int*) calloc((Nfaces+1)*(Nfaces+1),sizeof(int));
 
-  int AblockSize = Np*Np*(Nfaces+1)*(Nfaces+1);
+  int AblockSize = Np*Np*(Nfaces*Nfaces+1);
   iint nnzLocalBound = AblockSize*Nelements;
   *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
 
@@ -197,10 +196,33 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
     }
 
-    for (iint fM=0;fM<Nfaces;fM++) {
+    //check and record all the global element numbers in this patch
+    // and give them a local ordering so each element knows what patch to contribute to
+    int NpatchElements=1;
+    globalPatchIds[0] = globalIds[eM];
+    for (int fM=0;fM<Nfaces+1;fM++) {
+      iint eP = (fM==0) ? eM : mesh->EToE[eM*Nfaces+fM-1];
+      if (eP < 0) eP = eM;
 
-      dfloat *AeP = Ae + (fM+1)*Np*Np*(Nfaces+1);
+      for (int fP=0;fP<Nfaces+1;fP++) {
+        iint gid = Gids[fP+eP*(Nfaces+1)];
+        int i=0;
+        for (;i<NpatchElements;i++) { //loop through the list of ids in the patch
+          //check if we have this elements id already
+          if (gid==globalPatchIds[i]) {
+            patchIds[fP + fM*(Nfaces+1)] = i;
+            break;
+          }
+        }
+        if (i==NpatchElements) {
+          globalPatchIds[NpatchElements] = gid;
+          patchIds[fP + fM*(Nfaces+1)] = NpatchElements;
+          NpatchElements++;
+        }
+      }
+    }
 
+    for (int fM=0;fM<Nfaces;fM++) {
       // load surface geofactors for this face
       iint sid = mesh->Nsgeo*(eM*Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
@@ -229,6 +251,9 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       // mass matrix for this face
       dfloat *MSf = MS + fM*Nfp*Nfp;
 
+      //local patch id for this neighbor
+      int pid = patchIds[fM+1];
+
       // penalty term just involves face nodes
       for(iint n=0;n<Nfp;++n){
         for(iint m=0;m<Nfp;++m){
@@ -238,8 +263,8 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
           int mP = mesh->vmapP[idM]%Np;
 
           dfloat MSfnm = sJ*MSf[n*Nfp+m];
-          Ae [nM*Np+mM] +=  0.5*(1.-bcN)*(1.+bcD)*tau*MSfnm;
-          AeP[nM*Np+mP] += -0.5*(1.-bcN)*(1.-bcD)*tau*MSfnm;
+          Ae[nM*Np+mM          ] +=  0.5*(1.-bcN)*(1.+bcD)*tau*MSfnm;
+          Ae[nM*Np+mP+pid*Np*Np] += -0.5*(1.-bcN)*(1.-bcD)*tau*MSfnm;
         }
       }
 
@@ -255,17 +280,21 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
             dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
 
             for (int fP=0;fP<Nfaces+1;fP++) {
+              //local patch id for this neighbor
+              int pidM = patchIds[fP];
+              int pidP = patchIds[fP+(fM+1)*(Nfaces+1)];
+
               dfloat DxMim = Gx[m+iM*Np+fP*Np*Np+eM*GblockSize];
               dfloat DyMim = Gy[m+iM*Np+fP*Np*Np+eM*GblockSize];
 
               dfloat DxPim = Gx[m+iP*Np+fP*Np*Np+eP*GblockSize];
               dfloat DyPim = Gy[m+iP*Np+fP*Np*Np+eP*GblockSize];
 
-              Ae [m+nM*Np+fP*Np*Np] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
-              Ae [m+nM*Np+fP*Np*Np] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
+              Ae[m+nM*Np+pidM*Np*Np] += -0.5*nx*(1+bcD)*(1-bcN)*MSfni*DxMim;
+              Ae[m+nM*Np+pidM*Np*Np] += -0.5*ny*(1+bcD)*(1-bcN)*MSfni*DyMim;
 
-              AeP[m+nM*Np+fP*Np*Np] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
-              AeP[m+nM*Np+fP*Np*Np] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
+              Ae[m+nM*Np+pidP*Np*Np] += -0.5*nx*(1-bcD)*(1-bcN)*MSfni*DxPim;
+              Ae[m+nM*Np+pidP*Np*Np] += -0.5*ny*(1-bcD)*(1-bcN)*MSfni*DyPim;
             }
           }
         }
@@ -284,33 +313,35 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
             dfloat DxMin = drdx*mesh->Dr[iM*Np+n] + dsdx*mesh->Ds[iM*Np+n];
             dfloat DyMin = drdy*mesh->Dr[iM*Np+n] + dsdy*mesh->Ds[iM*Np+n];
 
-            Ae [mM+n*Np] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
-            Ae [mM+n*Np] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
+            Ae[mM+n*Np          ] +=  -0.5*nx*(1+bcD)*(1-bcN)*DxMin*MSfim;
+            Ae[mM+n*Np          ] +=  -0.5*ny*(1+bcD)*(1-bcN)*DyMin*MSfim;
 
-            AeP[mP+n*Np] +=  +0.5*nx*(1-bcD)*(1-bcN)*DxMin*MSfim;
-            AeP[mP+n*Np] +=  +0.5*ny*(1-bcD)*(1-bcN)*DyMin*MSfim;
+            Ae[mP+n*Np+pid*Np*Np] +=  +0.5*nx*(1-bcD)*(1-bcN)*DxMin*MSfim;
+            Ae[mP+n*Np+pid*Np*Np] +=  +0.5*ny*(1-bcD)*(1-bcN)*DyMin*MSfim;
           }
         }
       }
     }
 
-    for (int fM=0;fM<Nfaces+1;fM++) {
-      iint eP = (fM==0) ? eM : mesh->EToE[eM*Nfaces+fM-1];
-      if (eP<0) continue;
+    for (int e=0;e<NpatchElements;e++) {
+      iint eP = globalPatchIds[e];
 
-      for (int fP=0;fP<Nfaces+1;fP++) {
-        for (int n=0;n<Np;n++) {
-          for (int m=0;m<Np;m++) {
-            dfloat Anm = Ae[m+n*Np+fP*Np*Np+fM*(Nfaces+1)*Np*Np];
-
-            if(fabs(Anm)>tol){
-              (*A)[nnz].row = globalIds[eM*Np+n];
-              (*A)[nnz].col = Gids[m+fP*Np+eP*(Nfaces+1)*Np]; //use the column ids from the gradient lift
-
-              (*A)[nnz].val = Anm;
-              (*A)[nnz].ownerRank = rankM;
-              ++nnz;
+      for(int j=0;j<basisNp;++j){
+        for(int i=0;i<basisNp;++i){
+          dfloat val = 0;
+          for (int n=0;n<Np;n++) {
+            for (int m=0;m<Np;m++) {
+              val += basis[n*Np+j]*Ae[n*Np+m+e*Np*Np]*basis[m*Np+i];
             }
+          }
+
+          if(fabs(val)>tol){
+            (*A)[nnz].row = eM*Np+j;
+            (*A)[nnz].col = eP*Np+i;
+
+            (*A)[nnz].val = val;
+            (*A)[nnz].ownerRank = rankM;
+            ++nnz;
           }
         }
       }
@@ -320,25 +351,31 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   // sort non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
-  // compress duplicates
-  iint cnt = 0;
-  for(iint n=1;n<nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
-    }
-    else{
-      ++cnt;
-      (*A)[cnt] = (*A)[n];
-    }
+  *nnzA = nnz;
+
+#if 0
+  dfloat* Ap = (dfloat *) calloc(Np*Np*Nelements*Nelements,sizeof(dfloat));
+  for (int n=0;n<nnz;n++) {
+    int row = (*A)[n].row;
+    int col = (*A)[n].col;
+
+    Ap[col+row*Np*Nelements] = (*A)[n].val;
   }
-  *nnzA = cnt+1;
+
+  for (int i=0;i<Np*Nelements;i++) {
+    for (int j =0;j<Nelements*Np;j++) {
+      printf("%4.2f \t", Ap[j+i*Np*Nelements]);
+    }
+    printf("\n");
+  }
+#endif
 
   printf("nnz = %d\n", *nnzA);
 
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
 
   free(globalIds);
+  free(globalPatchIds); free(patchIds);
 
   free(Gx); free(Gy);
   free(Gids);
