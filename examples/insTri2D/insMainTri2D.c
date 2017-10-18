@@ -47,6 +47,8 @@ int main(int argc, char **argv){
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N); 
 
+  #if 1
+
   // capture header file
   char *boundaryHeaderFileName;
   if(argc==3)
@@ -82,4 +84,5 @@ int main(int argc, char **argv){
 
   exit(0);
   return 0;
+  #endif
 }
