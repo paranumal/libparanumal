@@ -1,3 +1,6 @@
+// to test for orders 1 to 10:
+// for N in `seq 1 10` ; do nvcc -Dp_N=$N -arch=sm_60 --use_fast_math -o dgemm dgemm.cu -lcublas -lm; ./dgemm ; done
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
@@ -6,9 +9,53 @@
 #include <curand.h>
 #define dfloat double
 
-#define p_N 5
+#ifndef p_N
+#define p_N 4
+#endif
+
 #define p_Np ((int)((p_N+1)*(p_N+2))/2) 
-#define p_cubNp ((int)(3*p_Np))
+
+// scraped from recent 
+#if p_N==1
+#define p_cubNp 6
+#endif
+
+#if p_N==2
+#define p_cubNp 12
+#endif
+
+#if p_N==3
+#define p_cubNp 19
+#endif
+
+#if p_N==4
+#define p_cubNp 36
+#endif
+
+#if p_N==5
+#define p_cubNp 54
+#endif
+
+#if p_N==6
+#define p_cubNp 73
+#endif
+
+#if p_N==7
+#define p_cubNp 93
+#endif
+
+#if p_N==8
+#define p_cubNp 118
+#endif
+
+#if p_N==9
+#define p_cubNp 145
+#endif
+
+#if p_N==10
+#define p_cubNp 256
+#endif
+
 #define p_Nvgeo 7
 #define p_RXID 0
 #define p_RYID 1
@@ -16,41 +63,35 @@
 #define p_SYID 3
 
 __global__ void volumeFlux(const int Nelements, 
-           const dfloat * __restrict__ vgeo,
-           const dfloat * __restrict__ u,
-           const dfloat * __restrict__ v,
-           const dfloat * __restrict__ ud,
-           const dfloat * __restrict__ vd,
-           dfloat * __restrict__ rhsu  ){
+			   const dfloat * __restrict__ vgeo,
+			   const dfloat * __restrict__ q,
+			   dfloat * __restrict__ rhsq  ){
 
    const int e  = blockIdx.x; 
    const int t  = threadIdx.x;
-   const int id = t + e*blockDim.x; 
+   const int id = t + e*p_cubNp*4;
   
    const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
    const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
    const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
    const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-
-   // now have u,v,ur,us,vr,vs at cubature node c
-    const dfloat un  = u [id + 0*p_cubNp];
-    const dfloat vn  = v [id + 1*p_cubNp];
-    const dfloat udn = ud[id + 2*p_cubNp];
-    const dfloat vdn = vd[id + 3*p_cubNp];
-    
+   
+   const dfloat un  = q[id + 0*p_cubNp];
+   const dfloat vn  = q[id + 1*p_cubNp];
+   const dfloat udn = q[id + 2*p_cubNp];
+   const dfloat vdn = q[id + 3*p_cubNp];
 
     const dfloat f11 = un*udn;
     const dfloat f12 = vn*udn;
 
     const dfloat f21 = un*vdn;
     const dfloat f22 = vn*vdn;
-
-
-    rhsu[id + 0*p_cubNp] = rx*f11 + ry*f21;
-    rhsu[id + 1*p_cubNp] = sx*f11 + sy*f21;
-    rhsu[id + 2*p_cubNp] = rx*f12 + ry*f12;
-    rhsu[id + 3*p_cubNp] = rx*f22 + ry*f22;
-  }
+    
+    rhsq[id + 0*p_cubNp] = rx*f11 + ry*f12;
+    rhsq[id + 1*p_cubNp] = sx*f11 + sy*f12;
+    rhsq[id + 2*p_cubNp] = rx*f21 + ry*f22;
+    rhsq[id + 3*p_cubNp] = sx*f21 + sy*f22;
+}
 
 void gpuFillRand(int N, dfloat **h_v, dfloat **c_v){
   
@@ -65,97 +106,107 @@ void gpuFillRand(int N, dfloat **h_v, dfloat **c_v){
   
 }
 
-void gpuBlasGemm(const dfloat *A, const dfloat *B, dfloat *C, const int m, const int k, const int n) {
+void gpuBlasGemm(cublasHandle_t &handle, const dfloat *A, const dfloat *B, dfloat *C, const int m, const int k, const int n) {
   int lda=m,ldb=k,ldc=m;
   const dfloat alf = 1;
   const dfloat bet = 0;
   const dfloat *alpha = &alf;
   const dfloat *beta = &bet;
 
-  // Create a handle for CUBLAS
-  cublasHandle_t handle;
-  cublasCreate(&handle);
 
   // Do the actual multiplication
   cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 
-  // Destroy the handle
-  cublasDestroy(handle);
 }
 
 
 
 int main(int argc, char **argv){
 
-  int N         = atoi(argv[1]);
-  int Nelements = 10000; // Write exact element number
-  int Np        = (N+1)*(N+2)/2;
-  int Ncub      = 3*Np; // (Use exact values later)
-  int nrI, ncI, ncB; 
-  // Velocity
-  dfloat *h_u, *h_v, *h_ud, *h_vd; 
-  dfloat *d_u, *d_v, *d_ud, *d_vd; 
-  // Velocity Vector;
-  dfloat *h_I, *h_P, *h_B, *h_C, *h_D, *h_vgeo; 
-  dfloat *d_I, *d_P, *d_B, *d_C, *d_D, *d_vgeo; 
- 
+  int Nelements = 20000; // Write exact element number
+  int Np        = p_Np;
+  int Ncub      = p_cubNp;
+
+  // fields q = (u,v,ud,vd)
+  dfloat *h_q, *h_cq; 
+  dfloat *d_q, *d_cq; 
+
+  // geofacs
+  dfloat *h_vgeo;
+  dfloat *d_vgeo;
   
-   // C = I*B // Interpolate
-   nrI = Ncub; ncI = Np; ncB = 4*Nelements; 
-   gpuFillRand(nrI*ncI, &h_I, &d_I); 
-   gpuFillRand(ncI*ncB, &h_B, &d_B);
-   gpuFillRand(nrI*ncB, &h_C, &d_C);
+  // matrices
+  dfloat *h_cI, *h_Div;
+  dfloat *d_cI, *d_Div;
 
-    #if 1
-   //
-   gpuBlasGemm(d_I, d_B, d_C, nrI, ncI, ncB);
+  // results
+  dfloat *h_flux, *h_rhs;
+  dfloat *d_flux, *d_rhs;
 
-   #endif
-   
-   
+  // allocate geofacs
+  gpuFillRand(p_Nvgeo*Nelements, &h_vgeo, &d_vgeo);
 
+  // allocate arrays for matrices
+  gpuFillRand(Ncub*Np,          &h_cI,   &d_cI); 
+  gpuFillRand(2*Ncub*Np,        &h_Div,  &d_Div); 
 
-   gpuFillRand(p_cubNp*Nelements, &h_u, &d_u); 
-   gpuFillRand(p_cubNp*Nelements, &h_v, &d_v); 
-   gpuFillRand(p_cubNp*Nelements, &h_ud, &d_ud); 
-   gpuFillRand(p_cubNp*Nelements, &h_vd, &d_vd); 
-   gpuFillRand(p_Nvgeo*Nelements, &h_vgeo, &d_vgeo); 
-   gpuFillRand(p_cubNp*4*Nelements, &h_D, &d_D); 
+  // allocate arrays for data
+  gpuFillRand(4*Np*Nelements,   &h_q,    &d_q);
+  gpuFillRand(4*Ncub*Nelements, &h_cq,   &d_cq);
+  gpuFillRand(4*Ncub*Nelements, &h_flux, &d_flux); 
+  gpuFillRand(2*Np*Nelements,   &h_rhs,  &d_rhs); 
 
+  // Create a handle for CUBLAS
+  cublasHandle_t handle;
+  cublasCreate(&handle);
 
-   dim3 G(Nelements,1,1);
-   dim3 B(p_cubNp,1,1);
+  // create events
+  cudaEvent_t start, stop;
 
-   volumeFlux<<< G, B >>> (Nelements, d_vgeo, d_u, d_v, d_ud, d_vd, d_D);
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
 
+  cudaEventRecord(start);
 
+  int Niterations = 10;
 
+  for(int it=0;it<Niterations;++it){
+    
+    // interpolate from nodes to cubature
+    gpuBlasGemm(handle, d_cI, d_q, d_cq, Ncub, Np, 4*Nelements);
+    
+    // compute volume fluxes
+    dim3 G(Nelements,1,1);
+    dim3 B(p_cubNp,1,1);
+    
+    volumeFlux<<< G, B >>> (Nelements, d_vgeo, d_cq, d_flux);
+    
+    // compute divergence
+    gpuBlasGemm(handle, d_Div, d_flux, d_rhs, Np,  2*Ncub, 2*Nelements);
+  }
 
-
-   // K = P*D // Project
-    int nrP, ncP, ncC; 
-    nrP = Np;   ncP = 2*Ncub; ncC = 2*Nelements;
-    gpuFillRand(nrP*ncP, &h_P, &d_P); 
-    gpuFillRand(nrP*ncC, &h_D, &d_D); 
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
   
-    gpuBlasGemm(d_P, d_C, d_D, nrP, ncP, ncC);
+  float elapsed; 
   
-   
+  cudaEventElapsedTime(&elapsed, start, stop);
+  elapsed /= Niterations*1000.;
 
-  // printf("Nbytes = %llu\n", Nbytes);
+  // minimal amount of data that could have moved (excluding matrices)
+  long long int minData  = (4*Np + 2*Np + p_Nvgeo )*sizeof(dfloat);
+  long long int actData  = (4*Np + 4*Ncub + 4*Ncub + 4*Ncub + 4*Ncub + 2*Np)*sizeof(dfloat);
+  long long int minFlops = (2*Np*Ncub*4 + Ncub*16 + 2*Np*Ncub*4);
+  double GIG = 1024*1024*1024;
+  double minBW  = Nelements*(minData/elapsed)/GIG;
+  double actBW  = Nelements*(actData/elapsed)/GIG;
+  double gflops = Nelements*(minFlops/elapsed)/GIG;
   
-  // dim3 G(Nelements,1,1);
-  // dim3 B(p_NSIMD,1,1);
+  printf("N=%d, elapsed = %5.7E, minBW = %5.7E, actBW (est) = %5.7E, estGF = %5.7E\n", p_N, elapsed, minBW, actBW, gflops);
 
-  // printf("p_Np = %d\n", p_Np);
-  // printf("p_cubNp = %d\n", p_cubNp);
-  // printf("p_NSIMD = %d\n", p_NSIMD);
-  // printf("p_CSIMD = %d\n", p_CSIMD);
-  // printf("p_BSIMD = %d\n", p_BSIMD);
-  // printf("G.x = %d, B.x = %d\n", G.x, B.x);
-  
-  
-  // experimentalVolumeKernel <<< G, B >>> (Nelements, c_vgeo, c_cI, c_cDr, c_cDs, c_cProj, c_u, c_v, c_Nu, c_Nv);
+  // Destroy the handle
+  cublasDestroy(handle);
+
 
   exit(0);
   return 0;
