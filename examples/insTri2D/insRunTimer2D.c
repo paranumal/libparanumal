@@ -24,7 +24,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 100,  Nbytes=0,  zero = 0;  
+  iint index = 0, iterations = 1,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
   dfloat time = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
@@ -111,7 +111,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
     // sync processes
     mesh->device.finish();
-    MPI_Barrier(MPI_COMM_WORLD);
+    //    MPI_Barrier(MPI_COMM_WORLD);
 
     //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
@@ -138,7 +138,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       if(i==0){
-        Nbytes       = (sizeof(dfloat)*(4*Np*Nc +4*Np + 2*Np)/2);
+        Nbytes       = (sizeof(dfloat)*(4*Np*Nc*0 +4*Np + 2*Np)/2);
 
         NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
 
@@ -153,9 +153,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       }
       else if(i==7){
-       
-        Nbytes        = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
-
+	printf("hi\n");
+        Nbytes        = (sizeof(dfloat)*(4*Np + 2*Np)/2); // TW removed 4*Np
+	
         NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
         flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
@@ -176,27 +176,24 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       mesh->device.finish(); 
       tic = MPI_Wtime();
 
-      // occa::streamTag startCopy = mesh->device.tagStream();
+      occa::streamTag startCopy = mesh->device.tagStream();
       for(int it=0;it<iterations;++it){
          o_bah.copyTo(o_foo);
       }
-      // occa::streamTag endCopy = mesh->device.tagStream();
+      occa::streamTag endCopy = mesh->device.tagStream();
 
       mesh->device.finish();
       toc = MPI_Wtime();
-      double copyElapsed = (toc-tic);
-      //double copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
+      //      double copyElapsed = (toc-tic);
+      double copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
 
 
       // Compute Data
       double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
       double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
 
-
       double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
-
-     
 
       double smbound       = 7340.5*flops/( (double) NbytesShared);
   
@@ -212,7 +209,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\tTH_peak]\n");
       printf("%02d \t%02d\t%02d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-              kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
+	     kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
 
       char fname[BUFSIZ];
       sprintf(fname, "KernelData.dat");

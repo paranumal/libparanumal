@@ -7,6 +7,7 @@
 
 #include <cublas_v2.h>
 #include <curand.h>
+
 #define dfloat double
 
 #ifndef p_N
@@ -115,7 +116,10 @@ void gpuBlasGemm(cublasHandle_t &handle, const dfloat *A, const dfloat *B, dfloa
 
 
   // Do the actual multiplication
-  cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+  if(sizeof(dfloat)==8)
+    cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, (double*)alpha, (double*)A, lda, (double*)B, ldb, (double*)beta, (double*)C, ldc);
+  else
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, (float*)alpha, (float*)A, lda, (float*)B, ldb, (float*)beta, (float*)C, ldc);
 
 }
 
@@ -123,7 +127,7 @@ void gpuBlasGemm(cublasHandle_t &handle, const dfloat *A, const dfloat *B, dfloa
 
 int main(int argc, char **argv){
 
-  int Nelements = 20000; // Write exact element number
+  int Nelements = (argc==1) ? 10000:atoi(argv[1]); // Write exact element number
   int Np        = p_Np;
   int Ncub      = p_cubNp;
 
@@ -191,7 +195,7 @@ int main(int argc, char **argv){
   float elapsed; 
   
   cudaEventElapsedTime(&elapsed, start, stop);
-  elapsed /= Niterations*1000.;
+  elapsed /= (Niterations*1000.);
 
   // minimal amount of data that could have moved (excluding matrices)
   long long int minData  = (4*Np + 2*Np + p_Nvgeo )*sizeof(dfloat);
@@ -202,7 +206,7 @@ int main(int argc, char **argv){
   double actBW  = Nelements*(actData/elapsed)/GIG;
   double gflops = Nelements*(minFlops/elapsed)/GIG;
   
-  printf("N=%d, elapsed = %5.7E, minBW = %5.7E, actBW (est) = %5.7E, estGF = %5.7E\n", p_N, elapsed, minBW, actBW, gflops);
+  printf("N=%d, K=%d, elapsed = %5.7E, minBW = %5.7E, actBW (est) = %5.7E, estGF = %5.7E\n", p_N, Nelements, elapsed, minBW, actBW, gflops);
 
   // Destroy the handle
   cublasDestroy(handle);
