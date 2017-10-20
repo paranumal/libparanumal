@@ -972,7 +972,7 @@ kernel void insSubCycleCubatureVolume2D_v7(const iint Nelements,
 	    cVd[nout] = 0.f;
 	  }
 
-	//	occaUnroll(p_Np)
+	occaUnroll(p_Np)
 	  for(iint i=0;i<p_Np;++i){
 	    
 	    const dfloat Ui = s_U[es][i];
