@@ -94,7 +94,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
-  int NKernels = 8;
+  int NKernels = 11;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
@@ -112,7 +112,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     // sync processes
     mesh->device.finish();
     //    MPI_Barrier(MPI_COMM_WORLD);
-
+    occa::streamTag start = mesh->device.tagStream();
     //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
       // assume 1 mpi process
@@ -134,8 +134,8 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       occa::streamTag end = mesh->device.tagStream();
       mesh->device.finish();  
       toc = MPI_Wtime();
-      kernelElapsed    = toc-tic;
-
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
 
       if(i==0){
         Nbytes       = (sizeof(dfloat)*(4*Np*Nc*0 +4*Np + 2*Np)/2);
@@ -152,8 +152,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
         flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
       }
-      else if(i==7){
-	printf("hi\n");
+      else if(i==7 || i==8 || i==9 || i==10){
         Nbytes        = (sizeof(dfloat)*(4*Np + 2*Np)/2); // TW removed 4*Np
 	
         NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
