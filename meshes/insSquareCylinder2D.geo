@@ -1,6 +1,6 @@
-coarse = DefineNumber[5];
-fine   = DefineNumber[0.5];
-fineC  = DefineNumber[0.05];
+coarse = DefineNumber[4];
+fine   = DefineNumber[0.4];
+fineC  = DefineNumber[0.1];
 
 xmax  = DefineNumber[25];
 xmin  = DefineNumber[-16];

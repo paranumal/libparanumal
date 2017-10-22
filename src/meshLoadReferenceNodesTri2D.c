@@ -44,7 +44,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)<NODETOL)
       mesh->vertexNodes[2] = n;
   }
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){
@@ -66,7 +66,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp); // read comment
 
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
@@ -83,7 +83,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); 
+  fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->plotNp));
 
   // read plot node coordinates (hard code triangles)
@@ -94,7 +94,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n);
   }
-  
+
   // read plot interpolation matrix
   mesh->plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
@@ -107,14 +107,14 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   // read number of elements in plot node triangulation
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); 
+  fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->plotNelements));
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->plotNverts));
-  
+
   // build and read in plot node triangulation
   mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
   fgets(buf, BUFSIZ, fp); // read comment
@@ -127,7 +127,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); 
+  fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->cubNp));
 
   // read cub nodes and weights
@@ -138,7 +138,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->cubNp;++n){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->cubr+n, mesh->cubs+n, mesh->cubw+n);
-  } 
+  }
 
   // read volume cubature interpolation matrix
   mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -180,14 +180,14 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
-  
+
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); 
+  fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->intNfp));
 
   // read surface intergration node interpolation matrix
-  mesh->intInterp 
+  mesh->intInterp
     = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
 
@@ -228,7 +228,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->D1ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
-  for (int n=0;n<mesh->Np*3;++n){    
+  for (int n=0;n<mesh->Np*3;++n){
     fscanf(fp, iintFormat, mesh->D1ids+n);
   }
 
@@ -238,7 +238,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*3;++n){
     fscanf(fp, iintFormat, mesh->D2ids+n);
   }
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->D3ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
@@ -252,7 +252,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*3;++n){
     fscanf(fp, dfloatFormat, mesh->Dvals+n);
   }
-  
+
   // BB cubature projection matrices
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
@@ -260,7 +260,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*mesh->cubNp;++n){
     fscanf(fp, dfloatFormat, mesh->VBq+n);
   }
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp, sizeof(dfloat));
@@ -284,14 +284,14 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
     fscanf(fp, iintFormat, mesh->ELids+n);
   }
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(dfloat));
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
     fscanf(fp, dfloatFormat, mesh->ELvals+n);
   }
-  
+
   // BB degree raise matrix (sparse format)
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
@@ -355,14 +355,39 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     fscanf(fp, iintFormat, mesh->rmapP+n);
   }
   fgets(buf, BUFSIZ, fp); // read comment
-  
+
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->invAP = (dfloat*) calloc(mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1), sizeof(dfloat));
   for(int n=0;n<mesh->Np*(mesh->Nfaces+1)*mesh->Np*(mesh->Nfaces+1);++n){
     fscanf(fp, dfloatFormat, mesh->invAP+n);
   }
   fgets(buf, BUFSIZ, fp); // read comment
-  
+
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  int Npp1;
+  sscanf(buf, "%d %d", &Npp1, &NpPcheck);
+
+  //degree raising and lowering interpolation matrices
+  mesh->interpRaise = (dfloat*) calloc(Npp1*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<Npp1*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->interpRaise+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  int Npm1;
+  sscanf(buf, "%d %d", &Npm1, &NpPcheck);
+
+  mesh->interpLower = (dfloat*) calloc(Npm1*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<Npm1*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->interpLower+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+
+
 #if 0
   printf("Dr: \n");
   for(int n=0;n<mesh->Np;++n){
@@ -380,7 +405,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     printf("\n");
   }
 #endif
-  
+
 
   fclose(fp);
 }

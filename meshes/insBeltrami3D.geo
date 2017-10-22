@@ -1,4 +1,4 @@
-r = DefineNumber[ 0.5];
+r = DefineNumber[0.25];
 Point(1) = {-1, -1, -1, r};
 Point(2) = {1, -1, -1, r};
 Point(3) = {1, 1, -1, r};
@@ -34,6 +34,7 @@ Plane Surface(28) = {28};
 Surface Loop(1) = {6, 15, 19, 23, 27, 28};
 Volume(1) = {1};
 
-Physical Surface("Inflow",2) = {6,15, 19, 27, 28};
-Physical Surface("Outflow",3) = {23};
+Physical Surface("Inflow",2) = {6,15, 19, 27, 28, 23};
+//+Physical Surface("Outflow",3) = {23};
 Physical Volume("Domain",9) = {1};
+Coherence;

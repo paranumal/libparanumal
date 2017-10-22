@@ -64,6 +64,12 @@ typedef struct {
   iint NinternalElements; // number of elements that can update without halo exchange
   iint NnotInternalElements; // number of elements that cannot update without halo exchange
 
+  //list of fair pairs
+  iint NfacePairs;
+  iint *EToFPairs;
+  iint *FPairsToE;
+  int *FPairsToF;
+
   // NBN: streams / command queues
   occa::stream stream0, stream1;
 
@@ -180,6 +186,10 @@ typedef struct {
   dfloat *BBRaiseVals; //Bernstein elevate matrix values
   dfloat *BBLower; //Berstein projection matrix.
 
+  //degree raising and lowering interpolation matrices
+  dfloat *interpRaise;
+  dfloat *interpLower;
+
   // time stepping info
   dfloat dt; // time step
   dfloat finalTime; // final time to run acoustics to
@@ -278,6 +288,8 @@ typedef struct {
   occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
+
+  occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
@@ -383,6 +395,9 @@ typedef struct {
 
   occa::kernel getKernel;
   occa::kernel putKernel;
+
+  occa::kernel sumKernel;
+  occa::kernel addScalarKernel;
 
   occa::kernel AxKernel;
   occa::kernel innerProductKernel;
@@ -503,10 +518,6 @@ void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memo
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 
-void occaTimerTic(occa::device device,std::string name);
-
-void occaTimerToc(occa::device device,std::string name);
-
 extern "C"
 {
   void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
@@ -528,49 +539,6 @@ extern "C"
                void* rhs);
 
   void xxtFree(void* A) ;
-
-  void * amg2013Setup( int Nnum,
-                       int *row_starts,     //[numproc+1] global partition array
-                       int     nnz,
-                       int    *Ai,      //coo sparse matrix (globally indexed)
-                       int    *Aj,
-                       void   *Avals,
-                       int    *sendSortId,
-                       int    *globalSortId,
-                       int    *compressId,
-                       int    *sendCounts,
-                       int    *sendOffsets,
-                       int    *recvCounts,
-                       int    *recvOffsets,
-                       const char* iintType,
-                       const char* dfloatType);
-
-
-  int amg2013Solve(void* x,
-                 void* A,
-                 void* rhs);
-
-
-  int amg2013Free(void* A);
 }
-
-void *parAlmondSetup(mesh_t *mesh,
-       iint* rowStarts,
-       iint  nnz,
-       iint* Ai,
-       iint* Aj,
-       dfloat* Avals,
-       hgs_t *hgs,
-       const char* options);
-
-void parAlmondPrecon(occa::memory o_x,
-    void* ALMOND,
-    occa::memory o_rhs);
-
-int parAlmondFree(void* A);
-
-void parAlmondSetMatFreeAX(void* A, void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options),
-                        void **args);
-
 
 #endif

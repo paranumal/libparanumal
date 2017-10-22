@@ -1,11 +1,11 @@
 
 kernel void insUpdateUpdate2D(const iint Nelements,
-				                      const dfloat dt,
-                              const dfloat g0,
+                              const dfloat dt,
+                              const dfloat ig0,
                               const dfloat a0,
                               const dfloat a1,
                               const dfloat a2,
-			      const dfloat c0,
+                              const dfloat c0,
                               const dfloat c1,
                               const dfloat c2,
                               const dfloat * restrict PI,
@@ -31,8 +31,8 @@ kernel void insUpdateUpdate2D(const iint Nelements,
       const iint id2 = n + (e+index2*offset)*p_Np;
 
       // // Update Velocity u = u - dt/g0 * grad(Pr)
-      U[id2] = U[id2] - dt/g0 * PIx[id];
-      V[id2] = V[id2] - dt/g0 * PIy[id];
+      U[id2] = U[id2] - dt*ig0 * PIx[id];
+      V[id2] = V[id2] - dt*ig0 * PIy[id];
 
       // Get Pressure from Pressure Increament
        P[id2] = PI[id] + c0*P[id0] + c1*P[id1] + c2*P[id2];

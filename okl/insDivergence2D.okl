@@ -1,4 +1,71 @@
 
+// kernel void insDivergence2D(const iint Nelements,
+//                             const dfloat * restrict vgeo,
+//                             const dfloat * restrict DrT,
+//                             const dfloat * restrict DsT,
+//                             const dfloat * restrict U,
+//                             const dfloat * restrict V,
+//                                   dfloat * restrict divU){
+
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+//     // for all elements
+//     shared dfloat s_U[p_NblockV][p_Np];
+//     shared dfloat s_V[p_NblockV][p_Np];
+     
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//         iint e = eo+es; // element in block
+//         if(e<Nelements){
+//           s_U[es][n]  = U[n + e*p_Np];
+//           s_V[es][n]  = V[n + e*p_Np];
+//         }
+//       }
+//     }
+
+//     // Make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//         iint e = eo+es; // element in block
+//         if(e<Nelements){
+          
+//           // prefetch geometric factors (constant on triangle)
+//           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//           const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//           const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+//           dfloat dudr  = 0.f, duds  = 0.f;
+//           dfloat dvdr  = 0.f, dvds  = 0.f;
+//           occaUnroll(p_Np)
+//             for(iint i=0;i<p_Np;++i){
+//               const dfloat Drni = DrT[n+i*p_Np];
+//               const dfloat Dsni = DsT[n+i*p_Np];
+//               //
+//               dudr  += Drni*s_U[es][i];
+//               duds  += Dsni*s_U[es][i];
+//               dvdr  += Drni*s_V[es][i];
+//               dvds  += Dsni*s_V[es][i];
+//             }
+//           //
+//           divU[n+e*p_Np] = (drdx*dudr + dsdx*duds) + (drdy*dvdr + dsdy*dvds); 
+//         }
+//       }
+//     }
+
+    
+//   }
+// }
+
+
+
+
+
+
+
+
+
 // Computes volume contribution of div(UI)
 kernel void insDivergenceVolume2D(const iint Nelements,
 				  const dfloat * restrict vgeo,
@@ -37,7 +104,7 @@ kernel void insDivergenceVolume2D(const iint Nelements,
       	  const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
       	  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
       	  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-      	  const dfloat J    = vgeo[e*p_Nvgeo + p_JID];
+      	  // const dfloat J    = vgeo[e*p_Nvgeo + p_JID];
 
       	  // compute 'r' and 's' derivatives of (q_m) at node n
       	  dfloat dudr = 0.f, duds = 0.f; 
@@ -64,6 +131,11 @@ kernel void insDivergenceVolume2D(const iint Nelements,
     }
   }
 }
+
+
+
+
+
 
 kernel void insDivergenceSurface2D(const iint Nelements,
 				   const dfloat * restrict sgeo,
