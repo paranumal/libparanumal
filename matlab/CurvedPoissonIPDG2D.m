@@ -61,14 +61,14 @@ for k1=1:K
     hinv = max(Fscale( 1 + (f1-1)*Nfp, k1), Fscale( 1 + (f2-1)*Nfp, k2));    
 
     % Set penalty scaling
-    gtau = (N)*(N+2-1)*hinv; 
+    gtau = (N+1)*(N+2)*hinv; 
 
     % Determine type of face
     switch(BCType(k1,f1))
       case {Dirichlet}
         % Dirichlet boundary face variational terms
         OP11 = OP11 + ( gVM'*gw*gtau*gVM - gVM'*gw*gDnM - gDnM'*gw*gVM);
-
+  
       case {Neuman}
         % Do nothing
       case {3}

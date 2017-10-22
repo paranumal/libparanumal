@@ -197,7 +197,7 @@ if N < 7
     
     
     % Surface Cubature
-    [cubx,cuby,cubw] = Cubature2D(3*N);
+    [cubx,cuby,cubw] = Cubature2D(3*N); 
     Nfi = length(cubx);
     ir = [cubx,         cubx,        cubx,                  -ones(Nfi,1)];
     is = [cuby,        -ones(Nfi,1), cuby,                   cubx];
@@ -648,5 +648,91 @@ for n=1:NpP
     end
     fprintf(fid, '\n');
 end
+
+%% permutations
+mVXYZ = [-1,+1,-1,-1;
+	 -1,-1,+1,-1;
+	 -1,-1,-1,+1];
+Nverts = 4;
+cnt = 0;
+for v1=1:Nverts
+  for v2=1:Nverts
+    for v3=1:Nverts
+      for v4=1:Nverts
+
+	if(v1~=v2 & v1~=v3 & v1~=v4 & v2~=v3 & v2 ~=v4 & v3~=v4)
+	  vX1 = mVXYZ(:,v1)';
+	  vX2 = mVXYZ(:,v2)';
+	  vX3 = mVXYZ(:,v3)';
+	  vX4 = mVXYZ(:,v4)';
+				  
+	  permRST = -0.5*(1+r+s+t)*vX1+0.5*(1+r)*vX2+0.5*(1+s)*vX3+0.5*(1+t)*vX4;
+
+	  [v1,v2,v3,v4]
+	  
+	  permr = permRST(:,1);
+	  perms = permRST(:,2);
+	  permt = permRST(:,3);
+
+	  for n=1:Np
+	    for m=1:Np
+	      dist(n,m) = (r(n)-permr(m))^2 + (s(n)-perms(m))^2 + (t(n)-permt(m))^2;
+	    end
+	  end
+	  [foo,ids] = min(dist);
+	  cnt = cnt+1;
+	  ids
+	  pmap(cnt, :) = [v1,v2,v3,v4,ids];
+
+	end
+      end
+    end
+  end
+end
+pmap
+
+%% degree raising interpolation
+[rP1,sP1,tP1] = Nodes3D(N+1);
+[rP1,sP1,tP1] = xyztorst(rP1,sP1,tP1);
+
+VP1 = Vandermonde3D(N, rP1, sP1, tP1);
+IP1 = VP1/V;
+NpP1 = length(rP1);
+
+fprintf(fid, '%% degree raising interpolation matrix\n')
+fprintf(fid, '%d %d\n', NpP1, Np);
+for n=1:NpP1
+  for m=1:Np
+    fprintf(fid, '%17.15E ', IP1(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+%% degree lowering interpolation
+if(N>1)
+  [rM1,sM1,tM1] = Nodes3D(N-1);
+[rM1,sM1,tM1] = xyztorst(rM1,sM1,tM1);
+else
+%% hard code degree 0
+rM1 = -1/2; % -1-1-1+1/4
+sM1 = -1/2;
+tM1 = -1/2;
+end
+
+VM1 = Vandermonde3D(N, rM1, sM1, tM1);
+IM1 = VM1/V;
+NpM1 = length(rM1);
+
+fprintf(fid, '%% degree lowering interpolation matrix\n')
+fprintf(fid, '%d %d\n', NpM1, Np);
+for n=1:NpM1
+  for m=1:Np
+    fprintf(fid, '%17.15E ', IM1(n,m));
+  end
+  fprintf(fid, '\n');
+end
+
+
+
 
 fclose(fid);

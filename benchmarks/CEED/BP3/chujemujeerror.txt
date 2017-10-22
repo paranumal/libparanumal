@@ -1,99 +1,75 @@
-==138424== NVPROF is profiling process 138424, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 1
-[nr144:138424:0] Caught signal 11 (Segmentation fault)
-==== backtrace ====
- 2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
- 3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
- 4 0x0000000000035670 killpg()  ??:0
- 5 0x000000000025ddf7 InitializeInjection()  ??:0
- 6 0x000000000029db5c InitializeInjection()  ??:0
- 7 0x0000000000264cb0 InitializeInjection()  ??:0
- 8 0x0000000000266c55 InitializeInjection()  ??:0
- 9 0x00000000000e713b InitializeInjection()  ??:0
-10 0x00000000000d002b InitializeInjection()  ??:0
-11 0x00000000004d3029 InitializeInjection()  ??:0
-12 0x0000000000007dc5 start_thread()  pthread_create.c:0
-13 0x00000000000f6ced __clone()  ??:0
-===================
-==138424== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 1
-==138424== Profiling result:
-No events/metrics were profiled.
-======== Error: Application received signal 11
-==138472== NVPROF is profiling process 138472, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 2
-==138472== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 2
-[nr144:138472:0] Caught signal 11 (Segmentation fault)
-==138472== Profiling result:
-==138472== Metric result:
+==56192== NVPROF is profiling process 56192, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 1
+==56192== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 1
+==56192== Profiling result:
+==56192== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.122597    0.122597    0.122597
+          1                        achieved_occupancy                        Achieved Occupancy    0.263501    0.263501    0.263501
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.111389    0.113759    0.112574
+          2                        achieved_occupancy                        Achieved Occupancy    0.110653    0.113706    0.112180
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.116292    0.116663    0.116477
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.122278    0.130775    0.123328
-==== backtrace ====
- 2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
- 3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
- 4 0x0000000000035670 killpg()  ??:0
- 5 0x00000000000a6bcc opal_memory_ptmalloc2_int_free()  ??:0
- 6 0x00000000000a712b opal_memory_ptmalloc2_free()  ??:0
- 7 0x000000000039f971 InitializeInjection()  ??:0
- 8 0x000000000038c8af InitializeInjection()  ??:0
- 9 0x0000000000038e69 __run_exit_handlers()  :0
-10 0x0000000000038eb5 __GI_exit()  :0
-11 0x000000000040bdab main()  ??:0
-12 0x0000000000021b15 __libc_start_main()  ??:0
-13 0x000000000040c541 _start()  ??:0
-===================
-======== Error: Application received signal 11
-==138547== NVPROF is profiling process 138547, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 3
-==138547== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 3
-[nr144:138547:0] Caught signal 11 (Segmentation fault)
-==138547== Profiling result:
-==138547== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.116870    0.117123    0.116996
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.257940    0.373925    0.280376
+==56211== NVPROF is profiling process 56211, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 2
+==56211== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 2
+==56211== Profiling result:
+==56211== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.263407    0.263407    0.263407
+          1                        achieved_occupancy                        Achieved Occupancy    0.689790    0.689790    0.689790
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.130145    0.132816    0.131481
+          2                        achieved_occupancy                        Achieved Occupancy    0.299135    0.302797    0.300966
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.133419    0.133705    0.133562
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.127267    0.134354    0.128665
-==== backtrace ====
- 2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
- 3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
- 4 0x0000000000035670 killpg()  ??:0
- 5 0x00000000000a6bcc opal_memory_ptmalloc2_int_free()  ??:0
- 6 0x00000000000a712b opal_memory_ptmalloc2_free()  ??:0
- 7 0x000000000039f950 InitializeInjection()  ??:0
- 8 0x000000000038c8af InitializeInjection()  ??:0
- 9 0x0000000000038e69 __run_exit_handlers()  :0
-10 0x0000000000038eb5 __GI_exit()  :0
-11 0x000000000040bdab main()  ??:0
-12 0x0000000000021b15 __libc_start_main()  ??:0
-13 0x000000000040c541 _start()  ??:0
-===================
-======== Error: Application received signal 11
-==138601== NVPROF is profiling process 138601, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 4
-==138601== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 4
-==138601== Profiling result:
-==138601== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.290567    0.291970    0.291268
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.402053    0.407874    0.403641
+==56258== NVPROF is profiling process 56258, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 3
+==56258== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 3
+==56258== Profiling result:
+==56258== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.453586    0.453586    0.453586
+          1                        achieved_occupancy                        Achieved Occupancy    0.800453    0.800453    0.800453
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.278682    0.292487    0.285584
+          2                        achieved_occupancy                        Achieved Occupancy    0.926901    0.930137    0.928519
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.284500    0.287863    0.286181
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.138183    0.138705    0.138350
-==138621== NVPROF is profiling process 138621, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 5
-[nr144:138621:0] Caught signal 11 (Segmentation fault)
+          2                        achieved_occupancy                        Achieved Occupancy    0.855401    0.862596    0.858998
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.426438    0.432440    0.427858
+==56310== NVPROF is profiling process 56310, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 4
+==56310== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 4
+==56310== Profiling result:
+==56310== Metric result:
+Invocations                               Metric Name                        Metric Description         Min         Max         Avg
+Device "Tesla P100-PCIE-12GB (0)"
+    Kernel: dotDivide0
+          1                        achieved_occupancy                        Achieved Occupancy    0.853343    0.853343    0.853343
+    Kernel: gather0
+          2                        achieved_occupancy                        Achieved Occupancy    0.900021    0.903747    0.901884
+    Kernel: scatter0
+          2                        achieved_occupancy                        Achieved Occupancy    0.897250    0.901612    0.899431
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.400610    0.403736    0.401938
+==56354== NVPROF is profiling process 56354, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 5
+==56354== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 5
+==56354== Profiling result:
+==56354== Metric result:
+Invocations                               Metric Name                        Metric Description         Min         Max         Avg
+Device "Tesla P100-PCIE-12GB (0)"
+    Kernel: dotDivide0
+          1                        achieved_occupancy                        Achieved Occupancy    0.872856    0.872856    0.872856
+    Kernel: gather0
+          2                        achieved_occupancy                        Achieved Occupancy    0.919559    0.921280    0.920420
+    Kernel: scatter0
+          2                        achieved_occupancy                        Achieved Occupancy    0.912930    0.916470    0.914700
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.360309    0.361280    0.360832
+==56409== NVPROF is profiling process 56409, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 6
+[nr163:56409:0] Caught signal 11 (Segmentation fault)
 ==== backtrace ====
  2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
  3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
@@ -108,88 +84,60 @@ Device "Tesla P100-PCIE-12GB (0)"
 12 0x000000000006e186 _ZN4occa8memory_tILi8388608EE8copyFromEPKvmm()  ??:0
 13 0x0000000000073821 _ZN4occa8device_tILi8388608EE6mallocEmPv()  ??:0
 14 0x00000000000b38a9 _ZN4occa6device6mallocEmPv()  ??:0
-15 0x0000000000412566 _Z23ellipticSolveSetupHex3DP6mesh_tdRN4occa10kernelInfoEPKc()  ??:0
-16 0x000000000040b9c8 main()  ??:0
+15 0x000000000041266f _Z23ellipticSolveSetupHex3DP6mesh_tdRN4occa10kernelInfoEPKc()  ??:0
+16 0x000000000040ba58 main()  ??:0
 17 0x0000000000021b15 __libc_start_main()  ??:0
-18 0x000000000040c541 _start()  ??:0
+18 0x000000000040c5d1 _start()  ??:0
 ===================
-==138621== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 5
-==138621== Profiling result:
+==56409== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 6
+==56409== Profiling result:
 No events/metrics were profiled.
-==138621== Warning: Some profiling data are not recorded. Make sure cudaProfilerStop() or cuProfilerStop() is called before application exit to flush profile data.
+==56409== Warning: Some profiling data are not recorded. Make sure cudaProfilerStop() or cuProfilerStop() is called before application exit to flush profile data.
 ======== Error: Application received signal 11
-==138640== NVPROF is profiling process 138640, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 6
-==138640== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 6
-==138640== Profiling result:
-==138640== Metric result:
+==56428== NVPROF is profiling process 56428, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 7
+==56428== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 7
+==56428== Profiling result:
+==56428== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.688612    0.688612    0.688612
+          1                        achieved_occupancy                        Achieved Occupancy    0.889034    0.889034    0.889034
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.829112    0.854102    0.841607
+          2                        achieved_occupancy                        Achieved Occupancy    0.869072    0.871499    0.870286
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.823063    0.834783    0.828923
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.281660    0.281895    0.281771
-==138658== NVPROF is profiling process 138658, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 7
-==138658== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 7
-==138658== Profiling result:
-==138658== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.872131    0.872786    0.872459
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.277284    0.278392    0.277889
+==56448== NVPROF is profiling process 56448, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 8
+==56448== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 8
+==56448== Profiling result:
+==56448== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.802546    0.802546    0.802546
+          1                        achieved_occupancy                        Achieved Occupancy    0.893730    0.893730    0.893730
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.789022    0.793868    0.791445
+          2                        achieved_occupancy                        Achieved Occupancy    0.849402    0.851425    0.850414
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.812831    0.832310    0.822570
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.282369    0.282700    0.282544
-==138676== NVPROF is profiling process 138676, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 8
-==138676== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 8
-==138676== Profiling result:
-==138676== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.847953    0.848086    0.848019
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.227968    0.228274    0.228149
+==56493== NVPROF is profiling process 56493, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 9
+==56493== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 9
+==56493== Profiling result:
+==56493== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.824010    0.824010    0.824010
+          1                        achieved_occupancy                        Achieved Occupancy    0.898518    0.898518    0.898518
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.776117    0.801803    0.788960
+          2                        achieved_occupancy                        Achieved Occupancy    0.862942    0.863401    0.863172
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.834058    0.841025    0.837541
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.415776    0.418944    0.417589
-==138744== NVPROF is profiling process 138744, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 9
-==138744== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 9
-==138744== Profiling result:
-==138744== Metric result:
-Invocations                               Metric Name                        Metric Description         Min         Max         Avg
-Device "Tesla P100-PCIE-12GB (0)"
-    Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.852526    0.852526    0.852526
-    Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.812363    0.822316    0.817340
-    Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.860137    0.861371    0.860754
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.360506    0.368378    0.365017
-==138762== NVPROF is profiling process 138762, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 10
-==138762== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 10
-==138762== Profiling result:
-==138762== Metric result:
-Invocations                               Metric Name                        Metric Description         Min         Max         Avg
-Device "Tesla P100-PCIE-12GB (0)"
-    Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.860657    0.860657    0.860657
-    Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.819483    0.828496    0.823989
-    Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.862937    0.863179    0.863058
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.299135    0.305460    0.303664
-==138798== NVPROF is profiling process 138798, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 11
-[nr144:138798:0] Caught signal 11 (Segmentation fault)
+          2                        achieved_occupancy                        Achieved Occupancy    0.866668    0.867460    0.867064
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.245308    0.245677    0.245433
+==56787== NVPROF is profiling process 56787, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 10
+[nr163:56787:0] Caught signal 11 (Segmentation fault)
 ==== backtrace ====
  2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
  3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
@@ -204,69 +152,95 @@ Device "Tesla P100-PCIE-12GB (0)"
 12 0x000000000006e186 _ZN4occa8memory_tILi8388608EE8copyFromEPKvmm()  ??:0
 13 0x0000000000073821 _ZN4occa8device_tILi8388608EE6mallocEmPv()  ??:0
 14 0x00000000000b38a9 _ZN4occa6device6mallocEmPv()  ??:0
-15 0x0000000000412566 _Z23ellipticSolveSetupHex3DP6mesh_tdRN4occa10kernelInfoEPKc()  ??:0
-16 0x000000000040b9c8 main()  ??:0
+15 0x000000000041266f _Z23ellipticSolveSetupHex3DP6mesh_tdRN4occa10kernelInfoEPKc()  ??:0
+16 0x000000000040ba58 main()  ??:0
 17 0x0000000000021b15 __libc_start_main()  ??:0
-18 0x000000000040c541 _start()  ??:0
+18 0x000000000040c5d1 _start()  ??:0
 ===================
-==138798== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 11
-==138798== Profiling result:
+==56787== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 10
+==56787== Profiling result:
 No events/metrics were profiled.
-==138798== Warning: Some profiling data are not recorded. Make sure cudaProfilerStop() or cuProfilerStop() is called before application exit to flush profile data.
+==56787== Warning: Some profiling data are not recorded. Make sure cudaProfilerStop() or cuProfilerStop() is called before application exit to flush profile data.
 ======== Error: Application received signal 11
-==138843== NVPROF is profiling process 138843, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 12
-==138843== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 12
-==138843== Profiling result:
-==138843== Metric result:
+==56894== NVPROF is profiling process 56894, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 11
+[nr163:56894:0] Caught signal 11 (Segmentation fault)
+==== backtrace ====
+ 2 0x000000000006736c mxm_handle_error()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:641
+ 3 0x00000000000678bc mxm_error_signal_handler()  /var/tmp/OFED_topdir/BUILD/mxm-3.4.3076/src/mxm/util/debug/debug.c:616
+ 4 0x0000000000035670 killpg()  ??:0
+ 5 0x00000000000fa370 cuMemGetAttribute_v2()  ??:0
+ 6 0x000000000019dd9e cudbgApiDetach()  ??:0
+ 7 0x0000000000268537 cuVDPAUCtxCreate()  ??:0
+ 8 0x000000000019f087 cudbgApiDetach()  ??:0
+ 9 0x00000000000c287a cuMemGetAttribute_v2()  ??:0
+10 0x00000000000c49ca cuMemGetAttribute_v2()  ??:0
+11 0x00000000001ff4a4 cuMemcpyHtoD_v2()  ??:0
+12 0x000000000006e186 _ZN4occa8memory_tILi8388608EE8copyFromEPKvmm()  ??:0
+13 0x0000000000073821 _ZN4occa8device_tILi8388608EE6mallocEmPv()  ??:0
+14 0x00000000000b38a9 _ZN4occa6device6mallocEmPv()  ??:0
+15 0x000000000041266f _Z23ellipticSolveSetupHex3DP6mesh_tdRN4occa10kernelInfoEPKc()  ??:0
+16 0x000000000040ba58 main()  ??:0
+17 0x0000000000021b15 __libc_start_main()  ??:0
+18 0x000000000040c5d1 _start()  ??:0
+===================
+==56894== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 11
+==56894== Profiling result:
+No events/metrics were profiled.
+==56894== Warning: Some profiling data are not recorded. Make sure cudaProfilerStop() or cuProfilerStop() is called before application exit to flush profile data.
+======== Error: Application received signal 11
+==57051== NVPROF is profiling process 57051, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 12
+==57051== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 12
+==57051== Profiling result:
+==57051== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.881258    0.881258    0.881258
+          1                        achieved_occupancy                        Achieved Occupancy    0.902363    0.902363    0.902363
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.817527    0.823959    0.820743
+          2                        achieved_occupancy                        Achieved Occupancy    0.852028    0.852122    0.852075
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.848554    0.856161    0.852358
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.277995    0.279037    0.278559
-==138936== NVPROF is profiling process 138936, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 13
-==138936== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 13
-==138936== Profiling result:
-==138936== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.855124    0.855377    0.855250
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.184909    0.184998    0.184960
+==57210== NVPROF is profiling process 57210, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 13
+==57210== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 13
+==57210== Profiling result:
+==57210== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.885410    0.885410    0.885410
+          1                        achieved_occupancy                        Achieved Occupancy    0.902055    0.902055    0.902055
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.831561    0.831607    0.831584
+          2                        achieved_occupancy                        Achieved Occupancy    0.854070    0.854490    0.854280
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.857112    0.865438    0.861275
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.215192    0.217260    0.216156
-==139013== NVPROF is profiling process 139013, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 14
-==139013== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 14
-==139013== Profiling result:
-==139013== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.860250    0.860498    0.860374
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.108260    0.108275    0.108268
+==57417== NVPROF is profiling process 57417, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 14
+==57417== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 14
+==57417== Profiling result:
+==57417== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.889102    0.889102    0.889102
+          1                        achieved_occupancy                        Achieved Occupancy    0.901509    0.901509    0.901509
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.826712    0.832025    0.829369
+          2                        achieved_occupancy                        Achieved Occupancy    0.848608    0.849413    0.849011
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.852727    0.853154    0.852941
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.246936    0.248243    0.247694
-==139065== NVPROF is profiling process 139065, command: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 15
-==139065== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH025.msh 15
-==139065== Profiling result:
-==139065== Metric result:
+          2                        achieved_occupancy                        Achieved Occupancy    0.854530    0.856002    0.855266
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.123505    0.123510    0.123508
+==57807== NVPROF is profiling process 57807, command: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 15
+==57807== Profiling application: ./ellipticMainHex3D ../../../meshes/cubeHexH0125.msh 15
+==57807== Profiling result:
+==57807== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: dotDivide0
-          1                        achieved_occupancy                        Achieved Occupancy    0.891540    0.891540    0.891540
+          1                        achieved_occupancy                        Achieved Occupancy    0.903519    0.903519    0.903519
     Kernel: gather0
-          2                        achieved_occupancy                        Achieved Occupancy    0.835345    0.836830    0.836087
+          2                        achieved_occupancy                        Achieved Occupancy    0.848551    0.848688    0.848620
     Kernel: scatter0
-          2                        achieved_occupancy                        Achieved Occupancy    0.856770    0.856773    0.856771
-    Kernel: ellipticAxHex3D_Ref2D00
-         10                        achieved_occupancy                        Achieved Occupancy    0.124623    0.124637    0.124630
+          2                        achieved_occupancy                        Achieved Occupancy    0.856975    0.857671    0.857323
+    Kernel: ellipticAxHex3D_Ref2D20
+         10                        achieved_occupancy                        Achieved Occupancy    0.124090    0.124099    0.124094

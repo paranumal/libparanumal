@@ -64,10 +64,10 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
     }
   }
 }
-#endif
+
 
 // experimental overlapping patch solver
-kernel void ellipticApproxPatchSolver2D(const int Nelements,
+kernel void ellipticPatchSolver2D(const int Nelements,
                                   const dfloat * restrict invAP,
                                   const iint   * restrict EToE,
                                   const iint   * restrict EToF,
@@ -80,18 +80,11 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
   for(iint eo=0;eo<Nelements;eo+=p_NblockP;outer0){
 
     shared dfloat s_q[p_NblockP][p_patchNp];
-    shared dfloat s_invAP[p_patchNp*p_patchNp];
 
     for(iint e=eo;e<eo+p_NblockP;++e;inner2){
       for(iint es=0;es<p_patchNelements;++es;inner1){
         for(iint n=0;n<p_Np;++n;inner0){
           s_q[e-eo][es*p_Np+n] = 0.f;
-
-          iint t = n + p_Np*es + p_patchNp*(e-eo);
-          while(t<p_patchNp*p_patchNp){
-            s_invAP[t] = invAP[t];
-            t+=p_NblockP*p_patchNp;
-          }
         }
       }
     }
@@ -131,15 +124,85 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
             //      occaUnroll(p_patchNp)
             occaUnroll(p_Np)
               for(iint m=0;m<p_Np;++m){
-                res1 += s_invAP[offset + m*p_patchNp]*s_q[e-eo][m];
-                res2 += s_invAP[offset + (m+p_Np)*p_patchNp]*s_q[e-eo][m+p_Np];
-                res3 += s_invAP[offset + (m+2*p_Np)*p_patchNp]*s_q[e-eo][m+2*p_Np];
-                res4 += s_invAP[offset + (m+3*p_Np)*p_patchNp]*s_q[e-eo][m+3*p_Np];
+                res1 += invAP[offset + (m       )*p_patchNp]*s_q[e-eo][m];
+                res2 += invAP[offset + (m+  p_Np)*p_patchNp]*s_q[e-eo][m+p_Np];
+                res3 += invAP[offset + (m+2*p_Np)*p_patchNp]*s_q[e-eo][m+2*p_Np];
+                res4 += invAP[offset + (m+3*p_Np)*p_patchNp]*s_q[e-eo][m+3*p_Np];
               }
 
             const dfloat invDeg = invDegree[e];
-            const dfloat sc = 2.0/(3.*p_N+4.);
-            //const dfloat sc = 0.25;
+            //const dfloat sc = 2.0/(3.*p_N+4.);
+            const dfloat sc = 1.0;
+
+            invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*(res1+res2+res3+res4);
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+
+// experimental overlapping patch solver
+kernel void ellipticExactPatchSolver2D(const int Nelements,
+                                  const dfloat * restrict invAP,
+                                  const iint   * restrict EToE,
+                                  const dfloat * restrict invDegree,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict invAPq){
+
+  // assume one patch per outer iteration (tune later)
+  for(iint eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+
+    shared dfloat s_q[p_NblockP][p_patchNp];
+
+    for(iint e=eo;e<eo+p_NblockP;++e;inner2){
+      for(iint es=0;es<p_patchNelements;++es;inner1){
+        for(iint n=0;n<p_Np;++n;inner0){
+          s_q[e-eo][es*p_Np+n] = 0.f;
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over elements in sub-patch e and load q
+    for(iint e=eo;e<eo+p_NblockP;++e;inner2){
+      for(iint es=0;es<p_patchNelements;++es;inner1){
+        for(iint n=0;n<p_Np;++n;inner0){
+          if(e<Nelements){
+            const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
+
+            if(eP>=0){
+              s_q[e-eo][es*p_Np+n] = q[eP*p_Np+n];
+            }
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over elements/nodes in patch and do local smooth
+    for(iint e=eo;e<eo+p_blockV;++e;inner2){
+      for(iint es=0;es<p_patchNelements;++es;inner1){
+        for(iint n=0;n<p_Np;++n;inner0){
+          if(e<Nelements){
+            const iint offset = e*p_patchNp*p_patchNp + es*p_Np + n; // patch matrices offset
+            dfloat res1 = 0.f, res2 = 0.f, res3 = 0.f, res4 = 0.f;
+
+            //      occaUnroll(p_patchNp)
+            occaUnroll(p_Np)
+              for(iint m=0;m<p_Np;++m){
+                res1 += invAP[offset + (m       )*p_patchNp]*s_q[e-eo][m];
+                res2 += invAP[offset + (m+  p_Np)*p_patchNp]*s_q[e-eo][m+p_Np];
+                res3 += invAP[offset + (m+2*p_Np)*p_patchNp]*s_q[e-eo][m+2*p_Np];
+                res4 += invAP[offset + (m+3*p_Np)*p_patchNp]*s_q[e-eo][m+3*p_Np];
+              }
+
+            const dfloat invDeg = invDegree[e];
+            //const dfloat sc = 2.0/(3.*p_N+4.);
+            const dfloat sc = 1.0;
 
             invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*(res1+res2+res3+res4);
           }
@@ -150,7 +213,8 @@ kernel void ellipticApproxPatchSolver2D(const int Nelements,
 }
 
 // experimental overlapping patch solver
-kernel void ellipticPatchSolver2D(const int Nelements,
+kernel void ellipticApproxPatchSolver2D(const int Nelements,
+                                  const iint   * restrict patchesIndex,
                                   const dfloat * restrict invAP,
                                   const iint   * restrict EToE,
                                   const dfloat * restrict invDegree,
@@ -158,19 +222,22 @@ kernel void ellipticPatchSolver2D(const int Nelements,
                                   dfloat * restrict invAPq){
 
   // assume one patch per outer iteration (tune later)
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockP;outer0){
 
-    shared dfloat s_q[p_patchNp];
-    shared dfloat s_invAPq[p_patchNp];
+    shared dfloat s_q[p_NblockP][p_patchNp];
 
     // loop over elements in sub-patch e and load q
-    for(iint es=0;es<p_patchNelements;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
+    for(iint e=eo;e<eo+p_NblockP;++e;inner2){
+      for(iint es=0;es<p_patchNelements;++es;inner1){
+        for(iint n=0;n<p_Np;++n;inner0){
+          if(e<Nelements){
+            const iint eP = (es==0) ? e: EToE[e*p_Nfaces+es-1]; // load element e first
 
-        s_q[es*p_Np+n] = 0.f;
-        if(eP>=0){
-          s_q[es*p_Np+n] = q[eP*p_Np+n];
+            s_q[e-eo][es*p_Np+n] = 0.f;
+            if(eP>=0){
+              s_q[e-eo][es*p_Np+n] = q[eP*p_Np+n];
+            }
+          }
         }
       }
     }
@@ -178,26 +245,141 @@ kernel void ellipticPatchSolver2D(const int Nelements,
     barrier(localMemFence);
 
     // loop over elements/nodes in patch and do local smooth
-    for(iint es=0;es<p_patchNelements;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint offset = e*p_patchNp*p_patchNp + es*p_Np + n; // patch matrices offset
-        dfloat res = 0.f;
-        occaUnroll(p_patchNp)
-          for(iint m=0;m<p_patchNp;++m){
-            res += invAP[offset + m*p_patchNp]*s_q[m];
+    for(iint e=eo;e<eo+p_NblockP;++e;inner2){
+      for(iint es=0;es<p_patchNelements;++es;inner1){
+        for(iint n=0;n<p_Np;++n;inner0){
+          if(e<Nelements){
+            const dfloat invDeg = invDegree[e];
+
+            // patch matrices offset
+            const iint offset = patchesIndex[e]*p_patchNp*p_patchNp + es*p_Np + n;
+            dfloat res1 = 0.f, res2 = 0.f, res3 = 0.f, res4 = 0.f;
+            occaUnroll(p_Np)
+              for(iint m=0;m<p_Np;++m){
+                res1 += invAP[offset + (m       )*p_patchNp ]*s_q[e-eo][m];
+                res2 += invAP[offset + (m  +p_Np)*p_patchNp ]*s_q[e-eo][m+p_Np];
+                res3 += invAP[offset + (m+2*p_Np)*p_patchNp ]*s_q[e-eo][m+2*p_Np];
+                res4 += invAP[offset + (m+3*p_Np)*p_patchNp ]*s_q[e-eo][m+3*p_Np];
+              }
+
+            invAPq[p_patchNp*e+es*p_Np+n] = invDeg*(res1+res2+res3+res4);
           }
-        s_invAPq[es*p_Np+n] = res;
+        }
+      }
+    }
+  }
+}
+
+// experimental overlapping patch solver
+kernel void ellipticExactFacePatchSolver2D(const int NfacePairs,
+                                  const dfloat * restrict invAP,
+                                  const iint   * restrict FPairsToE,
+                                  const dfloat * restrict invDegree,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict invAPq){
+
+  //tune later
+  for(iint f=0;f<NfacePairs;f++;outer0){
+
+    shared dfloat s_q[2*p_Np];
+
+    // loop over elements in sub-patch e and load q
+    for(iint es=0;es<2;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(f<NfacePairs){
+          const iint e = FPairsToE[2*f+es];
+
+          s_q[es*p_Np+n] = 0.f;
+          if(e>=0){
+            s_q[es*p_Np+n] = q[e*p_Np+n];
+          }
+        }
       }
     }
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_patchNelements;++es;inner1){
+    // loop over elements/nodes in patch and do local smooth
+    for(iint es=0;es<2;++es;inner1){
       for(iint n=0;n<p_Np;++n;inner0){
-        const dfloat invDeg = invDegree[e];
-        const dfloat sc = 1.;
+        if(f<NfacePairs){
+          const iint offset = f*2*p_Np*2*p_Np + es*p_Np + n; // patch matrices offset
+          dfloat res1 = 0.f, res2 = 0.f;
 
-        invAPq[p_patchNp*e+es*p_Np+n] = sc*invDeg*s_invAPq[es*p_Np+n];
+          occaUnroll(p_Np)
+            for(iint m=0;m<p_Np;++m){
+              res1 += invAP[offset + (m     )*2*p_Np]*s_q[m     ];
+              res2 += invAP[offset + (m+p_Np)*2*p_Np]*s_q[m+p_Np];
+            }
+
+          const iint e = FPairsToE[2*f+es];
+          dfloat invDeg;
+          if(e>=0) {
+            invDeg = invDegree[e];
+          } else {
+            invDeg = 0.f;
+          }
+
+          invAPq[2*p_Np*f+es*p_Np+n] = invDeg*(res1+res2);
+        }
+      }
+    }
+  }
+}
+
+// experimental overlapping patch solver
+kernel void ellipticApproxFacePatchSolver2D(const int NfacePairs,
+                                  const iint   * restrict patchesIndex,
+                                  const dfloat * restrict invAP,
+                                  const iint   * restrict FPairsToE,
+                                  const dfloat * restrict invDegree,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict invAPq){
+
+  //tune later
+  for(iint f=0;f<NfacePairs;f++;outer0){
+
+    shared dfloat s_q[2*p_Np];
+
+    // loop over elements in sub-patch f and load q
+    for(iint es=0;es<2;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(f<NfacePairs){
+          const iint e = FPairsToE[2*f+es];
+
+          s_q[es*p_Np+n] = 0.f;
+          if(e>=0){
+            s_q[es*p_Np+n] = q[e*p_Np+n];
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over elements/nodes in patch and do local smooth
+    for(iint es=0;es<2;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(f<NfacePairs){
+          const iint offset = patchesIndex[f]*2*p_Np*2*p_Np + es*p_Np + n; // patch matrices offset
+          dfloat res1 = 0.f, res2 = 0.f;
+
+          occaUnroll(p_Np)
+            for(iint m=0;m<p_Np;++m){
+              res1 += invAP[offset + (m     )*2*p_Np]*s_q[m     ];
+              res2 += invAP[offset + (m+p_Np)*2*p_Np]*s_q[m+p_Np];
+            }
+
+          const iint e = FPairsToE[2*f+es];
+
+          dfloat invDeg;
+          if(e>=0) {
+            invDeg = invDegree[e];
+          } else {
+            invDeg = 0.f;
+          }
+          invAPq[2*p_Np*f+es*p_Np+n] = invDeg*(res1+res2);
+        }
       }
     }
   }
@@ -205,40 +387,93 @@ kernel void ellipticPatchSolver2D(const int Nelements,
 
 
 // experimental overlapping patch solver
-kernel void ellipticLocalPatchSolver2D(const int Nelements,
-               const dfloat * restrict invAP,
-               const iint   * restrict EToE,
-               const dfloat * restrict q,
-               dfloat * restrict invAPq){
+kernel void ellipticExactBlockJacobiSolver2D(const int Nelements,
+                                  const dfloat * restrict invAP,
+                                  const dfloat * restrict invDegree,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict invAPq){
 
   // assume one patch per outer iteration (tune later)
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
-    shared dfloat s_q[p_Np];
+    shared dfloat s_q[p_NblockV][p_Np];
 
-    // loop over elements in sub-patch e and load q
-    for(iint n=0;n<p_Np;++n;inner0){
-      s_q[n] = q[e*p_Np + n];
+    // loop over elements and load q
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          s_q[e-eo][n] = q[e*p_Np+n];
+        }
+      }
     }
 
     barrier(localMemFence);
 
     // loop over elements/nodes in patch and do local smooth
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint offset = e*p_Np*p_Np + n; // patch matrices offset
+    for(iint e=eo;e<eo+p_blockV;++e;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          const dfloat invDeg = invDegree[e];
+          const iint offset = e*p_Np*p_Np + n; // patch matrices offset
+          dfloat res = 0.f;
 
-      dfloat res = 0.f;
-      occaUnroll(p_Np)
-        for(iint m=0;m<p_Np;++m){
-          res += invAP[offset + m*p_Np]*s_q[m];
+          occaUnroll(p_Np)
+            for(iint m=0;m<p_Np;++m){
+              res += invAP[offset + m*p_Np]*s_q[e-eo][m];
+            }
+
+          invAPq[p_Np*e+n] = invDeg*res;
         }
-
-      const dfloat sc = 1.;
-
-      invAPq[p_Np*e+n] = sc*res;
+      }
     }
   }
 }
+
+// experimental overlapping patch solver
+kernel void ellipticApproxBlockJacobiSolver2D(const int Nelements,
+                                  const iint   * restrict patchesIndex,
+                                  const dfloat * restrict invAP,
+                                  const dfloat * restrict invDegree,
+                                  const dfloat * restrict q,
+                                  dfloat * restrict invAPq){
+
+  // assume one patch per outer iteration (tune later)
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+    shared dfloat s_q[p_NblockV][p_Np];
+
+    // loop over elements and load q
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          s_q[e-eo][n] = q[e*p_Np+n];
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over elements/nodes in patch and do local smooth
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          const dfloat invDeg = invDegree[e];
+
+          // patch matrices offset
+          const iint offset = patchesIndex[e]*p_Np*p_Np + n;
+          dfloat res = 0.f;
+          occaUnroll(p_Np)
+            for(iint m=0;m<p_Np;++m){
+              res += invAP[offset + m*p_Np ]*s_q[e-eo][m];
+            }
+
+          invAPq[p_Np*e+n] = invDeg*res;
+        }
+      }
+    }
+  }
+}
+
 
 #if 0
 // experimental overlapping patch solver

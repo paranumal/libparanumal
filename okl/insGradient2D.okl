@@ -1,4 +1,61 @@
 // Compute Gradient in Strong Form
+kernel void insGradient2D(const iint Nelements,
+                          const dfloat * restrict vgeo,
+                          const dfloat * restrict DrT,
+                          const dfloat * restrict DsT,
+                          const dfloat * restrict P,
+                                dfloat * restrict Px,
+                                dfloat * restrict Py){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    // for all elements
+    shared dfloat s_P[p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        iint e = eo+es; // element in block
+        if(e<Nelements){
+                s_P[es][n]  = P[n + e*p_Np];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+        iint e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          dfloat dpdr  = 0.f, dpds  = 0.f;
+          occaUnroll(p_Np)
+            for(iint i=0;i<p_Np;++i){
+              const dfloat Drni = DrT[n+i*p_Np];
+              const dfloat Dsni = DsT[n+i*p_Np];
+
+              dpdr  += Drni*s_P[es][i];
+              dpds  += Dsni*s_P[es][i];
+            }
+
+          const iint id = e*p_Np+n;
+          Px[id] = drdx*dpdr + dsdx*dpds;
+          Py[id] = drdy*dpdr + dsdy*dpds;
+        }
+      }
+    }
+  }
+}
+
+
+
+// Compute Gradient in Strong Form
 kernel void insGradientVolume2D(const iint Nelements,
         const dfloat * restrict vgeo,
         const dfloat * restrict DrT,
@@ -114,36 +171,13 @@ kernel void insGradientSurface2D(const iint Nelements,
             if(bc>0){
               idM = vmapM[id];
               insGradientBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
-
-#if 0
-              //TODO fix this later. On a Neumann BC for pressure this is wrong.
-              //  Need the boundary values from the previous pressure steps.
-              // Note: Or is it? Tried changing it and didnt help
-              if((solverID == 1)&&(bc==3)){ //compute BC on pressure increment
-                dfloat PMm0, PMm1, PMm2;  //hard coded for 3 stages
-                dfloat PPm0, PPm1, PPm2;  //hard coded for 3 stages
-
-                int index0 = (index+0)%3;
-                int index1 = (index+2)%3; //one step back
-                int index2 = (index+1)%3; //two steps back
-
-                PMm0 = POld[idM+p_Np*index0*offset];
-                PMm1 = POld[idM+p_Np*index1*offset];
-                PMm2 = POld[idM+p_Np*index2*offset];
-
-                insGradientBoundaryConditions2D(bc, time-1*dt, x[idM], y[idM], nx, ny, PMm0, &PPm0);
-                insGradientBoundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PMm1, &PPm1);
-                insGradientBoundaryConditions2D(bc, time-3*dt, x[idM], y[idM], nx, ny, PMm2, &PPm2);
-                PP = PP - a0*PPm0 - a1*PPm1 - a2*PPm2;
-	      }
-#endif
-          if(solverID==1){ // Pressure Increament Gradient
-              // dfloat PPo = 0.f;
-              // dfloat to  = time-dt;
-              // insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
-              // PP = PP-c0*PPo;
-             PP = PM;
-            }
+              if(solverID==1){ // Pressure Increament Gradient
+                  // dfloat PPo = 0.f;
+                  // dfloat to  = time-dt;
+                  // insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo);
+                  // PP = PP-c0*PPo;
+                 PP = PM;
+                }
 
               PP = 2.f*PP - PM; //Strong form BCs
             }

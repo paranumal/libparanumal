@@ -60,7 +60,7 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
 
   free(Z); free(G); free(cZ);
 
-  [printf("Nelements: %d\n", mesh->Nelements);
+  printf("Nelements: %d\n", mesh->Nelements);
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
