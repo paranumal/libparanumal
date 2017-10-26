@@ -244,7 +244,7 @@ int main(int argc, char **argv){
 			dfloat exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
 			dfloat error = fabs(exact-mesh->q[id]);
 			if (error > 5){
-				printf("element %d id = %d exact %lf comp. %lf error %lf \n",e, id, exact, mesh->q[id], exact-mesh->q[id]);
+			//	printf("element %d id = %d exact %lf comp. %lf error %lf \n",e, id, exact, mesh->q[id], exact-mesh->q[id]);
 			}
 			maxError = mymax(maxError, error);
 			
