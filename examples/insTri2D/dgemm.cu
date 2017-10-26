@@ -172,7 +172,7 @@ int main(int argc, char **argv){
 
   cudaEventRecord(start);
 
-  int Niterations = 1;
+  int Niterations = 100;
 
   for(int it=0;it<Niterations;++it){
     

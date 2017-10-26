@@ -16,7 +16,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
 
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
@@ -24,9 +24,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 1,  Nbytes=0,  zero = 0;  
+  iint index = 0, iterations = 100,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
-  dfloat time = 0.0; 
+  dfloat time   = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   iint  cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
 
@@ -94,7 +94,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
-  int NKernels = 11;
+  int NKernels = 5;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
@@ -144,29 +144,41 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
-      else if(i==6){
-       
+       else
+      {
+          
         Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
 
         NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
         flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
       }
-      else if(i==7 || i==8 || i==9 || i==10){
-        Nbytes        = (sizeof(dfloat)*(4*Np + 2*Np)/2); // TW removed 4*Np
+
+
+      // else if(i==6 || i==5){
+       
+      //   Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
+
+      //   NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
+      //   flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+
+      // }
+      
+      // else if(i==7 || i==8 || i==9 || i==10){
+      //   Nbytes        = (sizeof(dfloat)*(4*Np + 2*Np)/2); // TW removed 4*Np
 	
-        NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
-        flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+      //   NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
+      //   flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
-      }
-      else
-      {
-        Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
+      // }
+      // else
+      // {
+      //   Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
 
-        NbytesShared     = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
+      //   NbytesShared     = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
 
-        flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
-      }
+      //   flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
+      // }
       
       
       occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
