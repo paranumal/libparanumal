@@ -39,6 +39,7 @@ kernel void meshDivergenceHex3D_v0(int Nelements,
 	  // matrix-vector multiplies
 	  dfloat dudr = 0, dvdr = 0, dwdr = 0;
 	  dfloat duds = 0, dvds = 0, dwds = 0;
+	  dfloat dudt = 0, dvdt = 0, dwdt = 0;
 	  for(int m=0;m<p_Nq;++m){
 	    int idr = m + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*3; // 3 fields
 	    int ids = i + m*p_Nq + k*p_Nq*p_Nq + e*p_Np*3;
