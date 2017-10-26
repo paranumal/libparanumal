@@ -44,8 +44,8 @@ kernel void meshDivergenceHex3D_v0(int Nelements,
 	    int ids = i + m*p_Nq + k*p_Nq*p_Nq + e*p_Np*3;
 	    int idt = i + j*p_Nq + m*p_Nq*p_Nq + e*p_Np*3;
 	    dqdr += D[i*p_Nq + m]*(drdx*q[idr] + drdy*q[idr+p_Np] + drdz*q[idr+2*p_Np]);
-	    dqds += D[j*p_Nq + m]*(dsdx*q[idr] + dsdy*q[idr+p_Np] + dsdz*q[idr+2*p_Np]);
-	    dqdt += D[k*p_Nq + m]*(dtdx*q[idr] + dtdy*q[idr+p_Np] + dtdz*q[idr+2*p_Np]); 
+	    dqds += D[j*p_Nq + m]*(dsdx*q[ids] + dsdy*q[ids+p_Np] + dsdz*q[ids+2*p_Np]);
+	    dqdt += D[k*p_Nq + m]*(dtdx*q[idt] + dtdy*q[idt+p_Np] + dtdz*q[idt+2*p_Np]); 
 	  }
 	  
 	  // chain rule
