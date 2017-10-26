@@ -31,8 +31,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   // build volume cubature matrix transposes
   iint cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
-  dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
-  dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
+  dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np*2, sizeof(dfloat));
+  dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np*2, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
@@ -312,11 +312,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   
   mesh->o_cubDrWT =
-    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+    mesh->device.malloc(mesh->Np*mesh->cubNp*2*sizeof(dfloat),
 			cubDrWT);
   
   mesh->o_cubDsWT =
-    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+    mesh->device.malloc(mesh->Np*mesh->cubNp*2*sizeof(dfloat),
 			cubDsWT);
 
   mesh->o_intInterpT =
@@ -390,11 +390,13 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   if(sizeof(dfloat)==4){
     kernelInfo.addDefine("dfloat","float");
+    kernelInfo.addDefine("dfloat2","float2");
     kernelInfo.addDefine("dfloat4","float4");
     kernelInfo.addDefine("dfloat8","float8");
   }
   if(sizeof(dfloat)==8){
     kernelInfo.addDefine("dfloat","double");
+    kernelInfo.addDefine("dfloat2","double2");
     kernelInfo.addDefine("dfloat4","double4");
     kernelInfo.addDefine("dfloat8","double8");
   }
