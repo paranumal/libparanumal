@@ -460,13 +460,13 @@ kernel void insSubCycleCubatureVolume2D_v3(const iint Nelements,
 
 
 
-#if p_N<=7
-#define p_Nmult 2
-#endif
+// #if p_N<=7
+// #define p_Nmult 2
+// #endif
 
-#if p_N>=8
-#define p_Nmult 3
-#endif
+// #if p_N>=8
+// #define p_Nmult 3
+// #endif
 
 
 // TW tweaks
@@ -771,8 +771,8 @@ kernel void insSubCycleCubatureVolume2D_v5(const iint Nelements,
 
 // these two parameters need to be tuned for each N
 
-#define p_NblockV 3
-#define p_Nmult 2
+// #define p_NblockV 3
+// #define p_Nmult 2
 
 kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
 					   const dfloat * restrict vgeo,
