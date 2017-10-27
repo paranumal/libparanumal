@@ -227,7 +227,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       FILE *fp;
       fp = fopen(fname, "a");
 
-      fprintf(fp, "%02d %02d\t%02d\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\t%12.10E\n",
+      fprintf(fp, "%02d %02d %02d %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
               kernelElapsed, copyElapsed, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
       fclose(fp);

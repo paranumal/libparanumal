@@ -200,7 +200,9 @@ int main(int argc, char **argv){
   // minimal amount of data that could have moved (excluding matrices)
   long long int minData  = (4*Np + 2*Np + p_Nvgeo )*sizeof(dfloat);
   long long int actData  = (4*Np + 4*Ncub + 4*Ncub + 4*Ncub + 4*Ncub + 2*Np)*sizeof(dfloat);
-  long long int minFlops = (2*Np*Ncub*4 + Ncub*16 + 2*Np*Ncub*4);
+  //long long int minFlops = (2*Np*Ncub*4 + Ncub*16 + 2*Np*Ncub*4);
+  long long int minFlops = (2*Np*Ncub*4 + Ncub*4 + 2*Np*Ncub*4 + 8*Np);
+  
   double GIG = 1024*1024*1024;
   double minBW  = Nelements*(minData/elapsed)/GIG;
   double actBW  = Nelements*(actData/elapsed)/GIG;
