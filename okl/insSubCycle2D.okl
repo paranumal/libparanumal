@@ -445,17 +445,29 @@ kernel void insSubCycleCubatureVolume2D_v3(const iint Nelements,
 
 
 
-#if p_N<=4
+// #if p_N<=6
+// #define p_Nmult 2
+// #endif
+
+// #if p_N>6 && p_N<=8
+// #define p_Nmult 3
+// #endif
+
+// #if p_N>=9
+// #define p_Nmult 3
+// #endif
+
+
+
+
+#if p_N<=7
 #define p_Nmult 2
 #endif
 
-#if p_N>4 && p_N<=8
-#define p_Nmult 2
-#endif
-
-#if p_N>=9
+#if p_N>=8
 #define p_Nmult 3
 #endif
+
 
 
 // TW tweaks
