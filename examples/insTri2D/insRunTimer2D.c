@@ -24,7 +24,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 1,  Nbytes=0,  zero = 0;  
+  iint index = 0, iterations = 10,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
   dfloat time   = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
@@ -95,9 +95,11 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
    #if KERNEL_TEST==5
-  int NKernels = 7;
-  int Nbl      = 5;
-  int Nmult    = 5;
+
+  
+  int Nbl      = 20;
+  int Nmult    = 10;
+  int NKernels = Nbl*Nmult;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
@@ -107,18 +109,20 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   iint mintblock = 0; 
   iint mintmult  = 0; 
 
-  for(iint i=6; i<NKernels; i++)
-  {
+  // for(iint i=6; i<NKernels; i++)
+  // {
+  
+  int i = 0; 
+  for (iint b=1;b<=Nbl; b++){
 
-    for (iint b=1;b<=Nbl; b++){
+    for(iint m =1; m<=Nmult; m++){
 
-      for(iint m =1; m<=Nmult; m++){
-    
-    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);
-    kernelInfo.addDefine("p_NblockV", b);
-    kernelInfo.addDefine("p_Nmult", m);
+    occa::kernelInfo kernelInfoT  = kernelInfo;
+    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v6");
+    kernelInfoT.addDefine("p_NbV", b);
+    kernelInfoT.addDefine("p_Nmt", m);
    
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfoT);
     printf("insSubCycleCubatureVolume Kernel #%02d\n", i);
     printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
 
@@ -179,15 +183,28 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       }
 
+
+      
       double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
 
       printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
       printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed, gflops,  mintime, mintblock, mintmult);
      
+     char fname[BUFSIZ];
+      sprintf(fname, "KernelOptimization.dat");
+      FILE *fp;
+      fp = fopen(fname, "a");
+
+      fprintf(fp,"%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed, gflops,  mintime, mintblock, mintmult);
+      fclose(fp);
+
+      i++;
+
+
      }
     }
 
-    }
+    // }
 
   #endif
 
