@@ -3,7 +3,7 @@
 #include "ellipticTri2D.h"
 
 // 1 Advection Volume 2 Advection Surface 3 Ax 4 Gradient
-#define KERNEL_TEST 1
+#define KERNEL_TEST 5
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
@@ -92,6 +92,106 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
   occa::kernel TestKernel; 
+
+
+   #if KERNEL_TEST==5
+  int NKernels = 7;
+  int Nbl      = 5;
+  int Nmult    = 5;
+
+  occa::kernel *testKernels = new occa::kernel[NKernels];
+  char kernelNames[NKernels][BUFSIZ];
+
+  dfloat mintime = 100.f;
+
+  iint mintblock = 0; 
+  iint mintmult  = 0; 
+
+  for(iint i=6; i<NKernels; i++)
+  {
+
+    for (iint b=1;b<=Nbl; b++){
+
+      for(iint m =1; m<=Nmult; m++){
+    
+    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);
+    kernelInfo.addDefine("p_NblockV", b);
+    kernelInfo.addDefine("p_Nmult", m);
+   
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
+    printf("insSubCycleCubatureVolume Kernel #%02d\n", i);
+    printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
+
+
+    // sync processes
+    mesh->device.finish();
+    //    MPI_Barrier(MPI_COMM_WORLD);
+
+    //occaTimerTic(mesh->device,"KernelTime");
+    tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
+      // assume 1 mpi process
+      for(int it=0;it<iterations;++it){
+        //printf("Cubature Points: %d", mesh->cubNp);
+        testKernels[i](mesh->Nelements,
+                  mesh->o_vgeo,
+                  mesh->o_cubDrWT,
+                  mesh->o_cubDsWT,
+                  mesh->o_cubInterpT,
+                  o_U,
+                  o_V,
+                  o_Ud,
+                  o_Vd,
+                  o_X,
+                  o_Y);
+      }
+
+      occa::streamTag end = mesh->device.tagStream();
+      mesh->device.finish();  
+      toc = MPI_Wtime();
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
+
+      if(i==0){
+        Nbytes       = (sizeof(dfloat)*(4*Np*Nc*0 +4*Np + 2*Np)/2);
+
+        NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
+
+        flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
+      }
+       else
+      {
+          
+        Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
+
+        NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
+        flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+
+      }
+
+      
+      if(kernelElapsed<mintime){
+        mintime = kernelElapsed;
+        mintblock = b;
+        mintmult  = m; 
+
+      }
+
+      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+
+      printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
+      printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed, gflops,  mintime, mintblock, mintmult);
+     
+     }
+    }
+
+    }
+
+  #endif
+
+
 
   #if KERNEL_TEST==1
   int NKernels = 7;
@@ -240,8 +340,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   #endif
 
 
-
-
+  
 
 
 
