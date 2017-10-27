@@ -94,7 +94,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
-  int NKernels = 8;
+  int NKernels = 7;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
