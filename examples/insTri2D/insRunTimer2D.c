@@ -24,7 +24,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 100,  Nbytes=0,  zero = 0;  
+  iint index = 0, iterations = 1,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
   dfloat time   = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
@@ -94,7 +94,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
-  int NKernels = 6;
+  int NKernels = 8;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
@@ -112,9 +112,12 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     // sync processes
     mesh->device.finish();
     //    MPI_Barrier(MPI_COMM_WORLD);
-    occa::streamTag start = mesh->device.tagStream();
+
     //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
       // assume 1 mpi process
       for(int it=0;it<iterations;++it){
         //printf("Cubature Points: %d", mesh->cubNp);
