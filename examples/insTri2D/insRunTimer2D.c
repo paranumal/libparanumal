@@ -43,19 +43,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   o_Ud  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Vd  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
 
-  // o_cU   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  //o_cV   = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  // o_cUd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-  // o_cVd  = mesh->device.malloc(cubNtotal*sizeof(dfloat),cZ);
-
-
   o_X   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Y   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
-  // o_G   = mesh->device.malloc(Ntotal*4*sizeof(dfloat),G); 
-  // free(G); 
-  free(Z); 
   
-  free(cZ);
+  free(Z);  free(cZ);
 
  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -76,7 +67,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = mymax(1,128/maxNodesSurfaceCub); // works for CUDA
   //
-  kernelInfo.addDefine("p_cubNblockV",cubNblockV);
+  // kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
   
   double flops;
@@ -98,7 +89,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   
   int Nbl      = 20;
-  int Nmult    = 10;
+  int Nmult    = 1;
   int NKernels = Nbl*Nmult;
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
@@ -118,9 +109,15 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     for(iint m =1; m<=Nmult; m++){
 
     occa::kernelInfo kernelInfoT  = kernelInfo;
-    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v6");
-    kernelInfoT.addDefine("p_NbV", b);
-    kernelInfoT.addDefine("p_Nmt", m);
+    sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v3");
+
+    // for kernel 6
+    // kernelInfoT.addDefine("p_NbV", b);
+    // kernelInfoT.addDefine("p_Nmt", m);
+    
+    // for kernel 3
+    kernelInfoT.addDefine("p_cubNblockV",b);
+   
    
     testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfoT);
     printf("insSubCycleCubatureVolume Kernel #%02d\n", i);
@@ -216,7 +213,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
 
-  for(iint i=0; i<NKernels; i++)
+  for(iint i=6; i<NKernels; i++)
   {
     
     sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);

@@ -101,6 +101,9 @@ kernel void insSubCycleCubatureVolume2D_v0(
 }
 
 
+
+
+
 // Add shared from global read
 kernel void insSubCycleCubatureVolume2D_v1(
 					   const iint Nelements,
@@ -765,60 +768,59 @@ kernel void insSubCycleCubatureVolume2D_v5(const iint Nelements,
   }
 }
 
+	// // Optimized sizes
+#if p_N==1
+ #define p_NbV 20
+ #define p_Nmt 1
+ #endif
+
+#if p_N==2
+ #define p_NbV 5
+ #define p_Nmt 2
+#endif
+
+#if p_N==3
+ #define p_NbV 6
+ #define p_Nmt 2
+#endif
+
+ #if p_N==4
+  #define p_NbV 2
+  #define p_Nmt 2
+#endif
+
+ #if p_N==5
+ #define p_NbV 3
+ #define p_Nmt 2
+ #endif
+
+#if p_N==6
+ #define p_NbV 6
+ #define p_Nmt 3
+ #endif
+
+#if p_N==7
+  #define p_NbV 3
+  #define p_Nmt 3
+ #endif
+
+#if p_N==8
+ #define p_NbV 5
+ #define p_Nmt 2
+#endif
+
+#if p_N==9
+  #define p_NbV 3
+  #define p_Nmt 2
+ #endif
+
+#if p_N==10
+ #define p_NbV 3
+ #define p_Nmt 2
+#endif
 
 
 
-
-// // Optimized sizes
-// #if p_N==1
-// 	#define p_NblockV 15
-// 	#define p_Nmult 7
-// #endif
-
-// #if p_N==2
-// 	#define p_NblockV 3
-// 	#define p_Nmt 1
-// #endif
-
-// #if p_N==3
-// #define p_NbV 5
-// #define p_Nmt 5
-// #endif
-
-// #if p_N==4
-// #define p_NbV 6
-// #define p_Nmt 8
-// #endif
-
-// #if p_N==5
-// #define p_NbV 4
-// #define p_Nmt 7
-// #endif
-
-// #if p_N==6
-// #define p_NbV 3
-// #define p_Nmt 3
-// #endif
-
-// #if p_N==7
-// #define p_NbV 3
-// #define p_Nmt 5
-// #endif
-
-// #if p_N==8
-// #define p_NbV 9
-// #define p_Nmt 2
-// #endif
-
-// #if p_N==9
-// #define p_NbV 1
-// #define p_Nmt 6
-// #endif
-
-// #if p_N==10
-// 	#define p_NbV 6
-// 	#define p_Nmt 4
-// #endif
 
 kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
 					   const dfloat * restrict vgeo,
