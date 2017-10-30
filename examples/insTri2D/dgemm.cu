@@ -202,13 +202,14 @@ int main(int argc, char **argv){
   long long int actData  = (4*Np + 4*Ncub + 4*Ncub + 4*Ncub + 4*Ncub + 2*Np)*sizeof(dfloat);
   //long long int minFlops = (2*Np*Ncub*4 + Ncub*16 + 2*Np*Ncub*4);
   long long int minFlops = (2*Np*Ncub*4 + Ncub*4 + 2*Np*Ncub*4 + 8*Np);
-  
+
   double GIG = 1024*1024*1024;
   double minBW  = Nelements*(minData/elapsed)/GIG;
   double actBW  = Nelements*(actData/elapsed)/GIG;
   double gflops = Nelements*(minFlops/elapsed)/GIG;
   
   printf("N=%d, K=%d, elapsed = %5.7E, minBW = %5.7E, actBW (est) = %5.7E, estGF = %5.7E\n", p_N, Nelements, elapsed, minBW, actBW, gflops);
+  printf("%d %d %5.7E %5.7E %5.7E %5.7E\n", p_N, Nelements, elapsed, minBW, actBW, gflops);
 
   // Destroy the handle
   cublasDestroy(handle);
