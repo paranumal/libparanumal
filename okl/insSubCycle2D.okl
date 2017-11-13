@@ -1677,6 +1677,7 @@ kernel void insSubCycleCubatureSurface2D_v2(
 #endif
 
 
+
 // Add multiple element per threadblock, 
 kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
            const dfloat * restrict sgeo,
@@ -1899,6 +1900,8 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
  #define p_cNbS 2
  #define p_cNmtS 2
 #endif
+
+
 
 kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
            const dfloat * restrict sgeo,
