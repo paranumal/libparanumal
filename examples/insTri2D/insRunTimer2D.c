@@ -251,7 +251,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
    // SURFACE KERNEL
   #if KERNEL_TEST==2
   
-  int NKernels = 5;
+  int NKernels = 7;
 
   dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
@@ -328,14 +328,17 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
                           +sizeof(iint)*(2*Ntfp   +   intNtfp*0.0 +   mesh->Nfaces*1.0))/2;
 
        NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
+       NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp 
+                                          +intNtfp*Nfp/nmt + Np*intNtfp/nmt ));
 
-       NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Nfaces + 
-					    8*intNtfp*Nfp + 
-					    intNtfp*Nfp + 
-					    2*intNtfp +
-					    2*Np*intNtfp +
-					    Np*intNtfp
-					    ) );
+
+       // NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Nfaces + 
+					  //                                 8*intNtfp*Nfp + 
+				   //                                   intNtfp*Nfp + 
+					  //                                  2*intNtfp +
+					  //                                  2*Np*intNtfp +
+					  //                                    Np*intNtfp
+					  //                                    ) );
 
        flops            = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;
       }
