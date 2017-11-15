@@ -5,7 +5,7 @@
 // 1 Advection Volume 2 Advection Surface 3 Ax  4 Gradient
 // for optimization
 // 5 advaction volume 6 advection surface 7 Ax kernel 8 Gradient
-#define KERNEL_TEST 1
+#define KERNEL_TEST 2
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
@@ -69,7 +69,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
   
-
+  // TW: why using 128 here ?
   iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = mymax(1,128/maxNodesVolumeCub); 
@@ -97,7 +97,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   #if KERNEL_TEST==1
   int NKernels = 7;
-
+  // TW: what do these variables mean ?
   dfloat  NMT1[10] = {2,2,2,2,2,2,3,2,2,1};
   dfloat  NMT2[10] = {1,2,2,2,2,3,3,2,2,2};
 
@@ -149,6 +149,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       
       dfloat nmt =1; 
 
+      // TW: ??? please add comments
       if(i==4 || i==5){
        nmt = NMT1[mesh->N-1];
        }
@@ -163,7 +164,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
         NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
 
-        NbytesShared2 = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 1*Np*Nc/nmt + 2*Np*Nc/nmt ));  // Add operators
+        NbytesShared2 = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 1.*Np*Nc/nmt + 2.*Np*Nc/nmt ));  // Add operators
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
@@ -172,7 +173,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
           
         Nbytes        = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
         NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
-        NbytesShared2 = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc + 1*Np*Nc/nmt + 2*Np*Nc/nmt )); // Add operators
+        NbytesShared2 = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc + 1.*Np*Nc/nmt + 2.*Np*Nc/nmt )); // Add operators
         flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
       }
@@ -196,33 +197,27 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       double copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
 
      
-
+      // TW: please use 10^9 for GFLOPS and GB
 
      // Compute Data
-      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
+      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
+      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
 
+      // TW: avoid using hard coded numbers like this in formula, define a new variable peakSharedStreaming
+      //     7882 is defined wrt to 10^9
       double smbound       = 7882*flops/( (double) NbytesShared);
-  
       double intensity     = gflops/bw; 
-
-      
-      #if 1
       double l1bound      = 7882*flops/( (double) NbytesShared2);
-      #else
-      const dfloat shmem_bw = 56*32*4*1.128;
-      double l1bound =  nmt*16.0 /(8.0*(nmt*8.0+3.0))*shmem_bw;
-      #endif
 
       printf("l1bound :%.2e \n", l1bound);
 
 
 
       double roofline1     = mymin(d2dbound, smbound);
-      double roofline2     = mymin(mymin(d2dbound, smbound),l1bound);
+      double roofline2     = mymin(d2dbound, l1bound);
       double max_thg_p100  = 4670; 
       double ach_thg       = mymin(549*intensity, max_thg_p100);
 
@@ -310,7 +305,8 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
       dfloat nmt =1; 
- 
+
+      // TW - why ?
        if(i>3){
        dfloat nmt = NMT[mesh->N-1];
        }
@@ -333,7 +329,13 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
        NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
 
-       NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp) + intNtfp*Nfp/nmt + Np*intNtfp/nmt ); 
+       NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Nfaces + 
+					    8*intNtfp*Nfp + 
+					    intNtfp*Nfp + 
+					    2*intNtfp +
+					    2*Np*intNtfp +
+					    Np*intNtfp
+					    ) );
 
        flops            = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;
       }
@@ -371,10 +373,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       // }
 
       // Compute Data
-      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
+      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
+      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
 
       double smbound       = 7882*flops/( (double) NbytesShared);
@@ -524,10 +526,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       // Compute Data
-      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
+      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
+      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
 
       double smbound       = 7882*flops/( (double) NbytesShared);
@@ -678,10 +680,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       // Compute Data
-      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
-      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
+      double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
+      double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
 
       double smbound       = 7882*flops/( (double) NbytesShared); // 7751 for 1189 GHz
@@ -807,7 +809,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
 
       printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
       printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed, gflops,  mintime, mintblock, mintmult);
@@ -918,7 +920,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
 
       printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
       printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed/iterations, gflops,  mintime, mintblock, mintmult);
@@ -1042,7 +1044,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
 
       printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
       printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed/iterations, gflops,  mintime, mintblock, mintmult);
@@ -1166,7 +1168,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
       
-      double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+      double gflops        = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
 
       printf("[ N\tBlock\tNmult\tKernelTime\tGFLOPS/s\t mintime]\n");
       printf("%02d %02d %02d %12.10E %12.10E %12.10E %02d %02d\n", mesh->N, b, m, kernelElapsed/iterations, gflops,  mintime, mintblock, mintmult);
@@ -1400,11 +1402,11 @@ if(KernelId==1){
    
   
   // Compute Data
- double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
- double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
+ double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
+ double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
   
-  double gflops   = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
+  double gflops   = mesh->Nelements*flops*iterations/(1e9*kernelElapsed);
   double d2dbound = copyBandwidth*gflops/bw;
 
 
@@ -1562,7 +1564,7 @@ if(KernelId==1){
   copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
   
   
-  double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
+  double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
 
   iint   localDofs = mesh->Np*mesh->Nelements;
   iint   localElements = mesh->Nelements;
@@ -1605,7 +1607,7 @@ if(KernelId==1){
    bw = 2.0*Nbytes;
   #endif
   
-  double gflops   = globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);
+  double gflops   = globalElements*flops*iterations/(1e9*globalElapsed);
   double d2dbound = copyBandwidth*flops/bw;
   double bwth     = 549*flops/bw;
 
