@@ -5,7 +5,7 @@
 // 1 Advection Volume 2 Advection Surface 3 Ax  4 Gradient
 // for optimization
 // 5 advaction volume 6 advection surface 7 Ax kernel 8 Gradient
-#define KERNEL_TEST 2
+#define KERNEL_TEST 1
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
@@ -88,7 +88,8 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   iint intNtfp = mesh->Nfaces*mesh->intNfp;
   iint Nfaces  = mesh->Nfaces;
   double tic   = 0.0, toc = 0.0, kernelElapsed=0.0;
-  int NbytesShared = 0;  
+  int NbytesShared = 0;
+  int NbytesShared2 = 0;   
 
 
 
@@ -97,10 +98,13 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   #if KERNEL_TEST==1
   int NKernels = 7;
 
+  dfloat  NMT1[10] = {2,2,2,2,2,2,3,2,2,1};
+  dfloat  NMT2[10] = {1,2,2,2,2,3,3,2,2,2};
+
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
 
-  for(iint i=6; i<NKernels; i++)
+  for(iint i=0; i<NKernels; i++)
   {
     
     sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);
@@ -141,50 +145,39 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
 
+
+      
+      dfloat nmt =1; 
+
+      if(i==4 || i==5){
+       nmt = NMT1[mesh->N-1];
+       }
+      else if(i==6){
+       nmt = NMT2[mesh->N-1];
+      }
+
+       
+
       if(i==0){
         Nbytes       = (sizeof(dfloat)*(4*Np*Nc*0 +4*Np + 2*Np)/2);
 
         NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
+
+        NbytesShared2 = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 1*Np*Nc/nmt + 2*Np*Nc/nmt ));  // Add operators
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
        else
       {
           
-        Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
-
-        NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
-        flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
+        Nbytes        = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
+        NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
+        NbytesShared2 = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc + 1*Np*Nc/nmt + 2*Np*Nc/nmt )); // Add operators
+        flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
 
       }
 
 
-      // else if(i==6 || i==5){
-       
-      //   Nbytes       = (sizeof(dfloat)*(4*Np +4*Np + 2*Np)/2);
-
-      //   NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
-      //   flops        = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
-
-      // }
-      
-      // else if(i==7 || i==8 || i==9 || i==10){
-      //   Nbytes        = (sizeof(dfloat)*(4*Np + 2*Np)/2); // TW removed 4*Np
-  
-      //   NbytesShared  = (sizeof(dfloat)*(4*Np + 4*Np*Np + 4*Nc + 4*Np*Nc)); 
-      //   flops         = Np*6 + Np*Nc*8 + 4*Nc + 8*Np*Nc + 2*Np ;  // All float ops only
-
-      // }
-      // else
-      // {
-      //   Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
-
-      //   NbytesShared     = (sizeof(dfloat)*(4*Np + 4*Np*Nc + 4*Nc + 4*Np*Nc)); 
-
-      //   flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
-      // }
-      
-      
       occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
       occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 
@@ -202,8 +195,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //      double copyElapsed = (toc-tic);
       double copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
 
+     
 
-      // Compute Data
+
+     // Compute Data
       double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
       double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*kernelElapsed));
 
@@ -212,29 +207,42 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       double smbound       = 7882*flops/( (double) NbytesShared);
   
-      double intensity    = gflops/bw; 
+      double intensity     = gflops/bw; 
 
-      double roofline     = mymin(d2dbound, smbound);
+      
+      #if 1
+      double l1bound      = 7882*flops/( (double) NbytesShared2);
+      #else
+      const dfloat shmem_bw = 56*32*4*1.128;
+      double l1bound =  nmt*16.0 /(8.0*(nmt*8.0+3.0))*shmem_bw;
+      #endif
 
-      double max_thg_p100 = 4670; 
-      double ach_thg      = mymin(549*intensity, max_thg_p100);
+      printf("l1bound :%.2e \n", l1bound);
 
 
 
-      printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\tTH_peak]\n");
-      printf("%02d \t%02d\t%02d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\n",
+      double roofline1     = mymin(d2dbound, smbound);
+      double roofline2     = mymin(mymin(d2dbound, smbound),l1bound);
+      double max_thg_p100  = 4670; 
+      double ach_thg       = mymin(549*intensity, max_thg_p100);
+
+
+
+      printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\t(ROOFLINE2 GFLOPS/s)\tTH_peak]\n");
+      printf("%02d \t%02d\t%02d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-       kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
+       kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline1, roofline2, ach_thg);
 
       char fname[BUFSIZ];
       sprintf(fname, "KernelData.dat");
       FILE *fp;
       fp = fopen(fname, "a");
 
-      fprintf(fp, "%02d %02d %02d %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E\n",
+      fprintf(fp, "%02d %02d %02d %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-              kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
+              kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline1, roofline2, ach_thg);
       fclose(fp);
+
 
     }
 
@@ -249,6 +257,8 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   #if KERNEL_TEST==2
   
   int NKernels = 5;
+
+  dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
@@ -299,9 +309,12 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       toc = MPI_Wtime();
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
-
-
-
+      dfloat nmt =1; 
+ 
+       if(i>3){
+       dfloat nmt = NMT[mesh->N-1];
+       }
+       
 
        if(i==3){
        // Nbytes           = (sizeof(dfloat)*(8*intNtfp*Nfp + 4*intNtfp + 4*mesh->Np))/2;
@@ -315,15 +328,17 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
        else
       {
           
-       Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp*1.0 + 4*mesh->Nfaces*0.0 + 4*mesh->Np) 
-                          +sizeof(iint)*(2*Ntfp + intNtfp*1.0 + mesh->Nfaces*0.0))/2;
+       Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp*0.0 + 4*mesh->Nfaces*1.0 + 4*mesh->Np) 
+                          +sizeof(iint)*(2*Ntfp   +   intNtfp*0.0 +   mesh->Nfaces*1.0))/2;
 
        NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
+
+       NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp) + intNtfp*Nfp/nmt + Np*intNtfp/nmt ); 
 
        flops            = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;
       }
 
-       
+      
             
       occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
       occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
@@ -344,6 +359,16 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
 
+      // const dfloat shmem_bw = 56*32*4*1.128;
+      // // const dfloat l1bound = mymin( 16.0 /(8.0*(8.0+1.0)), 4.0/(8.0*(2+1))  )*shmem_bw;
+      // dfloat l1bound =  20.0 /(8.0*(10.0+2.0))*shmem_bw;
+
+      // printf("L1 bound : %.2e shmem_bw: %.2f\n",l1bound,shmem_bw); 
+
+      // if(i>3){
+      // const dfloat nmt = NMT[mesh->N-1];
+      // l1bound =  nmt*20.0 /(8.0*(nmt*10.0+2.0))*shmem_bw;
+      // }
 
       // Compute Data
       double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
@@ -354,28 +379,32 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       double smbound       = 7882*flops/( (double) NbytesShared);
   
-      double intensity    = gflops/bw; 
+      double intensity     = gflops/bw; 
 
-      double roofline     = mymin(d2dbound, smbound);
+      double l1bound      = 7882*flops/( (double) NbytesShared2);
+
+      double roofline1     = mymin(d2dbound, smbound);
+
+      double roofline2     = mymin(mymin(d2dbound, smbound),l1bound);
 
       double max_thg_p100 = 4670; 
       double ach_thg      = mymin(549*intensity, max_thg_p100);
 
 
 
-      printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\tTH_peak]\n");
-      printf("%02d \t%02d\t%02d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\n",
+      printf("[ N\tK\tDOFS\tKernelTime\tCopyTime\tIntensity\tGFLOPS/s\t(d2dbound GFLOPS/s)\tBW(GB/s)\t(SMBOUND GFLOPS/s)\t(ROOFLINE GFLOPS/s)\t(ROOFLINE2 GFLOPS/s)\tTH_peak]\n");
+      printf("%02d \t%02d\t%02d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-       kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
+       kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline1, roofline2, ach_thg);
 
       char fname[BUFSIZ];
       sprintf(fname, "KernelData.dat");
       FILE *fp;
       fp = fopen(fname, "a");
 
-      fprintf(fp, "%02d %02d %02d %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E\n",
+      fprintf(fp, "%02d %02d %02d %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E %12.10E\n",
               mesh->N, mesh->Nelements,(mesh->Nelements*mesh->Np), 
-              kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline, ach_thg);
+              kernelElapsed/iterations, copyElapsed/iterations, intensity, gflops, d2dbound, bw, smbound, roofline1, roofline2, ach_thg);
       fclose(fp);
 
 
@@ -436,12 +465,28 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
       
-       const dfloat alpha = 1.0;  // assumption on caching element/face values
-      // const dfloat alpha = 0.0;
+      // const dfloat alpha = 1.0;  // assumption on caching element/face values
+       const dfloat alpha = 0.0;
       // const dfloat alpha = -1.0/9.0 + 1.0/9.0*mesh->N;
 
-      Nbytes = (sizeof(dfloat)*(4*Np    // float4
-                               +8*Ntfp // float4
+       if(i==3){
+
+         Nbytes = (sizeof(dfloat)*(4*Np    // float4
+                                  +4*Ntfp  // float4
+                                  +alpha*5*Nfaces + (1-alpha)*5*Ntfp   // alpha = 1 means cached face geometric factors
+                                  +alpha*5 +(1-alpha)*5*Np   // alpha 1 means drdx, J etc.. are all cached for an element
+                                  +1*mesh->Np))/2           // gloabl write of output
+              + (sizeof(iint)*(alpha*1 + (1-alpha)*Np*1  // element list//  was 3
+                              +2*Ntfp  // idM, idP
+                              +alpha*Nfaces + (1-alpha)*Ntfp // BC's
+                              ))/2;  
+
+
+
+       }
+       else{
+       Nbytes = (sizeof(dfloat)*(4*Np    // float4
+                               +8*Ntfp  // float4
                                +alpha*5*Nfaces + (1-alpha)*5*Ntfp   // alpha = 1 means cached face geometric factors
                                +alpha*5 +(1-alpha)*5*Np   // alpha 1 means drdx, J etc.. are all cached for an element
                                +1*mesh->Np))/2           // gloabl write of output
@@ -449,6 +494,10 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
                               +2*Ntfp  // idM, idP
                               +alpha*Nfaces + (1-alpha)*Ntfp // BC's
                               ))/2;  
+
+       }
+
+     
 
        NbytesShared = (sizeof(dfloat)*(3*Np + 3*Ntfp + Np*(2*Ntfp +2+4) + Ntfp*3 + Np*(2*Np + 1) + Np*(1*Ntfp + 1) + Np*(1*Np))); 
 
@@ -635,7 +684,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       double gflops        = mesh->Nelements*flops*iterations/(1024*1024*1024.*kernelElapsed);
       double d2dbound      = copyBandwidth*gflops/bw;
 
-      double smbound       = 7882*flops/( (double) NbytesShared);
+      double smbound       = 7882*flops/( (double) NbytesShared); // 7751 for 1189 GHz
   
       double intensity    = gflops/bw; 
 
