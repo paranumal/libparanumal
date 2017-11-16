@@ -35,6 +35,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   dfloat *Z      = (dfloat*) calloc(Ntotal,sizeof(dfloat));
   dfloat *ZM     = (dfloat*) calloc(Nftotal,sizeof(dfloat));
+  dfloat *ZM2    = (dfloat*) calloc(2*Nftotal,sizeof(dfloat));
   dfloat *ZMT    = (dfloat*) calloc(4*Nftotal,sizeof(dfloat));
 
 
@@ -48,6 +49,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::memory o_U, o_V, o_X, o_Y,  o_Ud, o_Vd,  o_G;
   occa::memory o_UM, o_VM,   o_UMd, o_VMd, o_DrsT; 
   occa::memory o_UP, o_VP,   o_UPd, o_VPd; 
+  occa::memory o_UM2, o_UP2,  o_UM2d, o_UP2d;
   occa::memory o_UT, o_VTd; 
   o_U   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_V   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
@@ -75,11 +77,16 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   o_UT   = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
   o_VTd  = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
 
+  o_UM2   = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UP2   = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UM2d  = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UP2d  = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+
 
 
 
   
-  free(Z);  free(ZM); free(ZMT); free(G);
+  free(Z);  free(ZM); free(ZM2); free(ZMT); free(G);
 
  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -273,7 +280,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
    // SURFACE KERNEL
   #if KERNEL_TEST==2
   
-  int NKernels = 12;
+  int NKernels = 13;
 
   dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
@@ -359,6 +366,45 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
                 mesh->o_inty,
                 o_UT,
                 o_VTd,
+                o_X,
+                o_Y);
+      }
+
+      occa::streamTag end = mesh->device.tagStream();
+      mesh->device.finish();  
+      toc = MPI_Wtime();
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
+
+    }
+
+
+     else if(i==12){
+
+      printf("Kernel 12\n");
+
+       //occaTimerTic(mesh->device,"KernelTime");
+    tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
+      // assume 1 mpi process
+      for(int it=0;it<iterations;++it){
+        //printf("Cubature Points: %d", mesh->cubNp);
+        testKernels[i](mesh->Nelements,
+                mesh->o_sgeo,
+                mesh->o_intInterpT,
+                mesh->o_intLIFTT,
+                mesh->o_vmapM,
+                mesh->o_vmapP,
+                mesh->o_EToB,
+                time,
+                mesh->o_intx,
+                mesh->o_inty,
+                o_UM2,
+                o_UP2,
+                o_UM2d,
+                o_UP2d,
                 o_X,
                 o_Y);
       }
