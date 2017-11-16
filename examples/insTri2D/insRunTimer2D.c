@@ -31,9 +31,11 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   dfloat time   = 0.0; 
   iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   iint  cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
+  iint  Nftotal   = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces*mesh->Nfp;
 
-  dfloat *Z     = (dfloat*) calloc(Ntotal,sizeof(dfloat));
-  dfloat *cZ    = (dfloat*) calloc(cubNtotal,sizeof(dfloat));
+  dfloat *Z      = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  dfloat *ZM     = (dfloat*) calloc(Nftotal,sizeof(dfloat));
+  dfloat *ZMT    = (dfloat*) calloc(4*Nftotal,sizeof(dfloat));
 
 
  // Test for dfloat2 in gradient kernel
@@ -44,7 +46,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   
 
   occa::memory o_U, o_V, o_X, o_Y,  o_Ud, o_Vd,  o_G;
-  occa::memory o_cU, o_cV,   o_cUd, o_cVd, o_DrsT; 
+  occa::memory o_UM, o_VM,   o_UMd, o_VMd, o_DrsT; 
+  occa::memory o_UP, o_VP,   o_UPd, o_VPd; 
+  occa::memory o_UT, o_VTd; 
   o_U   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_V   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_Ud  = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
@@ -56,8 +60,26 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   o_G   = mesh->device.malloc(4*Ntotal*sizeof(dfloat),G);
 
   o_DrsT = mesh->device.malloc(2*mesh->Np*mesh->Np, DrsT);
+
+
+  o_UM   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_VM   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_UMd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_VMd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+
+  o_UP   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_VP   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_UPd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+  o_VPd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
+
+  o_UT   = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
+  o_VTd  = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
+
+
+
+
   
-  free(Z);  free(cZ); free(G);
+  free(Z);  free(ZM); free(ZMT); free(G);
 
  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -251,7 +273,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
    // SURFACE KERNEL
   #if KERNEL_TEST==2
   
-  int NKernels = 7;
+  int NKernels = 12;
 
   dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
@@ -273,6 +295,83 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     mesh->device.finish();
     //    MPI_Barrier(MPI_COMM_WORLD);
 
+
+    if(i==8){
+
+       //occaTimerTic(mesh->device,"KernelTime");
+    tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
+      // assume 1 mpi process
+      for(int it=0;it<iterations;++it){
+        //printf("Cubature Points: %d", mesh->cubNp);
+        testKernels[i](mesh->Nelements,
+                mesh->o_sgeo,
+                mesh->o_intInterpT,
+                mesh->o_intLIFTT,
+                mesh->o_vmapM,
+                mesh->o_vmapP,
+                mesh->o_EToB,
+                time,
+                mesh->o_intx,
+                mesh->o_inty,
+                o_UM,
+                o_VM,
+                o_UMd,
+                o_VMd,
+                o_UP,
+                o_VP,
+                o_UPd,
+                o_VPd,
+                o_X,
+                o_Y);
+      }
+
+      occa::streamTag end = mesh->device.tagStream();
+      mesh->device.finish();  
+      toc = MPI_Wtime();
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
+
+
+    }
+
+    else if(i==9 || i==10 || i==11){
+
+       //occaTimerTic(mesh->device,"KernelTime");
+    tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
+      // assume 1 mpi process
+      for(int it=0;it<iterations;++it){
+        //printf("Cubature Points: %d", mesh->cubNp);
+        testKernels[i](mesh->Nelements,
+                mesh->o_sgeo,
+                mesh->o_intInterpT,
+                mesh->o_intLIFTT,
+                mesh->o_vmapM,
+                mesh->o_vmapP,
+                mesh->o_EToB,
+                time,
+                mesh->o_intx,
+                mesh->o_inty,
+                o_UT,
+                o_VTd,
+                o_X,
+                o_Y);
+      }
+
+      occa::streamTag end = mesh->device.tagStream();
+      mesh->device.finish();  
+      toc = MPI_Wtime();
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
+
+    }
+
+    else{
     //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
 
@@ -304,6 +403,11 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       toc = MPI_Wtime();
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
+    }
+
+
+
+
       dfloat nmt =1; 
 
       // TW - why ?
