@@ -245,8 +245,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesShared += sizeof(dfloat)*3*mesh->Np*mesh->max_EL_nnz;  //EL
 
       Nflops  = mesh->Nfp*mesh->Nfaces*(2+3*3); //eval fluxes
-      Nflops += mesh->Nfp*mesh->Nfaces*2*7;     //L0
-      Nflops += mesh->Np*2*mesh->max_EL_nnz;    //EL
+      Nflops += mesh->Nfp*mesh->Nfaces*3*2*7;     //L0
+      Nflops += mesh->Np*3*2*mesh->max_EL_nnz;    //EL
     } else if (strstr(kernelFileName,"ellipticBRBBDivergenceVolume3D.okl")) {
       NbytesGlobal  = sizeof(dfloat)*3*mesh->Np;   //volume data
       NbytesGlobal += sizeof(dfloat)*9;            //vgeo factors
