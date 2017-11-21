@@ -316,7 +316,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       }
       endCopy = mesh->device.tagStream();
       mesh->device.finish();
-      copyElapsed += mesh->device.timeBetween(startCopy, endCopy)*(((dfloat) mesh->Nelements)/(Nnodes*1000));
+      //copyElapsed += mesh->device.timeBetween(startCopy, endCopy)*(((dfloat) mesh->Nelements)/(Nnodes*1000));
     }
 
     // Compute Data
