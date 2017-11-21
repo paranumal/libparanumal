@@ -13,6 +13,9 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
   if (strstr(kernelFileName,"insSubCycleCubatureSurface2D.okl")) {
     NKernels = 6;
     sprintf(kernelName, "insSubCycleCubatureSurface2D");
+  } else if (strstr(kernelFileName,"insSubCycleCubatureVolume2D.okl")) {
+    NKernels = 5;
+    sprintf(kernelName, "insSubCycleCubatureVolume2D");
   }
 
   dfloat time = 0.;
@@ -41,6 +44,18 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
                   time,
                   mesh->o_intx,
                   mesh->o_inty,
+                  ins->o_Ue,
+                  ins->o_Ve,
+                  ins->o_Ud,
+                  ins->o_Vd,
+                  ins->o_resU,
+                  ins->o_resV);
+      } else if (strstr(kernelFileName,"insSubCycleCubatureVolume2D.okl")) {
+        testKernel(mesh->Nelements,
+                  mesh->o_vgeo,
+                  mesh->o_cubDrWT,
+                  mesh->o_cubDsWT,
+                  mesh->o_cubInterpT,
                   ins->o_Ue,
                   ins->o_Ve,
                   ins->o_Ud,
@@ -79,6 +94,24 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
       Nflops += mesh->intNfp*mesh->Nfaces*1;             //unmax
       Nflops += mesh->intNfp*mesh->Nfaces*28;            //eval fluxes
       Nflops += mesh->Np*mesh->intNfp*mesh->Nfaces*2*2;  // intLIFT matvec
+    } else if (strstr(kernelFileName,"insSubCycleCubatureVolume2D.okl")) {
+      NbytesGlobal  = sizeof(dfloat)*4*mesh->Np;   //volume data
+      NbytesGlobal += sizeof(dfloat)*4;            //vgeo factors
+      NbytesGlobal += sizeof(dfloat)*2*mesh->Np;   //write rhs
+
+      NbytesCacheMiss  = sizeof(dfloat)*mesh->Np*mesh->cubNp; //interp op
+      NbytesCacheMiss += sizeof(dfloat)*2*mesh->Np*mesh->cubNp; //cubDrWT and cubDsWT
+      NbytesCacheMiss -= L1CacheSize; //L1 cache size
+
+      NbytesShared  = sizeof(dfloat)*4*mesh->Np;               //load of volume data to shared
+      NbytesShared += sizeof(dfloat)*4*mesh->Np*mesh->cubNp;   //interp matvec
+      NbytesShared += sizeof(dfloat)*4*mesh->cubNp;            //store of fluxes
+      NbytesShared += sizeof(dfloat)*4*mesh->Np*mesh->cubNp;   //DR DS matvec
+
+      Nflops  = mesh->Np*6;               //velocity rotation
+      Nflops += 2*4*mesh->cubNp*mesh->Np; //interpolation
+      Nflops += mesh->cubNp*4;            //eval fluxes
+      Nflops += 4*2*mesh->cubNp*mesh->Np; //Dr Ds matvec
     }
 
     //global memory bandwidth benchmark
