@@ -36,8 +36,9 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
   dfloat *Z      = (dfloat*) calloc(Ntotal,sizeof(dfloat));
   dfloat *ZM     = (dfloat*) calloc(Nftotal,sizeof(dfloat));
-  dfloat *ZMF    = (dfloat*) calloc(intNftotal,sizeof(dfloat));
-  dfloat *ZMT    = (dfloat*) calloc(4*Nftotal,sizeof(dfloat));
+  dfloat *ZM1    = (dfloat*) calloc(intNftotal,sizeof(dfloat));
+  dfloat *ZM4    = (dfloat*) calloc(4*Nftotal,sizeof(dfloat));
+  dfloat *ZM2    = (dfloat*) calloc(2*Nftotal,sizeof(dfloat));
 
 
  // Test for dfloat2 in gradient kernel
@@ -48,9 +49,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   
 
   occa::memory o_U, o_V, o_X, o_Y,  o_Ud, o_Vd, o_G, o_DrsT;
-  // occa::memory o_UM, o_VM,   o_UMd, o_VMd; 
-  // occa::memory o_UP, o_VP,   o_UPd, o_VPd; 
-  occa::memory o_UF, o_VF, o_UFd, o_VFd;
+  occa::memory o_UM, o_UP, o_UdM, o_UdP;
   //occa::memory o_UT, o_VTd; 
   o_U   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
   o_V   = mesh->device.malloc(Ntotal*sizeof(dfloat),Z);
@@ -65,29 +64,16 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   o_DrsT = mesh->device.malloc(2*mesh->Np*mesh->Np, DrsT);
 
 
-  // o_UM   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_VM   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_UMd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_VMd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-
-  // o_UP   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_VP   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_UPd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-  // o_VPd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZM);
-
-  // o_UT   = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
-  // o_VTd  = mesh->device.malloc(4*Nftotal*sizeof(dfloat),ZMT);
-
-  o_UF   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZMF);
-  o_VF   = mesh->device.malloc(Nftotal*sizeof(dfloat),ZMF);
-  o_UFd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZMF);
-  o_VFd  = mesh->device.malloc(Nftotal*sizeof(dfloat),ZMF);
+  o_UM   = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UP   = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UdM  = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
+  o_UdP  = mesh->device.malloc(2*Nftotal*sizeof(dfloat),ZM2);
 
 
 
 
   
-  free(Z);  free(ZM);  free(ZMF); free(ZMT); free(G); // free(ZM2);
+  free(Z);  free(ZM);  free(ZM1); free(ZM2); free(ZM4); free(G); // free(ZM2);
 
  
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -102,11 +88,13 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   // TW: why using 128 here ?
   iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
-  iint cubNblockV = 512/maxNodesVolumeCub; 
+  iint cubNblockV = mymax(1,1024/maxNodesVolumeCub); 
   //
   iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+
+  iint cubNblockS = mymax(1,1024/maxNodesSurfaceCub);
     
   double flops;
  
@@ -125,6 +113,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel TestKernel; 
 
   #if KERNEL_TEST==1
+
   int NKernels = 7;
   // TW: what do these variables mean ?
   dfloat  NMT1[10] = {2,2,2,2,2,2,3,2,2,1};
@@ -138,7 +127,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     
     sprintf(kernelNames[i], "insSubCycleCubatureVolume2D_v%d", i);
 
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/optSubcycleVolume2D.okl",kernelNames[i], kernelInfo);
     printf("insSubCycleCubatureVolume Kernel #%02d\n", i);
     printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
 
@@ -174,26 +163,14 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
 
-
-      
       dfloat nmt =1; 
-
-      // TW: ??? please add comments
-      if(i==4 || i==5){
-       nmt = NMT1[mesh->N-1];
-       }
-      else if(i==6){
-       nmt = NMT2[mesh->N-1];
-      }
-
-       
 
       if(i==0){
         Nbytes       = (sizeof(dfloat)*(4*Np*Nc*0 +4*Np + 2*Np)/2);
 
         NbytesShared = (sizeof(dfloat)*(4*Nc + 4*Np*Nc)); 
 
-        NbytesShared2 = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 1.*Np*Nc/nmt + 2.*Np*Nc/nmt ));  // Add operators
+        //NbytesShared2 = (sizeof(dfloat)*(4*Nc + 4*Np*Nc + 1.*Np*Nc/nmt + 2.*Np*Nc/nmt ));  // Add operators
 
         flops = Nc*Np*8 + 4*Nc + Np*Nc*16 + Np*14 + Np*2;  // All float ops only
       }
@@ -229,6 +206,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       // TW: please use 10^9 for GFLOPS and GB
 
      // Compute Data
+      //double peakSharedStreaming = 
       double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1e9*copyElapsed));
       double  bw           = mesh->Nelements*((Nbytes*iterations*2)/(1e9*kernelElapsed));
 
@@ -277,14 +255,15 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
 
 
-   // SURFACE KERNEL
+  // SURFACE KERNEL
   #if KERNEL_TEST==2
   
-  int NKernels = 9;
+  int NKernels = 7;
 
   dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
   occa::kernel *testKernels = new occa::kernel[NKernels];
+
   char kernelNames[NKernels][BUFSIZ];
 
   for(iint i=0; i<NKernels; i++)
@@ -292,7 +271,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
         
     sprintf(kernelNames[i], "insSubCycleCubatureSurface2D_v%d", i);
 
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfo);
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/optSubcycleSurface2D.okl",kernelNames[i], kernelInfo);
 
     printf("insSubCycleCubatureSurface Kernel #%02d\n", i);
     printf("Nblock: %d cubNblock: %d N: %d Np: %d cubNp: %d\n", NblockV, cubNblockV, mesh->N, mesh->Np, mesh->cubNp);
@@ -302,43 +281,43 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     mesh->device.finish();
     //    MPI_Barrier(MPI_COMM_WORLD);
 
-    if(i==8){
+    // if(i==7){
 
-    //occaTimerTic(mesh->device,"KernelTime");
-    tic = MPI_Wtime();  
+    // //occaTimerTic(mesh->device,"KernelTime");
+    // tic = MPI_Wtime();  
 
-    occa::streamTag start = mesh->device.tagStream();
+    // occa::streamTag start = mesh->device.tagStream();
 
-      // assume 1 mpi process
-      for(int it=0;it<iterations;++it){
-        //printf("Cubature Points: %d", mesh->cubNp);
-        testKernels[i](mesh->Nelements,
-                mesh->o_sgeo,
-                mesh->o_intInterpT,
-                mesh->o_intLIFTT,
-                mesh->o_vmapM,
-                mesh->o_vmapP,
-                mesh->o_EToB,
-                time,
-                mesh->o_intx,
-                mesh->o_inty,
-                o_UF,
-                o_VF,
-                o_UFd,
-                o_VFd,
-                o_X,
-                o_Y);
-      }
+    //   // assume 1 mpi process
+    //   for(int it=0;it<iterations;++it){
+    //     //printf("Cubature Points: %d", mesh->cubNp);
+    //     testKernels[i](mesh->Nelements,
+    //             mesh->o_sgeo,
+    //             mesh->o_intInterpT,
+    //             mesh->o_intLIFTT,
+    //             mesh->o_vmapM,
+    //             mesh->o_vmapP,
+    //             mesh->o_EToB,
+    //             time,
+    //             mesh->o_intx,
+    //             mesh->o_inty,
+    //             o_UM,
+    //             o_UP,
+    //             o_UdM,
+    //             o_UdP,
+    //             o_X,
+    //             o_Y);
+    //   }
 
-      occa::streamTag end = mesh->device.tagStream();
-      mesh->device.finish();  
-      toc = MPI_Wtime();
-      //      kernelElapsed    = toc-tic;
-      kernelElapsed = mesh->device.timeBetween(start,end);
+    //   occa::streamTag end = mesh->device.tagStream();
+    //   mesh->device.finish();  
+    //   toc = MPI_Wtime();
+    //   //      kernelElapsed    = toc-tic;
+    //   kernelElapsed = mesh->device.timeBetween(start,end);
 
-    }
+    // }
 
-    else{
+    // else{
     //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
 
@@ -370,40 +349,43 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       toc = MPI_Wtime();
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
-    }
+    // }
 
 
 
       
       dfloat nmt = 1; 
 
-      // TW - why ?
-       if(i==4 || i==5){
-        nmt = NMT[mesh->N-1];
-        // nmt = cNmtS;
-       }
+      // // TW - why ?
+      //  if(i==4 || i==5){
+      //   nmt = NMT[mesh->N-1];
+      //   // nmt = cNmtS;
+      //  }
 
 
-       if(i==8){
-        Nbytes        = (sizeof(dfloat)*(8*intNtfp + 4*intNtfp*0.0 + 4*mesh->Nfaces*1.0 + 4*mesh->Np) 
-                      +sizeof(iint)*(0*Ntfp   +   intNtfp*0.0 +   mesh->Nfaces*1.0))/2;
+      dfloat alpha =1.0; 
 
-        NbytesShared  = (sizeof(dfloat)*(0*Ntfp + 0*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
-        NbytesShared2 = (sizeof(dfloat)*(0*Ntfp + 0*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp 
-                                            +intNtfp*Nfp/nmt + Np*intNtfp/nmt ));
 
-        flops = intNtfp*( 0*Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4; 
+       // if(i==8){
+       //  Nbytes        = (sizeof(dfloat)*(8*intNtfp + 4*intNtfp*alpha + 4*mesh->Nfaces*(1.0-alpha) + 4*mesh->Np) 
+       //                  +sizeof(iint)*(0*Ntfp   +   intNtfp*alpha +   mesh->Nfaces*(1.0-alpha)))/2;
 
-       }
-       else{
+       //  NbytesShared  = (sizeof(dfloat)*(0*Ntfp + intNtfp*Nfp*alpha + 2*intNtfp + 2*Np*intNtfp)); 
+       //  NbytesShared2 = (sizeof(dfloat)*(0*Ntfp + intNtfp*Nfp*alpha + 2*intNtfp + 2*Np*intNtfp 
+       //                                      +intNtfp*Nfp/nmt + Np*intNtfp/nmt ));
+
+       //  flops = intNtfp*( 0*Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4; 
+
+       // }
+       // else{
           
-       Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp*0.0 + 4*mesh->Nfaces*1.0 + 4*mesh->Np) 
-                          +sizeof(iint)*(2*Ntfp   +   intNtfp*0.0 +   mesh->Nfaces*1.0))/2;
+       Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp*alpha + 4*mesh->Nfaces*(1.0-alpha) + 4*mesh->Np) 
+                          +sizeof(iint)*(2*Ntfp   +   intNtfp*alpha +   mesh->Nfaces*(1.0-alpha)))/2;
 
        NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
 
        NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp 
-                                          +intNtfp*Nfp/nmt + Np*intNtfp/nmt ));
+                                                   +intNtfp*Nfp/nmt + Np*intNtfp/nmt ));
 
        // NbytesShared2     = (sizeof(dfloat)*(8*Ntfp + 4*mesh->Nfaces + 
 					  //                                 8*intNtfp*Nfp + 
@@ -414,7 +396,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 					  //                                    ) );
 
        flops            = intNtfp*( Nfp*16 + 6 + 1 + 28) + Np*intNtfp*4;
-      }
+      // }
 
       
             
@@ -899,7 +881,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 #if KERNEL_TEST==6 // Optimize surface kernel
 
   
-  int Nbl      = 5;
+  int Nbl      = 10;
   int Nmult    = 5;
   int NKernels = Nbl*Nmult;
 
@@ -917,12 +899,12 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     for(iint m =1; m<=Nmult; m++){
 
     occa::kernelInfo kernelInfoT  = kernelInfo;
-    sprintf(kernelNames[i], "insSubCycleCubatureSurface2D_v4");
+    sprintf(kernelNames[i], "insSubCycleCubatureSurface2D_v8");
 
     
      // kernelInfoT.addDefine("p_cubNblockS", b);
-    kernelInfoT.addDefine("p_cNmtS", m);
-    kernelInfoT.addDefine("p_cNbS", b);
+    kernelInfoT.addDefine("p_NnodesS5", m);
+    kernelInfoT.addDefine("p_NblockS5", b);
    
    
     testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfoT);
@@ -932,9 +914,47 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
     // sync processes
     mesh->device.finish();
-    //    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
 
-    //occaTimerTic(mesh->device,"KernelTime");
+
+    if(i==7){
+
+        //occaTimerTic(mesh->device,"KernelTime");
+    tic = MPI_Wtime();  
+
+    occa::streamTag start = mesh->device.tagStream();
+
+      // assume 1 mpi process
+      for(int it=0;it<iterations;++it){
+        //printf("Cubature Points: %d", mesh->cubNp);
+        testKernels[i](mesh->Nelements,
+                mesh->o_sgeo,
+                mesh->o_intInterpT,
+                mesh->o_intLIFTT,
+                mesh->o_vmapM,
+                mesh->o_vmapP,
+                mesh->o_EToB,
+                time,
+                mesh->o_intx,
+                mesh->o_inty,
+                o_UM,
+                o_UP,
+                o_UdM,
+                o_UdP,
+                o_X,
+                o_Y);
+      }
+
+      occa::streamTag end = mesh->device.tagStream();
+      mesh->device.finish();  
+      toc = MPI_Wtime();
+
+      //      kernelElapsed    = toc-tic;
+      kernelElapsed = mesh->device.timeBetween(start,end);
+
+    } else{
+
+       //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
 
     occa::streamTag start = mesh->device.tagStream();
@@ -963,9 +983,15 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       occa::streamTag end = mesh->device.tagStream();
       mesh->device.finish();  
       toc = MPI_Wtime();
+
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
+    }
 
+
+
+
+  
        Nbytes           = (sizeof(dfloat)*(8*Ntfp + 4*intNtfp + 4*mesh->Np) + sizeof(iint)*(2*Ntfp))/2;
 
        NbytesShared     = (sizeof(dfloat)*(8*Ntfp + 8*intNtfp*Nfp + 2*intNtfp + 2*Np*intNtfp)); 
