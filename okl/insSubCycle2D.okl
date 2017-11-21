@@ -1,1063 +1,4 @@
 
-
-// ref0 starting kernel for optimization
-// Do not use const, restrict, multiple element in a block
-// Read vector from global without shared but save to shared after interpolation
-kernel void insSubCycleCubatureVolume2D_v0(
-					   iint Nelements,
-					   dfloat * vgeo,
-					   dfloat * cubDrWT,
-					   dfloat * cubDsWT,
-					   dfloat * cubInterpT,
-					   dfloat * U,
-					   dfloat * V,
-					   dfloat * Ud,
-					   dfloat * Vd,
-					   dfloat * rhsU,
-					   dfloat * rhsV){
-
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
-  
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-      if(e<Nelements && n<p_cubNp){
-
-	dfloat cU = 0.f,  cV = 0.f;
-	dfloat cUd = 0.f, cVd = 0.f;
-    
-	for(iint i=0;i<p_Np;++i){
-	  dfloat cIni = cubInterpT[n+i*p_cubNp];
-	  iint  id   = e*p_Np + i;  // global id  
-	  cU  += cIni*U[id];
-	  cV  += cIni*V[id];
-	  cUd += cIni*Ud[id];
-	  cVd += cIni*Vd[id];       
-	}
-	//
-	s_cF11[n] = cU*cUd;
-	s_cF12[n] = cV*cUd;
-	s_cF21[n] = cU*cVd;
-	s_cF22[n] = cV*cVd;
-      }
-    }
-
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-
-
-      if(e<Nelements && n<p_Np){    
-	// prefetch geometric factors (constant on triangle)
-	dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-	// compute 'r' and 's' derivatives of (q_m) at node n
-	dfloat df11dr = 0.f, df11ds = 0.f; 
-	dfloat df12dr = 0.f, df12ds = 0.f; 
-	dfloat df21dr = 0.f, df21ds = 0.f; 
-	dfloat df22dr = 0.f, df22ds = 0.f; 
-
-
-	for(iint i=0;i<p_cubNp;++i){
-	  dfloat cDrWni = cubDrWT[n+i*p_Np];
-	  dfloat cDsWni = cubDsWT[n+i*p_Np];
-	  // Fetch to shared, used twice
-	  dfloat cF11 = s_cF11[i];  // makew them global
-	  dfloat cF12 = s_cF12[i];
-	  dfloat cF21 = s_cF21[i];
-	  dfloat cF22 = s_cF22[i];
-
-	  df11dr += cDrWni*cF11;
-	  df11ds += cDsWni*cF11;
-
-	  df12dr += cDrWni*cF12;
-	  df12ds += cDsWni*cF12;
-
-	  df21dr += cDrWni*cF21;
-	  df21ds += cDsWni*cF21;
-
-	  df22dr += cDrWni*cF22;
-	  df22ds += cDsWni*cF22;
-	}
-
-	dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
-	dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
-
-	iint id = e*p_Np+n;
-
-	rhsU[id]   = -rhsu; // note  change in sign
-	rhsV[id]   = -rhsv;     
-      }
-    } 
-
-
-  }
-}
-
-
-
-
-
-// Add shared from global read
-kernel void insSubCycleCubatureVolume2D_v1(
-					   const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_Np];
-    shared dfloat s_V[p_Np];
-    shared dfloat s_Ud[p_Np];
-    shared dfloat s_Vd[p_Np];
-
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
-
-
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-      if(e<Nelements && n<p_Np){ 
-        iint id = e*p_Np+n;
-        // prefetch geometric factors (constant on triangle)
-        dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        //           
-        dfloat Un = U[id];
-        dfloat Vn = V[id];
-            
-        s_Ud[n] = Ud[id];
-        s_Vd[n] = Vd[id];
-            
-        s_U[n] = drdx*Un + drdy*Vn; // rotate velocity 
-        s_V[n] = dsdx*Un + dsdy*Vn; // 
-
-      }
-    }
-
-    barrier(localMemFence);
-  
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-      if(e<Nelements && n<p_cubNp){
-        dfloat cU = 0.f,  cV = 0.f;
-        dfloat cUd = 0.f, cVd = 0.f;        
-        for(iint i=0;i<p_Np;++i){
-          dfloat cIni = cubInterpT[n+i*p_cubNp];
-          cU  += cIni*s_U[i];
-          cV  += cIni*s_V[i];
-          cUd += cIni*s_Ud[i];
-          cVd += cIni*s_Vd[i];        
-        }
-        //
-        s_cF11[n] = cU*cUd;
-        s_cF12[n] = cV*cUd;
-        s_cF21[n] = cU*cVd;
-        s_cF22[n] = cV*cVd;
-      }
-    }
-
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-
-      if(e<Nelements && n<p_Np){    
-       
-        dfloat fluxu = 0.f, fluxv = 0.f; 
-
-        // occaUnroll(p_cubNp)
-        for(iint i=0;i<p_cubNp;++i){
-          dfloat cDrWni = cubDrWT[n+i*p_Np];
-          dfloat cDsWni = cubDsWT[n+i*p_Np];
-          // Fetch to shared, used twice
-          dfloat cF11 = s_cF11[i];
-          dfloat cF12 = s_cF12[i];
-          dfloat cF21 = s_cF21[i];
-          dfloat cF22 = s_cF22[i];
-
-          fluxu += cDrWni*cF11 + cDsWni*cF12;
-                  
-          fluxv += cDrWni*cF21 + cDsWni*cF22;
-        }
-
-        iint id = e*p_Np+n;
-
-        rhsU[id]   = -fluxu; // note  change in sign
-        rhsV[id]   = -fluxv;      
-      }
-    }
-
-  }
-}
-
-
-// Add unrolling + const
-kernel void insSubCycleCubatureVolume2D_v2(
-					   const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_Np];
-    shared dfloat s_V[p_Np];
-    shared dfloat s_Ud[p_Np];
-    shared dfloat s_Vd[p_Np];
-
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
-
-
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-      if(e<Nelements && n<p_Np){ 
-	iint id = e*p_Np+n;
-      
-	// prefetch geometric factors (constant on triangle)
-	const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-      
-	const dfloat Un = U[id];
-	const dfloat Vn = V[id];
-      
-	s_Ud[n] = Ud[id];
-	s_Vd[n] = Vd[id];
-      
-	s_U[n] = drdx*Un + drdy*Vn; // rotate velocity 
-	s_V[n] = dsdx*Un + dsdy*Vn; // 
-
-      }
-    }
-
-    barrier(localMemFence);
-  
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-      if(e<Nelements && n<p_cubNp){
-
-	dfloat cU = 0.f,  cV = 0.f;
-	dfloat cUd = 0.f, cVd = 0.f;
-     
-	occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
-	    dfloat cIni = cubInterpT[n+i*p_cubNp];
-	    cU  += cIni*s_U[i];
-	    cV  += cIni*s_V[i];
-	    cUd += cIni*s_Ud[i];
-	    cVd += cIni*s_Vd[i];        
-	  }
-	//
-	s_cF11[n] = cU*cUd;
-	s_cF12[n] = cV*cUd;
-	s_cF21[n] = cU*cVd;
-	s_cF22[n] = cV*cVd;
-      }
-    }
-
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-
-      if(e<Nelements && n<p_Np){    
-       
-	dfloat fluxu = 0.f, fluxv = 0.f; 
-
-	occaUnroll(p_cubNp)
-	  for(iint i=0;i<p_cubNp;++i){
-	    const dfloat cDrWni = cubDrWT[n+i*p_Np];
-	    const dfloat cDsWni = cubDsWT[n+i*p_Np];
-	    // Fetch to shared, used twice
-	    const dfloat cF11 = s_cF11[i];
-	    const dfloat cF12 = s_cF12[i];
-	    const dfloat cF21 = s_cF21[i];
-	    const dfloat cF22 = s_cF22[i];
-
-	    fluxu += cDrWni*cF11 + cDsWni*cF12;
-            
-	    fluxv += cDrWni*cF21 + cDsWni*cF22;
-	  }
-
-	const iint id = e*p_Np+n;
-
-	rhsU[id]   = -fluxu; // note  change in sign
-	rhsV[id]   = -fluxv;      
-      }
-    }
-
-  }
-}
-
-
-// // Optimized sizes for kernel 3
-#if p_N==1
-#define p_cubNblockV 11
-#endif
-
-#if p_N==2
-#define p_cubNblockV 3
-#endif
-
-#if p_N==3
-#define p_cubNblockV 2
-#endif
-
-#if p_N==4
-#define p_cubNblockV 5
-#endif
-
-#if p_N==5
-#define p_cubNblockV 4
-#endif
-
-#if p_N==6
-#define p_cubNblockV 1
-#endif
-
-#if p_N==7
-#define p_cubNblockV 5
-#endif
-
-#if p_N==8
-#define p_cubNblockV 3
-#endif
-
-#if p_N==9
-#define p_cubNblockV 1
-#endif
-
-#if p_N==10
-#define p_cubNblockV 1
-#endif
-
-
-
-
-
-
-// Add multiple elements per threadblock
-kernel void insSubCycleCubatureVolume2D_v3(const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
-
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_cubNblockV][p_Np];
-    shared dfloat s_V[p_cubNblockV][p_Np];
-    shared dfloat s_Ud[p_cubNblockV][p_Np];
-    shared dfloat s_Vd[p_cubNblockV][p_Np];
-
-    shared dfloat s_cF11[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF12[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF21[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF22[p_cubNblockV][p_cubNp];
-    //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block      
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_Np){ 
-	  const iint id = e*p_Np+n;
-            
-	  // prefetch geometric factors (constant on triangle)
-	  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	  const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	  const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	  const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-            
-	  const dfloat Un = U[id];
-	  const dfloat Vn = V[id];
-            
-	  s_Ud[es][n] = Ud[id];
-	  s_Vd[es][n] = Vd[id];
-            
-	  s_U[es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-	  s_V[es][n] = dsdx*Un + dsdy*Vn; // 
-	}
-	else{
-	  s_U[es][n]  = 0.f;
-	  s_V[es][n]  = 0.f;
-	  s_Ud[es][n] = 0.f;
-	  s_Vd[es][n] = 0.f;
-	}
-      }
-    }
-   
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-	iint e = eo+es; // element in block
-	if(e<Nelements && n<p_cubNp){
-
-	  dfloat cU = 0.f,  cV = 0.f;
-	  dfloat cUd = 0.f, cVd = 0.f;
-
-	  occaUnroll(p_Np)
-	    for(iint i=0;i<p_Np;++i){
-	      dfloat cIni = cubInterpT[n+i*p_cubNp];
-	      cU  += cIni*s_U[es][i];
-	      cV  += cIni*s_V[es][i];
-	      cUd += cIni*s_Ud[es][i];
-	      cVd += cIni*s_Vd[es][i];        
-	    }
-	  //
-	  s_cF11[es][n] = cU*cUd;
-	  s_cF12[es][n] = cV*cUd;
-	  s_cF21[es][n] = cU*cVd;
-	  s_cF22[es][n] = cV*cVd;
-	}
-      }
-    }
-
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-	iint e = eo+es;
-
-	if(e<Nelements && n<p_Np){    
-         
-	  dfloat fluxu = 0.f, fluxv = 0.f; 
-
-	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
-	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
-	      // Fetch to shared, used twice
-	      const dfloat cF11 = s_cF11[es][i];
-	      const dfloat cF12 = s_cF12[es][i];
-	      const dfloat cF21 = s_cF21[es][i];
-	      const dfloat cF22 = s_cF22[es][i];
-
-	      fluxu += cDrWni*cF11 + cDsWni*cF12;
-            
-	      fluxv += cDrWni*cF21 + cDsWni*cF22;
-	    }
-
-	  const iint id = e*p_Np+n;
-
-	  rhsU[id]   = -fluxu; // note  change in sign
-	  rhsV[id]   = -fluxv;      
-	}
-      }
-    }
-
-  }
-
-}
-
-
-// // Optimized sizes for kernel 4-5
-#if p_N==1
-#define p_cNbV 11
-#define p_cNmt 2
-#endif
-
-#if p_N==2
-#define p_cNbV 8
-#define p_cNmt 2
-#endif
-
-#if p_N==3
-#define p_cNbV 2
-#define p_cNmt 2
-#endif
-
-#if p_N==4
-#define p_cNbV 5
-#define p_cNmt 2
-#endif
-
-#if p_N==5
-#define p_cNbV 1
-#define p_cNmt 2
-#endif
-
-#if p_N==6
-#define p_cNbV 5
-#define p_cNmt 2
-#endif
-
-#if p_N==7
-#define p_cNbV 1
-#define p_cNmt 3
-#endif
-
-#if p_N==8
-#define p_cNbV 3
-#define p_cNmt 2
-#endif
-
-#if p_N==9
-#define p_cNbV 2
-#define p_cNmt 2
-#endif
-
-#if p_N==10
-#define p_cNbV 2
-#define p_cNmt 1
-#endif
-
-// TW tweaks
-kernel void insSubCycleCubatureVolume2D_v4(const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);outer0){  // for all elements
-    
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
-    shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
-    
-    shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp];
-    
-    //
-    for(iint es=0;es<p_cNbV;++es;inner1){// for all elements in block      
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-  
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    const int e = eo + es*p_cNmt + em;
-	    const int id = e*p_Np + n;
-      
-	    if(e<Nelements && n<p_Np){
-        
-	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        
-	      const dfloat Un = U[id];
-	      const dfloat Vn = V[id];
-        
-	      s_Ud[em][es][n] = Ud[id];
-	      s_Vd[em][es][n] = Vd[id];
-        
-	      s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-	      s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
-	    }
-	  }
-      }
-    }
-    
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_cNbV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-
-	dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
-  
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    cU[em] = 0.f;
-	    cV[em] = 0.f;
-	    cUd[em] = 0.f; 
-	    cVd[em] = 0.f;
-	  }
-  
-	occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
-	    const dfloat cIni = cubInterpT[n+i*p_cubNp];
-	    occaUnroll(p_cNmt)
-	      for(iint em=0;em<p_cNmt;++em){
-		cU[em]  += cIni*s_U[em][es][i];
-		cV[em]  += cIni*s_V[em][es][i];
-		cUd[em] += cIni*s_Ud[em][es][i];
-		cVd[em] += cIni*s_Vd[em][es][i];        
-	      }
-	  }
-  
-	//
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    s_cF11[em][es][n] = cU[em]*cUd[em];
-	    s_cF12[em][es][n] = cV[em]*cUd[em];
-	    s_cF21[em][es][n] = cU[em]*cVd[em];
-	    s_cF22[em][es][n] = cV[em]*cVd[em];
-	  }
-      }
-    }
-    
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_cNbV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-  
-	if(n<p_Np){   
-	  dfloat fluxU[p_cNmt], fluxV[p_cNmt];
-    
-	  occaUnroll(p_cNmt)
-	    for(iint em=0;em<p_cNmt;++em){
-	      fluxU[em] = 0;
-	      fluxV[em] = 0;
-	    }
-    
-	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
-	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
-        
-	      occaUnroll(p_cNmt)
-		for(iint em=0;em<p_cNmt;++em){  
-		  const dfloat cF11 = s_cF11[em][es][i];
-		  const dfloat cF12 = s_cF12[em][es][i];
-		  const dfloat cF21 = s_cF21[em][es][i];
-		  const dfloat cF22 = s_cF22[em][es][i];
-      
-		  fluxU[em] += cDrWni*cF11;
-		  fluxU[em] += cDsWni*cF12;
-		  fluxV[em] += cDrWni*cF21;
-		  fluxV[em] += cDsWni*cF22;
-		}
-	    }
-
-	  occaUnroll(p_cNmt)
-	    for(iint em=0;em<p_cNmt;++em){
-	      iint e = eo+es*p_cNmt+em;
-	      if(e<Nelements){
-		const iint id = e*p_Np+n;
-    
-		rhsU[id]   = -fluxU[em]; // note  change in sign
-		rhsV[id]   = -fluxV[em];      
-	      }
-	    }
-	}
-      }
-    }
-  }
-}
-
-
-
-#define p_cubNpad 0 // Npad did not work use 0
-
-kernel void insSubCycleCubatureVolume2D_v5(const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat2 * restrict cubDrsWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);outer0){  // for all elements
-    
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
-    shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
-    
-    shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    
-    //
-    for(iint es=0;es<p_cNbV;++es;inner1){// for all elements in block      
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-  
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    const int e = eo + es*p_cNmt + em;
-	    const int id = e*p_Np + n;
-      
-	    if(e<Nelements && n<p_Np){
-        
-	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        
-	      const dfloat Un = U[id];
-	      const dfloat Vn = V[id];
-        
-	      s_Ud[em][es][n] = Ud[id];
-	      s_Vd[em][es][n] = Vd[id];
-        
-	      s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-	      s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
-	    }
-	    else{
-	      s_U[em][es][n] = 0;
-	      s_V[em][es][n] = 0;
-	      s_Ud[em][es][n] = 0;
-	      s_Vd[em][es][n] = 0;
-	    }
-	  }
-      }
-    }
-    
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_cNbV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-
-	dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
-  
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    cU[em] = 0.f;
-	    cV[em] = 0.f;
-	    cUd[em] = 0.f; 
-	    cVd[em] = 0.f;
-	  }
-  
-	occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
-	    const dfloat cIni = cubInterpT[n+i*p_cubNp];
-	    occaUnroll(p_cNmt)
-	      for(iint em=0;em<p_cNmt;++em){
-		cU[em]  += cIni*s_U[em][es][i];
-		cV[em]  += cIni*s_V[em][es][i];
-		cUd[em] += cIni*s_Ud[em][es][i];
-		cVd[em] += cIni*s_Vd[em][es][i];        
-	      }
-	  }
-  
-	//
-	occaUnroll(p_cNmt)
-	  for(iint em=0;em<p_cNmt;++em){
-	    s_cF11[em][es][n] = cU[em]*cUd[em];
-	    s_cF12[em][es][n] = cV[em]*cUd[em];
-	    s_cF21[em][es][n] = cU[em]*cVd[em];
-	    s_cF22[em][es][n] = cV[em]*cVd[em];
-	  }
-      }
-    }
-    
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_cNbV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     
-  
-	if(n<p_Np){   
-	  dfloat fluxU[p_cNmt], fluxV[p_cNmt];
-    
-	  occaUnroll(p_cNmt)
-	    for(iint em=0;em<p_cNmt;++em){
-	      fluxU[em] = 0;
-	      fluxV[em] = 0;
-	    }
-    
-	  occaUnroll()
-	    for(iint i=0;i<p_cubNp;++i){
-	      const dfloat2 cDrsWni = cubDrsWT[n+i*p_Np];
-        
-	      occaUnroll(p_cNmt)
-		for(iint em=0;em<p_cNmt;++em){  
-		  const dfloat cF11 = s_cF11[em][es][i];
-		  const dfloat cF12 = s_cF12[em][es][i];
-		  const dfloat cF21 = s_cF21[em][es][i];
-		  const dfloat cF22 = s_cF22[em][es][i];
-      
-		  fluxU[em] += cDrsWni.x*cF11;
-		  fluxU[em] += cDrsWni.y*cF12;
-		  fluxV[em] += cDrsWni.x*cF21;
-		  fluxV[em] += cDrsWni.y*cF22;
-		}
-	    }
-
-	  occaUnroll(p_cNmt)
-	    for(iint em=0;em<p_cNmt;++em){
-	      iint e = eo+es*p_cNmt+em;
-	      if(e<Nelements){
-		const iint id = e*p_Np+n;
-    
-		rhsU[id]   = -fluxU[em]; // note  change in sign
-		rhsV[id]   = -fluxV[em];      
-	      }
-	    }
-	}
-      }
-    }
-  }
-}
-
-
-// // Optimized sizes for kernel 6, currently best one !!!!
-#if p_N==1
-#define p_NbV 20
-#define p_Nmt 1
-#endif
-
-#if p_N==2
-#define p_NbV 5
-#define p_Nmt 2
-#endif
-
-#if p_N==3
-#define p_NbV 6
-#define p_Nmt 2
-#endif
-
-#if p_N==4
-#define p_NbV 2
-#define p_Nmt 2
-#endif
-
-#if p_N==5
-#define p_NbV 3
-#define p_Nmt 2
-#endif
-
-#if p_N==6
-#define p_NbV 6
-#define p_Nmt 3
-#endif
-
-#if p_N==7
-#define p_NbV 3
-#define p_Nmt 3
-#endif
-
-#if p_N==8
-#define p_NbV 5
-#define p_Nmt 2
-#endif
-
-#if p_N==9
-#define p_NbV 3
-#define p_Nmt 2
-#endif
-
-#if p_N==10
-#define p_NbV 3
-#define p_Nmt 2
-#endif
-
-
-
-
-kernel void insSubCycleCubatureVolume2D_v6(const iint Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
-
-  for(iint eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){  // for all elements
-    
-    // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_Nmt][p_NbV][p_Np];
-    shared dfloat  s_V[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_Ud[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_Vd[p_Nmt][p_NbV][p_Np];
-    
-    shared dfloat s_cF11[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF12[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF21[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF22[p_Nmt][p_NbV][p_Np];
-    
-    //
-    for(iint es=0;es<p_NbV;++es;inner1){// for all elements in block      
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-	occaUnroll(p_Nmt)
-	  for(iint em=0;em<p_Nmt;++em){
-	    const int e = eo + es*p_Nmt + em;
-	    const int id = e*p_Np + n;
-      
-	    if(e<Nelements){
-        
-	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        
-	      const dfloat Un = U[id];
-	      const dfloat Vn = V[id];
-        
-	      s_Ud[em][es][n] = Ud[id];
-	      s_Vd[em][es][n] = Vd[id];
-        
-	      s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-	      s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
-	    }
-	    else{
-	      s_U[em][es][n] = 0;
-	      s_V[em][es][n] = 0;
-	      s_Ud[em][es][n] = 0;
-	      s_Vd[em][es][n] = 0;
-	    }
-	  }
-      }
-    }
-
-    barrier(localMemFence);
-    
-    exclusive dfloat fluxU[p_Nmt], fluxV[p_Nmt];
-      
-    for(iint es=0;es<p_NbV;++es;inner1){// for all elements in block
-      for(iint ns=0;ns<p_Np;++ns;inner0){     // for all nodes in this element
-	occaUnroll(p_Nmt)
-	  for(iint em=0;em<p_Nmt;++em){
-	    fluxU[em] = 0;
-	    fluxV[em] = 0;
-	  }
-      }
-    }
-
-    occaUnroll()
-      for(iint io=0;io<p_cubNp;io+=p_Np){ // block the cubature nodes
-
-	barrier(localMemFence);
-
-	for(iint es=0;es<p_NbV;++es;inner1){// for all elements in block
-	  for(iint ns=0;ns<p_Np;++ns;inner0){     // for all nodes in this element
-	    const int n = ns+io; // choose cubature node to interpolate to
-	    if(n<p_cubNp){
-	      // compute Np of the cubNp cubature values
-	      dfloat cU[p_Nmt], cV[p_Nmt], cUd[p_Nmt], cVd[p_Nmt];
-        
-	      occaUnroll(p_Nmt)
-		for(iint em=0;em<p_Nmt;++em){
-		  cU[em] = 0.f;
-		  cV[em] = 0.f;
-		  cUd[em] = 0.f; 
-		  cVd[em] = 0.f;
-		}
-        
-	      occaUnroll(p_Np)
-		for(iint i=0;i<p_Np;++i){
-		  const dfloat cIni = cubInterpT[n+i*p_cubNp];
-		  occaUnroll(p_Nmt)
-		    for(iint em=0;em<p_Nmt;++em){
-		      cU[em]  += cIni*s_U[em][es][i];
-		      cV[em]  += cIni*s_V[em][es][i];
-		      cUd[em] += cIni*s_Ud[em][es][i];
-		      cVd[em] += cIni*s_Vd[em][es][i];        
-		    }
-		}
-        
-	      // share up to the Np cubature vals computed in this block
-	      occaUnroll(p_Nmt)
-		for(iint em=0;em<p_Nmt;++em){
-		  s_cF11[em][es][ns] = cU[em]*cUd[em];
-		  s_cF12[em][es][ns] = cV[em]*cUd[em];
-		  s_cF21[em][es][ns] = cU[em]*cVd[em];
-		  s_cF22[em][es][ns] = cV[em]*cVd[em];
-		}
-	    }
-	  }
-	}
-    
-	// Make sure all node data is loaded into shared
-	barrier(localMemFence);
-  
-	for(iint es=0;es<p_NbV;++es;inner1){
-	  for(iint n=0;n<p_Np;++n;inner0){      
-      
-	    occaUnroll(p_Np)
-	      for(iint i=0;i<p_Np;++i){
-		if(i+io<p_cubNp){ // differentiate this sub block
-		  const dfloat cDrWni = cubDrWT[n+(i+io)*p_Np];
-		  const dfloat cDsWni = cubDsWT[n+(i+io)*p_Np];
-      
-		  occaUnroll(p_Nmt)
-		    for(iint em=0;em<p_Nmt;++em){  
-		      const dfloat cF11 = s_cF11[em][es][i];
-		      const dfloat cF12 = s_cF12[em][es][i];
-		      const dfloat cF21 = s_cF21[em][es][i];
-		      const dfloat cF22 = s_cF22[em][es][i];
-          
-		      fluxU[em] += cDrWni*cF11;
-		      fluxU[em] += cDsWni*cF12;
-		      fluxV[em] += cDrWni*cF21;
-		      fluxV[em] += cDsWni*cF22;
-		    }
-		}
-	      }
-	  }
-	}
-      }
-    
-    for(iint es=0;es<p_NbV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){          
-	occaUnroll(p_Nmt)
-	  for(iint em=0;em<p_Nmt;++em){
-	    iint e = eo+es*p_Nmt+em;
-	    if(e<Nelements){
-	      const iint id = e*p_Np+n;
-        
-	      rhsU[id]   = -fluxU[em]; // note  change in sign
-	      rhsV[id]   = -fluxV[em];      
-	    }
-	  }
-      }
-    }
-  }
-}
-
-
-
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 					const dfloat * restrict vgeo,
@@ -1184,505 +125,26 @@ kernel void insSubCycleCubatureVolume2D(const iint Nelements,
 
 
 
-// TWEAK surface kernel, play with different implementations
-// Base implementation
-kernel void insSubCycleCubatureSurface2D_v0(
-					    iint Nelements,
-					    dfloat * sgeo,
-					    dfloat * intInterpT, // interpolate to integration nodes
-					    dfloat * intLIFTT, // lift from integration to interpolation nodes
-					    iint   * vmapM,
-					    iint   * vmapP,
-					    iint   * EToB,
-					    dfloat time,
-					    dfloat * intx, // integration nodes
-					    dfloat * inty,
-					    dfloat * U,
-					    dfloat * V,
-					    dfloat * Ud,
-					    dfloat * Vd,
-					    dfloat * rhsU,
-					    dfloat * rhsV){
-  // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
 
-    shared dfloat s_iFluxU[p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
 
-      if(e<Nelements){
-        if(n<(p_Nfaces*p_intNfp)){
 
-          iint face = n/p_intNfp; // find face that owns this integration node
-
-          // load surface geofactors for this face
-          iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-          dfloat nx   = sgeo[sid+p_NXID];
-          dfloat ny   = sgeo[sid+p_NYID];
-          dfloat sJ   = sgeo[sid+p_SJID];
-          dfloat invJ = sgeo[sid+p_IJID];
-
-          dfloat iUM  = 0.f, iVM  = 0.f;
-          dfloat iUP  = 0.f, iVP  = 0.f;
-          dfloat iUdM = 0.f, iVdM = 0.f;
-          dfloat iUdP = 0.f, iVdP = 0.f;
-
-          // local block interpolation (face nodes to integration nodes)
-          //occaUnroll(p_Nfp)
-	  for(iint m=0;m<p_Nfp;++m){
-	    dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-
-	    iint id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
-	    //
-	    iUM  += iInm*U[idM];
-	    iVM  += iInm*V[idM];
-	    iUdM += iInm*Ud[idM];
-	    iVdM += iInm*Vd[idM];
-
-	    iUP  += iInm*U[idP];
-	    iVP  += iInm*V[idP];
-	    iUdP += iInm*Ud[idP];
-	    iVdP += iInm*Vd[idP];
-	  }
-
-          // apply boundary conditions
-          iint bc = EToB[face+p_Nfaces*e];
-
-          if(bc>0){
-            insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-          }
-
-
-          // Find max normal velocity on the face
-          dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-          dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-          dfloat unmax = (unm > unp) ? unm : unp;
-
-          // evaluate "flux" terms: LLF
-          dfloat sc = invJ * sJ ;
-
-          s_iFluxU[n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
-				 +ny*(iVP*iUdP + iVM*iUdM) 
-				 +unmax*(iUdM-iUdP) ));
-
-          s_iFluxV[n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
-				 + ny*(iVP*iVdP + iVM*iVdM) 
-				 + unmax*(iVdM-iVdP) ));
-        }
-      }
-    }
-
-    barrier(localMemFence);
-
-    // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-      if(e<Nelements){
-        if(n<p_Np){
-          iint id = n + p_Np*e;
-          // prefetch volume rhs
-          dfloat rhsu = rhsU[id];
-          dfloat rhsv = rhsV[id];
-
-          //occaUnroll(p_intNfpNfaces)
-          for(iint m=0;m<p_intNfpNfaces;++m){
-	    // RefMassMatrix^{-1}*cInterp^t*cWeight
-            dfloat L = intLIFTT[n+m*p_Np];
-
-            rhsu += L*s_iFluxU[m];
-            rhsv += L*s_iFluxV[m];
-          }
-
-          rhsU[id] = rhsu;  // 
-          rhsV[id] = rhsv;  //  
-        }
-      }
-    }
-  }
-}
-
-
-
-
-// Add shared memory for global read
-kernel void insSubCycleCubatureSurface2D_v1(
-					    iint Nelements,
-					    dfloat * sgeo,
-					    dfloat * intInterpT, // interpolate to integration nodes
-					    dfloat * intLIFTT, // lift from integration to interpolation nodes
-					    iint   * vmapM,
-					    iint   * vmapP,
-					    iint   * EToB,
-					    dfloat time,
-					    dfloat * intx, // integration nodes
-					    dfloat * inty,
-					    dfloat * U,
-					    dfloat * V,
-					    dfloat * Ud,
-					    dfloat * Vd,
-					    dfloat * rhsU,
-					    dfloat * rhsV){
-  // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_NfacesNfp];
-    shared dfloat s_VM[p_NfacesNfp];
-    shared dfloat s_UP[p_NfacesNfp];
-    shared dfloat s_VP[p_NfacesNfp];
-
-    shared dfloat s_UdM[p_NfacesNfp];
-    shared dfloat s_VdM[p_NfacesNfp];
-    shared dfloat s_UdP[p_NfacesNfp];
-    shared dfloat s_VdP[p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_intNfpNfaces];
-
-
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-      if(e<Nelements){
-        if(n<(p_Nfaces*p_Nfp)){
-          // indices of negative and positive traces of face node
-          iint id  = e*p_Nfp*p_Nfaces + n;
-
-          iint idM = vmapM[id];
-          iint idP = vmapP[id];
-
-          if(idP<0) idP = idM;
-	  // load negative and positive trace node values of velocity
-	  s_UM[n] = U[idM];
-	  s_VM[n] = V[idM];
-	  s_UP[n] = U[idP];
-	  s_VP[n] = V[idP];
-
-	  s_UdM[n] = Ud[idM];
-	  s_VdM[n] = Vd[idM];
-	  s_UdP[n] = Ud[idP];
-	  s_VdP[n] = Vd[idP];
-
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-  
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-
-      if(e<Nelements){
-	if(n<(p_Nfaces*p_intNfp)){
-
-	  iint face = n/p_intNfp; // find face that owns this integration node
-
-	  // load surface geofactors for this face
-	  iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-	  dfloat nx   = sgeo[sid+p_NXID];
-	  dfloat ny   = sgeo[sid+p_NYID];
-	  dfloat sJ   = sgeo[sid+p_SJID];
-	  dfloat invJ = sgeo[sid+p_IJID];
-
-	  dfloat iUM  = 0.f, iVM  = 0.f;
-	  dfloat iUP  = 0.f, iVP  = 0.f;
-	  dfloat iUdM = 0.f, iVdM = 0.f;
-	  dfloat iUdP = 0.f, iVdP = 0.f;
-
-	  // local block interpolation (face nodes to integration nodes)
-	  //occaUnroll(p_Nfp)
-	  for(iint m=0;m<p_Nfp;++m){
-	    dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-	    iint fm = face*p_Nfp+m;
-
-	    iUM  += iInm*s_UM[fm];
-	    iVM  += iInm*s_VM[fm];
-	    iUdM += iInm*s_UdM[fm];
-	    iVdM += iInm*s_VdM[fm];
-
-	    iUP  += iInm*s_UP[fm];
-	    iVP  += iInm*s_VP[fm];
-	    iUdP += iInm*s_UdP[fm];
-	    iVdP += iInm*s_VdP[fm];
-	  }
-
-	  // apply boundary conditions
-	  iint bc = EToB[face+p_Nfaces*e];
-
-	  if(bc>0){
-	    insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-	  }
-
-
-	  // Find max normal velocity on the face
-	  dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-	  dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-	  dfloat unmax = (unm > unp) ? unm : unp;
-
-	  // evaluate "flux" terms: LLF
-	  dfloat sc = invJ * sJ ;
-
-	  s_iFluxU[n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
-				 +ny*(iVP*iUdP + iVM*iUdM) 
-				 +unmax*(iUdM-iUdP) ));
-
-	  s_iFluxV[n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
-				 + ny*(iVP*iVdP + iVM*iVdM) 
-				 + unmax*(iVdM-iVdP) ));
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-      if(e<Nelements){
-	if(n<p_Np){
-	  iint id = n + p_Np*e;
-	  // prefetch volume rhs
-	  dfloat rhsu = 0.f;
-	  dfloat rhsv = 0.f;
-
-	  //occaUnroll(p_intNfpNfaces)
-	  for(iint m=0;m<p_intNfpNfaces;++m){
-            // RefMassMatrix^{-1}*cInterp^t*cWeight
-	    dfloat L = intLIFTT[n+m*p_Np];
-
-	    rhsu += L*s_iFluxU[m];
-	    rhsv += L*s_iFluxV[m];
-	  }
-
-	  rhsU[id] = rhsu;  // 
-	  rhsV[id] = rhsv;  //  
-	}
-      }
-    }
-  }
-}
-
-
-
-// Add const read and loop unrolling
-kernel void insSubCycleCubatureSurface2D_v2(
-					    const iint Nelements,
-					    const dfloat * restrict sgeo,
-					    const dfloat * restrict intInterpT, // interpolate to integration nodes
-					    const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-					    const iint   * restrict vmapM,
-					    const iint   * restrict vmapP,
-					    const iint   * restrict EToB,
-					    const dfloat time,
-					    const dfloat * restrict intx, // integration nodes
-					    const dfloat * restrict inty,
-					    const dfloat * restrict U,
-					    const dfloat * restrict V,
-					    const dfloat * restrict Ud,
-					    const dfloat * restrict Vd,
-					    dfloat * restrict rhsU,
-					    dfloat * restrict rhsV){
-  // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_NfacesNfp];
-    shared dfloat s_VM[p_NfacesNfp];
-    shared dfloat s_UP[p_NfacesNfp];
-    shared dfloat s_VP[p_NfacesNfp];
-
-    shared dfloat s_UdM[p_NfacesNfp];
-    shared dfloat s_VdM[p_NfacesNfp];
-    shared dfloat s_UdP[p_NfacesNfp];
-    shared dfloat s_VdP[p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_intNfpNfaces];
-
-    //
-
-
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-      if(e<Nelements){
-        if(n<(p_Nfaces*p_Nfp)){
-          // indices of negative and positive traces of face node
-          const iint id  = e*p_Nfp*p_Nfaces + n;
-
-          iint idM = vmapM[id];
-          iint idP = vmapP[id];
-
-          if(idP<0) idP = idM;
-	  // load negative and positive trace node values of velocity
-	  s_UM[n] = U[idM];
-	  s_VM[n] = V[idM];
-	  s_UP[n] = U[idP];
-	  s_VP[n] = V[idP];
-
-	  s_UdM[n] = Ud[idM];
-	  s_VdM[n] = Vd[idM];
-	  s_UdP[n] = Ud[idP];
-	  s_VdP[n] = Vd[idP];
-
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-  
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-
-      if(e<Nelements){
-	if(n<(p_Nfaces*p_intNfp)){
-
-	  const iint face = n/p_intNfp; // find face that owns this integration node
-
-	  // load surface geofactors for this face
-	  const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-	  const dfloat nx   = sgeo[sid+p_NXID];
-	  const dfloat ny   = sgeo[sid+p_NYID];
-	  const dfloat sJ   = sgeo[sid+p_SJID];
-	  const dfloat invJ = sgeo[sid+p_IJID];
-
-	  dfloat iUM  = 0.f, iVM  = 0.f;
-	  dfloat iUP  = 0.f, iVP  = 0.f;
-	  dfloat iUdM = 0.f, iVdM = 0.f;
-	  dfloat iUdP = 0.f, iVdP = 0.f;
-
-	  // local block interpolation (face nodes to integration nodes)
-	  occaUnroll(p_Nfp)
-	    for(iint m=0;m<p_Nfp;++m){
-	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-	      const iint fm = face*p_Nfp+m;
-
-	      iUM  += iInm*s_UM[fm];
-	      iVM  += iInm*s_VM[fm];
-	      iUdM += iInm*s_UdM[fm];
-	      iVdM += iInm*s_VdM[fm];
-
-	      iUP  += iInm*s_UP[fm];
-	      iVP  += iInm*s_VP[fm];
-	      iUdP += iInm*s_UdP[fm];
-	      iVdP += iInm*s_VdP[fm];
-	    }
-
-	  // apply boundary conditions
-	  const iint bc = EToB[face+p_Nfaces*e];
-
-	  if(bc>0){
-	    insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-	  }
-
-
-	  // Find max normal velocity on the face
-	  const dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-	  const dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-	  const dfloat unmax = (unm > unp) ? unm : unp;
-
-	  // evaluate "flux" terms: LLF
-	  const dfloat sc = invJ * sJ ;
-
-	  s_iFluxU[n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
-				 +ny*(iVP*iUdP + iVM*iUdM) 
-				 +unmax*(iUdM-iUdP) ));
-
-	  s_iFluxV[n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
-				 + ny*(iVP*iVdP + iVM*iVdM) 
-				 + unmax*(iVdM-iVdP) ));
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-      if(e<Nelements){
-	if(n<p_Np){
-	  const iint id = n + p_Np*e;
-	  // prefetch volume rhs
-	  dfloat rhsu = 0.f;
-	  dfloat rhsv = 0.f;
-
-	  occaUnroll(p_intNfpNfaces)
-            for(iint m=0;m<p_intNfpNfaces;++m){
-	      // RefMassMatrix^{-1}*cInterp^t*cWeight
-              const dfloat L = intLIFTT[n+m*p_Np];
-
-              rhsu += L*s_iFluxU[m];
-              rhsv += L*s_iFluxV[m];
-            }
-
-	  rhsU[id] += rhsu;  // 
-	  rhsV[id] += rhsv;  //  
-	}
-      }
-    }
-  }
-}
-
-
-
-
-// // Optimized sizes for kernel 3
-#if p_N==1
-#define p_cubNblockS 14
-#endif
-
-#if p_N==2
-#define p_cubNblockS 8
-#endif
-
-#if p_N==3
-#define p_cubNblockS 7
-#endif
-
-#if p_N==4
-#define p_cubNblockS 6
-#endif
-
-#if p_N==5
-#define p_cubNblockS 6
-#endif
-
-#if p_N==6
-#define p_cubNblockS 7
-#endif
-
-#if p_N==7
-#define p_cubNblockS 7
-#endif
-
-#if p_N==8
-#define p_cubNblockS 6
-#endif
-
-#if p_N==9
-#define p_cubNblockS 4
-#endif
-
-#if p_N==10
-#define p_cubNblockS 5
-#endif
-
-
-
-// Add multiple element per threadblock, 
-kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
-					    const dfloat * restrict sgeo,
-					    const dfloat * restrict intInterpT, // interpolate to integration nodes
-					    const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-					    const iint   * restrict vmapM,
-					    const iint   * restrict vmapP,
-					    const iint   * restrict EToB,
-					    const dfloat time,
-					    const dfloat * restrict intx, // integration nodes
-					    const dfloat * restrict inty,
-					    const dfloat * restrict U,
-					    const dfloat * restrict V,
-					    const dfloat * restrict Ud,
-					    const dfloat * restrict Vd,
-					    dfloat * restrict rhsU,
-					    dfloat * restrict rhsV){
+kernel void insSubCycleCubatureSurface2D(const iint Nelements,
+           const dfloat * restrict sgeo,
+           const dfloat * restrict intInterpT, // interpolate to integration nodes
+           const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+           const iint   * restrict vmapM,
+           const iint   * restrict vmapP,
+           const iint   * restrict EToB,
+           const dfloat time,
+           const dfloat * restrict intx, // integration nodes
+           const dfloat * restrict inty,
+           const dfloat * restrict U,
+           const dfloat * restrict V,
+           const dfloat * restrict Ud,
+           const dfloat * restrict Vd,
+           dfloat * restrict rhsU,
+           dfloat * restrict rhsV){
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
@@ -1699,180 +161,6 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
 
     shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
     shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
-
-    // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-
-	iint e = eo + es;
-
-	if(e<Nelements){
-	  if(n<(p_Nfaces*p_Nfp)){
-	    // indices of negative and positive traces of face node
-	    const iint id  = e*p_Nfp*p_Nfaces + n;
-
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
-
-	    if(idP<0) idP = idM;
-	    // load negative and positive trace node values of velocity
-	    s_UM[es][n] = U[idM];
-	    s_VM[es][n] = V[idM];
-	    s_UP[es][n] = U[idP];
-	    s_VP[es][n] = V[idP];
-
-	    s_UdM[es][n] = Ud[idM];
-	    s_VdM[es][n] = Vd[idM];
-	    s_UdP[es][n] = Ud[idP];
-	    s_VdP[es][n] = Vd[idP];
-
-	  }
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-
-	iint e = eo + es;
-
-	if(e<Nelements){
-	  if(n<(p_Nfaces*p_intNfp)){
-
-	    const iint face = n/p_intNfp; // find face that owns this integration node
-
-	    // load surface geofactors for this face
-	    const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-	    const dfloat nx   = sgeo[sid+p_NXID];
-	    const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat sJ   = sgeo[sid+p_SJID];
-	    const dfloat invJ = sgeo[sid+p_IJID];
-
-	    dfloat iUM  = 0.f, iVM  = 0.f;
-	    dfloat iUP  = 0.f, iVP  = 0.f;
-	    dfloat iUdM = 0.f, iVdM = 0.f;
-	    dfloat iUdP = 0.f, iVdP = 0.f;
-
-	    // local block interpolation (face nodes to integration nodes)
-	    occaUnroll(p_Nfp)
-	      for(iint m=0;m<p_Nfp;++m){
-		const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-		const iint fm = face*p_Nfp+m;
-
-		iUM  += iInm*s_UM[es][fm];
-		iVM  += iInm*s_VM[es][fm];
-		iUdM += iInm*s_UdM[es][fm];
-		iVdM += iInm*s_VdM[es][fm];
-
-		iUP  += iInm*s_UP[es][fm];
-		iVP  += iInm*s_VP[es][fm];
-		iUdP += iInm*s_UdP[es][fm];
-		iVdP += iInm*s_VdP[es][fm];
-	      }
-
-	    // apply boundary conditions
-	    iint bc = EToB[face+p_Nfaces*e];
-
-	    if(bc>0){
-	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-	    }
-
-
-	    // Find max normal velocity on the face
-	    dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-	    dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-	    dfloat unmax = (unm > unp) ? unm : unp;
-
-	    // evaluate "flux" terms: LLF
-	    const dfloat sc = invJ * sJ ;
-
-	    s_iFluxU[es][n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
-				       +ny*(iVP*iUdP + iVM*iUdM) 
-				       +unmax*(iUdM-iUdP) ));
-
-	    s_iFluxV[es][n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
-				       + ny*(iVP*iVdP + iVM*iVdM) 
-				       + unmax*(iVdM-iVdP) ));
-	  }
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-
-        const iint e = eo + es;
-
-        if(e<Nelements){
-          if(n<p_Np){
-            iint id = n + p_Np*e;
-            // prefetch volume rhs
-            dfloat rhsu = rhsU[id];
-            dfloat rhsv = rhsV[id];
-
-            occaUnroll(p_intNfpNfaces)
-	      for(int m=0;m<p_intNfpNfaces;++m){
-		// RefMassMatrix^{-1}*cInterp^t*cWeight
-		const dfloat L = intLIFTT[n+m*p_Np];
-
-		rhsu += L*s_iFluxU[es][m];
-		rhsv += L*s_iFluxV[es][m];
-	      }
-
-            rhsU[id] = rhsu;  // 
-            rhsV[id] = rhsv;  //  
-          }
-        }
-      }
-    }
-  }
-
-}
-
-
-
-// same with Kernel 3 with shared memory for Geo
-kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
-              const dfloat * restrict sgeo,
-              const dfloat * restrict intInterpT, // interpolate to integration nodes
-              const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-              const iint   * restrict vmapM,
-              const iint   * restrict vmapP,
-              const iint   * restrict EToB,
-              const dfloat time,
-              const dfloat * restrict intx, // integration nodes
-              const dfloat * restrict inty,
-              const dfloat * restrict U,
-              const dfloat * restrict V,
-              const dfloat * restrict Ud,
-              const dfloat * restrict Vd,
-              dfloat * restrict rhsU,
-              dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
-
-    shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
-
-    shared dfloat s_sgeo[p_cubNblockS][p_Nfaces][p_Nsgeo];
-    //shared dfloat s_bc[p_cubNblockS][p_Nfaces];
 
     // for all face nodes of all elements
     for(iint es=0;es<p_cubNblockS;++es;inner1){
@@ -1881,17 +169,6 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
   iint e = eo + es;
 
   if(e<Nelements){
-
-      if(n<p_Np ){
-          iint m = n + p_Np*es;
-          // oad surface geofacs for all faces of all elements in block(s)
-          while(m<p_cubNblockS*p_Nfaces*p_Nsgeo){
-            const iint id = eo*p_Nfaces*p_Nsgeo+ m;
-            s_sgeo[0][0][m] = sgeo[id];
-            m+=p_Np*p_cubNblockS;
-         }
-        }
-
     if(n<(p_Nfaces*p_Nfp)){
       // indices of negative and positive traces of face node
       const iint id  = e*p_Nfp*p_Nfaces + n;
@@ -1930,12 +207,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
       const iint face = n/p_intNfp; // find face that owns this integration node
 
       // load surface geofactors for this face
-      //const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-       const dfloat nx   = s_sgeo[es][face][p_NXID];
-       const dfloat ny   = s_sgeo[es][face][p_NYID];
-       const dfloat sJ   = s_sgeo[es][face][p_SJID];
-       const dfloat invJ = s_sgeo[es][face][p_IJID];
-      
+      const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+      const dfloat nx   = sgeo[sid+p_NXID];
+      const dfloat ny   = sgeo[sid+p_NYID];
+      const dfloat sJ   = sgeo[sid+p_SJID];
+      const dfloat invJ = sgeo[sid+p_IJID];
+
       dfloat iUM  = 0.f, iVM  = 0.f;
       dfloat iUP  = 0.f, iVP  = 0.f;
       dfloat iUdM = 0.f, iVdM = 0.f;
@@ -2022,763 +299,1858 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
 
 
- // // Optimized sizes for kernel 4-5
-#if p_N==1
- #define p_cNbS 10
- #define p_cNmtS 2
- #endif
-
-#if p_N==2
-#define p_cNbS 8
-#define p_cNmtS 1
-#endif
-
-#if p_N==3
-#define p_cNbS 2
-#define p_cNmtS 2
-#endif
-
-#if p_N==4
-#define p_cNbS 3
-#define p_cNmtS 2
-#endif
-
-#if p_N==5
-#define p_cNbS 2
-#define p_cNmtS 2
-#endif
-
-#if p_N==6
-#define p_cNbS 2
-#define p_cNmtS 2
-#endif
-
-#if p_N==7
-#define p_cNbS 3
-#define p_cNmtS 2
-#endif
-
-#if p_N==8
-#define p_cNbS 4
-#define p_cNmtS 2
-#endif
-
-#if p_N==9
-#define p_cNbS 1
-#define p_cNmtS 3
-#endif
-
-#if p_N==10
-#define p_cNbS 2
-#define p_cNmtS 2
-#endif
 
 
-// Add multiple nodes to kernel 4
-
-kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
-              const dfloat * restrict sgeo,
-              const dfloat * restrict intInterpT, // interpolate to integration nodes
-              const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-              const iint   * restrict vmapM,
-              const iint   * restrict vmapP,
-              const iint   * restrict EToB,
-              const dfloat time,
-              const dfloat * restrict intx, // integration nodes
-              const dfloat * restrict inty,
-              const dfloat * restrict U,
-              const dfloat * restrict V,
-              const dfloat * restrict Ud,
-              const dfloat * restrict Vd,
-              dfloat * restrict rhsU,
-              dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=(p_cNbS*p_cNmtS);outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_VM[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_UP[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_VP[p_cNmtS][p_cNbS][p_NfacesNfp];
-
-    shared dfloat s_UdM[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_VdM[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_UdP[p_cNmtS][p_cNbS][p_NfacesNfp];
-    shared dfloat s_VdP[p_cNmtS][p_cNbS][p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_cNmtS][p_cNbS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cNmtS][p_cNbS][p_intNfpNfaces];
 
 
-    shared dfloat s_sgeo[p_cNmtS][p_cNbS][p_Nfaces][p_Nsgeo];
-    shared dfloat s_bc[p_cNmtS][p_cNbS][p_Nfaces];
-       
-    // for all face nodes of all elements
-    for(iint es=0;es<p_cNbS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+kernel void insSubCycleRKUpdate2D(const iint Nelements,
+          const dfloat activate_advection, 
+          const dfloat dt,  
+          const dfloat rka,
+          const dfloat rkb,
+          const dfloat * restrict rhsU,
+          const dfloat * restrict rhsV,
+          dfloat  * restrict resU,
+          dfloat  * restrict resV,
+          dfloat  * restrict U,
+          dfloat  * restrict V){
 
-        occaUnroll(p_cNmtS)
-     for(iint em=0;em<p_cNmtS;++em){ 
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint id = n + e*p_Np;
+
+      dfloat resu =  resU[id];
+      dfloat resv =  resV[id];
+      dfloat rhsu = -rhsU[id];// -Nu
+      dfloat rhsv = -rhsV[id];// -Nu
+
+      // If not axtivated zero it out
+      rhsu *= activate_advection;
+      rhsv *= activate_advection;
+      
+      dfloat u = U[id];
+      dfloat v = V[id];
+
+      resu = rka*resu + dt*rhsu;
+      resv = rka*resv + dt*rhsv;
+
+      u += rkb*resu;
+      v += rkb*resv;
+
+      resU[id] = resu;
+      resV[id] = resv;
+
+      U[id] = u;
+      V[id] = v;
+    }
+  }
+}
+
+
+
+
+
+kernel void insSubCycleExt2D(const iint Nelements,
+           const iint index,
+           const iint offset,
+           const dfloat c0,
+           const dfloat c1,
+           const dfloat c2, 
+           const dfloat * restrict U,
+           const dfloat * restrict V,
+           dfloat * restrict Ue,
+           dfloat * restrict Ve){
+
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint index0 = (index+0)%3;
+      const iint index1 = (index+2)%3; //back one step
+      const iint index2 = (index+1)%3; //back two steps
+
+      const iint id0   = n + p_Np*(e+index0*offset);
+      const iint id1   = n + p_Np*(e+index1*offset);
+      const iint id2   = n + p_Np*(e+index2*offset);
+
+      //U 
+      const dfloat Um0  = U[id0];
+      const dfloat Um1  = U[id1];
+      const dfloat Um2  = U[id2];
+
+      const dfloat Vm0  = V[id0];
+      const dfloat Vm1  = V[id1];
+      const dfloat Vm2  = V[id2];
+      
+      const iint id = n+e*p_Np;
+      Ue[id] = c0*Um0 + c1*Um1 + c2*Um2;
+      Ve[id] = c0*Vm0 + c1*Vm1 + c2*Vm2;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// #define p_NblockS5 5
+// #define p_NnodesS5 3
+
+// // Based on 4; Add multiple nodes // use all shared memory
+
+// kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
+//               const dfloat * restrict sgeo,
+//               const dfloat * restrict intInterpT, // interpolate to integration nodes
+//               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//               const iint   * restrict vmapM,
+//               const iint   * restrict vmapP,
+//               const iint   * restrict EToB,
+//               const dfloat time,
+//               const dfloat * restrict intx, // integration nodes
+//               const dfloat * restrict inty,
+//               const dfloat2 * restrict UM,
+//               const dfloat2 * restrict UP,
+//               const dfloat2 * restrict UdM,
+//               const dfloat2 * restrict UdP,
+//               dfloat * restrict rhsU,
+//               dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=(p_NblockS5*p_NnodesS5);outer0){
+
+//     // shared storage 
+//     shared dfloat s_U[p_NnodesS5][p_NblockS5][p_intNfpNfaces];
+//     shared dfloat s_V[p_NnodesS5][p_NblockS5][p_intNfpNfaces];
+    
+//     shared dfloat s_Ud[p_NnodesS5][p_NblockS5][p_NfacesNfp];
+//     shared dfloat s_Vd[p_NnodesS5][p_NblockS5][p_NfacesNfp];
+
+//     #define s_iFluxU s_U // Reuse shared memory arrays
+//     #define s_iFluxV s_V
+
+//     exclusive dfloat r_iUM[p_NnodesS5],  r_iUP[p_NnodesS5];
+//     exclusive dfloat r_iVM[p_NnodesS5],  r_iVP[p_NnodesS5];
+//     exclusive dfloat r_iUdM[p_NnodesS5], r_iUdP[p_NnodesS5];
+//     exclusive dfloat r_iVdM[p_NnodesS5], r_iVdP[p_NnodesS5];
+    
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS5;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+
+//         occaUnroll(p_NnodesS5)
+//      for(iint em=0;em<p_NnodesS5;++em){ 
                 
-      const iint e   = eo + es*p_cNmtS + em; 
-      const iint id  = e*p_NfacesNfp + n;
+//       const iint e   = eo + es*p_NnodesS5 + em; 
+//       const iint id  = e*p_NfacesNfp + n;
 
-       if(e<Nelements && n<p_Np ){
-          iint m = n + p_Np*es;
-          // oad surface geofacs for all faces of all elements in block(s)
-          while(m<p_cNbS*p_Nfaces*p_Nsgeo*p_cNmtS){
-            const iint id = eo*p_Nfaces*p_Nsgeo+ m;
-             s_sgeo[0][0][0][m] = sgeo[id];
-             m+=p_Np*p_cNbS;
-         }
-        }
+//       if(e<Nelements && n<p_NfacesNfp ){
+//         //iint idM = vmapM[id];
+//         // //load negative and positive trace node values of velocity
+//         // s_U[em][es][n]  = U[idM];
+//         // s_V[em][es][n]  = V[idM];
+//         // s_Ud[em][es][n] = Ud[idM];
+//         // s_Vd[em][es][n] = Vd[idM];
+//         dfloat2 um  = UM[id];
+//         dfloat2 udm = UdM[id];
 
-      if(e<Nelements && n<p_NfacesNfp ){
-        iint idM = vmapM[id];
-        iint idP = vmapP[id];
+//         s_U[em][es][n]  = um.x;
+//         s_V[em][es][n]  = um.y;
+//         s_Ud[em][es][n] = udm.x;
+//         s_Vd[em][es][n] = udm.y;
 
-        if(idP<0) idP = idM;
 
-        // //load negative and positive trace node values of velocity
-        s_UM[em][es][n] = U[idM];
-        s_VM[em][es][n] = V[idM];
-        s_UP[em][es][n] = U[idP];
-        s_VP[em][es][n] = V[idP];
+//         }        
+//      }
+//     }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS5;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//            const iint face = n/p_intNfp;       
+//             occaUnroll(p_NnodesS5)
+//             for(iint em=0;em<p_NnodesS5;++em){
+//               r_iUM [em] = 0.f;  
+//               r_iVM [em] = 0.f;  
+//               r_iUdM[em] = 0.f; 
+//               r_iVdM[em] = 0.f;                 
+//             }
+
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//           for(iint m=0;m<p_Nfp;++m){
+//             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//             //const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//             const iint fm = face*p_Nfp + m;
+//             occaUnroll(p_NnodesS5)
+//               for(iint em=0;em<p_NnodesS5;++em){
+//               r_iUM [em] += iInm*s_U[em][es][fm];
+//               r_iVM [em] += iInm*s_V[em][es][fm];
+//               r_iUdM[em] += iInm*s_Ud[em][es][fm];
+//               r_iVdM[em] += iInm*s_Vd[em][es][fm];
+//             }
+//           }
+//         }
+//       }
+//     }
+    
        
-        s_UdM[em][es][n] = Ud[idM];
-        s_VdM[em][es][n] = Vd[idM];
-        s_UdP[em][es][n] = Ud[idP];
-        s_VdP[em][es][n] = Vd[idP];
-         }
+//     barrier(localMemFence);
+
+//      // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS4;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//       occaUnroll(p_NnodesS4)
+//       for(iint em=0;em<p_NnodesS4;++em){           
+//        const iint e   = eo + es*p_NnodesS4 + em; 
+//        const iint id  = e*p_NfacesNfp + n;
+//       if(e<Nelements && n<p_NfacesNfp ){       
+//         s_U[em][es][n]  = 0.f;
+//         s_V[em][es][n]  = 0.f;
+//         s_Ud[em][es][n] = 0.f;
+//         s_Vd[em][es][n] = 0.f;
+//         }        
+//      }
+//     }
+//     }
+
+//     barrier(localMemFence);
+
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//            const iint face = n/p_intNfp;       
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUP [em] = 0.f;  
+//               r_iVP [em] = 0.f;  
+//               r_iUdP[em] = 0.f; 
+//               r_iVdP[em] = 0.f;              
+//             }
+
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//           for(iint m=0;m<p_Nfp;++m){
+//             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//             //const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//             const iint fm = face*p_Nfp + m;
+//             occaUnroll(p_NnodesS3)
+//               for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUP [em] += iInm*s_U[em][es][fm];
+//               r_iVP [em] += iInm*s_V[em][es][fm];
+//               r_iUdP[em] += iInm*s_Ud[em][es][fm];
+//               r_iVdP[em] += iInm*s_Vd[em][es][fm];
+//             }
+//           }
+//         }
+//       }
+//     }
+    
+//      barrier(localMemFence);
+
+
+//      // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS5;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//           const iint face = n/p_intNfp;       
+//           occaUnroll(p_NnodesS5)
+//           for(iint em=0;em<p_NnodesS5;++em){
+//             const iint e   = eo + es*p_NnodesS5 + em; 
+
+//             // load surface geofactors for this face
+//             const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat nx   = sgeo[sid+p_NXID];
+//             const dfloat ny   = sgeo[sid+p_NYID];
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+//             const dfloat invJ = sgeo[sid+p_IJID];
+       
+//             const iint bc = EToB[face+p_Nfaces*e];
+//             // if(bc>0){
+//             //   insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &r_iUdP[em], &r_iVdP[em]);
+//             // }
+
+//             const dfloat sc = sJ*invJ; 
+//             //Find max normal velocity on the face
+//             const dfloat unm   = occaFabs(nx*r_iUM[em] + ny*r_iVM[em]);
+//             const dfloat unp   = occaFabs(nx*r_iUP[em] + ny*r_iVP[em]);    
+//             const dfloat unmax = (unm > unp) ? unm : unp;
+
+//             s_iFluxU[em][es][n] = sc*(.5f*(nx*(r_iUP[em]*r_iUdP[em] + r_iUM[em]*r_iUdM[em]) 
+//                    +ny*(r_iVP[em]*r_iUdP[em] + r_iVM[em]*r_iUdM[em]) 
+//                    +unmax*(r_iUdM[em]- r_iUdP[em]) ));
+
+//             s_iFluxV[em][es][n] = sc*(.5f*(nx*(r_iUP[em]*r_iVdP[em] + r_iUM[em]*r_iVdM[em]) 
+//                    +ny*(r_iVP[em]*r_iVdP[em] + r_iVM[em]*r_iVdM[em]) 
+//                    +unmax*(r_iVdM[em]-r_iVdP[em]) ));
+//            }
+//         }
+//       }
+//     }
+
+//     barrier(localMemeFence);
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_NblockS5;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         dfloat rhsu[p_NnodesS5], rhsv[p_NnodesS5];
+
+//         if(n<p_Np){
+//           occaUnroll(p_NnodesS5)
+//          for(iint em=0;em<p_NnodesS5;++em){
+//           rhsu[em] = 0.f;
+//           rhsv[em] = 0.f;
+//           }
+//         //
+//           occaUnroll(p_intNfpNfaces)
+//           for(int m=0;m<p_intNfpNfaces;++m){
+//             const dfloat L = intLIFTT[n+m*p_Np];
+//             occaUnroll(p_NnodesS5)
+//             for(iint em=0;em<p_NnodesS5;++em){
+//               rhsu[em] += L*s_iFluxU[em][es][m];
+//               rhsv[em] += L*s_iFluxV[em][es][m];
+//            }
+//          }
+
+//         occaUnroll(p_NnodesS5)
+//        for(iint em=0;em<p_NnodesS5;++em){
+//         iint e = eo+es*p_NnodesS5+em;
+//           if(e<Nelements){
+//             const iint id = e*p_Np+n;
+//             rhsU[id]   += rhsu[em]; // note  change in sign
+//             rhsV[id]   += rhsv[em];    
+
+//            }
+//         }
+//         }
+//       }
+//     }
+//   #undef s_iFluxU
+//   #undef s_iFluxV   
+
+//   }
+
+// }
+
+
+
+
+
+
+// // Add multiple nodes; shared memory for interpolation matrix
+
+// kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
+//               const dfloat * restrict sgeo,
+//               const dfloat * restrict intInterpT, // interpolate to integration nodes
+//               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//               const iint   * restrict vmapM,
+//               const iint   * restrict vmapP,
+//               const iint   * restrict EToB,
+//               const dfloat time,
+//               const dfloat * restrict intx, // integration nodes
+//               const dfloat * restrict inty,
+//               const dfloat * restrict U,
+//               const dfloat * restrict V,
+//               const dfloat * restrict Ud,
+//               const dfloat * restrict Vd,
+//               dfloat * restrict rhsU,
+//               dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=(p_NblockS3*p_NnodesS3);outer0){
+
+//     // shared storage 
+//     shared dfloat s_U[p_NnodesS3][p_NblockS3][p_intNfpNfaces];
+//     shared dfloat s_V[p_NnodesS3][p_NblockS3][p_intNfpNfaces];
+    
+//     shared dfloat s_Ud[p_NnodesS3][p_NblockS3][p_NfacesNfp];
+//     shared dfloat s_Vd[p_NnodesS3][p_NblockS3][p_NfacesNfp];
+
+//     #define s_iFluxU s_U // Reuse shared memory arrays
+//     #define s_iFluxV s_V
+
+//     exclusive dfloat r_iUM[p_NnodesS3],  r_iUP[p_NnodesS3];
+//     exclusive dfloat r_iVM[p_NnodesS3],  r_iVP[p_NnodesS3];
+//     exclusive dfloat r_iUdM[p_NnodesS3], r_iUdP[p_NnodesS3];
+//     exclusive dfloat r_iVdM[p_NnodesS3], r_iVdP[p_NnodesS3];
+
+
+//     shared dfloat s_sgeo[p_NnodesS3][p_NblockS3][p_Nfaces][p_Nsgeo];
+//     shared dfloat s_intInterpT[p_Nfaces*p_intNfp*p_Nfp];
+    
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+
+//         occaUnroll(p_NnodesS3)
+//      for(iint em=0;em<p_NnodesS3;++em){ 
+                
+//       const iint e   = eo + es*p_NnodesS3 + em; 
+//       const iint id  = e*p_NfacesNfp + n;
+
+//        if(e<Nelements && n<p_Np ){
+//           iint m = n + p_Np*es;
+//           // oad surface geofacs for all faces of all elements in block(s)
+//           while(m<p_NblockS3*p_Nfaces*p_Nsgeo*p_NnodesS3){
+//             const iint id = eo*p_Nfaces*p_Nsgeo+ m;
+//              s_sgeo[0][0][0][m] = sgeo[id];
+//              m+=p_Np*p_NblockS3;
+//          }
+     
+//           if (es==0 && em==0) {
+//             for(iint m=n;m<p_Nfaces*p_Nfp*p_Nfp;m+=p_Np){
+//             s_intInterpT[m] = intInterpT[m];
+//             }
+//           }
+
+
+
+//         }
+
+//       if(e<Nelements && n<p_NfacesNfp ){
+//         iint idM = vmapM[id];
+//         // //load negative and positive trace node values of velocity
+//         s_U[em][es][n]  = U[idM];
+//         s_V[em][es][n]  = V[idM];
+//         s_Ud[em][es][n] = Ud[idM];
+//         s_Vd[em][es][n] = Vd[idM];
+//         }        
+//      }
+//     }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//            const iint face = n/p_intNfp;       
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUM [em] = 0.f;  
+//               r_iVM [em] = 0.f;  
+//               r_iUdM[em] = 0.f; 
+//               r_iVdM[em] = 0.f;              
+//             }
+
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//           for(iint m=0;m<p_Nfp;++m){
+//             const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//             const iint fm = face*p_Nfp + m;
+//             occaUnroll(p_NnodesS3)
+//               for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUM [em] += iInm*s_U[em][es][fm];
+//               r_iVM [em] += iInm*s_V[em][es][fm];
+//               r_iUdM[em] += iInm*s_Ud[em][es][fm];
+//               r_iVdM[em] += iInm*s_Vd[em][es][fm];
+//             }
+//           }
+//         }
+//       }
+//     }
+    
+//     barrier(localMemFence);
+
+
+
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//       occaUnroll(p_NnodesS3)
+//       for(iint em=0;em<p_NnodesS3;++em){           
+//        const iint e   = eo + es*p_NnodesS3 + em; 
+//        const iint id  = e*p_NfacesNfp + n;
+//       if(e<Nelements && n<p_NfacesNfp ){
+//         iint idP = vmapP[id];
+//         // //load negative and positive trace node values of velocity
+//         s_U[em][es][n]  = U[idP];
+//         s_V[em][es][n]  = V[idP];
+//         s_Ud[em][es][n] = Ud[idP];
+//         s_Vd[em][es][n] = Vd[idP];
+//         }        
+//      }
+//     }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//            const iint face = n/p_intNfp;       
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUP [em] = 0.f;  
+//               r_iVP [em] = 0.f;  
+//               r_iUdP[em] = 0.f; 
+//               r_iVdP[em] = 0.f;              
+//             }
+
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//           for(iint m=0;m<p_Nfp;++m){
+//             const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//             const iint fm = face*p_Nfp + m;
+//             occaUnroll(p_NnodesS3)
+//               for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUP [em] += iInm*s_U[em][es][fm];
+//               r_iVP [em] += iInm*s_V[em][es][fm];
+//               r_iUdP[em] += iInm*s_Ud[em][es][fm];
+//               r_iVdP[em] += iInm*s_Vd[em][es][fm];
+//             }
+//           }
+//         }
+//       }
+//     }
+    
+//     barrier(localMemFence);
+
+
+//      // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
+//           const iint face = n/p_intNfp;       
+//           occaUnroll(p_NnodesS3)
+//           for(iint em=0;em<p_NnodesS3;++em){
+//             const iint e   = eo + es*p_NnodesS3 + em; 
+//             const dfloat nx   = s_sgeo[em][es][face][p_NXID];
+//             const dfloat ny   = s_sgeo[em][es][face][p_NYID];
+//             const dfloat sj   = s_sgeo[em][es][face][p_SJID];
+//             const dfloat ij   = s_sgeo[em][es][face][p_IJID];
+        
+//             const iint bc = EToB[face+p_Nfaces*e];
+//             // if(bc>0){
+//             //   insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &r_iUdP[em], &r_iVdP[em]);
+//             // }
+
+//             const dfloat sc = sj*ij; 
+//             //Find max normal velocity on the face
+//             const dfloat unm   = occaFabs(nx*r_iUM[em] + ny*r_iVM[em]);
+//             const dfloat unp   = occaFabs(nx*r_iUP[em] + ny*r_iVP[em]);    
+//             const dfloat unmax = (unm > unp) ? unm : unp;
+
+//             s_iFluxU[em][es][n] = sc*(.5f*(nx*(r_iUP[em]*r_iUdP[em] + r_iUM[em]*r_iUdM[em]) 
+//                    +ny*(r_iVP[em]*r_iUdP[em] + r_iVM[em]*r_iUdM[em]) 
+//                    +unmax*(r_iUdM[em]- r_iUdP[em]) ));
+
+//             s_iFluxV[em][es][n] = sc*(.5f*(nx*(r_iUP[em]*r_iVdP[em] + r_iUM[em]*r_iVdM[em]) 
+//                    +ny*(r_iVP[em]*r_iVdP[em] + r_iVM[em]*r_iVdM[em]) 
+//                    +unmax*(r_iVdM[em]-r_iVdP[em]) ));
+//            }
+//         }
+//       }
+//     }
+
+//     barrier(localMemeFence);
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         dfloat rhsu[p_NnodesS3], rhsv[p_NnodesS3];
+
+//         if(n<p_Np){
+//           occaUnroll(p_NnodesS3)
+//          for(iint em=0;em<p_NnodesS3;++em){
+//           rhsu[em] = 0.f;
+//           rhsv[em] = 0.f;
+//           }
+//         //
+//           occaUnroll(p_intNfpNfaces)
+//           for(int m=0;m<p_intNfpNfaces;++m){
+//             const dfloat L = intLIFTT[n+m*p_Np];
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               rhsu[em] += L*s_iFluxU[em][es][m];
+//               rhsv[em] += L*s_iFluxV[em][es][m];
+//            }
+//          }
+
+//         occaUnroll(p_NnodesS3)
+//        for(iint em=0;em<p_NnodesS3;++em){
+//         iint e = eo+es*p_NnodesS3+em;
+//           if(e<Nelements){
+//             const iint id = e*p_Np+n;
+//             rhsU[id]   += rhsu[em]; // note  change in sign
+//             rhsV[id]   += rhsv[em];    
+
+//            }
+//         }
+//         }
+//       }
+//     }
+//   #undef s_iFluxU
+//   #undef s_iFluxV   
+
+//   }
+
+// }
+
+
+
+
+
+
+
+
+
+
+
+// // add multiple nodes per thread
+// kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
+//                                             const dfloat * restrict sgeo,
+//                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
+//                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//                                             const iint   * restrict vmapM,
+//                                             const iint   * restrict vmapP,
+//                                             const iint   * restrict EToB,
+//                                             const dfloat time,
+//                                             const dfloat * restrict intx, // integration nodes
+//                                             const dfloat * restrict inty,
+//                                             const dfloat * restrict U,
+//                                             const dfloat * restrict V,
+//                                             const dfloat * restrict Ud,
+//                                             const dfloat * restrict Vd,
+//                                             dfloat * restrict rhsU,
+//                                             dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockS3;outer0){
+
+//     // shared storage for flux terms
+//     shared dfloat s_U[p_NnodesS3][p_NblockS3][p_intNfpNfaces];
+//     shared dfloat s_V[p_NnodesS3][p_NblockS3][p_intNfpNfaces];
+//     shared dfloat s_Ud[p_NnodesS3][p_NblockS3][p_NfacesNfp];
+//     shared dfloat s_Vd[p_NnodesS3][p_NblockS3][p_NfacesNfp];
+
+//     shared dfloat s_sgeo[p_NnodesS3][p_NblockS3][p_Nfaces][p_Nsgeo];
+//     //shared dfloat s_intInterpT[p_Nfaces*p_intNfp*p_Nfp];
+
+//    #define s_iFluxU s_U // Reuse shemem array
+//    #define s_iFluxV s_V
+  
+//     exclusive dfloat r_iUM[p_NnodesS3],  r_iUP[p_NnodesS3];
+//     exclusive dfloat r_iVM[p_NnodesS3],  r_iVP[p_NnodesS3];
+//     exclusive dfloat r_iUdM[p_NnodesS3], r_iUdP[p_NnodesS3];
+//     exclusive dfloat r_iVdM[p_NnodesS3], r_iVdP[p_NnodesS3];
+
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         occaUnroll(p_NnodesS3)
+//         for(iint em=0;em<p_NnodesS3;++em){ 
+//             const iint e   = eo + es*p_NnodesS3 + em;        
+//             if(e<Nelements){
+
+//               if(n<p_Np ){
+//                 iint m = n + p_Np*es;
+//               // oad surface geofacs for all faces of all elements in block(s)
+//                 while(m<p_NblockS3*p_Nfaces*p_Nsgeo*p_NnodesS3){
+//                   const iint id = eo*p_Nfaces*p_Nsgeo+ m;
+//                   s_sgeo[0][0][0][m] = sgeo[id];
+//                   m+=p_Np*p_NblockS3;
+//                }
+//                //  if (es==0 && em==0) {
+//                //    for(iint m=n;m<p_Nfaces*p_Nfp*p_Nfp;m+=p_Np){
+//                //      s_intInterpT[m] = intInterpT[m];
+//                //    }
+//                // }
+//               }
+
+      
+//             if(n<(p_Nfaces*p_Nfp)){
+//               // indices of negative and positive traces of face node
+//               const iint id  = e*p_Nfp*p_Nfaces + n;
+//               const iint idM = vmapM[id];
+
+//               // load negative and positive trace node values of velocity
+//               s_U[em][es][n] = U[idM];
+//               s_V[em][es][n] = V[idM];
+//               s_Ud[em][es][n] = Ud[idM];
+//               s_Vd[em][es][n] = Vd[idM];
+//             }
+//             else{
+//                // load negative and positive trace node values of velocity
+//               s_U[em][es][n]  = 0.f;
+//               s_V[em][es][n]  = 0.f;
+//               s_Ud[em][es][n] = 0.f;
+//               s_Vd[em][es][n] = 0.f;
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//           if(n<(p_Nfaces*p_intNfp)){
+//             const iint face = n/p_intNfp; // find face that owns this integration node
+            
+//             occaUnroll(p_NblockS3)
+//               for(iint em=0;em<p_NnodesS3;++em){
+//                 r_iUM [em] = 0.f;
+//                 r_iVM [em] = 0.f;
+//                 r_iUdM[em] = 0.f; 
+//                 r_iVdM[em] = 0.f;       
+//               }
+//             // local block interpolation (face nodes to integration nodes)
+//             occaUnroll(p_Nfp)
+//               for(iint m=0;m<p_Nfp;++m){
+//                 //const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//                 const iint fm = face*p_Nfp+m;
+//                  for(iint em=0; em<p_NnodesS3; ++em){
+//                   r_iUM[em]  += iInm*s_U[em][es][fm];
+//                   r_iVM[em]  += iInm*s_V[em][es][fm];
+//                   r_iUdM[em] += iInm*s_Ud[em][es][fm];
+//                   r_iVdM[em] += iInm*s_Vd[em][es][fm];
+//                  }
+//               }
+//           }
+//       }
+//     }
+
+
+//     barrier(localMemFence);
+
+//     Loop for positive traces 
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         for(iint em=0;em<p_NnodesS3;++em){ 
+//           const iint e   = eo + es*p_NnodesS3 + em; 
+//            if(e<Nelements){
+//             if(n<(p_Nfaces*p_Nfp)){
+//               // indices of negative and positive traces of face node
+//               const iint id  = e*p_Nfp*p_Nfaces + n;
+//               const iint idP = vmapP[id];
+//               // load negative and positive trace node values of velocity
+//               s_U[em][es][n] = U[idP];
+//               s_V[em][es][n] = V[idP];
+//               s_Ud[em][es][n] = Ud[idP];
+//               s_Vd[em][es][n] = Vd[idP];
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+   
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//           if(n<(p_Nfaces*p_intNfp)){
+//           const iint face = n/p_intNfp; // find face that owns this integration node
+//           occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               r_iUP [em] = 0.f;
+//               r_iVP [em] = 0.f;
+//               r_iUdP[em] = 0.f; 
+//               r_iVdP[em] = 0.f;
+             
+//             }
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//             for(iint m=0;m<p_Nfp;++m){
+//               // const dfloat iInm = s_intInterpT[n+m*p_Nfaces*p_intNfp];
+//               const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//               const iint fm = face*p_Nfp+m;
+//                for(iint em=0; em<p_NnodesS3; ++em){
+//                 r_iUP[em]  += iInm*s_U[em][es][fm];
+//                 r_iVP[em]  += iInm*s_V[em][es][fm];
+//                 r_iUdP[em] += iInm*s_Ud[em][es][fm];
+//                 r_iVdP[em] += iInm*s_Vd[em][es][fm];
+//                }
+//             }
+//         }
+//       }
+//     }
+//     barrier(localMemFence);
+
+//     // Use traces to compuite and store flux 
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//          occaUnroll(p_NnodesS3)
+//           for(iint em=0;em<p_NnodesS3;++em){
+//              const iint e   = eo + es*p_NnodesS3 + em; 
+//              if(n<(p_Nfaces*p_intNfp)){
+
+//               const iint face = n/p_intNfp; // find face that owns this integration node
+//               // load surface geofactors for this face
+//               const dfloat nx   = s_sgeo[em][es][face][p_NXID];
+//               const dfloat ny   = s_sgeo[em][es][face][p_NYID];
+//               const dfloat sJ   = s_sgeo[em][es][face][p_SJID];
+//               const dfloat invJ = s_sgeo[em][es][face][p_IJID];
+            
+//             // apply boundary conditions
+//             const iint bc = EToB[face+p_Nfaces*e];
+//             // if(bc>0){
+//             //   insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &r_iUdP[em], &r_iVdP[em]);
+//             // }
+
+//             // Find max normal velocity on the face
+//             const dfloat unm   = occaFabs(nx*r_iUM[em] + ny*r_iVM[em]);
+//             const dfloat unp   = occaFabs(nx*r_iUP[em] + ny*r_iVP[em]);    
+//             const dfloat unmax = (unm > unp) ? unm : unp;
+
+//             // evaluate "flux" terms: LLF
+//             const dfloat sc = 0.5f*invJ*sJ ;
+
+//             // bad notation here //
+//             s_iFluxU[em][es][n] = sc*(nx*(r_iUP[em]*r_iUdP[em] + r_iUM[em]*r_iUdM[em]) 
+//                                      +ny*(r_iVP[em]*r_iUdP[em] + r_iVM[em]*r_iUdM[em]) 
+//                                     +unmax*(r_iUdM[em]-r_iUdP[em]));
+
+//             s_iFluxV[em][es][n] = sc*(nx*(r_iUP[em]*r_iVdP[em] + r_iUM[em]*r_iVdM[em]) 
+//                             + ny*(r_iVP[em]*r_iVdP[em] + r_iVM[em]*r_iVdM[em]) 
+//                             + unmax*(r_iVdM[em]-r_iVdP[em]));
+//           }
+//         }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_NblockS3;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         dfloat rhsu[p_NnodesS3], rhsv[p_NnodesS3];
+//           if(n<p_Np){
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               const iint e   = eo + es*p_NnodesS3 + em; 
+//               const iint id = e*p_Np+n;
+//               rhsu[em] = rhsU[id];
+//               rhsv[em] = rhsV[id];
+//               // rhsu[em] = 0.f;
+//               // rhsv[em] = 0.f;
+//             }
+
+//             occaUnroll(p_intNfpNfaces)
+//             for(int m=0;m<p_intNfpNfaces;++m){
+//               const dfloat L = intLIFTT[n+m*p_Np];
+//               occaUnroll(p_NnodesS3)
+//               for(iint em=0;em<p_NnodesS3;++em){
+//                 rhsu[em] += L*s_iFluxU[em][es][m];
+//                 rhsv[em] += L*s_iFluxV[em][es][m];
+//               }
+//             }
+
+//             occaUnroll(p_NnodesS3)
+//             for(iint em=0;em<p_NnodesS3;++em){
+//               const iint e = eo+es*p_NnodesS3 +em;
+//               if(e<Nelements){
+//                 iint id = e*p_Np+n;
+//                 rhsU[id]   = rhsu[em]; // note  change in sign
+//                 rhsV[id]   = rhsv[em];
+//                 // rhsU[id]   += rhsu[em]; // note  change in sign
+//                 // rhsV[id]   += rhsv[em];
+//                } 
+//              } 
+//            }
+           
+//          }
+//        }  
+//   #undef s_iFluxU
+//   #undef s_iFluxV   
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // same with Kernel 3 with shared memory for Geo
+// kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
+//               const dfloat * restrict sgeo,
+//               const dfloat * restrict intInterpT, // interpolate to integration nodes
+//               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//               const iint   * restrict vmapM,
+//               const iint   * restrict vmapP,
+//               const iint   * restrict EToB,
+//               const dfloat time,
+//               const dfloat * restrict intx, // integration nodes
+//               const dfloat * restrict inty,
+//               const dfloat * restrict U,
+//               const dfloat * restrict V,
+//               const dfloat * restrict Ud,
+//               const dfloat * restrict Vd,
+//               dfloat * restrict rhsU,
+//               dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+
+//     // shared storage for flux terms
+//     shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
+
+//     shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
+//     shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
+
+//     shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
+
+//     shared dfloat s_sgeo[p_cubNblockS][p_Nfaces][p_Nsgeo];
+//     //shared dfloat s_bc[p_cubNblockS][p_Nfaces];
+
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_cubNblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+
+//   iint e = eo + es;
+
+//   if(e<Nelements){
+
+//       if(n<p_Np ){
+//           iint m = n + p_Np*es;
+//           // oad surface geofacs for all faces of all elements in block(s)
+//           while(m<p_cubNblockS*p_Nfaces*p_Nsgeo){
+//             const iint id = eo*p_Nfaces*p_Nsgeo+ m;
+//             s_sgeo[0][0][m] = sgeo[id];
+//             m+=p_Np*p_cubNblockS;
+//          }
+//         }
+
+//     if(n<(p_Nfaces*p_Nfp)){
+//       // indices of negative and positive traces of face node
+//       const iint id  = e*p_Nfp*p_Nfaces + n;
+
+//       iint idM = vmapM[id];
+//       iint idP = vmapP[id];
+
+//       if(idP<0) idP = idM;
+//       // load negative and positive trace node values of velocity
+//       s_UM[es][n] = U[idM];
+//       s_VM[es][n] = V[idM];
+//       s_UP[es][n] = U[idP];
+//       s_VP[es][n] = V[idP];
+
+//       s_UdM[es][n] = Ud[idM];
+//       s_VdM[es][n] = Vd[idM];
+//       s_UdP[es][n] = Ud[idP];
+//       s_VdP[es][n] = Vd[idP];
+
+//     }
+//   }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cubNblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+
+//   iint e = eo + es;
+
+//   if(e<Nelements){
+//     if(n<(p_Nfaces*p_intNfp)){
+
+//       const iint face = n/p_intNfp; // find face that owns this integration node
+
+//       // load surface geofactors for this face
+//       //const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+//        const dfloat nx   = s_sgeo[es][face][p_NXID];
+//        const dfloat ny   = s_sgeo[es][face][p_NYID];
+//        const dfloat sJ   = s_sgeo[es][face][p_SJID];
+//        const dfloat invJ = s_sgeo[es][face][p_IJID];
+      
+//       dfloat iUM  = 0.f, iVM  = 0.f;
+//       dfloat iUP  = 0.f, iVP  = 0.f;
+//       dfloat iUdM = 0.f, iVdM = 0.f;
+//       dfloat iUdP = 0.f, iVdP = 0.f;
+
+//       // local block interpolation (face nodes to integration nodes)
+//       occaUnroll(p_Nfp)
+//         for(iint m=0;m<p_Nfp;++m){
+//     const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//     const iint fm = face*p_Nfp+m;
+
+//     iUM  += iInm*s_UM[es][fm];
+//     iVM  += iInm*s_VM[es][fm];
+//     iUdM += iInm*s_UdM[es][fm];
+//     iVdM += iInm*s_VdM[es][fm];
+
+//     iUP  += iInm*s_UP[es][fm];
+//     iVP  += iInm*s_VP[es][fm];
+//     iUdP += iInm*s_UdP[es][fm];
+//     iVdP += iInm*s_VdP[es][fm];
+//         }
+
+//       // apply boundary conditions
+//       iint bc = EToB[face+p_Nfaces*e];
+
+//       if(bc>0){
+//         insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
+//       }
+
+
+//       // Find max normal velocity on the face
+//       dfloat unm   = occaFabs(nx*iUM + ny*iVM);
+//       dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
+//       dfloat unmax = (unm > unp) ? unm : unp;
+
+//       // evaluate "flux" terms: LLF
+//       const dfloat sc = invJ * sJ ;
+
+//       s_iFluxU[es][n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
+//                +ny*(iVP*iUdP + iVM*iUdM) 
+//                +unmax*(iUdM-iUdP) ));
+
+//       s_iFluxV[es][n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
+//                + ny*(iVP*iVdP + iVM*iVdM) 
+//                + unmax*(iVdM-iVdP) ));
+//     }
+//   }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_cubNblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+
+//         const iint e = eo + es;
+
+//         if(e<Nelements){
+//           if(n<p_Np){
+//             iint id = n + p_Np*e;
+//             // prefetch volume rhs
+//             dfloat rhsu = rhsU[id];
+//             dfloat rhsv = rhsV[id];
+
+//             occaUnroll(p_intNfpNfaces)
+//         for(int m=0;m<p_intNfpNfaces;++m){
+//     // RefMassMatrix^{-1}*cInterp^t*cWeight
+//     const dfloat L = intLIFTT[n+m*p_Np];
+
+//     rhsu += L*s_iFluxU[es][m];
+//     rhsv += L*s_iFluxV[es][m];
+//         }
+
+//             rhsU[id] = rhsu;  // 
+//             rhsV[id] = rhsv;  //  
+//           }
+//         }
+//       }
+//     }
+//   }
+
+// }
+
+
+
+//  // // Optimized sizes for kernel 4-5
+// #if p_N==1
+//  #define p_cNbS 10
+//  #define p_cNmtS 2
+//  #endif
+
+// #if p_N==2
+// #define p_cNbS 8
+// #define p_cNmtS 1
+// #endif
+
+// #if p_N==3
+// #define p_cNbS 2
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==4
+// #define p_cNbS 3
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==5
+// #define p_cNbS 2
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==6
+// #define p_cNbS 2
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==7
+// #define p_cNbS 3
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==8
+// #define p_cNbS 4
+// #define p_cNmtS 2
+// #endif
+
+// #if p_N==9
+// #define p_cNbS 1
+// #define p_cNmtS 3
+// #endif
+
+// #if p_N==10
+// #define p_cNbS 2
+// #define p_cNmtS 2
+// #endif
+
+
+// // Add multiple nodes to kernel 4
+
+// kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
+//               const dfloat * restrict sgeo,
+//               const dfloat * restrict intInterpT, // interpolate to integration nodes
+//               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//               const iint   * restrict vmapM,
+//               const iint   * restrict vmapP,
+//               const iint   * restrict EToB,
+//               const dfloat time,
+//               const dfloat * restrict intx, // integration nodes
+//               const dfloat * restrict inty,
+//               const dfloat * restrict U,
+//               const dfloat * restrict V,
+//               const dfloat * restrict Ud,
+//               const dfloat * restrict Vd,
+//               dfloat * restrict rhsU,
+//               dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=(p_cNbS*p_cNmtS);outer0){
+
+//     // shared storage for flux terms
+//     shared dfloat s_UM[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_VM[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_UP[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_VP[p_cNmtS][p_cNbS][p_NfacesNfp];
+
+//     shared dfloat s_UdM[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_VdM[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_UdP[p_cNmtS][p_cNbS][p_NfacesNfp];
+//     shared dfloat s_VdP[p_cNmtS][p_cNbS][p_NfacesNfp];
+
+//     shared dfloat s_iFluxU[p_cNmtS][p_cNbS][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_cNmtS][p_cNbS][p_intNfpNfaces];
+
+
+//     shared dfloat s_sgeo[p_cNmtS][p_cNbS][p_Nfaces][p_Nsgeo];
+//     shared dfloat s_bc[p_cNmtS][p_cNbS][p_Nfaces];
+       
+//     // for all face nodes of all elements
+//     for(iint es=0;es<p_cNbS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+
+//         occaUnroll(p_cNmtS)
+//      for(iint em=0;em<p_cNmtS;++em){ 
+                
+//       const iint e   = eo + es*p_cNmtS + em; 
+//       const iint id  = e*p_NfacesNfp + n;
+
+//        if(e<Nelements && n<p_Np ){
+//           iint m = n + p_Np*es;
+//           // oad surface geofacs for all faces of all elements in block(s)
+//           while(m<p_cNbS*p_Nfaces*p_Nsgeo*p_cNmtS){
+//             const iint id = eo*p_Nfaces*p_Nsgeo+ m;
+//              s_sgeo[0][0][0][m] = sgeo[id];
+//              m+=p_Np*p_cNbS;
+//          }
+//         }
+
+//       if(e<Nelements && n<p_NfacesNfp ){
+//         iint idM = vmapM[id];
+//         iint idP = vmapP[id];
+
+//         if(idP<0) idP = idM;
+
+//         // //load negative and positive trace node values of velocity
+//         s_UM[em][es][n] = U[idM];
+//         s_VM[em][es][n] = V[idM];
+//         s_UP[em][es][n] = U[idP];
+//         s_VP[em][es][n] = V[idP];
+       
+//         s_UdM[em][es][n] = Ud[idM];
+//         s_VdM[em][es][n] = Vd[idM];
+//         s_UdP[em][es][n] = Ud[idP];
+//         s_VdP[em][es][n] = Vd[idP];
+//          }
 
         
-     }
-    }
-    }
+//      }
+//     }
+//     }
 
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // interpolate to surface integration nodes
-    for(iint es=0;es<p_cNbS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        if(n<(p_Nfaces*p_intNfp)){
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cNbS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         if(n<(p_Nfaces*p_intNfp)){
 
-    dfloat cUM[p_cNmtS], cVM[p_cNmtS], cUdM[p_cNmtS], cVdM[p_cNmtS];
-    dfloat cUP[p_cNmtS], cVP[p_cNmtS], cUdP[p_cNmtS], cVdP[p_cNmtS];
-    const iint face = n/p_intNfp;       
+//     dfloat cUM[p_cNmtS], cVM[p_cNmtS], cUdM[p_cNmtS], cVdM[p_cNmtS];
+//     dfloat cUP[p_cNmtS], cVP[p_cNmtS], cUdP[p_cNmtS], cVdP[p_cNmtS];
+//     const iint face = n/p_intNfp;       
          
-          occaUnroll(p_cNmtS)
-      for(iint em=0;em<p_cNmtS;++em){
-        cUM [em] = 0.f;
-        cVM [em] = 0.f;
-        cUdM[em] = 0.f; 
-        cVdM[em] = 0.f;
-        //
-        cUP [em] = 0.f;
-        cVP [em] = 0.f;
-        cUdP[em] = 0.f; 
-        cVdP[em] = 0.f;
-      }
+//           occaUnroll(p_cNmtS)
+//       for(iint em=0;em<p_cNmtS;++em){
+//         cUM [em] = 0.f;
+//         cVM [em] = 0.f;
+//         cUdM[em] = 0.f; 
+//         cVdM[em] = 0.f;
+//         //
+//         cUP [em] = 0.f;
+//         cVP [em] = 0.f;
+//         cUdP[em] = 0.f; 
+//         cVdP[em] = 0.f;
+//       }
 
-          // local block interpolation (face nodes to integration nodes)
-      occaUnroll(p_Nfp)
-      for(iint m=0;m<p_Nfp;++m){
-        const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-        const iint fm = face*p_Nfp + m;
-        occaUnroll(p_cNmtS)
-    for(iint em=0;em<p_cNmtS;++em){
+//           // local block interpolation (face nodes to integration nodes)
+//       occaUnroll(p_Nfp)
+//       for(iint m=0;m<p_Nfp;++m){
+//         const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+//         const iint fm = face*p_Nfp + m;
+//         occaUnroll(p_cNmtS)
+//     for(iint em=0;em<p_cNmtS;++em){
 
-      cUM [em] += iInm*s_UM[em][es][fm];
-      cVM [em] += iInm*s_VM[em][es][fm];
-      cUdM[em] += iInm*s_UdM[em][es][fm];
-      cVdM[em] += iInm*s_VdM[em][es][fm];
+//       cUM [em] += iInm*s_UM[em][es][fm];
+//       cVM [em] += iInm*s_VM[em][es][fm];
+//       cUdM[em] += iInm*s_UdM[em][es][fm];
+//       cVdM[em] += iInm*s_VdM[em][es][fm];
 
-      cUP[em]  += iInm*s_UP[em][es][fm];
-      cVP[em]  += iInm*s_VP[em][es][fm];
-      cUdP[em] += iInm*s_UdP[em][es][fm];
-      cVdP[em] += iInm*s_VdP[em][es][fm];
-    }
-      }
+//       cUP[em]  += iInm*s_UP[em][es][fm];
+//       cVP[em]  += iInm*s_VP[em][es][fm];
+//       cUdP[em] += iInm*s_UdP[em][es][fm];
+//       cVdP[em] += iInm*s_VdP[em][es][fm];
+//     }
+//       }
 
-    occaUnroll(p_cNmtS)
-      for(iint em=0;em<p_cNmtS;++em){
-        //const iint e = eo + es*p_cNmtS + em;
-        //const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-        const dfloat nx   = s_sgeo[em][es][face][p_NXID];
-        const dfloat ny   = s_sgeo[em][es][face][p_NYID];
-        const dfloat sj   = s_sgeo[em][es][face][p_SJID];
-        const dfloat ij   = s_sgeo[em][es][face][p_IJID];
+//     occaUnroll(p_cNmtS)
+//       for(iint em=0;em<p_cNmtS;++em){
+//         //const iint e = eo + es*p_cNmtS + em;
+//         //const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+//         const dfloat nx   = s_sgeo[em][es][face][p_NXID];
+//         const dfloat ny   = s_sgeo[em][es][face][p_NYID];
+//         const dfloat sj   = s_sgeo[em][es][face][p_SJID];
+//         const dfloat ij   = s_sgeo[em][es][face][p_IJID];
         
-        //const iint   bc   = EToB[face+p_Nfaces*e];
+//         //const iint   bc   = EToB[face+p_Nfaces*e];
         
         
-        const dfloat sc = sj*ij; 
-        //Find max normal velocity on the face
-        const dfloat unm   = occaFabs(nx*cUM[em] + ny*cVM[em]);
-        const dfloat unp   = occaFabs(nx*cUP[em] + ny*cVP[em]);    
-        const dfloat unmax = (unm > unp) ? unm : unp;
+//         const dfloat sc = sj*ij; 
+//         //Find max normal velocity on the face
+//         const dfloat unm   = occaFabs(nx*cUM[em] + ny*cVM[em]);
+//         const dfloat unp   = occaFabs(nx*cUP[em] + ny*cVP[em]);    
+//         const dfloat unmax = (unm > unp) ? unm : unp;
 
-        s_iFluxU[em][es][n] = sc*(.5f*(nx*(cUP[em]*cUdP[em] + cUM[em]*cUdM[em]) 
-               +ny*(cVP[em]*cUdP[em] + cVM[em]*cUdM[em]) 
-               +unmax*(cUdM[em]- cUdP[em]) ));
+//         s_iFluxU[em][es][n] = sc*(.5f*(nx*(cUP[em]*cUdP[em] + cUM[em]*cUdM[em]) 
+//                +ny*(cVP[em]*cUdP[em] + cVM[em]*cUdM[em]) 
+//                +unmax*(cUdM[em]- cUdP[em]) ));
 
-        s_iFluxV[em][es][n] = sc*(.5f*(nx*(cUP[em]*cVdP[em] + cUM[em]*cVdM[em]) 
-               +ny*(cVP[em]*cVdP[em] + cVM[em]*cVdM[em]) 
-               +unmax*(cVdM[em]-cVdP[em]) ));
+//         s_iFluxV[em][es][n] = sc*(.5f*(nx*(cUP[em]*cVdP[em] + cUM[em]*cVdM[em]) 
+//                +ny*(cVP[em]*cVdP[em] + cVM[em]*cVdM[em]) 
+//                +unmax*(cVdM[em]-cVdP[em]) ));
 
 
 
-      }
-  }
-      }
-    }
+//       }
+//   }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cNbS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-  dfloat rhsu[p_cNmtS], rhsv[p_cNmtS];
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_cNbS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//   dfloat rhsu[p_cNmtS], rhsv[p_cNmtS];
 
-        if(n<p_Np){
-    occaUnroll(p_cNmtS)
-      for(iint em=0;em<p_cNmtS;++em){
-        rhsu[em] = 0.f;
-        rhsv[em] = 0.f;
-      }
-    //
-    occaUnroll(p_intNfpNfaces)
-      for(int m=0;m<p_intNfpNfaces;++m){
-        const dfloat L = intLIFTT[n+m*p_Np];
-        occaUnroll(p_cNmtS)
-    for(iint em=0;em<p_cNmtS;++em){
-      rhsu[em] += L*s_iFluxU[em][es][m];
-      rhsv[em] += L*s_iFluxV[em][es][m];
-    }
-      }
+//         if(n<p_Np){
+//     occaUnroll(p_cNmtS)
+//       for(iint em=0;em<p_cNmtS;++em){
+//         rhsu[em] = 0.f;
+//         rhsv[em] = 0.f;
+//       }
+//     //
+//     occaUnroll(p_intNfpNfaces)
+//       for(int m=0;m<p_intNfpNfaces;++m){
+//         const dfloat L = intLIFTT[n+m*p_Np];
+//         occaUnroll(p_cNmtS)
+//     for(iint em=0;em<p_cNmtS;++em){
+//       rhsu[em] += L*s_iFluxU[em][es][m];
+//       rhsv[em] += L*s_iFluxV[em][es][m];
+//     }
+//       }
 
-    occaUnroll(p_cNmtS)
-      for(iint em=0;em<p_cNmtS;++em){
-        iint e = eo+es*p_cNmtS+em;
-        if(e<Nelements){
-    const iint id = e*p_Np+n;
-    rhsU[id]   += rhsu[em]; // note  change in sign
-    rhsV[id]   += rhsv[em];    
+//     occaUnroll(p_cNmtS)
+//       for(iint em=0;em<p_cNmtS;++em){
+//         iint e = eo+es*p_cNmtS+em;
+//         if(e<Nelements){
+//     const iint id = e*p_Np+n;
+//     rhsU[id]   += rhsu[em]; // note  change in sign
+//     rhsV[id]   += rhsv[em];    
 
-        }
-      }
-  }
-      }
-    }
+//         }
+//       }
+//   }
+//       }
+//     }
       
 
-  }
+//   }
 
-}
-
-
-
- // // Optimized sizes for kernel 4-5
-#if p_N==1
- #define p_cNbS1 10
- #define p_cNmtS1 2
- #endif
-
-#if p_N==2
-#define p_cNbS1 8
-#define p_cNmtS1 1
-#endif
-
-#if p_N==3
-#define p_cNbS1 2
-#define p_cNmtS1 2
-#endif
-
-#if p_N==4
-#define p_cNbS1 3
-#define p_cNmtS1 2
-#endif
-
-#if p_N==5
-#define p_cNbS1 2
-#define p_cNmtS1 2
-#endif
-
-#if p_N==6
-#define p_cNbS1 2
-#define p_cNmtS1 2
-#endif
-
-#if p_N==7
-#define p_cNbS1 3
-#define p_cNmtS1 2
-#endif
-
-#if p_N==8
-#define p_cNbS1 4
-#define p_cNmtS1 2
-#endif
-
-#if p_N==9
-#define p_cNbS1 1
-#define p_cNmtS1 3
-#endif
-
-#if p_N==10
-#define p_cNbS1 2
-#define p_cNmtS1 2
-#endif
+// }
 
 
 
+//  // // Optimized sizes for kernel 4-5
+// #if p_N==1
+//  #define p_cNbS1 10
+//  #define p_cNmtS1 2
+//  #endif
 
-// add "restrict to p_Np thread"  to kernel 5
-kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
-                                            const dfloat * restrict sgeo,
-                                            const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                            const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
-                                            const dfloat time,
-                                            const dfloat * restrict intx, // integration nodes
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict Ud,
-                                            const dfloat * restrict Vd,
-                                            dfloat * restrict rhsU,
-                                            dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cNbS1*p_cNmtS1;outer0){
+// #if p_N==2
+// #define p_cNbS1 8
+// #define p_cNmtS1 1
+// #endif
 
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_VM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_UP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_VP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+// #if p_N==3
+// #define p_cNbS1 2
+// #define p_cNmtS1 2
+// #endif
 
-    shared dfloat s_UdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_VdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_UdP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
-    shared dfloat s_VdP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+// #if p_N==4
+// #define p_cNbS1 3
+// #define p_cNmtS1 2
+// #endif
 
-    shared dfloat s_iFluxU[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
+// #if p_N==5
+// #define p_cNbS1 2
+// #define p_cNmtS1 2
+// #endif
 
-    shared dfloat s_sgeo[p_cNmtS1][p_cNbS1][p_Nfaces][p_Nsgeo];
+// #if p_N==6
+// #define p_cNbS1 2
+// #define p_cNmtS1 2
+// #endif
+
+// #if p_N==7
+// #define p_cNbS1 3
+// #define p_cNmtS1 2
+// #endif
+
+// #if p_N==8
+// #define p_cNbS1 4
+// #define p_cNmtS1 2
+// #endif
+
+// #if p_N==9
+// #define p_cNbS1 1
+// #define p_cNmtS1 3
+// #endif
+
+// #if p_N==10
+// #define p_cNbS1 2
+// #define p_cNmtS1 2
+// #endif
+
+
+
+
+// // add "restrict to p_Np thread"  to kernel 5
+// kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
+//                                             const dfloat * restrict sgeo,
+//                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
+//                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//                                             const iint   * restrict vmapM,
+//                                             const iint   * restrict vmapP,
+//                                             const iint   * restrict EToB,
+//                                             const dfloat time,
+//                                             const dfloat * restrict intx, // integration nodes
+//                                             const dfloat * restrict inty,
+//                                             const dfloat * restrict U,
+//                                             const dfloat * restrict V,
+//                                             const dfloat * restrict Ud,
+//                                             const dfloat * restrict Vd,
+//                                             dfloat * restrict rhsU,
+//                                             dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_cNbS1*p_cNmtS1;outer0){
+
+//     // shared storage for flux terms
+//     shared dfloat s_UM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_UP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+
+//     shared dfloat s_UdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_UdP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VdP[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+
+//     shared dfloat s_iFluxU[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
+
+//     shared dfloat s_sgeo[p_cNmtS1][p_cNbS1][p_Nfaces][p_Nsgeo];
     
-    for (int es=0;es<p_cNbS1;++es;inner1){
-      for (int n=0;n<p_Np;++n;inner0) { //all faces*facenodes on this element
-        int m = n + p_Np*es;
-        while(m<p_cNmtS1*p_cNbS1*p_Nfaces*p_Nsgeo){
-          const int id = eo*p_Nfaces*p_Nsgeo + m;
-          s_sgeo[0][0][0][m] = sgeo[id];
-          m+=p_Np*p_cNbS1;
-        }
+//     for (int es=0;es<p_cNbS1;++es;inner1){
+//       for (int n=0;n<p_Np;++n;inner0) { //all faces*facenodes on this element
+//         int m = n + p_Np*es;
+//         while(m<p_cNmtS1*p_cNbS1*p_Nfaces*p_Nsgeo){
+//           const int id = eo*p_Nfaces*p_Nsgeo + m;
+//           s_sgeo[0][0][0][m] = sgeo[id];
+//           m+=p_Np*p_cNbS1;
+//         }
         
-        occaUnroll(p_cNmtS1)
-        for (int et=0;et<p_cNmtS1;++et){
-          const int e = et*p_cNbS1 + es + eo;
-          if(e<Nelements){
-            for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
-              // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + m;
+//         occaUnroll(p_cNmtS1)
+//         for (int et=0;et<p_cNmtS1;++et){
+//           const int e = et*p_cNbS1 + es + eo;
+//           if(e<Nelements){
+//             for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
+//               // indices of negative and positive traces of face node
+//               const iint id  = e*p_Nfp*p_Nfaces + m;
 
-              const iint idM = vmapM[id];
-              const iint idP = vmapP[id];
+//               const iint idM = vmapM[id];
+//               const iint idP = vmapP[id];
 
-              // load negative and positive trace node values of velocity
-              s_UM[et][es][m] = U[idM];
-              s_VM[et][es][m] = V[idM];
-              s_UP[et][es][m] = U[idP];
-              s_VP[et][es][m] = V[idP];
+//               // load negative and positive trace node values of velocity
+//               s_UM[et][es][m] = U[idM];
+//               s_VM[et][es][m] = V[idM];
+//               s_UP[et][es][m] = U[idP];
+//               s_VP[et][es][m] = V[idP];
 
-              s_UdM[et][es][m] = Ud[idM];
-              s_VdM[et][es][m] = Vd[idM];
-              s_UdP[et][es][m] = Ud[idP];
-              s_VdP[et][es][m] = Vd[idP];
-            }
-          }
-        }
-      }
-    }
+//               s_UdM[et][es][m] = Ud[idM];
+//               s_VdM[et][es][m] = Vd[idM];
+//               s_UdP[et][es][m] = Ud[idP];
+//               s_VdP[et][es][m] = Vd[idP];
+//             }
+//           }
+//         }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // interpolate to surface integration nodes
-    for(iint es=0;es<p_cNbS1;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){ 
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cNbS1;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){ 
         
-        dfloat iUM [p_cNmtS1], iVM [p_cNmtS1];
-        dfloat iUP [p_cNmtS1], iVP [p_cNmtS1];
-        dfloat iUdM[p_cNmtS1], iVdM[p_cNmtS1];
-        dfloat iUdP[p_cNmtS1], iVdP[p_cNmtS1];
+//         dfloat iUM [p_cNmtS1], iVM [p_cNmtS1];
+//         dfloat iUP [p_cNmtS1], iVP [p_cNmtS1];
+//         dfloat iUdM[p_cNmtS1], iVdM[p_cNmtS1];
+//         dfloat iUdP[p_cNmtS1], iVdP[p_cNmtS1];
 
-        for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
+//         for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
 
-          occaUnroll(p_cNmtS1)
-          for (int et=0;et<p_cNmtS1;++et){
-            iUM [et] = 0.f, iVM [et] = 0.f;
-            iUP [et] = 0.f, iVP [et] = 0.f;
-            iUdM[et] = 0.f, iVdM[et] = 0.f;
-            iUdP[et] = 0.f, iVdP[et] = 0.f;
-          }
+//           occaUnroll(p_cNmtS1)
+//           for (int et=0;et<p_cNmtS1;++et){
+//             iUM [et] = 0.f, iVM [et] = 0.f;
+//             iUP [et] = 0.f, iVP [et] = 0.f;
+//             iUdM[et] = 0.f, iVdM[et] = 0.f;
+//             iUdP[et] = 0.f, iVdP[et] = 0.f;
+//           }
       
-          const iint face = m/p_intNfp; // find face that owns this integration node
-          // local block interpolation (face nodes to integration nodes)
-          occaUnroll(p_Nfp)
-            for(iint k=0;k<p_Nfp;++k){
-              const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
-              const iint fm = face*p_Nfp+k;
+//           const iint face = m/p_intNfp; // find face that owns this integration node
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//             for(iint k=0;k<p_Nfp;++k){
+//               const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
+//               const iint fm = face*p_Nfp+k;
 
-              occaUnroll(p_cNmtS1)
-              for (int et=0;et<p_cNmtS1;++et){
+//               occaUnroll(p_cNmtS1)
+//               for (int et=0;et<p_cNmtS1;++et){
 
-                iUM [et] += iInm* s_UM[et][es][fm];
-                iVM [et] += iInm* s_VM[et][es][fm];
-                iUdM[et] += iInm*s_UdM[et][es][fm];
-                iVdM[et] += iInm*s_VdM[et][es][fm];
+//                 iUM [et] += iInm* s_UM[et][es][fm];
+//                 iVM [et] += iInm* s_VM[et][es][fm];
+//                 iUdM[et] += iInm*s_UdM[et][es][fm];
+//                 iVdM[et] += iInm*s_VdM[et][es][fm];
 
-                iUP [et] += iInm* s_UP[et][es][fm];
-                iVP [et] += iInm* s_VP[et][es][fm];
-                iUdP[et] += iInm*s_UdP[et][es][fm];
-                iVdP[et] += iInm*s_VdP[et][es][fm];
-              }
-            }
+//                 iUP [et] += iInm* s_UP[et][es][fm];
+//                 iVP [et] += iInm* s_VP[et][es][fm];
+//                 iUdP[et] += iInm*s_UdP[et][es][fm];
+//                 iVdP[et] += iInm*s_VdP[et][es][fm];
+//               }
+//             }
 
-          occaUnroll(p_cNmtS1)
-          for (int et=0;et<p_cNmtS1;++et){
-            const int e = et*p_cNbS1 + es + eo;
-            if (e<Nelements) {
-              // load surface geofactors for this face
-              const dfloat nx   = s_sgeo[et][es][face][p_NXID];
-              const dfloat ny   = s_sgeo[et][es][face][p_NYID];
-              const dfloat sJ   = s_sgeo[et][es][face][p_SJID];
-              const dfloat invJ = s_sgeo[et][es][face][p_IJID];
+//           occaUnroll(p_cNmtS1)
+//           for (int et=0;et<p_cNmtS1;++et){
+//             const int e = et*p_cNbS1 + es + eo;
+//             if (e<Nelements) {
+//               // load surface geofactors for this face
+//               const dfloat nx   = s_sgeo[et][es][face][p_NXID];
+//               const dfloat ny   = s_sgeo[et][es][face][p_NYID];
+//               const dfloat sJ   = s_sgeo[et][es][face][p_SJID];
+//               const dfloat invJ = s_sgeo[et][es][face][p_IJID];
 
-              // apply boundary conditions
-              const iint bc = EToB[face+p_Nfaces*e];
-              if(bc>0){
-                insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
-              }
+//               // apply boundary conditions
+//               const iint bc = EToB[face+p_Nfaces*e];
+//               if(bc>0){
+//                 insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
+//               }
 
-              // Find max normal velocity on the face
-              const dfloat unm   = occaFabs(nx*iUM[et]+ ny*iVM[et]);
-              const dfloat unp   = occaFabs(nx*iUP[et]+ ny*iVP[et]);    
-              const dfloat unmax = (unm > unp) ? unm : unp;
+//               // Find max normal velocity on the face
+//               const dfloat unm   = occaFabs(nx*iUM[et]+ ny*iVM[et]);
+//               const dfloat unp   = occaFabs(nx*iUP[et]+ ny*iVP[et]);    
+//               const dfloat unmax = (unm > unp) ? unm : unp;
 
-              // evaluate "flux" terms: LLF
-              const dfloat sc = 0.5f*invJ*sJ ;
+//               // evaluate "flux" terms: LLF
+//               const dfloat sc = 0.5f*invJ*sJ ;
 
-              s_iFluxU[et][es][m] = sc*(nx*(iUP[et]*iUdP[et] + iUM[et]*iUdM[et]) 
-                                   +ny*(iVP[et]*iUdP[et] + iVM[et]*iUdM[et]) 
-                                   +unmax*(iUdM[et]-iUdP[et]));
+//               s_iFluxU[et][es][m] = sc*(nx*(iUP[et]*iUdP[et] + iUM[et]*iUdM[et]) 
+//                                    +ny*(iVP[et]*iUdP[et] + iVM[et]*iUdM[et]) 
+//                                    +unmax*(iUdM[et]-iUdP[et]));
 
-              s_iFluxV[et][es][m] = sc*(nx*(iUP[et]*iVdP[et] + iUM[et]*iVdM[et]) 
-                                  + ny*(iVP[et]*iVdP[et] + iVM[et]*iVdM[et]) 
-                                  + unmax*(iVdM[et]-iVdP[et]));
-            }
-          }
-        }
-      }
-    }
+//               s_iFluxV[et][es][m] = sc*(nx*(iUP[et]*iVdP[et] + iUM[et]*iVdM[et]) 
+//                                   + ny*(iVP[et]*iVdP[et] + iVM[et]*iVdM[et]) 
+//                                   + unmax*(iVdM[et]-iVdP[et]));
+//             }
+//           }
+//         }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cNbS1;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_cNbS1;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){
         
-        dfloat rhsu[p_cNmtS1];
-        dfloat rhsv[p_cNmtS1];
+//         dfloat rhsu[p_cNmtS1];
+//         dfloat rhsv[p_cNmtS1];
         
-        occaUnroll(p_cNmtS1)
-        for (int et=0;et<p_cNmtS1;++et){
-          rhsu[et] = 0;
-          rhsv[et] = 0;
-        }
+//         occaUnroll(p_cNmtS1)
+//         for (int et=0;et<p_cNmtS1;++et){
+//           rhsu[et] = 0;
+//           rhsv[et] = 0;
+//         }
         
-        occaUnroll(p_intNfpNfaces)
-          for(int m=0;m<p_intNfpNfaces;++m){
-            const dfloat L = intLIFTT[n+m*p_Np];
-            occaUnroll(p_cNmtS1)
-            for (int et=0;et<p_cNmtS1;++et){
-              rhsu[et] += L*s_iFluxU[et][es][m];
-              rhsv[et] += L*s_iFluxV[et][es][m];
-            }
-          }
+//         occaUnroll(p_intNfpNfaces)
+//           for(int m=0;m<p_intNfpNfaces;++m){
+//             const dfloat L = intLIFTT[n+m*p_Np];
+//             occaUnroll(p_cNmtS1)
+//             for (int et=0;et<p_cNmtS1;++et){
+//               rhsu[et] += L*s_iFluxU[et][es][m];
+//               rhsv[et] += L*s_iFluxV[et][es][m];
+//             }
+//           }
         
-        occaUnroll(p_cNmtS1)
-        for (int et=0;et<p_cNmtS1;++et){
-          const int e = et*p_cNbS1 + es + eo;
-          if(e<Nelements){
-            const iint id = n + p_Np*e;
-            rhsU[id] += rhsu[et];
-            rhsV[id] += rhsv[et];
-          }
-        }
-      }
-    }
-  }
-}
+//         occaUnroll(p_cNmtS1)
+//         for (int et=0;et<p_cNmtS1;++et){
+//           const int e = et*p_cNbS1 + es + eo;
+//           if(e<Nelements){
+//             const iint id = n + p_Np*e;
+//             rhsU[id] += rhsu[et];
+//             rhsV[id] += rhsv[et];
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
 
 
- // // Optimized sizes for kernel 4-5
-#if p_N==1
- #define p_cNbS2 10
- #define p_cNmtS2 2
- #endif
+//  // // Optimized sizes for kernel 4-5
+// #if p_N==1
+//  #define p_cNbS2 10
+//  #define p_cNmtS2 2
+//  #endif
 
-#if p_N==2
-#define p_cNbS2 8
-#define p_cNmtS2 1
-#endif
+// #if p_N==2
+// #define p_cNbS2 8
+// #define p_cNmtS2 1
+// #endif
 
-#if p_N==3
-#define p_cNbS2 2
-#define p_cNmtS2 2
-#endif
+// #if p_N==3
+// #define p_cNbS2 2
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==4
-#define p_cNbS2 3
-#define p_cNmtS2 2
-#endif
+// #if p_N==4
+// #define p_cNbS2 3
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==5
-#define p_cNbS2 2
-#define p_cNmtS2 2
-#endif
+// #if p_N==5
+// #define p_cNbS2 2
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==6
-#define p_cNbS2 2
-#define p_cNmtS2 2
-#endif
+// #if p_N==6
+// #define p_cNbS2 2
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==7
-#define p_cNbS2 3
-#define p_cNmtS2 2
-#endif
+// #if p_N==7
+// #define p_cNbS2 3
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==8
-#define p_cNbS2 4
-#define p_cNmtS2 2
-#endif
+// #if p_N==8
+// #define p_cNbS2 4
+// #define p_cNmtS2 2
+// #endif
 
-#if p_N==9
-#define p_cNbS2 1
-#define p_cNmtS2 3
-#endif
+// #if p_N==9
+// #define p_cNbS2 1
+// #define p_cNmtS2 3
+// #endif
 
-#if p_N==10
-#define p_cNbS2 2
-#define p_cNmtS2 2
-#endif
+// #if p_N==10
+// #define p_cNbS2 2
+// #define p_cNmtS2 2
+// #endif
 
+// // interp in shared
+// kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
+//                                             const dfloat * restrict sgeo,
+//                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
+//                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//                                             const iint   * restrict vmapM,
+//                                             const iint   * restrict vmapP,
+//                                             const iint   * restrict EToB,
+//                                             const dfloat time,
+//                                             const dfloat * restrict intx, // integration nodes
+//                                             const dfloat * restrict inty,
+//                                             const dfloat * restrict U,
+//                                             const dfloat * restrict V,
+//                                             const dfloat * restrict Ud,
+//                                             const dfloat * restrict Vd,
+//                                             dfloat * restrict rhsU,
+//                                             dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=(p_cNbS2*p_cNmtS2);outer0){
 
+//     // shared storage for flux terms
+//     shared dfloat s_UM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_VM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_UP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_VP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
 
+//     shared dfloat s_UdM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_VdM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_UdP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
+//     shared dfloat s_VdP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
 
+//     shared dfloat s_iFluxU[p_cNmtS2][p_cNbS2][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_cNmtS2][p_cNbS2][p_intNfpNfaces];
 
-
-// interp in shared
-kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
-                                            const dfloat * restrict sgeo,
-                                            const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                            const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
-                                            const dfloat time,
-                                            const dfloat * restrict intx, // integration nodes
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict Ud,
-                                            const dfloat * restrict Vd,
-                                            dfloat * restrict rhsU,
-                                            dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=(p_cNbS2*p_cNmtS2);outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_VM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_UP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_VP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-
-    shared dfloat s_UdM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_VdM[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_UdP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-    shared dfloat s_VdP[p_cNmtS2][p_cNbS2][p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_cNmtS2][p_cNbS2][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cNmtS2][p_cNbS2][p_intNfpNfaces];
-
-    shared dfloat s_sgeo[p_cNmtS2][p_cNbS2][p_Nfaces][p_Nsgeo];
-    shared dfloat s_intInterpT[p_Nfaces*p_intNfp*p_Nfp];
+//     shared dfloat s_sgeo[p_cNmtS2][p_cNbS2][p_Nfaces][p_Nsgeo];
+//     shared dfloat s_intInterpT[p_Nfaces*p_intNfp*p_Nfp];
     
     
-    for (int es=0;es<p_cNbS2;++es;inner1){
-      for (int n=0;n<p_Np;++n;inner0) { //all faces*facenodes on this element
-        int m = n + p_Np*es;
-        while(m<p_cNmtS2*p_cNbS2*p_Nfaces*p_Nsgeo){
-          const int id = eo*p_Nfaces*p_Nsgeo + m;
-          s_sgeo[0][0][0][m] = sgeo[id];
-          m+=p_Np*p_cNbS2;
-        }
+//     for (int es=0;es<p_cNbS2;++es;inner1){
+//       for (int n=0;n<p_Np;++n;inner0) { //all faces*facenodes on this element
+//         int m = n + p_Np*es;
+//         while(m<p_cNmtS2*p_cNbS2*p_Nfaces*p_Nsgeo){
+//           const int id = eo*p_Nfaces*p_Nsgeo + m;
+//           s_sgeo[0][0][0][m] = sgeo[id];
+//           m+=p_Np*p_cNbS2;
+//         }
 
-        if (es==0) {
-          for(int m=n;m<p_Nfaces*p_Nfp*p_Nfp;m+=p_Np){
-            s_intInterpT[m] = intInterpT[m];
-          }
-        }
+//         if (es==0) {
+//           for(int m=n;m<p_Nfaces*p_Nfp*p_Nfp;m+=p_Np){
+//             s_intInterpT[m] = intInterpT[m];
+//           }
+//         }
         
-        occaUnroll(p_cNmtS2)
-        for (int et=0;et<p_cNmtS2;++et){
-          const int e = et*p_cNbS2 + es + eo;
-          if(e<Nelements){
-            for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
-              // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + m;
+//         occaUnroll(p_cNmtS2)
+//         for (int et=0;et<p_cNmtS2;++et){
+//           const int e = et*p_cNbS2 + es + eo;
+//           if(e<Nelements){
+//             for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
+//               // indices of negative and positive traces of face node
+//               const iint id  = e*p_Nfp*p_Nfaces + m;
 
-              const iint idM = vmapM[id];
-              const iint idP = vmapP[id];
+//               const iint idM = vmapM[id];
+//               const iint idP = vmapP[id];
 
-              // load negative and positive trace node values of velocity
-              s_UM[et][es][m] = U[idM];
-              s_VM[et][es][m] = V[idM];
-              s_UP[et][es][m] = U[idP];
-              s_VP[et][es][m] = V[idP];
+//               // load negative and positive trace node values of velocity
+//               s_UM[et][es][m] = U[idM];
+//               s_VM[et][es][m] = V[idM];
+//               s_UP[et][es][m] = U[idP];
+//               s_VP[et][es][m] = V[idP];
 
-              s_UdM[et][es][m] = Ud[idM];
-              s_VdM[et][es][m] = Vd[idM];
-              s_UdP[et][es][m] = Ud[idP];
-              s_VdP[et][es][m] = Vd[idP];
-            }
-          }
-        }
-      }
-    }
+//               s_UdM[et][es][m] = Ud[idM];
+//               s_VdM[et][es][m] = Vd[idM];
+//               s_UdP[et][es][m] = Ud[idP];
+//               s_VdP[et][es][m] = Vd[idP];
+//             }
+//           }
+//         }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // interpolate to surface integration nodes
-    for(iint es=0;es<p_cNbS2;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){ 
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cNbS2;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){ 
         
-        dfloat iUM [p_cNmtS2], iVM [p_cNmtS2];
-        dfloat iUP [p_cNmtS2], iVP [p_cNmtS2];
-        dfloat iUdM[p_cNmtS2], iVdM[p_cNmtS2];
-        dfloat iUdP[p_cNmtS2], iVdP[p_cNmtS2];
+//         dfloat iUM [p_cNmtS2], iVM [p_cNmtS2];
+//         dfloat iUP [p_cNmtS2], iVP [p_cNmtS2];
+//         dfloat iUdM[p_cNmtS2], iVdM[p_cNmtS2];
+//         dfloat iUdP[p_cNmtS2], iVdP[p_cNmtS2];
 
-        for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
+//         for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
 
-          occaUnroll(p_cNmtS2)
-          for (int et=0;et<p_cNmtS2;++et){
-            iUM [et] = 0.f, iVM [et] = 0.f;
-            iUP [et] = 0.f, iVP [et] = 0.f;
-            iUdM[et] = 0.f, iVdM[et] = 0.f;
-            iUdP[et] = 0.f, iVdP[et] = 0.f;
-          }
+//           occaUnroll(p_cNmtS2)
+//           for (int et=0;et<p_cNmtS2;++et){
+//             iUM [et] = 0.f, iVM [et] = 0.f;
+//             iUP [et] = 0.f, iVP [et] = 0.f;
+//             iUdM[et] = 0.f, iVdM[et] = 0.f;
+//             iUdP[et] = 0.f, iVdP[et] = 0.f;
+//           }
       
-          const iint face = m/p_intNfp; // find face that owns this integration node
-          // local block interpolation (face nodes to integration nodes)
-          occaUnroll(p_Nfp)
-            for(iint k=0;k<p_Nfp;++k){
-              const dfloat iInm = s_intInterpT[m+k*p_Nfaces*p_intNfp];
-              const iint fm = face*p_Nfp+k;
+//           const iint face = m/p_intNfp; // find face that owns this integration node
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//             for(iint k=0;k<p_Nfp;++k){
+//               const dfloat iInm = s_intInterpT[m+k*p_Nfaces*p_intNfp];
+//               const iint fm = face*p_Nfp+k;
 
-              occaUnroll(p_cNmtS2)
-              for (int et=0;et<p_cNmtS2;++et){
+//               occaUnroll(p_cNmtS2)
+//               for (int et=0;et<p_cNmtS2;++et){
 
-                iUM [et] += iInm* s_UM[et][es][fm];
-                iVM [et] += iInm* s_VM[et][es][fm];
-                iUdM[et] += iInm*s_UdM[et][es][fm];
-                iVdM[et] += iInm*s_VdM[et][es][fm];
+//                 iUM [et] += iInm* s_UM[et][es][fm];
+//                 iVM [et] += iInm* s_VM[et][es][fm];
+//                 iUdM[et] += iInm*s_UdM[et][es][fm];
+//                 iVdM[et] += iInm*s_VdM[et][es][fm];
 
-                iUP [et] += iInm* s_UP[et][es][fm];
-                iVP [et] += iInm* s_VP[et][es][fm];
-                iUdP[et] += iInm*s_UdP[et][es][fm];
-                iVdP[et] += iInm*s_VdP[et][es][fm];
-              }
-            }
+//                 iUP [et] += iInm* s_UP[et][es][fm];
+//                 iVP [et] += iInm* s_VP[et][es][fm];
+//                 iUdP[et] += iInm*s_UdP[et][es][fm];
+//                 iVdP[et] += iInm*s_VdP[et][es][fm];
+//               }
+//             }
 
-          occaUnroll(p_cNmtS2)
-          for (int et=0;et<p_cNmtS2;++et){
-            const int e = et*p_cNbS2 + es + eo;
-            if (e<Nelements) {
-              // load surface geofactors for this face
-              const dfloat nx   = s_sgeo[et][es][face][p_NXID];
-              const dfloat ny   = s_sgeo[et][es][face][p_NYID];
-              const dfloat sJ   = s_sgeo[et][es][face][p_SJID];
-              const dfloat invJ = s_sgeo[et][es][face][p_IJID];
+//           occaUnroll(p_cNmtS2)
+//           for (int et=0;et<p_cNmtS2;++et){
+//             const int e = et*p_cNbS2 + es + eo;
+//             if (e<Nelements) {
+//               // load surface geofactors for this face
+//               const dfloat nx   = s_sgeo[et][es][face][p_NXID];
+//               const dfloat ny   = s_sgeo[et][es][face][p_NYID];
+//               const dfloat sJ   = s_sgeo[et][es][face][p_SJID];
+//               const dfloat invJ = s_sgeo[et][es][face][p_IJID];
 
-              // apply boundary conditions
-              const iint bc = EToB[face+p_Nfaces*e];
-              if(bc>0){
-                insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
-              }
+//               // apply boundary conditions
+//               const iint bc = EToB[face+p_Nfaces*e];
+//               if(bc>0){
+//                 insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
+//               }
 
-              // Find max normal velocity on the face
-              const dfloat unm   = occaFabs(nx*iUM[et]+ ny*iVM[et]);
-              const dfloat unp   = occaFabs(nx*iUP[et]+ ny*iVP[et]);    
-              const dfloat unmax = (unm > unp) ? unm : unp;
+//               // Find max normal velocity on the face
+//               const dfloat unm   = occaFabs(nx*iUM[et]+ ny*iVM[et]);
+//               const dfloat unp   = occaFabs(nx*iUP[et]+ ny*iVP[et]);    
+//               const dfloat unmax = (unm > unp) ? unm : unp;
 
-              // evaluate "flux" terms: LLF
-              const dfloat sc = 0.5f*invJ*sJ ;
+//               // evaluate "flux" terms: LLF
+//               const dfloat sc = 0.5f*invJ*sJ ;
 
-              s_iFluxU[et][es][m] = sc*(nx*(iUP[et]*iUdP[et] + iUM[et]*iUdM[et]) 
-                                   +ny*(iVP[et]*iUdP[et] + iVM[et]*iUdM[et]) 
-                                   +unmax*(iUdM[et]-iUdP[et]));
+//               s_iFluxU[et][es][m] = sc*(nx*(iUP[et]*iUdP[et] + iUM[et]*iUdM[et]) 
+//                                    +ny*(iVP[et]*iUdP[et] + iVM[et]*iUdM[et]) 
+//                                    +unmax*(iUdM[et]-iUdP[et]));
 
-              s_iFluxV[et][es][m] = sc*(nx*(iUP[et]*iVdP[et] + iUM[et]*iVdM[et]) 
-                                  + ny*(iVP[et]*iVdP[et] + iVM[et]*iVdM[et]) 
-                                  + unmax*(iVdM[et]-iVdP[et]));
-            }
-          }
-        }
-      }
-    }
+//               s_iFluxV[et][es][m] = sc*(nx*(iUP[et]*iVdP[et] + iUM[et]*iVdM[et]) 
+//                                   + ny*(iVP[et]*iVdP[et] + iVM[et]*iVdM[et]) 
+//                                   + unmax*(iVdM[et]-iVdP[et]));
+//             }
+//           }
+//         }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cNbS2;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_cNbS2;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){
         
-        dfloat rhsu[p_cNmtS2];
-        dfloat rhsv[p_cNmtS2];
+//         dfloat rhsu[p_cNmtS2];
+//         dfloat rhsv[p_cNmtS2];
         
-        occaUnroll(p_cNmtS2)
-        for (int et=0;et<p_cNmtS2;++et){
-          rhsu[et] = 0;
-          rhsv[et] = 0;
-        }
+//         occaUnroll(p_cNmtS2)
+//         for (int et=0;et<p_cNmtS2;++et){
+//           rhsu[et] = 0;
+//           rhsv[et] = 0;
+//         }
         
-        occaUnroll(p_intNfpNfaces)
-          for(int m=0;m<p_intNfpNfaces;++m){
-            const dfloat L = intLIFTT[n+m*p_Np];
-            occaUnroll(p_cNmtS2)
-            for (int et=0;et<p_cNmtS2;++et){
-              rhsu[et] += L*s_iFluxU[et][es][m];
-              rhsv[et] += L*s_iFluxV[et][es][m];
-            }
-          }
+//         occaUnroll(p_intNfpNfaces)
+//           for(int m=0;m<p_intNfpNfaces;++m){
+//             const dfloat L = intLIFTT[n+m*p_Np];
+//             occaUnroll(p_cNmtS2)
+//             for (int et=0;et<p_cNmtS2;++et){
+//               rhsu[et] += L*s_iFluxU[et][es][m];
+//               rhsv[et] += L*s_iFluxV[et][es][m];
+//             }
+//           }
         
-        occaUnroll(p_cNmtS2)
-        for (int et=0;et<p_cNmtS2;++et){
-          const int e = et*p_cNbS2 + es + eo;
-          if(e<Nelements){
-            const iint id = n + p_Np*e;
-            rhsU[id] += rhsu[et];
-            rhsV[id] += rhsv[et];
-          }
-        }
-      }
-    }
-  }
-}
+//         occaUnroll(p_cNmtS2)
+//         for (int et=0;et<p_cNmtS2;++et){
+//           const int e = et*p_cNbS2 + es + eo;
+//           if(e<Nelements){
+//             const iint id = n + p_Np*e;
+//             rhsU[id] += rhsu[et];
+//             rhsV[id] += rhsv[et];
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 
@@ -2786,117 +2158,327 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
 
 
 
-// Copied from Noel "Based on v4. Assume trace buffers are pre-built"
-kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
-                                            const dfloat * restrict sgeo,
-                                            const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                            const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
-                                            const dfloat time,
-                                            const dfloat * restrict intx, // integration nodes
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict fU,
-                                            const dfloat * restrict fV,
-                                            const dfloat * restrict fUd,
-                                            const dfloat * restrict fVd,
-                                            dfloat * restrict rhsU,
-                                            dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+// // Copied from Noel "Based on v4. Assume trace buffers are pre-built"
+// kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
+//                                             const dfloat * restrict sgeo,
+//                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
+//                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//                                             const iint   * restrict vmapM,
+//                                             const iint   * restrict vmapP,
+//                                             const iint   * restrict EToB,
+//                                             const dfloat time,
+//                                             const dfloat * restrict intx, // integration nodes
+//                                             const dfloat * restrict inty,
+//                                             const dfloat * restrict fU,
+//                                             const dfloat * restrict fV,
+//                                             const dfloat * restrict fUd,
+//                                             const dfloat * restrict fVd,
+//                                             dfloat * restrict rhsU,
+//                                             dfloat * restrict rhsV){
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
-    shared dfloat s_iFluxU[p_NblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
+//     shared dfloat s_iFluxU[p_NblockS][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
 
-    // get surface integration nodes and compute flux
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
-        if(e<Nelements){
-          if(n<(p_Nfaces*p_intNfp)){
+//     // get surface integration nodes and compute flux
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+//         const iint e = eo + es;
+//         if(e<Nelements){
+//           if(n<(p_Nfaces*p_intNfp)){
 
-            const iint face = n/p_intNfp; // find face that owns this integration node
+//             const iint face = n/p_intNfp; // find face that owns this integration node
 
-            // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx   = sgeo[sid+p_NXID];
-            const dfloat ny   = sgeo[sid+p_NYID];
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
+//             // load surface geofactors for this face
+//             const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat nx   = sgeo[sid+p_NXID];
+//             const dfloat ny   = sgeo[sid+p_NYID];
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+//             const dfloat invJ = sgeo[sid+p_IJID];
 
-            const iint idM  = e*p_intNfp*p_Nfaces + n;
-            const iint idP  = idM;
+//             const iint idM  = e*p_intNfp*p_Nfaces + n;
+//             const iint idP  = idM;
 
-            const dfloat iUM  = fU[idM];
-            const dfloat iUP  = fU[idP];
-            const dfloat iUdM = fUd[idM];
-            const dfloat iUdP = fUd[idP];
+//             const dfloat iUM  = fU[idM];
+//             const dfloat iUP  = fU[idP];
+//             const dfloat iUdM = fUd[idM];
+//             const dfloat iUdP = fUd[idP];
 
-            const dfloat iVM  = fV[idM];
-            const dfloat iVP  = fV[idP];
-            const dfloat iVdM = fVd[idM];
-            const dfloat iVdP = fVd[idP];
+//             const dfloat iVM  = fV[idM];
+//             const dfloat iVP  = fV[idP];
+//             const dfloat iVdM = fVd[idM];
+//             const dfloat iVdP = fVd[idP];
 
-            // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
-            //if(bc>0){
-            //  insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-            //}
+//             // apply boundary conditions
+//             const iint bc = EToB[face+p_Nfaces*e];
+//             //if(bc>0){
+//             //  insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
+//             //}
 
-            // Find max normal velocity on the face
-            const dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-            const dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-            const dfloat unmax = (unm > unp) ? unm : unp;
+//             // Find max normal velocity on the face
+//             const dfloat unm   = occaFabs(nx*iUM + ny*iVM);
+//             const dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
+//             const dfloat unmax = (unm > unp) ? unm : unp;
 
-            // evaluate "flux" terms: LLF
-            const dfloat sc = 0.5f*invJ*sJ ;
+//             // evaluate "flux" terms: LLF
+//             const dfloat sc = 0.5f*invJ*sJ ;
 
-            s_iFluxU[es][n] = sc*(nx*(iUP*iUdP + iUM*iUdM) 
-                             +ny*(iVP*iUdP + iVM*iUdM) 
-                             +unmax*(iUdM-iUdP));
+//             s_iFluxU[es][n] = sc*(nx*(iUP*iUdP + iUM*iUdM) 
+//                              +ny*(iVP*iUdP + iVM*iUdM) 
+//                              +unmax*(iUdM-iUdP));
 
-            s_iFluxV[es][n] = sc*(nx*(iUP*iVdP + iUM*iVdM) 
-                            + ny*(iVP*iVdP + iVM*iVdM) 
-                            + unmax*(iVdM-iVdP));
-          }
-        }
-      }
-    }
+//             s_iFluxV[es][n] = sc*(nx*(iUP*iVdP + iUM*iVdM) 
+//                             + ny*(iVP*iVdP + iVM*iVdM) 
+//                             + unmax*(iVdM-iVdP));
+//           }
+//         }
+//       }
+//     }
 
-    barrier(localMemFence);
+//     barrier(localMemFence);
 
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
-        if(e<Nelements){
-          if(n<p_Np){
-            const iint id = n + p_Np*e;
-            // prefetch volume rhs
-            dfloat rhsu = rhsU[id];
-            dfloat rhsv = rhsV[id];
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         const iint e = eo + es;
+//         if(e<Nelements){
+//           if(n<p_Np){
+//             const iint id = n + p_Np*e;
+//             // prefetch volume rhs
+//             dfloat rhsu = rhsU[id];
+//             dfloat rhsv = rhsV[id];
 
-            occaUnroll(p_intNfpNfaces)
-              for(int m=0;m<p_intNfpNfaces;++m){
-                const dfloat L = intLIFTT[n+m*p_Np];
-                rhsu += L*s_iFluxU[es][m];
-                rhsv += L*s_iFluxV[es][m];
-              }
+//             occaUnroll(p_intNfpNfaces)
+//               for(int m=0;m<p_intNfpNfaces;++m){
+//                 const dfloat L = intLIFTT[n+m*p_Np];
+//                 rhsu += L*s_iFluxU[es][m];
+//                 rhsv += L*s_iFluxV[es][m];
+//               }
 
-            rhsU[id] = rhsu;
-            rhsV[id] = rhsv; 
-          }
-        }
-      }
-    }
-  }
-}
-
-
+//             rhsU[id] = rhsu;
+//             rhsV[id] = rhsv; 
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 
+
+
+
+
+// // Kernel is split in two
+// kernel void insSubCycleCubatureSurface2D_v9(const iint Nelements,
+//                                             const dfloat * restrict sgeo,
+//                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
+//                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+//                                             const iint   * restrict vmapM,
+//                                             const iint   * restrict vmapP,
+//                                             const iint   * restrict EToB,
+//                                             const dfloat time,
+//                                             const dfloat * restrict intx, // integration nodes
+//                                             const dfloat * restrict inty,
+//                                             const dfloat * restrict U,
+//                                             const dfloat * restrict V,
+//                                             const dfloat * restrict Ud,
+//                                             const dfloat * restrict Vd,                                            
+//                                                   dfloat2 * restrict fU,
+//                                                   dfloat2 * restrict fUd,
+//                                                   dfloat * restrict rhsU,
+//                                                   dfloat * restrict rhsV){
+
+//  // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_cNbS1*p_cNmtS1;outer0){
+
+//     // shared storage for flux terms
+//     shared dfloat s_UM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_UdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+//     shared dfloat s_VdM[p_cNmtS1][p_cNbS1][p_NfacesNfp];
+    
+//     //shared dfloat s_sgeo[p_cNmtS1][p_cNbS1][p_Nfaces][p_Nsgeo];
+    
+//     for (int es=0;es<p_cNbS1;++es;inner1){
+//       for (int n=0;n<p_Np;++n;inner0) { //all faces*facenodes on this element     
+//         occaUnroll(p_cNmtS1)
+//         for (int et=0;et<p_cNmtS1;++et){
+//           const int e = et*p_cNbS1 + es + eo;
+//           if(e<Nelements){
+//             for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
+//               // indices of negative and positive traces of face node
+//               const iint id  = e*p_Nfp*p_Nfaces + m;
+//               const iint idM = vmapM[id]; 
+//               // load negative and positive trace node values of velocity
+//               s_UM[et][es][m] = U[idM];
+//               s_VM[et][es][m] = V[idM];
+//               s_UP[et][es][m] = U[idP];
+//               s_VP[et][es][m] = V[idP];
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cNbS1;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){ 
+        
+//         dfloat iUM [p_cNmtS1];
+//         dfloat iVM [p_cNmtS1];
+//         dfloat iUdM[p_cNmtS1];
+//         dfloat iUdP[p_cNmtS1];
+
+//         for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
+
+//           occaUnroll(p_cNmtS1)
+//           for (int et=0;et<p_cNmtS1;++et){
+//             iUM [et] = 0.f ;
+//             iVM [et] = 0.f ;
+//             iUdM[et] = 0.f ;
+//             iVdM[et] = 0.f ;
+//           }
+      
+//           const iint face = m/p_intNfp; // find face that owns this integration node
+//           // local block interpolation (face nodes to integration nodes)
+//           occaUnroll(p_Nfp)
+//             for(iint k=0;k<p_Nfp;++k){
+//               const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
+//               const iint fm = face*p_Nfp+k;
+//               occaUnroll(p_cNmtS1)
+//               for (int et=0;et<p_cNmtS1;++et){
+//                 iUM [et] += iInm* s_UM[et][es][fm];
+//                 iVM [et] += iInm* s_VM[et][es][fm];
+//                 iUdM[et] += iInm*s_UdM[et][es][fm];
+//                 iVdM[et] += iInm*s_VdM[et][es][fm];
+//               }
+//             }
+//           }
+
+//           occaUnroll(p_cNmt)
+//             for(iint em=0;em<p_cNmt;++em){
+//               iint e = eo+es*p_cNmt+em;
+//                if(e<Nelements){
+//                 for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
+//                     // indices of negative and positive traces of face node
+//                     const iint id  = e*p_Nfp*p_intNfaces + m;
+//                     dfloat2 tmp;
+//                     tmp.x = iUM[em];
+//                     tmp.y = iVM[em];
+//                     fU[id] = tmp; 
+    
+//                     tmp.x = iUdM[em];
+//                     tmp.y = iVdM[em];
+//                     //
+//                     fUd[id] = tmp; // note  change in sign
+//                 }
+//               }
+//            }
+
+//          }
+//        }
+//      }
+
+
+
+
+//   // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_cNbS1*p_cNmtS1;outer0){
+
+//     shared dfloat s_iFluxU[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
+//     shared dfloat s_iFluxV[p_cNmtS1][p_cNbS1][p_intNfpNfaces];
+
+//     // interpolate to surface integration nodes
+//     for(iint es=0;es<p_cNbS1;++es;inner1){
+//       for(iint n=0;n<p_Np;++n;inner0){ 
+        
+//         // dfloat iUM [p_cNmtS1], iVM [p_cNmtS1];
+//         // dfloat iUP [p_cNmtS1], iVP [p_cNmtS1];
+//         // dfloat iUdM[p_cNmtS1], iVdM[p_cNmtS1];
+//         // dfloat iUdP[p_cNmtS1], iVdP[p_cNmtS1];
+
+//         for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
+
+//            const iint face = m/p_intNfp; // find face that owns this integration node
+
+//            for (int et=0;et<p_cNmtS1;++et){
+
+//               const int e = et*p_cNbS1 + es + eo;
+//               // load surface geofactors for this face
+//               const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+//               const dfloat nx   = sgeo[sid+p_NXID];
+//               const dfloat ny   = sgeo[sid+p_NYID];
+//               const dfloat sJ   = sgeo[sid+p_SJID];
+//               const dfloat invJ = sgeo[sid+p_IJID];
+
+//               const iint idM  = e*p_intNfp*p_Nfaces + m;
+//               const iint idP  = idM;
+
+//               const dfloat2 fum  = fU[idM];
+//               const dfloat2 fup = fUd[idM];
+//               const dfloat2 fud = fU[idM];
+//               const dfloat2  = fUd[idM];
+
+
+//             // apply boundary conditions
+//             const iint bc = EToB[face+p_Nfaces*e];
+//             //if(bc>0){
+//             //  insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
+//             //}
+
+//             // Find max normal velocity on the face
+//             const dfloat unm   = occaFabs(nx*iUM + ny*iVM);
+//             const dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
+//             const dfloat unmax = (unm > unp) ? unm : unp;
+
+//             // evaluate "flux" terms: LLF
+//             const dfloat sc = 0.5f*invJ*sJ ;
+
+//             s_iFluxU[es][n] = sc*(nx*(iUP*iUdP + iUM*iUdM) 
+//                              +ny*(iVP*iUdP + iVM*iUdM) 
+//                              +unmax*(iUdM-iUdP));
+
+//             s_iFluxV[es][n] = sc*(nx*(iUP*iVdP + iUM*iVdM) 
+//                             + ny*(iVP*iVdP + iVM*iVdM) 
+//                             + unmax*(iVdM-iVdP));
+//           }
+//         }
+//       }
+//     }
+
+//     barrier(localMemFence);
+
+//     // lift from surface integration to volume nodes
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+//         const iint e = eo + es;
+//         if(e<Nelements){
+//           if(n<p_Np){
+//             const iint id = n + p_Np*e;
+//             // prefetch volume rhs
+//             dfloat rhsu = rhsU[id];
+//             dfloat rhsv = rhsV[id];
+
+//             occaUnroll(p_intNfpNfaces)
+//               for(int m=0;m<p_intNfpNfaces;++m){
+//                 const dfloat L = intLIFTT[n+m*p_Np];
+//                 rhsu += L*s_iFluxU[es][m];
+//                 rhsv += L*s_iFluxV[es][m];
+//               }
+
+//             rhsU[id] = rhsu;
+//             rhsV[id] = rhsv; 
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 
@@ -4096,292 +3678,6 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
 //   }
 
 // }
-
-
-
-
-
-
-kernel void insSubCycleCubatureSurface2D(const iint Nelements,
-					 const dfloat * restrict sgeo,
-					 const dfloat * restrict intInterpT, // interpolate to integration nodes
-					 const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-					 const iint   * restrict vmapM,
-					 const iint   * restrict vmapP,
-					 const iint   * restrict EToB,
-					 const dfloat time,
-					 const dfloat * restrict intx, // integration nodes
-					 const dfloat * restrict inty,
-					 const dfloat * restrict U,
-					 const dfloat * restrict V,
-					 const dfloat * restrict Ud,
-					 const dfloat * restrict Vd,
-					 dfloat * restrict rhsU,
-					 dfloat * restrict rhsV){
-  // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
-
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
-
-    shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
-
-    shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
-
-    // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-
-	iint e = eo + es;
-
-	if(e<Nelements){
-	  if(n<(p_Nfaces*p_Nfp)){
-	    // indices of negative and positive traces of face node
-	    const iint id  = e*p_Nfp*p_Nfaces + n;
-
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
-
-	    if(idP<0) idP = idM;
-	    // load negative and positive trace node values of velocity
-	    s_UM[es][n] = U[idM];
-	    s_VM[es][n] = V[idM];
-	    s_UP[es][n] = U[idP];
-	    s_VP[es][n] = V[idP];
-
-	    s_UdM[es][n] = Ud[idM];
-	    s_VdM[es][n] = Vd[idM];
-	    s_UdP[es][n] = Ud[idP];
-	    s_VdP[es][n] = Vd[idP];
-
-	  }
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-
-	iint e = eo + es;
-
-	if(e<Nelements){
-	  if(n<(p_Nfaces*p_intNfp)){
-
-	    const iint face = n/p_intNfp; // find face that owns this integration node
-
-	    // load surface geofactors for this face
-	    const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
-	    const dfloat nx   = sgeo[sid+p_NXID];
-	    const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat sJ   = sgeo[sid+p_SJID];
-	    const dfloat invJ = sgeo[sid+p_IJID];
-
-	    dfloat iUM  = 0.f, iVM  = 0.f;
-	    dfloat iUP  = 0.f, iVP  = 0.f;
-	    dfloat iUdM = 0.f, iVdM = 0.f;
-	    dfloat iUdP = 0.f, iVdP = 0.f;
-
-	    // local block interpolation (face nodes to integration nodes)
-	    occaUnroll(p_Nfp)
-	      for(iint m=0;m<p_Nfp;++m){
-		const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-		const iint fm = face*p_Nfp+m;
-
-		iUM  += iInm*s_UM[es][fm];
-		iVM  += iInm*s_VM[es][fm];
-		iUdM += iInm*s_UdM[es][fm];
-		iVdM += iInm*s_VdM[es][fm];
-
-		iUP  += iInm*s_UP[es][fm];
-		iVP  += iInm*s_VP[es][fm];
-		iUdP += iInm*s_UdP[es][fm];
-		iVdP += iInm*s_VdP[es][fm];
-	      }
-
-	    // apply boundary conditions
-	    iint bc = EToB[face+p_Nfaces*e];
-
-	    if(bc>0){
-	      insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
-	    }
-
-
-	    // Find max normal velocity on the face
-	    dfloat unm   = occaFabs(nx*iUM + ny*iVM);
-	    dfloat unp   = occaFabs(nx*iUP + ny*iVP);    
-	    dfloat unmax = (unm > unp) ? unm : unp;
-
-	    // evaluate "flux" terms: LLF
-	    const dfloat sc = invJ * sJ ;
-
-	    s_iFluxU[es][n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM) 
-				       +ny*(iVP*iUdP + iVM*iUdM) 
-				       +unmax*(iUdM-iUdP) ));
-
-	    s_iFluxV[es][n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM) 
-				       + ny*(iVP*iVdP + iVM*iVdM) 
-				       + unmax*(iVdM-iVdP) ));
-	  }
-	}
-      }
-    }
-
-    barrier(localMemFence);
-
-    // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-
-        const iint e = eo + es;
-
-        if(e<Nelements){
-          if(n<p_Np){
-            iint id = n + p_Np*e;
-            // prefetch volume rhs
-            dfloat rhsu = rhsU[id];
-            dfloat rhsv = rhsV[id];
-
-            occaUnroll(p_intNfpNfaces)
-	      for(int m=0;m<p_intNfpNfaces;++m){
-		// RefMassMatrix^{-1}*cInterp^t*cWeight
-		const dfloat L = intLIFTT[n+m*p_Np];
-
-		rhsu += L*s_iFluxU[es][m];
-		rhsv += L*s_iFluxV[es][m];
-	      }
-
-            rhsU[id] = rhsu;  // 
-            rhsV[id] = rhsv;  //  
-          }
-        }
-      }
-    }
-  }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-kernel void insSubCycleRKUpdate2D(const iint Nelements,
-				  const dfloat activate_advection, 
-				  const dfloat dt,  
-				  const dfloat rka,
-				  const dfloat rkb,
-				  const dfloat * restrict rhsU,
-				  const dfloat * restrict rhsV,
-				  dfloat  * restrict resU,
-				  dfloat  * restrict resV,
-				  dfloat  * restrict U,
-				  dfloat  * restrict V){
-
-  // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-
-      const iint id = n + e*p_Np;
-
-      dfloat resu =  resU[id];
-      dfloat resv =  resV[id];
-      dfloat rhsu = -rhsU[id];// -Nu
-      dfloat rhsv = -rhsV[id];// -Nu
-
-      // If not axtivated zero it out
-      rhsu *= activate_advection;
-      rhsv *= activate_advection;
-      
-      dfloat u = U[id];
-      dfloat v = V[id];
-
-      resu = rka*resu + dt*rhsu;
-      resv = rka*resv + dt*rhsv;
-
-      u += rkb*resu;
-      v += rkb*resv;
-
-      resU[id] = resu;
-      resV[id] = resv;
-
-      U[id] = u;
-      V[id] = v;
-    }
-  }
-}
-
-
-kernel void insSubCycleExt2D(const iint Nelements,
-			     const iint index,
-			     const iint offset,
-			     const dfloat c0,
-			     const dfloat c1,
-			     const dfloat c2, 
-			     const dfloat * restrict U,
-			     const dfloat * restrict V,
-			     dfloat * restrict Ue,
-			     dfloat * restrict Ve){
-
-  // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-
-      const iint index0 = (index+0)%3;
-      const iint index1 = (index+2)%3; //back one step
-      const iint index2 = (index+1)%3; //back two steps
-
-      const iint id0   = n + p_Np*(e+index0*offset);
-      const iint id1   = n + p_Np*(e+index1*offset);
-      const iint id2   = n + p_Np*(e+index2*offset);
-
-      //U 
-      const dfloat Um0  = U[id0];
-      const dfloat Um1  = U[id1];
-      const dfloat Um2  = U[id2];
-
-      const dfloat Vm0  = V[id0];
-      const dfloat Vm1  = V[id1];
-      const dfloat Vm2  = V[id2];
-      
-      const iint id = n+e*p_Np;
-      Ue[id] = c0*Um0 + c1*Um1 + c2*Um2;
-      Ve[id] = c0*Vm0 + c1*Vm1 + c2*Vm2;
-    }
-  }
-}
-
 
 
 
