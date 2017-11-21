@@ -4,7 +4,7 @@
      do
    for volNod in `seq 2 2 8`;
    do
-       ./insMainTri2D insSubCycleCubatureSurface2D.okl ../../meshes/insKernelTest2Dh3.msh $N $volBlk $volNod |& grep GFL;
+       ./ellipticBenchmarkTri2D ellipticBRGradientVolume2D.okl ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep GFL;
    done
      done
  done
