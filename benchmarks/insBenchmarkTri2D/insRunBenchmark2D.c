@@ -11,10 +11,10 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
   int NKernels;
   char kernelName[BUFSIZ];
   if (strstr(kernelFileName,"insSubCycleCubatureSurface2D.okl")) {
-    NKernels = 6;
+    NKernels = 7;
     sprintf(kernelName, "insSubCycleCubatureSurface2D");
   } else if (strstr(kernelFileName,"insSubCycleCubatureVolume2D.okl")) {
-    NKernels = 5;
+    NKernels = 7;
     sprintf(kernelName, "insSubCycleCubatureVolume2D");
   }
 
