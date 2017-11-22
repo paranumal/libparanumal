@@ -155,7 +155,9 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
     double intensity  = kernelGFLOPS*Ntrials/kernelBandwidth;
     double roofline   = mymin(copyGFLOPS, shmemBound);
 
-    printf("%s\t N %d \tK %d \tKernelTime %6.4E\tCopyTime %6.4E\tKernel GFLOPS/s %6.4E\tCopy GFLOPS/s %6.4E\tKernelTime/CopyTime %6.4E\tNblocks %d\tNnodes %d\n",
-            testkernelName, mesh->N, mesh->Nelements, kernelElapsed/Ntrials, copyElapsed/Ntrials, kernelGFLOPS, copyGFLOPS, kernelElapsed/copyElapsed, Nblocks, Nnodes);
+    // printf("%s\t N %d \tK %d \tKernelTime %6.4E\tCopyTime %6.4E\tKernel GFLOPS/s %6.4E\tCopy GFLOPS/s %6.4E\tKernelTime/CopyTime %6.4E\tNblocks %d\tNnodes %d\n",
+    //         testkernelName, mesh->N, mesh->Nelements, kernelElapsed/Ntrials, copyElapsed/Ntrials, kernelGFLOPS, copyGFLOPS, kernelElapsed/copyElapsed, Nblocks, Nnodes);
+    printf("%d\t%d\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%6.4E\t%d\t%d\n",
+            mesh->N, mesh->Nelements, kernelElapsed/Ntrials, copyElapsed/Ntrials, kernelGFLOPS, copyGFLOPS, kernelElapsed/copyElapsed, Nblocks, Nnodes);
   }
 }

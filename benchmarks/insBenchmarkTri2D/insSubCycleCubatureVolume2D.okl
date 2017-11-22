@@ -436,7 +436,6 @@ kernel void insSubCycleCubatureVolume2D_v3(const iint Nelements,
   }
       }
     }
-./insBenchmarkTri2D insSubCycleCubatureSurface2D.okl ../../meshes/insKernelTest2Dh3.msh $N $volBlk $volNod |& grep GFL;
   }
 
 }

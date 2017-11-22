@@ -270,7 +270,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   
   // 
   dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
-  dfloat ABS_TOL = 1e-10*1e-10; // absolute tolerance 10^-10
+  dfloat ABS_TOL = 1e-8*1e-8; // absolute tolerance 10^-10
   dfloat REL_TOL = tol*tol*n2b; // 
   //
   dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 

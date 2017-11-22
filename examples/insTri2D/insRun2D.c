@@ -147,7 +147,7 @@ void insRun2D(ins_t *ins, char *options){
     
 
     occaTimerTic(mesh->device,"Report");
-    if(strstr(options, "REPORT")){
+    if(strstr(options, "VTU")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport2D(ins, tstep+1,options);
       }
@@ -163,7 +163,7 @@ void insRun2D(ins_t *ins, char *options){
     occaTimerToc(mesh->device,"Report");
 
     
-    #if 1 // For time accuracy test fed history with exact solution
+    #if 0// For time accuracy test fed history with exact solution
         if(tstep<1){
           iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
           dfloat tt = (tstep+1)*ins->dt;
