@@ -117,7 +117,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_rhsP);
   #endif
 
-  #if 1 // if time dependent BC
+  #if 0 // if time dependent BC
   //
    const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
   occaTimerTic(mesh->device,"PoissonRhsIpdg"); 

@@ -94,13 +94,13 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.001/4.0;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 1.0;
+  ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
@@ -129,14 +129,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
             ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
       #endif
 
-      #if 1
+      #if 0
             ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
             ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
             ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
       #endif
 
 
-      #if 0 // Zero flow
+      #if 1 // Zero flow
             ins->U[id] = 0.0;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
@@ -213,7 +213,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
    if(strstr(options,"SUBCYCLING"))
      ins->errorStep =100*16/ins->Nsubsteps;
    else
-     ins->errorStep = 1000;
+     ins->errorStep = 500;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
