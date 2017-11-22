@@ -1,0 +1,3 @@
+ellipticBRBBGradientVolume3D_v0	 N 1 	K 5058 	KernelTime 7.0592E-05	CopyTime 2.7296E-05	Kernel GFLOPS/s 1.4617E+01	Copy GFLOPS/s 3.7802E+01	KernelTime/CopyTime 2.5862E+00	Nblocks 2	Nnodes 1
+ellipticBRBBGradientVolume3D_v1	 N 1 	K 5058 	KernelTime 2.5888E-05	CopyTime 1.3344E-05	Kernel GFLOPS/s 3.9858E+01	Copy GFLOPS/s 7.7326E+01	KernelTime/CopyTime 1.9400E+00	Nblocks 2	Nnodes 1
+ellipticBRBBGradientVolume3D_v2	 N 1 	K 5058 	KernelTime 3.2896E-05	CopyTime 1.7984E-05	Kernel GFLOPS/s 3.1366E+01	Copy GFLOPS/s 5.7375E+01	KernelTime/CopyTime 1.8292E+00	Nblocks 2	Nnodes 1
