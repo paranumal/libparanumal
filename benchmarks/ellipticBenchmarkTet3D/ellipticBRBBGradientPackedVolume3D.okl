@@ -19,7 +19,14 @@ kernel void ellipticBRBBGradientPackedVolume3D_v0(const iint Nelements,
 			
     for(iint es=0;es<p_NblockV;++es;inner1) {// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0) {     // for all nodes in this element
-		
+	
+	int m = n + es*p_Np;
+	while(m<p_Nnodes*p_NblockV*p_Np && m+eo*p_Np<Nelements*p_Np){
+	  s_q[0][0][m] = q[m + eo*p_Np];
+	  m+=p_NblockV*p_Np;
+	}
+
+#if 0
 	occaUnroll(p_Nnodes)
 	  for (int et=0; et<p_Nnodes; et++) {
 	    const iint e = eo + es + et*p_NblockV;
@@ -27,8 +34,8 @@ kernel void ellipticBRBBGradientPackedVolume3D_v0(const iint Nelements,
 	      s_q[et][es][n]  = q[n + e*p_Np];
 	    }
 	  }
-								
-	int m=n + es*p_Np;
+#endif								
+	m=n + es*p_Np;
 	while(m<4*p_Np){
 	  s_Dvals[0][m] = Dvals[m];
 	  s_D0[0][m]    = D0ids[m];
