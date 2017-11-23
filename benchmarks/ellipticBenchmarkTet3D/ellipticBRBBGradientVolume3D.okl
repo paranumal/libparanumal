@@ -557,7 +557,6 @@ kernel void ellipticBRBBGradientVolume3D_v4(const iint Nelements,
     for(iint es=0;es<p_NblockV;++es;inner1) {// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0) {     // for all nodes in this element
 
-
 	// extract sparse derivative matrix once 
 	const int D0i1 = D0ids[0*p_Np+n];
 	const int D0i2 = D0ids[1*p_Np+n];
@@ -584,13 +583,28 @@ kernel void ellipticBRBBGradientVolume3D_v4(const iint Nelements,
 	const dfloat Dval3 = Dvals[2*p_Np+n];
 	const dfloat Dval4 = Dvals[3*p_Np+n];
 
+
+
 	// reuse derivative info for each node
 	occaUnroll(p_Nnodes)
 	  for (int et=0; et<p_Nnodes; et++) {
 	    const iint e = eo + es + et*p_NblockV;
+
+	      // prefetch geometric factors (constant on triangle)
+	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+	      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+	      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+	      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+	      
+
 	    
 	    if(e<Nelements) {
-#if 0
+#if 1
 	      const dfloat dqdr = .5f*(Dval1*(s_q[et][es][D1i1] - s_q[et][es][D0i1]) +
 				       Dval2*(s_q[et][es][D1i2] - s_q[et][es][D0i2]) +
 				       Dval3*(s_q[et][es][D1i3] - s_q[et][es][D0i3]) +
@@ -626,17 +640,6 @@ kernel void ellipticBRBBGradientVolume3D_v4(const iint Nelements,
 				       Dval3*s_q[et][es][D3i3] + 
 				       Dval4*s_q[et][es][D3i4] - tmp);
 #endif
-	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-	      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-	      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
-	      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
-	      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
-	      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
-	      
 	      
 	      const iint id = e*3*p_Np;
 	      gradq[id+       n] = drdx*dqdr + dsdx*dqds + dtdx*dqdt;
