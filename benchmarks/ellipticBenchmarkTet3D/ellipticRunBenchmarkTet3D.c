@@ -24,7 +24,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
     NKernels = 1;
     sprintf(kernelName, "ellipticBRBBDivergenceSurface3D");
   } else if (strstr(kernelFileName,"ellipticBRBBGradientVolume3D.okl")) {
-    NKernels = 3;
+    NKernels = 5;
     sprintf(kernelName, "ellipticBRBBGradientVolume3D");
   } else if (strstr(kernelFileName,"ellipticBRBBGradientPackedVolume3D.okl")) {
     NKernels = 1;
