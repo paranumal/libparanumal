@@ -4,7 +4,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
   mesh3D *mesh = solver->mesh;
 	
-  int Ntrials = 1;
+  int Ntrials = 4;
 	
   size_t L1CacheSize = 24576; //L1 cache size of test device in bytes (24KB for P100)
 	
@@ -27,7 +27,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
     NKernels = 5;
     sprintf(kernelName, "ellipticBRBBGradientVolume3D");
   } else if (strstr(kernelFileName,"ellipticBRBBGradientPackedVolume3D.okl")) {
-    NKernels = 1;
+    NKernels = 2;
     sprintf(kernelName, "ellipticBRBBGradientPackedVolume3D");
 
   } else if (strstr(kernelFileName,"ellipticBRBBGradientSurface3D.okl")) {
@@ -364,7 +364,9 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
     double intensity  = kernelGFLOPS*Ntrials/kernelBandwidth;
     double roofline   = mymin(copyGFLOPS, shmemBound);
 			
-    printf("%s\t N %d \tK %d \tKernelTime %6.4E\tCopyTime %6.4E\tKernel GFLOPS/s %6.4E\tCopy GFLOPS/s %6.4E\tKernelTime/CopyTime %6.4E\tNblocks %d\tNnodes %d\n",
-	   testkernelName, mesh->N, mesh->Nelements, kernelElapsed/Ntrials, copyElapsed/Ntrials, kernelGFLOPS, copyGFLOPS, kernelElapsed/copyElapsed, Nblocks, Nnodes);
+    printf("%s\t %d \t %d \t %6.4E\t %6.4E\t %6.4E\t %6.4E\t %6.4E\t %d \t %d\t %6.4E "
+	   "[ N K KernelTime CopyTime (Kernel GFLOPS/s) (Copy GFLOPS/s) (KernelTime/copyTime) Nblocks Nnodes (GNODES/s)\n ]",
+	   testkernelName, mesh->N, mesh->Nelements, kernelElapsed/Ntrials, copyElapsed/Ntrials, kernelGFLOPS, copyGFLOPS, kernelElapsed/copyElapsed, Nblocks, Nnodes,
+	   mesh->Nelements*Ntrials*mesh->Np/(1e9*kernelElapsed));
   }
 }

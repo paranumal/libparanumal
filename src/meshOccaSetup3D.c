@@ -200,8 +200,14 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_D3ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D3ids);
     mesh->o_Dvals = mesh->device.malloc(mesh->Np*4*sizeof(dfloat),Dvals);
 
-    char *packedDids = (char*) malloc(mesh->Np*3*4*sizeof(char));
+    unsigned char *packedDids = (unsigned char*) malloc(mesh->Np*3*4*sizeof(unsigned char));
     
+    for(iint n=0;n<4*mesh->Np;++n){
+      if(D1ids[n]<D0ids[n]) printf("bugger: D0id > D1id\n");
+      if(D2ids[n]<D0ids[n]) printf("bugger: D0id > D2id\n");
+      if(D3ids[n]<D0ids[n]) printf("bugger: D0id > D3id\n");
+    }
+
     for(iint n=0;n<mesh->Np;++n){
       
       packedDids[n*4+0] = D1ids[n+0*mesh->Np]-D0ids[n+0*mesh->Np];
@@ -221,7 +227,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     }
 
     
-    mesh->o_packedDids = mesh->device.malloc(mesh->Np*3*4*sizeof(char),packedDids);
+    mesh->o_packedDids = mesh->device.malloc(mesh->Np*3*4*sizeof(unsigned char),packedDids);
 
     mesh->o_L0ids  = mesh->device.malloc(mesh->Nfp*7*sizeof(iint),L0ids);
     mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*7*sizeof(dfloat),L0vals);
@@ -234,7 +240,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   dfloat *SrrT, *SrsT, *SrtT;
   dfloat *SsrT, *SssT, *SstT;
   dfloat *StrT, *StsT, *SttT;
-  if (mesh->Nverts==4) {
+  if (mesh->Nverts==4 && 0) {
     mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
