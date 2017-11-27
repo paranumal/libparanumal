@@ -19,8 +19,8 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
-		 	
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."'
+
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
@@ -65,6 +65,7 @@ ellipticBuildJacobiIpdgTri2D.o \
 ellipticBuildLocalPatchesIpdgTri2D.o \
 ellipticBuildMultigridLevelTri2D.o \
 ellipticMultiGridSetupTri2D.o \
+ellipticSEMFEMSetupTri2D.o\
 ellipticSetupSmoothersTri2D.o \
 ellipticSmoothersTri2D.o
 

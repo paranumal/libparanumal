@@ -100,7 +100,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   iint totalElements = 0;
   MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
-  
+
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
   for (iint e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -138,6 +138,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   kernelInfo.addDefine("p_NpFine", mesh->Np);
   kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
 
+  kernelInfo.addDefine("p_NpFEM", mesh->NpFEM);
+
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
@@ -166,6 +168,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
 				       "scatter",
 				       kernelInfo);
+
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+               "gatherScatter",
+               kernelInfo);
 
   mesh->getKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
@@ -328,6 +335,16 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->precon->exactBlockJacobiSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticExactBlockJacobiSolver2D",
+               kernelInfo);
+
+  solver->precon->SEMFEMInterpKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterpTri2D.okl",
+               "ellipticSEMFEMInterpTri2D",
+               kernelInfo);
+
+  solver->precon->SEMFEMAnterpKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterpTri2D.okl",
+               "ellipticSEMFEMAnterpTri2D",
                kernelInfo);
 
   long long int pre = mesh->device.memoryAllocated();

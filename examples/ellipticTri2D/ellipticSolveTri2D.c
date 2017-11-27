@@ -15,9 +15,18 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *sendBuffer = solver->sendBuffer;
   dfloat *recvBuffer = solver->recvBuffer;
 
+  dfloat alpha = 0., alphaG =0.;
+  iint Nblock = solver->Nblock;
+  dfloat *tmp = solver->tmp;
+  occa::memory &o_tmp = solver->o_tmp;
+
   if(strstr(options, "CONTINUOUS")){
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
+
+    if(solver->allNeumann)
+      //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
+      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
     if(halo->Ngather) {
       solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
@@ -30,6 +39,16 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
                               mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
                               mesh->o_MM, lambda, o_q, o_Aq);
+
+    if(solver->allNeumann) {
+      o_tmp.copyTo(tmp);
+
+      for(iint n=0;n<Nblock;++n)
+        alpha += tmp[n];
+
+      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+    }
 
     // C0 halo gather-scatter (on data stream)
     if(halo->Ngather) {
@@ -54,19 +73,20 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       mesh->device.waitFor(tag);
     }
 
+    if(solver->allNeumann) {
+      mesh->addScalarKernel((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np, alphaG, o_Aq);
+      //dfloat one = 1.f;
+      //solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
+    }
+
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather)
-      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-
+    //if(nonHalo->Ngather)
+    //  mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
 
   } else{
 
     iint offset = 0;
-    dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
-    dfloat *tmp = solver->tmp;
-    occa::memory &o_tmp = solver->o_tmp;
 
     ellipticStartHaloExchange2D(solver, o_q, sendBuffer, recvBuffer);
 
@@ -82,7 +102,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     //Start the rank 1 augmentation if all BCs are Neumann
     //TODO this could probably be moved inside the Ax kernel for better performance
-    if(solver->allNeumann) 
+    if(solver->allNeumann)
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
     if(mesh->NinternalElements)
@@ -107,7 +127,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       for(iint n=0;n<Nblock;++n)
         alpha += tmp[n];
-      
+
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
@@ -142,14 +162,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                                 solver->o_grad,
                                 o_Aq);
 
-    if(solver->allNeumann) 
+    if(solver->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-
   }
-
-  if(strstr(options, "CONTINUOUS"))
-    // parallel gather scatter
-    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_Aq, o_Aq, dfloatString, "add");
 
   occaTimerToc(mesh->device,"AxKernel");
 }
@@ -230,7 +245,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   return globalab;
 }
 
-int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, 
+int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
                         occa::memory &o_r, occa::memory &o_x, const char *options){
 
   mesh_t *mesh = solver->mesh;
@@ -267,16 +282,16 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-  
-  // 
-  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0; 
-  dfloat ABS_TOL = 1e-8*1e-8; // absolute tolerance 10^-10
-  dfloat REL_TOL = tol*tol*n2b; // 
-  //
-  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL; 
 
-  // dfloat TOL     = tol*tol; 
-  
+  //
+  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0;
+  dfloat ABS_TOL = 1e-8*1e-8; // absolute tolerance 10^-10
+  dfloat REL_TOL = tol*tol*n2b; //
+  //
+  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
+
+  // dfloat TOL     = tol*tol;
+
   dfloat rdotz0 = 0;
   iint Niter = 0;
   //sanity check
@@ -311,7 +326,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
-
+/*
   while(rdotr0>(TOL)){
 
     // A*p
@@ -375,15 +390,15 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-     
+
     if((rank==0)&&(strstr(options,"VERBOSE")))
       printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
 
     ++Niter;
 
   }
-
-
+*/
+o_x.copyFrom(o_z);
    //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));

@@ -734,5 +734,45 @@ for n=1:NpM1
   fprintf(fid, '\n');
 end
 
+addpath('./newNodes')
+[req,seq] = NewEquiNodes2D(N+1,'EI');
+FEMEToV = FemEToV2D(N+1,req,seq,'EI')-1;
+[rFEM,sFEM] = NewNodes2D(N,'EIKappaNp1');
+[rFEM,sFEM] = xytors(rFEM,sFEM);
+
+triplot(FEMEToV+1,req,seq)
+
+NpFEM = length(rFEM);
+NelFEM = size(FEMEToV,1);
+
+IQN = Vandermonde2D(N, rFEM, sFEM)/V;
+invIQN = (transpose(IQN)*IQN)\(transpose(IQN));
+
+fprintf(fid, '%% number of FEM points \n');
+fprintf(fid, '%d\n', NpFEM);
+fprintf(fid, '%% SEMFEM rs coordinates\n');
+for n=1:NpFEM
+    fprintf(fid, '%17.15E %17.15E\n', rFEM(n), sFEM(n));
+end
+
+
+fprintf(fid, '%% number of reference FEM elements \n');
+fprintf(fid, '%d\n', NelFEM);
+fprintf(fid, '%% SEMFEM reference EToV \n');
+for n=1:NelFEM
+    fprintf(fid, '%d %d %d\n' ,...
+        FEMEToV(n,1),FEMEToV(n,2),FEMEToV(n,3));
+end
+
+fprintf(fid, '%% SEM to FEM interpolation matrix\n');
+for n=1:NpFEM
+    for m=1:Np
+        fprintf(fid, '%17.15E ', invIQN(m,n));
+    end
+    fprintf(fid, '\n');
+end
+
+
+
 
 fclose(fid)
