@@ -81,8 +81,8 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-    //if(nonHalo->Ngather)
-    //  mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+    if(nonHalo->Ngather)
+      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
 
   } else{
 
@@ -326,7 +326,9 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
-/*
+
+  //o_x.copyFrom(o_z);
+
   while(rdotr0>(TOL)){
 
     // A*p
@@ -397,9 +399,8 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     ++Niter;
 
   }
-*/
-o_x.copyFrom(o_z);
-   //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
+
+  //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
 
