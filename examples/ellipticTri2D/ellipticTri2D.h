@@ -1,4 +1,4 @@
-#ifndef ELLIPTICTRI2D_H 
+#ifndef ELLIPTICTRI2D_H
 #define ELLIPTICTRI2D_H 1
 
 #include <math.h>
@@ -152,5 +152,8 @@ void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 const char *options);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
 
+void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
+                              dfloat tau, dfloat lambda, iint *BCType,
+                              const char *options, const char *parAlmondOptions);
 
 #endif
