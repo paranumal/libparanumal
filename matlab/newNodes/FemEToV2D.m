@@ -1,6 +1,6 @@
 function [refEToV] = FemEToV2D(N,req,seq,nodeType)
 
-refEToV = delaunay(req',seq');
+refEToV = delaunayOriented2D(req',seq');
 if strcmp(nodeType,'EI')
     if (N==2)
         refEToV(2,:) = [4,1,2];

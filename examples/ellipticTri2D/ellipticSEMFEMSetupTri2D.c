@@ -110,7 +110,6 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   }
   if (NFEMverts) NFEMnodes++;
 
-  // sort based on x,y coordinates
   qsort(FEMverts, NFEMverts, sizeof(FEMverts_t), parallelCompareFEMvertsLocalId);
 
 
