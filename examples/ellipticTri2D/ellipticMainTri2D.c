@@ -39,7 +39,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,HOST,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
 

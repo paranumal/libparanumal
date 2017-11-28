@@ -764,6 +764,8 @@ for n=1:NelFEM
         FEMEToV(n,1),FEMEToV(n,2),FEMEToV(n,3));
 end
 
+invIQN*invIQN'
+
 fprintf(fid, '%% SEM to FEM interpolation matrix\n');
 for n=1:NpFEM
     for m=1:Np

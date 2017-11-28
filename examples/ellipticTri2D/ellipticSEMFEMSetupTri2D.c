@@ -26,15 +26,16 @@ int parallelCompareGlobalId(const void *a, const void *b);
 
 // compare xy coordinates
 int parallelCompareFEMvertsLocation(const void *a, const void *b){
+  dfloat NODETOL = 1e-6;
 
   FEMverts_t *fa = (FEMverts_t*) a;
   FEMverts_t *fb = (FEMverts_t*) b;
 
-  if(fa->VX < fb->VX) return -1;
-  if(fa->VX > fb->VX) return +1;
+  if(fa->VX < fb->VX - NODETOL) return -1;
+  if(fa->VX > fb->VX + NODETOL) return +1;
 
-  if(fa->VY < fb->VY) return -1;
-  if(fa->VY > fb->VY) return +1;
+  if(fa->VY < fb->VY - NODETOL) return -1;
+  if(fa->VY > fb->VY + NODETOL) return +1;
 
   return 0;
 }
@@ -119,6 +120,10 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
 
+  int localNodeCount = femMesh->Nelements*femMesh->Np;
+  femMesh->gatherLocalIds  = (iint*) calloc(localNodeCount, sizeof(iint));
+  femMesh->gatherBaseIds   = (iint*) calloc(localNodeCount, sizeof(iint));
+
   for(int e=0;e<mesh->Nelements;++e){
     for (int n=0;n<mesh->NelFEM;n++) {
       int id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
@@ -135,7 +140,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
         id2 = id3tmp;
       }
 
-      /* read vertex triplet for trianngle */
+      /* read vertex triplet for triangle */
       iint femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
       femMesh->EToV[femId+0] = FEMverts[id1].globalId;
       femMesh->EToV[femId+1] = FEMverts[id2].globalId;
@@ -148,6 +153,16 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
       femMesh->EY[femId+0] = FEMverts[id1].VY;
       femMesh->EY[femId+1] = FEMverts[id2].VY;
       femMesh->EY[femId+2] = FEMverts[id3].VY;
+
+      //propagate the global node numbering
+      iint id = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
+      femMesh->gatherLocalIds[id+0] = id+0;
+      femMesh->gatherLocalIds[id+1] = id+1;
+      femMesh->gatherLocalIds[id+2] = id+2;
+
+      femMesh->gatherBaseIds[id+0] = FEMverts[id1].globalId;
+      femMesh->gatherBaseIds[id+1] = FEMverts[id2].globalId;
+      femMesh->gatherBaseIds[id+2] = FEMverts[id3].globalId;
     }
   }
 
@@ -220,14 +235,14 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   meshSurfaceGeometricFactorsTri2D(femMesh);
 
   // global nodes
-  meshParallelConnectNodes(femMesh);
+  //meshParallelConnectNodes(femMesh);
 
-  ogs_t *ogs = meshParallelGatherScatterSetup(mesh,
-                 femMesh->Np*femMesh->Nelements,
-                 sizeof(dfloat),
-                 femMesh->gatherLocalIds,
-                 femMesh->gatherBaseIds,
-                 femMesh->gatherHaloFlags);
+  // ogs_t *ogs = meshParallelGatherScatterSetup(mesh,
+  //                femMesh->Np*femMesh->Nelements,
+  //                sizeof(dfloat),
+  //                femMesh->gatherLocalIds,
+  //                femMesh->gatherBaseIds,
+  //                femMesh->gatherHaloFlags);
 
   //build stiffness matrices
   femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
@@ -281,14 +296,16 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh->NpFEM*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->NpFEM;++n){
     for(iint m=0;m<mesh->Np;++m){
-      SEMFEMAnterp[n+m*mesh->Np] = mesh->SEMFEMInterp[n*mesh->Np+m];
+      SEMFEMAnterp[n+m*mesh->NpFEM] = mesh->SEMFEMInterp[n*mesh->Np+m];
+      printf("%f \t", mesh->SEMFEMInterp[n*mesh->Np+m]);
     }
+    printf("\n");
   }
 
   mesh->o_SEMFEMInterp = mesh->device.malloc(mesh->NpFEM*mesh->Np*sizeof(dfloat),mesh->SEMFEMInterp);
+  mesh->o_SEMFEMAnterp = mesh->device.malloc(mesh->NpFEM*mesh->Np*sizeof(dfloat),SEMFEMAnterp);
 
   free(SEMFEMAnterp);
-
 
   Nnum = mesh->Np*mesh->Nelements;
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
