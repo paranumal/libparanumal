@@ -327,8 +327,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   if((rank==0)&&strstr(options,"VERBOSE"))
     printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
 
-  o_x.copyFrom(o_z);
-
   while(rdotr0>(TOL)){
 
     // A*p
