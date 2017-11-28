@@ -61,6 +61,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
     exit(-1);
   }
 
+  printf("Setting up FEM problem...");
+
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -198,9 +200,6 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   // connect elements using parallel sort
   meshParallelConnect(femMesh);
 
-  // print out connectivity statistics
-  meshPartitionStatistics(femMesh);
-
   //propagate boundary flags
   femMesh->EToB = (int*) calloc(femMesh->Nelements*mesh->Nfaces, sizeof(int));
   for(int n=0;n<femMesh->Nelements*mesh->Nfaces;++n) femMesh->EToB[n] = -1;
@@ -234,16 +233,6 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   // compute surface geofacs
   meshSurfaceGeometricFactorsTri2D(femMesh);
 
-  // global nodes
-  //meshParallelConnectNodes(femMesh);
-
-  // ogs_t *ogs = meshParallelGatherScatterSetup(mesh,
-  //                femMesh->Np*femMesh->Nelements,
-  //                sizeof(dfloat),
-  //                femMesh->gatherLocalIds,
-  //                femMesh->gatherBaseIds,
-  //                femMesh->gatherHaloFlags);
-
   //build stiffness matrices
   femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
@@ -267,6 +256,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   iint Nnum = femMesh->Np*femMesh->Nelements;
   iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+
+  printf("done. \n");
 
   ellipticBuildContinuousTri2D(femMesh,lambda,&A,&nnz,&(precon->hgs),globalStarts,options);
 
@@ -297,9 +288,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   for(iint n=0;n<mesh->NpFEM;++n){
     for(iint m=0;m<mesh->Np;++m){
       SEMFEMAnterp[n+m*mesh->NpFEM] = mesh->SEMFEMInterp[n*mesh->Np+m];
-      printf("%f \t", mesh->SEMFEMInterp[n*mesh->Np+m]);
     }
-    printf("\n");
   }
 
   mesh->o_SEMFEMInterp = mesh->device.malloc(mesh->NpFEM*mesh->Np*sizeof(dfloat),mesh->SEMFEMInterp);
@@ -307,13 +296,13 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   free(SEMFEMAnterp);
 
-  Nnum = mesh->Np*mesh->Nelements;
+  //correct the gather operation (since the fem grid is partially gathered after interpolation)
+  Nnum = mesh->NpFEM*mesh->Nelements;
   iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
   iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
 
   for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n];
-    globalNumbering[id] = mesh->gatherBaseIds[n];
+    globalNumbering[n] = FEMverts[n].globalId;
   }
 
   // squeeze node numbering
@@ -322,31 +311,14 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   //use the ordering to define a gather+scatter for assembly
   precon->hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
-  //correct the gather operation (since the fem grid is partially gathered after interpolation)
-  Nnum = mesh->NpFEM*mesh->Nelements;
-  iint *SglobalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  iint *SglobalNumbering = (iint*) calloc(Nnum, sizeof(iint));
-
-  for (iint n=0;n<Nnum;n++) {
-    SglobalNumbering[n] = FEMverts[n].globalId;
-  }
-
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, SglobalNumbering, SglobalOwners, globalStarts);
-
-  //use the ordering to define a gather+scatter for assembly
-  precon->FEMhgs = meshParallelGatherSetup(mesh, Nnum, SglobalNumbering, SglobalOwners);
-
-  precon->o_Gr = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
-  precon->o_Gz = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
-  precon->o_Sr = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat));
-
   precon->o_rFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
   precon->o_zFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
 
-  precon->o_GrFEM = mesh->device.malloc(precon->FEMhgs->Ngather*sizeof(dfloat));
-  precon->o_GzFEM = mesh->device.malloc(precon->FEMhgs->Ngather*sizeof(dfloat));
+  precon->o_GrFEM = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
+  precon->o_GzFEM = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
 
   free(FEMverts);
   free(faceMap);
+  free(globalOwners);
+  free(globalNumbering);
 }
