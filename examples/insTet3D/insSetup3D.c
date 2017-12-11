@@ -80,16 +80,16 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 1.0  ;  // kinematic viscosity,
+  dfloat nu   = 0.001/1.0  ;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 0.05;
+  ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.0*(mesh->N+1)*(mesh->N+3); 
+  ins->tau       = 10.0*(mesh->N+1)*(mesh->N+3); //was 3 
 
   // Define total DOF per field for INS i.e. (Nelm + Nelm_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -103,7 +103,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
 
-     #if 1 //Beltrami Flow
+     #if 0 //Beltrami Flow
       dfloat a = M_PI/4.0f, d = M_PI/2.0f; 
       u = -a*( exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y) )* exp(-d*d*t);
       v = -a*( exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z) )* exp(-d*d*t);
@@ -124,7 +124,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
 
      #endif
 
-     #if 0 // Uniform Channel Flow
+     #if 1 // Uniform Channel Flow
       u = 0.f;
       v = 0.f;
       w = 0.f;
@@ -167,7 +167,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.2; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -220,7 +220,7 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
    if(strstr(options,"SUBCYCLING"))
      ins->errorStep =100*16/ins->Nsubsteps;
    else
-     ins->errorStep = 10000;
+     ins->errorStep = 100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 

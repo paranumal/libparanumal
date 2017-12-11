@@ -413,7 +413,7 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
 
 #if p_N==10
  #define p_NbV2 4
- #define p_Nmt2 10
+ #define p_Nmt2 6
 #endif
 
 
