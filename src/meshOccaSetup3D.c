@@ -192,11 +192,42 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     }
 
     // =============== Bernstein-Bezier allocations [added by NC] ============
+
+    // create packed BB indexes
     mesh->o_D0ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D0ids);
     mesh->o_D1ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D1ids);
     mesh->o_D2ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D2ids);
     mesh->o_D3ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D3ids);
     mesh->o_Dvals = mesh->device.malloc(mesh->Np*4*sizeof(dfloat),Dvals);
+
+    unsigned char *packedDids = (unsigned char*) malloc(mesh->Np*3*4*sizeof(unsigned char));
+    
+    for(iint n=0;n<4*mesh->Np;++n){
+      if(D1ids[n]<D0ids[n]) printf("bugger: D0id > D1id\n");
+      if(D2ids[n]<D0ids[n]) printf("bugger: D0id > D2id\n");
+      if(D3ids[n]<D0ids[n]) printf("bugger: D0id > D3id\n");
+    }
+
+    for(iint n=0;n<mesh->Np;++n){
+      
+      packedDids[n*4+0] = D1ids[n+0*mesh->Np]-D0ids[n+0*mesh->Np];
+      packedDids[n*4+1] = D1ids[n+1*mesh->Np]-D0ids[n+1*mesh->Np];
+      packedDids[n*4+2] = D1ids[n+2*mesh->Np]-D0ids[n+2*mesh->Np];
+      packedDids[n*4+3] = D1ids[n+3*mesh->Np]-D0ids[n+3*mesh->Np];
+      
+      packedDids[4*mesh->Np+n*4+0] = D2ids[n+0*mesh->Np]-D0ids[n+0*mesh->Np];
+      packedDids[4*mesh->Np+n*4+1] = D2ids[n+1*mesh->Np]-D0ids[n+1*mesh->Np];
+      packedDids[4*mesh->Np+n*4+2] = D2ids[n+2*mesh->Np]-D0ids[n+2*mesh->Np];
+      packedDids[4*mesh->Np+n*4+3] = D2ids[n+3*mesh->Np]-D0ids[n+3*mesh->Np];
+      
+      packedDids[8*mesh->Np+n*4+0] = D3ids[n+0*mesh->Np]-D0ids[n+0*mesh->Np];
+      packedDids[8*mesh->Np+n*4+1] = D3ids[n+1*mesh->Np]-D0ids[n+1*mesh->Np];
+      packedDids[8*mesh->Np+n*4+2] = D3ids[n+2*mesh->Np]-D0ids[n+2*mesh->Np];
+      packedDids[8*mesh->Np+n*4+3] = D3ids[n+3*mesh->Np]-D0ids[n+3*mesh->Np];
+    }
+
+    
+    mesh->o_packedDids = mesh->device.malloc(mesh->Np*3*4*sizeof(unsigned char),packedDids);
 
     mesh->o_L0ids  = mesh->device.malloc(mesh->Nfp*7*sizeof(iint),L0ids);
     mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*7*sizeof(dfloat),L0vals);
@@ -209,7 +240,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   dfloat *SrrT, *SrsT, *SrtT;
   dfloat *SsrT, *SssT, *SstT;
   dfloat *StrT, *StsT, *SttT;
-  if (mesh->Nverts==4) {
+  if (mesh->Nverts==4 && 0) {
     mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
