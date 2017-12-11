@@ -5,7 +5,7 @@
 // 1 Advection Volume 2 Advection Surface 3 Ax  4 Gradient
 // for optimization
 // 5 advaction volume 6 advection surface 7 Ax kernel 8 Gradient
-#define KERNEL_TEST 2
+#define KERNEL_TEST 7
 
 void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
@@ -258,7 +258,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
   // SURFACE KERNEL
   #if KERNEL_TEST==2
   
-  int NKernels = 7;
+  int NKernels = 8;
 
   dfloat  NMT[10] = {2,1,2,2,2,2,2,2,3,2};
 
@@ -363,7 +363,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
       //  }
 
 
-      dfloat alpha =1.0; 
+      dfloat alpha =0.0; 
 
 
        // if(i==8){
@@ -907,7 +907,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     kernelInfoT.addDefine("p_NblockS5", b);
    
    
-    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",kernelNames[i], kernelInfoT);
+    testKernels[i] = mesh->device.buildKernelFromSource(DHOLMES "/okl/optSubcycleSurface2D.okl",kernelNames[i], kernelInfoT);
     printf("insSubCycleCubatureSurface Kernel #%02d\n", i);
     printf("NblockS: %d cubNblockS: %d N: %d Np: %d Nfp: %d cubNfp: %d\n", NblockS, cubNblockS,  mesh->N, mesh->Np, mesh->Nfaces*mesh->Nfp,  mesh->Nfaces*mesh->intNfp );
 
@@ -917,44 +917,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
     // MPI_Barrier(MPI_COMM_WORLD);
 
 
-    if(i==7){
-
-        //occaTimerTic(mesh->device,"KernelTime");
-    tic = MPI_Wtime();  
-
-    occa::streamTag start = mesh->device.tagStream();
-
-      // assume 1 mpi process
-      for(int it=0;it<iterations;++it){
-        //printf("Cubature Points: %d", mesh->cubNp);
-        testKernels[i](mesh->Nelements,
-                mesh->o_sgeo,
-                mesh->o_intInterpT,
-                mesh->o_intLIFTT,
-                mesh->o_vmapM,
-                mesh->o_vmapP,
-                mesh->o_EToB,
-                time,
-                mesh->o_intx,
-                mesh->o_inty,
-                o_UM,
-                o_UP,
-                o_UdM,
-                o_UdP,
-                o_X,
-                o_Y);
-      }
-
-      occa::streamTag end = mesh->device.tagStream();
-      mesh->device.finish();  
-      toc = MPI_Wtime();
-
-      //      kernelElapsed    = toc-tic;
-      kernelElapsed = mesh->device.timeBetween(start,end);
-
-    } else{
-
-       //occaTimerTic(mesh->device,"KernelTime");
+           //occaTimerTic(mesh->device,"KernelTime");
     tic = MPI_Wtime();  
 
     occa::streamTag start = mesh->device.tagStream();
@@ -986,7 +949,7 @@ void insRunTimer2D(mesh2D *mesh, char *options, char *boundaryHeaderFileName){
 
       //      kernelElapsed    = toc-tic;
       kernelElapsed = mesh->device.timeBetween(start,end);
-    }
+    
 
 
 

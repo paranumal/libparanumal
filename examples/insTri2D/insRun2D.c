@@ -7,7 +7,7 @@ void insRun2D(ins_t *ins, char *options){
   mesh2D *mesh = ins->mesh;
   
   // Write Initial Data
-  // insReport2D(ins, 0, options);
+  insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver
   iint  tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat  *tSendBuffer = (dfloat*) malloc(tHaloBytes);
@@ -29,7 +29,11 @@ void insRun2D(ins_t *ins, char *options){
   occa::initTimer(mesh->device);
 
   occaTimerTic(mesh->device,"INS");
-
+  
+  // if(ins->Nsubsteps)
+  // ins->NtimeSteps = 160/ins->Nsubsteps;
+  // else
+  //   ins->NtimeSteps=160;
 
 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){

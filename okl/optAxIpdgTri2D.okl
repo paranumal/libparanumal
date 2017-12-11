@@ -643,8 +643,8 @@ kernel void ellipticPartialAxIpdgTri2D_v3(const int Nelements,
           s_nydq[es][n] = hlf*sJ*invJ*ny*dq;
 
           s_lapflux[es][n] = hlf*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
-                                      -ny*(gradqP.y-gradqM.y)
-                                      -tau*hinv*dq);
+                                          -ny*(gradqP.y-gradqM.y)
+                                          -tau*hinv*dq);
         }
       }
     }
@@ -849,8 +849,6 @@ kernel void ellipticPartialAxIpdgTri2D_v4(const int Nelements,
 
    for(iint es=0;es<p_NbV;++es;inner1){//
     for(iint n=0;n<p_maxNodes;++n;inner0){
-
-    
       occaUnroll(p_Nmt)
         for(iint em=0;em<p_Nmt;++em){
           const iint e = eo+es*p_Nmt + em;
@@ -858,9 +856,6 @@ kernel void ellipticPartialAxIpdgTri2D_v4(const int Nelements,
            element[em] = elementList[e];
          }
       }
-
-
-
      
       occaUnroll(p_Nmt)
         for(iint em=0;em<p_Nmt;++em){
@@ -1098,6 +1093,21 @@ kernel void ellipticPartialAxIpdgTri2D_v4(const int Nelements,
     }
 }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // // Added multiple element per threadblock

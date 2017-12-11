@@ -94,7 +94,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001/4.0;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -103,7 +103,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f;
+  ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -211,7 +211,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   
   // errorStep
    if(strstr(options,"SUBCYCLING"))
-     ins->errorStep =100*16/ins->Nsubsteps;
+     ins->errorStep =100*32/ins->Nsubsteps;
    else
      ins->errorStep = 500;
 
