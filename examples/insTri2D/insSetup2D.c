@@ -94,7 +94,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01;   // kinematic viscosity,
+  dfloat nu   = 0.001;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
