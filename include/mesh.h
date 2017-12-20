@@ -173,6 +173,7 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
+  dfloat *BBMM;
   dfloat *invVB1D, *invVB2D;
   iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
@@ -323,6 +324,7 @@ typedef struct {
   occa::memory o_notInternalElementIds;
 
   // Bernstein-Bezier occa arrays
+  occa::memory o_BBMM;
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
   occa::memory o_packedDids; // char4 packed increments (D1ids-D0ids)
 

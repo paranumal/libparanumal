@@ -58,11 +58,12 @@ ellipticHaloExchange2D.o\
 ellipticParallelGatherScatterTri2D.o \
 ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTri2D.o \
+ellipticBuildBRdgTri2D.o \
 ellipticBuildContinuousTri2D.o \
-ellipticBuildFullPatchesIpdgTri2D.o \
-ellipticBuildFacePatchesIpdgTri2D.o \
-ellipticBuildJacobiIpdgTri2D.o \
-ellipticBuildLocalPatchesIpdgTri2D.o \
+ellipticBuildFullPatchesTri2D.o \
+ellipticBuildFacePatchesTri2D.o \
+ellipticBuildJacobiTri2D.o \
+ellipticBuildLocalPatchesTri2D.o \
 ellipticBuildMultigridLevelTri2D.o \
 ellipticMultiGridSetupTri2D.o \
 ellipticSEMFEMSetupTri2D.o\

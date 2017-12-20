@@ -1,0 +1,416 @@
+
+kernel void ellipticBBBRGradientVolume2D(const iint Nelements,
+        const dfloat * restrict vgeo,
+        const iint * restrict D1ids,
+        const iint * restrict D2ids,
+        const iint * restrict D3ids,
+        const dfloat * restrict Dvals,
+        const dfloat * restrict q,
+        dfloat * restrict gradq){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    // for all elements
+    shared dfloat s_q[p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        iint e = eo+es; // element in block
+        if(e<Nelements){
+          s_q[es][n]  = q[n + e*p_Np];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const iint e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
+          const dfloat Dval2 = Dvals[n+p_Np];
+
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];
+          const dfloat Dval3 = Dvals[n+2*p_Np];
+
+          const dfloat dqdr = .5f*(Dval1*(s_q[es][D2i1] - s_q[es][D1i1]) +
+                                   Dval2*(s_q[es][D2i2] - s_q[es][D1i2]) +
+                                   Dval3*(s_q[es][D2i3] - s_q[es][D1i3]));
+          const dfloat dqds = .5f*(Dval1*(s_q[es][D3i1] - s_q[es][D1i1]) +
+                                   Dval2*(s_q[es][D3i2] - s_q[es][D1i2]) +
+                                   Dval3*(s_q[es][D3i3] - s_q[es][D1i3]));
+
+          const iint id = e*2*p_Np;
+          gradq[id+     n] = drdx*dqdr + dsdx*dqds;
+          gradq[id+p_Np+n] = drdy*dqdr + dsdy*dqds;
+        }
+      }
+    }
+  }
+}
+
+kernel void ellipticBBBRGradientSurface2D(const iint Nelements,
+         const iint   * restrict vmapM,
+         const iint   * restrict vmapP,
+         const dfloat * restrict sgeo,
+         const iint   * restrict EToB,
+         const dfloat * restrict L0vals,
+         const iint   * restrict ELids,
+         const dfloat * restrict ELvals,
+         const dfloat * restrict q,
+         dfloat * restrict gradq){
+
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    shared dfloat s_fluxqx[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxqy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxqx_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_fluxqy_copy[p_NblockS][p_Nfp*p_Nfaces];
+
+    // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            iint face = n/p_Nfp;
+            // load surface geofactors for this face
+            iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            dfloat nx   = sgeo[sid+p_NXID];
+            dfloat ny   = sgeo[sid+p_NYID];
+            dfloat sJ   = sgeo[sid+p_SJID];
+            dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            iint id  = e*p_Nfp*p_Nfaces + n;
+            const iint idM = vmapM[id];
+            const iint idP = vmapP[id];
+
+            dfloat  qM = q[idM], qP = q[idP];
+
+            // apply boundary condition
+            iint bc = EToB[face+p_Nfaces*e];
+            if(bc>0) {
+              dfloat qxM = 0.f, qyM = 0.f;
+              dfloat qxP = 0.f, qyP = 0.f;
+              ellipticHomogeneousBC2D(bc, qM, qxM, qyM, qP, qxP, qyP);
+              qP = 2*qP - qM;
+            }
+
+            // evaluate "flux" terms: LLF
+            const dfloat sc = 0.5*invJ * sJ ;
+
+            // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
+            s_fluxqx[es][n]  = sc*nx*(qP-qM);
+            s_fluxqy[es][n]  = sc*ny*(qP-qM);
+          }
+        }
+      }
+    }
+
+    // wait for all flux functions are written to shared
+    barrier(localMemFence);
+
+    // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+
+            iint id = n % p_Nfp;  // warning: redundant reads
+            dfloat L0val = L0vals[id+p_Nfp];
+
+            dfloat qxfluxtmp = L0val * s_fluxqx[es][n];
+            dfloat qyfluxtmp = L0val * s_fluxqy[es][n];
+
+            if (id > 0){
+              qxfluxtmp += L0vals[id]*s_fluxqx[es][n-1]; // add previous term
+              qyfluxtmp += L0vals[id]*s_fluxqy[es][n-1]; // add previous term
+            }
+            if (id < p_Nfp-1){
+              qxfluxtmp += L0vals[id+2*p_Nfp]*s_fluxqx[es][n+1];// add next term
+              qyfluxtmp += L0vals[id+2*p_Nfp]*s_fluxqy[es][n+1];// add next term
+            }
+            s_fluxqx_copy[es][n] = qxfluxtmp;
+            s_fluxqy_copy[es][n] = qyfluxtmp;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // apply lift reduction and accumulate RHS
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            iint id = e*2*p_Np;
+
+            dfloat qxn  = gradq[id+     n];
+            dfloat qyn  = gradq[id+p_Np+n];
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            occaUnroll(p_max_EL_nnz)
+              for (int m = 0; m < p_max_EL_nnz; ++m){
+                iint iid = n + m*p_Np;
+                dfloat ELval = ELvals[iid];
+                iint ELid = ELids[iid];
+                qxn += ELval * s_fluxqx_copy[es][ELid];
+                qyn += ELval * s_fluxqy_copy[es][ELid];
+              }
+
+            gradq[id+     n] = qxn;
+            gradq[id+p_Np+n] = qyn;
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void ellipticBBBRDivergenceVolume2D(const iint Nelements,
+        const dfloat * restrict vgeo,
+        const iint * restrict D1ids,
+        const iint * restrict D2ids,
+        const iint * restrict D3ids,
+        const dfloat * restrict Dvals,
+        const dfloat * restrict gradq,
+        dfloat * restrict Aq){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    // for all elements
+    shared dfloat s_qx[p_NblockV][p_Np];
+    shared dfloat s_qy[p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        iint e = eo+es; // element in block
+        if(e<Nelements){
+          s_qx[es][n]  = gradq[n +        e*2*p_Np];
+          s_qy[es][n]  = gradq[n + p_Np + e*2*p_Np];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+        iint e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
+          const dfloat Dval1 = Dvals[n];
+
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
+          const dfloat Dval2 = Dvals[n+p_Np];
+
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];
+          const dfloat Dval3 = Dvals[n+2*p_Np];
+
+          const dfloat dqxdr = .5f*(Dval1*(s_qx[es][D2i1] - s_qx[es][D1i1]) +
+                  Dval2*(s_qx[es][D2i2] - s_qx[es][D1i2]) +
+                  Dval3*(s_qx[es][D2i3] - s_qx[es][D1i3]));
+          const dfloat dqxds = .5f*(Dval1*(s_qx[es][D3i1] - s_qx[es][D1i1]) +
+                  Dval2*(s_qx[es][D3i2] - s_qx[es][D1i2]) +
+                  Dval3*(s_qx[es][D3i3] - s_qx[es][D1i3]));
+
+          const dfloat dqydr = .5f*(Dval1*(s_qy[es][D2i1] - s_qy[es][D1i1]) +
+                  Dval2*(s_qy[es][D2i2] - s_qy[es][D1i2]) +
+                  Dval3*(s_qy[es][D2i3] - s_qy[es][D1i3]));
+          const dfloat dqyds = .5f*(Dval1*(s_qy[es][D3i1] - s_qy[es][D1i1]) +
+                  Dval2*(s_qy[es][D3i2] - s_qy[es][D1i2]) +
+                  Dval3*(s_qy[es][D3i3] - s_qy[es][D1i3]));
+
+          const iint id = e*p_Np;
+          Aq[id+n] = drdx*dqxdr + dsdx*dqxds + drdy*dqydr + dsdy*dqyds;
+        }
+      }
+    }
+  }
+}
+
+kernel void ellipticBBBRDivergenceSurface2D(const iint Nelements,
+         const iint   * restrict vmapM,
+         const iint   * restrict vmapP,
+         const dfloat lambda,
+         const dfloat tau,
+         const dfloat * restrict vgeo,
+         const dfloat * restrict sgeo,
+         const iint   * restrict EToB,
+         const dfloat * restrict L0vals,
+         const iint   * restrict ELids,
+         const dfloat * restrict ELvals,
+         const dfloat * restrict MM,
+         const dfloat * restrict q,
+         const dfloat * restrict gradq,
+         dfloat * restrict Aq){
+
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+
+    shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
+    shared dfloat s_Aq[p_NblockS][p_Np];
+
+    // for all face nodes of all elements
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            const iint face = n/p_Nfp;
+            // load surface geofactors for this face
+            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const iint id  = e*p_Nfp*p_Nfaces + n;
+            const iint idM = vmapM[id]%p_Np;
+            const iint idP = vmapP[id]%p_Np;
+
+            const iint eM = vmapM[id]/p_Np;
+            const iint eP = vmapP[id]/p_Np;
+
+            const dfloat  qM  = q[idM+p_Np*eM];
+            const dfloat  qxM = gradq[idM+     2*p_Np*eM];
+            const dfloat  qyM = gradq[idM+p_Np+2*p_Np*eM];
+
+            dfloat qP  = q[idP+p_Np*eP];
+            dfloat qxP = gradq[idP+     2*p_Np*eP];
+            dfloat qyP = gradq[idP+p_Np+2*p_Np*eP];
+
+            // apply boundary condition
+            iint bc = EToB[face+p_Nfaces*e];
+            if(bc>0) {
+              ellipticHomogeneousBC2D(bc, qM, qxM, qyM, qP, qxP, qyP);
+              qP  = 2*qP  - qM;
+              qxP = 2*qxP - qxM;
+              qyP = 2*qyP - qyM;
+            }
+
+            const dfloat sc = 0.5f*invJ*sJ;
+
+            // Central Flux + penalty
+            s_flux[es][n]  = sc*(nx*(qxP-qxM)+ny*(qyP-qyM)+tau*(qP-qM));
+          }
+        }
+      }
+    }
+
+    // wait for all flux functions are written to shared
+    barrier(localMemFence);
+
+    // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        const iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+            const iint id = n % p_Nfp;  // warning: redundant reads
+
+            dfloat tmpflux = L0vals[id+p_Nfp]*s_flux[es][n];
+            if (id > 0)
+              tmpflux += L0vals[id]*s_flux[es][n-1]; // add previous term
+            if (id < p_Nfp-1)
+              tmpflux += L0vals[id+2*p_Nfp]*s_flux[es][n+1];// add next term
+
+            s_flux_copy[es][n] = tmpflux;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // apply lift reduction and accumulate RHS
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            iint id = e*p_Np;
+
+            dfloat Aqn = Aq[id+n];
+            dfloat qn  = q[id+n];
+
+
+            occaUnroll(p_max_EL_nnz)
+              for (int m = 0; m < p_max_EL_nnz; ++m){
+                iint iid = n + m*p_Np;
+                dfloat ELval = ELvals[iid];
+                iint ELid = ELids[iid];
+                Aqn += ELval * s_flux_copy[es][ELid];
+              }
+
+            s_Aq[es][n] = -Aqn+lambda*qn;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+
+            const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+            iint id = e*p_Np;
+
+            dfloat MAqn = 0.f;
+
+            // multiply by mass matrix
+            occaUnroll(p_Np)
+              for(int i=0;i<p_Np;++i){
+                MAqn += MM[n+i*p_Np]*s_Aq[es][i];
+              }
+
+            Aq[id+n] = J*MAqn;
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -1,7 +1,7 @@
 % Purpose: declare global variables
 
 global Np Nfp N K
-global r s 
+global r s
 global Dr Ds LIFT Drw Dsw MassMatrix
 global Fx Fy nx ny jac Fscale J
 global vmapM vmapP vmapB mapB Fmask
@@ -9,7 +9,7 @@ global BCType mapI mapO mapW mapF mapC mapS mapM mapP mapD mapN
 global vmapI vmapO vmapW vmapO vmapC vmapS vmapD vmapN
 global rx ry sx sy J sJ
 global rk4a rk4b rk4c
-global Nfaces EToE EToF EToV
+global Nfaces EToE EToF EToV EToB
 global V invV
 global x y NODETOL VX VY
 
