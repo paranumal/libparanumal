@@ -65,6 +65,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
     solver->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
     solver->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+
+    occa::memory o_gradSendBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+    occa::memory o_gradRecvBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+
+    solver->gradSendBuffer = (dfloat*) o_gradSendBuffer.getMappedPointer();
+    solver->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
   }else{
     solver->sendBuffer = NULL;
     solver->recvBuffer = NULL;
@@ -143,10 +149,16 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 512/(4*mesh->Np); // get close to 256 threads
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -234,25 +246,90 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 					 "dotDivide",
 					 kernelInfo);
 
-  solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-				       "ellipticGradientTri2D",
-					 kernelInfo);
+  if (strstr(options,"BERN")) {
 
-  solver->partialGradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticPartialGradientTri2D",
-                kernelInfo);
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+               "ellipticGradientBBTri2D",
+           kernelInfo);
 
-  solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-				       "ellipticAxIpdgTri2D",
-				       kernelInfo);
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+                 "ellipticPartialGradientBBTri2D",
+                  kernelInfo);
 
-  solver->partialIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticPartialAxIpdgTri2D",
-               kernelInfo);
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticAxIpdgBBTri2D",
+                 kernelInfo);
+
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticPartialAxIpdgBBTri2D",
+                 kernelInfo);
+
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceSurface2D",
+                 kernelInfo);
+      
+  } else if (strstr(options,"NODAL")) {
+
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+               "ellipticGradientTri2D",
+           kernelInfo);
+
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+                 "ellipticPartialGradientTri2D",
+                  kernelInfo);
+
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticAxIpdgTri2D",
+                 kernelInfo);
+
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticPartialAxIpdgTri2D",
+                 kernelInfo);
+
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceSurface2D",
+                 kernelInfo);
+  }
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
