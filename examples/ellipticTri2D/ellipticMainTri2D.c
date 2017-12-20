@@ -17,9 +17,10 @@ int main(int argc, char **argv){
   // int specify polynomial degree
   int N = atoi(argv[2]);
 
-  // solver can be CG or PCG
+  // solver can be PCG, PGMRES, or PBiCGStab
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
+  //  can add NONSYM option
   // basis can be NODAL or BERN
   // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
   // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
@@ -29,18 +30,18 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
+    strdup("solver=PGMRES,LEFT,FLEXIBLE,VERBOSE method=IPDG,NONSYM basis=NODAL preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
-  // solver can be EXACT, KCYCLE, or VCYCLE
+  // solver can be KCYCLE, or VCYCLE
+  //  can add the EXACT and NONSYM option
   // smoother can be DAMPEDJACOBI or CHEBYSHEV
-  // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=VCYCLE,VERBOSE,EXACT,NONSYM smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 
@@ -56,8 +57,8 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
-  //dfloat lambda = 0;
+  //dfloat lambda = 1;
+  dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -88,6 +89,7 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[n+e*mesh->Np];
       nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
     }
+
     if (strstr(options,"BERN")) {
       for(iint n=0;n<mesh->Np;++n){
         nrhstmp[n] = 0.;
@@ -97,8 +99,12 @@ int main(int argc, char **argv){
       }
       for(iint n=0;n<mesh->Np;++n){
         dfloat rhs = 0;
-        for(iint m=0;m<mesh->Np;++m){
-          rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
+        if (strstr(options,"NONSYM")) {
+          rhs = nrhs[n];
+        } else {
+          for(iint m=0;m<mesh->Np;++m){
+            rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
+          }
         }
         iint id = n+e*mesh->Np;
 
@@ -109,8 +115,12 @@ int main(int argc, char **argv){
     } else if (strstr(options,"NODAL")) {
       for(iint n=0;n<mesh->Np;++n){
         dfloat rhs = 0;
-        for(iint m=0;m<mesh->Np;++m){
-  	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+        if (strstr(options,"NONSYM")) {
+          rhs = nrhs[n];
+        } else {
+          for(iint m=0;m<mesh->Np;++m){
+            rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+          }
         }
         iint id = n+e*mesh->Np;
 

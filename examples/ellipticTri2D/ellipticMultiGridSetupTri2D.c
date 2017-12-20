@@ -69,7 +69,6 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* opti
   }
 
   if (strstr(options,"BERN")) {
-    printf("TEST\n");
     dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
     for (iint j=0;j<NpFine;j++) {
       for (iint i=0;i<NpCoarse;i++) {

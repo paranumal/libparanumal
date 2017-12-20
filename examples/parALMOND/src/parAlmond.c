@@ -7,21 +7,29 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
   if (strstr(parAlmond->options,"HOST")) {
     //host versions
     parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(strstr(parAlmond->options,"EXACT")) {
+      if(parAlmond->ktype == PCG) {
+        pcg(parAlmond,1000,1e-8);
+      } else if(parAlmond->ktype == GMRES) {
+        pgmres(parAlmond,1000,1e-8);
+      }
+    } else if(strstr(parAlmond->options,"KCYCLE")) {
       kcycle(parAlmond, 0);
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       vcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"EXACT")) {
-      pcg(parAlmond,1000,1e-8);
     }
     parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
   } else {
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(strstr(parAlmond->options,"EXACT")) {
+      if(parAlmond->ktype == PCG) {
+        device_pcg(parAlmond,1000,1e-8);
+      } else if(parAlmond->ktype == GMRES) {
+        device_pgmres(parAlmond,1000,1e-8);
+      }
+    } else if(strstr(parAlmond->options,"KCYCLE")) {
       device_kcycle(parAlmond, 0);
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       device_vcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"EXACT")) {
-      device_pcg(parAlmond,1000,1e-8);
     }
   }
 
@@ -38,7 +46,12 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 
   parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
   parAlmond->numLevels = 0;
-  parAlmond->ktype = PCG;
+  
+  if (strstr(options,"NONSYM")) {
+    parAlmond->ktype = GMRES;  
+  } else {
+    parAlmond->ktype = PCG;
+  }
 
   buildAlmondKernels(parAlmond);
 

@@ -443,191 +443,44 @@ dfloat ellipticInnerProduct(solver_t *solver,
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
                         occa::memory &o_r, occa::memory &o_x, const char *options){
 
-  mesh_t *mesh = solver->mesh;
-
-  iint rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // placeholder conjugate gradient:
-  // https://en.wikipedia.org/wiki/Conjugate_gradient_method
-
-  // placeholder preconditioned conjugate gradient
-  // https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_preconditioned_conjugate_gradient_method
-
-  occa::memory &o_p  = solver->o_p;
-  occa::memory &o_z  = solver->o_z;
-  occa::memory &o_Ap = solver->o_Ap;
-  occa::memory &o_Ax = solver->o_Ax;
-
-  occaTimerTic(mesh->device,"PCG");
-
-  //start timer
-  mesh->device.finish();
-  MPI_Barrier(MPI_COMM_WORLD);
-  double tic = MPI_Wtime();
+  mesh2D *mesh = solver->mesh;
 
   // gather-scatter
   if(strstr(options, "CONTINUOUS"))
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
-  // compute A*x
-  ellipticOperator2D(solver, lambda, o_x, solver->o_Ax, options);
+  int Niter;
+  iint maxIter = 5000; 
 
-  // subtract r = b - A*x
-  ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
-
-  dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-
-  //
-  dfloat n2b     = rdotr0>(1e-12*1e-12) ? rdotr0:1.0;
-  dfloat ABS_TOL = 1e-8*1e-8; // absolute tolerance 10^-10
-  dfloat REL_TOL = tol*tol*n2b; //
-  //
-  dfloat TOL     = ABS_TOL>REL_TOL ? ABS_TOL:REL_TOL;
-
-  //dfloat TOL     = tol*tol;
-
-#if 0
-  dfloat *Ax = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  dfloat *Ap = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Np*mesh->Nelements,sizeof(dfloat));
-  for (int i=0;i<mesh->Nelements*mesh->Np;i++) {
-    x[i] = 1.;
-    o_x.copyFrom(x);
-    ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
-    o_Ax.copyTo(Ax);
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      Ap[i+j*mesh->Np*mesh->Nelements] = Ax[j];
-      //printf("%4.2f \t", Ax[j]);
-    }
-    //printf("\n");
-    x[i] = 0.;
-  }
-
-  for (int i=0;i<mesh->Np*mesh->Nelements;i++) {
-    for (int j =0;j<mesh->Nelements*mesh->Np;j++) {
-      printf("%4.2f \t", Ap[j+i*mesh->Np*mesh->Nelements]);
-    }
-    printf("\n");
-  }
-#endif
-
-  dfloat rdotz0 = 0;
-  iint Niter = 0;
-  //sanity check
-  if (rdotr0<=(TOL)) {
-   // printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
-    occaTimerToc(mesh->device,"PCG");
-    return 0;
-  }
-
-
-  occaTimerTic(mesh->device,"Preconditioner");
-  if(strstr(options,"PCG")){
-    // Precon^{-1} (b-A*x)
-    ellipticPreconditioner2D(solver, lambda, o_r, o_z, options);
-
-    // p = z
-    o_p.copyFrom(o_z); // PCG
-  }
-  else{
-    // p = r
-    o_p.copyFrom(o_r); // CG
-  }
-  occaTimerToc(mesh->device,"Preconditioner");
-
-
-  // dot(r,r)
-  rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
-  dfloat rdotr1 = 0;
-  dfloat rdotz1 = 0;
-
-  dfloat alpha, beta, pAp = 0;
-
-  if((rank==0)&&strstr(options,"VERBOSE"))
-    printf("rdotr0 = %g, rdotz0 = %g\n", rdotr0, rdotz0);
-
-  while(rdotr0>(TOL)){
-
-    // A*p
-    ellipticOperator2D(solver, lambda, o_p, o_Ap, options);
-
-    // dot(p,A*p)
-    pAp =  ellipticWeightedInnerProduct(solver, solver->o_invDegree,o_p, o_Ap, options);
-
-    if(strstr(options,"PCG"))
-      // alpha = dot(r,z)/dot(p,A*p)
-      alpha = rdotz0/pAp;
-    else
-      // alpha = dot(r,r)/dot(p,A*p)
-      alpha = rdotr0/pAp;
-
-    // x <= x + alpha*p
-    ellipticScaledAdd(solver,  alpha, o_p,  1.f, o_x);
-
-    // r <= r - alpha*A*p
-    ellipticScaledAdd(solver, -alpha, o_Ap, 1.f, o_r);
-
-    // dot(r,r)
-    rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-
-    if(rdotr1 < TOL) {
-      rdotr0 = rdotr1;
-      break;
-    }
-
-    occaTimerTic(mesh->device,"Preconditioner");
-    if(strstr(options,"PCG")){
-
-      // z = Precon^{-1} r
-      ellipticPreconditioner2D(solver, lambda, o_r, o_z, options);
-
-      // dot(r,z)
-      rdotz1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
-
-      // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
-      if(strstr(options,"FLEXIBLE")){
-        dfloat zdotAp = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_z, o_Ap, options);
-        beta = -alpha*zdotAp/rdotz0;
-      }
-      else{
-        beta = rdotz1/rdotz0;
-      }
-
-      // p = z + beta*p
-      ellipticScaledAdd(solver, 1.f, o_z, beta, o_p);
-
-      // switch rdotz0 <= rdotz1
-      rdotz0 = rdotz1;
-    }
-    else{
-      beta = rdotr1/rdotr0;
-
-      // p = r + beta*p
-      ellipticScaledAdd(solver, 1.f, o_r, beta, o_p);
-    }
-    occaTimerToc(mesh->device,"Preconditioner");
-
-    // switch rdotz0,rdotr0 <= rdotz1,rdotr1
-    rdotr0 = rdotr1;
-
-    if((rank==0)&&(strstr(options,"VERBOSE")))
-     printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0)/sqrt(n2b));
-
-    ++Niter;
-
-  }
-
-
-   //printf("iter=%05d pAp = %g norm(r) = %g relnorm(r) = %g\n", Niter, pAp, sqrt(rdotr0), sqrt(rdotr0)/sqrt(n2b));
-  if((rank==0)&&strstr(options,"VERBOSE"))
-   printf("iter=%05d pAp = %g norm(r) = %g\n", Niter, pAp, sqrt(rdotr0));
-
+  double start, end;
 
   if(strstr(options,"VERBOSE")){
     mesh->device.finish();
-    double toc = MPI_Wtime();
-    double localElapsed = toc-tic;
+    start = MPI_Wtime(); 
+  }
+
+  occaTimerTic(mesh->device,"Linear Solve");
+  if(strstr(options, "GMRES")) {
+    Niter = pgmresm  (solver, options, lambda, o_r, o_x, tol, maxIter);
+  } else if(strstr(options, "BiCGStab")) {
+    Niter = pbicgstab(solver, options, lambda, o_r, o_x, tol, maxIter);
+  } else if(strstr(options, "CG")) {
+    Niter = pcg      (solver, options, lambda, o_r, o_x, tol, maxIter);
+  }
+  occaTimerToc(mesh->device,"Linear Solve");
+
+  
+  iint rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if(strstr(options,"VERBOSE")){
+    mesh->device.finish();
+    end = MPI_Wtime();
+    double localElapsed = end-start;
+
+    occa::printTimer();
+    
+    printf("Solver converged in %d iters \n", Niter );
 
     iint size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -646,11 +499,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
       printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
            size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
   }
-
-  occaTimerToc(mesh->device,"PCG");
-
- //occa::printTimer();
-
   return Niter;
 
 }

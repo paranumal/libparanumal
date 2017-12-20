@@ -222,6 +222,25 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
 
       // store non-zeros for off diagonal block
+      if (strstr(options,"NONSYM")) { //multiply by inverse mass matrix
+        dfloat *tmpSP = (dfloat *) calloc(Np*Np,sizeof(dfloat));
+  
+        for(iint j=0;j<Np;++j){
+          for(iint i=0;i<Np;++i){
+            dfloat val = 0;
+            for(iint m=0;m<Np;++m){
+              tmpSP[i*Np+j] += mesh->invMM[i*Np+m]*SP[m*Np+j];
+            }
+          }
+        }
+
+        for(iint j=0;j<Np;++j){
+          for(iint i=0;i<Np;++i){
+            SP[i*Np+j] = tmpSP[i*Np+j];
+          }
+        }
+        free(tmpSP);
+      }
       for(iint j=0;j<basisNp;++j){
         for(iint i=0;i<basisNp;++i){
           dfloat val = 0;
@@ -242,6 +261,24 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       }
     }
     // store non-zeros for diagonal block
+    if (strstr(options,"NONSYM")) { //multiply by inverse mass matrix
+      dfloat *tmpSM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
+      for(iint j=0;j<Np;++j){
+        for(iint i=0;i<Np;++i){
+          dfloat val = 0;
+          for(iint m=0;m<Np;++m){
+            val += mesh->invMM[i*Np+m]*SM[m*Np+j];
+          }
+          tmpSM[i*Np+j] = val;
+        }
+      }
+      for(iint j=0;j<Np;++j){
+        for(iint i=0;i<Np;++i){
+          SM[i*Np+j] = tmpSM[i*Np+j];
+        }
+      }
+      free(tmpSM);
+    }
     for(iint j=0;j<basisNp;++j){
       for(iint i=0;i<basisNp;++i){
         dfloat val = 0;
