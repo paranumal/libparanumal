@@ -102,8 +102,8 @@ typedef struct {
   dfloat *gllw; // 1D GLL quadrature weights
 
   iint gjNq;
-  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
-  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
+  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
   dfloat *gjD2;     // 1D GJ to GJ node differentiation
 
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
@@ -223,6 +223,15 @@ typedef struct {
   iint   *plotEToV;      // triangulation of plot nodes
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
+
+  //SEMFEM data
+  int NpFEM, NelFEM;
+  int *FEMEToV;
+  dfloat *rFEM, *sFEM;
+  dfloat *SEMFEMInterp;
+
+  occa::memory o_SEMFEMInterp;
+  occa::memory o_SEMFEMAnterp;
 
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling

@@ -174,14 +174,13 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       // build degree 1 matrix problem
       nonZero_t *coarseA;
       iint nnzCoarseA;
-      hgs_t *coarsehgs;
       dfloat *V1;
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
       ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
                                              &V1, &coarseA, &nnzCoarseA,
-                                             &coarsehgs, coarseGlobalStarts, options);
+                                             &(precon->hgs), coarseGlobalStarts, options);
 
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
@@ -203,8 +202,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
                          Cols,
                          Vals,
                          solver->allNeumann,
-                         solver->allNeumannPenalty,
-                         coarsehgs);
+                         solver->allNeumannPenalty);
 
       free(coarseA); free(Rows); free(Cols); free(Vals);
     } else {
@@ -226,7 +224,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
-    
+
     if (strstr(options,"CHEBYSHEV")) {
       levels[n]->device_smooth = smoothChebyshevTri2D;
 

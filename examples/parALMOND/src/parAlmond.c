@@ -1,15 +1,8 @@
 #include "agmg.h"
 
 void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rhs) {
-  //gather the global problem
-  //if the rhs has already been gather scattered, weight the gathered rhs
-  if(strstr(parAlmond->options,"GATHER")) {
-    meshParallelGather(parAlmond->mesh, parAlmond->hgs, o_rhs, parAlmond->levels[0]->o_rhs);
-    dotStar(parAlmond, parAlmond->hgs->Ngather,
-            parAlmond->hgs->o_invDegree, parAlmond->levels[0]->o_rhs);
-  } else {
-    parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
-  }
+
+  parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
 
   if (strstr(parAlmond->options,"HOST")) {
     //host versions
@@ -32,12 +25,7 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     }
   }
 
-  //scatter the result
-  if(strstr(parAlmond->options,"GATHER")) {
-    meshParallelScatter(parAlmond->mesh, parAlmond->hgs, parAlmond->levels[0]->o_x, o_x);
-  } else {
-    parAlmond->levels[0]->o_x.copyTo(o_x);
-  }
+  parAlmond->levels[0]->o_x.copyTo(o_x);
 }
 
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
@@ -67,8 +55,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
        iint* Aj,                    //--
        dfloat* Avals,               //--
        bool nullSpace,
-       dfloat nullSpacePenalty,
-       hgs_t *hgs){                  // gs op for problem assembly (to be removed in future?)
+       dfloat nullSpacePenalty){                  // gs op for problem assembly (to be removed in future?)
 
   iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -88,8 +75,6 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
-
-  parAlmond->hgs = hgs;
 
   mesh_t *mesh = parAlmond->mesh;
 
