@@ -13,7 +13,6 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
     iint nnz;
     nonZero_t *A;
-    hgs_t *hgs;
 
     iint Nnum = mesh->Np*mesh->Nelements;
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
@@ -21,9 +20,11 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTri2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&(precon->hgs),globalStarts, options);
+
+      precon->o_Gr = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
+      precon->o_Gz = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
     }
-    
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
@@ -43,8 +44,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Cols,
                        Vals,
                        solver->allNeumann,
-                       solver->allNeumannPenalty,
-                       hgs);
+                       solver->allNeumannPenalty);
 
     free(A); free(Rows); free(Cols); free(Vals);
 
@@ -172,14 +172,13 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     nonZero_t *coarseA;
     iint nnzCoarseA;
-    hgs_t *coarsehgs;
     dfloat *V1;
 
     iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
     ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
                                            &V1, &coarseA, &nnzCoarseA,
-                                           &coarsehgs, coarseGlobalStarts, options);
+                                           &(precon->hgs), coarseGlobalStarts, options);
 
     iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
@@ -202,8 +201,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Cols,
                        Vals,
                        solver->allNeumann,
-                       solver->allNeumannPenalty,
-                       coarsehgs);
+                       solver->allNeumannPenalty);
 
     free(coarseA); free(Rows); free(Cols); free(Vals);
 
@@ -216,6 +214,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   } else if(strstr(options, "MULTIGRID")){
 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
+
+  } else if(strstr(options, "SEMFEM")) {
+
+    ellipticSEMFEMSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
   } else if(strstr(options,"JACOBI")) {
 

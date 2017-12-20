@@ -22,15 +22,15 @@ int main(int argc, char **argv){
   // method can be IPDG or CONTINUOUS
   // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
   // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
-  //                      patch smoothers can include EXACT        
+  //                      patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -55,7 +55,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   //dfloat lambda = 0;
 
   // set up
@@ -63,7 +63,7 @@ int main(int argc, char **argv){
   ellipticSetupTri2D(mesh, kernelInfo);
 
   // Boundary Type translation. Just default from the mesh file.
-  int BCType[3] = {0,1,2};
+  int BCType[3] = {0,2,2};
 
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
     for(iint n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
-      nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
+      nrhs[n] = -(2*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -88,9 +88,12 @@ int main(int argc, char **argv){
       }
       iint id = n+e*mesh->Np;
 
+      dfloat xn = mesh->x[n+e*mesh->Np];
+      dfloat yn = mesh->y[n+e*mesh->Np];
+
       r[id] = -rhs*J;
       x[id] = 0;
-      mesh->q[id] = nrhs[n];
+      mesh->q[id] = x[id];
     }
   }
   free(nrhs);
@@ -109,7 +112,7 @@ int main(int argc, char **argv){
 
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
-    
+
     solver->rhsBCIpdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
                "ellipticRhsBCIpdgTri2D",
@@ -146,11 +149,11 @@ int main(int argc, char **argv){
       iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);
+      dfloat exact = cos(M_PI*xn)*cos(M_PI*yn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 

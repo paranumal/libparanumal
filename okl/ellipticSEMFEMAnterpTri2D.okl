@@ -1,0 +1,48 @@
+// block Jacobi preconditioner with inverse of mass matrix
+// (assumes mass matrix dominant)
+kernel void ellipticSEMFEMAnterpTri2D(const int Nelements,
+                                     const dfloat * restrict P,
+                                     const dfloat * restrict q,
+                                     dfloat * restrict Pq){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+    shared dfloat s_q[p_NblockV][p_NpFEM];
+    shared dfloat s_P[p_Np][p_NpFEM];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        iint t = n + es*p_Np;
+
+        while(t<p_NpFEM*p_NblockV){
+          if(eo*p_NpFEM + t<Nelements*p_NpFEM)
+            s_q[0][t] = q[eo*p_NpFEM+t];
+          t += p_Np*p_NblockV;
+        }
+
+        t = n + es*p_Np;
+
+        while(t<p_NpFEM*p_Np){
+          s_P[0][t] = P[t];
+          t += p_Np*p_NblockV;
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const iint e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0;
+          occaUnroll(p_NpFEM)
+            for(iint i=0;i<p_NpFEM;++i){
+              tmp += s_P[n][i]*s_q[es][i]; // bank conflict ?
+            }
+          Pq[e*p_Np+n] = tmp; // *invDegree[e*p_Np+n];
+        }
+      }
+    }
+  }
+}
