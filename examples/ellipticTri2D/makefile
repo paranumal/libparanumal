@@ -48,6 +48,9 @@ $(ALMONDDIR)/parALMOND.h \
 
 # list of objects to be compiled
 AOBJS    = \
+PCG.o \
+PGMRES.o \
+PBiCGStab.o \
 ellipticSetupTri2D.o \
 ellipticPreconditionerSetupTri2D.o\
 ellipticCoarsePreconditionerSetupTri2D.o\

@@ -46,6 +46,11 @@ typedef struct {
   dfloat *sendBuffer, *recvBuffer;
   dfloat *gradSendBuffer, *gradRecvBuffer;
 
+  //GMRES variables
+  int GMRESrestartFreq;
+  dfloat *HH;
+  occa::memory *o_V;  
+
   occa::stream defaultStream;
   occa::stream dataStream;
 
@@ -123,6 +128,22 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
           iint *gatherHaloFlags,
           ogs_t **halo,
           ogs_t **nonHalo);   // 1 for halo node, 0 for not
+
+
+//Linear solvers
+int pcg      (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+int pbicgstab(solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+int pgmresm  (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+
+
+dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+dfloat ellipticWeightedInnerProduct(solver_t *solver,
+            occa::memory &o_w,
+            occa::memory &o_a,
+            occa::memory &o_b,
+            const char *options);
+void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
+
 
 void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,

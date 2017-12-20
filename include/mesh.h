@@ -85,7 +85,7 @@ typedef struct {
   iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
-  dfloat *MM;           // reference mass matrix
+  dfloat *MM, *invMM;           // reference mass matrix
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;

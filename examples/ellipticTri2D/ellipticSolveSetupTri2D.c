@@ -1,5 +1,7 @@
 #include "ellipticTri2D.h"
 
+void matrixInverse(int N, dfloat *A);
+
 void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
 
   // build degree vector
@@ -99,6 +101,26 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
+
+
+  //set up memory for linear solver
+  if(strstr(options,"GMRES")) {
+    solver->GMRESrestartFreq = 20;
+    printf("GMRES Restart Frequency = %d \n", solver->GMRESrestartFreq);
+    solver->HH  = (dfloat*) calloc((solver->GMRESrestartFreq+1)*solver->GMRESrestartFreq,   sizeof(dfloat));
+    
+    solver->o_V = (occa::memory *) calloc(solver->GMRESrestartFreq+1,sizeof(occa::memory));
+    for (int i=0; i<=solver->GMRESrestartFreq; ++i) {
+      solver->o_V[i] = mesh->device.malloc(Nall*sizeof(dfloat), solver->z);
+    }
+  }
+
+  //build inverse of mass matrix
+  mesh->invMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->Np;n++)
+    mesh->invMM[n] = mesh->MM[n];
+  matrixInverse(mesh->Np,mesh->invMM);
+
 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
@@ -258,16 +280,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                  "ellipticPartialGradientBBTri2D",
                   kernelInfo);
 
-    solver->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticAxIpdgBBTri2D",
-                 kernelInfo);
-
-    solver->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticPartialAxIpdgBBTri2D",
-                 kernelInfo);
-
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
                  "ellipticBBBRGradientVolume2D",
@@ -283,10 +295,37 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                  "ellipticBBBRDivergenceVolume2D",
                  kernelInfo);
 
-    solver->BRDivergenceSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
-                 "ellipticBBBRDivergenceSurface2D",
-                 kernelInfo);
+    if (strstr(options,"NONSYM")) {
+      solver->ipdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBNonSymTri2D.okl",
+                   "ellipticAxIpdgBBNonSymTri2D",
+                   kernelInfo);
+
+      solver->partialIpdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBNonSymTri2D.okl",
+                   "ellipticPartialAxIpdgBBNonSymTri2D",
+                   kernelInfo);
+
+      solver->BRDivergenceSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                   "ellipticBBBRDivergenceSurfaceNonSym2D",
+                   kernelInfo);
+    } else {
+      solver->ipdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                   "ellipticAxIpdgBBTri2D",
+                   kernelInfo);
+
+      solver->partialIpdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                   "ellipticPartialAxIpdgBBTri2D",
+                   kernelInfo);
+
+      solver->BRDivergenceSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                   "ellipticBBBRDivergenceSurface2D",
+                   kernelInfo);
+    }
       
   } else if (strstr(options,"NODAL")) {
 
@@ -299,16 +338,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
                  "ellipticPartialGradientTri2D",
                   kernelInfo);
-
-    solver->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticAxIpdgTri2D",
-                 kernelInfo);
-
-    solver->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticPartialAxIpdgTri2D",
-                 kernelInfo);
 
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
@@ -325,10 +354,37 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                  "ellipticBRDivergenceVolume2D",
                  kernelInfo);
 
-    solver->BRDivergenceSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
-                 "ellipticBRDivergenceSurface2D",
-                 kernelInfo);
+    if (strstr(options,"NONSYM")) {
+      solver->ipdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgNonSymTri2D.okl",
+                   "ellipticAxIpdgNonSymTri2D",
+                   kernelInfo);
+
+      solver->partialIpdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgNonSymTri2D.okl",
+                   "ellipticPartialAxIpdgNonSymTri2D",
+                   kernelInfo);
+
+      solver->BRDivergenceSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                   "ellipticBRDivergenceSurfaceNonSym2D",
+                   kernelInfo);
+    } else {
+      solver->ipdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                   "ellipticAxIpdgTri2D",
+                   kernelInfo);
+
+      solver->partialIpdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                   "ellipticPartialAxIpdgTri2D",
+                   kernelInfo);
+
+      solver->BRDivergenceSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                   "ellipticBRDivergenceSurface2D",
+                   kernelInfo);
+    }
   }
 
   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
