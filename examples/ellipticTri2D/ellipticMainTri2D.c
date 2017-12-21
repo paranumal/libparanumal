@@ -31,7 +31,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PGMRES,LEFT,FLEXIBLE,VERBOSE method=IPDG,NONSYM basis=NODAL preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv){
   // smoother can be DAMPEDJACOBI or CHEBYSHEV
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=VCYCLE,VERBOSE,EXACT,NONSYM smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 

@@ -107,4 +107,5 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
 
     ++Niter;
   }
+  return Niter;
 }
