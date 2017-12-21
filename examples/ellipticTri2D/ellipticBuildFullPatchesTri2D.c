@@ -7,7 +7,7 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
-void ellipticBuildFullPatchesIpdgTri2D(solver_t *solver, mesh2D* mesh, iint basisNp, dfloat *basis,
+void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
                                    iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
                                    const char *options){

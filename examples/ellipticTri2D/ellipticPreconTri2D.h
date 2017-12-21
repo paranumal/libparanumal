@@ -11,8 +11,15 @@ typedef struct {
 
   long long int preconBytes;
 
+  hgs_t *hgs;
+  hgs_t *FEMhgs;
+
   dfloat *zP;
   occa::memory o_zP;
+
+  occa::memory o_Gr;
+  occa::memory o_Gz;
+  occa::memory o_Sr;
 
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
@@ -43,6 +50,15 @@ typedef struct {
   occa::kernel approxBlockJacobiSolverKernel;
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
+
+
+  occa::memory o_rFEM;
+  occa::memory o_zFEM;
+  occa::memory o_GrFEM;
+  occa::memory o_GzFEM;
+
+  occa::kernel SEMFEMInterpKernel;
+  occa::kernel SEMFEMAnterpKernel;
 
   ogs_t *ogsP, *ogsDg;
   hgs_t *hgsP, *hgsDg;
@@ -78,6 +94,9 @@ typedef struct {
   agmgLevel *OASLevel;
   void **OASsmoothArgs;
 
+  //SEMFEM variables
+  mesh2D *femMesh;
+
 } precon_t;
 
 extern "C"
@@ -91,7 +110,12 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              iint *nnzA, iint *globalStarts, const char *options);
+
+void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                               iint *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,

@@ -17,30 +17,32 @@ int main(int argc, char **argv){
   // int specify polynomial degree
   int N = atoi(argv[2]);
 
-  // solver can be CG or PCG
+  // solver can be PCG, PGMRES, or PBiCGStab
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
+  //  can add NONSYM option
+  // basis can be NODAL or BERN
   // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
   // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
-  //                      patch smoothers can include EXACT        
+  //                      patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
-  // solver can be EXACT, KCYCLE, or VCYCLE
+  // solver can be KCYCLE, or VCYCLE
+  //  can add the EXACT and NONSYM option
   // smoother can be DAMPEDJACOBI or CHEBYSHEV
-  // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
     strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-    //strdup("solver=EXACT,HOST,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+    //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 
   //this is strictly for testing, to do repeated runs. Will be removed later
@@ -55,8 +57,8 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
+  //dfloat lambda = 1;
   dfloat lambda = 0;
-  //dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -65,7 +67,12 @@ int main(int argc, char **argv){
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
-  dfloat tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  dfloat tau;
+  if (strstr(options,"IPDG")) {
+    tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  } else if (strstr(options,"BRDG")) {
+    tau = 1.0;
+  }
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
@@ -74,6 +81,7 @@ int main(int argc, char **argv){
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *nrhstmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(iint n=0;n<mesh->Np;++n){
@@ -81,19 +89,49 @@ int main(int argc, char **argv){
       dfloat yn = mesh->y[n+e*mesh->Np];
       nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
     }
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat rhs = 0;
-      for(iint m=0;m<mesh->Np;++m){
-	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
-      }
-      iint id = n+e*mesh->Np;
 
-      r[id] = -rhs*J;
-      x[id] = 0;
-      mesh->q[id] = nrhs[n];
+    if (strstr(options,"BERN")) {
+      for(iint n=0;n<mesh->Np;++n){
+        nrhstmp[n] = 0.;
+        for(iint m=0;m<mesh->Np;++m){
+          nrhstmp[n] += mesh->invVB[n*mesh->Np+m]*nrhs[m];
+        }
+      }
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat rhs = 0;
+        if (strstr(options,"NONSYM")) {
+          rhs = nrhs[n];
+        } else {
+          for(iint m=0;m<mesh->Np;++m){
+            rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
+          }
+        }
+        iint id = n+e*mesh->Np;
+
+        r[id] = -rhs*J;
+        x[id] = 0;
+        mesh->q[id] = rhs;
+      }
+    } else if (strstr(options,"NODAL")) {
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat rhs = 0;
+        if (strstr(options,"NONSYM")) {
+          rhs = nrhs[n];
+        } else {
+          for(iint m=0;m<mesh->Np;++m){
+            rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
+          }
+        }
+        iint id = n+e*mesh->Np;
+
+        r[id] = -rhs*J;
+        x[id] = 0;
+        mesh->q[id] = rhs;
+      }
     }
   }
   free(nrhs);
+  free(nrhstmp);
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
@@ -109,7 +147,7 @@ int main(int argc, char **argv){
 
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
-    
+
     solver->rhsBCIpdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
                "ellipticRhsBCIpdgTri2D",
@@ -134,11 +172,29 @@ int main(int argc, char **argv){
   }
 
   // convergence tolerance
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-6;
   ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
+
+  if (strstr(options,"BERN")) {
+    dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+    for (iint e =0;e<mesh->Nelements;e++){
+      iint id = e*mesh->Np;
+
+      for (iint n=0; n<mesh->Np; n++){
+        qtmp[n] = mesh->q[id+n];
+        mesh->q[id+n] = 0.0;
+      }
+      for (iint n=0;n<mesh->Np;n++){
+        for (iint m=0; m<mesh->Np; m++){
+          mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
+        }
+      }
+    }
+    free(qtmp);
+  }
 
   dfloat maxError = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -150,7 +206,7 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 

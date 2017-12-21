@@ -92,7 +92,7 @@ plotNelements = size(plotEToV,1);
 [plotR,plotS] = xytors(plotR,plotS);
 
 %% check triangulation
-before = plotNelements
+before = plotNelements;
 sk = 0;
 for e=1:plotNelements
   v1 = plotEToV(e,1)+1;
@@ -112,7 +112,7 @@ for e=1:plotNelements
 end
 plotNelements = sk;
 plotEToV = plotEToV(1:sk,:);
-after = plotNelements
+after = plotNelements;
 %% create interpolation matrix from warp & blend to plot nodes
 plotInterp = Vandermonde2D(N, plotR,plotS)/V;
 
@@ -292,14 +292,16 @@ V = Vandermonde2D(N,r,s);
 [VB Vr Vs V1 V2 V3] = bern_basis_tri(N,r,s);
 VB1D = bern_basis_1D(N,r1D);
 
-inv(VB1D)
+inv(VB1D);
 
-invVB = inv(VB)
+invVB = inv(VB);
 
 BBMM = VB' * MM * VB
+normBB2 = sqrt(diag(diag(BBMM)));
+BBMM2 = normBB2\(BBMM/normBB2)
 
-cond(BBMM)
-
+cond(BBMM2)
+pause
 %% write VDM for conversion
 
 % VB(abs(VB)<tol) = 0;
@@ -620,7 +622,7 @@ gauss = GaussFaceMesh2D(NGauss);
 % build weak Poisson operator matrices
 [A, M] = CurvedPoissonIPDG2D();
 
-full(A)
+full(A);
 
 %% hack since we know W&B face 1 nodes are first
 vmapP = reshape(vmapP, Nfp*Nfaces, K);
@@ -630,7 +632,7 @@ subind = [(1:Np)';idsP];
 subA = full(A(subind,subind));
 subM = full(M(subind,subind));
 
-condSubA = cond(subA)
+condSubA = cond(subA);
 
 [B,d] = eig(subA, subM);
 
@@ -669,11 +671,11 @@ end
 
 [rG,sG,shiftIds] = GroupNodes2D(N);
 
-shiftIds
+shiftIds;
 
-A = full(A)
+A = full(A);
 
-condA = cond(A)
+condA = cond(A);
 
 spy(abs(A)>1e-10);
 
@@ -702,7 +704,7 @@ VP1 = Vandermonde2D(N, rP1, sP1);
 IP1 = VP1/V;
 NpP1 = length(rP1);
 
-fprintf(fid, '%% degree raising interpolation matrix\n')
+fprintf(fid, '%% degree raising interpolation matrix\n');
 fprintf(fid, '%d %d\n', NpP1, Np);
 for n=1:NpP1
   for m=1:Np
@@ -725,7 +727,7 @@ VM1 = Vandermonde2D(N, rM1, sM1);
 IM1 = VM1/V;
 NpM1 = length(rM1);
 
-fprintf(fid, '%% degree lowering interpolation matrix\n')
+fprintf(fid, '%% degree lowering interpolation matrix\n');
 fprintf(fid, '%d %d\n', NpM1, Np);
 for n=1:NpM1
   for m=1:Np
@@ -734,5 +736,49 @@ for n=1:NpM1
   fprintf(fid, '\n');
 end
 
+addpath('./newNodes')
+[req,seq] = NewEquiNodes2D(N+1,'EI');
+FEMEToV = FemEToV2D(N+1,req,seq,'EI')-1;
+[rFEM,sFEM] = NewNodes2D(N,'EIKappaNp1');
+[rFEM,sFEM] = xytors(rFEM,sFEM);
+
+triplot(FEMEToV+1,req,seq)
+
+NpFEM = length(rFEM);
+NelFEM = size(FEMEToV,1);
+
+IQN = Vandermonde2D(N, rFEM, sFEM)/V;
+invIQN = (transpose(IQN)*IQN)\(transpose(IQN));
+
+fprintf(fid, '%% number of FEM points \n');
+fprintf(fid, '%d\n', NpFEM);
+fprintf(fid, '%% SEMFEM rs coordinates\n');
+for n=1:NpFEM
+    fprintf(fid, '%17.15E %17.15E\n', rFEM(n), sFEM(n));
+end
+
+
+fprintf(fid, '%% number of reference FEM elements \n');
+fprintf(fid, '%d\n', NelFEM);
+fprintf(fid, '%% SEMFEM reference EToV \n');
+for n=1:NelFEM
+    fprintf(fid, '%d %d %d\n' ,...
+        FEMEToV(n,1),FEMEToV(n,2),FEMEToV(n,3));
+end
+
+invIQN*invIQN'
+
+fprintf(fid, '%% SEM to FEM interpolation matrix\n');
+for n=1:NpFEM
+    for m=1:Np
+        fprintf(fid, '%17.15E ', invIQN(m,n));
+    end
+    fprintf(fid, '\n');
+end
+
+
+
 
 fclose(fid)
+
+end

@@ -85,7 +85,7 @@ typedef struct {
   iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
-  dfloat *MM;           // reference mass matrix
+  dfloat *MM, *invMM;           // reference mass matrix
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
@@ -102,8 +102,8 @@ typedef struct {
   dfloat *gllw; // 1D GLL quadrature weights
 
   iint gjNq;
-  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature 
-  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices 
+  dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
+  dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
   dfloat *gjD2;     // 1D GJ to GJ node differentiation
 
   // transform to/from eigenmodes of 1D laplacian (with built in weighting)
@@ -173,6 +173,7 @@ typedef struct {
 
   // Bernstein-Bezier info
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
+  dfloat *BBMM;
   dfloat *invVB1D, *invVB2D;
   iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
@@ -224,6 +225,15 @@ typedef struct {
   iint   *plotEToV;      // triangulation of plot nodes
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
+
+  //SEMFEM data
+  int NpFEM, NelFEM;
+  int *FEMEToV;
+  dfloat *rFEM, *sFEM;
+  dfloat *SEMFEMInterp;
+
+  occa::memory o_SEMFEMInterp;
+  occa::memory o_SEMFEMAnterp;
 
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
@@ -327,6 +337,7 @@ typedef struct {
   occa::memory o_notInternalElementIds;
 
   // Bernstein-Bezier occa arrays
+  occa::memory o_BBMM;
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
   occa::memory o_packedDids; // char4 packed increments (D1ids-D0ids)
 
