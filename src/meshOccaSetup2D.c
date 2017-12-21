@@ -31,8 +31,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   // build volume cubature matrix transposes
   iint cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
-  dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np*2, sizeof(dfloat));
-  dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np*2, sizeof(dfloat));
+  dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
+  dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
@@ -105,6 +105,18 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 	ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
 	ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz]; // ???
       }
+    }
+  }
+
+  //BB mass matrix
+  mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n = 0; n < mesh->Np; ++n){
+    for (int m = 0; m < mesh->Np; ++m){
+      for (int i = 0; i < mesh->Np; ++i){
+        for (int j = 0; j < mesh->Np; ++j){
+          mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
+        }
+      } 
     }
   }
 
@@ -312,11 +324,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   
   mesh->o_cubDrWT =
-    mesh->device.malloc(mesh->Np*mesh->cubNp*2*sizeof(dfloat),
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			cubDrWT);
   
   mesh->o_cubDsWT =
-    mesh->device.malloc(mesh->Np*mesh->cubNp*2*sizeof(dfloat),
+    mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			cubDsWT);
 
   mesh->o_intInterpT =
@@ -334,6 +346,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D2ids);
   mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D3ids);
   mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
+
+  mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
 
   mesh->o_VBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),VBq);
   mesh->o_PBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),PBq);

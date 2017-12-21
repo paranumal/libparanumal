@@ -406,6 +406,36 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   }
 #endif
 
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  sscanf(buf, "%d", &(mesh->NpFEM));
+  fgets(buf, BUFSIZ, fp); // read comment
+  //degree raising and lowering interpolation matrices
+  mesh->rFEM = (dfloat*) calloc(mesh->NpFEM, sizeof(dfloat));
+  mesh->sFEM = (dfloat*) calloc(mesh->NpFEM, sizeof(dfloat));
+  for(int n=0;n<mesh->NpFEM;++n){
+    fscanf(fp, dfloatFormat dfloatFormat, mesh->rFEM+n, mesh->sFEM+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
+
+  fgets(buf, BUFSIZ, fp);
+  fgets(buf, BUFSIZ, fp);
+  sscanf(buf, "%d", &(mesh->NelFEM));
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->FEMEToV = (int*) calloc(mesh->NelFEM*mesh->Nverts, sizeof(int));
+  for(int n=0;n<mesh->NelFEM;++n){
+    for(int m=0;m<mesh->Nverts;++m){
+      fscanf(fp, iintFormat, mesh->FEMEToV+m + mesh->Nverts*n);
+    }
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  mesh->SEMFEMInterp = (dfloat*) calloc(mesh->NpFEM*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->NpFEM*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->SEMFEMInterp+n);
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
 
   fclose(fp);
 }

@@ -22,9 +22,22 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
-    occaTimerTic(mesh->device,"parALMOND");
-    parAlmondPrecon(precon->parAlmond, o_z, o_r);
-    occaTimerToc(mesh->device,"parALMOND");
+    if(strstr(options,"CONTINUOUS")) {
+      meshParallelGather(mesh, precon->hgs, o_r, precon->o_Gr);
+      solver->dotMultiplyKernel(precon->hgs->Ngather, precon->hgs->o_invDegree, precon->o_Gr, precon->o_Gr);
+
+      occaTimerTic(mesh->device,"parALMOND");
+      parAlmondPrecon(precon->parAlmond, precon->o_Gz, precon->o_Gr);
+      occaTimerToc(mesh->device,"parALMOND");
+
+      //scatter the result
+      meshParallelScatter(mesh, precon->hgs, precon->o_Gz, o_z);
+
+    } else {
+      occaTimerTic(mesh->device,"parALMOND");
+      parAlmondPrecon(precon->parAlmond, o_z, o_r);
+      occaTimerToc(mesh->device,"parALMOND");
+    }
 
   } else if(strstr(options, "OAS")){
     //L2 project weighting
@@ -69,6 +82,21 @@ void ellipticPreconditioner2D(solver_t *solver,
     precon->blockJacobiKernel(mesh->Nelements, invLambda, mesh->o_vgeo, precon->o_invMM, o_r, o_z);
     occaTimerToc(mesh->device,"blockJacobiKernel");
 
+  } else if (strstr(options, "SEMFEM")) {
+
+    o_z.copyFrom(o_r);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+    precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
+    meshParallelGather(mesh, precon->hgs, precon->o_rFEM, precon->o_GrFEM);
+    occaTimerTic(mesh->device,"parALMOND");
+    parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
+    occaTimerToc(mesh->device,"parALMOND");
+    meshParallelScatter(mesh, precon->hgs, precon->o_GzFEM, precon->o_zFEM);
+    precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+
+    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
+
   } else if(strstr(options, "JACOBI")){
 
     iint Ntotal = mesh->Np*mesh->Nelements;
@@ -78,6 +106,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     occaTimerToc(mesh->device,"dotDivideKernel");
   }
   else{ // turn off preconditioner
+    printf("TEST\n");
     o_z.copyFrom(o_r);
   }
 }
