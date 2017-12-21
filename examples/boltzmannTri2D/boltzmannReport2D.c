@@ -1,8 +1,13 @@
 #include "boltzmann2D.h"
 
 void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
+  
+  dfloat t = 0.f; 
 
-  dfloat t = (tstep+1)*mesh->dt;
+  if(strstr(options,"MRAB") || strstr(options, "MRSAAB"))
+   t = mesh->dt*(tstep+1)*pow(2,(mesh->MRABNlevels-1));
+  else
+   t = (tstep+1)*mesh->dt;
   
   // copy data back to host
   mesh->o_q.copyTo(mesh->q);
@@ -29,8 +34,8 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     // output field files
     iint fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
-    meshPlotVTU2D(mesh, fname, fld);
+    sprintf(fname, "foo_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
+    boltzmannPlotVTU2D(mesh, fname);
    }
   }
   else{
@@ -44,7 +49,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     // output field files
     iint fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "fooT_%04d", tstep/mesh->errorStep);
+    sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
     meshPlotVTU2D(mesh, fname, fld);
   }
   

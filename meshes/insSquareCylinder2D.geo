@@ -59,3 +59,4 @@ Physical Line("Inflow",2) = {4,1,5};
 Physical Line("Outflow",3) = {2, 9, 6};
 Physical Surface("Domain",9) = {15, 18};
 Coherence;
+Coherence;

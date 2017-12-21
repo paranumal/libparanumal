@@ -9,7 +9,8 @@ include ${OCCA_DIR}/scripts/makefile
 HDRDIR  = ../../include
 
 # set options for this machine
-# specify which compilers to use for c, fortran and linking
+# specify which compilers to use for c, fortran and linkingcc	
+cc 	= mpicc
 CC	= mpic++
 LD	= mpic++
 
@@ -31,7 +32,7 @@ LIBS	=  $(links)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
 
 # list of objects to be compiled
-OBJS    = \
+AOBJS    = \
 boltzmannMain2D.o \
 boltzmannComputeVorticity2D.o \
 boltzmannError2D.o \
@@ -45,8 +46,17 @@ boltzmannSaab3Step2D.o \
 boltzmannLsimexStep2D.o \
 boltzmannSark3Step2D.o \
 boltzmannLserk3Step2D.o \
+boltzmannMRABStep2D.o \
+boltzmannMRSAABStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
+boltzmannPlotVTU2D.o \
+boltzmannMRABSetup2D.o \
+boltzmannMRABPmlSetup2D.o \
+boltzmannMRRun2D.o 
+
+# library objects
+LOBJS = \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
@@ -60,23 +70,27 @@ boltzmannReport2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
-../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshReader2D.o \
+../../src/meshMRABSetup2D.o \
+../../src/meshBuildMRABClusters2D.o \
+../../src/meshClusteredGeometricPartition2D.o \
+../../src/meshMRABWeightedPartitionTri2D.o \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o
 
-boltzmannSplitPmlMain2D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(OBJS) $(paths) $(LIBS) 
+boltzmannMain2D:$(AOBJS) $(LOBJS) 
+	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS) boltzmannMain2D
+	rm -r $(AOBJS) $(LOBJS) boltzmannMain2D
  
 

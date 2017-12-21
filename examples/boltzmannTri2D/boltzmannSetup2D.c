@@ -6,7 +6,7 @@
 
 void boltzmannSetup2D(mesh2D *mesh, char * options){
 
-  mesh->Nfields = 8;
+  mesh->Nfields = 6;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -41,8 +41,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma22 = 0.f;  
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    Ma = 0.1;     //Set Mach number
-    Re = 1000.;   // Set Reynolds number
+    Ma = 0.1;    //Set Mach number
+    Re = 1000.;  // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -56,7 +56,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 20.0;
+    mesh->finalTime = 0.1;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -88,7 +88,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
-
+  
+  // Define Mean Flow
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
   dfloat q3bar = rho*v/mesh->sqrtRT;
@@ -255,7 +256,7 @@ for(iint n=0;n<mesh->Np;++n){
 
   dfloat dt = 0.f;
 
-  // AK: Set time step size
+  // Set time step size
   if(strstr(options, "LSERK")){
     printf("Time discretization method: LSERK with CFL: %.2f \n",cfl);
     dt = cfl*mymin(dtex,dtim);
@@ -295,7 +296,7 @@ for(iint n=0;n<mesh->Np;++n){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 5000;
+  mesh->errorStep = 10000;
 
   printf("Nsteps = %d with dt = %.8e\n", mesh->NtimeSteps, mesh->dt);
 
@@ -306,11 +307,11 @@ for(iint n=0;n<mesh->Np;++n){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
- // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   // sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
 
-   sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
 
 
@@ -631,17 +632,23 @@ for(iint n=0;n<mesh->Np;++n){
   // specialization for Boltzmann
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int maxCubNodes = mymax(maxNodes,mesh->cubNp);
+
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
   
   kernelInfo.addDefine("p_pmlAlpha", (float).2);
   
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-
   int NblockV = 128/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
+
+   int NblockCub = 512/mesh->cubNp; // works for CUDA
+  kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
