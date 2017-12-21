@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -215,6 +215,7 @@ typedef struct {
 
   //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
   dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
+  dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
   iint Nimex;
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
@@ -237,22 +238,34 @@ typedef struct {
   dfloat *pmlSigmaZ;
   dfloat *pmlq;
   dfloat *pmlrhsq;
+  dfloat *pmlrhsqx;
+  dfloat *pmlrhsqy;
+  dfloat *pmlrhsqz;
+
+  dfloat *pmlqx;
+  dfloat *pmlqy;
+  dfloat *pmlqz;
+  
+
+
   dfloat *pmlresq;
 
 
   dfloat *invTau;
+  
 
-  dfloat *pmlqx;    // x-pml data array
+  // AK: Remove the below definition after fixin MRAB, only single rate uses 
+  // dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
 
-  dfloat *pmlqy;    // y-pml data array
+  // dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
 
-  dfloat *pmlqz;    // Z-pml data array
+  // dfloat *pmlqz;    // Z-pml data array
   dfloat *rhspmlqz; // right hand side data array
   dfloat *respmlqz; // residual data array (for LSERK time-stepping)
   dfloat *sigmaz;
@@ -353,9 +366,10 @@ typedef struct {
 
   occa::memory o_pmlElementList;
   occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
-  occa::memory o_pmlrhsq;
-
-  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
+  occa::memory o_pmlq, o_pmlrhsq, o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
+  
+  // AK: Remove this stuff, rename single rate files
+  occa::memory o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
   occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
 

@@ -2,17 +2,22 @@
 
 void boltzmannRun2D(mesh2D *mesh, char *options){
 
-  // Allocate MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
-  dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
-  dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+   // For initial data
+  boltzmannReport2D(mesh, 0 ,options);
 
   occa::initTimer(mesh->device);
 
+      // Allocate MPI send buffer for single rate integrators
+    iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+    dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
+    dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
+  
+    // VOLUME KERNELS
+    mesh->device.finish();
+    occa::tic("Boltzmann Solver");
 
-   
-
-    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  // for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+    for(iint tstep=0;tstep<100;++tstep){
       if(strstr(options, "LSERK")){
       boltzmannLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
@@ -35,7 +40,11 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
         boltzmannReport2D(mesh, tstep,options);
       }
      }
+
     }
+
+  mesh->device.finish();
+  occa::toc("Boltzmann Solver");
   
   // For Final Time
   boltzmannReport2D(mesh, mesh->NtimeSteps,options);

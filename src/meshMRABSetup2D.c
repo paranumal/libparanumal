@@ -66,6 +66,9 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
       }
     }
   }
+
+  
+
   if (mesh->totalHaloPairs) free(MRABsendBuffer);
 
   //this could change the number of MRAB levels there are, so find the new max level
@@ -134,6 +137,8 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     }
   }
 
+
+  
   //offset index
   mesh->MRABshiftIndex = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
 
