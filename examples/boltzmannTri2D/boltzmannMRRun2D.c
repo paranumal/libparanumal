@@ -5,9 +5,6 @@ void boltzmannMRRun2D(mesh2D *mesh, char *options){
    // For initial data
   boltzmannReport2D(mesh, 0 ,options);
 
-  // occa::stream defaultStream = mesh->device.getStream();
-  // occa::stream dataStream    = mesh->device.createStream();
-  // mesh->device.setStream(defaultStream);
 
   // MPI send buffer
   dfloat *sendBuffer;
@@ -59,7 +56,7 @@ void boltzmannMRRun2D(mesh2D *mesh, char *options){
 
     else if(strstr(options,"MRSAAB")){
     
-       if (mesh->MRABNelements[l])
+    if (mesh->MRABNelements[l])
       mesh->updateKernel(mesh->MRABNelements[l],
                         mesh->o_MRABelementIds[l],
                         zero,

@@ -1,97 +1,77 @@
 #include "boltzmann2D.h"
 
-void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
+void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
   dfloat xsigma = 80,  ysigma  = 80;
   dfloat cxsigma = 80, cysigma = 80;
 
-  //construct element and halo lists
-  mesh->MRABpmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  mesh->MRABpmlIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
+  // //construct element and halo lists
+  // mesh->pmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  // mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  // mesh->MRABpmlIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
-  mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
+  // mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  // mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  // mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
 
   //count the pml elements
   mesh->pmlNelements=0;
-  for (iint lev =0;lev<mesh->MRABNlevels;lev++){
-    for (iint m=0;m<mesh->MRABNelements[lev];m++) {
-      iint e = mesh->MRABelementIds[lev][m];
+
+
+    for (iint m=0;m<mesh->Nelements;m++) {
+      iint e = mesh->nonPmlElementIds[m];
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)) {
         mesh->pmlNelements++;
-        mesh->MRABpmlNelements[lev]++;
       }
     }
-    for (iint m=0;m<mesh->MRABNhaloElements[lev];m++) {
-      iint e = mesh->MRABhaloIds[lev][m];
-      int type = mesh->elementInfo[e];
-      if ((type==100)||(type==200)||(type==300))
-        mesh->MRABpmlNhaloElements[lev]++;
-    }
-  }
 
+
+printf("Number of pmlElements: %d \n", mesh->pmlNelements);
 
   //set up the pml
   if (mesh->pmlNelements) {
 
     //construct a numbering of the pml elements
     iint *pmlIds = (iint *) calloc(mesh->Nelements,sizeof(iint));
-    iint pmlcnt = 0;
+    iint pmlcnt  = 0;
+    iint nonpmlcnt = 0;
     for (iint e=0;e<mesh->Nelements;e++) {
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300))  //pml element
         pmlIds[e] = pmlcnt++;
     }
 
-    //set up lists of pml elements and remove the pml elements from the nonpml MRAB lists
-    for (iint lev =0;lev<mesh->MRABNlevels;lev++){
-      mesh->MRABpmlElementIds[lev] = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
-      mesh->MRABpmlIds[lev] = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
-      mesh->MRABpmlHaloElementIds[lev] = (iint *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(iint));
-      mesh->MRABpmlHaloIds[lev] = (iint *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(iint));
+    //set up lists of pml elements and remove the pml elements from the nonpml element list
 
-      iint pmlcnt = 0;
-      iint nonpmlcnt = 0;
-      for (iint m=0;m<mesh->MRABNelements[lev];m++){
-        iint e = mesh->MRABelementIds[lev][m];
-        int type = mesh->elementInfo[e];
-
-        if ((type==100)||(type==200)||(type==300)) { //pml element
-          mesh->MRABpmlElementIds[lev][pmlcnt] = e;
-          mesh->MRABpmlIds[lev][pmlcnt] = pmlIds[e];
-          pmlcnt++;
-        } else { //nonpml element
-          mesh->MRABelementIds[lev][nonpmlcnt] = e;
-          nonpmlcnt++;
-        }
-      }
+      mesh->pmlElementIds = (iint *) calloc(mesh->pmlNelements,sizeof(iint));
+      mesh->pmlIds        = (iint *) calloc(mesh->pmlNelements,sizeof(iint));
+     
 
       pmlcnt = 0;
       nonpmlcnt = 0;
-      for (iint m=0;m<mesh->MRABNhaloElements[lev];m++){
-        iint e = mesh->MRABhaloIds[lev][m];
+      for (iint m=0;m<mesh->Nelements;m++){
+        iint e = mesh->nonPmlElementIds[m];
         int type = mesh->elementInfo[e];
 
         if ((type==100)||(type==200)||(type==300)) { //pml element
-          mesh->MRABpmlHaloElementIds[lev][pmlcnt] = e;
-          mesh->MRABpmlHaloIds[lev][pmlcnt] = pmlIds[e];
+          mesh->pmlElementIds[pmlcnt] = e;
+          mesh->pmlIds[pmlcnt] = pmlIds[e];
           pmlcnt++;
         } else { //nonpml element
-          mesh->MRABhaloIds[lev][nonpmlcnt] = e;
+          mesh->nonPmlElementIds[nonpmlcnt] = e;
           nonpmlcnt++;
         }
       }
 
+     
       //resize nonpml element lists
-      mesh->MRABNelements[lev] -= mesh->MRABpmlNelements[lev];
-      mesh->MRABNhaloElements[lev] -= mesh->MRABpmlNhaloElements[lev];
-      mesh->MRABelementIds[lev] = (iint*) realloc(mesh->MRABelementIds[lev],mesh->MRABNelements[lev]*sizeof(iint));
-      mesh->MRABhaloIds[lev]    = (iint*) realloc(mesh->MRABhaloIds[lev],mesh->MRABNhaloElements[lev]*sizeof(iint));
-    }
+      mesh->nonPmlNelements -= mesh->pmlNelements;
+      mesh->nonPmlElementIds = (iint*) realloc(mesh->nonPmlElementIds,mesh->nonPmlNelements*sizeof(iint));
+     
+
+
 
     //set up damping parameter
     mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
@@ -211,6 +191,7 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
     mesh->pmlNfields = 6;
 
+    if(strstr(options,"SAAB")  || strstr(options,"SRAB") ){
       mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
       mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
 
@@ -224,6 +205,67 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
       mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
       mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+    }
+
+
+
+    if(strstr(options,"LSERK")){
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlrhsqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlresqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlrhsqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlresqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+
+
+      // set up PML on DEVICE    
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
+      mesh->o_pmlresqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlresqx);
+
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+      mesh->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlresqy);
+    }
+
+
+    if(strstr(options,"SARK")){
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+
+
+      // set up PML on DEVICE    
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
+
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+    }
+
+
+    if(strstr(options,"LSIMEX")){
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      // set up PML on DEVICE 
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);   
+      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qYx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qZx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qYy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qZy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+    }
+
+
+    
 
 
     mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->Np*sizeof(dfloat),mesh->pmlSigmaX);
@@ -231,25 +273,12 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
 
 
-    mesh->o_MRABpmlElementIds     = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlIds            = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlHaloElementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlHaloIds        = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
-      if (mesh->MRABpmlNelements[lev]) {
-        mesh->o_MRABpmlElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(iint),
-           mesh->MRABpmlElementIds[lev]);
-        mesh->o_MRABpmlIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(iint),
-           mesh->MRABpmlIds[lev]);
-      }
-      if (mesh->MRABpmlNhaloElements[lev]) {
-        mesh->o_MRABpmlHaloElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
-           mesh->MRABpmlHaloElementIds[lev]);
-        mesh->o_MRABpmlHaloIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
-           mesh->MRABpmlHaloIds[lev]);
-      }
-    }
 
+      if (mesh->pmlNelements) {
+        mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);
+        mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
+      }
+      
     free(pmlIds);
   }
 }

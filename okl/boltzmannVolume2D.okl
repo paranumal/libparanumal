@@ -1,151 +1,15 @@
-
+// Only difference with boltzmannVolume2D is size of rhsq and shifting
 kernel void boltzmannVolume2D(const iint Nelements,
             const iint * restrict elementIds,
             const dfloat ramp,
             const dfloat drampdt,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat4 * restrict q,
-                  dfloat4 * restrict rhsq){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-  iint e = eo+es; // element in block
-
-  if(e<Nelements){
-    element = elementIds[e];
-
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
-
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
-
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-
-  }
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
-
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
-
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
-      
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
-    }
-    
-    // chain rule
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
-    
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
-    
-    // transport operator
-    dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
-    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
-    dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
-    dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
-    dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
-    dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
-
-    // BGK relaxation approximation to the Boltzmann collision operator
-    rhsq4 -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-    rhsq5 -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-    rhsq6 -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-
-    // add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
-
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
-
-    rhsq[2*id] = tmp;
-
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
-
-    rhsq[2*id+1] = tmp;
-  }
-      }
-    }
-  }
-}
-
-
-
-kernel void boltzmannMRABVolume2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat ramp,
-            const dfloat drampdt,
+            const iint nrhs,
             const iint shift,
             const dfloat * restrict vgeo,
             const dfloat * restrict DrT,
             const dfloat * restrict DsT,
             const dfloat * restrict q,
-                  dfloat * restrict rhsq){
-  
+                  dfloat * restrict rhsq){  
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
@@ -231,217 +95,7 @@ kernel void boltzmannMRABVolume2D(const iint Nelements,
 
          //Update 
         const iint id = p_Nfields*(e*p_Np + n);
-        const iint rhsId = 3*id + p_Nfields*shift;
-       
-        for(iint fld=0; fld<p_Nfields;++fld){
-          rhsq[rhsId + fld] = r_rhsq[fld];
-        }
-      }
-    }
-  }
-}
-}
-
-
-kernel void boltzmannMRSAABVolume2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat ramp,
-            const dfloat drampdt,
-            const iint shift,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat * restrict q,
-                  dfloat * restrict rhsq){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive iint e;
-
-  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-      iint et = eo+es; // element in block
-
-      if(et<Nelements){
-        e = elementIds[et];
-        const iint id = p_Nfields*(e*p_Np + n);
-
-        for(iint fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld];
-        }
-
-      }
-    }
-  }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
-      iint et = eo+es; // element in block
-      if(et<Nelements){   
-        // prefetch geometric factors (constant on triangle)
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-        // compute 'r' and 's' derivatives of (q_m) at node n
-        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
-        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
-        dfloat r_rhsq[p_Nfields];
-
-        for(iint fld=0; fld<p_Nfields;++fld){
-          r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
-          r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
-          r_rhsq[fld] = 0.f;
-         }
-
-        occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-        //
-          for(iint fld=0; fld<p_Nfields;++fld){
-           r_dqdr[fld] += Drni*s_q[es][fld][i];
-           r_dqds[fld] += Dsni*s_q[es][fld][i];
-         }
-        }
-      
-        // Compute derivatives in physical coordinates 
-        for(iint fld=0; fld<p_Nfields;++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-
-         // transport operator
-        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
-        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
-        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
-        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
-        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
-        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
-
-        // BGK relaxation approximation to the Boltzmann collision operator
-        r_rhsq[3] += p_tauInv*((s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-        r_rhsq[4] += p_tauInv*(p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-        r_rhsq[5] += p_tauInv*(p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-
-        // Add mean flow forcing
-        r_rhsq[1] += drampdt*p_q2bar;
-        r_rhsq[2] += drampdt*p_q3bar;
-        r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
-        r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
-        r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
-
-         //Update 
-        const iint id = p_Nfields*(e*p_Np + n);
-        const iint rhsId = 3*id + p_Nfields*shift;
-       
-        for(iint fld=0; fld<p_Nfields;++fld){
-          rhsq[rhsId + fld] = r_rhsq[fld];
-        }
-      }
-    }
-  }
-}
-}
-
-kernel void boltzmannMRABVolumeCub2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat ramp,
-            const dfloat drampdt,
-            const iint shift,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat * restrict q,
-                  dfloat * restrict rhsq){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive iint e;
-
-  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-      iint et = eo+es; // element in block
-
-      if(et<Nelements){
-        e = elementIds[et];
-        const iint id = p_Nfields*(e*p_Np + n);
-
-        for(iint fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld];
-        }
-
-      }
-    }
-  }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
-      iint et = eo+es; // element in block
-      if(et<Nelements){   
-        // prefetch geometric factors (constant on triangle)
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-        // compute 'r' and 's' derivatives of (q_m) at node n
-        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
-        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
-        dfloat r_rhsq[p_Nfields];
-
-        for(iint fld=0; fld<p_Nfields;++fld){
-          r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
-          r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
-          r_rhsq[fld] = 0.f;
-         }
-
-        occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-        //
-          for(iint fld=0; fld<p_Nfields;++fld){
-           r_dqdr[fld] += Drni*s_q[es][fld][i];
-           r_dqds[fld] += Dsni*s_q[es][fld][i];
-         }
-        }
-      
-        // Compute derivatives in physical coordinates 
-        for(iint fld=0; fld<p_Nfields;++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-
-         // transport operator
-        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
-        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
-        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
-        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
-        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
-        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
-
-        // Add mean flow forcing
-        r_rhsq[1] += drampdt*p_q2bar;
-        r_rhsq[2] += drampdt*p_q3bar;
-        r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
-        r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
-        r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
-
-         //Update 
-        const iint id = p_Nfields*(e*p_Np + n);
-        const iint rhsId = 3*id + p_Nfields*shift;
+        const iint rhsId = nrhs*id + p_Nfields*shift;
        
         for(iint fld=0; fld<p_Nfields;++fld){
           rhsq[rhsId + fld] = r_rhsq[fld];
@@ -454,343 +108,12 @@ kernel void boltzmannMRABVolumeCub2D(const iint Nelements,
 
 
 
-
-
-kernel void boltzmannVolumeCub2D(const iint Nelements,
-            const iint * restrict elementIds,
-            const dfloat ramp,
-            const dfloat drampdt,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat4 * restrict q,
-                  dfloat4 * restrict rhsq){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-  iint e = eo+es; // element in block
-
-  if(e<Nelements){
-    element = elementIds[e];
-
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
-
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
-
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-
-  }
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
-
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
-
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
-      
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
-    }
-    
-    // chain rule
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
-    
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
-    
-    // transport operator
-    dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
-    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
-    dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
-    dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
-    dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
-    dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
-
-    // add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
-
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
-
-    rhsq[2*id] = tmp;
-
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
-
-    rhsq[2*id+1] = tmp;
-  }
-      }
-    }
-  }
-}
-
-
-
-
-
-
-kernel void boltzmannPmlVolume2D(const iint Nelements,
-              const iint * restrict elementIds,
-              const dfloat ramp,
-              const dfloat drampdt,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict sigmax,
-              const dfloat * restrict sigmay,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat4 * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat4 * restrict rhsq,
-                    dfloat * restrict rhspmlqx,
-                    dfloat * restrict rhspmlqy
-              ){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    element = elementIds[e];
-
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
-    
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
-
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-  }
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
-
-    const dfloat sigmaxe = sigmax[element*p_Np+n];
-    const dfloat sigmaye = sigmay[element*p_Np+n];
-
-    const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-    const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-
-    iint base = element*p_Np*p_Nfields+n;
-    dfloat pmlqx1 = pmlqx[base+0*p_Np];
-    dfloat pmlqx2 = pmlqx[base+1*p_Np];
-    dfloat pmlqx3 = pmlqx[base+2*p_Np];
-    dfloat pmlqx4 = pmlqx[base+3*p_Np];
-    dfloat pmlqx5 = pmlqx[base+4*p_Np];
-    dfloat pmlqx6 = pmlqx[base+5*p_Np];
-
-    dfloat pmlqy1 = pmlqy[base+0*p_Np];
-    dfloat pmlqy2 = pmlqy[base+1*p_Np];
-    dfloat pmlqy3 = pmlqy[base+2*p_Np];
-    dfloat pmlqy4 = pmlqy[base+3*p_Np];
-    dfloat pmlqy5 = pmlqy[base+4*p_Np];
-    dfloat pmlqy6 = pmlqy[base+5*p_Np];
-
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
-
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
-      
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
-    }
-
-     // dQ/dx
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
-    
-    // dQ/dy
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
-          
-    // A*dQ/dx
-    dfloat Aqx1 = -p_sqrtRT*(dq2dx);
-    dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
-    dfloat Aqx3 = -p_sqrtRT*(dq4dx);
-    dfloat Aqx4 = -p_sqrtRT*(dq3dx);
-    dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
-    dfloat Aqx6 = 0;
-      // B*dQ/dy
-    dfloat Bqy1 = -p_sqrtRT*(dq3dy);
-    dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
-    dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
-    dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
-    dfloat Bqy5 = 0;
-    dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
-      
-      // Rhs for qx       
-    rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
-    rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
-    rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
-    rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
-    rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
-    rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
-
-    // Rhs for qy
-    rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
-    rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
-    rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
-    rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
-    rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
-    rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
-   
-
-    // BGK relaxation approximation to the Boltzmann collision operator
-    dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-    dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-    dfloat N6 = -p_tauInv*(s_q[es][5][n]-(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-   
-    // Rhs for q
-    dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
-    dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
-    dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
-    dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
-    dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
-    dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
-    //
-    //Add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
-
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
-
-    rhsq[2*id] = tmp;
-
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
-
-    rhsq[2*id+1] = tmp;
-
-  }
-      }
-    }
-  }
-}
-
-
-
-kernel void boltzmannMRABPmlVolume2D(const iint pmlNelements,
+kernel void boltzmannPmlVolume2D(const iint pmlNelements,
               const iint * restrict pmlElementIds,
               const iint * restrict pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
+              const iint nrhs, 
               const iint shift,
               const dfloat * restrict vgeo,
               const dfloat * restrict pmlSigmaX,
@@ -916,8 +239,8 @@ kernel void boltzmannMRABPmlVolume2D(const iint pmlNelements,
 
         // Update
         const iint id       = p_Nfields*(e*p_Np + n);
-        const iint rhsId    = 3*id + p_Nfields*shift;
-        const iint pmlrhsId = 3*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
+        const iint rhsId    = nrhs*id + p_Nfields*shift;
+        const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
@@ -941,11 +264,120 @@ kernel void boltzmannMRABPmlVolume2D(const iint pmlNelements,
 
 
 
-kernel void boltzmannMRABPmlVolumeCub2D(const iint pmlNelements,
+
+// Only difference with boltzmannVolume2D is size of rhsq and shifting
+kernel void boltzmannVolumeCub2D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat ramp,
+            const dfloat drampdt,
+            const iint nrhs,
+            const iint shift,
+            const dfloat * restrict vgeo,
+            const dfloat * restrict DrT,
+            const dfloat * restrict DsT,
+            const dfloat * restrict q,
+                  dfloat * restrict rhsq){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    exclusive iint e;
+
+  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+      iint et = eo+es; // element in block
+
+      if(et<Nelements){
+        e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
+
+        for(iint fld=0; fld<p_Nfields;++fld){
+          s_q[es][fld][n] = q[id+fld];
+        }
+
+      }
+    }
+  }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+      iint et = eo+es; // element in block
+      if(et<Nelements){   
+        // prefetch geometric factors (constant on triangle)
+        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+        // compute 'r' and 's' derivatives of (q_m) at node n
+        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+        dfloat r_rhsq[p_Nfields];
+
+        for(iint fld=0; fld<p_Nfields;++fld){
+          r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+          r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+          r_rhsq[fld] = 0.f;
+         }
+
+        occaUnroll(p_Np)
+        for(iint i=0;i<p_Np;++i){
+          const dfloat Drni = DrT[n+i*p_Np];
+          const dfloat Dsni = DsT[n+i*p_Np];
+        //
+          for(iint fld=0; fld<p_Nfields;++fld){
+           r_dqdr[fld] += Drni*s_q[es][fld][i];
+           r_dqds[fld] += Dsni*s_q[es][fld][i];
+         }
+        }
+      
+        // Compute derivatives in physical coordinates 
+        for(iint fld=0; fld<p_Nfields;++fld){
+          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+        }
+
+         // transport operator
+        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+
+        
+        // Add mean flow forcing
+        r_rhsq[1] += drampdt*p_q2bar;
+        r_rhsq[2] += drampdt*p_q3bar;
+        r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+        r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+        r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
+
+         //Update 
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = nrhs*id + p_Nfields*shift;
+       
+        for(iint fld=0; fld<p_Nfields;++fld){
+          rhsq[rhsId + fld] = r_rhsq[fld];
+        }
+      }
+    }
+  }
+}
+}
+
+
+
+kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
               const iint * restrict pmlElementIds,
               const iint * restrict pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
+              const iint nrhs, 
               const iint shift,
               const dfloat * restrict vgeo,
               const dfloat * restrict pmlSigmaX,
@@ -1056,13 +488,13 @@ kernel void boltzmannMRABPmlVolumeCub2D(const iint pmlNelements,
         r_Bqy[4] =  0.f;
         r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
 
-        //  mean flow forcing 
+        // N(q) + mean flow forcing 
         r_N[0] = 0.f;
         r_N[1] = drampdt*p_q2bar;
         r_N[2] = drampdt*p_q3bar;
-        r_N[3] = 2.f*ramp*drampdt*p_q4bar ;
-        r_N[4] = 2.f*ramp*drampdt*p_q5bar ;
-        r_N[5] = 2.f*ramp*drampdt*p_q6bar ;
+        r_N[3] = 2.f*ramp*drampdt*p_q4bar;
+        r_N[4] = 2.f*ramp*drampdt*p_q5bar;
+        r_N[5] = 2.f*ramp*drampdt*p_q6bar;
 
      
      
@@ -1071,8 +503,8 @@ kernel void boltzmannMRABPmlVolumeCub2D(const iint pmlNelements,
 
         // Update
         const iint id       = p_Nfields*(e*p_Np + n);
-        const iint rhsId    = 3*id + p_Nfields*shift;
-        const iint pmlrhsId = 3*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
+        const iint rhsId    = nrhs*id + p_Nfields*shift;
+        const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
@@ -1096,707 +528,2188 @@ kernel void boltzmannMRABPmlVolumeCub2D(const iint pmlNelements,
 
 
 
-kernel void boltzmannPmlVolumeCub2D(const iint Nelements,
-              const iint * restrict elementIds,
-              const dfloat ramp,
-              const dfloat drampdt,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict sigmax, 
-              const dfloat * restrict sigmay,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat4 * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat4 * restrict rhsq,
-                    dfloat * restrict rhspmlqx,
-                    dfloat * restrict rhspmlqy){
-  
-   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    element = elementIds[e];
-
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
-    
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
-
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-  }
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
-
-    const dfloat sigmaxe = sigmax[element*p_Np+n];
-    const dfloat sigmaye = sigmay[element*p_Np+n];
-
-    const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-    const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-
-    iint base = element*p_Np*p_Nfields+n;
-    dfloat pmlqx1 = pmlqx[base+0*p_Np];
-    dfloat pmlqx2 = pmlqx[base+1*p_Np];
-    dfloat pmlqx3 = pmlqx[base+2*p_Np];
-    dfloat pmlqx4 = pmlqx[base+3*p_Np];
-    dfloat pmlqx5 = pmlqx[base+4*p_Np];
-    dfloat pmlqx6 = pmlqx[base+5*p_Np];
-
-    dfloat pmlqy1 = pmlqy[base+0*p_Np];
-    dfloat pmlqy2 = pmlqy[base+1*p_Np];
-    dfloat pmlqy3 = pmlqy[base+2*p_Np];
-    dfloat pmlqy4 = pmlqy[base+3*p_Np];
-    dfloat pmlqy5 = pmlqy[base+4*p_Np];
-    dfloat pmlqy6 = pmlqy[base+5*p_Np];
-      
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
-
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
-      
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
-    }
-    
-    // dQ/dx
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
-    
-    // dQ/dy
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
-          
-    // A*dQ/dx
-    dfloat Aqx1 = -p_sqrtRT*(dq2dx);
-    dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
-    dfloat Aqx3 = -p_sqrtRT*(dq4dx);
-    dfloat Aqx4 = -p_sqrtRT*(dq3dx);
-    dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
-    dfloat Aqx6 = 0.f;
-      // B*dQ/dy
-    dfloat Bqy1 = -p_sqrtRT*(dq3dy);
-    dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
-    dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
-    dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
-    dfloat Bqy5 = 0.f;
-    dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
-      
-      // Rhs for qx : -sigma_x*qx + Adq/dx        
-    rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
-    rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
-    rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
-    rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
-    rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
-    rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
-
-    // Rhs for qy : -sigma_y*qy + Adq/dy  
-    rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
-    rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
-    rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
-    rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
-    rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
-    rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
-   
-    // Rhs for q: A*dq/dx + B*dq/dy - sigma_x*qx  - sigma_y*qy + N(q)
-    dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1;
-    dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2;
-    dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3;
-    dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4;
-    dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5;
-    dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6;
-
-      // Add mean flow forcing to Rhsq: d q_bar/ dt
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
-
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
-
-    rhsq[2*id] = tmp;
-
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
-
-    rhsq[2*id+1] = tmp;
-  }
-      }
-    }
-  }
-}
-
 
 kernel void boltzmannSAVolume2D(const iint Nelements,
             const iint * restrict elementIds,
             const dfloat ramp,
             const dfloat drampdt,
+            const iint nrhs,
+            const iint shift,
             const dfloat * restrict vgeo,
             const dfloat * restrict DrT,
             const dfloat * restrict DsT,
-            const dfloat4 * restrict q,
-                  dfloat4 * restrict rhsq){
+            const dfloat * restrict q,
+                  dfloat * restrict rhsq){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    exclusive iint e;
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-  iint e = eo+es; // element in block
+      iint et = eo+es; // element in block
 
-  if(e<Nelements){
-    element = elementIds[e];
+      if(et<Nelements){
+        e = elementIds[et];
+        const iint id = p_Nfields*(e*p_Np + n);
 
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
+        for(iint fld=0; fld<p_Nfields;++fld){
+          s_q[es][fld][n] = q[id+fld];
+        }
 
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
-
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-
-  }
       }
     }
+  }
 
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+  for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+      iint et = eo+es; // element in block
+      if(et<Nelements){   
+        // prefetch geometric factors (constant on triangle)
+        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+        // compute 'r' and 's' derivatives of (q_m) at node n
+        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+        dfloat r_rhsq[p_Nfields];
 
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
+        for(iint fld=0; fld<p_Nfields;++fld){
+          r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+          r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+          r_rhsq[fld] = 0.f;
+         }
+
+        occaUnroll(p_Np)
+        for(iint i=0;i<p_Np;++i){
+          const dfloat Drni = DrT[n+i*p_Np];
+          const dfloat Dsni = DsT[n+i*p_Np];
+        //
+          for(iint fld=0; fld<p_Nfields;++fld){
+           r_dqdr[fld] += Drni*s_q[es][fld][i];
+           r_dqds[fld] += Dsni*s_q[es][fld][i];
+         }
+        }
       
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
-    }
-    
-    // chain rule
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
-    
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
-    
-    // transport operator
-    dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
-    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
-    dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
-    dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
-    dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
-    dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+        // Compute derivatives in physical coordinates 
+        for(iint fld=0; fld<p_Nfields;++fld){
+          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+        }
 
-    // BGK relaxation approximation to the Boltzmann collision operator
-    rhsq4 += p_tauInv* (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]);
-    rhsq5 += p_tauInv* p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
-    rhsq6 += p_tauInv* p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
+         // transport operator
+        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
 
-    // add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+        // BGK relaxation approximation to the Boltzmann collision operator
+        r_rhsq[3] += p_tauInv*s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n];
+        r_rhsq[4] += p_tauInv*p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n];
+        r_rhsq[5] += p_tauInv*p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n];
 
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
+        // Add mean flow forcing
+        r_rhsq[1] += drampdt*p_q2bar;
+        r_rhsq[2] += drampdt*p_q3bar;
+        r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+        r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+        r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
 
-    rhsq[2*id] = tmp;
-
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
-
-    rhsq[2*id+1] = tmp;
-  }
+         //Update 
+        const iint id = p_Nfields*(e*p_Np + n);
+        const iint rhsId = nrhs*id + p_Nfields*shift;
+       
+        for(iint fld=0; fld<p_Nfields;++fld){
+          rhsq[rhsId + fld] = r_rhsq[fld];
+        }
       }
     }
   }
 }
+}
 
 
 
-kernel void boltzmannSAPmlVolume2D(const iint Nelements,
-              const iint * restrict elementIds,
+
+
+kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
+              const iint * restrict pmlElementIds,
+              const iint * restrict pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
+              const iint nrhs, 
+              const iint shift,
               const dfloat * restrict vgeo,
-              const dfloat * restrict sigmax,
-              const dfloat * restrict sigmay,
+              const dfloat * restrict pmlSigmaX,
+              const dfloat * restrict pmlSigmaY,
               const dfloat * restrict DrT,
               const dfloat * restrict DsT,
-              const dfloat4 * restrict q,
+              const dfloat * restrict q,
               const dfloat * restrict pmlqx,
               const dfloat * restrict pmlqy,
-                    dfloat4 * restrict rhsq,
-                    dfloat * restrict rhspmlqx,
-                    dfloat * restrict rhspmlqy
-              ){
+                    dfloat * restrict rhsq,
+                    dfloat * restrict pmlrhsqx,
+                    dfloat * restrict pmlrhsqy){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    exclusive iint e, pmlId;
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-  
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    element = elementIds[e];
 
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
-    
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
+      iint et = eo+es; // element in block
+      if(et<pmlNelements){
+        e     = pmlElementIds[et];
+        pmlId = pmlIds[et];
 
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
-  }
+        const iint id = p_Nfields*(e*p_Np + n);
+        for(iint fld=0; fld<p_Nfields;++fld){
+          s_q[es][fld][n] = q[id+fld];
+        }
       }
+     }
     }
 
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+       iint et = eo+es; // element in block
+       if(et<pmlNelements){  
+
+        // prefetch geometric factors 
+        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+        
+        // Prefetch sigma
+        const dfloat sigmaxe = pmlSigmaX[pmlId*p_Np+n];
+        const dfloat sigmaye = pmlSigmaY[pmlId*p_Np+n];
+
+        // Pack register variables into arrays 
+        dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
+        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
+        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
+        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
+        dfloat r_N[p_Nfields];
+        
+        // Initialize
+        for(iint fld=0; fld<p_Nfields; ++fld){
+          r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
+          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
+          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
+          r_N[fld]     = 0.f; 
+        }
+    
+       
+       // Read from global
+        const iint pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(iint fld=0; fld<p_Nfields; ++fld){
+          r_pmlqx[fld] = pmlqx[pid+fld]; 
+          r_pmlqy[fld] = pmlqy[pid+fld]; 
+        }
+
+
+        // Compute Derivatives
+        occaUnroll(p_Np)
+        for(iint i=0;i<p_Np;++i){
+          const dfloat Drni = DrT[n+i*p_Np];
+          const dfloat Dsni = DsT[n+i*p_Np];
+          //
+          for(iint fld=0; fld<p_Nfields; ++fld){
+            r_dqdr[fld] += Drni*s_q[es][fld][i];
+            r_dqds[fld] += Dsni*s_q[es][fld][i];
+          }
+        }
+
+        for(iint fld=0; fld<p_Nfields; ++fld){
+          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+        }
   
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+        // Compute volume flux for q, qx and qy
+        // A*dQ/dx
+        r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
+        r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
+        r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
+        r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
+        r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
+        r_Aqx[5] =  0.f;
+        // B*dQ/dy
+        r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
+        r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
+        r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
+        r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
+        r_Bqy[4] =  0.f;
+        r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
 
-    const dfloat sigmaxe = sigmax[element*p_Np+n];
-    const dfloat sigmaye = sigmay[element*p_Np+n];
+        // N(q) + mean flow forcing 
+        r_N[0] = 0.f;
+        r_N[1] = drampdt*p_q2bar;
+        r_N[2] = drampdt*p_q3bar;
+        r_N[3] = 2.f*ramp*drampdt*p_q4bar  + p_tauInv*(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]);
+        r_N[4] = 2.f*ramp*drampdt*p_q5bar  + p_tauInv*(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
+        r_N[5] = 2.f*ramp*drampdt*p_q6bar  + p_tauInv*(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
 
-    const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-    const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+     
+     
+        const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+        const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha; 
 
-    iint base = element*p_Np*p_Nfields+n;
-    dfloat pmlqx1 = pmlqx[base+0*p_Np];
-    dfloat pmlqx2 = pmlqx[base+1*p_Np];
-    dfloat pmlqx3 = pmlqx[base+2*p_Np];
-    dfloat pmlqx4 = pmlqx[base+3*p_Np];
-    dfloat pmlqx5 = pmlqx[base+4*p_Np];
-    dfloat pmlqx6 = pmlqx[base+5*p_Np];
+        // Update
+        const iint id       = p_Nfields*(e*p_Np + n);
+        const iint rhsId    = nrhs*id + p_Nfields*shift;
+        const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
-    dfloat pmlqy1 = pmlqy[base+0*p_Np];
-    dfloat pmlqy2 = pmlqy[base+1*p_Np];
-    dfloat pmlqy3 = pmlqy[base+2*p_Np];
-    dfloat pmlqy4 = pmlqy[base+3*p_Np];
-    dfloat pmlqy5 = pmlqy[base+4*p_Np];
-    dfloat pmlqy6 = pmlqy[base+5*p_Np];
+        for(iint fld=0; fld<p_Nfields; ++fld){
+          pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
+          pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
+          //
+          rhsq[rhsId +fld] = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
+         
+        }
 
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
-
-    occaUnroll(p_Np)
-    for(iint i=0;i<p_Np;++i){
-      const dfloat Drni = DrT[n+i*p_Np];
-      const dfloat Dsni = DsT[n+i*p_Np];
-      
-      // differentiate q components with respect to 'r' and 's'
-      dq1dr += Drni*s_q[es][0][i];
-      dq1ds += Dsni*s_q[es][0][i];
-      dq2dr += Drni*s_q[es][1][i];
-      dq2ds += Dsni*s_q[es][1][i];
-      dq3dr += Drni*s_q[es][2][i];
-      dq3ds += Dsni*s_q[es][2][i];
-      dq4dr += Drni*s_q[es][3][i];
-      dq4ds += Dsni*s_q[es][3][i];
-      dq5dr += Drni*s_q[es][4][i];
-      dq5ds += Dsni*s_q[es][4][i];
-      dq6dr += Drni*s_q[es][5][i];
-      dq6ds += Dsni*s_q[es][5][i];
+      }
     }
+  }
+  
+}
+}
 
-     // dQ/dx
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// kernel void boltzmannVolume2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat ramp,
+//             const dfloat drampdt,
+//             const dfloat * restrict vgeo,
+//             const dfloat * restrict DrT,
+//             const dfloat * restrict DsT,
+//             const dfloat * restrict q,
+//                   dfloat * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+//     exclusive iint e;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//       iint et = eo+es; // element in block
+
+//       if(et<Nelements){
+//         e = elementIds[et];
+//         const iint id = p_Nfields*(e*p_Np + n);
+
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           s_q[es][fld][n] = q[id+fld];
+//         }
+
+//       }
+//     }
+//   }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//   for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+//       iint et = eo+es; // element in block
+//       if(et<Nelements){   
+//         // prefetch geometric factors (constant on triangle)
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+//         // compute 'r' and 's' derivatives of (q_m) at node n
+//         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+//         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+//         dfloat r_rhsq[p_Nfields];
+
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+//           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+//           r_rhsq[fld] = 0.f;
+//          }
+
+//         occaUnroll(p_Np)
+//         for(iint i=0;i<p_Np;++i){
+//           const dfloat Drni = DrT[n+i*p_Np];
+//           const dfloat Dsni = DsT[n+i*p_Np];
+//         //
+//           for(iint fld=0; fld<p_Nfields;++fld){
+//            r_dqdr[fld] += Drni*s_q[es][fld][i];
+//            r_dqds[fld] += Dsni*s_q[es][fld][i];
+//          }
+//         }
+      
+//         // Compute derivatives in physical coordinates 
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+//           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+//         }
+
+//          // transport operator
+//         r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+//         r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+//         r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+//         r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+//         r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+//         r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+
+//         // BGK relaxation approximation to the Boltzmann collision operator
+//         r_rhsq[3] -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//         r_rhsq[4] -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//         r_rhsq[5] -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+
+//         // Add mean flow forcing
+//         r_rhsq[1] += drampdt*p_q2bar;
+//         r_rhsq[2] += drampdt*p_q3bar;
+//         r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+//         r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+//         r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
+
+//          //Update 
+//         const iint id = p_Nfields*(e*p_Np + n);
+              
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           rhsq[id + fld] = r_rhsq[fld];
+//         }
+//       }
+//     }
+//   }
+// }
+// }
+
+
+
+
+// kernel void boltzmannPmlVolume2D(const iint Nelements,
+//               const iint * restrict elementIds,
+//               const dfloat ramp,
+//               const dfloat drampdt,
+//               const dfloat * restrict vgeo,
+//               const dfloat * restrict sigmax,
+//               const dfloat * restrict sigmay,
+//               const dfloat * restrict DrT,
+//               const dfloat * restrict DsT,
+//               const dfloat * restrict q,
+//               const dfloat * restrict pmlqx,
+//               const dfloat * restrict pmlqy,
+//                     dfloat * restrict rhsq,
+//                     dfloat * restrict rhspmlqx,
+//                     dfloat * restrict rhspmlqy){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+//     exclusive iint e;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//         iint et = eo+es; // element in block
+//         if(et<Nelements){
+//           e = elementIds[et];
+
+//           const iint id = p_Nfields*(e*p_Np + n);
+
+//           for(iint fld=0; fld<p_Nfields;++fld){
+//              s_q[es][fld][n] = q[id+fld];
+//           }
+//         }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//       iint et = eo+es; // element in block
+//       if(et<Nelements){
     
-    // dQ/dy
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+//         // prefetch geometric factors (constant on triangle)
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+//         const dfloat sigmaxe = sigmax[e*p_Np+n];
+//         const dfloat sigmaye = sigmay[e*p_Np+n];
+
+//         const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+//         const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+
+//          //Update 
+//         const iint id = p_Nfields*(e*p_Np + n);
+
+//         dfloat pmlqx1 = pmlqx[id+0];
+//         dfloat pmlqx2 = pmlqx[id+1];
+//         dfloat pmlqx3 = pmlqx[id+2];
+//         dfloat pmlqx4 = pmlqx[id+3];
+//         dfloat pmlqx5 = pmlqx[id+4];
+//         dfloat pmlqx6 = pmlqx[id+5];
+
+//         dfloat pmlqy1 = pmlqy[id+0];
+//         dfloat pmlqy2 = pmlqy[id+1];
+//         dfloat pmlqy3 = pmlqy[id+2];
+//         dfloat pmlqy4 = pmlqy[id+3];
+//         dfloat pmlqy5 = pmlqy[id+4];
+//         dfloat pmlqy6 = pmlqy[id+5];
+
+//         // compute 'r' and 's' derivatives of (q_m) at node n
+//         dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//         dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//         occaUnroll(p_Np)
+//         for(iint i=0;i<p_Np;++i){
+//           const dfloat Drni = DrT[n+i*p_Np];
+//           const dfloat Dsni = DsT[n+i*p_Np];
+        
+//           // differentiate q components with respect to 'r' and 's'
+//           dq1dr += Drni*s_q[es][0][i];
+//           dq1ds += Dsni*s_q[es][0][i];
+//           dq2dr += Drni*s_q[es][1][i];
+//           dq2ds += Dsni*s_q[es][1][i];
+//           dq3dr += Drni*s_q[es][2][i];
+//           dq3ds += Dsni*s_q[es][2][i];
+//           dq4dr += Drni*s_q[es][3][i];
+//           dq4ds += Dsni*s_q[es][3][i];
+//           dq5dr += Drni*s_q[es][4][i];
+//           dq5ds += Dsni*s_q[es][4][i];
+//           dq6dr += Drni*s_q[es][5][i];
+//           dq6ds += Dsni*s_q[es][5][i];
+//         }
+
+//          // dQ/dx
+//         dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//         dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//         dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//         dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//         dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//         dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+        
+//         // dQ/dy
+//         dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//         dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//         dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//         dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//         dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//         dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+              
+//         // A*dQ/dx
+//         dfloat Aqx1 = -p_sqrtRT*(dq2dx);
+//         dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
+//         dfloat Aqx3 = -p_sqrtRT*(dq4dx);
+//         dfloat Aqx4 = -p_sqrtRT*(dq3dx);
+//         dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
+//         dfloat Aqx6 = 0;
+//           // B*dQ/dy
+//         dfloat Bqy1 = -p_sqrtRT*(dq3dy);
+//         dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
+//         dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
+//         dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
+//         dfloat Bqy5 = 0;
+//         dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+      
+//       // Rhs for qx       
+//     rhspmlqx[id+0] = -msigmaxe*(pmlqx1) + Aqx1;
+//     rhspmlqx[id+1] = -msigmaxe*(pmlqx2) + Aqx2;
+//     rhspmlqx[id+2] = -msigmaxe*(pmlqx3) + Aqx3;
+//     rhspmlqx[id+3] = -msigmaxe*(pmlqx4) + Aqx4;
+//     rhspmlqx[id+4] = -msigmaxe*(pmlqx5) + Aqx5;
+//     rhspmlqx[id+5] = -msigmaxe*(pmlqx6) + Aqx6;
+
+//     // Rhs for qy
+//     rhspmlqy[id+0] = -msigmaye*(pmlqy1) + Bqy1;
+//     rhspmlqy[id+1] = -msigmaye*(pmlqy2) + Bqy2;
+//     rhspmlqy[id+2] = -msigmaye*(pmlqy3) + Bqy3;
+//     rhspmlqy[id+3] = -msigmaye*(pmlqy4) + Bqy4;
+//     rhspmlqy[id+4] = -msigmaye*(pmlqy5) + Bqy5;
+//     rhspmlqy[id+5] = -msigmaye*(pmlqy6) + Bqy6;
+   
+
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//     dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//     dfloat N6 = -p_tauInv*(s_q[es][5][n]-(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+   
+//     // Rhs for q
+//     dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
+//     dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
+//     dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
+//     dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
+//     dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
+//     dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
+//     //
+//     //Add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     // Rhs for qy
+//     rhsq[id+0] = rhsq1;
+//     rhsq[id+1] = rhsq2;
+//     rhsq[id+2] = rhsq3;
+//     rhsq[id+3] = rhsq4;
+//     rhsq[id+4] = rhsq5;
+//     rhsq[id+5] = rhsq6;
+
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// kernel void boltzmannVolume2D_0(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat ramp,
+//             const dfloat drampdt,
+//             const dfloat * restrict vgeo,
+//             const dfloat * restrict DrT,
+//             const dfloat * restrict DsT,
+//             const dfloat4 * restrict q,
+//                   dfloat4 * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//   iint e = eo+es; // element in block
+
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
+    
+//     // chain rule
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+    
+//     // transport operator
+//     dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
+//     dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
+//     dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
+//     dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
+//     dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
+//     dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     rhsq4 -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//     rhsq5 -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//     rhsq6 -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+
+//     // add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
+
+//     rhsq[2*id] = tmp;
+
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+
+
+// // // Only difference with boltzmannVolume2D is size of rhsq and shifting
+
+// // kernel void boltzmannMRABVolume2D(const iint Nelements,
+// //             const iint * restrict elementIds,
+// //             const dfloat ramp,
+// //             const dfloat drampdt,
+// //             const iint shift,
+// //             const dfloat * restrict vgeo,
+// //             const dfloat * restrict DrT,
+// //             const dfloat * restrict DsT,
+// //             const dfloat * restrict q,
+// //                   dfloat * restrict rhsq){
+  
+// //   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+// //     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+// //     exclusive iint e;
+
+// //   for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+// //     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+// //       iint et = eo+es; // element in block
+
+// //       if(et<Nelements){
+// //         e = elementIds[et];
+// //         const iint id = p_Nfields*(e*p_Np + n);
+
+// //         for(iint fld=0; fld<p_Nfields;++fld){
+// //           s_q[es][fld][n] = q[id+fld];
+// //         }
+
+// //       }
+// //     }
+// //   }
+
+// //     // make sure all node data is loaded into shared
+// //     barrier(localMemFence);
+
+// //   for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+// //     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+// //       iint et = eo+es; // element in block
+// //       if(et<Nelements){   
+// //         // prefetch geometric factors (constant on triangle)
+// //         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+// //         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+// //         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+// //         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+// //         // compute 'r' and 's' derivatives of (q_m) at node n
+// //         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+// //         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+// //         dfloat r_rhsq[p_Nfields];
+
+// //         for(iint fld=0; fld<p_Nfields;++fld){
+// //           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+// //           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+// //           r_rhsq[fld] = 0.f;
+// //          }
+
+// //         occaUnroll(p_Np)
+// //         for(iint i=0;i<p_Np;++i){
+// //           const dfloat Drni = DrT[n+i*p_Np];
+// //           const dfloat Dsni = DsT[n+i*p_Np];
+// //         //
+// //           for(iint fld=0; fld<p_Nfields;++fld){
+// //            r_dqdr[fld] += Drni*s_q[es][fld][i];
+// //            r_dqds[fld] += Dsni*s_q[es][fld][i];
+// //          }
+// //         }
+      
+// //         // Compute derivatives in physical coordinates 
+// //         for(iint fld=0; fld<p_Nfields;++fld){
+// //           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+// //           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+// //         }
+
+// //          // transport operator
+// //         r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+// //         r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+// //         r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+// //         r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+// //         r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+// //         r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+
+// //         // BGK relaxation approximation to the Boltzmann collision operator
+// //         r_rhsq[3] -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+// //         r_rhsq[4] -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+// //         r_rhsq[5] -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+
+// //         // Add mean flow forcing
+// //         r_rhsq[1] += drampdt*p_q2bar;
+// //         r_rhsq[2] += drampdt*p_q3bar;
+// //         r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+// //         r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+// //         r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
+
+// //          //Update 
+// //         const iint id = p_Nfields*(e*p_Np + n);
+// //         const iint rhsId = 3*id + p_Nfields*shift;
+       
+// //         for(iint fld=0; fld<p_Nfields;++fld){
+// //           rhsq[rhsId + fld] = r_rhsq[fld];
+// //         }
+// //       }
+// //     }
+// //   }
+// // }
+// // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// kernel void boltzmannMRABVolumeCub2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat ramp,
+//             const dfloat drampdt,
+//             const iint shift,
+//             const dfloat * restrict vgeo,
+//             const dfloat * restrict DrT,
+//             const dfloat * restrict DsT,
+//             const dfloat * restrict q,
+//                   dfloat * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+//     exclusive iint e;
+
+//   for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//       iint et = eo+es; // element in block
+
+//       if(et<Nelements){
+//         e = elementIds[et];
+//         const iint id = p_Nfields*(e*p_Np + n);
+
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           s_q[es][fld][n] = q[id+fld];
+//         }
+
+//       }
+//     }
+//   }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//   for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//     for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+//       iint et = eo+es; // element in block
+//       if(et<Nelements){   
+//         // prefetch geometric factors (constant on triangle)
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+//         // compute 'r' and 's' derivatives of (q_m) at node n
+//         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+//         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+//         dfloat r_rhsq[p_Nfields];
+
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+//           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+//           r_rhsq[fld] = 0.f;
+//          }
+
+//         occaUnroll(p_Np)
+//         for(iint i=0;i<p_Np;++i){
+//           const dfloat Drni = DrT[n+i*p_Np];
+//           const dfloat Dsni = DsT[n+i*p_Np];
+//         //
+//           for(iint fld=0; fld<p_Nfields;++fld){
+//            r_dqdr[fld] += Drni*s_q[es][fld][i];
+//            r_dqds[fld] += Dsni*s_q[es][fld][i];
+//          }
+//         }
+      
+//         // Compute derivatives in physical coordinates 
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+//           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+//         }
+
+//          // transport operator
+//         r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+//         r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+//         r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+//         r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+//         r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+//         r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+
+//         // Add mean flow forcing
+//         r_rhsq[1] += drampdt*p_q2bar;
+//         r_rhsq[2] += drampdt*p_q3bar;
+//         r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+//         r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+//         r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
+
+//          //Update 
+//         const iint id = p_Nfields*(e*p_Np + n);
+//         const iint rhsId = 3*id + p_Nfields*shift;
+       
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           rhsq[rhsId + fld] = r_rhsq[fld];
+//         }
+//       }
+//     }
+//   }
+// }
+// }
+
+
+
+
+
+// kernel void boltzmannVolumeCub2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat ramp,
+//             const dfloat drampdt,
+//             const dfloat * restrict vgeo,
+//             const dfloat * restrict DrT,
+//             const dfloat * restrict DsT,
+//             const dfloat4 * restrict q,
+//                   dfloat4 * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//   iint e = eo+es; // element in block
+
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
+    
+//     // chain rule
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+    
+//     // transport operator
+//     dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
+//     dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
+//     dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
+//     dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
+//     dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
+//     dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+
+//     // add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
+
+//     rhsq[2*id] = tmp;
+
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+// kernel void boltzmannPmlVolume2D_0(const iint Nelements,
+//               const iint * restrict elementIds,
+//               const dfloat ramp,
+//               const dfloat drampdt,
+//               const dfloat * restrict vgeo,
+//               const dfloat * restrict sigmax,
+//               const dfloat * restrict sigmay,
+//               const dfloat * restrict DrT,
+//               const dfloat * restrict DsT,
+//               const dfloat4 * restrict q,
+//               const dfloat * restrict pmlqx,
+//               const dfloat * restrict pmlqy,
+//                     dfloat4 * restrict rhsq,
+//                     dfloat * restrict rhspmlqx,
+//                     dfloat * restrict rhspmlqy
+//               ){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+    
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     const dfloat sigmaxe = sigmax[element*p_Np+n];
+//     const dfloat sigmaye = sigmay[element*p_Np+n];
+
+//     const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+//     const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+
+//     iint base = element*p_Np*p_Nfields+n;
+//     dfloat pmlqx1 = pmlqx[base+0*p_Np];
+//     dfloat pmlqx2 = pmlqx[base+1*p_Np];
+//     dfloat pmlqx3 = pmlqx[base+2*p_Np];
+//     dfloat pmlqx4 = pmlqx[base+3*p_Np];
+//     dfloat pmlqx5 = pmlqx[base+4*p_Np];
+//     dfloat pmlqx6 = pmlqx[base+5*p_Np];
+
+//     dfloat pmlqy1 = pmlqy[base+0*p_Np];
+//     dfloat pmlqy2 = pmlqy[base+1*p_Np];
+//     dfloat pmlqy3 = pmlqy[base+2*p_Np];
+//     dfloat pmlqy4 = pmlqy[base+3*p_Np];
+//     dfloat pmlqy5 = pmlqy[base+4*p_Np];
+//     dfloat pmlqy6 = pmlqy[base+5*p_Np];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
+
+//      // dQ/dx
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     // dQ/dy
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
           
-    // A*dQ/dx
-    dfloat Aqx1 = -p_sqrtRT*(dq2dx);
-    dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
-    dfloat Aqx3 = -p_sqrtRT*(dq4dx);
-    dfloat Aqx4 = -p_sqrtRT*(dq3dx);
-    dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
-    dfloat Aqx6 = 0;
-      // B*dQ/dy
-    dfloat Bqy1 = -p_sqrtRT*(dq3dy);
-    dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
-    dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
-    dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
-    dfloat Bqy5 = 0;
-    dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+//     // A*dQ/dx
+//     dfloat Aqx1 = -p_sqrtRT*(dq2dx);
+//     dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
+//     dfloat Aqx3 = -p_sqrtRT*(dq4dx);
+//     dfloat Aqx4 = -p_sqrtRT*(dq3dx);
+//     dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
+//     dfloat Aqx6 = 0;
+//       // B*dQ/dy
+//     dfloat Bqy1 = -p_sqrtRT*(dq3dy);
+//     dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
+//     dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
+//     dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
+//     dfloat Bqy5 = 0;
+//     dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
       
-      // Rhs for qx       
-    rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
-    rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
-    rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
-    rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
-    rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
-    rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
+//       // Rhs for qx       
+//     rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
+//     rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
+//     rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
+//     rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
+//     rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
+//     rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
 
-    // Rhs for qy
-    rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
-    rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
-    rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
-    rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
-    rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
-    rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
+//     // Rhs for qy
+//     rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
+//     rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
+//     rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
+//     rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
+//     rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
+//     rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
    
 
-    // BGK relaxation approximation to the Boltzmann collision operator
-    dfloat N4 = p_tauInv*(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]);
-    dfloat N5 = p_tauInv*(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
-    dfloat N6 = p_tauInv*(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//     dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//     dfloat N6 = -p_tauInv*(s_q[es][5][n]-(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
    
-    // Rhs for q
-    dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
-    dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
-    dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
-    dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
-    dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
-    dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
-    //
-    // Add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+//     // Rhs for q
+//     dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
+//     dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
+//     dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
+//     dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
+//     dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
+//     dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
+//     //
+//     //Add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
 
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
 
-    rhsq[2*id] = tmp;
+//     rhsq[2*id] = tmp;
 
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
 
-    rhsq[2*id+1] = tmp;
+//     rhsq[2*id+1] = tmp;
 
-  }
-      }
-    }
-  }
-}
-
-
+//   }
+//       }
+//     }
+//   }
+// }
 
 
 
 
 
-kernel void boltzmannVolume2Dbbdg(const iint Nelements,
-          const iint * restrict elementIds,
-          const dfloat ramp,
-          const dfloat drampdt,
-          const dfloat * restrict vgeo,
-          const iint * restrict D1ids,
-          const iint * restrict D2ids,
-          const iint * restrict D3ids,
-          const dfloat * restrict Dvals,    
-          const dfloat4 * restrict q,
-          dfloat4 * restrict rhsq){
+
+
+
+
+
+
+// kernel void boltzmannMRABPmlVolumeCub2D(const iint pmlNelements,
+//               const iint * restrict pmlElementIds,
+//               const iint * restrict pmlIds,
+//               const dfloat ramp,
+//               const dfloat drampdt,
+//               const iint shift,
+//               const dfloat * restrict vgeo,
+//               const dfloat * restrict pmlSigmaX,
+//               const dfloat * restrict pmlSigmaY,
+//               const dfloat * restrict DrT,
+//               const dfloat * restrict DsT,
+//               const dfloat * restrict q,
+//               const dfloat * restrict pmlqx,
+//               const dfloat * restrict pmlqy,
+//                     dfloat * restrict rhsq,
+//                     dfloat * restrict pmlrhsqx,
+//                     dfloat * restrict pmlrhsqy){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(iint eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive iint element;
+//     shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+//     exclusive iint e, pmlId;
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-  iint e = eo+es; // element in block
+//       iint et = eo+es; // element in block
+//       if(et<pmlNelements){
+//         e     = pmlElementIds[et];
+//         pmlId = pmlIds[et];
 
-  if(e<Nelements){
-    element = elementIds[e];
+//         const iint id = p_Nfields*(e*p_Np + n);
+//         for(iint fld=0; fld<p_Nfields;++fld){
+//           s_q[es][fld][n] = q[id+fld];
+//         }
+//       }
+//      }
+//     }
 
-    const iint id = element*p_Np+n;
-    dfloat4 qan = q[2*id];
-    dfloat4 qbn = q[2*id+1];
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
 
-    s_q[es][0][n] = qan.x;
-    s_q[es][1][n] = qan.y;
-    s_q[es][2][n] = qan.z;
-    s_q[es][3][n] = qan.w;
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+//        iint et = eo+es; // element in block
+//        if(et<pmlNelements){  
 
-    s_q[es][4][n] = qbn.x;
-    s_q[es][5][n] = qbn.y;
+//         // prefetch geometric factors 
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+        
+//         // Prefetch sigma
+//         const dfloat sigmaxe = pmlSigmaX[pmlId*p_Np+n];
+//         const dfloat sigmaye = pmlSigmaY[pmlId*p_Np+n];
 
-  }
-      }
-    }
+//         // Pack register variables into arrays 
+//         dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
+//         dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
+//         dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
+//         dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
+//         dfloat r_N[p_Nfields];
+        
+//         // Initialize
+//         for(iint fld=0; fld<p_Nfields; ++fld){
+//           r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
+//           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
+//           r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
+//           r_N[fld]     = 0.f; 
+//         }
+    
+       
+//        // Read from global
+//         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+//         for(iint fld=0; fld<p_Nfields; ++fld){
+//           r_pmlqx[fld] = pmlqx[pid+fld]; 
+//           r_pmlqy[fld] = pmlqy[pid+fld]; 
+//         }
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//         // Compute Derivatives
+//         occaUnroll(p_Np)
+//         for(iint i=0;i<p_Np;++i){
+//           const dfloat Drni = DrT[n+i*p_Np];
+//           const dfloat Dsni = DsT[n+i*p_Np];
+//           //
+//           for(iint fld=0; fld<p_Nfields; ++fld){
+//             r_dqdr[fld] += Drni*s_q[es][fld][i];
+//             r_dqds[fld] += Dsni*s_q[es][fld][i];
+//           }
+//         }
+
+//         for(iint fld=0; fld<p_Nfields; ++fld){
+//           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+//           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+//         }
   
-  iint e = eo+es; // element in block
-  if(e<Nelements){
-    
-    // prefetch geometric factors (constant on triangle)
-    const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
-    const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
-    const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
-    const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+//         // Compute volume flux for q, qx and qy
+//         // A*dQ/dx
+//         r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
+//         r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
+//         r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
+//         r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
+//         r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
+//         r_Aqx[5] =  0.f;
+//         // B*dQ/dy
+//         r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
+//         r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
+//         r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
+//         r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
+//         r_Bqy[4] =  0.f;
+//         r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
 
-    // compute 'r' and 's' derivatives of (q_m) at node n
-    //dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
-    //dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+//         //  mean flow forcing 
+//         r_N[0] = 0.f;
+//         r_N[1] = drampdt*p_q2bar;
+//         r_N[2] = drampdt*p_q3bar;
+//         r_N[3] = 2.f*ramp*drampdt*p_q4bar ;
+//         r_N[4] = 2.f*ramp*drampdt*p_q5bar ;
+//         r_N[5] = 2.f*ramp*drampdt*p_q6bar ;
 
-    const iint D1i1 = D1ids[n];
-    const iint D2i1 = D2ids[n];
-    const iint D3i1 = D3ids[n];
-    const dfloat Dval1 = Dvals[n];
-    
-    const iint D1i2 = D1ids[n + p_Np];
-    const iint D2i2 = D2ids[n + p_Np];
-    const iint D3i2 = D3ids[n + p_Np];
-    const dfloat Dval2 = Dvals[n + p_Np];
+     
+     
+//         const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+//         const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha; 
 
-    const iint D1i3 = D1ids[n + 2*p_Np];
-    const iint D2i3 = D2ids[n + 2*p_Np];
-    const iint D3i3 = D3ids[n + 2*p_Np];    
-    const dfloat Dval3 = Dvals[n + 2*p_Np];
+//         // Update
+//         const iint id       = p_Nfields*(e*p_Np + n);
+//         const iint rhsId    = 3*id + p_Nfields*shift;
+//         const iint pmlrhsId = 3*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
-#if 1
-    const dfloat dq1dr = .5f*(Dval1*(s_q[es][0][D2i1] - s_q[es][0][D1i1]) +
-            Dval2*(s_q[es][0][D2i2] - s_q[es][0][D1i2]) +
-            Dval3*(s_q[es][0][D2i3] - s_q[es][0][D1i3]));
-    const dfloat dq1ds = .5f*(Dval1*(s_q[es][0][D3i1] - s_q[es][0][D1i1]) +
-            Dval2*(s_q[es][0][D3i2] - s_q[es][0][D1i2]) +
-            Dval3*(s_q[es][0][D3i3] - s_q[es][0][D1i3]));
-    
-    const dfloat dq2dr = .5f*(Dval1*(s_q[es][1][D2i1] - s_q[es][1][D1i1]) +
-            Dval2*(s_q[es][1][D2i2] - s_q[es][1][D1i2]) +
-            Dval3*(s_q[es][1][D2i3] - s_q[es][1][D1i3]));
-    const dfloat dq2ds = .5f*(Dval1*(s_q[es][1][D3i1] - s_q[es][1][D1i1]) +
-            Dval2*(s_q[es][1][D3i2] - s_q[es][1][D1i2]) +
-            Dval3*(s_q[es][1][D3i3] - s_q[es][1][D1i3]));
-    
-    const dfloat dq3dr = .5f*(Dval1*(s_q[es][2][D2i1] - s_q[es][2][D1i1]) +
-            Dval2*(s_q[es][2][D2i2] - s_q[es][2][D1i2]) +
-            Dval3*(s_q[es][2][D2i3] - s_q[es][2][D1i3]));
-    const dfloat dq3ds = .5f*(Dval1*(s_q[es][2][D3i1] - s_q[es][2][D1i1]) +
-            Dval2*(s_q[es][2][D3i2] - s_q[es][2][D1i2]) +
-            Dval3*(s_q[es][2][D3i3] - s_q[es][2][D1i3]));
-    
-    const dfloat dq4dr = .5f*(Dval1*(s_q[es][3][D2i1] - s_q[es][3][D1i1]) +
-            Dval2*(s_q[es][3][D2i2] - s_q[es][3][D1i2]) +
-            Dval3*(s_q[es][3][D2i3] - s_q[es][3][D1i3]));
-    const dfloat dq4ds = .5f*(Dval1*(s_q[es][3][D3i1] - s_q[es][3][D1i1]) +
-            Dval2*(s_q[es][3][D3i2] - s_q[es][3][D1i2]) +
-            Dval3*(s_q[es][3][D3i3] - s_q[es][3][D1i3]));
-    
-    const dfloat dq5dr = .5f*(Dval1*(s_q[es][4][D2i1] - s_q[es][4][D1i1]) +
-            Dval2*(s_q[es][4][D2i2] - s_q[es][4][D1i2]) +
-            Dval3*(s_q[es][4][D2i3] - s_q[es][4][D1i3]));
-    const dfloat dq5ds = .5f*(Dval1*(s_q[es][4][D3i1] - s_q[es][4][D1i1]) +
-            Dval2*(s_q[es][4][D3i2] - s_q[es][4][D1i2]) +
-            Dval3*(s_q[es][4][D3i3] - s_q[es][4][D1i3])); 
+//         for(iint fld=0; fld<p_Nfields; ++fld){
+//           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
+//           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
+//           //
+//           rhsq[rhsId +fld] = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
+         
+//         }
 
-    const dfloat dq6dr = .5f*(Dval1*(s_q[es][5][D2i1] - s_q[es][5][D1i1]) +
-            Dval2*(s_q[es][5][D2i2] - s_q[es][5][D1i2]) +
-            Dval3*(s_q[es][5][D2i3] - s_q[es][5][D1i3]));
-    const dfloat dq6ds = .5f*(Dval1*(s_q[es][5][D3i1] - s_q[es][5][D1i1]) +
-            Dval2*(s_q[es][5][D3i2] - s_q[es][5][D1i2]) +
-            Dval3*(s_q[es][5][D3i3] - s_q[es][5][D1i3])); 
+//       }
+//     }
+//   }
+  
+// }
+// }
+
+
+
+
+
+
+
+
+// kernel void boltzmannPmlVolumeCub2D(const iint Nelements,
+//               const iint * restrict elementIds,
+//               const dfloat ramp,
+//               const dfloat drampdt,
+//               const dfloat * restrict vgeo,
+//               const dfloat * restrict sigmax, 
+//               const dfloat * restrict sigmay,
+//               const dfloat * restrict DrT,
+//               const dfloat * restrict DsT,
+//               const dfloat4 * restrict q,
+//               const dfloat * restrict pmlqx,
+//               const dfloat * restrict pmlqy,
+//                     dfloat4 * restrict rhsq,
+//                     dfloat * restrict rhspmlqx,
+//                     dfloat * restrict rhspmlqy){
+  
+//    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
     
-    // chain rule
-    dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
-    dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
-    dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
-    dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
-    dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
-    dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
     
-    dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
-    dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
-    dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
-    dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
-    dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
-    dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     const dfloat sigmaxe = sigmax[element*p_Np+n];
+//     const dfloat sigmaye = sigmay[element*p_Np+n];
+
+//     const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+//     const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+
+//     iint base = element*p_Np*p_Nfields+n;
+//     dfloat pmlqx1 = pmlqx[base+0*p_Np];
+//     dfloat pmlqx2 = pmlqx[base+1*p_Np];
+//     dfloat pmlqx3 = pmlqx[base+2*p_Np];
+//     dfloat pmlqx4 = pmlqx[base+3*p_Np];
+//     dfloat pmlqx5 = pmlqx[base+4*p_Np];
+//     dfloat pmlqx6 = pmlqx[base+5*p_Np];
+
+//     dfloat pmlqy1 = pmlqy[base+0*p_Np];
+//     dfloat pmlqy2 = pmlqy[base+1*p_Np];
+//     dfloat pmlqy3 = pmlqy[base+2*p_Np];
+//     dfloat pmlqy4 = pmlqy[base+3*p_Np];
+//     dfloat pmlqy5 = pmlqy[base+4*p_Np];
+//     dfloat pmlqy6 = pmlqy[base+5*p_Np];
+      
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
     
-    // transport operator
-    dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
-    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
-    dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
-    dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
-    dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
-    dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
-#endif
+//     // dQ/dx
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
     
-#if 0
-    // BGK relaxation approximation to the Boltzmann collision operator
-    rhsq4 -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-    rhsq5 -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-    rhsq6 -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-#endif
+//     // dQ/dy
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+          
+//     // A*dQ/dx
+//     dfloat Aqx1 = -p_sqrtRT*(dq2dx);
+//     dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
+//     dfloat Aqx3 = -p_sqrtRT*(dq4dx);
+//     dfloat Aqx4 = -p_sqrtRT*(dq3dx);
+//     dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
+//     dfloat Aqx6 = 0.f;
+//       // B*dQ/dy
+//     dfloat Bqy1 = -p_sqrtRT*(dq3dy);
+//     dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
+//     dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
+//     dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
+//     dfloat Bqy5 = 0.f;
+//     dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+      
+//       // Rhs for qx : -sigma_x*qx + Adq/dx        
+//     rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
+//     rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
+//     rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
+//     rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
+//     rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
+//     rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
 
-#if 1
-    // add mean flow forcing
-    rhsq2 += drampdt*p_q2bar;
-    rhsq3 += drampdt*p_q3bar;
-    rhsq4 += 2.f*ramp*drampdt*p_q4bar;
-    rhsq5 += 2.f*ramp*drampdt*p_q5bar;
-    rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+//     // Rhs for qy : -sigma_y*qy + Adq/dy  
+//     rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
+//     rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
+//     rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
+//     rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
+//     rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
+//     rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
+   
+//     // Rhs for q: A*dq/dx + B*dq/dy - sigma_x*qx  - sigma_y*qy + N(q)
+//     dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1;
+//     dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2;
+//     dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3;
+//     dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4;
+//     dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5;
+//     dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6;
 
-    const int id = element*p_Np+n;    
-    dfloat4 tmp;
-    tmp.x = rhsq1;
-    tmp.y = rhsq2;
-    tmp.z = rhsq3;
-    tmp.w = rhsq4;
+//       // Add mean flow forcing to Rhsq: d q_bar/ dt
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
 
-    rhsq[2*id] = tmp;
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
 
-    tmp.x = rhsq5;
-    tmp.y = rhsq6;
-    tmp.z = 0.f;
-    tmp.w = 0.f;
+//     rhsq[2*id] = tmp;
 
-    rhsq[2*id+1] = tmp;
-#endif
-  }
-      }
-    }
-  }
-}
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+// kernel void boltzmannSAVolume2D(const iint Nelements,
+//             const iint * restrict elementIds,
+//             const dfloat ramp,
+//             const dfloat drampdt,
+//             const dfloat * restrict vgeo,
+//             const dfloat * restrict DrT,
+//             const dfloat * restrict DsT,
+//             const dfloat4 * restrict q,
+//                   dfloat4 * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//   iint e = eo+es; // element in block
+
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
+    
+//     // chain rule
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+    
+//     // transport operator
+//     dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
+//     dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
+//     dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
+//     dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
+//     dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
+//     dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     rhsq4 += p_tauInv* (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]);
+//     rhsq5 += p_tauInv* p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
+//     rhsq6 += p_tauInv* p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
+
+//     // add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
+
+//     rhsq[2*id] = tmp;
+
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+
+// kernel void boltzmannSAPmlVolume2D(const iint Nelements,
+//               const iint * restrict elementIds,
+//               const dfloat ramp,
+//               const dfloat drampdt,
+//               const dfloat * restrict vgeo,
+//               const dfloat * restrict sigmax,
+//               const dfloat * restrict sigmay,
+//               const dfloat * restrict DrT,
+//               const dfloat * restrict DsT,
+//               const dfloat4 * restrict q,
+//               const dfloat * restrict pmlqx,
+//               const dfloat * restrict pmlqy,
+//                     dfloat4 * restrict rhsq,
+//                     dfloat * restrict rhspmlqx,
+//                     dfloat * restrict rhspmlqy
+//               ){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+    
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     const dfloat sigmaxe = sigmax[element*p_Np+n];
+//     const dfloat sigmaye = sigmay[element*p_Np+n];
+
+//     const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+//     const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+
+//     iint base = element*p_Np*p_Nfields+n;
+//     dfloat pmlqx1 = pmlqx[base+0*p_Np];
+//     dfloat pmlqx2 = pmlqx[base+1*p_Np];
+//     dfloat pmlqx3 = pmlqx[base+2*p_Np];
+//     dfloat pmlqx4 = pmlqx[base+3*p_Np];
+//     dfloat pmlqx5 = pmlqx[base+4*p_Np];
+//     dfloat pmlqx6 = pmlqx[base+5*p_Np];
+
+//     dfloat pmlqy1 = pmlqy[base+0*p_Np];
+//     dfloat pmlqy2 = pmlqy[base+1*p_Np];
+//     dfloat pmlqy3 = pmlqy[base+2*p_Np];
+//     dfloat pmlqy4 = pmlqy[base+3*p_Np];
+//     dfloat pmlqy5 = pmlqy[base+4*p_Np];
+//     dfloat pmlqy6 = pmlqy[base+5*p_Np];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     occaUnroll(p_Np)
+//     for(iint i=0;i<p_Np;++i){
+//       const dfloat Drni = DrT[n+i*p_Np];
+//       const dfloat Dsni = DsT[n+i*p_Np];
+      
+//       // differentiate q components with respect to 'r' and 's'
+//       dq1dr += Drni*s_q[es][0][i];
+//       dq1ds += Dsni*s_q[es][0][i];
+//       dq2dr += Drni*s_q[es][1][i];
+//       dq2ds += Dsni*s_q[es][1][i];
+//       dq3dr += Drni*s_q[es][2][i];
+//       dq3ds += Dsni*s_q[es][2][i];
+//       dq4dr += Drni*s_q[es][3][i];
+//       dq4ds += Dsni*s_q[es][3][i];
+//       dq5dr += Drni*s_q[es][4][i];
+//       dq5ds += Dsni*s_q[es][4][i];
+//       dq6dr += Drni*s_q[es][5][i];
+//       dq6ds += Dsni*s_q[es][5][i];
+//     }
+
+//      // dQ/dx
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     // dQ/dy
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+          
+//     // A*dQ/dx
+//     dfloat Aqx1 = -p_sqrtRT*(dq2dx);
+//     dfloat Aqx2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx);  
+//     dfloat Aqx3 = -p_sqrtRT*(dq4dx);
+//     dfloat Aqx4 = -p_sqrtRT*(dq3dx);
+//     dfloat Aqx5 = -p_sqrtRT*p_sqrt2*dq2dx;      
+//     dfloat Aqx6 = 0;
+//       // B*dQ/dy
+//     dfloat Bqy1 = -p_sqrtRT*(dq3dy);
+//     dfloat Bqy2 = -p_sqrtRT*(dq4dy);  
+//     dfloat Bqy3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy);  
+//     dfloat Bqy4 = -p_sqrtRT*(dq2dy);    
+//     dfloat Bqy5 = 0;
+//     dfloat Bqy6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+      
+//       // Rhs for qx       
+//     rhspmlqx[base+0*p_Np] = -msigmaxe*(pmlqx1) + Aqx1;
+//     rhspmlqx[base+1*p_Np] = -msigmaxe*(pmlqx2) + Aqx2;
+//     rhspmlqx[base+2*p_Np] = -msigmaxe*(pmlqx3) + Aqx3;
+//     rhspmlqx[base+3*p_Np] = -msigmaxe*(pmlqx4) + Aqx4;
+//     rhspmlqx[base+4*p_Np] = -msigmaxe*(pmlqx5) + Aqx5;
+//     rhspmlqx[base+5*p_Np] = -msigmaxe*(pmlqx6) + Aqx6;
+
+//     // Rhs for qy
+//     rhspmlqy[base+0*p_Np] = -msigmaye*(pmlqy1) + Bqy1;
+//     rhspmlqy[base+1*p_Np] = -msigmaye*(pmlqy2) + Bqy2;
+//     rhspmlqy[base+2*p_Np] = -msigmaye*(pmlqy3) + Bqy3;
+//     rhspmlqy[base+3*p_Np] = -msigmaye*(pmlqy4) + Bqy4;
+//     rhspmlqy[base+4*p_Np] = -msigmaye*(pmlqy5) + Bqy5;
+//     rhspmlqy[base+5*p_Np] = -msigmaye*(pmlqy6) + Bqy6;
+   
+
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     dfloat N4 = p_tauInv*(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]);
+//     dfloat N5 = p_tauInv*(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]);
+//     dfloat N6 = p_tauInv*(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]);
+   
+//     // Rhs for q
+//     dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
+//     dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
+//     dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
+//     dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
+//     dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
+//     dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
+//     //
+//     // Add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
+
+//     rhsq[2*id] = tmp;
+
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+
+//   }
+//       }
+//     }
+//   }
+// }
+
+
+
+
+
+
+
+// kernel void boltzmannVolume2Dbbdg(const iint Nelements,
+//           const iint * restrict elementIds,
+//           const dfloat ramp,
+//           const dfloat drampdt,
+//           const dfloat * restrict vgeo,
+//           const iint * restrict D1ids,
+//           const iint * restrict D2ids,
+//           const iint * restrict D3ids,
+//           const dfloat * restrict Dvals,    
+//           const dfloat4 * restrict q,
+//           dfloat4 * restrict rhsq){
+  
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+//     shared dfloat s_q[p_NblockV][6][p_Np];
+//     exclusive iint element;
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+
+//   iint e = eo+es; // element in block
+
+//   if(e<Nelements){
+//     element = elementIds[e];
+
+//     const iint id = element*p_Np+n;
+//     dfloat4 qan = q[2*id];
+//     dfloat4 qbn = q[2*id+1];
+
+//     s_q[es][0][n] = qan.x;
+//     s_q[es][1][n] = qan.y;
+//     s_q[es][2][n] = qan.z;
+//     s_q[es][3][n] = qan.w;
+
+//     s_q[es][4][n] = qbn.x;
+//     s_q[es][5][n] = qbn.y;
+
+//   }
+//       }
+//     }
+
+//     // make sure all node data is loaded into shared
+//     barrier(localMemFence);
+
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  
+//   iint e = eo+es; // element in block
+//   if(e<Nelements){
+    
+//     // prefetch geometric factors (constant on triangle)
+//     const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+//     const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+//     const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+//     const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
+
+//     // compute 'r' and 's' derivatives of (q_m) at node n
+//     //dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
+//     //dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
+
+//     const iint D1i1 = D1ids[n];
+//     const iint D2i1 = D2ids[n];
+//     const iint D3i1 = D3ids[n];
+//     const dfloat Dval1 = Dvals[n];
+    
+//     const iint D1i2 = D1ids[n + p_Np];
+//     const iint D2i2 = D2ids[n + p_Np];
+//     const iint D3i2 = D3ids[n + p_Np];
+//     const dfloat Dval2 = Dvals[n + p_Np];
+
+//     const iint D1i3 = D1ids[n + 2*p_Np];
+//     const iint D2i3 = D2ids[n + 2*p_Np];
+//     const iint D3i3 = D3ids[n + 2*p_Np];    
+//     const dfloat Dval3 = Dvals[n + 2*p_Np];
+
+// #if 1
+//     const dfloat dq1dr = .5f*(Dval1*(s_q[es][0][D2i1] - s_q[es][0][D1i1]) +
+//             Dval2*(s_q[es][0][D2i2] - s_q[es][0][D1i2]) +
+//             Dval3*(s_q[es][0][D2i3] - s_q[es][0][D1i3]));
+//     const dfloat dq1ds = .5f*(Dval1*(s_q[es][0][D3i1] - s_q[es][0][D1i1]) +
+//             Dval2*(s_q[es][0][D3i2] - s_q[es][0][D1i2]) +
+//             Dval3*(s_q[es][0][D3i3] - s_q[es][0][D1i3]));
+    
+//     const dfloat dq2dr = .5f*(Dval1*(s_q[es][1][D2i1] - s_q[es][1][D1i1]) +
+//             Dval2*(s_q[es][1][D2i2] - s_q[es][1][D1i2]) +
+//             Dval3*(s_q[es][1][D2i3] - s_q[es][1][D1i3]));
+//     const dfloat dq2ds = .5f*(Dval1*(s_q[es][1][D3i1] - s_q[es][1][D1i1]) +
+//             Dval2*(s_q[es][1][D3i2] - s_q[es][1][D1i2]) +
+//             Dval3*(s_q[es][1][D3i3] - s_q[es][1][D1i3]));
+    
+//     const dfloat dq3dr = .5f*(Dval1*(s_q[es][2][D2i1] - s_q[es][2][D1i1]) +
+//             Dval2*(s_q[es][2][D2i2] - s_q[es][2][D1i2]) +
+//             Dval3*(s_q[es][2][D2i3] - s_q[es][2][D1i3]));
+//     const dfloat dq3ds = .5f*(Dval1*(s_q[es][2][D3i1] - s_q[es][2][D1i1]) +
+//             Dval2*(s_q[es][2][D3i2] - s_q[es][2][D1i2]) +
+//             Dval3*(s_q[es][2][D3i3] - s_q[es][2][D1i3]));
+    
+//     const dfloat dq4dr = .5f*(Dval1*(s_q[es][3][D2i1] - s_q[es][3][D1i1]) +
+//             Dval2*(s_q[es][3][D2i2] - s_q[es][3][D1i2]) +
+//             Dval3*(s_q[es][3][D2i3] - s_q[es][3][D1i3]));
+//     const dfloat dq4ds = .5f*(Dval1*(s_q[es][3][D3i1] - s_q[es][3][D1i1]) +
+//             Dval2*(s_q[es][3][D3i2] - s_q[es][3][D1i2]) +
+//             Dval3*(s_q[es][3][D3i3] - s_q[es][3][D1i3]));
+    
+//     const dfloat dq5dr = .5f*(Dval1*(s_q[es][4][D2i1] - s_q[es][4][D1i1]) +
+//             Dval2*(s_q[es][4][D2i2] - s_q[es][4][D1i2]) +
+//             Dval3*(s_q[es][4][D2i3] - s_q[es][4][D1i3]));
+//     const dfloat dq5ds = .5f*(Dval1*(s_q[es][4][D3i1] - s_q[es][4][D1i1]) +
+//             Dval2*(s_q[es][4][D3i2] - s_q[es][4][D1i2]) +
+//             Dval3*(s_q[es][4][D3i3] - s_q[es][4][D1i3])); 
+
+//     const dfloat dq6dr = .5f*(Dval1*(s_q[es][5][D2i1] - s_q[es][5][D1i1]) +
+//             Dval2*(s_q[es][5][D2i2] - s_q[es][5][D1i2]) +
+//             Dval3*(s_q[es][5][D2i3] - s_q[es][5][D1i3]));
+//     const dfloat dq6ds = .5f*(Dval1*(s_q[es][5][D3i1] - s_q[es][5][D1i1]) +
+//             Dval2*(s_q[es][5][D3i2] - s_q[es][5][D1i2]) +
+//             Dval3*(s_q[es][5][D3i3] - s_q[es][5][D1i3])); 
+    
+//     // chain rule
+//     dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds;
+//     dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds;
+//     dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds;
+//     dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds;
+//     dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds;
+//     dfloat dq6dx = drdx*dq6dr + dsdx*dq6ds;
+    
+//     dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds;
+//     dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds;
+//     dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds;
+//     dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds;
+//     dfloat dq5dy = drdy*dq5dr + dsdy*dq5ds;
+//     dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
+    
+//     // transport operator
+//     dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy);
+//     dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq4dy); 
+//     dfloat rhsq3 = -p_sqrtRT*(dq4dx + dq1dy + p_sqrt2*dq6dy); 
+//     dfloat rhsq4 = -p_sqrtRT*(dq3dx + dq2dy);   
+//     dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;     
+//     dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;                   
+// #endif
+    
+// #if 0
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     rhsq4 -= p_tauInv*(s_q[es][3][n] - (s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//     rhsq5 -= p_tauInv*(s_q[es][4][n] - p_invsqrt2*(s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//     rhsq6 -= p_tauInv*(s_q[es][5][n] - p_invsqrt2*(s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+// #endif
+
+// #if 1
+//     // add mean flow forcing
+//     rhsq2 += drampdt*p_q2bar;
+//     rhsq3 += drampdt*p_q3bar;
+//     rhsq4 += 2.f*ramp*drampdt*p_q4bar;
+//     rhsq5 += 2.f*ramp*drampdt*p_q5bar;
+//     rhsq6 += 2.f*ramp*drampdt*p_q6bar;
+
+//     const int id = element*p_Np+n;    
+//     dfloat4 tmp;
+//     tmp.x = rhsq1;
+//     tmp.y = rhsq2;
+//     tmp.z = rhsq3;
+//     tmp.w = rhsq4;
+
+//     rhsq[2*id] = tmp;
+
+//     tmp.x = rhsq5;
+//     tmp.y = rhsq6;
+//     tmp.z = 0.f;
+//     tmp.w = 0.f;
+
+//     rhsq[2*id+1] = tmp;
+// #endif
+//   }
+//       }
+//     }
+//   }
+// }
 
 
 

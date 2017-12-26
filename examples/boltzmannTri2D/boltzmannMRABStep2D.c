@@ -5,6 +5,8 @@ void boltzmannMRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                          dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
+
+
 for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     // intermediate stage time
@@ -79,6 +81,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                             mesh->o_MRABelementIds[l],
                             ramp, 
                             drampdt,
+                            mesh->Nrhs,
                             mesh->MRABshiftIndex[l],
                             mesh->o_vgeo,
                             mesh->o_DrT,
@@ -92,6 +95,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                             mesh->o_MRABpmlIds[l],
                             ramp, 
                             drampdt,
+                            mesh->Nrhs,
                             mesh->MRABshiftIndex[l],
                             mesh->o_vgeo,
                             mesh->o_pmlSigmaX,
@@ -114,6 +118,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
         if (mesh->MRABNelements[l])
               mesh->relaxationKernel(mesh->MRABNelements[l],
                             mesh->o_MRABelementIds[l],
+                            mesh->Nrhs,
                             mesh->MRABshiftIndex[l],
                             mesh->o_cubInterpT,
                             mesh->o_cubProjectT,
@@ -124,6 +129,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
              mesh->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
                             mesh->o_MRABpmlElementIds[l],
                             mesh->o_MRABpmlIds[l],
+                            mesh->Nrhs,
                             mesh->MRABshiftIndex[l],
                             mesh->o_cubInterpT,
                             mesh->o_cubProjectT,
@@ -168,6 +174,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                               mesh->o_MRABelementIds[l],
                               t,
                               ramp,
+                              mesh->Nrhs,
                               mesh->MRABshiftIndex[l],
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
@@ -187,6 +194,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                               mesh->o_MRABpmlIds[l],
                               t,
                               ramp,
+                              mesh->Nrhs,
                               mesh->MRABshiftIndex[l],
                               mesh->o_sgeo,
                               mesh->o_LIFTT,
