@@ -20,7 +20,7 @@ int main(int argc, char **argv){
   // bc          = UNSPLITPML, SPLITPML, NONE
   // pmlprofile  = CONSTANT, QUADRATIC
   
-  char *options =strdup("out = REPORT+VTU, MR_GROUPS, relaxation = COLLOCATION, time = LSERK, bc=PML, pmlprofile=CONSTANT");
+  char *options =strdup("out = REPORT+VTU, MR_GROUPS, relaxation = CUBATURE, time = LSIMEX, bc=PML, pmlprofile=CONSTANT");
   
     if(argc!=3){
           printf("usage: ./main meshes/cavityH005.msh N\n");
@@ -29,21 +29,27 @@ int main(int argc, char **argv){
     // int specify polynomial degree 
     int N = atoi(argv[2]);
     // set up mesh stuff
+   
     mesh2D *mesh = meshSetupTri2D(argv[1], N);  
-    printf("Setup Boltzmann Solver: \n");  
+   
+    printf("Setup Boltzmann Solver: \n");
+    boltzmannSetup2D(mesh,options); 
 
-    if ( strstr(options,"MRAB") || strstr(options,"MRSAAB")){
-     boltzmannMRABSetup2D(mesh,options); 
-     // printf("Boltzmann Multi-Rate Run: \n"); 
-     boltzmannMRRun2D(mesh,options);   
+    printf("Boltzmann Run: \n");
+    boltzmannRun2D(mesh,options);        
 
-    }
+    // if ( strstr(options,"MRAB") || strstr(options,"MRSAAB")){
+    //  boltzmannMRABSetup2D(mesh,options); 
+    //   // printf("Boltzmann Multi-Rate Run: \n"); 
+    //  boltzmannMRRun2D(mesh,options);   
 
-    else{
-       boltzmannSetup2D(mesh,options);    
-       printf("Boltzmann Run: \n");  
-       boltzmannRun2D(mesh,options);  
-     }
+    // }
+
+    // else{
+    //   boltzmannSetup2D(mesh,options);    
+    //   printf("Boltzmann Run: \n");  
+    //   boltzmannRun2D(mesh,options);  
+    // }
     
     
     

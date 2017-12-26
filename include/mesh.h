@@ -197,10 +197,10 @@ typedef struct {
   iint   NtimeSteps;// number of time steps
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
-  dfloat rka[5], rkb[5], rkc[6];
+  dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
 
   // MRAB,SAAB coefficients
-  dfloat mrab[3], mrabb[3], saab[3], saabexp; // exp(-tauInv*dt)
+  dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated 
   iint MRABNlevels;
   iint *MRABlevel;
   iint *MRABNelements, *MRABNhaloElements;
@@ -211,13 +211,18 @@ typedef struct {
   iint **MRABpmlElementIds, **MRABpmlIds;
   iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
 
+  iint pmlNelements, nonPmlNelements;
+  iint *nonPmlElementIds, *pmlElementIds, *pmlIds;  
+  iint shiftIndex;
+
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann;
 
   //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
-  dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
+  dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
   dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
-  iint Nimex;
+  dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
+  iint Nimex, Nrhs;
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
   iint    plotNp;        // number of plot nodes per element
@@ -242,29 +247,33 @@ typedef struct {
   iint    pmlNfields;
   //  iint    pmlNelements; // deprecated
   iint   *pmlElementList; // deprecated
+
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
   dfloat *pmlSigmaZ;
+
   dfloat *pmlq;
+  dfloat *pmlqx;
+  dfloat *pmlqy;
+  dfloat *pmlqz;
+
   dfloat *pmlrhsq;
   dfloat *pmlrhsqx;
   dfloat *pmlrhsqy;
   dfloat *pmlrhsqz;
 
-  dfloat *pmlqx;
-  dfloat *pmlqy;
-  dfloat *pmlqz;
-  
-
-
   dfloat *pmlresq;
-
-
+  dfloat *pmlresqx;
+  dfloat *pmlresqy;
+  dfloat *pmlresqz;
+  
+  
+  
   dfloat *invTau;
   
 
-  // AK: Remove the below definition after fixin MRAB, only single rate uses 
+  // AK: Remove the below definition after fixing MRAB, only single rate uses 
   // dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
@@ -329,6 +338,7 @@ typedef struct {
   occa::memory *o_MRABpmlHaloElementIds;
   occa::memory *o_MRABpmlHaloIds;
 
+  
   // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
@@ -347,26 +357,35 @@ typedef struct {
 
 
   // pml vars
-  occa::memory o_sigmax, o_sigmay, o_sigmaz;
+  occa::memory o_sigmax, o_sigmay, o_sigmaz; // AK: deprecated
 
-  iint pmlNelements;
-  iint nonPmlNelements;
+  
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
+  occa::memory o_pmlIds;
 
-  occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
-  occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
-  occa::memory o_pmlqz, o_rhspmlqz, o_respmlqz;
+  occa::memory o_pmlElementList;
+  
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
+  occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
+  occa::memory o_pmlqx,o_pmlqy, o_pmlqz; 
+  occa::memory o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
+  occa::memory o_pmlresqx, o_pmlresqy, p_pmlresqz;
+
+  
+  // occa::memory o_rhspmlqx, o_respmlqx; 
+  // occa::memory o_rhspmlqy, o_respmlqy;
+  // occa::memory o_rhspmlqz, o_respmlqz;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
 
   // Boltzmann SARK extra storage for exponential update
   // occa::memory o_resqex;
 
   // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used
-  occa::memory o_expsigmax, o_expsigmay;
-  occa::memory o_rhsq2,     o_rhsq3;
-  occa::memory o_rhspmlqx2, o_rhspmlqx3;
-  occa::memory o_rhspmlqy2, o_rhspmlqy3;
+  occa::memory o_expsigmax, o_expsigmay; // deprecated
+  occa::memory o_rhsq2,     o_rhsq3;     // deprecated
+  occa::memory o_rhspmlqx2, o_rhspmlqx3; // deprecated
+  occa::memory o_rhspmlqy2, o_rhspmlqy3; // deprecated
   occa::memory o_rhspmlNT2, o_rhspmlNT3; // deprecated
   // LS Imex vars
   occa::memory o_qY,   o_qZ,   o_qS;
@@ -375,10 +394,11 @@ typedef struct {
 
 
 
-  occa::memory o_pmlElementList;
-  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
-  occa::memory o_pmlq, o_pmlrhsq, o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
+ 
   
+  
+
+
   // AK: Remove this stuff, rename single rate files
   occa::memory o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic

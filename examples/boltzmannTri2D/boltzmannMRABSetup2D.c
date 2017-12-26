@@ -23,10 +23,10 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
 
 
  // Initialize
-  dfloat Ma   = 0.f,   Re   = 0.f;
-  dfloat rho  = 1.f,   u    = 0.f;
-  dfloat v    = 0.f,   nu   = 0.f;
-  dfloat Uref = 1.f,   Lref = 1.f; 
+  dfloat Ma      = 0.f,   Re     = 0.f;
+  dfloat rho     = 1.f,   u      = 0.f;
+  dfloat v       = 0.f,   nu     = 0.f;
+  dfloat Uref    = 1.f,   Lref   = 1.f; 
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma22 = 0.f;  
 
   if(strstr(options, "PML")){
@@ -462,13 +462,13 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
       printf("Compiling MRAB volume kernel with nodal collocation for nonlinear term\n");
       mesh->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-             "boltzmannMRABVolume2D",
+             "boltzmannABVolume2D",
              kernelInfo);
 
       printf("Compiling MRAB PML volume kernel with nodal collocation for nonlinear term\n");
       mesh->pmlVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-           "boltzmannMRABPmlVolume2D",
+           "boltzmannABPmlVolume2D",
            kernelInfo); 
     }
 
