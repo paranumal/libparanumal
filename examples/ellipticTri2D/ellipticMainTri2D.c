@@ -31,9 +31,9 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+  //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
+  //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be KCYCLE, or VCYCLE
@@ -41,14 +41,22 @@ int main(int argc, char **argv){
   // smoother can be DAMPEDJACOBI or CHEBYSHEV
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-    //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=VCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
+  //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
 
   //this is strictly for testing, to do repeated runs. Will be removed later
-  if (argc==6) {
-    options = strdup(argv[4]);
-    parAlmondOptions = strdup(argv[5]);
+  //  if (argc==6) {
+  //   options = strdup(argv[4]);
+  //   parAlmondOptions = strdup(argv[5]);
+  // }
+
+  iint NblockV = 1;
+  iint NnodesV = 1;
+
+  if (argc == 5){
+    NblockV = atoi(argv[3]);
+    NnodesV = atoi(argv[4]);
   }
 
   // set up mesh stuff
@@ -73,8 +81,7 @@ int main(int argc, char **argv){
   } else if (strstr(options,"BRDG")) {
     tau = 1.0;
   }
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
-
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -138,10 +145,10 @@ int main(int argc, char **argv){
 
   // capture header file
   char *boundaryHeaderFileName;
-  if(argc==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/homogeneous2D.h"); // default
-  else
-    boundaryHeaderFileName = strdup(argv[3]);
+  // if(argc==3)
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/homogeneous2D.h"); // default
+  //  else
+  //  boundaryHeaderFileName = strdup(argv[3]);
   //add user defined boundary data
   kernelInfo.addInclude(boundaryHeaderFileName);
 
@@ -149,26 +156,26 @@ int main(int argc, char **argv){
   if (strstr(options,"IPDG")) {
 
     solver->rhsBCIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
-               "ellipticRhsBCIpdgTri2D",
-               kernelInfo);
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgTri2D.okl",
+          "ellipticRhsBCIpdgTri2D",
+          kernelInfo);
 
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
-                           mesh->o_vmapM,
-                           mesh->o_vmapP,
-                           solver->tau,
-                           zero,
-                           mesh->o_x,
-                           mesh->o_y,
-                           mesh->o_vgeo,
-                           mesh->o_sgeo,
-                           solver->o_EToB,
-                           mesh->o_DrT,
-                           mesh->o_DsT,
-                           mesh->o_LIFTT,
-                           mesh->o_MM,
-                           o_r);
+        mesh->o_vmapM,
+        mesh->o_vmapP,
+        solver->tau,
+        zero,
+        mesh->o_x,
+        mesh->o_y,
+        mesh->o_vgeo,
+        mesh->o_sgeo,
+        solver->o_EToB,
+        mesh->o_DrT,
+        mesh->o_DsT,
+        mesh->o_LIFTT,
+        mesh->o_MM,
+        o_r);
   }
 
   // convergence tolerance
