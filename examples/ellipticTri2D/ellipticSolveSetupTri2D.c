@@ -22,7 +22,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 }
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
-                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
+                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, iint NblockV, iint NnodesV){
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -105,7 +105,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   //set up memory for linear solver
   if(strstr(options,"GMRES")) {
-    solver->GMRESrestartFreq = 20;
+    solver->GMRESrestartFreq = 200;
     printf("GMRES Restart Frequency = %d \n", solver->GMRESrestartFreq);
     solver->HH  = (dfloat*) calloc((solver->GMRESrestartFreq+1)*solver->GMRESrestartFreq,   sizeof(dfloat));
     
@@ -174,8 +174,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+//  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NnodesV", NnodesV);
 
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
@@ -234,8 +235,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                kernelInfo);
 
   solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2DTW.okl",
+               "ellipticPartialAxTri2D_v1",
                kernelInfo);
 
   solver->weightedInnerProduct1Kernel =
