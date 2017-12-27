@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannRun2D(mesh2D *mesh, char *options){
+void boltzmannMRRun2D(mesh2D *mesh, char *options){
 
    // For initial data
   boltzmannReport2D(mesh, 0 ,options);
@@ -106,28 +106,8 @@ occa::initTimer(mesh->device);
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
-      if(strstr(options, "MRSAAB")){
+       if(strstr(options, "MRSAAB")){
       boltzmannMRSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-      if(strstr(options, "SRAB")){
-      boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-      if(strstr(options, "SAAB")){
-      boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-       if(strstr(options, "LSERK")){
-      boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-       if(strstr(options, "SARK")){
-      boltzmannSARKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-       if(strstr(options, "LSIMEX")){
-      boltzmannLSIMEXStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
       
@@ -172,5 +152,6 @@ occa::printTimer();
   // free(recvBuffer);
   // free(sendBuffer);
 }
+
 
 
