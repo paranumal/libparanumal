@@ -26,7 +26,7 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   printf("Comment 2%s ", buf);
   mesh->Ind = (iint*) calloc(mesh->maxNnzPerRow*mesh->maxNnzPerRow, sizeof(iint));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
-    fscanf(fp, "%d", mesh->Ind+n);                                                
+    fscanf(fp, "%d ", mesh->Ind+n);                                                
     //fscanf(fp, " %s ", buf);    
     printf(" %d ", mesh->Ind[n]);
     //printf("buf %s ", buf); 
@@ -40,8 +40,8 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   printf("Comment 3 %s ", buf);
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
     char test[1000];    
-    int aa = fscanf(fp,  "%lf", mesh->Srr+n);                                                
-    printf(" %f", mesh->Srr[n]);
+    int aa = fscanf(fp,  "%lf ", mesh->Srr+n);                                                
+    printf(" %f ", mesh->Srr[n]);
     //mesh->Srr[n]); 
     if ((n+1)%mesh->maxNnzPerRow == 0){
       printf(" \n ");
@@ -51,12 +51,24 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   fgets(buf, BUFSIZ, fp);
 
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
-    fscanf(fp, dfloatFormat, mesh->Srs+n);                                                
+    fscanf(fp, "%lf ", mesh->Srs+n);
+    printf(" %f ", mesh->Srs[n]);
+    //mesh->Srr[n]); 
+    if ((n+1)%mesh->maxNnzPerRow == 0){
+      printf(" \n ");
+    }
+                                                
   } 
   fgets(buf, BUFSIZ, fp);
 
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
-    fscanf(fp, dfloatFormat, mesh->Sss+n);                                                
+    fscanf(fp, "%lf ", mesh->Sss+n);                                                
+    printf(" %f ", mesh->Sss[n]);
+    //mesh->Srr[n]); 
+    if ((n+1)%mesh->maxNnzPerRow == 0){
+      printf(" \n ");
+    }
+
   }   
 
   //now occa copy, transpose and stuff

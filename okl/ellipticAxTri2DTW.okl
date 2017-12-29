@@ -222,6 +222,7 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
   }
 }
 //author: KS
+/*
 kernel void ellipticPartialAxTri2D_v3(const int Nelements,
     const iint   * restrict elementList,
     const dfloat * restrict ggeo,
@@ -330,6 +331,6 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
     }
   }
 }
-
+*/
 
 
