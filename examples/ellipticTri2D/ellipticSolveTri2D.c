@@ -456,18 +456,27 @@ dfloat ellipticInnerProduct(solver_t *solver,
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     occa::memory &o_r, occa::memory &o_x, const char *options){
-  mesh2D *mesh = solver->mesh;
+ 
+ mesh2D *mesh = solver->mesh;
+printf("N=%d \n", mesh->N);
+ loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
 
   //KS for testing
   /*  iint Nbytes = mesh->Np*(6+mesh->Np*5);
       int flops = mesh->Np* (mesh->Np *10+15); */
   //TW testing
-  iint Nbytes = mesh->Np*(6+4*mesh->Np);//assume the operators are cached
-  iint flops = mesh->Np*(mesh->Np*8+7);
+  //  iint Nbytes = mesh->Np*(6+mesh->Np);//assume the operators are cached
+  iint Nbytes = sizeof(dfloat)*mesh->Np*(6+0*mesh->Np);
+  //replace with mesh->Np*(6+4*mesh->Np); if they are NOT`
+  //TW v1:
+//  iint flops = mesh->Np*(mesh->Np*8+7);
+//TW v2
+  iint flops = mesh->Np*(mesh->Np*6+5);
 
 
 
   Nbytes /= 2; 
+  printf("copyint %d elements \n", Nbytes*mesh->Nelements);  
   occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
   occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 
@@ -511,14 +520,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   printf("time per Ax kernel %16.17f (executed %d times) \n", timeAx/NAx, NAx);
   double kernelElapsed = timeAx/NAx;
 
-  double copyBandwidth   = mesh->Nelements*Ntrials*((Nbytes*2)/(1e9*copyElapsed));
-  double kernelBandwidth = mesh->Nelements*((Nbytes*2)/(1e9*kernelElapsed));
-  double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);  
-  double roofline = mesh->Nelements*flops*Ntrials/(1e9*copyElapsed);
-
-  printf("copy BW %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
-  printf("ROOFLINE %16.17g \n", roofline);
-  printf("GFLOPS %16.17f \n", kernelGFLOPS);
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -540,14 +541,33 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     double globalElapsed;
     iint   globalDofs;
     iint   globalElements;
+    double globalCopyElapsed;
 
     MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
     MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&copyElapsed,&globalCopyElapsed,1, MPI_DOUBLE,   MPI_MAX, 0, MPI_COMM_WORLD );
 
-    if (rank==0)
+
+
+    if (rank==0){
+
+      double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
+      double kernelBandwidth = mesh->Nelements*((Nbytes*2)/(1e9*kernelElapsed));
+      double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);  
+      //globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);      
+       double roofline = mesh->Nelements*flops*Ntrials/(1e9*globalCopyElapsed);
+
+      // double roofline = mesh->Nelements*flops*Ntrials/(1e9*copyElapsed);
+      //( BWfromcopy512(N)*W)/(8*D);
+     // double roofline = copyBandwidth*flops/(Nbytes*2*8);
+      printf("copy BW %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
+      printf("ROOFLINE %16.17g \n", roofline);
+      printf("GFLOPS %16.17f \n", kernelGFLOPS);
+
       printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
           size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
+    }
   }
   return Niter;
 

@@ -1,9 +1,9 @@
 for N in `seq 1 8`;
 do
 echo "$N"
-for volBlk in `seq 1 1 16`;
+for volBlk in `seq 1 2 15`;
      do
-   for volNod in `seq 1 1 8`;
+   for volNod in `seq 1 2 9`;
    do
        ./ellipticMainTri2D ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep GFLOPS;
    done
