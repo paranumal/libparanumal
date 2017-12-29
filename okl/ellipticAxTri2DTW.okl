@@ -227,7 +227,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
     const dfloat * restrict ggeo,
     const dfloat * restrict SrrT,
     const dfloat * restrict SrsT,
-    const dfloat * restrict SsrT,
+    const char4 * restrict IndT,
     const dfloat * restrict SssT,
     const dfloat * restrict MM,
     const dfloat lambda,
@@ -272,31 +272,36 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
             r_qrs[et] = 0;
             r_qss[et] = 0;
           }
+        //this loop is modified
 
-        occaUnroll(p_Np)
-          for (int k=0;k<p_Np;k++) {
+        occaUnroll(p_maxNnzPerRow)
+          for (int k=0;k<p_maxNnzPerRow;k++) {
             // prefetch operators to register for reuse
-            const int id = n+k*p_Np;
-            const dfloat Srr_nk = SrrT[id];
-            const dfloat Srs_nk = SrsT[id];
-            const dfloat Sss_nk = SssT[id];
 
-            // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
-            // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
-            // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
-            // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
+            //if IndList(i,j) ~=0 
+            if (IndT[k*p_maxNnzPerRow+n] != 0){
+//result(j) = result(j)+ Srr(j,IndList(i,j))*x(IndList(i,j));
+              const int id = IndT[k*p_maxNnzPerRow+n];
+              const dfloat Srr_nk = SrrT[id*k+n];
+              const dfloat Srs_nk = SrsT[id*k+n];
+              const dfloat Sss_nk = SssT[id*k+n];
 
-            occaUnroll(p_NnodesV){
-              for(iint et=0;et<p_NnodesV;++et){
-                // fetch from shared (for reuse four times)
-                const dfloat r_qk = s_q[et][es][k];
-                r_qrr[et] += Srr_nk*r_qk;
-                r_qrs[et] += Srs_nk*r_qk;
-                r_qss[et] += Sss_nk*r_qk;
+              // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
+              // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
+              // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
+              // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
+
+              occaUnroll(p_NnodesV){
+                for(iint et=0;et<p_NnodesV;++et){
+                  // fetch from shared (for reuse four times)
+                  const dfloat r_qk = s_q[et][es][k];
+                  r_qrr[et] += Srr_nk*r_qk;
+                  r_qrs[et] += Srs_nk*r_qk;
+                  r_qss[et] += Sss_nk*r_qk;
+                }
               }
             }
           }
-
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
           for(iint et=0;et<p_NnodesV;++et){

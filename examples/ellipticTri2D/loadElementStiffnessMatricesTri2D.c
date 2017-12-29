@@ -14,6 +14,8 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("Comment 1%s ", buf);
+
   fgets(buf, BUFSIZ, fp);
   int maxNnzPerRow;
   sscanf(buf, "%d", &maxNnzPerRow);
@@ -21,23 +23,38 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
 
   mesh->maxNnzPerRow = maxNnzPerRow;
   fgets(buf, BUFSIZ, fp); // another  comment
+  printf("Comment 2%s ", buf);
   mesh->Ind = (iint*) calloc(mesh->maxNnzPerRow*mesh->maxNnzPerRow, sizeof(iint));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
-    fscanf(fp, "%d", mesh->Ind+n);                                                
-    printf("%d", mesh->Ind[n]); 
+     fscanf(fp, "%d", mesh->Ind+n);                                                
+    //fscanf(fp, " %s ", buf);    
+    printf(" %d ", mesh->Ind[n]);
+    //printf("buf %s ", buf); 
+    if ((n+1)%mesh->maxNnzPerRow == 0){printf(" \n ");}
   }   
   mesh->Srr =  (dfloat*) calloc(mesh->maxNnzPerRow*mesh->maxNnzPerRow, sizeof(dfloat));
   mesh->Srs =  (dfloat*) calloc(mesh->maxNnzPerRow*mesh->maxNnzPerRow, sizeof(dfloat));
   mesh->Sss =  (dfloat*) calloc(mesh->maxNnzPerRow*mesh->maxNnzPerRow, sizeof(dfloat));
-  sscanf(buf, "%d", &maxNnzPerRow);
+  fgets(buf, BUFSIZ, fp);
+  //fscanf(fp, "%s", buf);
+  printf("Comment 3 %s ", buf);
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
-    fscanf(fp, dfloatFormat, mesh->Srr+n);                                                
+    char test[1000];    
+    int aa = fscanf(fp,  "%s", &test);                                                
+    printf(" %s", test);
+//mesh->Srr[n]); 
+    if ((n+1)%mesh->maxNnzPerRow == 0){
+      printf(" \n ");
+    }
+
   }   
-  sscanf(buf, "%d", &maxNnzPerRow);
+  fgets(buf, BUFSIZ, fp);
+
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
     fscanf(fp, dfloatFormat, mesh->Srs+n);                                                
-  }   
-  sscanf(buf, "%d", &maxNnzPerRow);
+  } 
+  fgets(buf, BUFSIZ, fp);
+
   for(int n=0;n<mesh->maxNnzPerRow*mesh->maxNnzPerRow;++n){                                           
     fscanf(fp, dfloatFormat, mesh->Sss+n);                                                
   }   
