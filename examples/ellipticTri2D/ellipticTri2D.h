@@ -184,3 +184,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
                               const char *options, const char *parAlmondOptions);
 
 #endif
+
+//KS: load sparse stiffness ops
+void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N);
+void buildElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N);

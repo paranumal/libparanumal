@@ -221,7 +221,110 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
     }
   }
 }
+//author: KS
+kernel void ellipticPartialAxTri2D_v3(const int Nelements,
+    const iint   * restrict elementList,
+    const dfloat * restrict ggeo,
+    const dfloat * restrict SrrT,
+    const dfloat * restrict SrsT,
+    const dfloat * restrict SsrT,
+    const dfloat * restrict SssT,
+    const dfloat * restrict MM,
+    const dfloat lambda,
+    const dfloat  * restrict q,
+    dfloat  * restrict Aq){
 
+  // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
+
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+
+    shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+            if(e<Nelements){
+              //prefetch q
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
+              s_q[et][es][n] = q[id];
+            }
+          }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        // do this part irrespective of e
+        dfloat r_qrr[p_NnodesV];
+        dfloat r_qrs[p_NnodesV];
+        dfloat r_qss[p_NnodesV];
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            r_qrr[et] = 0;
+            r_qrs[et] = 0;
+            r_qss[et] = 0;
+          }
+
+        occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+            // prefetch operators to register for reuse
+            const int id = n+k*p_Np;
+            const dfloat Srr_nk = SrrT[id];
+            const dfloat Srs_nk = SrsT[id];
+            const dfloat Sss_nk = SssT[id];
+
+            // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
+            // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
+            // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
+            // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
+
+            occaUnroll(p_NnodesV){
+              for(iint et=0;et<p_NnodesV;++et){
+                // fetch from shared (for reuse four times)
+                const dfloat r_qk = s_q[et][es][k];
+                r_qrr[et] += Srr_nk*r_qk;
+                r_qrs[et] += Srs_nk*r_qk;
+                r_qss[et] += Sss_nk*r_qk;
+              }
+            }
+          }
+
+        // this part has to check for element index validity
+        occaUnroll(p_NnodesV){
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+
+            if (e<Nelements) {
+              const iint element = elementList[e];
+
+              const iint gid = element*p_Nggeo;
+
+              const dfloat Grr = ggeo[gid + p_G00ID];
+              const dfloat Grs = ggeo[gid + p_G01ID];
+              const dfloat Gss = ggeo[gid + p_G11ID];
+              const dfloat J   = ggeo[gid + p_GWJID];
+
+              dfloat res = Grr*r_qrr[et];
+              dfloat res2 = Grs*r_qrs[et]; // A.
+              dfloat res3 = Gss*r_qss[et];
+
+              const iint id = n + element*p_Np;
+              Aq[id] = res+res2+res3;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 
 
