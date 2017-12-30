@@ -31,7 +31,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE,LEFT,SPARSE, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -81,6 +81,14 @@ int main(int argc, char **argv){
   } else if (strstr(options,"BRDG")) {
     tau = 1.0;
   }
+  if (strstr(options, "SPARSE")){
+ 
+   loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+  }
+  else{
+    buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+  } 
+
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
