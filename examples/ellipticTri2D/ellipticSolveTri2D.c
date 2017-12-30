@@ -32,7 +32,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndT,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
@@ -50,7 +50,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       occa::streamTag startAxtime = mesh->device.tagStream();
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndT,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else {

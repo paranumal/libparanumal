@@ -289,12 +289,12 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
               const dfloat Srs_nk = SrsT[id*p_maxNnzPerRow+n];
               const dfloat Sss_nk = SssT[id*p_maxNnzPerRow+n];
               /*
-              const dfloat Srr_nk = 1.0;
-              const dfloat Srs_nk = 1.0;
-              const dfloat Sss_nk = 1.0;*/
-            /*if (eo+es == 0){
+                 const dfloat Srr_nk = 1.0;
+                 const dfloat Srs_nk = 1.0;
+                 const dfloat Sss_nk = 1.0;*/
+              /*if (eo+es == 0){
                 printf("n = %d, k = %d, requesting Ind[%d] = %d, element Srr[%d] \n",n,k,n*p_maxNnzPerRow+k, IndT[n*p_maxNnzPerRow+k], id*p_maxNnzPerRow+n);
-              }*/
+                }*/
               // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
               // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
               // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
@@ -339,6 +339,132 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
     }
   }
 }
+//char4 version
+kernel void ellipticPartialAxTri2D_v4(const int Nelements,
+    const iint   * restrict elementList,
+    const dfloat * restrict ggeo,
+    const dfloat * restrict SrrT,
+    const dfloat * restrict SrsT,
+    const char4   * restrict IndT,
+    const dfloat * restrict SssT,
+    const dfloat * restrict MM,
+    const dfloat lambda,
+    const dfloat  * restrict q,
+    dfloat  * restrict Aq){
 
+  // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
+
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+
+    shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+            if(e<Nelements){
+              //prefetch q
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
+              s_q[et][es][n] = q[id];
+              //printf("maxNNz = %d \n", p_maxNnzPerRow);           
+            }
+          }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        // do this part irrespective of e
+        dfloat r_qrr[p_NnodesV];
+        dfloat r_qrs[p_NnodesV];
+        dfloat r_qss[p_NnodesV];
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            r_qrr[et] = 0;
+            r_qrs[et] = 0;
+            r_qss[et] = 0;
+          }
+        //this loop is modified
+int shift = p_maxNnzPerRow/4;
+        occaUnroll(p_maxNnzPerRow/4)
+          for (int k=0;k<shift;k++) {
+            // prefetch operators to register for reuse
+            
+            char4 Indn = IndT[n*shift+k];
+            int indicesn[4];
+            indicesn[0] = (int) Indn.x;
+            indicesn[1] = (int) Indn.y;
+            indicesn[2] = (int) Indn.z;
+            indicesn[3] = (int) Indn.w;
+            //if (n== 2) {
+            //  printf("k = %d max = %d put %d %d %d %d \n",k,p_maxNnzPerRow/4, (int) Indn.x, (int) Indn.y, (int) Indn.z, (int) Indn.w);
+             // }
+            //if IndList(i,j) ~=0 
+           
+ occaUnroll(4)            
+              for (int k2 =0; k2<4; k2++){
+                if (indicesn[k2] != 0){
+/*                if (es+eo ==0){
+
+                  printf("n=%d k = %d  processing idx %d: Indices[%d] = %d need SrrT [%d]\n ",n,k, k2, k2, indicesn[k2], (indicesn[k2]-1)*p_maxNnzPerRow+n);
+                }*/
+                  //result(j) = result(j)+ Srr(j,IndList(i,j))*x(IndList(i,j));
+                  const int id = indicesn[k2]-1;
+                  //IndT[n*p_maxNnzPerRow+k]-1;
+                  const dfloat Srr_nk = SrrT[id*p_maxNnzPerRow+n];
+                  const dfloat Srs_nk = SrsT[id*p_maxNnzPerRow+n];
+                  const dfloat Sss_nk = SssT[id*p_maxNnzPerRow+n];
+                  // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
+                  // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
+                  // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
+                  // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
+
+                  occaUnroll(p_NnodesV){
+                    for(iint et=0;et<p_NnodesV;++et){
+                      // fetch from shared (for reuse four times)
+                      const dfloat r_qk = s_q[et][es][k*4+k2];
+                      r_qrr[et] += Srr_nk*r_qk;
+                      r_qrs[et] += Srs_nk*r_qk;
+                      r_qss[et] += Sss_nk*r_qk;
+                    }
+                  }
+                }
+              }
+          }
+        // this part has to check for element index validity
+        occaUnroll(p_NnodesV){
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+
+            if (e<Nelements) {
+              const iint element = elementList[e];
+
+              const iint gid = element*p_Nggeo;
+
+              const dfloat Grr = ggeo[gid + p_G00ID];
+              const dfloat Grs = ggeo[gid + p_G01ID];
+              const dfloat Gss = ggeo[gid + p_G11ID];
+              const dfloat J   = ggeo[gid + p_GWJID];
+
+              dfloat res = Grr*r_qrr[et];
+              dfloat res2 = Grs*r_qrs[et]; // A.
+              dfloat res3 = Gss*r_qss[et];
+
+              const iint id = n + element*p_Np;
+              Aq[id] = res+res2+res3;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 
