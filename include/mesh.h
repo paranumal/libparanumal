@@ -313,7 +313,7 @@ typedef struct {
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
   occa::memory o_SsrT, o_SssT, o_SstT;
-  occa::memory o_IndT;
+  occa::memory o_IndT, o_IndTchar;
   occa::memory o_StrT, o_StsT, o_SttT;
   occa::memory o_Ind; // for sparse index storage
 
