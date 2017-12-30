@@ -161,6 +161,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+
 
   //sizes for the coarsen and prolongation kernels. degree N to degree 1
   kernelInfo.addDefine("p_NpFine", mesh->Np);
@@ -236,7 +238,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2DTW.okl",
-               "ellipticPartialAxTri2D_v2",
+               "ellipticPartialAxTri2D_v3",
                kernelInfo);
 
   solver->weightedInnerProduct1Kernel =

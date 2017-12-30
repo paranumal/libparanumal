@@ -29,9 +29,17 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     if(halo->Ngather) {
       occa::streamTag startAxtime = mesh->device.tagStream();
-      solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-          mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-          mesh->o_MM, lambda, o_q, o_Aq);
+
+      if (strstr(options, "SPARSE")){
+        solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndT,mesh->o_SssT,
+            mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else{
+        solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+            mesh->o_MM, lambda, o_q, o_Aq);
+      }
       occa::streamTag stopAxtime = mesh->device.tagStream();
       NAx++;
       timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
@@ -40,10 +48,16 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     }
     if(nonHalo->Ngather){
       occa::streamTag startAxtime = mesh->device.tagStream();
-
-      solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-          mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-          mesh->o_MM, lambda, o_q, o_Aq);
+      if (strstr(options, "SPARSE")){
+        solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndT,mesh->o_SssT,
+            mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else {
+        solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+            mesh->o_MM, lambda, o_q, o_Aq);
+      }
       occa::streamTag stopAxtime = mesh->device.tagStream();
       NAx++;    
       timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
@@ -459,12 +473,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   mesh2D *mesh = solver->mesh;
   printf("N=%d \n", mesh->N);
-  if (strstr(options, "SPARSE")){
-    loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  }
-  else{
-    buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  }
   //KS for testing
   /*  iint Nbytes = mesh->Np*(6+mesh->Np*5);
       int flops = mesh->Np* (mesh->Np *10+15); */
@@ -503,7 +511,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   int Niter;
-  iint maxIter = 5000; 
+  iint maxIter = 500; 
 
   double start, end;
 
