@@ -1,12 +1,18 @@
-for N in `seq 1 8`;
+FILEMATLAB="testSparseV5.txt"
+FILEBEST="testSparseV5Param.txt"
+for N in `seq 7 8`;
 do
-echo "$N"
-for volBlk in `seq 1 2 15`;
-     do
-   for volNod in `seq 1 2 9`;
-   do
-       ./ellipticMainTri2D ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep GFLOPS;
-   done
- done
-echo ];
- done
+echo "$N">>$FILEMATLAB
+echo [>>$FILEMATLAB;
+echo [>>$FILEBEST;
+for volBlk in `seq 2 2 20`;
+do
+for volNod in `seq 2 2 8`;
+do
+./ellipticMainTri2D ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep GFLOPS>>$FILEMATLAB;
+./ellipticMainTri2D ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep PARAMETERS>>$FILEBEST;
+done
+done
+echo ]>>$FILEMATLAB;
+echo ]>>$FILEBEST;
+done
