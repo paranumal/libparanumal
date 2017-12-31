@@ -96,6 +96,29 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   }   
   printf("\n count = %d \n", count);
 
+  //push not zeros to the left
+  dfloat * SrrAux = (dfloat *) calloc(paddedRowSize*mesh->Np,sizeof(dfloat));
+  dfloat * SrsAux = (dfloat *) calloc(paddedRowSize*mesh->Np,sizeof(dfloat));
+  dfloat * SssAux = (dfloat *) calloc(paddedRowSize*mesh->Np,sizeof(dfloat));
+  for (int i=0; i<mesh->Np; ++i){
+    for (int j=0; j<paddedRowSize; ++j){
+      int myid = mesh->Ind[mesh->Np*j+i]-1;
+     // printf("I am in the row %d, idx is %d, need an entry %d\n",i,myid, paddedRowSize*i+myid  );
+      
+      if ((myid !=-1)&&(j<mesh->maxNnzPerRow)){
+        //printf("I am in the row %d, idx is %d, need an entry %d\n",j,myid, paddedRowSize*j+myid  );
+        SrrAux[i*paddedRowSize+j] = mesh->Srr[paddedRowSize*i+myid];
+        printf(" %f ", SrrAux[i*paddedRowSize+j] );
+        SrsAux[i*paddedRowSize+j] = mesh->Srs[paddedRowSize*i+myid];
+        SssAux[i*paddedRowSize+j] = mesh->Sss[paddedRowSize*i+myid];
+      }
+else{printf(" zero \n");}
+    }
+    printf("\n");
+  }
+  printf("\n");
+
+
   /*char4 packing*/
 
   //now occa copy, transpose and stuff
@@ -116,9 +139,9 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   printf("\nIND transose\n");
   for (iint n=0;n<mesh->Np;n++) {
     for (iint m=0;m<paddedRowSize;m++) {  
-      SrrT[m+n*paddedRowSize] = mesh->Srr[n+m*mesh->Np];
-      SrsT[m+n*paddedRowSize] = mesh->Srs[n+m*mesh->Np];
-      SssT[m+n*paddedRowSize] = mesh->Sss[n+m*mesh->Np];
+      SrrT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
+      SrsT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
+      SssT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
       if (m<mesh->maxNnzPerRow){      
         IndT[m+n*paddedRowSize] = mesh->Ind[n+m*mesh->Np];
       }
@@ -137,9 +160,9 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
     printf("\n");
   }
   printf("\n\nSrrT: ");
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<paddedRowSize;m++) {  
-      printf("SrsT[%d] =  %f \n",m+n*paddedRowSize,  SrrT[m+n*paddedRowSize]);   
+  for (iint n=0;n<paddedRowSize;n++) {
+    for (iint m=0;m<mesh->Np;m++) {  
+      printf(" %f ",  SrrT[n+m*mesh->Np]);   
     }
     printf("\n");
   }
