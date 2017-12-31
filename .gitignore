@@ -2,6 +2,7 @@
 *.a
 .DS_STORE
 *.vtu
+*.dat
 
 **/*.o
 **/*.c~
