@@ -411,17 +411,17 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
             occaUnroll(4)            
               for (int k2 =0; k2<4; k2++){
                 if (indicesn[k2] != 0){
-                  if (es+eo ==0){
+                  /*if (es+eo ==0){
 
-                    printf("n=%d k = %d  processing idx %d: Indices[%d] = %d need SrrT [%d]\n ",n,k, k2, k2, indicesn[k2], (indicesn[k2]-1)*p_maxNnzPerRow+n);
+                    printf("n=%d k = %d  processing idx %d: Indices[%d] = %d need SrrT [%d*%d+%d]\n ",n,k, k2, k2, indicesn[k2], (indicesn[k2]-1),p_Np,n);
                     printf("accesing x[%d] \n", indicesn[k2]-1);                                    
-                  }
+                  }*/
                   //result(j) = result(j)+ Srr(j,IndList(i,j))*x(IndList(i,j));
                   const int id = indicesn[k2]-1;
                   //IndT[n*p_maxNnzPerRow+k]-1;
-                  const dfloat Srr_nk = SrrT[id*p_maxNnzPerRow+n];
-                  const dfloat Srs_nk = SrsT[id*p_maxNnzPerRow+n];
-                  const dfloat Sss_nk = SssT[id*p_maxNnzPerRow+n];
+                  const dfloat Srr_nk = SrrT[id*p_Np+n];
+                  const dfloat Srs_nk = SrsT[id*p_Np+n];
+                  const dfloat Sss_nk = SssT[id*p_Np+n];
                   // (dphidr_n, dphidr_m)*(rx*rx+ry*ry)*q_m
                   // (dphidr_n, dphids_m)*(rx*sx+ry*sy)*q_m
                   // (dphids_n, dphidr_m)*(sx*rx+sy*ry)*q_m
@@ -539,9 +539,9 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
             occaUnroll(4)            
               for (int k2 =0; k2<4; k2++){
                 if (indicesn[k2] != 0){
-/*                 if (es+eo ==0){
+                /* if (es+eo ==0){
 
-                    printf("n=%d k = %d  processing idx %d: Indices[%d] = %d need SrrT [%d]\n ",n,k, k2, k2, indicesn[k2], (indicesn[k2]-1)+n*p_Np);
+                    printf("n=%d k = %d  processing idx %d: Indices[%d] = %d need SrrT [%d]\n ",n,k, k2, k2, indicesn[k2], (indicesn[k2]-1)*p_Np+n);
                     printf("accesing x[%d] \n", indicesn[k2]-1);                                    
                   }*/
                   const int id = indicesn[k2]-1;
