@@ -1,6 +1,6 @@
-FILEMATLAB="testSparseV4alt.txt"
-FILEBEST="testSparseV4altParam.txt"
-for N in `seq 1 8`;
+FILEMATLAB="testSparseV6.txt"
+FILEBEST="testSparseV6Param.txt"
+for N in `seq 1 12`;
 do
 echo "$N">>$FILEMATLAB
 echo [>>$FILEMATLAB;
