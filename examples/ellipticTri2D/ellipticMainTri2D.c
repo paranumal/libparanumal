@@ -86,6 +86,7 @@ int main(int argc, char **argv){
    loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
   }
   else{
+   //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
     buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
   } 
 
@@ -188,7 +189,7 @@ int main(int argc, char **argv){
 
   // convergence tolerance
   dfloat tol = 1e-6;
-  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
+  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options, NblockV, NnodesV);
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);

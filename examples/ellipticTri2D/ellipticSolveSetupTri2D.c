@@ -238,7 +238,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2DTW.okl",
-               "ellipticPartialAxTri2D_v4",
+               "ellipticPartialAxTri2D_v5",
                kernelInfo);
 
   solver->weightedInnerProduct1Kernel =

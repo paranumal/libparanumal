@@ -32,7 +32,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_Srr, mesh->o_Srs, mesh->o_IndTchar,mesh->o_Sss,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
@@ -50,7 +50,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       occa::streamTag startAxtime = mesh->device.tagStream();
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_Srr, mesh->o_Srs, mesh->o_IndTchar,mesh->o_Sss,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else {
@@ -469,7 +469,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
 }
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
-    occa::memory &o_r, occa::memory &o_x, const char *options){
+    occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV){
 
   mesh2D *mesh = solver->mesh;
   printf("N=%d \n", mesh->N);
@@ -576,7 +576,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
       printf("copy BW %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
       printf("ROOFLINE %16.17g \n", roofline);
       printf("GFLOPS %16.17f \n", kernelGFLOPS);
-
+      printf("PARAMETERS %d %d %16.17f \n ", NblockV, NnodesV, kernelGFLOPS );
       printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
           size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
     }
