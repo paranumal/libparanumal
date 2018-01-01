@@ -31,7 +31,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv){
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
-
+printf("passed elliptic setup tri\n");
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
