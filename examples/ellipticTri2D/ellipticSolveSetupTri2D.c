@@ -334,13 +334,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
     solver->gradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+               "ellipticGradientTri2D_v0",
            kernelInfo);
 
     solver->partialGradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-                 "ellipticPartialGradientTri2D",
-                  kernelInfo);
+             //    "ellipticPartialGradientTri2D_v0",
+               "ellipticGradientTri2D_v0",
+           kernelInfo);
+               
 
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",

@@ -501,7 +501,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
   occa::streamTag endCopy = mesh->device.tagStream();
   double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
-
+printf("copy elapsed %f ", copyElapsed);
 
   timeAx = 0.0f;
 
