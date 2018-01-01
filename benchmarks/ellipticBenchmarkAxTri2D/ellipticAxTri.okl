@@ -1,14 +1,14 @@
 kernel void ellipticPartialAxTri2D_v0(const int Nelements,
-    const iint   * restrict elementList,
-    const dfloat * restrict ggeo,
-    const dfloat * restrict Srr,
-    const dfloat * restrict Srs,
-    const char4   * restrict IndT,
-    const dfloat * restrict Sss,
-    const dfloat * restrict MM,
-    const dfloat lambda,
-    const dfloat  * restrict q,
-    dfloat  * restrict Aq){
+				      const iint   * restrict elementList,
+				      const dfloat * restrict ggeo,
+				      const dfloat * restrict Srr,
+				      const dfloat * restrict Srs,
+				      const char4   * restrict IndT,
+				      const dfloat * restrict Sss,
+				      const dfloat * restrict MM,
+				      const dfloat lambda,
+				      const dfloat  * restrict q,
+				      dfloat  * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
@@ -54,7 +54,7 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
           for (int k=0;k<shift;k++) {
             // prefetch operators to register for reuse
 
-            char4 Indn = IndT[n*shift+k];
+            const char4 Indn = IndT[n*shift+k];
             int indicesn[4];
             indicesn[0] = (int) Indn.x;
             indicesn[1] = (int) Indn.y;
@@ -63,7 +63,10 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
 
             occaUnroll(4)
               for (int k2 =0; k2<4; k2++){
-                if (indicesn[k2] != 0){
+		int idk = indicesn[k2];
+                if (idk != 0){
+		  --idk;
+
                   // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
                   const int id = n + (k2+4*k)*p_Np;
                   const dfloat Srr_nk = Srr[id];
@@ -74,7 +77,7 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
                     for(iint et=0;et<p_NnodesV;++et){
                       // fetch from shared (for reuse three times)
                       // 6 flops per 8 bytes
-                      const dfloat r_qk = s_q[et][es][indicesn[k2]-1];
+                      const dfloat r_qk = s_q[et][es][idk];
                       r_qrr[et] += Srr_nk*r_qk;
                       r_qrs[et] += Srs_nk*r_qk;
                       r_qss[et] += Sss_nk*r_qk;
@@ -99,12 +102,12 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
               const dfloat Gss = ggeo[gid + p_G11ID];
               const dfloat J   = ggeo[gid + p_GWJID];
 
-              dfloat res = Grr*r_qrr[et];
-              dfloat res2 = Grs*r_qrs[et]; // A.
-              dfloat res3 = Gss*r_qss[et];
+              const dfloat res1 = Grr*r_qrr[et];
+              const dfloat res2 = Grs*r_qrs[et];
+              const dfloat res3 = Gss*r_qss[et];
 
               const iint id = n + element*p_Np;
-              Aq[id] = res+res2+res3;
+              Aq[id] = res1+res2+res3;
             }
           }
         }
