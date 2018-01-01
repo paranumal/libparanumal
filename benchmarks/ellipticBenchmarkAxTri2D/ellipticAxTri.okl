@@ -13,8 +13,23 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
   for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
-
+    shared iint s_elements[p_NnodesV][p_NblockV];
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	
+	int t = n + es*p_Np;
+	while(t<p_NblockV*p_NnodesV){
+	  const iint e = eo + t;
+	  if(e<Nelements)
+	    s_elements[0][t] = elementList[e];
+	  t+=p_Np*p_NblockV;
+	}
+      }
+    }
+    
+    barrier(localMemFence);
 
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
@@ -24,7 +39,8 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
             const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const iint element = elementList[e];
+	      //	      element = elementList[e];
+	      const int element = s_elements[et][es];
               const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
             }
@@ -53,48 +69,50 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
         occaUnroll(p_maxNnzPerRow/4)
           for (int k=0;k<shift;k++) {
             // prefetch operators to register for reuse
-
-            const char4 Indn = IndT[n*shift+k];
             int indicesn[4];
-            indicesn[0] = (int) Indn.x;
-            indicesn[1] = (int) Indn.y;
-            indicesn[2] = (int) Indn.z;
-            indicesn[3] = (int) Indn.w;
+	    {
+	      const char4 Indn = IndT[n*shift+k];
+	      indicesn[0] = (int) Indn.x;
+	      indicesn[1] = (int) Indn.y;
+	      indicesn[2] = (int) Indn.z;
+	      indicesn[3] = (int) Indn.w;
+	    }
 
             occaUnroll(4)
               for (int k2 =0; k2<4; k2++){
 		int idk = indicesn[k2];
-                if (idk != 0){
-		  --idk;
+		if(idk==0) break; // first zero 
 
-                  // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-                  const int id = n + (k2+4*k)*p_Np;
-                  const dfloat Srr_nk = Srr[id];
-                  const dfloat Srs_nk = Srs[id];
-                  const dfloat Sss_nk = Sss[id];
-
-                  occaUnroll(p_NnodesV){
-                    for(iint et=0;et<p_NnodesV;++et){
-                      // fetch from shared (for reuse three times)
-                      // 6 flops per 8 bytes
-                      const dfloat r_qk = s_q[et][es][idk];
-                      r_qrr[et] += Srr_nk*r_qk;
-                      r_qrs[et] += Srs_nk*r_qk;
-                      r_qss[et] += Sss_nk*r_qk;
-                    }
-                  }
+		--idk;
+		
+		// assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
+		const int id = n + (k2+4*k)*p_Np;
+		const dfloat Srr_nk = Srr[id];
+		const dfloat Srs_nk = Srs[id];
+		const dfloat Sss_nk = Sss[id];
+		
+		occaUnroll(p_NnodesV){
+		  for(iint et=0;et<p_NnodesV;++et){
+		    // fetch from shared (for reuse three times)
+		    // 6 flops per 8 bytes
+		    const dfloat r_qk = s_q[et][es][idk];
+		    r_qrr[et] += Srr_nk*r_qk;
+		    r_qrs[et] += Srs_nk*r_qk;
+		    r_qss[et] += Sss_nk*r_qk;
+		  }
                 }
               }
           }
+	
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
           for(iint et=0;et<p_NnodesV;++et){
             const iint e = eo + es + et*p_NblockV;
-
+	    
             if (e<Nelements) {
-              const iint element = elementList[e];
-
+	      //	      const iint element = elementList[e];
+	      const int element = s_elements[et][es];
               const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
@@ -102,12 +120,12 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
               const dfloat Gss = ggeo[gid + p_G11ID];
               const dfloat J   = ggeo[gid + p_GWJID];
 
-              const dfloat res1 = Grr*r_qrr[et];
-              const dfloat res2 = Grs*r_qrs[et];
-              const dfloat res3 = Gss*r_qss[et];
-
+              dfloat res1 = Grr*r_qrr[et];
+              res1 += Grs*r_qrs[et];
+              res1 += Gss*r_qss[et];
+	      
               const iint id = n + element*p_Np;
-              Aq[id] = res1+res2+res3;
+              Aq[id] = res1;
             }
           }
         }
