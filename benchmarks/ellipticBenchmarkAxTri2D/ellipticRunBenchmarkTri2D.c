@@ -14,6 +14,8 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   NKernels = 1;
   sprintf(kernelName, "ellipticPartialAxTri2D");
 
+  //  kernelInfo.addCompilerFlag("-G");
+
   dfloat time = 0.;
 
   char testkernelName[BUFSIZ];
@@ -29,7 +31,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
     dfloat lambda = 0;
     // sync processes
 
-    iint Nbytes = sizeof(dfloat)*mesh->Np*(6+0*mesh->Np);
+    iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
     Nbytes /= 2;
     printf("copying %d bytes \n", Nbytes*mesh->Nelements);
     occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
@@ -93,19 +95,25 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank==0){
-      printf("Ntrials = %d globla copy el %f local copy el %f size(dfloat) %d \n",Ntrials, globalCopyElapsed, copyElapsed, sizeof(dfloat));
+      printf("Ntrials = %d global copy el %f local copy el %f size(dfloat) %d \n",Ntrials, globalCopyElapsed, copyElapsed, sizeof(dfloat));
 
-      //      iint flops = mesh->Np*(mesh->Np*6+5);
-      iint flops = mesh->Np*(mesh->maxNnzPerRow*6+5);
+      // count actual number of non-zeros
+      int nnzs = 0;
+      for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n)
+	nnzs += (mesh->Ind[n]>0);
+      printf("nnzs = %d\n", nnzs);
 
-      double roofline = ((dfloat)(mesh->Nelements*flops*Ntrials))/(1e9*globalCopyElapsed);
-      printf("Nelements = %d flops = %d Ntials = %d copy elapsed scaled = %f \n",mesh->Nelements, flops, Ntrials,  1e9*globalCopyElapsed);
+      // 6 flops per non-zero plus chain rule
+      iint flops = nnzs*6 + mesh->Np*5;
+
+      double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
+      printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f \n",mesh->Nelements, flops, Ntrials,  1e9*globalCopyElapsed);
 
       double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
       double kernelBandwidth = mesh->Nelements*((Nbytes*2.)/(1e9*kernelElapsed));
       double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);
 
-      printF("Copy Bw %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
+      printf("Copy Bw %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
       printf("ROOFLINE %16.17g \n", roofline);
       printf("GFLOPS %16.17f \n", kernelGFLOPS);
       printf("time per kernel %f \n",kernelElapsed);
