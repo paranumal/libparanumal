@@ -7,7 +7,7 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
                            dfloat a3, iint lev, dfloat dt){
 
   for(iint et=0;et<mesh->MRABpmlNelements[lev];et++){
-    iint e = mesh->MRABpmlElementIds[lev][et];
+    iint e     = mesh->MRABpmlElementIds[lev][et];
     iint pmlId = mesh->MRABpmlIds[lev][et];
 
     for(iint n=0;n<mesh->Np;++n){

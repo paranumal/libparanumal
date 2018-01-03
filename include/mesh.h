@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -89,8 +89,9 @@ typedef struct {
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
+  iint *Ind; // for sparse storage of Srr, Sss, Srs  
   dfloat *x, *y, *z;    // coordinates of physical nodes
-
+  iint maxNnzPerRow;
   // indices of vertex nodes
   iint *vertexNodes;
 
@@ -197,10 +198,10 @@ typedef struct {
   iint   NtimeSteps;// number of time steps
   iint   errorStep; // number of steps between error calculations
   iint   Nrk;
-  dfloat rka[5], rkb[5], rkc[6];
+  dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
 
   // MRAB,SAAB coefficients
-  dfloat mrab[3], mrabb[3], saab[3], saabexp; // exp(-tauInv*dt)
+  dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated 
   iint MRABNlevels;
   iint *MRABlevel;
   iint *MRABNelements, *MRABNhaloElements;
@@ -211,12 +212,18 @@ typedef struct {
   iint **MRABpmlElementIds, **MRABpmlIds;
   iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
 
+  iint pmlNelements, nonPmlNelements;
+  iint *nonPmlElementIds, *pmlElementIds, *pmlIds;  
+  iint shiftIndex;
+
   dfloat dtfactor ;  //Delete later for script run
   dfloat maxErrorBoltzmann;
 
   //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
-  dfloat LsimexB[4], LsimexC[4], LsimexABi[4], LsimexABe[4], LsimexAd[4];
-  iint Nimex;
+  dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
+  dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
+  dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
+  iint Nimex, Nrhs;
   // ploting info for generating field vtu
   iint    plotNverts;    // number of vertices for each plot element
   iint    plotNp;        // number of plot nodes per element
@@ -241,28 +248,46 @@ typedef struct {
   iint    pmlNfields;
   //  iint    pmlNelements; // deprecated
   iint   *pmlElementList; // deprecated
+
+  iint Ntscale; // Will be removed, for time accuracy test
+
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
   dfloat *pmlSigmaZ;
+
   dfloat *pmlq;
+  dfloat *pmlqx;
+  dfloat *pmlqy;
+  dfloat *pmlqz;
+
   dfloat *pmlrhsq;
+  dfloat *pmlrhsqx;
+  dfloat *pmlrhsqy;
+  dfloat *pmlrhsqz;
+
   dfloat *pmlresq;
+  dfloat *pmlresqx;
+  dfloat *pmlresqy;
+  dfloat *pmlresqz;
+
 
 
   dfloat *invTau;
 
-  dfloat *pmlqx;    // x-pml data array
+
+  // AK: Remove the below definition after fixing MRAB, only single rate uses 
+  // dfloat *pmlqx;    // x-pml data array
   dfloat *rhspmlqx; // right hand side data array
   dfloat *respmlqx; // residual data array (for LSERK time-stepping)
   dfloat *sigmax;
 
-  dfloat *pmlqy;    // y-pml data array
+  // dfloat *pmlqy;    // y-pml data array
   dfloat *rhspmlqy; // right hand side data array
   dfloat *respmlqy; // residual data array (for LSERK time-stepping)
   dfloat *sigmay;
 
-  dfloat *pmlqz;    // Z-pml data array
+  // dfloat *pmlqz;    // Z-pml data array
   dfloat *rhspmlqz; // right hand side data array
   dfloat *respmlqz; // residual data array (for LSERK time-stepping)
   dfloat *sigmaz;
@@ -290,7 +315,10 @@ typedef struct {
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
   occa::memory o_SsrT, o_SssT, o_SstT;
+  occa::memory o_Sss, o_Srr, o_Srs; // for char4-based kernels
+  occa::memory o_IndT, o_IndTchar;
   occa::memory o_StrT, o_StsT, o_SttT;
+  occa::memory o_Ind; // for sparse index storage
 
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
@@ -316,6 +344,7 @@ typedef struct {
   occa::memory *o_MRABpmlHaloElementIds;
   occa::memory *o_MRABpmlHaloIds;
 
+
   // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
@@ -334,26 +363,35 @@ typedef struct {
 
 
   // pml vars
-  occa::memory o_sigmax, o_sigmay, o_sigmaz;
+  occa::memory o_sigmax, o_sigmay, o_sigmaz; // AK: deprecated
 
-  iint pmlNelements;
-  iint nonPmlNelements;
+
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
+  occa::memory o_pmlIds;
 
-  occa::memory o_pmlqx, o_rhspmlqx, o_respmlqx;
-  occa::memory o_pmlqy, o_rhspmlqy, o_respmlqy;
-  occa::memory o_pmlqz, o_rhspmlqz, o_respmlqz;
+  occa::memory o_pmlElementList;
+
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
+  occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
+  occa::memory o_pmlqx,o_pmlqy, o_pmlqz; 
+  occa::memory o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
+  occa::memory o_pmlresqx, o_pmlresqy, p_pmlresqz;
+
+
+  // occa::memory o_rhspmlqx, o_respmlqx; 
+  // occa::memory o_rhspmlqy, o_respmlqy;
+  // occa::memory o_rhspmlqz, o_respmlqz;
   occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
 
   // Boltzmann SARK extra storage for exponential update
   // occa::memory o_resqex;
 
   // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used
-  occa::memory o_expsigmax, o_expsigmay;
-  occa::memory o_rhsq2,     o_rhsq3;
-  occa::memory o_rhspmlqx2, o_rhspmlqx3;
-  occa::memory o_rhspmlqy2, o_rhspmlqy3;
+  occa::memory o_expsigmax, o_expsigmay; // deprecated
+  occa::memory o_rhsq2,     o_rhsq3;     // deprecated
+  occa::memory o_rhspmlqx2, o_rhspmlqx3; // deprecated
+  occa::memory o_rhspmlqy2, o_rhspmlqy3; // deprecated
   occa::memory o_rhspmlNT2, o_rhspmlNT3; // deprecated
   // LS Imex vars
   occa::memory o_qY,   o_qZ,   o_qS;
@@ -362,11 +400,13 @@ typedef struct {
 
 
 
-  occa::memory o_pmlElementList;
-  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
-  occa::memory o_pmlrhsq;
 
-  occa::memory o_pmlq,     o_rhspmlq,   o_respmlq; // 3D LSERK
+
+
+
+
+  // AK: Remove this stuff, rename single rate files
+  occa::memory o_rhspmlq,   o_respmlq; // 3D LSERK
   occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
   occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
 
@@ -447,7 +487,7 @@ typedef struct {
 
 
   // Experimental Time Steppings for Boltzmann
-  #if 1
+#if 1
   occa::kernel updateStageKernel;
   occa::kernel pmlUpdateStageKernel;
   //occa::kernel updateStageKernel33;
@@ -461,7 +501,7 @@ typedef struct {
   dfloat rk4a[5][5], rk4b[5];
   dfloat lserk3a[3], lserk3b[3], lserk3c[4];
 
-  #endif
+#endif
 
 
 
@@ -472,28 +512,28 @@ void mysort(iint *data, iint N, const char *order);
 
 // sort entries in an array in parallel
 void parallelSort(iint N, void *vv, size_t sz,
-		  int (*compare)(const void *, const void *),
-		  void (*match)(void *, void *)
-		  );
+    int (*compare)(const void *, const void *),
+    void (*match)(void *, void *)
+    );
 
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
 
-/* hash function */
-unsigned int hash(const unsigned int value) ;
+  /* hash function */
+  unsigned int hash(const unsigned int value) ;
 
-/* dimension independent mesh operations */
-void meshConnect(mesh_t *mesh);
+  /* dimension independent mesh operations */
+  void meshConnect(mesh_t *mesh);
 
-/* build parallel face connectivity */
-void meshParallelConnect(mesh_t *mesh);
+  /* build parallel face connectivity */
+  void meshParallelConnect(mesh_t *mesh);
 
-/* build global connectivity in parallel */
-void meshParallelConnectNodes(mesh_t *mesh);
+  /* build global connectivity in parallel */
+  void meshParallelConnectNodes(mesh_t *mesh);
 
-/* renumber global nodes to remove gaps */
-void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
-                                          iint *globalOwners, iint *globalStarts);
+  /* renumber global nodes to remove gaps */
+  void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
+      iint *globalOwners, iint *globalStarts);
 
 void meshHaloSetup(mesh_t *mesh);
 
@@ -501,15 +541,15 @@ void meshHaloSetup(mesh_t *mesh);
 void meshHaloExtract(mesh_t *mesh, size_t Nbytes, void *sourceBuffer, void *haloBuffer);
 
 void meshHaloExchange(mesh_t *mesh,
-		      size_t Nbytes,         // message size per element
-		      void *sourceBuffer,
-		      void *sendBuffer,    // temporary buffer
-		      void *recvBuffer);
+    size_t Nbytes,         // message size per element
+    void *sourceBuffer,
+    void *sendBuffer,    // temporary buffer
+    void *recvBuffer);
 
 void meshHaloExchangeStart(mesh_t *mesh,
-			   size_t Nbytes,       // message size per element
-			   void *sendBuffer,    // temporary buffer
-			   void *recvBuffer);
+    size_t Nbytes,       // message size per element
+    void *sendBuffer,    // temporary buffer
+    void *recvBuffer);
 
 
 void meshHaloExchangeFinish(mesh_t *mesh);
@@ -522,9 +562,9 @@ void meshPartitionStatistics(mesh_t *mesh);
 void meshConnectBoundary(mesh_t *mesh);
 
 hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
-                              iint Nlocal,     // number of local nodes
-                              iint *globalNumbering,  // global index of nodes
-                              iint *globalOwners);
+    iint Nlocal,     // number of local nodes
+    iint *globalNumbering,  // global index of nodes
+    iint *globalOwners);
 void meshParallelGather(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_sv);
 
@@ -538,18 +578,18 @@ extern "C"
   void gsParallelGatherScatterDestroy(void *gsh);
 
   void * xxtSetup(uint num_local_rows,
-                  void* row_ids,
-                  uint nnz,
-                  void*   A_i,
-                  void*   A_j,
-                  void* A_vals,
-                  int null_space,
-                  const char* inttype,
-                  const char* floattype);
+      void* row_ids,
+      uint nnz,
+      void*   A_i,
+      void*   A_j,
+      void* A_vals,
+      int null_space,
+      const char* inttype,
+      const char* floattype);
 
   void xxtSolve(void* x,
-               void* A,
-               void* rhs);
+      void* A,
+      void* rhs);
 
   void xxtFree(void* A) ;
 }

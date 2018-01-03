@@ -42,8 +42,7 @@ else{
 
     // Coutte Flow exact solution for U velocity
 
-    dfloat maxerr = 0;
-    dfloat maxQ1 = 0, minQ1 = 1e9;
+    dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
     iint fid = 1; //U velocity
 
     dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
@@ -55,11 +54,19 @@ else{
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
-        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields];
+        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
+  
+        dfloat uex = y ; 
+        for(iint k=1; k<=100; k++)
+        {
 
-        
-        dfloat uex = 2. * y ; 
+         dfloat lamda = k*M_PI;
+         uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y);
+        }
+
         maxerr = mymax(maxerr, fabs(u-uex));
+
+        mesh->q[id*mesh->Nfields+2] = fabs(u-uex);
 
         maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields]));
         minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields]));
@@ -69,26 +76,54 @@ else{
 
     // compute maximum over all processes
     dfloat globalMaxQ1, globalMinQ1, globalMaxErr;
-    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1,
-       MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&minQ1, &globalMinQ1, 1,
-      MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(&maxerr, &globalMaxErr, 1,
-       MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxerr, &globalMaxErr, 1,  MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
+    
+    
 
-
+   
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0){
-      printf("%g %g %g %g (time,min(density),max(density),max(error)\n",
-       time, globalMinQ1, globalMaxQ1, globalMaxErr);
+      printf("%g %g %g %g (time,min(density),max(density),max(error)\n", time, globalMinQ1, globalMaxQ1, globalMaxErr);
+
+      
+      #if 1
+
+    // iint fld = 2;
+    // iint tstep = time/mesh->dt;
+    // char errname[BUFSIZ];
+    // sprintf(errname, "err_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+    // meshPlotVTU2D(mesh, errname,fld);
+      
+    iint tmethod = 0; 
+    if(strstr(options,"LSERK"))
+      tmethod = 1;
+    if(strstr(options,"SRAB"))
+       tmethod = 2;
+    if(strstr(options,"SAAB"))
+       tmethod = 3;
+    if(strstr(options,"SARK"))
+       tmethod = 4;
+    if(strstr(options,"LSIMEX"))
+       tmethod = 5;
+
+      char fname[BUFSIZ]; 
+      sprintf(fname, "boltzmannTemporalError.dat");
+      FILE *fp; 
+      fp = fopen(fname, "a");
+      fprintf(fp, "%2d %2d %.5e %.5e %.5e %.5e\n", mesh->N, tmethod, mesh->dt,  globalMinQ1, globalMaxQ1, globalMaxErr); 
+      fclose(fp); 
+
       mesh->maxErrorBoltzmann = globalMaxErr; 
+      #endif
     }
 
 
-    if(isnan(globalMaxErr))
-      exit(EXIT_FAILURE);
+    // if(isnan(globalMaxErr))
+    //   exit(EXIT_FAILURE);
 }
 
   

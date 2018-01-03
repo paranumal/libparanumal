@@ -15,7 +15,7 @@
 #define EPSMAC    1.0e-16
 
 int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT) {
-  
+
   mesh2D *mesh = solver->mesh;
 
   occa::memory &o_w = solver->o_Ax;
@@ -23,7 +23,7 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
   occa::memory &o_b = solver->o_rtmp;
 
   occa::memory o_invDegree = solver->o_invDegree;
-  occa::memory o_z = solver->o_z;
+  occa::memory &o_z = solver->o_z;
   occa::memory *o_V = solver->o_V;
 
   dfloat *HH = solver->HH;
@@ -42,13 +42,23 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
     ellipticPreconditioner2D(solver, lambda, o_r, o_z , options);
     o_r.copyFrom(o_z);
   }
-  
+
   /* set the tolerance */
   dfloat bnorm = ellipticWeightedInnerProduct(solver, o_invDegree, o_r, o_r, options);
-  bnorm = sqrt(bnorm);
 
+  bnorm = sqrt(bnorm);
   dfloat tolrel =  tol*tol*bnorm;
-  
+
+  ellipticOperator2D(solver, lambda, o_x, o_Ax, options);
+
+  // subtract r = b - A*x
+  // ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
+
+  // dfloat rnorm2 = ellipticWeightedInnerProduct(solver, o_invDegree, o_r, o_r, options);
+
+  dfloat zero = 0.0f;
+  // printf("initial res norm %16.18f tol rel = %15.18f\n", rnorm2, tolrel);
+
   /*start iterating*/
   int conv = 0;
   int Niter = -1;
@@ -60,15 +70,24 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
     // compute A*(M*x) NOTE: DIFFERENT than in standard implementation
     //since intial guess is 0, and you cannot call the preconditioner on zero vector, just DONT DO IT
     if (Niter!=-1) {
-      if (strstr(options, "RIGHT")){
-        ellipticPreconditioner2D(solver, lambda, o_x, o_w, options);
-        ellipticOperator2D(solver, lambda, o_w, o_Ax, options);
-      } else{
+      if (strstr(options, "LEFT")){
         ellipticOperator2D(solver, lambda, o_x, o_w, options);
         ellipticPreconditioner2D(solver, lambda, o_w, o_Ax, options);
+      } else{
+        ellipticPreconditioner2D(solver, lambda, o_x, o_w, options);
+        ellipticOperator2D(solver, lambda, o_w, o_Ax, options);
       }
     }
-  
+    else{
+      iint Ntotal = mesh->Np*mesh->Nelements; 
+      iint Nblock = (Ntotal+blockSize-1)/blockSize; 
+      iint Nhalo = mesh->Np*mesh->totalHaloPairs; 
+      iint Nall   = Ntotal + Nhalo; 
+
+      dfloat * zeroVec   = (dfloat*) calloc(Nall,   sizeof(dfloat));
+      o_Ax.copyFrom(zeroVec);
+
+    }
     // subtract r = b - A*(M*x);
     o_r.copyFrom(o_b);
     ellipticScaledAdd(solver, -1.f, o_Ax, 1.f, o_r);
@@ -78,12 +97,10 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
     beta = sqrt(beta);
 
     /*v(:,0) = r/beta */
-    dfloat zero = 0.0f;
     ellipticScaledAdd(solver, 1./beta, o_r, zero , o_V[0]);
 
     /*hessenberg matrix */
     rs[0] = beta;
-    /*z = M*v, w = A*z */
 
     /*inner cycle */
     int NinnerIt =-1;
@@ -92,12 +109,12 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
       NinnerIt++;
       Niter++;
 
-      if (strstr(options, "RIGHT")){
-        ellipticPreconditioner2D(solver, lambda, o_V[k], o_w, options);
-        ellipticOperator2D(solver, lambda, o_w, o_V[k+1], options);
-      }else{
+      if (strstr(options, "LEFT")){
         ellipticOperator2D(solver, lambda, o_V[k], o_w, options);
         ellipticPreconditioner2D(solver, lambda, o_w, o_V[k+1], options);
+      }else{
+        ellipticPreconditioner2D(solver, lambda, o_V[k], o_w, options);
+        ellipticOperator2D(solver, lambda, o_w, o_V[k+1], options);
       }
 
       /* Gram-Schmidt */
@@ -106,9 +123,10 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
         HH[IDX2C(k,j,m+1)] = ellipticWeightedInnerProduct(solver, o_invDegree, o_V[(k+1)], o_V[(j)], options);
         ellipticScaledAdd(solver, -1.f*HH[IDX2C(k,j,m+1)], o_V[(j)], 1, o_V[(k+1)]);
       }
+
       t = ellipticWeightedInnerProduct(solver,  o_invDegree,  o_V[(k+1)],  o_V[(k+1)], options);
       t = sqrt(t);
-
+      printf("t= %17.18g\n", t);
       HH[IDX2C(k,k+1,m+1)] = t;
 
       /* protect */
@@ -117,27 +135,30 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
         /*----------------*
           |    V(k+1)*t
          *----------------*/
-        ellipticScaledAdd(solver, t, o_V[(k+1)], 0.0,o_V[(k+1)]);
-
+        ellipticScaledAdd(solver, t, o_V[(k+1)], zero,o_V[(k+1)]);
       }
 
-      if (k !=0 )
-        for (int j=1; j<=k; j++) {
-          //i->k,  k->j
-          k1 = j-1;
+      for (int j=1; j<=k; j++) {
+        //i->k,  k->j
+        k1 = j-1;
 
-          t  = HH[IDX2C(k,k1,m+1)];
+        t  = HH[IDX2C(k,k1,m+1)];
 
-          HH[IDX2C(k,k1,m+1)] =  c[k1]*t + s[k1]*HH[IDX2C(k,j,m+1)];
-          HH[IDX2C(k,j, m+1)] = -s[k1]*t + c[k1]*HH[IDX2C(k,j,m+1)];
-        }
+        HH[IDX2C(k,k1,m+1)] =  c[k1]*t + s[k1]*HH[IDX2C(k,j,m+1)];
+        HH[IDX2C(k,j, m+1)] = -s[k1]*t + c[k1]*HH[IDX2C(k,j,m+1)];
+      }
 
       dfloat Hii  = HH[IDX2C(k,k,m+1)];
       dfloat Hii1 = HH[IDX2C(k,k+1,m+1)];
 
       gam = sqrt(Hii*Hii + Hii1*Hii1);
 
-      if (fabs(gam-ZERO) <= EPSILON) gam = EPSMAC;
+      if (fabs(gam-ZERO) <= EPSILON){ 
+        if (strstr(options, "VERBOSE")) {
+          printf("GMRES: gamma too small, gamma =  %15.18f\n", gam);
+          gam = EPSMAC;
+        }
+      }
 
       /* next Given's rotation */
       c[k] = Hii  / gam;
@@ -152,7 +173,7 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
       if (strstr(options, "VERBOSE")) {
         printf("GMRES: iteration %d residual %15.15f\n", Niter, ro);
       }
-      
+
       /* test convergence */
       if (ro < tolrel) {
         conv = 1;
@@ -181,6 +202,11 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
      *---------------*/
     for (int j=0; j<=NinnerIt; j++)
       ellipticScaledAdd(solver, rs[j], o_V[j], 1, o_x);
+    //DEBUG CODE
+
+    //DEBUG CODE (END)
+
+
   }
 
   if (strstr(options, "VERBOSE")) {
@@ -191,11 +217,11 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
     }
   }
 
-  if (strstr(options, "RIGHT")){
+  if (!strstr(options, "LEFT")){
     ellipticPreconditioner2D(solver, lambda, o_x, o_Ax, options);
     o_x.copyFrom(o_Ax);
   }
-  
+
   return Niter;
 }
 
