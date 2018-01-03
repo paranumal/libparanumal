@@ -1,5 +1,5 @@
 #include "ellipticBenchmarkTri2D.h"
-void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N){
+void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N){
 
   char fname[BUFSIZ];
   sprintf(fname, "sparseN%02d.dat", N);
