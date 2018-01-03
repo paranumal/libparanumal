@@ -94,6 +94,6 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCTy
 
 void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes);
 
-void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N);
+void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N);
 
 #endif
