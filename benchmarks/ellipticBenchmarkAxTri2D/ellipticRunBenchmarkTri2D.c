@@ -27,7 +27,6 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
     testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
 
-    loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
     dfloat lambda = 0;
     // sync processes
 
