@@ -62,6 +62,14 @@ kernel void ellipticAxTri2D(const int Nelements,
     }
   }
 }
+//Analysis:
+// We perform (per thread block)
+// Nelements per block x Np x (Np x 5+10) flops
+// We load: (Nelements per block) x Np to shared
+// We read (Nelements per block) x Np xNp x 5 times from shared
+// We request: (Nelements per block) x Np x(1+4+Npx5 variables
+// We store (Nelements per block) x Np x (1) variables
+
 
 kernel void ellipticPartialAxTri2D(const int Nelements,
         const iint   * restrict elementList,

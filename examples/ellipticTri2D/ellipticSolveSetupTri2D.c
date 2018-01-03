@@ -22,7 +22,7 @@ void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 }
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
-                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
+                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, iint NblockV, iint NnodesV){
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -105,7 +105,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   //set up memory for linear solver
   if(strstr(options,"GMRES")) {
-    solver->GMRESrestartFreq = 20;
+    solver->GMRESrestartFreq = 200;
     printf("GMRES Restart Frequency = %d \n", solver->GMRESrestartFreq);
     solver->HH  = (dfloat*) calloc((solver->GMRESrestartFreq+1)*solver->GMRESrestartFreq,   sizeof(dfloat));
     
@@ -161,6 +161,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+
 
   //sizes for the coarsen and prolongation kernels. degree N to degree 1
   kernelInfo.addDefine("p_NpFine", mesh->Np);
@@ -174,8 +176,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+//  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo.addDefine("p_NnodesV", NnodesV);
 
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
@@ -234,8 +237,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                kernelInfo);
 
   solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2DTW.okl",
+               "ellipticPartialAxTri2D_v6",
                kernelInfo);
 
   solver->weightedInnerProduct1Kernel =
@@ -331,13 +334,15 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
     solver->gradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+               "ellipticGradientTri2D_v0",
            kernelInfo);
 
     solver->partialGradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-                 "ellipticPartialGradientTri2D",
-                  kernelInfo);
+             //    "ellipticPartialGradientTri2D_v0",
+               "ellipticGradientTri2D_v0",
+           kernelInfo);
+               
 
     solver->BRGradientVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",

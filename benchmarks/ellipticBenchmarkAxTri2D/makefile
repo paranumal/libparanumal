@@ -10,7 +10,7 @@ include ${OCCA_DIR}/scripts/makefile
 # define variables
 HDRDIR = ../../include
 GSDIR  = ../../3rdParty/gslib.github/src
-ALMONDDIR = ../parALMOND
+ALMONDDIR = ../../examples/parALMOND
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -31,7 +31,7 @@ LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 #-llapack -lblas
 
-INCLUDES = ellipticTri2D.h ellipticPreconTri2D.h
+INCLUDES = ellipticBenchmarkTri2D.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
@@ -48,32 +48,9 @@ $(ALMONDDIR)/parALMOND.h \
 
 # list of objects to be compiled
 AOBJS    = \
-PCG.o \
-PGMRES.o \
-PBiCGStab.o \
 ellipticSetupTri2D.o \
-ellipticPreconditionerSetupTri2D.o\
-ellipticCoarsePreconditionerSetupTri2D.o\
-ellipticPreconditionerTri2D.o\
-loadElementStiffnessMatricesTri2D.o\
-buildElementStiffnessMatricesTri2D.o\
-ellipticSolveTri2D.o\
-ellipticSolveSetupTri2D.o\
-ellipticHaloExchange2D.o\
-ellipticParallelGatherScatterTri2D.o \
-ellipticParallelGatherScatterSetup.o \
-ellipticBuildIpdgTri2D.o \
-ellipticBuildBRdgTri2D.o \
-ellipticBuildContinuousTri2D.o \
-ellipticBuildFullPatchesTri2D.o \
-ellipticBuildFacePatchesTri2D.o \
-ellipticBuildJacobiTri2D.o \
-ellipticBuildLocalPatchesTri2D.o \
-ellipticBuildMultigridLevelTri2D.o \
-ellipticMultiGridSetupTri2D.o \
-ellipticSEMFEMSetupTri2D.o\
-ellipticSetupSmoothersTri2D.o \
-ellipticSmoothersTri2D.o
+ellipticRunBenchmarkTri2D.o \
+loadElementStiffnessMatricesTri2D.o
 
 # library objects
 LOBJS = \
@@ -107,7 +84,6 @@ LOBJS = \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ../../src/timer.o\
-./diagnostic.o\
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
@@ -115,32 +91,29 @@ COBJS = \
 ../../src/xxtCoarseSolve.o
 
 
-ellipticMainTri2D:$(AOBJS) $(LOBJS) ellipticMainTri2D.o gslibInterface
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/ellipticTri2D
-	cd ../parALMOND; make -j lib; cd ../ellipticTri2D
-	$(LD)  $(LDFLAGS)  -o ellipticMainTri2D ellipticMainTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
-
-lib:$(AOBJS)
-	ar -cr libellipticTri2D.a $(AOBJS)
+ellipticBenchmarkTri2D:$(AOBJS) $(LOBJS) ellipticBenchmarkTri2D.o gslibInterface
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../examples/parALMOND; make -j lib; cd ../../benchmarks/ellipticBenchmarkTri2D
+	$(LD)  $(LDFLAGS)  -o ellipticBenchmarkTri2D ellipticBenchmarkTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/ellipticTri2D
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../benchmarks/ellipticBenchmarkTri2D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
-all: lib ellipticMainTri2D
+all: ellipticBenchmarkTri2D
 
 # what to do if user types "make clean"
 clean:
-	cd ../parALMOND; make clean; cd ../ellipticTri2D
-	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
-	rm *.o ellipticMainTri2D libellipticTri2D.a
+	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../src; rm *.o; cd ../../benchmarks/ellipticBenchmarkTri2D
+	rm *.o ellipticBenchmarkTri2D
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
-	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTri2D
-	cd ../parALMOND; make clean; cd ../ellipticTri2D
-	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
-	rm *.o ellipticMainTri2D libellipticTri2D.a
+	cd ../../3rdParty/gslib.github; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkTri2D
+	rm *.o ellipticBenchmarkTri2D
 
