@@ -73,40 +73,36 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
             r_qss[et] = 0;
           }
 
-        int shift = p_maxNnzPerRow/4; // TW: need to make sure this is multiple of 4
-	occaUnroll(p_maxNnzPerRow/4)
-          for (int k=0;k<(p_maxNnzPerRow/4);k++) {
+	//p_maxNnzPerRow)/4)
+	//	occaUnroll()
+          for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
 
-            // prefetch operators to register for reuse
-            int indicesn[4];
-	    {
-	      const char4 Indn = IndT[n+k*p_Np]; // IndT[n*shift+k]; // this is bad
-	      indicesn[0] = (int) Indn.x;
-	      indicesn[1] = (int) Indn.y;
-	      indicesn[2] = (int) Indn.z;
-	      indicesn[3] = (int) Indn.w;
-	    }
-
-	    occaUnroll(4)
+	    const char4 Indn = IndT[n+k*p_Np]; // IndT[n*shift+k]; <== this was bad
+	    const char * pt_Indn = (char*) &Indn;
+	    
+	    //	    occaUnroll(4) //seems inefficient
               for (int k2 =0; k2<4; k2++){
 
-		int idk = indicesn[k2];
+		int idk = pt_Indn[k2];
 
-		if(idk!=0){
+		if(!idk) break;
+		
+		{
+		  --idk;
+
 		  // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
 		  const int id = n + (k2+4*k)*p_Np;
 		  const dfloat Srr_nk = Srr[id];
 		  const dfloat Srs_nk = Srs[id];
 		  const dfloat Sss_nk = Sss[id];
 		  
-		  occaUnroll(p_NnodesV)
+		  //occaUnroll(p_NnodesV)
 		    for(iint et=0;et<p_NnodesV;++et){
 		      const iint e = eo + es + et*p_NblockV;
 		      // fetch from shared (for reuse three times)
 		      // 6 flops per 8 bytes
-		      // const dfloat r_qk = (e<Nelements) ? q[e*p_Np+idk] : 0; // s_q[et][es][idk];
 		      const dfloat r_qk = s_q[et][es][idk];
-
+		      
 		      r_qrr[et] += Srr_nk*r_qk;
 		      r_qrs[et] += Srs_nk*r_qk;
 		      r_qss[et] += Sss_nk*r_qk;
@@ -130,12 +126,11 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
               const dfloat Gss = ggeo[gid + p_G11ID];
-              const dfloat J   = ggeo[gid + p_GWJID];
 
               dfloat res1 = Grr*r_qrr[et];
               res1 += Grs*r_qrs[et];
               res1 += Gss*r_qss[et];
-	      
+
               const iint id = n + element*p_Np;
               Aq[id] = res1;
             }
