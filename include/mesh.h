@@ -248,6 +248,8 @@ typedef struct {
   //  iint    pmlNelements; // deprecated
   iint   *pmlElementList; // deprecated
 
+  iint Ntscale; // Will be removed, for time accuracy test
+
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;

@@ -74,11 +74,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 30.0;
+    mesh->finalTime = 100.;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
-    Ma = 0.1;     //Set Mach number
+    Ma = 0.05;     //Set Mach number
     Re = 1000.;   // Set Reynolds number
     //
     Uref = 1.;   // Set Uref
@@ -90,7 +90,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     nu = Uref*Lref/Re; 
     mesh->tauInv = mesh->RT/nu;
     
-    #if 0
+    #if 1
     // Create Periodic Boundaries
     printf("Creating periodic connections if exist \n");
     dfloat xper = 1.0;   dfloat yper = 0.0;
@@ -100,7 +100,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 200.;
+    mesh->finalTime = 10.0;
   }
 
   // set penalty parameter
@@ -143,11 +143,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   //
 
   // Set stable time step size for each element
-  dfloat cfl          = 0.3; 
+  dfloat cfl          = 0.33; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
-  
+  dfloat ghmin        = 1e9; 
   dfloat dt           = 1e9; 
   dfloat *EtoDT       = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
@@ -167,6 +167,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       hmin = mymin(hmin, htest); 
     }
 
+    ghmin = mymin(ghmin, hmin);
+
     dfloat dtex   = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
     dfloat dtim   = 1.f/(mesh->tauInv);
 
@@ -184,7 +186,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
   }
 
-  
+   printf("dtex = %.5e dtim = %.5e \n", cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT), 1.f/(mesh->tauInv));
+
  
   // Set multiRate/singleRate element groups/group  
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
@@ -192,6 +195,13 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     meshMRABSetup2D(mesh,EtoDT,maxLevels);
   }
   else{
+    
+    if(mesh->Ntscale){
+      printf("Time step size scaling with 2^ %d", mesh->Ntscale);
+      dt = pow(2,mesh->Ntscale)*1e-6;
+    }
+
+
 
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -215,11 +225,14 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
 
-  mesh->errorStep = 10000;
+  mesh->errorStep = 100000;
   if(rank==0){
     printf("dt   = %g ",   mesh->dt);
     printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
-    printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt, mesh->MRABNlevels, pow(2, mesh->MRABNlevels-1)*(mesh->dt*(mesh->NtimeSteps+1)));
+    if(mesh->MRABNlevels)
+      printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt, mesh->MRABNlevels, pow(2, mesh->MRABNlevels-1)*(mesh->dt*(mesh->NtimeSteps+1)));   
+    else
+     printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt,  mesh->dt*mesh->NtimeSteps);
   }
  
 
@@ -549,13 +562,13 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
 
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockCub = 512/mesh->cubNp; // works for CUDA
+  int NblockCub = 256/mesh->cubNp; // works for CUDA
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   // physics 
