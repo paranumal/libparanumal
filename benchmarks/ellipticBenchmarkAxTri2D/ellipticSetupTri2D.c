@@ -20,6 +20,8 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
+  loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
