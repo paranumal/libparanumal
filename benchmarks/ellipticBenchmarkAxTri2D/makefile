@@ -92,12 +92,12 @@ COBJS = \
 
 
 ellipticBenchmarkTri2D:$(AOBJS) $(LOBJS) ellipticBenchmarkTri2D.o gslibInterface
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../examples/parALMOND; make -j lib; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../examples/parALMOND; make -j lib; cd ../../benchmarks/ellipticBenchmarkAxTri2D
 	$(LD)  $(LDFLAGS)  -o ellipticBenchmarkTri2D ellipticBenchmarkTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../benchmarks/ellipticBenchmarkAxTri2D
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
@@ -106,14 +106,14 @@ all: ellipticBenchmarkTri2D
 
 # what to do if user types "make clean"
 clean:
-	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../src; rm *.o; cd ../../benchmarks/ellipticBenchmarkTri2D
+	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkAxTri2D
 	rm *.o ellipticBenchmarkTri2D
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../3rdParty/BlasLapack; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkTri2D
+	cd ../../3rdParty/gslib.github; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkAxTri2D
 	rm *.o ellipticBenchmarkTri2D
 
