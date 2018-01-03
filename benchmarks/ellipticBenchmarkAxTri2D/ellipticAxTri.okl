@@ -3,18 +3,22 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
 				      const dfloat * restrict ggeo,
 				      const dfloat * restrict Srr,
 				      const dfloat * restrict Srs,
-				      const char4   * restrict IndT,
+				      const char4  * restrict IndT,
 				      const dfloat * restrict Sss,
 				      const dfloat * restrict MM,
 				      const dfloat lambda,
-				      const dfloat  * restrict q,
-				      dfloat  * restrict Aq){
+				      const dfloat * restrict q,
+				            dfloat * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
   for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
-    shared iint s_elements[p_NnodesV][p_NblockV];
+#if 1
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
+#endif
+
+#if 0
+    shared iint s_elements[p_NnodesV][p_NblockV];
 
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
@@ -28,9 +32,11 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
 	}
       }
     }
-    
-    barrier(localMemFence);
 
+    barrier(localMemFence);
+#endif
+
+#if 1
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
@@ -40,13 +46,15 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
             if(e<Nelements){
               //prefetch q
 	      //	      element = elementList[e];
-	      const int element = s_elements[et][es];
+	      //	      const int element = s_elements[et][es];
+	      const int element = e;
               const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
             }
           }
       }
     }
+#endif
 
     barrier(localMemFence);
 
@@ -66,53 +74,57 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
           }
 
         int shift = p_maxNnzPerRow/4; // TW: need to make sure this is multiple of 4
-        occaUnroll(p_maxNnzPerRow/4)
-          for (int k=0;k<shift;k++) {
+	occaUnroll(p_maxNnzPerRow/4)
+          for (int k=0;k<(p_maxNnzPerRow/4);k++) {
+
             // prefetch operators to register for reuse
             int indicesn[4];
 	    {
-	      const char4 Indn = IndT[n*shift+k];
+	      const char4 Indn = IndT[n+k*p_Np]; // IndT[n*shift+k]; // this is bad
 	      indicesn[0] = (int) Indn.x;
 	      indicesn[1] = (int) Indn.y;
 	      indicesn[2] = (int) Indn.z;
 	      indicesn[3] = (int) Indn.w;
 	    }
 
-            occaUnroll(4)
+	    occaUnroll(4)
               for (int k2 =0; k2<4; k2++){
-		int idk = indicesn[k2];
-		if(idk==0) break; // first zero 
 
-		--idk;
-		
-		// assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-		const int id = n + (k2+4*k)*p_Np;
-		const dfloat Srr_nk = Srr[id];
-		const dfloat Srs_nk = Srs[id];
-		const dfloat Sss_nk = Sss[id];
-		
-		occaUnroll(p_NnodesV){
-		  for(iint et=0;et<p_NnodesV;++et){
-		    // fetch from shared (for reuse three times)
-		    // 6 flops per 8 bytes
-		    const dfloat r_qk = s_q[et][es][idk];
-		    r_qrr[et] += Srr_nk*r_qk;
-		    r_qrs[et] += Srs_nk*r_qk;
-		    r_qss[et] += Sss_nk*r_qk;
-		  }
-                }
-              }
+		int idk = indicesn[k2];
+
+		if(idk!=0){
+		  // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
+		  const int id = n + (k2+4*k)*p_Np;
+		  const dfloat Srr_nk = Srr[id];
+		  const dfloat Srs_nk = Srs[id];
+		  const dfloat Sss_nk = Sss[id];
+		  
+		  occaUnroll(p_NnodesV)
+		    for(iint et=0;et<p_NnodesV;++et){
+		      const iint e = eo + es + et*p_NblockV;
+		      // fetch from shared (for reuse three times)
+		      // 6 flops per 8 bytes
+		      // const dfloat r_qk = (e<Nelements) ? q[e*p_Np+idk] : 0; // s_q[et][es][idk];
+		      const dfloat r_qk = s_q[et][es][idk];
+
+		      r_qrr[et] += Srr_nk*r_qk;
+		      r_qrs[et] += Srs_nk*r_qk;
+		      r_qss[et] += Sss_nk*r_qk;
+		    }
+		}
+	      }
           }
 	
 
         // this part has to check for element index validity
-        occaUnroll(p_NnodesV){
+        occaUnroll(p_NnodesV)
           for(iint et=0;et<p_NnodesV;++et){
             const iint e = eo + es + et*p_NblockV;
 	    
             if (e<Nelements) {
 	      //	      const iint element = elementList[e];
-	      const int element = s_elements[et][es];
+	      //	      const int element = s_elements[et][es];
+	      const int element = e;
               const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
@@ -127,8 +139,7 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
               const iint id = n + element*p_Np;
               Aq[id] = res1;
             }
-          }
-        }
+	  }
       }
     }
   }
