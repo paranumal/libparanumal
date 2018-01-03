@@ -3,7 +3,9 @@
 void boltzmannRun2D(mesh2D *mesh, char *options){
 
    // For initial data
+  #if 0
   boltzmannReport2D(mesh, 0 ,options);
+  #endif
 
 
   // MPI send buffer
@@ -131,11 +133,11 @@ occa::initTimer(mesh->device);
       }
 
       
-    if(strstr(options, "REPORT")){
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep, options);
-      }
-    }
+    //  if(strstr(options, "REPORT")){
+    //   if((tstep%mesh->errorStep)==0){
+    //     boltzmannReport2D(mesh, tstep, options);
+    //   }
+    // }
 
   }
 
