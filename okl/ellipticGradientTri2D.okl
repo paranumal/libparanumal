@@ -47,6 +47,8 @@ kernel void ellipticGradientTri2D_v0(const int Nelements,
   }
 }
 
+/*
+
 #define drdx s_vgeo[es][p_RXID]
 #define drdy s_vgeo[es][p_RYID]
 #define dsdx s_vgeo[es][p_SXID]
@@ -185,7 +187,10 @@ kernel void ellipticGradientTri2D(const int Nelements,
   }
 }
 
-
+#define drdx s_vgeo[es][p_RXID]
+#define drdy s_vgeo[es][p_RYID]
+#define dsdx s_vgeo[es][p_SXID]
+#define dsdy s_vgeo[es][p_SYID]
 
 
 kernel void ellipticPartialGradientTri2D_v0(const int Nelements,
@@ -396,4 +401,4 @@ kernel void ellipticPartialGradientTri2D(iint Nelements,
 
   }
 }
-
+*/

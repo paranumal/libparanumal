@@ -165,7 +165,7 @@ void acousticsRun2Dbbdg(mesh2D *mesh){
           }
         }
       }
-    }
+    // }
   }
 
   free(recvBuffer);
