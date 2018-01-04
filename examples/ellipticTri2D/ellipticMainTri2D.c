@@ -64,6 +64,25 @@ int main(int argc, char **argv){
   ogs_t *ogs;
   precon_t *precon;
 
+  if (strstr(options,"SPARSE")) {
+    //connect the face modes between each element 
+    meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
+    //use the mmaps constructed and overwrite vmap and FaceNodes
+    for (iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+      mesh->vmapM[n] = mesh->mmapM[n];
+      mesh->vmapP[n] = mesh->mmapP[n];
+    }
+    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+      mesh->FaceNodes[n] mesh->FaceModes[n];
+    }
+    //free the old gather scatter arrays and re-run the connect nodes function using this updated connectivity
+    free(mesh->gatherLocalIds );
+    free(mesh->gatherBaseIds  );
+    free(mesh->gatherBaseRanks);
+    free(mesh->gatherHaloFlags);
+    meshParallelConnectNodes(mesh);
+  }
+
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
   dfloat lambda = 0;
