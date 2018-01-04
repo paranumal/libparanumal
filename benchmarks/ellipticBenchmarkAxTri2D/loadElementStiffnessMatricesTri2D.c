@@ -9,18 +9,14 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
   char fname[BUFSIZ];
   sprintf(fname, "sparseN%02d.dat", N);
   FILE *fp = fopen(fname, "r");
-  //  printf("opened\n");
 
   char buf[BUFSIZ];
-  //  printf("buffer created\n");
   if (fp == NULL) {
     printf("no file! %s\n", fname);
     exit(-1);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
-  //  printf("Comment 1%s ", buf);
-
   fgets(buf, BUFSIZ, fp);
   int maxNnzPerRow;
   sscanf(buf, "%d", &maxNnzPerRow);
@@ -30,8 +26,7 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
   int paddedRowSize = 4*((mesh->maxNnzPerRow+3)/4);
   printf("maxNnzPerRow = %d, paddedNnzPerRow = %d\n", mesh->maxNnzPerRow, paddedRowSize);
 
-  fgets(buf, BUFSIZ, fp); // another  comment
-
+  fgets(buf, BUFSIZ, fp); 
   mesh->Ind = (iint*) calloc(paddedRowSize*mesh->Np, sizeof(iint));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->Np;++n){ 
     fscanf(fp, "%d ", mesh->Ind+n);                                             
@@ -40,38 +35,29 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
   mesh->Srs =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   mesh->Sss =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp);
-
   for(int r=0;r<mesh->maxNnzPerRow;++r){
     for(int n=0;n<mesh->Np;++n){                                           
       int count = n + r*mesh->Np;
       int aa = fscanf(fp,  "%lf ", mesh->Srr+count); 
     }
   }
-  
   fgets(buf, BUFSIZ, fp);
-  
   for(int r=0;r<mesh->maxNnzPerRow;++r){
     for(int n=0;n<mesh->Np;++n){                                           
       int count = n + r*mesh->Np;
       int aa = fscanf(fp,  "%lf ", mesh->Srs+count); 
     }
   }
-  
   fgets(buf, BUFSIZ, fp);
-  
   for(int r=0;r<mesh->maxNnzPerRow;++r){
     for(int n=0;n<mesh->Np;++n){                                           
       int count = n + r*mesh->Np;
       int aa = fscanf(fp,  "%lf ", mesh->Sss+count); 
-      if(r==mesh->maxNnzPerRow-1)
-	printf("%lf ", mesh->Sss[count]);
     }
   }
-  
   fgets(buf, BUFSIZ, fp);
   
   /*char4 packing*/
-
   char4 * IndTchar = (char4*) calloc((paddedRowSize*mesh->Np)/4,sizeof(char4));
   for (iint m=0;m<paddedRowSize;m+=4) {  
     for (iint n=0;n<mesh->Np;n++) {
@@ -85,9 +71,7 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
     }
   }
   
-  //ACHTUNG!!! ACHTUNG!!! ACHTUNG!!! mesh->maxNnzPerRow changes to acchount for padding!!!
   mesh->maxNnzPerRow = paddedRowSize;
-
   mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Srr);
   mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Srs);
   mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Sss);
@@ -98,5 +82,4 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
   mesh->o_IndTchar = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(char), IndTchar);
   
   fclose(fp); 
-  //  printf("matrices loaded \n");
 }

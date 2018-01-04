@@ -12,7 +12,8 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   char kernelName[BUFSIZ];
 
   NKernels = 1;
-  sprintf(kernelName, "ellipticPartialAxTri2D");
+  sprintf(kernelName, "ellipticAxTri2D");
+  //sprintf(kernelName, "ellipticPartialAxTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
@@ -99,7 +100,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       // count actual number of non-zeros
       int nnzs = 0;
       for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n)
-	nnzs += (mesh->Ind[n]>0);
+	      nnzs += (mesh->Ind[n]>0);
       printf("nnzs = %d\n", nnzs);
 
       // 6 flops per non-zero plus chain rule
@@ -119,8 +120,6 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("GFLOPS %16.17f (%16.17f) \n", kernelGFLOPS, kernelEquivGFLOPS);
       printf("time per kernel %f \n",kernelElapsed);
       printf("PARAMETERS %d %d %16.17f \n ", Nblocks, Nnodes, kernelGFLOPS );
-
-
     }
   }
 }
