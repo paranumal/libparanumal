@@ -1,14 +1,14 @@
 kernel void ellipticAxTri2D_v1(const int Nelements,
-                              const iint   * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict Srr,
-                              const dfloat * restrict Srs,
-                              const char4  * restrict IndT,
-                              const dfloat * restrict Sss,
-                              const dfloat * restrict MM,
-                              const dfloat lambda,
-                              const dfloat * restrict q,
-                              dfloat * restrict Aq){
+			       const iint   * restrict elementList,
+			       const dfloat * restrict ggeo,
+			       const dfloat * restrict Srr,
+			       const dfloat * restrict Srs,
+			       const char4  * restrict IndT,
+			       const dfloat * restrict Sss,
+			       const dfloat * restrict MM,
+			       const dfloat lambda,
+			       const dfloat * restrict q,
+			       dfloat * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
   for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
@@ -56,41 +56,41 @@ kernel void ellipticAxTri2D_v1(const int Nelements,
 
         
         occaUnroll(p_qmaxNnzPerRow)
-        for (int k=0;k<p_qmaxNnzPerRow;k++) {
-          const char4 Indn = IndT[n + p_Np*k]; 
-          const char *pt_Indn = (char*) &Indn;
+	  for (int k=0;k<p_qmaxNnzPerRow;k++) {
+	    const char4 Indn = IndT[n + p_Np*k]; 
+	    const char *pt_Indn = (char*) &Indn;
         
-          int idk;
+	    int idk;
 
-          occaUnroll(4) //seems inefficient
-          for (int k2=0; k2<4; k2++){
-            idk = pt_Indn[k2];
+	    occaUnroll(4) //seems inefficient
+	      for (int k2=0; k2<4; k2++){
+		idk = pt_Indn[k2];
 
-            if(!idk) break;
+		if(!idk) break;
           
-            --idk;
+		--idk;
 
-            // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-            const int id = n + (k2+4*k)*p_Np;
-            // 3 loads from global (probably L1 for NnodesV*6 flops)
-            const dfloat Srr_nk = Srr[id];
-            const dfloat Srs_nk = Srs[id];
-            const dfloat Sss_nk = Sss[id];
+		// assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
+		const int id = n + (k2+4*k)*p_Np;
+		// 3 loads from global (probably L1 for NnodesV*6 flops)
+		const dfloat Srr_nk = Srr[id];
+		const dfloat Srs_nk = Srs[id];
+		const dfloat Sss_nk = Sss[id];
 
-            occaUnroll(p_NnodesV)
-            for(iint et=0;et<p_NnodesV;++et){
-              const iint e = eo + es + et*p_NblockV;
-              // fetch from shared (for reuse three times)
-              // 6 flops per 8 bytes
-              const dfloat r_qk = s_q[et][es][idk];
+		occaUnroll(p_NnodesV)
+		  for(iint et=0;et<p_NnodesV;++et){
+		    const iint e = eo + es + et*p_NblockV;
+		    // fetch from shared (for reuse three times)
+		    // 6 flops per 8 bytes
+		    const dfloat r_qk = s_q[et][es][idk];
               
-              r_qrr[et] += Srr_nk*r_qk;
-              r_qrs[et] += Srs_nk*r_qk;
-              r_qss[et] += Sss_nk*r_qk;
-            }
-          }
-          if(!idk) break;
-        }
+		    r_qrr[et] += Srr_nk*r_qk;
+		    r_qrs[et] += Srs_nk*r_qk;
+		    r_qss[et] += Sss_nk*r_qk;
+		  }
+	      }
+	    if(!idk) break;
+	  }
         
         // this part has to check for element index validity
         occaUnroll(p_NnodesV)
@@ -112,16 +112,16 @@ kernel void ellipticAxTri2D_v1(const int Nelements,
 }
 
 kernel void ellipticAxTri2D_v2(const int Nelements,
-                              const iint   * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict Srr,
-                              const dfloat * restrict Srs,
-                              const char4  * restrict IndT,
-                              const dfloat * restrict Sss,
-                              const dfloat * restrict MM,
-                              const dfloat lambda,
-                              const dfloat * restrict q,
-                              dfloat * restrict Aq){
+			       const iint   * restrict elementList,
+			       const dfloat * restrict ggeo,
+			       const dfloat * restrict Srr,
+			       const dfloat * restrict Srs,
+			       const char4  * restrict IndT,
+			       const dfloat * restrict Sss,
+			       const dfloat * restrict MM,
+			       const dfloat lambda,
+			       const dfloat * restrict q,
+			       dfloat * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
   for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
@@ -187,16 +187,16 @@ kernel void ellipticAxTri2D_v2(const int Nelements,
             const dfloat Sss_nk = Sss[id];
 
             occaUnroll(p_NnodesV)
-            for(iint et=0;et<p_NnodesV;++et){
-              const iint e = eo + es + et*p_NblockV;
-              // fetch from shared (for reuse three times)
-              // 6 flops per 8 bytes
-              const dfloat r_qk = s_q[et][es][idk];
-              dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk;
-              r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk;
-              r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk;
-              r_Laq[et] += r_lap*r_qk;
-            }
+	      for(iint et=0;et<p_NnodesV;++et){
+		const iint e = eo + es + et*p_NblockV;
+		// fetch from shared (for reuse three times)
+		// 6 flops per 8 bytes
+		const dfloat r_qk = s_q[et][es][idk];
+		dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk;
+		r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk;
+		r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk;
+		r_Laq[et] += r_lap*r_qk;
+	      }
           }
           if(!idk) break;
         }
@@ -219,16 +219,16 @@ kernel void ellipticAxTri2D_v2(const int Nelements,
 }
 
 kernel void ellipticAxTri2D_v0(const int Nelements,
-                              const iint   * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat2 * restrict Srr,
-                              const dfloat2 * restrict Srs,
-                              const char4  * restrict IndT,
-                              const dfloat2 * restrict Sss,
-                              const dfloat * restrict MM,
-                              const dfloat lambda,
-                              const dfloat * restrict q,
-                              dfloat * restrict Aq){
+			       const iint   * restrict elementList,
+			       const dfloat * restrict ggeo,
+			       const dfloat2 * restrict Srr,
+			       const dfloat2 * restrict Srs,
+			       const char4  * restrict IndT,
+			       const dfloat2 * restrict Sss,
+			       const dfloat * restrict MM,
+			       const dfloat lambda,
+			       const dfloat * restrict q,
+			       dfloat * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
   for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
@@ -280,78 +280,57 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
           int id2 = Indn.z-1;
           int id3 = Indn.w-1;
 
-          //occaUnroll(4) //seems inefficient
-               
+	  id0 = (id0<0) ? 0:id0;
+	  id1 = (id1<0) ? 0:id1;
+	  id2 = (id2<0) ? 0:id2;
+	  id3 = (id3<0) ? 0:id3;
 
-        
-          {
-            // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-            const int id = n + (k*2+0)*p_Np;
-        
+	  // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
+	  const int id = n + (k*2)*p_Np;
+	  
+	  // 3 loads from global (probably L1 for NnodesV*6 flops)
+	  const dfloat2 Srr_nk1 = Srr[id];
+	  const dfloat2 Srs_nk1 = Srs[id];
+	  const dfloat2 Sss_nk1 = Sss[id];
+	  
+	  const dfloat2 Srr_nk2 = Srr[id+p_Np];
+	  const dfloat2 Srs_nk2 = Srs[id+p_Np];
+	  const dfloat2 Sss_nk2 = Sss[id+p_Np];
+	  
+	  occaUnroll(p_NnodesV)
+	    for(iint et=0;et<p_NnodesV;++et){
+	      const dfloat G00 = s_ggeo[et][es][p_G00ID];
+	      const dfloat G01 = s_ggeo[et][es][p_G01ID];
+	      const dfloat G11 = s_ggeo[et][es][p_G11ID];
+	      
+	      dfloat tmp = 0;
+	      
+	      const dfloat r_qk0 = s_q[et][es][id0];
+	      dfloat r_lap0 = G00*Srr_nk1.x;
+	      r_lap0 +=  G01*Srs_nk1.x;
+	      r_lap0 +=  G11*Sss_nk1.x;
+	      tmp += r_lap0*r_qk0;
 
-            // 3 loads from global (probably L1 for NnodesV*6 flops)
-            const dfloat2 Srr_nk = Srr[id];
-            const dfloat2 Srs_nk = Srs[id];
-            const dfloat2 Sss_nk = Sss[id];
-
-              occaUnroll(p_NnodesV)
-              for(iint et=0;et<p_NnodesV;++et){
-                // fetch from shared (for reuse three times)
-                // 6 flops per 8 bytes
-                if(id0>=0){
-                const dfloat r_qk = s_q[et][es][id0];
-                dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk.x;
-                r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk.x;
-                r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk.x;
-                r_Laq[et] += r_lap*r_qk;
-                }
-
-                if(id1>=0){
-                const dfloat r_qk = s_q[et][es][id1];
-                dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk.y;
-                r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk.y;
-                r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk.y;
-                r_Laq[et] += r_lap*r_qk;
-              }
-              }
-            
-          }
-            
-          {
-
-            // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-            const int id = n + (k*2+1)*p_Np;
-        
-            // 3 loads from global (probably L1 for NnodesV*6 flops)
-            const dfloat2 Srr_nk = Srr[id];
-            const dfloat2 Srs_nk = Srs[id];
-            const dfloat2 Sss_nk = Sss[id];
-
-           
-              occaUnroll(p_NnodesV)
-              for(iint et=0;et<p_NnodesV;++et){
-                // fetch from shared (for reuse three times)
-                // 6 flops per 8 bytes
-                 if(id2>=0) {
-                const dfloat r_qk = s_q[et][es][id2];
-                dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk.x;
-                r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk.x;
-                r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk.x;
-                r_Laq[et] += r_lap*r_qk;
-              }
-
-                // fetch from shared (for reuse three times)
-                // 6 flops per 8 bytes
-               if(id3>=0) {
-                const dfloat r_qk = s_q[et][es][id3];
-                dfloat r_lap = s_ggeo[et][es][p_G00ID]*Srr_nk.y;
-                r_lap +=  s_ggeo[et][es][p_G01ID]*Srs_nk.y;
-                r_lap +=  s_ggeo[et][es][p_G11ID]*Sss_nk.y;
-                r_Laq[et] += r_lap*r_qk;
-              }
-            }
-          }
-        }
+	      const dfloat r_qk1 = s_q[et][es][id1];
+	      dfloat r_lap1 = G00*Srr_nk1.y;
+	      r_lap1 +=  G01*Srs_nk1.y;
+	      r_lap1 +=  G11*Sss_nk1.y;
+	      tmp += r_lap1*r_qk1;
+	      
+	      const dfloat r_qk2 = s_q[et][es][id2];
+	      dfloat r_lap2 = G00*Srr_nk2.x;
+	      r_lap2 +=  G01*Srs_nk2.x;
+	      r_lap2 +=  G11*Sss_nk2.x;
+	      tmp += r_lap2*r_qk2;
+	      
+	      const dfloat r_qk3 = s_q[et][es][id3];
+	      dfloat r_lap3 = G00*Srr_nk2.y;
+	      r_lap3 +=  G01*Srs_nk2.y;
+	      r_lap3 +=  G11*Sss_nk2.y;
+	      r_Laq[et] = tmp + r_lap3*r_qk3;
+	    }
+	}
+	
         
         // this part has to check for element index validity
         occaUnroll(p_NnodesV)
@@ -438,38 +417,38 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
 
         
         occaUnroll(p_maxNnzPerRow/4)
-        for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
-          const char4 Indn = IndT[n + p_Np*k]; 
-          const char *pt_Indn = (char*) &Indn;
+	  for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
+	    const char4 Indn = IndT[n + p_Np*k]; 
+	    const char *pt_Indn = (char*) &Indn;
             
-          occaUnroll(4) //seems inefficient
-          for (int k2=0; k2<4; k2++){
-            int idk = pt_Indn[k2];
+	    occaUnroll(4) //seems inefficient
+	      for (int k2=0; k2<4; k2++){
+		int idk = pt_Indn[k2];
               
-            if(!idk) break;
+		if(!idk) break;
           
-            --idk;
+		--idk;
 
-            // assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
-            const int id = n + (k2+4*k)*p_Np;
-            // 3 loads from global (probably L1 for NnodesV*6 flops)
-            const dfloat Srr_nk = Srr[id];
-            const dfloat Srs_nk = Srs[id];
-            const dfloat Sss_nk = Sss[id];
+		// assume Srr, Srs, Sss are stored as a row-major matrix with maxNnzPerRow rows and Np columns
+		const int id = n + (k2+4*k)*p_Np;
+		// 3 loads from global (probably L1 for NnodesV*6 flops)
+		const dfloat Srr_nk = Srr[id];
+		const dfloat Srs_nk = Srs[id];
+		const dfloat Sss_nk = Sss[id];
 
-            occaUnroll(p_NnodesV)
-            for(iint et=0;et<p_NnodesV;++et){
-              const iint e = eo + es + et*p_NblockV;
-              // fetch from shared (for reuse three times)
-              // 6 flops per 8 bytes
-              const dfloat r_qk = s_q[et][es][idk];
+		occaUnroll(p_NnodesV)
+		  for(iint et=0;et<p_NnodesV;++et){
+		    const iint e = eo + es + et*p_NblockV;
+		    // fetch from shared (for reuse three times)
+		    // 6 flops per 8 bytes
+		    const dfloat r_qk = s_q[et][es][idk];
               
-              r_qrr[et] += Srr_nk*r_qk;
-              r_qrs[et] += Srs_nk*r_qk;
-              r_qss[et] += Sss_nk*r_qk;
-            }
-          }
-        }
+		    r_qrr[et] += Srr_nk*r_qk;
+		    r_qrs[et] += Srs_nk*r_qk;
+		    r_qss[et] += Sss_nk*r_qk;
+		  }
+	      }
+	  }
         
         // this part has to check for element index validity
         occaUnroll(p_NnodesV)
