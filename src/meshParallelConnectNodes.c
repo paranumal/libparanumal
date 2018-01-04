@@ -59,6 +59,8 @@ void meshParallelConnectNodes(mesh_t *mesh){
   for(iint r=0;r<rank;++r)
     gatherNodeStart += allLocalNodeCounts[r];
   
+  free(allLocalNodeCounts);
+
   // form continuous node numbering (local=>virtual gather)
   parallelNode_t *gatherNumbering =
     (parallelNode_t*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,
