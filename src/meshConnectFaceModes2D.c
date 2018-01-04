@@ -3,32 +3,6 @@
 #include <stdio.h>
 #include "mesh2D.h"
 
-iint findBestMatch(dfloat x1, dfloat y1,
-                   iint Np2, iint *nodeList, dfloat *x2, dfloat *y2, int *nP){
-
-  iint matchIndex = nodeList[0];
-  dfloat mindist2 = pow(x1-x2[nodeList[0]],2) + pow(y1-y2[nodeList[0]],2);
-
-  *nP = 0;
-  for(int n=1;n<Np2;++n){
-
-    /* next node */
-    const iint i2 = nodeList[n];
-
-    /* distance between target and next node */
-    const dfloat dist2 = pow(x1-x2[i2],2) + pow(y1-y2[i2],2);
-
-    /* if next node is closer to target update match */
-    if(dist2<mindist2){
-      mindist2 = dist2;
-      matchIndex = i2;
-      *nP = n;
-    }
-  }
-  if(mindist2>1e-3) printf("arggh - bad match: x,y=%g,%g\n", x1,y1);
-  return matchIndex;
-}
-
 
 // serial face-mode to face-mode connection
 void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
@@ -108,6 +82,3 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
     }
   }
 }
-
-//      printf("connecting (%d,%d) to (%d,%d) [ vmapM %d to vmapP %d ]\n",
-//             e,f,eP,fP, mesh->vmapM[id], mesh->vmapP[id]);
