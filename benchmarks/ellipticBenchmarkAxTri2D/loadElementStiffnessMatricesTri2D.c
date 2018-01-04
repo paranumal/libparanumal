@@ -28,8 +28,10 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
 
   mesh->maxNnzPerRow = maxNnzPerRow;
   int paddedRowSize = 4*((mesh->maxNnzPerRow+3)/4);
+  printf("maxNnzPerRow = %d, paddedNnzPerRow = %d\n", mesh->maxNnzPerRow, paddedRowSize);
+
   fgets(buf, BUFSIZ, fp); // another  comment
-  //  printf("Comment 2%s ", buf);
+
   mesh->Ind = (iint*) calloc(paddedRowSize*mesh->Np, sizeof(iint));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->Np;++n){ 
     fscanf(fp, "%d ", mesh->Ind+n);                                             
@@ -61,6 +63,8 @@ void loadElementStiffnessMatricesTri2D(mesh_t *mesh, const char *options, int N)
     for(int n=0;n<mesh->Np;++n){                                           
       int count = n + r*mesh->Np;
       int aa = fscanf(fp,  "%lf ", mesh->Sss+count); 
+      if(r==mesh->maxNnzPerRow-1)
+	printf("%lf ", mesh->Sss[count]);
     }
   }
   
