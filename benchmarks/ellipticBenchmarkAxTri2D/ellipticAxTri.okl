@@ -68,11 +68,11 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
 	//	occaUnroll()
 	for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
 	    
-	  const char4 Indn = IndT[n*((int)p_maxNnzPerRow/4)+k]; // IndT[n*shift+k]; <== this was bad
-	  const char * pt_Indn = (char*) &Indn;
+	  const char4 Indn = IndT[n + p_Np*k]; 
+	  const char *pt_Indn = (char*) &Indn;
 	    
 	    
-	  //	    occaUnroll(4) //seems inefficient
+	  occaUnroll(4) //seems inefficient
 	  for (int k2 =0; k2<4; k2++){
 	      
 	    int idk = pt_Indn[k2];

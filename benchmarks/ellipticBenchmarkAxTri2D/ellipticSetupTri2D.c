@@ -151,8 +151,9 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
   kernelInfo.addDefine("p_NblockV", Nblocks);
-kernelInfo.addDefine("p_NnodesV", Nnodes);
-kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_NnodesV", Nnodes);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_qmaxNnzPerRow", mesh->maxNnzPerRow/4);
 
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
