@@ -151,16 +151,17 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
   kernelInfo.addDefine("p_NblockV", Nblocks);
-kernelInfo.addDefine("p_NnodesV", Nnodes);
-kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_NnodesV", Nnodes);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_qmaxNnzPerRow", mesh->maxNnzPerRow/4);
 
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
   kernelInfo.addDefine("p_NblockG", Nblocks);
- iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
   iint *localGatherElementList = (iint*) calloc(mesh->Nelements, sizeof(iint));
-int globalCount = 0;
-int localCount =0;
+  int globalCount = 0;
+  int localCount =0;
 
   for(iint e=0;e<mesh->Nelements;++e){
       globalGatherElementList[globalCount++] = e;
@@ -175,9 +176,6 @@ int localCount =0;
 
     solver->o_localGatherElementList =
       mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
-
-
-
 
   return solver;
 }
