@@ -14,7 +14,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
@@ -153,7 +153,8 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   kernelInfo.addDefine("p_NblockV", Nblocks);
   kernelInfo.addDefine("p_NnodesV", Nnodes);
   kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
-  kernelInfo.addDefine("p_qmaxNnzPerRow", mesh->maxNnzPerRow/4);
+  kernelInfo.addDefine("p_qmaxNnzPerRow", (int)(mesh->maxNnzPerRow/4));
+  printf("maxNnz = %d, qmaxNnz = %d\n", mesh->maxNnzPerRow, (int)(mesh->maxNnzPerRow/4));
 
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
