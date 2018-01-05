@@ -431,20 +431,14 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
 	      const dfloat G01 = s_ggeo[et][es][p_G01ID];
 	      const dfloat G11 = s_ggeo[et][es][p_G11ID];
 	      
-	      dfloat4 r_qk;
-	      r_qk.x = s_q[et][es][id0];
-	      r_qk.y = s_q[et][es][id1];
-	      r_qk.z = s_q[et][es][id2];
-	      r_qk.w = s_q[et][es][id3];
-	      
 	      dfloat4 r_lap = G00*Srr_nk;
 	      r_lap += G01*Srs_nk;
 	      r_lap += G11*Sss_nk;
 
-	      r_Laq[et] += r_lap.x*r_qk.x;
-	      r_Laq[et] += r_lap.y*r_qk.y;
-	      r_Laq[et] += r_lap.z*r_qk.z;
-	      r_Laq[et] += r_lap.w*r_qk.w;
+	      r_Laq[et] += r_lap.x*s_q[et][es][id0];
+	      r_Laq[et] += r_lap.y*s_q[et][es][id1];
+	      r_Laq[et] += r_lap.z*s_q[et][es][id2];
+	      r_Laq[et] += r_lap.w*s_q[et][es][id3];
 	      
 	    }
 	}
