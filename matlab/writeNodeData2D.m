@@ -301,7 +301,6 @@ normBB2 = sqrt(diag(diag(BBMM)));
 BBMM2 = normBB2\(BBMM/normBB2)
 
 cond(BBMM2)
-pause
 %% write VDM for conversion
 
 % VB(abs(VB)<tol) = 0;
@@ -464,7 +463,7 @@ for f = 2:Nfaces
     diff = sum(abs( - LIFT(:,ids)),2);
     p = zeros(Np,1);
     for i = 1:Np
-        iid = find(sum(abs(repmat(LIFT(i,1:Nfp),Np,1)-LIFT(:,ids)),2)<1e-8);
+        iid = find(sum(abs(repmat(LIFT(i,1:Nfp),Np,1)-LIFT(:,ids)),2)<1e-4);
         p(iid) = i;
     end
     EL(:,ids) = EL1(p,:);
@@ -776,6 +775,85 @@ for n=1:NpFEM
     fprintf(fid, '\n');
 end
 
+%% Sparse Basis
+
+addpath('./sparseBasis')
+[cV,cMM,cSrr,cSrs,cSss,stackedNz] = GenModalOps(N);
+
+faceModes1   = find( sum(abs(cV(faceNodes1,:)),1) > NODETOL);
+faceModes2   = find( sum(abs(cV(faceNodes2,:)),1) > NODETOL);
+faceModes3   = find( sum(abs(cV(faceNodes3,:)),1) > NODETOL);
+FaceModes  = [faceModes1;faceModes2;faceModes3]';
+
+  fprintf(fid, '%% sparse basis Vandermonde \n');		     
+  for n=1:Np
+    for m=1:Np
+       fprintf(fid, '%17.15E ', cV(m,n));
+    end
+    fprintf(fid, '\n');
+  end
+  
+  fprintf(fid, '%% sparse basis mass matrix \n');		     
+  for n=1:Np
+    for m=1:Np
+       fprintf(fid, '%17.15E ', cMM(m,n));
+    end
+    fprintf(fid, '\n');
+  end
+
+  fprintf(fid, '%% FaceModes\n');
+    for f=1:Nfaces
+        for m=1:Nfp
+            fprintf(fid, '%d ', FaceModes(m,f)-1); %% adjust for 0-indexing
+        end
+        fprintf(fid, '\n');
+    end
+
+  fprintf(fid, '# max number of non-zeros per row\n');
+  maxNzPerRow = size(stackedNz,2);
+  fprintf(fid, '%d\n', maxNzPerRow);
+  fprintf(fid, '# column index of non-zeros (each row is Np column offsets, 1-indexed)\n');		     
+  for n=1:maxNzPerRow
+    fprintf(fid, '%d ', stackedNz(:,n)');
+    fprintf(fid, '\n');
+  end
+
+  fprintf(fid, '# non-zero value of Srr\n');
+  for n=1:maxNzPerRow
+    for m=1:Np
+      val = 0;
+      if(stackedNz(m,n)>0)
+	 val = cSrr(m,stackedNz(m,n)); 
+      end
+      fprintf(fid, '%17.15E ', val);
+    end
+    fprintf(fid, '\n');
+  end
+
+  fprintf(fid, '# non-zero value of Srs\n');		     
+  for n=1:maxNzPerRow
+    for m=1:Np
+      val = 0;
+      if(stackedNz(m,n)>0)
+	 val = cSrs(m,stackedNz(m,n)); 
+      end
+      fprintf(fid, '%17.15E ', val);
+    end
+    fprintf(fid, '\n');
+  end
+
+
+  fprintf(fid, '# non-zero value of Sss\n');		     
+  for n=1:maxNzPerRow
+    for m=1:Np
+      val = 0;
+      if(stackedNz(m,n)>0)
+	 val = cSss(m,stackedNz(m,n)); 
+      end
+      fprintf(fid, '%17.15E ', val);
+    end
+    fprintf(fid, '\n');
+  end
 
 
 
