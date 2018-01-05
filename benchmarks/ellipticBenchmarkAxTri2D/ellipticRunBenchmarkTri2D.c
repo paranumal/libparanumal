@@ -99,12 +99,15 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
       // count actual number of non-zeros
       int nnzs = 0;
-      for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n)
-	      nnzs += (mesh->Ind[n]>0);
+      for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n){
+	nnzs += (fabs(mesh->Srr[n])>1e-13);
+	nnzs += (fabs(mesh->Srs[n])>1e-13);
+	nnzs += (fabs(mesh->Sss[n])>1e-13);
+      }
       printf("nnzs = %d\n", nnzs);
 
       // 6 flops per non-zero plus chain rule
-      double flops = nnzs*6 + mesh->Np*5;
+      double flops = nnzs*2 + mesh->Np*5;
       double eqflops = mesh->Np*mesh->Np*6 + mesh->Np*5;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
