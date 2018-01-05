@@ -403,7 +403,7 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
           }
 
         
-        //occaUnroll(p_qmaxNnzPerRow)
+	//        occaUnroll(p_qmaxNnzPerRow)
         for (int k=0;k<p_qmaxNnzPerRow;k++) {
           const char4 Indn = IndT[n + p_Np*k]; 
 
@@ -431,15 +431,21 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
 	      const dfloat G01 = s_ggeo[et][es][p_G01ID];
 	      const dfloat G11 = s_ggeo[et][es][p_G11ID];
 	      
+	      // 4 flops
 	      dfloat4 r_lap = G00*Srr_nk;
+	      
+	      // 4x2 flops
 	      r_lap += G01*Srs_nk;
+	      
+	      // 4x2 flops
 	      r_lap += G11*Sss_nk;
-
+	      
+	      // 4x2 flops
 	      r_Laq[et] += r_lap.x*s_q[et][es][id0];
 	      r_Laq[et] += r_lap.y*s_q[et][es][id1];
 	      r_Laq[et] += r_lap.z*s_q[et][es][id2];
 	      r_Laq[et] += r_lap.w*s_q[et][es][id3];
-	      
+	      ++et;
 	    }
 	}
 	
