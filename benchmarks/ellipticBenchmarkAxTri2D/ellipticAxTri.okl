@@ -403,7 +403,7 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
           }
 
         
-	//        occaUnroll(p_qmaxNnzPerRow)
+	//	occaUnroll(p_qmaxNnzPerRow)
         for (int k=0;k<p_qmaxNnzPerRow;k++) {
           const char4 Indn = IndT[n + p_Np*k]; 
 
