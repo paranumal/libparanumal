@@ -54,7 +54,7 @@ void meshPhysicalNodesQuad3D(mesh_t *mesh){
 	+0.25*(1+rn)*(1+sn)*ze3
 	+0.25*(1-rn)*(1+sn)*ze4;
 
-      printf("xlin=%g, ylin=%g, zlin=%g\n", xlin, ylin, zlin);
+      //      printf("xlin=%g, ylin=%g, zlin=%g\n", xlin, ylin, zlin);
       
       // project to sphere
       dfloat rlin = sqrt(xlin*xlin+ylin*ylin+zlin*zlin);

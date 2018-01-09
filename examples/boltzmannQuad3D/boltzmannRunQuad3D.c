@@ -10,12 +10,17 @@ void boltzmannRunQuad3D(solver_t *solver){
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
+  iint fld = 0;
+  boltzmannPlotVTUQuad3D(mesh, "bah.vtu", fld);
+  
   occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
     
     for(iint rk=0;rk<mesh->Nrk;++rk){
+
+      printf("RK %d --------------------\n", rk);
       
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
@@ -62,7 +67,8 @@ void boltzmannRunQuad3D(solver_t *solver){
       
       mesh->device.finish();
       occa::tic("surfaceKernel");
-      
+
+#if 1
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -75,6 +81,7 @@ void boltzmannRunQuad3D(solver_t *solver){
 			  mesh->o_z,
 			  mesh->o_q,
 			  mesh->o_rhsq);
+#endif
       
       mesh->device.finish();
       occa::toc("surfaceKernel");

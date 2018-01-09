@@ -51,7 +51,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat q2mod = q2bar - qdotx*x/(mesh->sphereRadius*mesh->sphereRadius);
       dfloat q3mod = q3bar - qdotx*y/(mesh->sphereRadius*mesh->sphereRadius);
       dfloat q4mod = q4bar - qdotx*z/(mesh->sphereRadius*mesh->sphereRadius);
-      
+
       mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
 
       mesh->q[base+1*mesh->Np] = q2mod;
@@ -74,13 +74,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 2.e-3;  // was 6.e-3
+  dfloat nu = 2.e-2;  // was 6.e-3
   mesh->tauInv = mesh->RT/nu; // TW
   
-  // set penalty parameter
-  //  mesh->Lambda2 = 0.5/(sqrt(3.)*mesh->sqrtRT);
-  mesh->Lambda2 = 0.5/(mesh->sqrtRT);
-
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){  
@@ -88,6 +84,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
 	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+
 	dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
 	dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
 	
@@ -103,7 +100,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     }
   }
     
-  dfloat cfl = .2; // depends on the stability region size (was .4)
+  dfloat cfl = .1; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
@@ -123,7 +120,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -134,9 +131,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
