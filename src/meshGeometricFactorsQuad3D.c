@@ -17,12 +17,12 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
     for(int j=0;j<mesh->Nq;++j){
       for(int i=0;i<mesh->Nq;++i){
 
-	dfloat xr = 0, yr = 0, zr = 0;
-	dfloat xs = 0, ys = 0, zs = 0;
-
 	dfloat xij = mesh->x[i+j*mesh->Nq+e*mesh->Np];
 	dfloat yij = mesh->y[i+j*mesh->Nq+e*mesh->Np];
 	dfloat zij = mesh->z[i+j*mesh->Nq+e*mesh->Np];
+
+	dfloat xr = 0, yr = 0, zr = 0;
+	dfloat xs = 0, ys = 0, zs = 0;
 	
 	for(int n=0;n<mesh->Nq;++n){
 
@@ -43,9 +43,9 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	dfloat ry = zs*xij - xs*zij;
 	dfloat rz = xs*yij - ys*xij;
 
-	dfloat sx = zs*yij - zs*yij;
-	dfloat sy = xs*zij - xs*zij;
-	dfloat sz = ys*xij - ys*xij;
+	dfloat sx = zr*yij - yr*zij;
+	dfloat sy = xr*zij - zr*xij;
+	dfloat sz = yr*xij - xr*yij;
 
 	dfloat tx = yr*zs - zr*ys;
 	dfloat ty = zr*xs - xr*zs;
