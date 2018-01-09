@@ -46,12 +46,17 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat z = mesh->z[n + mesh->Np*e];
 
       int base = n + e*mesh->Np*mesh->Nfields;
+
+      dfloat qdotx = q2bar*x + q3bar*y + q4bar*z;
+      dfloat q2mod = q2bar - qdotx*x/(mesh->sphereRadius*mesh->sphereRadius);
+      dfloat q3mod = q3bar - qdotx*y/(mesh->sphereRadius*mesh->sphereRadius);
+      dfloat q4mod = q4bar - qdotx*z/(mesh->sphereRadius*mesh->sphereRadius);
       
       mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
 
-      mesh->q[base+1*mesh->Np] = q2bar;
-      mesh->q[base+2*mesh->Np] = q3bar;
-      mesh->q[base+3*mesh->Np] = q4bar;
+      mesh->q[base+1*mesh->Np] = q2mod;
+      mesh->q[base+2*mesh->Np] = q3mod;
+      mesh->q[base+3*mesh->Np] = q4mod;
 
       mesh->q[base+4*mesh->Np] = q5bar;
       mesh->q[base+5*mesh->Np] = q6bar;
@@ -98,7 +103,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     }
   }
     
-  dfloat cfl = .8; // depends on the stability region size (was .4)
+  dfloat cfl = .2; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
@@ -113,12 +118,12 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = .1;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10;
+  mesh->errorStep = 100;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -170,6 +175,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
+  kernelInfo.addDefine("p_invsqrtRT", (dfloat)(1./mesh->sqrtRT));
   kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
@@ -177,7 +183,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
   kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
-  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
+
+  //  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
+  kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // TW
   
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);

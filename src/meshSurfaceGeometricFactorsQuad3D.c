@@ -117,6 +117,8 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	ny /= sJ;
 	nz /= sJ;
 
+	if(sJ<1e-8) { printf("Negative or small surface Jacobian: %g\n", sJ); exit(-1);}
+	
 	int base = e*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq*mesh->Nsgeo;
 	
 	mesh->sgeo[base+mesh->Nq*NXID] = nx;
