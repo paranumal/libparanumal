@@ -80,6 +80,7 @@ LOBJS = \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
+../../src/meshConnectFaceModes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloSetup.o \

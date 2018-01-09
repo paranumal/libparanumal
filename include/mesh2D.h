@@ -78,6 +78,9 @@ void occaOptimizeGradientQuad2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *d
 // serial face-node to face-node connection
 void meshConnectFaceNodes2D(mesh2D *mesh);
 
+// serial face-mode to face-mode connection
+void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V);
+
 // halo connectivity information
 void meshHaloSetup2D(mesh2D *mesh);
 

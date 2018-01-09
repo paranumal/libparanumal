@@ -69,7 +69,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
             s = -1;
           }
         }
-        if(mindist2>1e-3) printf("arggh - bad match: e=%d,f=%d, mode=%d\n", e,f, m);
+        if(mindist>1e-3) printf("arggh - bad match: e=%d,f=%d, mode=%d\n", e,f, m);
 
         iint id  = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
         iint idM = faceModes[f*mesh->Nfp+n] + e*mesh->Np;
