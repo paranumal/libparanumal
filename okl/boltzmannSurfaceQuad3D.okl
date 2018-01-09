@@ -43,6 +43,9 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
     // for all faces (global barrier at end of body of this loop)
     for(iint face=0;face<p_Nfaces;++face){      
 
+      // wait for all global memory writes of the previous inner loop to complete
+      barrier(globalMemFence);
+      
       for(iint es=0;es<p_NblockS;++es;inner1){
 	for(iint i=0;i<p_Nq;++i;inner0){ 
 
@@ -52,15 +55,13 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	  if(eM<Nelements){
 	    
 	    // load surface geofactors for this face
-	    const iint sid =
-	      eM*p_Nsgeo*p_Nfp*p_Nfaces +
-	      face*p_Nsgeo*p_Nfp + i; 
+	    const iint sid = eM*p_Nsgeo*p_Nfp*p_Nfaces + face*p_Nsgeo*p_Nfp + i; 
 	    const dfloat nx = sgeo[sid+0*p_Nfp];
 	    const dfloat ny = sgeo[sid+1*p_Nfp];
 	    const dfloat nz = sgeo[sid+2*p_Nfp];
 	    const dfloat sJ = sgeo[sid+3*p_Nfp];
 	    const dfloat invJ = sgeo[sid+4*p_Nfp];
-	    
+
 	    // indices of negative and positive traces of face node
 	    const iint id  = eM*p_Nfp*p_Nfaces + n;
 	    const int idM = vmapM[id];
@@ -81,7 +82,7 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 
 	    // D = nx*A + ny*B + nz*C
    	    // compute 0.5*[q] + 0.5*D*[q]
-	    const dfloat ave = 0.5, beta = 0; 0.5*p_invsqrtRT;
+	    const dfloat ave = 0.5, beta = 0.5*p_invsqrtRT;
 
 	    flux(nx, ny, nz, ave, beta, dq, fluxq);
 
@@ -91,17 +92,19 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	    
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;
-	    
+
+	    //	    printf("nor=%g,%g,%g sc=%g\n", nx, ny, nz, sc);
+
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
+		printf("%g ", dq[fld]);
 		rhsq[vidM+fld*p_Np] += sc*dq[fld];
 	      }
+	    printf("\n");
 	  }
 	}
       }
       
-      // wait for all global memory writes of the previous inner loop to complete
-      barrier(globalMemFence);
     }
   }
 }

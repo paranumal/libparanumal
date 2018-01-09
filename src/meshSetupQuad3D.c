@@ -14,11 +14,22 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
   // connect elements using parallel sort
   meshParallelConnect(mesh);
 
+
+  
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
+
+#if 0
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      printf("%d ", mesh->EToB[e*mesh->Nfaces+f]);
+    }
+    printf("\n");
+  }
+#endif
   
   // load reference (r,s) element nodes
   void meshLoadReferenceNodesQuad2D(mesh_t *mesh, int N);
@@ -36,12 +47,19 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
 
+  for(int n=0;n<mesh->Nfp*mesh->Nelements*mesh->Nfaces;++n){
+    if(mesh->vmapM[n]==mesh->vmapP[n]){
+      printf("node %d matches self \n");
+    }
+  }
+      
+  
   // compute surface geofacs
   meshSurfaceGeometricFactorsQuad3D(mesh);
   
   // global nodes
   meshParallelConnectNodes(mesh);
-  
+
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
 

@@ -162,11 +162,13 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
       mesh->EX[e*mesh->Nverts+n] = VX[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EY[e*mesh->Nverts+n] = VY[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EZ[e*mesh->Nverts+n] = VZ[mesh->EToV[e*mesh->Nverts+n]];
+#if 0
       printf("e %d v %d %g %g %g\n",
 	     e, n,
 	     mesh->EX[e*mesh->Nverts+n],
 	     mesh->EY[e*mesh->Nverts+n],
 	     mesh->EZ[e*mesh->Nverts+n]);
+#endif
     }
   }
 

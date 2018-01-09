@@ -12,21 +12,19 @@ kernel void boltzmannUpdateQuad3D(const iint Nelements,
 
     for(iint n=0;n<p_Np;++n;inner0){
 
-      const iint id = p_Nfields*(n + e*p_Np);
-      
       for(iint fld=0; fld< p_Nfields; ++fld){
+
+	const iint id = e*p_Np*p_Nfields + fld*p_Np + n;
 	
-	const iint idn = id + fld;
-	
-	dfloat r_resq = resq[idn];
-	dfloat r_rhsq = rhsq[idn]; 
-	dfloat r_q    = q[idn];
+	dfloat r_resq = resq[id];
+	dfloat r_rhsq = rhsq[id]; 
+	dfloat r_q    = q[id];
 	//
 	r_resq = rka*r_resq + dt*r_rhsq;
 	r_q   += rkb*r_resq;
 	//
-	resq[idn] = r_resq;
-	q[idn]    = r_q;
+	resq[id] = r_resq;
+	q[id]    = r_q;
 	
       }
     }
