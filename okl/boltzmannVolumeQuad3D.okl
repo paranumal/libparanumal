@@ -136,7 +136,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);
 	    dfloat rhsq3 = -p_sqrtRT*(dq8dx + dq1dy + p_sqrt2*dq6dy + dq10dz);
 	    dfloat rhsq4 = -p_sqrtRT*(dq9dx + dq10dy + dq1dz + p_sqrt2*dq7dz);
-	    
+
 	    const dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx -p_tauInv*(q5 - q2*q2*p_invsqrt2*invq1);
 	    const dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy -p_tauInv*(q6 - q3*q3*p_invsqrt2*invq1);
 	    const dfloat rhsq7 = -p_sqrtRT*p_sqrt2*dq4dz -p_tauInv*(q7 - q4*q4*p_invsqrt2*invq1);
@@ -150,9 +150,15 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    const dfloat yij = y[i+j*p_Nq+e*p_Np];
 	    const dfloat zij = z[i+j*p_Nq+e*p_Np];
 
+	    // add coriolis force to momentum equation
+	    rhsq2 -= p_fainv*zij*(yij*q4-zij*q3);
+	    rhsq3 -= p_fainv*zij*(zij*q2-xij*q4);
+	    rhsq4 -= p_fainv*zij*(xij*q3-yij*q2);
+
+	      // remove radial comonent of momentum change
 	    const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
 
-	    rhsq2 -= xij*xdotrhsq; // remove radial comonent of momentum change
+	    rhsq2 -= xij*xdotrhsq; 
 	    rhsq3 -= yij*xdotrhsq;
 	    rhsq4 -= zij*xdotrhsq;
 			    
