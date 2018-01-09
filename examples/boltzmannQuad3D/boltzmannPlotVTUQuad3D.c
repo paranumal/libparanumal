@@ -31,7 +31,7 @@ void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld){
   // compute plot node coordinates on the fly
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
-      dfloat plotxn = 0, plotyn = 0, plotzn;
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
       for(iint m=0;m<mesh->Np;++m){
 	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
 	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
@@ -54,7 +54,7 @@ void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld){
       dfloat plotpn = 0;
 
       for(iint m=0;m<mesh->Np;++m){
-        dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->Np)];
+        dfloat pm = mesh->q[m + mesh->Np*fld + mesh->Nfields*e*mesh->Np];
         //dfloat pm = mesh->invTau[m+e*mesh->Np];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
