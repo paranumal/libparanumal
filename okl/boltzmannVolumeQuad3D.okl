@@ -1,0 +1,179 @@
+
+#define RXID 0  
+#define RYID 1
+#define RZID 2
+#define SXID 3  
+#define SYID 4
+#define SZID 5
+#define TXID 6  
+#define TYID 7
+#define TZID 8
+
+kernel void boltzmannVolumeQuad3D(const iint Nelements,
+				  const dfloat * restrict vgeo,
+				  const dfloat * restrict D,
+				  const dfloat * restrict x,
+				  const dfloat * restrict y,
+				  const dfloat * restrict z,
+				  const dfloat * restrict q,
+				  dfloat * restrict rhsa){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+    
+    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+    
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){    
+	for(iint i=0;i<p_Nq;++i;inner0){    
+	  
+	  iint e = eo+es; // element in block
+	  if(e<Nelements){
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_q[fld][es][j][i] = q[i+j*p_Nq+fld*p_Np+p_Nfields*p_Np*e];
+	    }
+	  }
+	  
+	  if(es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+	}
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){    
+	for(iint i=0;i<p_Nq;++i;inner0){    
+	  iint e = eo+es; // element in block
+
+	  if(e<Nelements){
+
+	    const iint n=j*p_Nq+i;
+
+	    // prefetch geometric factors (constant on triangle)
+	    const int gbase = e*p_Np*p_Nvgeo + n;
+	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
+	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
+	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
+	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
+	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
+	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
+	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
+	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
+	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
+	    
+	    // compute 'r' and 's' derivatives of (q_m) at node n
+	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
+
+	    occaUnroll(p_Nfields)
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      dqdr[fld] = 0;
+	      dqds[fld] = 0;
+	    }
+	    
+	    occaUnroll(p_Nq)
+	      for(iint m=0;m<p_Nq;++m){
+		const dfloat Drni = s_D[i][m]; // could L1
+		const dfloat Dsni = s_D[j][m];
+		
+		// differentiate q components with respect to 'r'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld) 
+		    dqdr[fld] += Drni*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
+
+		// differentiate q components with respect to 's'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld)
+		    dqds[fld] += Dsni*s_q[fld][es][m][i];
+	      }
+	    
+	    const dfloat q1  = s_q[0][es][j][i];
+	    const dfloat q2  = s_q[1][es][j][i];
+	    const dfloat q3  = s_q[2][es][j][i];
+	    const dfloat q4  = s_q[3][es][j][i];
+	    const dfloat q5  = s_q[4][es][j][i];
+	    const dfloat q6  = s_q[5][es][j][i];
+	    const dfloat q7  = s_q[6][es][j][i];
+	    const dfloat q8  = s_q[7][es][j][i];
+	    const dfloat q9  = s_q[8][es][j][i];
+	    const dfloat q10 = s_q[9][es][j][i];
+	    
+	    const dfloat invq1 = 1.f/q1;
+	    
+	    const dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds + dtdx*q1;
+	    const dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds + dtdy*q1;
+	    const dfloat dq1dz = drdz*dq1dr + dsdz*dq1ds + dtdz*q1;
+
+	    const dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds + dtdx*q2;
+	    const dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds + dtdy*q2;
+	    const dfloat dq2dz = drdz*dq2dr + dsdz*dq2ds + dtdz*q2;
+
+	    const dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds + dtdx*q3;
+	    const dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds + dtdy*q3;
+	    const dfloat dq3dz = drdz*dq3dr + dsdz*dq3ds + dtdz*q3;
+
+	    const dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds + dtdx*q4;
+	    const dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds + dtdy*q4;
+	    const dfloat dq4dz = drdz*dq4dr + dsdz*dq4ds + dtdz*q4;
+
+	    const dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds + dtdx*q5;
+	    const dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds + dtdy*q6;
+	    const dfloat dq7dz = drdz*dq7dr + dsdz*dq7ds + dtdz*q7;
+
+	    const dfloat dq8dx = drdx*dq8dr + dsdx*dq8ds + dtdx*q8;
+	    const dfloat dq8dy = drdy*dq8dr + dsdy*dq8ds + dtdy*q8;
+
+	    const dfloat dq9dx = drdx*dq9dr + dsdx*dq9ds + dtdx*q9;
+	    const dfloat dq9dz = drdz*dq9dr + dsdz*dq9ds + dtdz*q9;
+
+	    const dfloat dq10dy = drdy*dq10dr + dsdy*dq10ds + dtdy*q10;
+	    const dfloat dq10dz = drdz*dq10dr + dsdz*dq10ds + dtdz*q10;
+
+	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);
+	    
+	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);
+	    dfloat rhsq3 = -p_sqrtRT*(dq8dx + dq1dy + p_sqrt2*dq6dy + dq10dz);
+	    dfloat rhsq4 = -p_sqrtRT*(dq9dx + dq10dy + dq1dz + p_sqrt2*dq7dz);
+	    
+	    const dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx -p_tauInv*(q5 - q2*q2*p_invsqrt2*invq1);
+	    const dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy -p_tauInv*(q6 - q3*q3*p_invsqrt2*invq1);
+	    const dfloat rhsq7 = -p_sqrtRT*p_sqrt2*dq4dz -p_tauInv*(q7 - q4*q4*p_invsqrt2*invq1);
+
+	    const dfloat rhsq8  = -p_sqrtRT*(dq3dx+dq2dy) -p_tauInv*(q8  - q2*q3*p_invsqrt2*invq1);
+	    const dfloat rhsq9  = -p_sqrtRT*(dq4dx+dq2dz) -p_tauInv*(q9  - q2*q4*p_invsqrt2*invq1);
+	    const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*p_invsqrt2*invq1);
+
+	    // constrain momentum changes to lie on sphere
+	    const dfloat xij = x[i+j*p_Nq+e*p_Np];
+	    const dfloat yij = y[i+j*p_Nq+e*p_Np];
+	    const dfloat zij = z[i+j*p_Nq+e*p_Np];
+
+	    const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
+
+	    rhsq2 -= xij*xdotrhsq; // remove radial comonent of momentum change
+	    rhsq3 -= yij*xdotrhsq;
+	    rhsq4 -= zij*xdotrhsq;
+			    
+	    const iint base = e*p_Np*p_Nfields+n;
+	    
+	    rhsq[base+0*p_Np] = rhsq1;
+	    rhsq[base+1*p_Np] = rhsq2;
+	    rhsq[base+2*p_Np] = rhsq3;
+	    rhsq[base+3*p_Np] = rhsq4;
+	    rhsq[base+4*p_Np] = rhsq5;
+	    rhsq[base+5*p_Np] = rhsq6;
+	    rhsq[base+6*p_Np] = rhsq7;
+	    rhsq[base+7*p_Np] = rhsq8;
+	    rhsq[base+8*p_Np] = rhsq9;
+	    rhsq[base+9*p_Np] = rhsq10;
+
+	  }
+	}
+      }
+    }
+  }
+}
+
+
