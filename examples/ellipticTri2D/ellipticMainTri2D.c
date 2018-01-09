@@ -31,8 +31,8 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=NONE");
-  //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -43,7 +43,6 @@ int main(int argc, char **argv){
   char *parAlmondOptions =
     strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
   //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-
 
   //this is strictly for testing, to do repeated runs. Will be removed later
   //  if (argc==6) {
@@ -73,7 +72,7 @@ int main(int argc, char **argv){
       mesh->vmapP[n] = mesh->mmapP[n];
     }
     for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
-      mesh->FaceNodes[n] mesh->FaceModes[n];
+      mesh->faceNodes[n] = mesh->FaceModes[n];
     }
     //free the old gather scatter arrays and re-run the connect nodes function using this updated connectivity
     free(mesh->gatherLocalIds );
@@ -85,14 +84,14 @@ int main(int argc, char **argv){
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
-  dfloat lambda = 0;
+  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
-printf("passed elliptic setup tri\n");
+
   // Boundary Type translation. Just default from the mesh file.
-  int BCType[3] = {0,1,2};
+  int BCType[3] = {0,2,2};
 
   dfloat tau;
   if (strstr(options,"IPDG")) {
@@ -101,12 +100,10 @@ printf("passed elliptic setup tri\n");
     tau = 1.0;
   }
   if (strstr(options, "SPARSE")){
- 
-   loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  }
-  else{
-   //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-    buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+    //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+  } else{
+    //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
+    //buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
   } 
 
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);

@@ -19,6 +19,8 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   FILE *fp = fopen(fileName, "r");
   int n;
 
+  char *status;
+
   mesh2D *mesh = (mesh2D*) calloc(1, sizeof(mesh2D));
 
   mesh->dim = 2;
@@ -44,11 +46,11 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   // look for Nodes section
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
@@ -57,17 +59,17 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   /* load nodes */
   for(n=0;n<mesh->Nnodes;++n){
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat, VX+n, VY+n);
   }
 
   /* look for section with Element node data */
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nelements));
 
   /* find # of triangles */
@@ -77,7 +79,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   int NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
     iint elementType;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1) ++NboundaryFaces;
     if(elementType==2) ++Ntriangles;
@@ -109,7 +111,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*3, sizeof(iint));
   for(n=0;n<mesh->Nelements;++n){
     iint elementType, v1, v2, v3;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1){ // boundary face
       sscanf(buf, "%*d%*d %*d%d%*d %d%d",

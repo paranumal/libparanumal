@@ -192,6 +192,18 @@ typedef struct {
   dfloat *interpRaise;
   dfloat *interpLower;
 
+  //sparse basis info
+  dfloat *sparseV;
+  dfloat *sparseMM;
+  int* FaceModes;
+  int SparseNnzPerRow;
+  int *sparseStackedNZ;
+  dfloat *sparseSrr;
+  dfloat *sparseSrs;
+  dfloat *sparseSss;
+
+  iint *mmapM, *mmapP, *mmapS;
+
   // time stepping info
   dfloat dt; // time step
   dfloat finalTime; // final time to run acoustics to

@@ -20,7 +20,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   mesh->N = N;
   mesh->Nfp = N+1;
-  mesh->Np = (msh->N+1)*(msh->N+2)/2;
+  mesh->Np = (N+1)*(N+2)/2;
 
   int Nrows, Ncols;
 
@@ -92,6 +92,8 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
     /* SEMFEM data */ 
     readDfloatArray(fp, "SEMFEM r-coordinates", &(mesh->rFEM),&Nrows,&Ncols);
     readDfloatArray(fp, "SEMFEM s-coordinates", &(mesh->sFEM),&Nrows,&Ncols);
+    mesh->NpFEM = Nrows;
+
     readIntArray   (fp, "SEMFEM reference mesh", &(mesh->FEMEToV), &Nrows, &Ncols);
     mesh->NelFEM = Nrows;
 
