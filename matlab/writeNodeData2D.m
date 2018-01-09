@@ -320,10 +320,15 @@ faceModes2   = find( sum(abs(cV(faceNodes2,:)),1) > NODETOL);
 faceModes3   = find( sum(abs(cV(faceNodes3,:)),1) > NODETOL);
 FaceModes  = [faceModes1;faceModes2;faceModes3]';
 
-for m=1:Np
-  sparseSrr(m,:) = cSrr(m,stackedNz(m,:));
-  sparseSrs(m,:) = cSrs(m,stackedNz(m,:));
-  sparseSss(m,:) = cSss(m,stackedNz(m,:));
+for n=1:Np
+  for m=1:size(stackedNz,2)
+    id = stackedNz(n,m);
+    if (id>0)
+      sparseSrr(n,m) = cSrr(id,n);
+      sparseSrs(n,m) = cSrs(id,n);
+      sparseSss(n,m) = cSss(id,n);
+     end
+   end
 end
 
 writeFloatMatrix(fid, cV, 'Sparse basis Vandermonde');
@@ -334,8 +339,8 @@ writeIntMatrix(fid, FaceModes'-1, 'Sparse basis face modes');
 writeIntMatrix(fid, stackedNz', 'Sparse differentiation matrix ids'); 
 
 writeFloatMatrix(fid, sparseSrr, 'Sparse differentiation Srr values');
-writeFloatMatrix(fid, sparseSrs, 'Sparse differentiation Srr values');
-writeFloatMatrix(fid, sparseSss, 'Sparse differentiation Srr values');
+writeFloatMatrix(fid, sparseSrs, 'Sparse differentiation Srs values');
+writeFloatMatrix(fid, sparseSss, 'Sparse differentiation Sss values');
 
 fclose(fid)
 
