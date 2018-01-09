@@ -15,7 +15,8 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // set up mesh stuff
-  mesh_t *mesh = meshSetupQuad3D(argv[1], N);
+  dfloat sphereRadius = 1;
+  mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius);
 
   // set up boltzmann stuff
   solver_t *solver = boltzmannSetupQuad3D(mesh);

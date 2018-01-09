@@ -45,36 +45,21 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat y = mesh->y[n + mesh->Np*e];
       dfloat z = mesh->z[n + mesh->Np*e];
 
-#if 0
-      boltzmannCavitySolution2D(x, y, t,
-				mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
-#endif
-
-#if 0
-      boltzmannGaussianPulse2D(x, y, t,
-			       mesh->q+cnt,
-			       mesh->q+cnt+1,
-			       mesh->q+cnt+2,
-			       mesh->q+cnt+3,
-			       mesh->q+cnt+4,
-			       mesh->q+cnt+5);
-#endif
-      mesh->q[mesh->Np*cnt+0] = q1bar; // uniform density, zero flow
-
-      mesh->q[mesh->Np*cnt+1] = q2bar;
-      mesh->q[mesh->Np*cnt+2] = q3bar;
-      mesh->q[mesh->Np*cnt+3] = q4bar;
-
-      mesh->q[mesh->Np*cnt+4] = q5bar;
-      mesh->q[mesh->Np*cnt+5] = q6bar;
-      mesh->q[mesh->Np*cnt+6] = q7bar;
-
-      mesh->q[mesh->Np*cnt+7] = q8bar;
-      mesh->q[mesh->Np*cnt+8] = q9bar;
-      mesh->q[mesh->Np*cnt+9] = q10bar;
+      int base = n + e*mesh->Np*mesh->Nfields;
       
-      cnt += mesh->Nfields;
-      
+      mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
+
+      mesh->q[base+1*mesh->Np] = q2bar;
+      mesh->q[base+2*mesh->Np] = q3bar;
+      mesh->q[base+3*mesh->Np] = q4bar;
+
+      mesh->q[base+4*mesh->Np] = q5bar;
+      mesh->q[base+5*mesh->Np] = q6bar;
+      mesh->q[base+6*mesh->Np] = q7bar;
+
+      mesh->q[base+7*mesh->Np] = q8bar;
+      mesh->q[base+8*mesh->Np] = q9bar;
+      mesh->q[base+9*mesh->Np] = q10bar;
     }
   }
   // set BGK collision relaxation rate
@@ -97,9 +82,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
-	iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e + mesh->Nfp*f+n);
-	dfloat sJ   = mesh->sgeo[sid + SJID];
-	dfloat invJ = mesh->sgeo[sid + IJID];
+	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+	dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
+	dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
 	
 	// A = 0.5*h*L
 	// => J*2 = 0.5*h*sJ*2
@@ -185,13 +170,15 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
-  kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
-  kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
+  kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
+  kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
+  kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
-
+  kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
+  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
+  
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
@@ -202,8 +189,6 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_q8bar", q8bar);
   kernelInfo.addDefine("p_q9bar", q9bar);
   kernelInfo.addDefine("p_q10bar", q10bar);
-
-  kernelInfo.addDefine("p_alpha0", (float).01f);
 
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
@@ -225,5 +210,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-  
+
+
+  return solver;
 }

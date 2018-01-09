@@ -7,6 +7,7 @@
 #define mesh3D mesh_t
 
 // mesh readers
+mesh3D* meshParallelReaderQuad3D(char *fileName);
 mesh3D* meshParallelReaderTet3D(char *fileName);
 mesh3D* meshParallelReaderHex3D(char *fileName);
 
@@ -35,12 +36,15 @@ void meshVTU3D(mesh3D *mesh, char *fileName);
 void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
 
 // compute geometric factors for local to physical map 
+void meshGeometricFactorsQuad3D(mesh3D *mesh);
 void meshGeometricFactorsTet3D(mesh3D *mesh);
 void meshGeometricFactorsHex3D(mesh3D *mesh);
 
+void meshSurfaceGeometricFactorsQuad3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
+void meshPhysicalNodesQuad3D(mesh3D *mesh);
 void meshPhysicalNodesTet3D(mesh3D *mesh);
 void meshPhysicalNodesHex3D(mesh3D *mesh);
 
@@ -67,6 +71,7 @@ void occaOptimizeGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dq
 void meshConnectFaceNodes3D(mesh3D *mesh);
 
 //
+mesh3D *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius);
 mesh3D *meshSetupTet3D(char *filename, int N);
 mesh3D *meshSetupHex3D(char *filename, int N);
 

@@ -1,10 +1,13 @@
 #include "mesh3D.h"
 
-mesh_t *meshSetupQuad3D(char *filename, int N){
+mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 
   // read chunk of elements
   mesh_t *mesh = meshParallelReaderQuad3D(filename);
-  
+
+  // set sphere radius (will be used later in building physical nodes)
+  mesh->sphereRadius = sphereRadius;
+
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh); // need to double check this
 

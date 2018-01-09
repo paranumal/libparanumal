@@ -90,8 +90,13 @@ typedef struct {
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
   iint *Ind; // for sparse storage of Srr, Sss, Srs  
-  dfloat *x, *y, *z;    // coordinates of physical nodes
   iint maxNnzPerRow;
+  
+  dfloat *x, *y, *z;    // coordinates of physical nodes
+
+  dfloat sphereRadius;  // for Quad3D 
+  
+
   // indices of vertex nodes
   iint *vertexNodes;
 
