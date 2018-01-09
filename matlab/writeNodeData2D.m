@@ -138,9 +138,9 @@ invVB = inv(VB);
 %write out the BB operators
 writeFloatMatrix(fid, VB, 'Bernstein-Bezier Vandermonde Matrix');
 writeFloatMatrix(fid, invVB, 'Bernstein-Bezier Inverse Vandermonde Matrix');
-writeIntegerMatrix(fid, D0ids, 'Bernstein-Bezier sparse D1 differentiation ids');
-writeIntegerMatrix(fid, D1ids, 'Bernstein-Bezier sparse D2 differentiation ids');
-writeIntegerMatrix(fid, D2ids, 'Bernstein-Bezier sparse D3 differentiation ids');
+writeIntMatrix(fid, D0ids, 'Bernstein-Bezier sparse D1 differentiation ids');
+writeIntMatrix(fid, D1ids, 'Bernstein-Bezier sparse D2 differentiation ids');
+writeIntMatrix(fid, D2ids, 'Bernstein-Bezier sparse D3 differentiation ids');
 writeFloatMatrix(fid, D0vals, 'Bernstein-Bezier sparse D differentiation values');
 
 writeFloatMatrix(fid, L0vals, 'Bernstein-Bezier L0 Matrix values');
@@ -164,13 +164,13 @@ BBRaise(abs(BBRaise)<tol) = 0;
 BBRaiseIds  = zeros(N+2,2);
 BBRaiseVals = zeros(N+2,2);
 for i = 1:N+2
-    tmp = find(BBRaise(i,:));
-    BBRaiseVals(i,1:length(tmp)) = BBRaise(i,tmp);
-    tmp = tmp-1; % zero indexing
-    if length(tmp) < 2
-        tmp = [tmp zeros(1,2-length(tmp))];
-    end
-    BBRaiseIds(i,:) = tmp;
+  tmp = find(BBRaise(i,:));
+  BBRaiseVals(i,1:length(tmp)) = BBRaise(i,tmp);
+  tmp = tmp-1; % zero indexing
+  if length(tmp) < 2
+    tmp = [tmp zeros(1,2-length(tmp))];
+  end
+  BBRaiseIds(i,:) = tmp;
 end
 
 [r1D] = JacobiGQ(0,0,N);
@@ -264,16 +264,7 @@ writeIntMatrix(fid, shiftIds-1, 'Nodal rotation permutations');
 
 writeFloatMatrix(fid, invA, 'IPDG full reference patch inverse matrix');
 
-
-fprintf(fid, '%% patch inverse matrix \n');
-for n=1:size(A,1)
-  for m=1:size(A,1)
-	fprintf(fid, '%17.15E ', invA(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-%% degree raising interpolation
+%degree raising interpolation
 [rP1,sP1] = Nodes2D(N+1);
 [rP1,sP1] = xytors(rP1,sP1);
 
@@ -281,80 +272,46 @@ VP1 = Vandermonde2D(N, rP1, sP1);
 IP1 = VP1/V;
 NpP1 = length(rP1);
 
-fprintf(fid, '%% degree raising interpolation matrix\n');
-fprintf(fid, '%d %d\n', NpP1, Np);
-for n=1:NpP1
-  for m=1:Np
-    fprintf(fid, '%17.15E ', IP1(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-%% degree lowering interpolation
+%degree lowering interpolation
 if(N>1)
-[rM1,sM1] = Nodes2D(N-1);
-[rM1,sM1] = xytors(rM1,sM1);
-else
-%% hard code degree 0
-rM1 = -1/3;
-sM1 = -1/3;
+  [rM1,sM1] = Nodes2D(N-1);
+  [rM1,sM1] = xytors(rM1,sM1);
+else %hard code degree 0
+  rM1 = -1/3;
+  sM1 = -1/3;
 end
 
 VM1 = Vandermonde2D(N, rM1, sM1);
 IM1 = VM1/V;
 NpM1 = length(rM1);
 
-fprintf(fid, '%% degree lowering interpolation matrix\n');
-fprintf(fid, '%d %d\n', NpM1, Np);
-for n=1:NpM1
-  for m=1:Np
-    fprintf(fid, '%17.15E ', IM1(n,m));
-  end
-  fprintf(fid, '\n');
-end
+writeFloatMatrix(fid, IP1, 'Nodal degree raise matrix');
+writeFloatMatrix(fid, IM1, 'Nodal degree lower matrix');
 
-addpath('./newNodes')
-[req,seq] = NewEquiNodes2D(N+1,'EI');
-FEMEToV = FemEToV2D(N+1,req,seq,'EI')-1;
-[rFEM,sFEM] = NewNodes2D(N,'EIKappaNp1');
-[rFEM,sFEM] = xytors(rFEM,sFEM);
+%% SEMFEM
+if (N<13)
+  addpath('./newNodes')
+  [req,seq] = NewEquiNodes2D(N+1,'EI');
+  FEMEToV = FemEToV2D(N+1,req,seq,'EI')-1;
+  [rFEM,sFEM] = NewNodes2D(N,'EIKappaNp1');
+  [rFEM,sFEM] = xytors(rFEM,sFEM);
 
-triplot(FEMEToV+1,req,seq)
+  %triplot(FEMEToV+1,req,seq)
 
-NpFEM = length(rFEM);
-NelFEM = size(FEMEToV,1);
+  NpFEM = length(rFEM);
+  NelFEM = size(FEMEToV,1);
 
-IQN = Vandermonde2D(N, rFEM, sFEM)/V;
-invIQN = (transpose(IQN)*IQN)\(transpose(IQN));
+  IQN = Vandermonde2D(N, rFEM, sFEM)/V;
+  invIQN = (transpose(IQN)*IQN)\(transpose(IQN));
 
-fprintf(fid, '%% number of FEM points \n');
-fprintf(fid, '%d\n', NpFEM);
-fprintf(fid, '%% SEMFEM rs coordinates\n');
-for n=1:NpFEM
-    fprintf(fid, '%17.15E %17.15E\n', rFEM(n), sFEM(n));
-end
+  writeFloatMatrix(fid, rFEM, 'SEMFEM r-coordinates');
+  writeFloatMatrix(fid, sFEM, 'SEMFEM s-coordinates');
 
-
-fprintf(fid, '%% number of reference FEM elements \n');
-fprintf(fid, '%d\n', NelFEM);
-fprintf(fid, '%% SEMFEM reference EToV \n');
-for n=1:NelFEM
-    fprintf(fid, '%d %d %d\n' ,...
-        FEMEToV(n,1),FEMEToV(n,2),FEMEToV(n,3));
-end
-
-invIQN*invIQN'
-
-fprintf(fid, '%% SEM to FEM interpolation matrix\n');
-for n=1:NpFEM
-    for m=1:Np
-        fprintf(fid, '%17.15E ', invIQN(m,n));
-    end
-    fprintf(fid, '\n');
+  writeIntMatrix(fid, FEMEToV, 'SEMFEM reference mesh');  
+  writeFloatMatrix(fid, invIQN', 'SEMFEM interpolation matrix');
 end
 
 %% Sparse Basis
-
 addpath('./sparseBasis')
 [cV,cMM,cSrr,cSrs,cSss,stackedNz] = GenModalOps(N);
 
@@ -363,77 +320,22 @@ faceModes2   = find( sum(abs(cV(faceNodes2,:)),1) > NODETOL);
 faceModes3   = find( sum(abs(cV(faceNodes3,:)),1) > NODETOL);
 FaceModes  = [faceModes1;faceModes2;faceModes3]';
 
-  fprintf(fid, '%% sparse basis Vandermonde \n');		     
-  for n=1:Np
-    for m=1:Np
-       fprintf(fid, '%17.15E ', cV(m,n));
-    end
-    fprintf(fid, '\n');
-  end
-  
-  fprintf(fid, '%% sparse basis mass matrix \n');		     
-  for n=1:Np
-    for m=1:Np
-       fprintf(fid, '%17.15E ', cMM(m,n));
-    end
-    fprintf(fid, '\n');
-  end
+for m=1:Np
+  sparseSrr(m,:) = cSrr(m,stackedNz(m,:));
+  sparseSrs(m,:) = cSrs(m,stackedNz(m,:));
+  sparseSss(m,:) = cSss(m,stackedNz(m,:));
+end
 
-  fprintf(fid, '%% FaceModes\n');
-    for f=1:Nfaces
-        for m=1:Nfp
-            fprintf(fid, '%d ', FaceModes(m,f)-1); %% adjust for 0-indexing
-        end
-        fprintf(fid, '\n');
-    end
+writeFloatMatrix(fid, cV, 'Sparse basis Vandermonde');
+writeFloatMatrix(fid, cMM, 'Sparse basis mass matrix');
 
-  fprintf(fid, '# max number of non-zeros per row\n');
-  maxNzPerRow = size(stackedNz,2);
-  fprintf(fid, '%d\n', maxNzPerRow);
-  fprintf(fid, '# column index of non-zeros (each row is Np column offsets, 1-indexed)\n');		     
-  for n=1:maxNzPerRow
-    fprintf(fid, '%d ', stackedNz(:,n)');
-    fprintf(fid, '\n');
-  end
+writeIntMatrix(fid, FaceModes'-1, 'Sparse basis face modes'); 
 
-  fprintf(fid, '# non-zero value of Srr\n');
-  for n=1:maxNzPerRow
-    for m=1:Np
-      val = 0;
-      if(stackedNz(m,n)>0)
-	 val = cSrr(m,stackedNz(m,n)); 
-      end
-      fprintf(fid, '%17.15E ', val);
-    end
-    fprintf(fid, '\n');
-  end
+writeIntMatrix(fid, stackedNz', 'Sparse differentiation matrix ids'); 
 
-  fprintf(fid, '# non-zero value of Srs\n');		     
-  for n=1:maxNzPerRow
-    for m=1:Np
-      val = 0;
-      if(stackedNz(m,n)>0)
-	 val = cSrs(m,stackedNz(m,n)); 
-      end
-      fprintf(fid, '%17.15E ', val);
-    end
-    fprintf(fid, '\n');
-  end
-
-
-  fprintf(fid, '# non-zero value of Sss\n');		     
-  for n=1:maxNzPerRow
-    for m=1:Np
-      val = 0;
-      if(stackedNz(m,n)>0)
-	 val = cSss(m,stackedNz(m,n)); 
-      end
-      fprintf(fid, '%17.15E ', val);
-    end
-    fprintf(fid, '\n');
-  end
-
-
+writeFloatMatrix(fid, sparseSrr, 'Sparse differentiation Srr values');
+writeFloatMatrix(fid, sparseSrs, 'Sparse differentiation Srr values');
+writeFloatMatrix(fid, sparseSss, 'Sparse differentiation Srr values');
 
 fclose(fid)
 
