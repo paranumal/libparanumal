@@ -20,8 +20,6 @@ void boltzmannRunQuad3D(solver_t *solver){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
-      printf("tstep = %d, rk = %d, t = %g\n", tstep, rk, t);
-      
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
@@ -100,7 +98,10 @@ void boltzmannRunQuad3D(solver_t *solver){
     
     // estimate maximum error
     if((tstep%mesh->errorStep)==0){
-
+      dfloat t = (tstep+1)*mesh->dt;
+      
+      printf("tstep = %d, t = %g\n", tstep, t);
+      
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
       
