@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "mesh.h"
+#include "mesh3D.h"
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
@@ -55,7 +55,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 
 	dfloat Gx = txij, Gy = tyij, Gz = tzij;
 	
-	dfloat J = x*txij + y*tyij + z*tzij;
+	dfloat Jij = x*txij + y*tyij + z*tzij;
 	
 	xr[i+j*mesh->Nq] = xrij;
 	yr[i+j*mesh->Nq] = yrij;
@@ -111,20 +111,22 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	ny /= R;
 	nz /= R;
 
-	sJ = sqrt(nx*nx+ny*ny+nz*nz);
+	dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
 
 	nx /= sJ;
 	ny /= sJ;
 	nz /= sJ;
 
-	mesh_>sgeo[base+NXID] = nx;
-	mesh_>sgeo[base+NYID] = ny;
-	mesh_>sgeo[base+NZID] = nz;
-	mesh_>sgeo[base+SJID] = sJ;
-
-	mesh_>sgeo[base+IJID] = 1./Jid;
+	int base = mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq;
 	
-	mesh_>sgeo[base+WSJID] = sJ*mesh->gllw[n];
+	mesh->sgeo[base+NXID] = nx;
+	mesh->sgeo[base+NYID] = ny;
+	mesh->sgeo[base+NZID] = nz;
+	mesh->sgeo[base+SJID] = sJ;
+
+	mesh->sgeo[base+IJID] = 1./Jid;
+	
+	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[n];
       }
     }
   }

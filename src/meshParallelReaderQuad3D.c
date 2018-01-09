@@ -4,7 +4,7 @@
 #include <string.h>
 #include  "mpi.h"
 
-#include "mesh_t.h"
+#include "mesh3D.h"
 
 /* 
    purpose: read gmsh quadrilateral mesh 

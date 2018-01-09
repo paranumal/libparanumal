@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "mesh.h"
+#include "mesh3D.h"
 
 // custom geometric factors specialized for 3D quad on sphere
 
@@ -75,7 +75,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
 	
 	/* store geometric factors */
-	int base = mesh->Nvgeo*mesh->Np*e + n;
+	int base = mesh->Nvgeo*mesh->Np*e + j*mesh->Nq + i;
 
 	mesh->vgeo[base + mesh->Np*RXID] = rx;
 	mesh->vgeo[base + mesh->Np*RYID] = ry;
