@@ -14,11 +14,14 @@ void boltzmannRunQuad3D(solver_t *solver){
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-
+    
     for(iint rk=0;rk<mesh->Nrk;++rk){
+      
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
+      printf("tstep = %d, rk = %d, t = %g\n", tstep, rk, t);
+      
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
@@ -44,6 +47,9 @@ void boltzmannRunQuad3D(solver_t *solver){
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
 			 mesh->o_D,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
 			 mesh->o_q,
 			 mesh->o_rhsq);
       
@@ -107,7 +113,7 @@ void boltzmannRunQuad3D(solver_t *solver){
       // output field files
       iint fld = 0;
       char fname[BUFSIZ];
-      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
+      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
       boltzmannPlotVTUQuad3D(mesh, fname, fld);
     }
   }

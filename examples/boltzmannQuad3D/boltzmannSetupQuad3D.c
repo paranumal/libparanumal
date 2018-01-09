@@ -113,12 +113,12 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 50;
+  mesh->finalTime = .1;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 10000;
+  mesh->errorStep = 10;
 
   printf("dt = %g\n", mesh->dt);
 
