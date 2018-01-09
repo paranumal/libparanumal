@@ -16,7 +16,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 				  const dfloat * restrict y,
 				  const dfloat * restrict z,
 				  const dfloat * restrict q,
-				  dfloat * restrict rhsa){
+				  dfloat * restrict rhsq){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
@@ -102,38 +102,38 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    
 	    const dfloat invq1 = 1.f/q1;
 	    
-	    const dfloat dq1dx = drdx*dq1dr + dsdx*dq1ds + dtdx*q1;
-	    const dfloat dq1dy = drdy*dq1dr + dsdy*dq1ds + dtdy*q1;
-	    const dfloat dq1dz = drdz*dq1dr + dsdz*dq1ds + dtdz*q1;
+	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
+	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
+	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
+					     		     
+	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
+	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
+	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;
+					     	            
+	    const dfloat dq3dx = drdx*dqdr[2] + dsdx*dqds[2] + dtdx*q3;
+	    const dfloat dq3dy = drdy*dqdr[2] + dsdy*dqds[2] + dtdy*q3;
+	    const dfloat dq3dz = drdz*dqdr[2] + dsdz*dqds[2] + dtdz*q3;
+					     	            
+	    const dfloat dq4dx = drdx*dqdr[3] + dsdx*dqds[3] + dtdx*q4;
+	    const dfloat dq4dy = drdy*dqdr[3] + dsdy*dqds[3] + dtdy*q4;
+	    const dfloat dq4dz = drdz*dqdr[3] + dsdz*dqds[3] + dtdz*q4;
+					     	            
+	    const dfloat dq5dx = drdx*dqdr[4] + dsdx*dqds[4] + dtdx*q5;
+	    const dfloat dq6dy = drdy*dqdr[5] + dsdy*dqds[5] + dtdy*q6;
+	    const dfloat dq7dz = drdz*dqdr[6] + dsdz*dqds[6] + dtdz*q7;
+					     	            
+	    const dfloat dq8dx = drdx*dqdr[7] + dsdx*dqds[7] + dtdx*q8;
+	    const dfloat dq8dy = drdy*dqdr[7] + dsdy*dqds[7] + dtdy*q8;
+					     	            
+	    const dfloat dq9dx = drdx*dqdr[8] + dsdx*dqds[8] + dtdx*q9;
+	    const dfloat dq9dz = drdz*dqdr[8] + dsdz*dqds[8] + dtdz*q9;
 
-	    const dfloat dq2dx = drdx*dq2dr + dsdx*dq2ds + dtdx*q2;
-	    const dfloat dq2dy = drdy*dq2dr + dsdy*dq2ds + dtdy*q2;
-	    const dfloat dq2dz = drdz*dq2dr + dsdz*dq2ds + dtdz*q2;
+	    const dfloat dq10dy = drdy*dqdr[9] + dsdy*dqds[9] + dtdy*q10;
+	    const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9] + dtdz*q10;
 
-	    const dfloat dq3dx = drdx*dq3dr + dsdx*dq3ds + dtdx*q3;
-	    const dfloat dq3dy = drdy*dq3dr + dsdy*dq3ds + dtdy*q3;
-	    const dfloat dq3dz = drdz*dq3dr + dsdz*dq3ds + dtdz*q3;
-
-	    const dfloat dq4dx = drdx*dq4dr + dsdx*dq4ds + dtdx*q4;
-	    const dfloat dq4dy = drdy*dq4dr + dsdy*dq4ds + dtdy*q4;
-	    const dfloat dq4dz = drdz*dq4dr + dsdz*dq4ds + dtdz*q4;
-
-	    const dfloat dq5dx = drdx*dq5dr + dsdx*dq5ds + dtdx*q5;
-	    const dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds + dtdy*q6;
-	    const dfloat dq7dz = drdz*dq7dr + dsdz*dq7ds + dtdz*q7;
-
-	    const dfloat dq8dx = drdx*dq8dr + dsdx*dq8ds + dtdx*q8;
-	    const dfloat dq8dy = drdy*dq8dr + dsdy*dq8ds + dtdy*q8;
-
-	    const dfloat dq9dx = drdx*dq9dr + dsdx*dq9ds + dtdx*q9;
-	    const dfloat dq9dz = drdz*dq9dr + dsdz*dq9ds + dtdz*q9;
-
-	    const dfloat dq10dy = drdy*dq10dr + dsdy*dq10ds + dtdy*q10;
-	    const dfloat dq10dz = drdz*dq10dr + dsdz*dq10ds + dtdz*q10;
-
-	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);
-	    
-	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);
+	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);	
+	    	  
+	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);	
 	    dfloat rhsq3 = -p_sqrtRT*(dq8dx + dq1dy + p_sqrt2*dq6dy + dq10dz);
 	    dfloat rhsq4 = -p_sqrtRT*(dq9dx + dq10dy + dq1dz + p_sqrt2*dq7dz);
 
@@ -155,7 +155,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    rhsq3 -= p_fainv*zij*(zij*q2-xij*q4);
 	    rhsq4 -= p_fainv*zij*(xij*q3-yij*q2);
 
-	      // remove radial comonent of momentum change
+	    // remove radial component of momentum change
 	    const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
 
 	    rhsq2 -= xij*xdotrhsq; 

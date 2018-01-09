@@ -65,7 +65,6 @@ void boltzmannRunQuad3D(solver_t *solver){
 			  mesh->o_LIFTT,
 			  mesh->o_vmapM,
 			  mesh->o_vmapP,
-			  mesh->o_EToB,
 			  t,
 			  mesh->o_x,
 			  mesh->o_y,
@@ -76,10 +75,6 @@ void boltzmannRunQuad3D(solver_t *solver){
       mesh->device.finish();
       occa::toc("surfaceKernel");
       
-      // updaee solution using Runge-Kutta
-      iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
-
-
       dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
 
       mesh->device.finish();

@@ -1,0 +1,36 @@
+
+kernel void boltzmannUpdateQuad3D(const iint Nelements,
+				  const dfloat dt,  
+				  const dfloat rka,
+				  const dfloat rkb,
+				  const dfloat * restrict rhsq,
+				  dfloat * restrict resq,
+				  dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint e=0;e<Nelements;++e;outer0){
+
+    for(iint n=0;n<p_Np;++n;inner0){
+
+      const iint id = p_Nfields*(n + e*p_Np);
+      
+      for(iint fld=0; fld< p_Nfields; ++fld){
+	
+	const iint idn = id + fld;
+	
+	dfloat r_resq = resq[idn];
+	dfloat r_rhsq = rhsq[idn]; 
+	dfloat r_q    = q[idn];
+	//
+	r_resq = rka*r_resq + dt*r_rhsq;
+	r_q   += rkb*r_resq;
+	//
+	resq[idn] = r_resq;
+	q[idn]    = r_q;
+	
+      }
+    }
+  }
+}
+
+

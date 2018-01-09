@@ -36,24 +36,32 @@ void meshPhysicalNodesQuad3D(mesh_t *mesh){
       dfloat sn = mesh->s[n];
 
       /* physical coordinate of interpolation node */
-      mesh->x[cnt] = 
+      dfloat xlin = 
 	+0.25*(1-rn)*(1-sn)*xe1
 	+0.25*(1+rn)*(1-sn)*xe2
 	+0.25*(1+rn)*(1+sn)*xe3
 	+0.25*(1-rn)*(1+sn)*xe4;
 
-      mesh->y[cnt] = 
+      dfloat ylin =
 	+0.25*(1-rn)*(1-sn)*ye1
 	+0.25*(1+rn)*(1-sn)*ye2
 	+0.25*(1+rn)*(1+sn)*ye3
 	+0.25*(1-rn)*(1+sn)*ye4;
 
-      mesh->z[cnt] = 
+      dfloat zlin =
 	+0.25*(1-rn)*(1-sn)*ze1
 	+0.25*(1+rn)*(1-sn)*ze2
 	+0.25*(1+rn)*(1+sn)*ze3
 	+0.25*(1-rn)*(1+sn)*ze4;
+
+      printf("xlin=%g, ylin=%g, zlin=%g\n", xlin, ylin, zlin);
       
+      // project to sphere
+      dfloat rlin = sqrt(xlin*xlin+ylin*ylin+zlin*zlin);
+      mesh->x[cnt] = xlin/rlin; 
+      mesh->y[cnt] = ylin/rlin; 
+      mesh->z[cnt] = zlin/rlin; 
+	
       ++cnt;
     }
   }

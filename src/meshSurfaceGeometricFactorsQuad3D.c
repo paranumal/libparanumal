@@ -7,7 +7,7 @@
 void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 6;
+  mesh->Nsgeo = 7;
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
@@ -117,16 +117,16 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	ny /= sJ;
 	nz /= sJ;
 
-	int base = mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq;
+	int base = e*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq*mesh->Nsgeo;
 	
-	mesh->sgeo[base+NXID] = nx;
-	mesh->sgeo[base+NYID] = ny;
-	mesh->sgeo[base+NZID] = nz;
-	mesh->sgeo[base+SJID] = sJ;
+	mesh->sgeo[base+mesh->Nq*NXID] = nx;
+	mesh->sgeo[base+mesh->Nq*NYID] = ny;
+	mesh->sgeo[base+mesh->Nq*NZID] = nz;
+	mesh->sgeo[base+mesh->Nq*SJID] = sJ;
 
-	mesh->sgeo[base+IJID] = 1./Jid;
+	mesh->sgeo[base+mesh->Nq*IJID] = 1./Jid;
 	
-	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[n];
+	mesh->sgeo[base+mesh->Nq*WSJID] = sJ*mesh->gllw[n];
       }
     }
   }

@@ -122,6 +122,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	sscanf(buf, "%*d%*d%*d%*d%*d %d%d%d%d", 
 	       &v1, &v2, &v3, &v4);
 
+#if 0
 	// check orientation
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
 	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
@@ -130,8 +131,9 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	  iint v4tmp = v4;
 	  v4 = v2;
 	  v2 = v4tmp;
-	  //	  printf("unwarping element\n");
+	  printf("unwarping element\n");
 	}
+#endif
 	
 	/* read vertex triplet for trianngle */
 	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
@@ -160,6 +162,11 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
       mesh->EX[e*mesh->Nverts+n] = VX[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EY[e*mesh->Nverts+n] = VY[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EZ[e*mesh->Nverts+n] = VZ[mesh->EToV[e*mesh->Nverts+n]];
+      printf("e %d v %d %g %g %g\n",
+	     e, n,
+	     mesh->EX[e*mesh->Nverts+n],
+	     mesh->EY[e*mesh->Nverts+n],
+	     mesh->EZ[e*mesh->Nverts+n]);
     }
   }
 
