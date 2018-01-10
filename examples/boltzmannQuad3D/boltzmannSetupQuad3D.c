@@ -22,7 +22,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   
   // initial conditions
   // uniform flow
-  dfloat rho = 1, u = 1, v = 0, w = 0; 
+  dfloat rho = 1, u = 0, v = 0, w = 0; 
   dfloat sigma11 = 0, sigma12 = 0, sigma13 = 0, sigma22 = 0, sigma23 = 0, sigma33 = 0;
 
   //  dfloat ramp = 0.5*(1.f+tanh(10.f*(0-.5f)));
@@ -47,6 +47,34 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
       int base = n + e*mesh->Np*mesh->Nfields;
 
+#if 0
+      // Gaussian pulse centered at X=(1,0,0)
+      q1bar = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
+#endif
+
+      // Brown Minion shear layer roll up
+      q1bar = 1;
+      dfloat delta = 40;
+      dfloat Utangential = 0.25*(1+tanh(delta*(-z+0.5)))*(1+tanh(delta*(0.5+z)));
+
+      if(x*x+y*y>1e-4) {
+	q2bar =  (q1bar/mesh->sqrtRT)*(-y*Utangential)/(x*x+y*y);
+	q3bar =  (q1bar/mesh->sqrtRT)*( x*Utangential)/(x*x+y*y);
+      }
+      else{
+	q2bar = 0;
+	q3bar = 0;
+      }
+
+      dfloat epsilon  = 0.05;
+      if(x*x+y*y>1e-5)
+	q4bar = epsilon*y/sqrt(x*x+y*y);
+      else
+	q4bar = 0;
+
+      //      printf("x=%g, y=%g, z=%g, q2,3,4 = %g,%g,%g\n",
+      //	     x, y, z, q2bar, q3bar, q4bar);
+      
       dfloat qdotx = q2bar*x + q3bar*y + q4bar*z;
       dfloat q2mod = q2bar - qdotx*x/(mesh->sphereRadius*mesh->sphereRadius);
       dfloat q3mod = q3bar - qdotx*y/(mesh->sphereRadius*mesh->sphereRadius);
@@ -74,7 +102,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat nu = 2.e-2;  // was 6.e-3
+  dfloat nu = 2.e-4;  // was 6.e-3
   mesh->tauInv = mesh->RT/nu; // TW
   
   // set time step
@@ -100,7 +128,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     }
   }
     
-  dfloat cfl = .1; // depends on the stability region size (was .4)
+  dfloat cfl = .4; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
@@ -120,7 +148,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 400*mesh->Nq;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -180,19 +208,8 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
   kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
 
-  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
+  kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
   
-  kernelInfo.addDefine("p_q1bar", q1bar);
-  kernelInfo.addDefine("p_q2bar", q2bar);
-  kernelInfo.addDefine("p_q3bar", q3bar);
-  kernelInfo.addDefine("p_q4bar", q4bar);
-  kernelInfo.addDefine("p_q5bar", q5bar);
-  kernelInfo.addDefine("p_q6bar", q6bar);
-  kernelInfo.addDefine("p_q7bar", q7bar);
-  kernelInfo.addDefine("p_q8bar", q8bar);
-  kernelInfo.addDefine("p_q9bar", q9bar);
-  kernelInfo.addDefine("p_q10bar", q10bar);
-
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
 				       "boltzmannVolumeQuad3D",

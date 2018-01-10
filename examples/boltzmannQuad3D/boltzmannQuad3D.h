@@ -50,6 +50,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh);
 void boltzmannRunQuad3D(solver_t *solver);
 
 void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
+void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, iint tstep);
 
 void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 
