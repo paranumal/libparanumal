@@ -130,8 +130,10 @@ void boltzmannRunQuad3D(solver_t *solver){
       // output field files
       iint fld = 0;
       char fname[BUFSIZ];
-      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
-      boltzmannPlotVTUQuad3D(mesh, fname, fld);
+      //      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
+
+      //      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
+      boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
     }
   }
 
