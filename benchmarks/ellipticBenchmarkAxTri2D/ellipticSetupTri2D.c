@@ -14,11 +14,13 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+
+  loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -149,16 +151,18 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
   kernelInfo.addDefine("p_NblockV", Nblocks);
-kernelInfo.addDefine("p_NnodesV", Nnodes);
-kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_NnodesV", Nnodes);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_qmaxNnzPerRow", (int)(mesh->maxNnzPerRow/4));
+  printf("maxNnz = %d, qmaxNnz = %d\n", mesh->maxNnzPerRow, (int)(mesh->maxNnzPerRow/4));
 
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
   kernelInfo.addDefine("p_NblockG", Nblocks);
- iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
   iint *localGatherElementList = (iint*) calloc(mesh->Nelements, sizeof(iint));
-int globalCount = 0;
-int localCount =0;
+  int globalCount = 0;
+  int localCount =0;
 
   for(iint e=0;e<mesh->Nelements;++e){
       globalGatherElementList[globalCount++] = e;
@@ -173,9 +177,6 @@ int localCount =0;
 
     solver->o_localGatherElementList =
       mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
-
-
-
 
   return solver;
 }
