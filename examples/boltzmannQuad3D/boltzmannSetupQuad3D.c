@@ -120,7 +120,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1;
+  mesh->errorStep = 100;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -131,10 +131,10 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%3);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");	  
+  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //  sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
 
@@ -160,17 +160,16 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int maxNodes = mesh->Nfp;
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
   kernelInfo.addDefine("p_invsqrtRT", (dfloat)(1./mesh->sqrtRT));
   kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
@@ -181,8 +180,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
   kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
 
-  //  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
-  kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // TW
+  kernelInfo.addDefine("p_fainv", (dfloat) 1.0);
   
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);

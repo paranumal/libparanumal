@@ -39,19 +39,25 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	}
 
-	dfloat rx = ys*zij - zs*yij;
+	dfloat rx = ys*zij - zs*yij; // dXds x X
 	dfloat ry = zs*xij - xs*zij;
 	dfloat rz = xs*yij - ys*xij;
 
-	dfloat sx = zr*yij - yr*zij;
+	dfloat sx = zr*yij - yr*zij; // -dXdr x X
 	dfloat sy = xr*zij - zr*xij;
 	dfloat sz = yr*xij - xr*yij;
 
-	dfloat tx = yr*zs - zr*ys;
+	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
 	dfloat ty = zr*xs - xr*zs;
 	dfloat tz = xr*ys - yr*xs;
 
 	dfloat Gx = tx, Gy = ty, Gz = tz;
+
+#if 0
+	dfloat foo = xij*tx+yij*ty+zij*tz;
+	printf("foo = %g [%g,%g,%g] [%g,%g,%g]\n", foo,
+	       xij,yij,zij,tx-foo*xij,ty-foo*yij,tz-foo*zij);
+#endif
 	
 	dfloat J = xij*tx + yij*ty + zij*tz;
 
