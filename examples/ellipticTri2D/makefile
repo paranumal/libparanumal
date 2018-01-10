@@ -55,8 +55,6 @@ ellipticSetupTri2D.o \
 ellipticPreconditionerSetupTri2D.o\
 ellipticCoarsePreconditionerSetupTri2D.o\
 ellipticPreconditionerTri2D.o\
-loadElementStiffnessMatricesTri2D.o\
-buildElementStiffnessMatricesTri2D.o\
 ellipticSolveTri2D.o\
 ellipticSolveSetupTri2D.o\
 ellipticHaloExchange2D.o\

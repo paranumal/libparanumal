@@ -143,6 +143,47 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
   printf("allNeumann = %d \n", solver->allNeumann);
 
+
+  /* sparse basis setup */
+  //build inverse vandermonde matrix
+  mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->Np;n++)
+    mesh->invSparseV[n] = mesh->sparseV[n];
+  matrixInverse(mesh->Np,mesh->invSparseV);
+
+  int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
+  
+  char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
+  for (iint m=0;m<mesh->SparseNnzPerRow*mesh->Np;m++) IndTchar[m] = mesh->sparseStackedNZ[m];
+  
+  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
+  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
+  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
+  
+  mesh->SparseNnzPerRow = paddedRowSize;
+  mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(char), IndTchar);
+  free(IndTchar);
+
+  if (strstr(options,"SPARSE")) {
+    // make the gs sign change array for flipped trace modes
+    //TODO this is a hack that likely will need updating for MPI
+    mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+
+    for (iint e=0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+        iint id = n+e*mesh->Nfp*mesh->Nfaces;
+        if (mesh->mmapS[id]==-1) { //sign flipped
+          if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
+            mesh->mapSgn[mesh->vmapM[id]]= -1;
+          } 
+        } 
+      }
+    }
+    mesh->o_mapSgn = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), mesh->mapSgn);
+  }
+
+  //copy boundary flags
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
   //add standard boundary functions
@@ -161,7 +202,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
+  kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
 
 
   //sizes for the coarsen and prolongation kernels. degree N to degree 1
@@ -231,15 +272,27 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                "addScalar",
                kernelInfo);
 
-  solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
-               kernelInfo);
+  if (strstr(options,"SPARSE")) {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticAxTri2D_v0",
+                 kernelInfo);
 
-  solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
-               kernelInfo);
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticPartialAxTri2D_v0",
+                 kernelInfo);
+  } else {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticAxTri2D",
+                 kernelInfo);
+
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticPartialAxTri2D",
+                 kernelInfo);
+  }
 
   solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",

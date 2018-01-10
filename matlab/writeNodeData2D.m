@@ -338,9 +338,9 @@ writeIntMatrix(fid, FaceModes'-1, 'Sparse basis face modes');
 
 writeIntMatrix(fid, stackedNz', 'Sparse differentiation matrix ids'); 
 
-writeFloatMatrix(fid, sparseSrr, 'Sparse differentiation Srr values');
-writeFloatMatrix(fid, sparseSrs, 'Sparse differentiation Srs values');
-writeFloatMatrix(fid, sparseSss, 'Sparse differentiation Sss values');
+writeFloatMatrix(fid, sparseSrr', 'Sparse differentiation Srr values');
+writeFloatMatrix(fid, sparseSrs', 'Sparse differentiation Srs values');
+writeFloatMatrix(fid, sparseSss', 'Sparse differentiation Sss values');
 
 fclose(fid)
 

@@ -15,9 +15,9 @@ function [cV,cMM,cSrr,cSrs,cSss,stackedNz] = GenModalOps(N)
   %% change normalization
   cMM = cV'*M*cV;
 
-  cDMM = diag(diag(cMM));
-  cV = cV/sqrt(cDMM);
-  cMM = cV'*M*cV;
+  %cDMM = diag(diag(cMM));
+  %cV = cV/sqrt(cDMM)
+  %cMM = cV'*M*cV;
 
   %% compute derivative matrices
   cVr = Dr*cV;

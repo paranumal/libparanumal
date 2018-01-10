@@ -31,7 +31,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -99,12 +99,6 @@ int main(int argc, char **argv){
   } else if (strstr(options,"BRDG")) {
     tau = 1.0;
   }
-  if (strstr(options, "SPARSE")){
-    //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  } else{
-    //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-    //buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  } 
 
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
@@ -141,6 +135,24 @@ int main(int argc, char **argv){
         iint id = n+e*mesh->Np;
 
         r[id] = -rhs*J;
+        x[id] = 0;
+        mesh->q[id] = rhs;
+      }
+    } else if (strstr(options,"SPARSE")) {
+      for(iint n=0;n<mesh->Np;++n){
+        nrhstmp[n] = 0.;
+        for(iint m=0;m<mesh->Np;++m){
+          nrhstmp[n] += mesh->invSparseV[n*mesh->Np+m]*nrhs[m];
+        }
+      }
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat rhs = 0;
+        for(iint m=0;m<mesh->Np;++m){
+          rhs += mesh->sparseMM[n+m*mesh->Np]*nrhstmp[m];
+        }
+        iint id = n+e*mesh->Np;
+
+        r[id] = -rhs;
         x[id] = 0;
         mesh->q[id] = rhs;
       }
@@ -222,6 +234,22 @@ int main(int argc, char **argv){
       for (iint n=0;n<mesh->Np;n++){
         for (iint m=0; m<mesh->Np; m++){
           mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
+        }
+      }
+    }
+    free(qtmp);
+  } else if (strstr(options,"SPARSE")) {
+    dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+    for (iint e =0;e<mesh->Nelements;e++){
+      iint id = e*mesh->Np;
+
+      for (iint n=0; n<mesh->Np; n++){
+        qtmp[n] = mesh->q[id+n];
+        mesh->q[id+n] = 0.0;
+      }
+      for (iint n=0;n<mesh->Np;n++){
+        for (iint m=0; m<mesh->Np; m++){
+          mesh->q[id+n] += mesh->sparseV[n*mesh->Np+m]*qtmp[m];
         }
       }
     }

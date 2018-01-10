@@ -89,7 +89,6 @@ typedef struct {
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
-  iint *Ind; // for sparse storage of Srr, Sss, Srs  
   dfloat *x, *y, *z;    // coordinates of physical nodes
   iint maxNnzPerRow;
   // indices of vertex nodes
@@ -193,16 +192,17 @@ typedef struct {
   dfloat *interpLower;
 
   //sparse basis info
-  dfloat *sparseV;
+  dfloat *sparseV, *invSparseV;
   dfloat *sparseMM;
   int* FaceModes;
   int SparseNnzPerRow;
   int *sparseStackedNZ;
-  dfloat *sparseSrr;
-  dfloat *sparseSrs;
-  dfloat *sparseSss;
+  dfloat *sparseSrrT;
+  dfloat *sparseSrsT;
+  dfloat *sparseSssT;
 
   iint *mmapM, *mmapP, *mmapS;
+  dfloat *mapSgn;
 
   // time stepping info
   dfloat dt; // time step
@@ -373,6 +373,12 @@ typedef struct {
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
 
+  /* sparse basis occa arrays */
+  occa::memory o_sparseStackedNZ;
+  occa::memory o_sparseSrrT;
+  occa::memory o_sparseSrsT;
+  occa::memory o_sparseSssT;
+  occa::memory o_mapSgn;
 
   // pml vars
   occa::memory o_sigmax, o_sigmay, o_sigmaz; // AK: deprecated
