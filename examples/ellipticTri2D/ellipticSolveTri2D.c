@@ -32,7 +32,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
@@ -50,7 +50,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       occa::streamTag startAxtime = mesh->device.tagStream();
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
       else {
@@ -104,8 +104,15 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather)
-      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+    if(nonHalo->Ngather) {
+      if (strstr(options,"SPARSE")) { //TODO need to make the sign slip correction for the halo too
+        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+      } else {
+        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+      }
+    }
 
 
   } else if(strstr(options, "IPDG")) {
@@ -474,11 +481,19 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   mesh2D *mesh = solver->mesh;
 
   // gather-scatter
-  if(strstr(options, "CONTINUOUS"))
-    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
+  if(strstr(options, "CONTINUOUS")){
+    if (strstr(options,"SPARSE")) {
+      //sign correction for gs
+      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, solver->o_z);
+      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, solver->o_z, solver->o_z, dfloatString, "add");  
+      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, solver->o_z, mesh->o_mapSgn, o_r);
+    } else {
+      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
+    }
+  }
 
   int Niter;
-  iint maxIter = 5000; 
+  iint maxIter = 2; 
 
   double start, end;
 

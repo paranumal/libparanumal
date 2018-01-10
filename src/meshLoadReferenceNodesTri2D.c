@@ -105,10 +105,10 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   readDfloatArray(fp, "Sparse basis mass matrix", &(mesh->sparseMM), &Nrows, &Ncols);
   readIntArray   (fp, "Sparse basis face modes", &(mesh->FaceModes), &Nrows, &Ncols);
   readIntArray   (fp, "Sparse differentiation matrix ids", &(mesh->sparseStackedNZ), &Nrows, &Ncols);
-  readDfloatArray(fp, "Sparse differentiation Srr values", &(mesh->sparseSrr), &Nrows, &Ncols);
-  readDfloatArray(fp, "Sparse differentiation Srs values", &(mesh->sparseSrs), &Nrows, &Ncols);
-  readDfloatArray(fp, "Sparse differentiation Sss values", &(mesh->sparseSss), &Nrows, &Ncols);
-  mesh->SparseNnzPerRow = Nrows;
+  readDfloatArray(fp, "Sparse differentiation Srr values", &(mesh->sparseSrrT), &Nrows, &Ncols);
+  readDfloatArray(fp, "Sparse differentiation Srs values", &(mesh->sparseSrsT), &Nrows, &Ncols);
+  readDfloatArray(fp, "Sparse differentiation Sss values", &(mesh->sparseSssT), &Nrows, &Ncols);
+  mesh->SparseNnzPerRow = Ncols;
 
   fclose(fp);
 
