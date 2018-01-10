@@ -509,7 +509,6 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
-          //
           rhsq[rhsId +fld] = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
          
         }
@@ -522,7 +521,35 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
 }
 
 
+//       // Rhs for qx       
+//     rhspmlqx[id+0] = -msigmaxe*(pmlqx1) + Aqx1;
+//     rhspmlqx[id+1] = -msigmaxe*(pmlqx2) + Aqx2;
+//     rhspmlqx[id+2] = -msigmaxe*(pmlqx3) + Aqx3;
+//     rhspmlqx[id+3] = -msigmaxe*(pmlqx4) + Aqx4;
+//     rhspmlqx[id+4] = -msigmaxe*(pmlqx5) + Aqx5;
+//     rhspmlqx[id+5] = -msigmaxe*(pmlqx6) + Aqx6;
 
+//     // Rhs for qy
+//     rhspmlqy[id+0] = -msigmaye*(pmlqy1) + Bqy1;
+//     rhspmlqy[id+1] = -msigmaye*(pmlqy2) + Bqy2;
+//     rhspmlqy[id+2] = -msigmaye*(pmlqy3) + Bqy3;
+//     rhspmlqy[id+3] = -msigmaye*(pmlqy4) + Bqy4;
+//     rhspmlqy[id+4] = -msigmaye*(pmlqy5) + Bqy5;
+//     rhspmlqy[id+5] = -msigmaye*(pmlqy6) + Bqy6;
+   
+
+//     // BGK relaxation approximation to the Boltzmann collision operator
+//     dfloat N4 = -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
+//     dfloat N5 = -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
+//     dfloat N6 = -p_tauInv*(s_q[es][5][n]-(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
+   
+//     // Rhs for q
+//     dfloat rhsq1 = -msigmaxe*(pmlqx1) - msigmaye*(pmlqy1) + Aqx1 + Bqy1 + 0.f;
+//     dfloat rhsq2 = -msigmaxe*(pmlqx2) - msigmaye*(pmlqy2) + Aqx2 + Bqy2 + 0.f;
+//     dfloat rhsq3 = -msigmaxe*(pmlqx3) - msigmaye*(pmlqy3) + Aqx3 + Bqy3 + 0.f;
+//     dfloat rhsq4 = -msigmaxe*(pmlqx4) - msigmaye*(pmlqy4) + Aqx4 + Bqy4 + N4;
+//     dfloat rhsq5 = -msigmaxe*(pmlqx5) - msigmaye*(pmlqy5) + Aqx5 + Bqy5 + N5;
+//     dfloat rhsq6 = -msigmaxe*(pmlqx6) - msigmaye*(pmlqy6) + Aqx6 + Bqy6 + N6;
 
 
 

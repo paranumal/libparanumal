@@ -3,17 +3,8 @@
 void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma = 80,  ysigma  = 80;
-  dfloat cxsigma = 80, cysigma = 80;
-
-  // //construct element and halo lists
-  // mesh->pmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  // mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  // mesh->MRABpmlIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
-
-  // mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  // mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  // mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
+  dfloat xsigma = 80.,  ysigma  = 80.;
+  dfloat cxsigma =80, cysigma = 80;
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -108,18 +99,21 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
       }
     }
 
+
+
+
+
+
     dfloat xmaxScale = pow(pmlxmax-xmax,2);
     dfloat xminScale = pow(pmlxmin-xmin,2);
     dfloat ymaxScale = pow(pmlymax-ymax,2);
     dfloat yminScale = pow(pmlymin-ymin,2);
 
     //set up the damping factor
-    for (iint lev =0;lev<mesh->MRABNlevels;lev++){
-      for (iint m=0;m<mesh->MRABpmlNelements[lev];m++) {
-        iint e = mesh->MRABpmlElementIds[lev][m];
-        iint pmlId = mesh->MRABpmlIds[lev][m];
+    for (iint es=0;es<mesh->pmlNelements;es++){
+        iint e     = mesh->pmlElementIds[es];
+        iint pmlId = mesh->pmlIds[es];
         int type = mesh->elementInfo[e];
-
         iint id = e*mesh->Nverts;
 
         dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
@@ -181,10 +175,12 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
             if(y<ymin)
               mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
           }
+
+         //printf("%.6f %.6f\n", mesh->pmlSigmaX[mesh->Np*pmlId + n],mesh->pmlSigmaY[mesh->Np*pmlId + n]);
+
         }
         }
       }
-    }
 
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
@@ -279,6 +275,6 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
         mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
       }
       
-    free(pmlIds);
+   // free(pmlIds);
   }
 }

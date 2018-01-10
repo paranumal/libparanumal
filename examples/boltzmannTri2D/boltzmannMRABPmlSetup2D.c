@@ -4,7 +4,7 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
   dfloat xsigma = 80,  ysigma  = 80;
-  dfloat cxsigma = 80, cysigma = 80;
+  dfloat cxsigma = 1000, cysigma = 1000;
 
   //construct element and halo lists
   mesh->MRABpmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));

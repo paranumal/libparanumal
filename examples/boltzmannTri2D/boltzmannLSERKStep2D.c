@@ -11,7 +11,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
   for(iint rk=0;rk<mesh->Nrk;++rk){
 
     // intermediate stage time
-    dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
+    dfloat t = mesh->startTime + tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
     
    if(mesh->totalHaloPairs>0){
     // extract halo on DEVICE
@@ -114,14 +114,15 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			mesh->device.finish();
            occa::tic("PML_relaxationKernel");
 
-		   mesh->relaxationKernel(mesh->nonPmlNelements,
-                            mesh->o_nonPmlElementIds,
-                            mesh->Nrhs,
-                            mesh->shiftIndex,
-                            mesh->o_cubInterpT,
-                            mesh->o_cubProjectT,
-                            mesh->o_q,
-                            mesh->o_rhsq);  
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+                                mesh->o_pmlElementIds,
+                                mesh->o_pmlIds,
+                                mesh->Nrhs,
+                                mesh->shiftIndex,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mesh->o_q,
+                                mesh->o_rhsq);
 
 		   mesh->device.finish();
            occa::toc("PML_relaxationKernel");
