@@ -1,4 +1,4 @@
-r1 = DefineNumber[0.1];
+r1 = DefineNumber[0.5];
 Point(1) = {0, 0, 0, r1};
 Point(2) = {1, 0, 0, r1};
 Point(3) = {1, 1, 0,  r1};

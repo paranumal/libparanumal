@@ -194,6 +194,7 @@ typedef struct {
 
   // time stepping info
   dfloat dt; // time step
+  dfloat startTime ; // Start Time
   dfloat finalTime; // final time to run acoustics to
   iint   NtimeSteps;// number of time steps
   iint   errorStep; // number of steps between error calculations
@@ -216,7 +217,7 @@ typedef struct {
   iint *nonPmlElementIds, *pmlElementIds, *pmlIds;  
   iint shiftIndex;
 
-  dfloat dtfactor ;  //Delete later for script run
+  dfloat dtfactor; //Delete later for script run 
   dfloat maxErrorBoltzmann;
 
   //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
@@ -242,7 +243,7 @@ typedef struct {
   occa::memory o_SEMFEMAnterp;
 
   // Boltzmann specific stuff
-  dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
+  dfloat RT, sqrtRT, tauInv, Ma, Re; // need to remove this to ceedling
 
   // pml stuff
   iint    pmlNfields;

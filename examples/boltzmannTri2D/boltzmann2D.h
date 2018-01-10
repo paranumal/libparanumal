@@ -3,7 +3,7 @@
 #include <math.h>
 #include <mpi.h>
 #include "mesh2D.h"
-
+#include <complex.h>  
 
 
 
@@ -70,4 +70,4 @@ void boltzmannMRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 void boltzmannMRSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-
+void boltzmannSACoefs2D(mesh2D *mesh, dfloat alpha, dfloat h);

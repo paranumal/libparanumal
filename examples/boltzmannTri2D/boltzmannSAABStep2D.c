@@ -14,7 +14,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mrab_order = 1; // second order
 
   // intermediate stage time
-  dfloat t = (tstep+1)*mesh->dt;
+  dfloat t = mesh->startTime + (tstep+1)*mesh->dt;
 
   // COMPUTE RAMP FUNCTION 
   dfloat ramp, drampdt;
