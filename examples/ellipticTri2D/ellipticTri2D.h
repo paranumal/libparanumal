@@ -77,6 +77,7 @@ typedef struct {
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel rhsBCKernel;
+  occa::kernel addBCKernel;
   occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;

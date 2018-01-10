@@ -10,17 +10,13 @@ typedef struct{
   iint node;    // local node id
   iint rank;    // rank of original node
   iint id;      // original id
-  iint tag;   // original bc tag
-  iint haloFlag;
-  
+  int haloFlag;
+
   // info on base node (lowest rank node)
   iint baseElement; 
   iint baseNode;
   iint baseRank;
   iint baseId;
-
-  // priority tag
-  iint priorityTag;   // minimum (non-zero bc tag)
 
 }parallelNode_t;
 
@@ -99,18 +95,6 @@ void meshParallelConnectNodes(mesh_t *mesh){
       	}
       }
     }
-		      
-    // use element-to-boundary connectivity to create tag for local nodes
-    for(iint f=0;f<mesh->Nfaces;++f){
-      for(iint n=0;n<mesh->Nfp;++n){
-      	iint tag = mesh->EToB[e*mesh->Nfaces+f];
-      	iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
-      	if(tag>0){
-      	  gatherNumbering[id].tag = tag;
-      	  gatherNumbering[id].priorityTag = tag;
-      	}
-      }
-    }
   }
 
   iint localChange = 0, gatherChange = 1;
@@ -161,30 +145,15 @@ void meshParallelConnectNodes(mesh_t *mesh){
       	  gatherNumbering[idM].baseRank    = gatherNumbering[idP].baseRank;
       	  gatherNumbering[idM].baseId      = gatherNumbering[idP].baseId;
       	}
-      	
-      	iint tagM = gatherNumbering[idM].priorityTag;
-      	iint tagP = gatherNumbering[idP].priorityTag;
-
-      	// use maximum non-zero tag for both nodes
-      	if(tagM!=tagP){
-      	  if(tagP>tagM){
-      	    ++localChange;
-      	    gatherNumbering[idM].priorityTag = tagP;
-      	  }
-      	  if(tagM>tagP){
-      	    ++localChange;
-      	    gatherNumbering[idP].priorityTag = tagM;
-      	  }
-      	}
       }
     }
 
     // sum up changes
     MPI_Allreduce(&localChange, &gatherChange, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
 
-    // report
-    if(rank==0)
-      printf("gatherChange=%d\n", gatherChange);
+    // report for degugging
+    //if(rank==0)
+    //  printf("gatherChange=%d\n", gatherChange);
   }
 
   // sort based on base nodes (rank,element,node at base)
@@ -202,10 +171,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     mesh->gatherBaseRanks[id] = gatherNumbering[id].baseRank;
     mesh->gatherHaloFlags[id] = gatherNumbering[id].haloFlag;
   }
-
-  // also need to extract bc tag above !!!
   
-  // should do something with tag and gather numbering arrays
   free(sendBuffer);
   free(gatherNumbering);
 }

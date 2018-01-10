@@ -123,12 +123,14 @@ typedef struct {
   dfloat *invAP;
 
   // face node info
-  iint Nfp;        // number of nodes per face
-  iint *faceNodes; // list of element reference interpolation nodes on element faces
+  int Nfp;        // number of nodes per face
+  int *faceNodes; // list of element reference interpolation nodes on element faces
   iint *vmapM;     // list of volume nodes that are face nodes
   iint *vmapP;     // list of volume nodes that are paired with face nodes
   iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
-  iint *faceVertices; // list of mesh vertices on each face
+  int *mapB;      // boundary flag of face nodes
+  dfloat *mask;
+  int *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix
@@ -334,6 +336,8 @@ typedef struct {
 
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
+
+  occa::memory o_mapB, o_mask;
 
   occa::memory o_rmapP;
 
