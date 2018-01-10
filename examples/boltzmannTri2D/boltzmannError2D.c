@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 // currently maximum
-void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
+void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
 
  if(strstr(options, "PML")){
@@ -43,8 +43,9 @@ else{
     // Coutte Flow exact solution for U velocity
 
     dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
-    iint fid = 1; //U velocity
+    iint fid = 1; 
 
+    dfloat Uref        =  mesh->Ma*mesh->sqrtRT;
     dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
 
     for(iint e=0;e<mesh->Nelements;++e){
@@ -54,14 +55,18 @@ else{
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
-        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
-  
+       dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
+ 
         dfloat uex = y ; 
-        for(iint k=1; k<=100; k++)
+        for(iint k=1; k<=10; k++)
         {
 
          dfloat lamda = k*M_PI;
-         uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y);
+         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
+         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2* sqrt(1.- 4.*pow(1./ mesh->tauInv, 2)* mesh->RT* lamda*lamda);
+         uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
+         
+         // uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y); // !!!!!
         }
 
         maxerr = mymax(maxerr, fabs(u-uex));
@@ -92,11 +97,11 @@ else{
       
       #if 1
 
-    // iint fld = 2;
-    // iint tstep = time/mesh->dt;
-    // char errname[BUFSIZ];
-    // sprintf(errname, "err_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
-    // meshPlotVTU2D(mesh, errname,fld);
+    iint fld = 2;
+    iint tstep = (time-mesh->startTime)/mesh->dt;
+    char errname[BUFSIZ];
+    sprintf(errname, "err_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+    meshPlotVTU2D(mesh, errname,fld);
       
     iint tmethod = 0; 
     if(strstr(options,"LSERK"))
@@ -114,7 +119,7 @@ else{
       sprintf(fname, "boltzmannTemporalError.dat");
       FILE *fp; 
       fp = fopen(fname, "a");
-      fprintf(fp, "%2d %2d %.5e %.5e %.5e %.5e\n", mesh->N, tmethod, mesh->dt,  globalMinQ1, globalMaxQ1, globalMaxErr); 
+      fprintf(fp, "%2d %2d %.8e %.8e %.8e %.8e %.8e\n", mesh->N, tmethod, mesh->dt, time,  globalMinQ1, globalMaxQ1, globalMaxErr); 
       fclose(fp); 
 
       mesh->maxErrorBoltzmann = globalMaxErr; 

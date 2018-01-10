@@ -13,7 +13,7 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
   for(iint s=0; s<3; ++s){
 
     // Stage time
-    dfloat t = tstep*mesh->dt + mesh->dt*mesh->RK_C[s];
+    dfloat t = mesh->startTime+ tstep*mesh->dt + mesh->dt*mesh->RK_C[s];
     //
 
     dfloat ramp, drampdt;
