@@ -2,12 +2,6 @@
 
 void boltzmannRun2D(mesh2D *mesh, char *options){
 
-   // For initial data
-  #if 0
-  boltzmannReport2D(mesh, 0 ,options);
-  #endif
-
-
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
@@ -94,6 +88,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
   }
 
 
+printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, mesh->NtimeSteps, mesh->dt);
 occa::initTimer(mesh->device);
 
 
@@ -102,8 +97,15 @@ occa::initTimer(mesh->device);
     occa::tic("Boltzmann Solver");
 
  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-   // for(iint tstep=0;tstep<100;++tstep){
- 
+  // for(iint tstep=0;tstep<1;++tstep){
+
+     if(strstr(options, "REPORT")){
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep, options);
+      }
+     }
+
+
       if(strstr(options, "MRAB")){
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
@@ -120,7 +122,7 @@ occa::initTimer(mesh->device);
       boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
-       if(strstr(options, "LSERK")){
+       if(strstr(options, "LSERK")){ 
       boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
@@ -133,11 +135,7 @@ occa::initTimer(mesh->device);
       }
 
       
-    //  if(strstr(options, "REPORT")){
-    //   if((tstep%mesh->errorStep)==0){
-    //     boltzmannReport2D(mesh, tstep, options);
-    //   }
-    // }
+    
 
   }
 
@@ -145,34 +143,19 @@ occa::initTimer(mesh->device);
 
 mesh->device.finish();
 occa::toc("Boltzmann Solver");
-  
+ 
+printf("writing Final data\n");  
 //   // // For Final Time
 boltzmannReport2D(mesh, mesh->NtimeSteps,options);
 
 occa::printTimer();
 
 
-
-
-  //
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  // //Deallocate Halo MPI storage
-  // free(recvBuffer);
-  // free(sendBuffer);
+  if (haloBytes) {
+  //Deallocate Halo MPI storage
+  free(recvBuffer);
+  free(sendBuffer);
+  }
 }
 
 

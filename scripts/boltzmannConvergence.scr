@@ -1,13 +1,24 @@
 cd ../examples/boltzmannTri2D;
 make -j; 
+//
+// # TIME="LSERK SAAB SARK LSIMEX"
+// # MESH="../../meshes/boltzmannCouette2D_h0.msh
+// 		../../meshes/boltzmannCouette2D_h1.msh
+// 		../../meshes/boltzmannCouette2D_h2.msh
+// 		../../meshes/boltzmannCouette2D_h3.msh"
 
-for time in LSERK SAAB SARK LSIMEX
-do
-for mesh in ../../meshes/boltzmannCouette2D_h0.msh ../../meshes/boltzmannCouette2D_h1.msh ../../meshes/boltzmannCouette2D_h2.msh ../../meshes/boltzmannCouette2D_h3.msh
-do
-for N in `seq 1 6 `
-do
-./boltzmannMain2D $mesh $N $time; 
-done
-done
-done
+// # for time in $TIME;do
+// # for mesh in $MESH;do  
+// # for N in `seq 1 6 `;do
+// # ./boltzmannMain2D $mesh $N $time; 
+// # done; done; done;
+//
+//
+// #TIME="LSERK SAAB SARK LSIMEX"
+// #
+// #for time in $TIME;do
+// #for mesh in ../../meshes/boltzmannCouette2D_h0.msh; do
+// #for N in 3; do
+// #echo "Time:" $time; echo "mesh:" $mesh; echo "Order:" $N;
+// #./boltzmannMain2D $mesh $N $time; done; done; done; 
+//

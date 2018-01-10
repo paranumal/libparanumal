@@ -20,7 +20,8 @@ int main(int argc, char **argv){
   // bc          = UNSPLITPML, SPLITPML, NONE
   // pmlprofile  = CONSTANT, QUADRATIC
   
-  char *options =strdup("out = REPORT, MR_GROUPS, relaxation = CUBATURE, bc=NONE, pmlprofile=CONSTANT");
+  char options[BUFSIZ];
+  strcpy(options,"out = REPORT+VTU, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=CONSTANT");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 
@@ -37,7 +38,7 @@ int main(int argc, char **argv){
       printf("Warning!!! meshfile is not speciefied, defaulting %s\n",meshfile);  
       mesh = meshSetupTri2D(meshfile, N);  
       
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str);
     }  
@@ -49,7 +50,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str); 
     }  
@@ -60,7 +61,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str); 
     }  
@@ -71,7 +72,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time="); 
+      strcpy(time_str,", time="); 
       strcat(time_str,argv[3]); 
       strcat(options,time_str);
     }  
@@ -81,9 +82,13 @@ int main(int argc, char **argv){
        exit(-1);
     }  
     
-    for(iint i=0; i<1;++i){
+    for(iint i=0; i<1;i+=2){
 
+      if(i==0)
+      mesh->Ntscale=1;
+      else
       mesh->Ntscale=i;
+
       printf("Setup Boltzmann Solver: \n");
       boltzmannSetup2D(mesh,options); 
 

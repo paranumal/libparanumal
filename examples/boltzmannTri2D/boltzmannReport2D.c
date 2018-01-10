@@ -5,9 +5,9 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   dfloat t = 0.f; 
 
   if(strstr(options,"MRAB") || strstr(options, "MRSAAB"))
-   t = mesh->dt*(tstep+1)*pow(2,(mesh->MRABNlevels-1));
+   t = mesh->startTime + mesh->dt*tstep*pow(2,(mesh->MRABNlevels-1));
   else
-   t = (tstep+1)*mesh->dt;
+   t = mesh->startTime+ tstep*mesh->dt;
   
   // copy data back to host
   mesh->o_q.copyTo(mesh->q);
@@ -40,6 +40,8 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   }
   else{
    
+  
+
 
    if(strstr(options, "VTU")){ 
     //boltzmannCouetteError2D(mesh, t);
