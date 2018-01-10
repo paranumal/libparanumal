@@ -23,6 +23,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ogs_t *nonHalo = solver->nonHalo;
     ogs_t *halo = solver->halo;
 
+    //pre-mask
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_q, mesh->o_mask, o_q);
+
     if(solver->allNeumann)
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
@@ -114,6 +117,8 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       }
     }
 
+    //post-mask
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mask, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
     iint offset = 0;
@@ -484,16 +489,19 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   if(strstr(options, "CONTINUOUS")){
     if (strstr(options,"SPARSE")) {
       //sign correction for gs
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, solver->o_z);
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, solver->o_z, solver->o_z, dfloatString, "add");  
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, solver->o_z, mesh->o_mapSgn, o_r);
+      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
+      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
+      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
     } else {
       ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
     }
+  
+    //mask
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mask, o_r);
   }
 
   int Niter;
-  iint maxIter = 2; 
+  iint maxIter = 500; 
 
   double start, end;
 
@@ -512,6 +520,15 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
   occaTimerToc(mesh->device,"Linear Solve");
   
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       mesh->o_mapB,
+                       o_x);
+  }
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

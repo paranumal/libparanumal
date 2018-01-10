@@ -1,5 +1,20 @@
 #include "ellipticTri2D.h"
 
+void applyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq) {
+
+  dfloat *Aqn = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) {
+      Aqn[n] = 0;
+      for (int k=0;k<mesh->Np;k++) {
+        Aqn[n] += A[k+n*mesh->Np]*q[k+e*mesh->Np];
+      }
+    }
+    for (int n=0;n<mesh->Np;n++) Aq[n+e*mesh->Np] = Aqn[n];
+  }
+  free(Aqn);
+}
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -31,7 +46,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -91,7 +106,7 @@ int main(int argc, char **argv){
   ellipticSetupTri2D(mesh, kernelInfo);
 
   // Boundary Type translation. Just default from the mesh file.
-  int BCType[3] = {0,2,2};
+  int BCType[3] = {0,1,2};
 
   dfloat tau;
   if (strstr(options,"IPDG")) {
@@ -105,78 +120,29 @@ int main(int argc, char **argv){
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
-  // load rhs into r
-  dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *nrhstmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  // load forcing into r
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(iint n=0;n<mesh->Np;++n){
-      dfloat xn = mesh->x[n+e*mesh->Np];
-      dfloat yn = mesh->y[n+e*mesh->Np];
-      nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
-    }
-
-    if (strstr(options,"BERN")) {
-      for(iint n=0;n<mesh->Np;++n){
-        nrhstmp[n] = 0.;
-        for(iint m=0;m<mesh->Np;++m){
-          nrhstmp[n] += mesh->invVB[n*mesh->Np+m]*nrhs[m];
-        }
-      }
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rhs = 0;
-        if (strstr(options,"NONSYM")) {
-          rhs = nrhs[n];
-        } else {
-          for(iint m=0;m<mesh->Np;++m){
-            rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
-          }
-        }
-        iint id = n+e*mesh->Np;
-
-        r[id] = -rhs*J;
-        x[id] = 0;
-        mesh->q[id] = rhs;
-      }
-    } else if (strstr(options,"SPARSE")) {
-      for(iint n=0;n<mesh->Np;++n){
-        nrhstmp[n] = 0.;
-        for(iint m=0;m<mesh->Np;++m){
-          nrhstmp[n] += mesh->invSparseV[n*mesh->Np+m]*nrhs[m];
-        }
-      }
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rhs = 0;
-        for(iint m=0;m<mesh->Np;++m){
-          rhs += mesh->sparseMM[n+m*mesh->Np]*nrhstmp[m];
-        }
-        iint id = n+e*mesh->Np;
-
-        r[id] = -rhs;
-        x[id] = 0;
-        mesh->q[id] = rhs;
-      }
-    } else if (strstr(options,"NODAL")) {
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rhs = 0;
-        if (strstr(options,"NONSYM")) {
-          rhs = nrhs[n];
-        } else {
-          for(iint m=0;m<mesh->Np;++m){
-            rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
-          }
-        }
-        iint id = n+e*mesh->Np;
-
-        r[id] = -rhs*J;
-        x[id] = 0;
-        mesh->q[id] = rhs;
-      }
+      iint id = n+e*mesh->Np;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
+      x[id] = 0;
     }
   }
-  free(nrhs);
-  free(nrhstmp);
 
+  //Apply some element matrix ops to r depending on our solver
+  if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->invVB,r,r);
+  if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->invSparseV,r,r);
+
+  if (!strstr(options,"NONSYM")) {
+    if (strstr(options,"NODAL"))  applyElementMatrix(mesh,mesh->MM,r,r);
+    if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->BBMM,r,r);
+    if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->sparseMM,r,r);
+  }
+
+  //copy to occa buffers
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
@@ -199,20 +165,48 @@ int main(int argc, char **argv){
 
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
-        mesh->o_vmapM,
-        mesh->o_vmapP,
-        solver->tau,
-        zero,
-        mesh->o_x,
-        mesh->o_y,
-        mesh->o_vgeo,
-        mesh->o_sgeo,
-        solver->o_EToB,
-        mesh->o_DrT,
-        mesh->o_DsT,
-        mesh->o_LIFTT,
-        mesh->o_MM,
-        o_r);
+                            mesh->o_vmapM,
+                            mesh->o_vmapP,
+                            solver->tau,
+                            zero,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_vgeo,
+                            mesh->o_sgeo,
+                            solver->o_EToB,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            mesh->o_LIFTT,
+                            mesh->o_MM,
+                            o_r);
+  }
+
+  if (strstr(options,"CONTINUOUS")) {
+
+    solver->rhsBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCTri2D.okl",
+          "ellipticRhsBCTri2D",
+          kernelInfo);
+
+    solver->addBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAddBCTri2D.okl",
+          "ellipticAddBCTri2D",
+          kernelInfo);
+
+    dfloat zero = 0.f;
+    solver->rhsBCKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        mesh->o_SrrT,
+                        mesh->o_SrsT,
+                        mesh->o_SsrT,
+                        mesh->o_SssT,
+                        mesh->o_MM,
+                        lambda,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_mapB,
+                        o_r);
   }
 
   // convergence tolerance
@@ -222,39 +216,8 @@ int main(int argc, char **argv){
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
-  if (strstr(options,"BERN")) {
-    dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    for (iint e =0;e<mesh->Nelements;e++){
-      iint id = e*mesh->Np;
-
-      for (iint n=0; n<mesh->Np; n++){
-        qtmp[n] = mesh->q[id+n];
-        mesh->q[id+n] = 0.0;
-      }
-      for (iint n=0;n<mesh->Np;n++){
-        for (iint m=0; m<mesh->Np; m++){
-          mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
-        }
-      }
-    }
-    free(qtmp);
-  } else if (strstr(options,"SPARSE")) {
-    dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    for (iint e =0;e<mesh->Nelements;e++){
-      iint id = e*mesh->Np;
-
-      for (iint n=0; n<mesh->Np; n++){
-        qtmp[n] = mesh->q[id+n];
-        mesh->q[id+n] = 0.0;
-      }
-      for (iint n=0;n<mesh->Np;n++){
-        for (iint m=0; m<mesh->Np; m++){
-          mesh->q[id+n] += mesh->sparseV[n*mesh->Np+m]*qtmp[m];
-        }
-      }
-    }
-    free(qtmp);
-  }
+  if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->VB,mesh->q,mesh->q);
+  if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->sparseV,mesh->q,mesh->q);
 
   dfloat maxError = 0;
   for(iint e=0;e<mesh->Nelements;++e){

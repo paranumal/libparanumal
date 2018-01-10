@@ -102,10 +102,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  // flag boundary nodes
+
 
   //set up memory for linear solver
   if(strstr(options,"GMRES")) {
-    solver->GMRESrestartFreq = 200;
+    solver->GMRESrestartFreq = 20;
     printf("GMRES Restart Frequency = %d \n", solver->GMRESrestartFreq);
     solver->HH  = (dfloat*) calloc((solver->GMRESrestartFreq+1)*solver->GMRESrestartFreq,   sizeof(dfloat));
     
@@ -563,7 +565,45 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_invDegree.copyFrom(invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  iint *gatherIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) gatherIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
 
+  void *allGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, gatherIds);
+  
+  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  mesh->mask = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        int BCflag = BCType[bc]; //translate the mesh bc flag
+        for (int n=0;n<mesh->Nfp;n++) {
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mesh->mapB[fid+e*mesh->Np] = BCflag;
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(allGsh, mesh->mapB, "int", "min"); // should use iint
+
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1E9) {
+      mesh->mapB[n] = 0.;
+      mesh->mask[n] = 1.; //reset internal mask to 1
+    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
+      mesh->mapB[n] = 1.;
+      mesh->mask[n] = 0.;
+    } else { //Neumann or Robin boundary
+      mesh->mask[n] = 1.;
+    }
+  }
+  mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
+  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+
+  gsParallelGatherScatterDestroy(allGsh);
+  free(gatherIds);
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
   ellipticParallelGatherScatterSetup(mesh,
