@@ -74,9 +74,9 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
       for(int n=0;n<mesh->Nq;++n){
 	int id = mesh->faceNodes[n+f*mesh->Nq];
 
-	dfloat xid = mesh->x[id+e*mesh->Nq];
-	dfloat yid = mesh->y[id+e*mesh->Nq];
-	dfloat zid = mesh->z[id+e*mesh->Nq];
+	dfloat xid = mesh->x[id+e*mesh->Np];
+	dfloat yid = mesh->y[id+e*mesh->Np];
+	dfloat zid = mesh->z[id+e*mesh->Np];
 	dfloat Jid = J[id];
 	
 	dfloat nx, ny, nz;
@@ -133,5 +133,30 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
     }
   }
 
+
+#if 0
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->Nq;++n){
+	int idM = n+f*mesh->Nq+e*mesh->Nfaces*mesh->Nq;
+	int idP = mesh->mapP[idM];
+	int eP = idP/(mesh->Nq*mesh->Nfaces);
+	int fP = (idP%(mesh->Nq*mesh->Nfaces))/mesh->Nq;
+	int nP = (idP%mesh->Nq);
+	int baseM = e*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + f*mesh->Nq*mesh->Nsgeo + n;
+	int baseP = eP*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + fP*mesh->Nq*mesh->Nsgeo + nP;
+	printf("e,f,n=(%d,%d,%d)-(%d,%d,%d): xP-xM=(%g,%g,%g) : norP+norM=%g,%g,%g\n",
+	       e,f,n,eP,fP,nP,
+	       mesh->x[mesh->vmapP[idM]]-mesh->x[mesh->vmapM[idM]],
+	       mesh->y[mesh->vmapP[idM]]-mesh->y[mesh->vmapM[idM]],
+	       mesh->z[mesh->vmapP[idM]]-mesh->z[mesh->vmapM[idM]],
+	       mesh->sgeo[baseM+NXID*mesh->Nq]+mesh->sgeo[baseP+NXID*mesh->Nq],
+	       mesh->sgeo[baseM+NYID*mesh->Nq]+mesh->sgeo[baseP+NYID*mesh->Nq],
+	       mesh->sgeo[baseM+NZID*mesh->Nq]+mesh->sgeo[baseP+NZID*mesh->Nq]);
+
+      }
+    }
+  }
+#endif  
   // TW: omit 1/min(h) calculation
 }

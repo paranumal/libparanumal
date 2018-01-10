@@ -20,7 +20,7 @@ void boltzmannRunQuad3D(solver_t *solver){
     
     for(iint rk=0;rk<mesh->Nrk;++rk){
 
-      printf("RK %d --------------------\n", rk);
+      //      printf("RK %d --------------------\n", rk);
       
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
@@ -111,6 +111,15 @@ void boltzmannRunQuad3D(solver_t *solver){
       
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
+
+      // check for nans
+      for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
+	if(isnan(mesh->q[n])){
+	  printf("found nan\n");
+	  exit(-1);
+	}
+      }
+	  
       
       // do error stuff on host
       //      boltzmannErrorQuad2D(mesh, mesh->dt*(tstep+1));

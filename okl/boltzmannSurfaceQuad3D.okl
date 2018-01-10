@@ -90,17 +90,13 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 
 	    flux(nx, ny, nz, zero, one, fluxq, dq);
 	    
-	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;
-
-	    //	    printf("nor=%g,%g,%g sc=%g\n", nx, ny, nz, sc);
 
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		printf("%g ", dq[fld]);
-		rhsq[vidM+fld*p_Np] += sc*dq[fld];
+		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
 	      }
-	    printf("\n");
 	  }
 	}
       }

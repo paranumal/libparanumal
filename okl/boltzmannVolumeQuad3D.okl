@@ -31,7 +31,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	  if(e<Nelements){
 	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
 	    for(int fld=0;fld<p_Nfields;++fld){
-	      s_q[fld][es][j][i] = q[e+fld*p_Np];
+	      s_q[fld][es][j][i] = q[base+fld*p_Np];
 	    }
 	  }
 	  
