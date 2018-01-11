@@ -104,6 +104,11 @@ int main(int argc, char **argv){
   //dfloat lambda = 1;
   dfloat lambda = 0;
 
+  if (strstr(options,"SPARSE")&&(lambda!=0)) { //sanity check
+    printf("SPARSE not currently supported for screened Poisson\n");
+    exit(-1);
+  }
+
   // set up
   occa::kernelInfo kernelInfo;
   ellipticSetupTri2D(mesh, kernelInfo);
@@ -199,11 +204,14 @@ int main(int argc, char **argv){
     dfloat zero = 0.f;
     solver->rhsBCKernel(mesh->Nelements,
                         mesh->o_ggeo,
+                        mesh->o_sgeo,
                         mesh->o_SrrT,
                         mesh->o_SrsT,
                         mesh->o_SsrT,
                         mesh->o_SssT,
                         mesh->o_MM,
+                        mesh->o_vmapM,
+                        mesh->o_sMT,
                         lambda,
                         zero,
                         mesh->o_x,
