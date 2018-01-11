@@ -145,6 +145,18 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
   printf("allNeumann = %d \n", solver->allNeumann);
 
+  //set surface mass matrix for continuous boundary conditions
+  mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
+  for (iint n=0;n<mesh->Np;n++) {
+    for (iint m=0;m<mesh->Nfp*mesh->Nfaces;m++) {
+      dfloat MSnm = 0;
+      for (int i=0;i<mesh->Np;i++){
+        MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[m+i*mesh->Nfp*mesh->Nfaces];
+      }
+      mesh->sMT[n+m*mesh->Np]  = MSnm;
+    }
+  }
+  mesh->o_sMT = mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), mesh->sMT);
 
   /* sparse basis setup */
   //build inverse vandermonde matrix
