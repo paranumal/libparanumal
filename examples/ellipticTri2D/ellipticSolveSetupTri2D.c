@@ -159,7 +159,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   for (int m=0;m<paddedRowSize/4;m++) {
     for (int n=0;n<mesh->Np;n++) {
       for (int k=0;k<4;k++) {
-        IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
+        if (k+4*m < mesh->SparseNnzPerRow) {
+          IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
+        } else {
+          IndTchar[k+4*n+m*4*mesh->Np] = 0;
+        }
       }
     }
   }

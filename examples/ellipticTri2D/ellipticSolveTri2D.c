@@ -32,8 +32,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
-      }
-      else{
+      } else{
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
@@ -46,8 +45,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
-      }
-      else {
+      } else {
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
