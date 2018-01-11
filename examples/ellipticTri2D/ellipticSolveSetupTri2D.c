@@ -154,7 +154,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   matrixInverse(mesh->Np,mesh->invSparseV);
 
   int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
-  
+
   char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
   for (int m=0;m<paddedRowSize/4;m++) {
     for (int n=0;n<mesh->Np;n++) {
