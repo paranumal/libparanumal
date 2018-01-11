@@ -23,7 +23,12 @@ void ellipticPreconditioner2D(solver_t *solver,
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
     if(strstr(options,"CONTINUOUS")) {
-      meshParallelGather(mesh, precon->hgs, o_r, precon->o_Gr);
+      if (strstr(options,"SPARSE")) {
+        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_z);
+        meshParallelGather(mesh, precon->hgs, o_z, precon->o_Gr);
+      } else {
+        meshParallelGather(mesh, precon->hgs, o_r, precon->o_Gr);  
+      }
       solver->dotMultiplyKernel(precon->hgs->Ngather, precon->hgs->o_invDegree, precon->o_Gr, precon->o_Gr);
 
       occaTimerTic(mesh->device,"parALMOND");
@@ -32,6 +37,8 @@ void ellipticPreconditioner2D(solver_t *solver,
 
       //scatter the result
       meshParallelScatter(mesh, precon->hgs, precon->o_Gz, o_z);
+      if (strstr(options,"SPARSE")) 
+        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_z, mesh->o_mapSgn, o_z);
 
     } else {
       occaTimerTic(mesh->device,"parALMOND");
