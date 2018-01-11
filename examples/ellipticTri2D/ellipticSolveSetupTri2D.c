@@ -156,7 +156,13 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
   
   char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
-  for (iint m=0;m<mesh->SparseNnzPerRow*mesh->Np;m++) IndTchar[m] = mesh->sparseStackedNZ[m];
+  for (int m=0;m<paddedRowSize/4;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int k=0;k<4;k++) {
+        IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
+      }
+    }
+  }
   
   mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
   mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);

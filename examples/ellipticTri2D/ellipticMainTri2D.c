@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv){
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
-  dfloat lambda = 1;
+  dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;

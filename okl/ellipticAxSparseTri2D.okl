@@ -79,7 +79,6 @@ kernel void ellipticAxTri2D_v0(const int Nelements,
 
               occaUnroll(p_NnodesV)
                 for(iint et=0;et<p_NnodesV;++et){
-                  const iint e = eo + es + et*p_NblockV;
                   // fetch from shared (for reuse three times)
                   // 6 flops per 8 bytes
                   const dfloat r_qk = s_q[et][es][idk];
@@ -186,6 +185,8 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
               for (int k2=0; k2<4; k2++){
                 int idk = pt_Indn[k2];
                           
+                //printf("thread %d, idk = %d\n", n,idk);
+
                 if(!idk) break;
                       
                 --idk;
@@ -196,6 +197,8 @@ kernel void ellipticPartialAxTri2D_v0(const int Nelements,
                 const dfloat Srr_nk = Srr[id];
                 const dfloat Srs_nk = Srs[id];
                 const dfloat Sss_nk = Sss[id];
+
+                //printf("thread %d, idk = %d, Srr = %f, Srs = %f, Sss = %f \n", n,idk, Srr_nk,Srs_nk,Sss_nk);
 
                 occaUnroll(p_NnodesV)
                   for(iint et=0;et<p_NnodesV;++et){
