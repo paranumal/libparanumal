@@ -305,8 +305,10 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
     globalNumbering[n] = FEMverts[n].globalId;
   }
 
+  dfloat *femMask; //TODO need to fill this
+
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts,femMask);
 
   //use the ordering to define a gather+scatter for assembly
   precon->hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);

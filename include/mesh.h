@@ -555,7 +555,7 @@ void parallelSort(iint N, void *vv, size_t sz,
 
   /* renumber global nodes to remove gaps */
   void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
-      iint *globalOwners, iint *globalStarts);
+      iint *globalOwners, iint *globalStarts, dfloat *mask);
 
 void meshHaloSetup(mesh_t *mesh);
 
