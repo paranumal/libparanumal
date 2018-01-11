@@ -1,8 +1,5 @@
 #include "ellipticTri2D.h"
-//this is bad coding practice, added for quick testing
-dfloat timeAx;
-iint NAx;
-//end
+
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
   mesh_t *mesh = solver->mesh;
@@ -31,8 +28,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
     if(halo->Ngather) {
-      occa::streamTag startAxtime = mesh->device.tagStream();
-
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
@@ -43,14 +38,10 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      occa::streamTag stopAxtime = mesh->device.tagStream();
-      NAx++;
-      timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
       mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
       halo->o_gatherTmp.copyTo(halo->gatherTmp);
     }
     if(nonHalo->Ngather){
-      occa::streamTag startAxtime = mesh->device.tagStream();
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
@@ -61,10 +52,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      occa::streamTag stopAxtime = mesh->device.tagStream();
-      NAx++;    
-      timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
-
     }
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
