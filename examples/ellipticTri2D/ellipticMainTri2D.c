@@ -86,8 +86,11 @@ int main(int argc, char **argv){
       mesh->vmapM[n] = mesh->mmapM[n];
       mesh->vmapP[n] = mesh->mmapP[n];
     }
-    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) { //overwrite facenodes
       mesh->faceNodes[n] = mesh->FaceModes[n];
+    }
+    for (int n=0;n<mesh->Nverts;n++) { //overwrite vertex nodes (assumes their first in the list)
+      mesh->vertexNodes[n] = n;
     }
     //free the old gather scatter arrays and re-run the connect nodes function using this updated connectivity
     free(mesh->gatherLocalIds );
@@ -95,6 +98,31 @@ int main(int argc, char **argv){
     free(mesh->gatherBaseRanks);
     free(mesh->gatherHaloFlags);
     meshParallelConnectNodes(mesh);
+  }
+
+  for (int e=0;e<mesh->Nelements;e++) {
+    printf("Element %d verts: (%f,%f) (%f,%f) (%f,%f)\n", e, 
+        mesh->EX[0+e*mesh->Nverts],mesh->EY[0+e*mesh->Nverts],
+        mesh->EX[1+e*mesh->Nverts],mesh->EY[1+e*mesh->Nverts],
+        mesh->EX[2+e*mesh->Nverts],mesh->EY[2+e*mesh->Nverts]);
+  }
+
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int f=0;f<mesh->Nfaces;f++) {
+      for (int n=0;n<mesh->Nfp;n++) {
+        int id = n+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+        int idM = mesh->vmapM[id];
+        int idP = mesh->vmapP[id];
+
+        printf("Mode %d of element %d connects to mode %d of element %d\n", 
+              idM%mesh->Np,e, idP%mesh->Np,idP/mesh->Np);
+      }
+    }
+  }
+
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    printf("%d , node %d element %d,GlobalID %d, BaseRank %d, HaloFlag %d\n", 
+            n, mesh->gatherLocalIds[n]%mesh->Np, mesh->gatherLocalIds[n]/mesh->Np,mesh->gatherBaseIds[n], mesh->gatherBaseRanks[n], mesh->gatherHaloFlags[n]);
   }
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
