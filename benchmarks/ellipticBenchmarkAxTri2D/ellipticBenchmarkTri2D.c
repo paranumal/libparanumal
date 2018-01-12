@@ -41,7 +41,8 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
-  strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");    
+strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=NONE");
+
 //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
