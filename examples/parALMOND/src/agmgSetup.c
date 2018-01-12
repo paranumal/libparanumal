@@ -27,6 +27,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   int lev = parAlmond->numLevels; //add this level to the end of the chain
 
   levels[lev] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+  levels[lev]->gatherLevel = false;
   parAlmond->numLevels++;
 
   //copy A matrix and null vector

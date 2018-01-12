@@ -472,15 +472,10 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   // gather-scatter
   if(strstr(options, "CONTINUOUS")){
-    if (strstr(options,"SPARSE")) {
-      //sign correction for gs
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-    } else {
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
-    }
-  
+    //sign correction for gs
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
+    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);       
     //mask
     solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mask, o_r);
   }

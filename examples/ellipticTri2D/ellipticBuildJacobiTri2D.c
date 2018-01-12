@@ -6,6 +6,10 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
+void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
+                                  iint eM, dfloat *A);
+
+
 void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    iint *BCType, dfloat **invDiagA,
@@ -52,7 +56,7 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
     } else if (strstr(options,"BRDG")) {
       BuildLocalBRdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
     } else if (strstr(options,"CONTINUOUS")) {
-      BuildLocalContinuousPatchAx(solver, mesh, lambda, BCType, eM, patchA);
+      BuildLocalContinuousPatchAx(solver, mesh, lambda, eM, patchA);
     }
 
     // compute the diagonal entries

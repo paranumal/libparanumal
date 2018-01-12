@@ -1,7 +1,7 @@
 #include "ellipticTri2D.h"
 
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegree, int n, int* BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -11,6 +11,13 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   memcpy(mesh,baseSolver->mesh,sizeof(mesh2D));
 
   solver->mesh = mesh;
+
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
+
+  solver->Nblock = Nblock;
 
   int N = levelDegree[n];
   int NFine = levelDegree[n-1];
@@ -38,9 +45,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
-
   // global nodes
-  //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
+  meshParallelConnectNodes(mesh);
 
   //dont need these once vmap is made
   free(mesh->x);
@@ -187,6 +193,47 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   mesh->o_ELvals =
     mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
 
+
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  iint *gatherIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) gatherIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
+
+  void *allGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, gatherIds);
+  
+  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  mesh->mask = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        int BCflag = BCType[bc]; //translate the mesh bc flag
+        for (int n=0;n<mesh->Nfp;n++) {
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mesh->mapB[fid+e*mesh->Np] = BCflag;
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(allGsh, mesh->mapB, "int", "min"); // should use iint
+
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1E9) {
+      mesh->mapB[n] = 0.;
+      mesh->mask[n] = 1.; //reset internal mask to 1
+    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
+      mesh->mapB[n] = 1.;
+      mesh->mask[n] = 0.;
+    } else { //Neumann or Robin boundary
+      mesh->mask[n] = 1.;
+    }
+  }
+  mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
+  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+
+  gsParallelGatherScatterDestroy(allGsh);
+  free(gatherIds);
+
   // info for kernel construction
   occa::kernelInfo kernelInfo;
 
@@ -256,14 +303,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
-
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
-
-  solver->Nblock = Nblock;
-
   //add standard boundary functions
   char *boundaryHeaderFileName;
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
@@ -301,6 +340,45 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   else NblockG = 256/mesh->Np;
   kernelInfo.addDefine("p_NblockG", NblockG);
 
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);
+
+  mesh->gatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+               "gather",
+               kernelInfo);
+
+  mesh->scatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+               "scatter",
+               kernelInfo);
+
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+               "gatherScatter",
+               kernelInfo);
+
+  mesh->getKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+               "get",
+               kernelInfo);
+
+  mesh->putKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+               "put",
+               kernelInfo);
+
+  mesh->sumKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+               "sum",
+               kernelInfo);
+
+  mesh->addScalarKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+               "addScalar",
+               kernelInfo);
 
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
@@ -368,12 +446,12 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
 
     solver->gradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+               "ellipticGradientTri2D_v0",
            kernelInfo);
 
     solver->partialGradientKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-                 "ellipticPartialGradientTri2D",
+                 "ellipticPartialGradientTri2D_v0",
                   kernelInfo);
 
     solver->ipdgKernel =
@@ -476,6 +554,106 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
+
+    // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+  occaTimerTic(mesh->device,"GatherScatterSetup");
+  solver->ogs = meshParallelGatherScatterSetup(mesh,
+                 mesh->Np*mesh->Nelements,
+                 sizeof(dfloat),
+                 mesh->gatherLocalIds,
+                 mesh->gatherBaseIds,
+                 mesh->gatherHaloFlags);
+  occaTimerToc(mesh->device,"GatherScatterSetup");
+
+  /* node degree vector */
+  occaTimerTic(mesh->device,"DegreeVectorSetup");
+  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  // build degree vector
+  for(iint n=0;n<Ntotal;++n) degree[n] = 1;
+
+  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), degree);
+
+  ellipticParallelGatherScatterTri2D(mesh, solver->ogs, solver->o_invDegree, 
+                                      solver->o_invDegree, dfloatString, "add");
+
+  solver->o_invDegree.copyTo(degree);
+
+  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+    if(degree[n] == 0) printf("WARNING!!!!\n");
+    invDegree[n] = 1./degree[n];
+  }
+
+  solver->o_invDegree.copyFrom(invDegree);
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(mesh,
+                                     mesh->Np*mesh->Nelements,
+                                     sizeof(dfloat),
+                                     mesh->gatherLocalIds,
+                                     mesh->gatherBaseIds,
+                                     mesh->gatherHaloFlags,
+                                     &(solver->halo),
+                                     &(solver->nonHalo));
+
+  // count elements that contribute to global C0 gather-scatter
+  iint globalCount = 0;
+  iint localCount = 0;
+  iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
+
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n)
+    localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(localHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+      }
+      if(localHaloFlags[e*mesh->Np+n]<0){
+        printf("found halo flag %d\n", localHaloFlags[e*mesh->Np+n]);
+      }
+    }
+    globalCount += isHalo;
+    localCount += 1-isHalo;
+  }
+
+  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
+  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
+
+  globalCount = 0;
+  localCount = 0;
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(localHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+      }
+    }
+    if(isHalo){
+      globalGatherElementList[globalCount++] = e;
+    }
+    else{
+      localGatherElementList[localCount++] = e;
+    }
+  }
+  printf("local = %d, global = %d\n", localCount, globalCount);
+
+  solver->NglobalGatherElements = globalCount;
+  solver->NlocalGatherElements = localCount;
+
+  if(globalCount)
+    solver->o_globalGatherElementList =
+      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
+
+  if(localCount)
+    solver->o_localGatherElementList =
+      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+
+  free(localHaloFlags);
 
   free(DrT); free(DsT); free(LIFTT);
   free(D1ids); free(D2ids); free(D3ids); free(Dvals);
