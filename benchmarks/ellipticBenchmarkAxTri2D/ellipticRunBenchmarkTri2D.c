@@ -24,6 +24,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
 		sprintf(testkernelName, "%s_v%d", kernelName,  i);
 		printf("%s Kernel #%02d\n", kernelFileName, i);
+		printf("Np = %d sizeof(dfloat) = %d Nelements = %d \n", mesh->Np, sizeof(dfloat), mesh->Nelements);
 
 		testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
 
