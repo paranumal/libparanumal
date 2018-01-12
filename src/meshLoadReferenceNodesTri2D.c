@@ -108,7 +108,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   readDfloatArray(fp, "Sparse differentiation Srr values", &(mesh->sparseSrrT), &Nrows, &Ncols);
   readDfloatArray(fp, "Sparse differentiation Srs values", &(mesh->sparseSrsT), &Nrows, &Ncols);
   readDfloatArray(fp, "Sparse differentiation Sss values", &(mesh->sparseSssT), &Nrows, &Ncols);
-  mesh->SparseNnzPerRow = Ncols;
+  mesh->SparseNnzPerRow = Nrows;
 
   fclose(fp);
 

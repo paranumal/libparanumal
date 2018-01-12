@@ -1,3 +1,9 @@
+*
+!/**/
+!*.*
+
+!*/makefile
+
 *.o
 *.a
 .DS_STORE
@@ -7,3 +13,5 @@
 **/*.o
 **/*.c~
 **/makefile~
+*.m~
+*.nvprof

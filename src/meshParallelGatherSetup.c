@@ -49,9 +49,9 @@ int parallelCompareGlobalId(const void *a, const void *b){
 }
 
 hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint *globalNumbering,  // global index of nodes
-				      iint *globalOwners){   // node owners
+                  				      iint Nlocal,            // number of local nodes
+                  				      iint *globalNumbering,  // global index of nodes
+                  				      iint *globalOwners){   
 
   iint rank,size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -62,22 +62,19 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   parallelNode_t *nodes = (parallelNode_t *) calloc(Nlocal,sizeof(parallelNode_t));
 
   //populate node list
+  iint cnt = 0;
   for (iint n=0;n<Nlocal;n++) {
-    nodes[n].localId = n;
-    nodes[n].globalId = globalNumbering[n];
-    nodes[n].ownerRank = globalOwners[n];
+    if (globalNumbering[n] < 0) continue; //ignore negative global ids
+    nodes[cnt].localId = n;
+    nodes[cnt].globalId = globalNumbering[n];
+    nodes[cnt].ownerRank = globalOwners[n];
+    cnt++;
   }
+  Nlocal = cnt;
+  hgs->Nlocal = Nlocal;
 
   //sort by owning rank
   qsort(nodes, Nlocal, sizeof(parallelNode_t), parallelCompareOwnersAndGlobalId);
-
-  //count number of entries to gather (negative global ids are ignored)
-  hgs->Nlocal = 0;
-  for (iint n=0;n<Nlocal;n++) {
-    if (nodes[n].globalId<0) break;
-    hgs->Nlocal++;
-  }
-  Nlocal = hgs->Nlocal;
 
   //record this ordering
   hgs->sortIds = (iint *) calloc(Nlocal,sizeof(iint));
@@ -160,7 +157,7 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
 
   free(nodes);
 
-  //newNodes now conatains all the nodes which are owned by this rank. We just need to define the local gatherIds
+  //newNodes now contains all the nodes which are owned by this rank. We just need to define the local gatherIds
   for (iint n=0;n<NownedTotal;n++)
     newNodes[n].localId = n;
 
@@ -176,7 +173,7 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
 
   //count the number of globalIds to gather
   hgs->gatherOffsets = (iint *) calloc(hgs->Ngather+1,sizeof(iint));
-  iint cnt =1;
+  cnt = 1;
   if (NownedTotal) hgs->gatherOffsets[1]++;
   for (iint n=1;n<NownedTotal;n++) {
     if (newNodes[n].globalId!=newNodes[n-1].globalId) {
@@ -203,10 +200,10 @@ hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
   free(newNodes);
 
   //allocate device storage buffers
-  hgs->o_sortIds = mesh->device.malloc(Nlocal*sizeof(iint),hgs->sortIds);
-  hgs->o_gatherOffsets = mesh->device.malloc((hgs->Ngather+1)*sizeof(iint),hgs->gatherOffsets);
+  hgs->o_sortIds        = mesh->device.malloc(Nlocal*sizeof(iint),hgs->sortIds);
+  hgs->o_gatherOffsets  = mesh->device.malloc((hgs->Ngather+1)*sizeof(iint),hgs->gatherOffsets);
   hgs->o_gatherLocalIds = mesh->device.malloc(NownedTotal*sizeof(iint),hgs->gatherLocalIds);
-  hgs->o_invDegree = mesh->device.malloc(hgs->Ngather*sizeof(dfloat),hgs->invDegree);
+  hgs->o_invDegree      = mesh->device.malloc(hgs->Ngather*sizeof(dfloat),hgs->invDegree);
 
   iint tmpSize = mymax(Nlocal,NownedTotal);
   void *tmpBuffer = calloc(tmpSize,sizeof(dfloat));

@@ -183,9 +183,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-    ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
-                                           &V1, &coarseA, &nnzCoarseA,
-                                           &(precon->hgs), coarseGlobalStarts, options);
+    //TODO need to fix this to use the normal builder for OAS to work again
+    //ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+    //                                       &V1, &coarseA, &nnzCoarseA,
+    //                                       &(precon->hgs), coarseGlobalStarts, options);
 
     iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
