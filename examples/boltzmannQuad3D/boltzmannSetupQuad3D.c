@@ -91,13 +91,15 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat dudz = (uP-uM)/(2*delta);
       dfloat dvdz = (vP-vM)/(2*delta);
       dfloat dwdz = (wP-wM)/(2*delta);
+
+      dfloat divu = dudx + dvdy + dwdz;
       
-      dfloat sigma11 = nu*(dudx+dudx);
+      dfloat sigma11 = nu*(dudx+dudx - (2*divu/3));
       dfloat sigma12 = nu*(dvdx+dudy);
       dfloat sigma13 = nu*(dwdx+dudz);
-      dfloat sigma22 = nu*(dvdy+dvdy);
+      dfloat sigma22 = nu*(dvdy+dvdy - (2*divu/3));
       dfloat sigma23 = nu*(dwdy+dvdz);
-      dfloat sigma33 = nu*(dwdz+dwdz);
+      dfloat sigma33 = nu*(dwdz+dwdz - (2*divu/3));
 			     
       dfloat q1bar = rho;
       dfloat q2bar = rho*umod/mesh->sqrtRT;
