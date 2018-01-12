@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=NONE");
   //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -103,6 +103,11 @@ int main(int argc, char **argv){
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
   dfloat lambda = 0;
+
+  if (strstr(options,"SPARSE")&&(lambda!=0)) { //sanity check
+    printf("SPARSE not currently supported for screened Poisson\n");
+    exit(-1);
+  }
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -199,11 +204,14 @@ int main(int argc, char **argv){
     dfloat zero = 0.f;
     solver->rhsBCKernel(mesh->Nelements,
                         mesh->o_ggeo,
+                        mesh->o_sgeo,
                         mesh->o_SrrT,
                         mesh->o_SrsT,
                         mesh->o_SsrT,
                         mesh->o_SssT,
                         mesh->o_MM,
+                        mesh->o_vmapM,
+                        mesh->o_sMT,
                         lambda,
                         zero,
                         mesh->o_x,

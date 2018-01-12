@@ -1,7 +1,20 @@
 #include "ellipticTri2D.h"
 
 
-int parallelCompareRowColumn(const void *a, const void *b);
+// compare on global indices
+int parallelCompareRowColumn(const void *a, const void *b){
+
+  nonZero_t *fa = (nonZero_t*) a;
+  nonZero_t *fb = (nonZero_t*) b;
+
+  if(fa->row < fb->row) return -1;
+  if(fa->row > fb->row) return +1;
+
+  if(fa->col < fb->col) return -1;
+  if(fa->col > fb->col) return +1;
+
+  return 0;
+}
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
 
@@ -21,16 +34,13 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
-
+  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts, mesh->mask);
+  
   //use the ordering to define a gather+scatter for assembly
   *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
-  iint   *rows = (iint*) calloc(nnzLocal, sizeof(iint));
-  iint   *cols = (iint*) calloc(nnzLocal, sizeof(iint));
-  dfloat *vals = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
@@ -38,12 +48,47 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
+  dfloat *Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *MM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+
+  if (strstr(options,"SPARSE")) {
+    for (int k=0;k<mesh->SparseNnzPerRow;k++) {
+      for (int n=0;n<mesh->Np;n++) {
+        int m = mesh->sparseStackedNZ[n+k*mesh->Np]-1;
+        if (m>-1) {
+          Srr[m+n*mesh->Np] = mesh->sparseSrrT[n+k*mesh->Np];
+          Srs[m+n*mesh->Np] = mesh->sparseSrsT[n+k*mesh->Np];
+          Sss[m+n*mesh->Np] = mesh->sparseSssT[n+k*mesh->Np];  
+        }
+      }
+    }
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        MM[m+n*mesh->Np] = mesh->sparseMM[m+n*mesh->Np];
+      }
+    }
+  } else {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        Srr[m+n*mesh->Np] = mesh->Srr[m+n*mesh->Np];
+        Srs[m+n*mesh->Np] = mesh->Srs[m+n*mesh->Np] + mesh->Ssr[m+n*mesh->Np];
+        Sss[m+n*mesh->Np] = mesh->Sss[m+n*mesh->Np];
+        MM[m+n*mesh->Np] = mesh->MM[m+n*mesh->Np];
+      }
+    }
+  }
+
   //Build unassembed non-zeros
-  printf("Building full matrix system\n");
+  printf("Building full matrix system\n"); 
   iint cnt =0;
   for (iint e=0;e<mesh->Nelements;e++) {
     for (iint n=0;n<mesh->Np;n++) {
+      if (globalNumbering[e*mesh->Np + n]<0) continue; //skip masked nodes
       for (iint m=0;m<mesh->Np;m++) {
+        if (globalNumbering[e*mesh->Np + m]<0) continue; //skip masked nodes
+
         dfloat val = 0.;
 
         dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
@@ -51,18 +96,16 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
         dfloat Gss = mesh->ggeo[e*mesh->Nggeo + G11ID];
         dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
-        val += Grr*mesh->Srr[m+n*mesh->Np];
-        val += Grs*mesh->Srs[m+n*mesh->Np];
-        val += Grs*mesh->Ssr[m+n*mesh->Np];
-        val += Gss*mesh->Sss[m+n*mesh->Np];
-        val += J*lambda*mesh->MM[m+n*mesh->Np];
+        val += Grr*Srr[m+n*mesh->Np];
+        val += Grs*Srs[m+n*mesh->Np];
+        val += Gss*Sss[m+n*mesh->Np];
+        val += J*lambda*MM[m+n*mesh->Np];
+
+        if (strstr(options,"SPARSE")) 
+          val *= mesh->mapSgn[m + e*mesh->Np]*mesh->mapSgn[n + e*mesh->Np];
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          vals[cnt] = val;
-          rows[cnt] = e*mesh->Np + n;
-          cols[cnt] = e*mesh->Np + m;
-
           // pack non-zero
           sendNonZeros[cnt].val = val;
           sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
@@ -117,11 +160,15 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   *nnz = cnt+1;
 
   free(globalNumbering); free(globalOwners);
-  free(rows); free(cols); free(vals);
   free(sendNonZeros);
 
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
   free(ArecvOffsets);
+
+  free(Srr);
+  free(Srs);
+  free(Sss);
+  free(MM );
 }
