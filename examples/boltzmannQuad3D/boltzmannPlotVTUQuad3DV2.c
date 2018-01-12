@@ -98,7 +98,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticit\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   dfloat *vort = (dfloat*) calloc(mesh->Np*mesh->dim, sizeof(dfloat));
-  
+  dfloat *plotVortRadial = (dfloat*) calloc(mesh->plotNp*mesh->Nelements, sizeof(dfloat));
   for(iint e=0;e<mesh->Nelements;++e){
 
     // compute vorticity
@@ -152,6 +152,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	vort[base+0*mesh->Np] = dwdy - dvdz;
 	vort[base+1*mesh->Np] = dudz - dwdx;
 	vort[base+2*mesh->Np] = dvdx - dudy;
+
       }
     }
     
@@ -170,17 +171,42 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
         plotvort1n += mesh->plotInterp[n*mesh->Np+m]*vort1m;
         plotvort2n += mesh->plotInterp[n*mesh->Np+m]*vort2m;
 	plotvort3n += mesh->plotInterp[n*mesh->Np+m]*vort3m;
-        
       }
-    
+
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotvort1n, plotvort2n, plotvort3n);
+
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
+	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
+	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
+      }
+      
+      plotVortRadial[n + mesh->plotNp*e] =
+	plotxn*plotvort1n + 
+	plotyn*plotvort2n + 
+	plotzn*plotvort3n;
+      
     }
   }
   fprintf(fp, "       </DataArray>\n");
 
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"RadialVorticity\" NumberOfComponents=\"1\" Format=\"ascii\">\n");
 
-  
+  for(iint e=0;e<mesh->Nelements;++e){
+
+    // compute vorticity
+    for(iint n=0;n<mesh->plotNp;++n){
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotVortRadial[n+e*mesh->plotNp]);
+    }
+  }
+
+  fprintf(fp, "       </DataArray>\n");
+
+  free(vort);
+  free(plotVortRadial);
 
   // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   // for(iint e=0;e<mesh->Nelements;++e){
