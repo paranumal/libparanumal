@@ -12,7 +12,7 @@ kernel void ellipticAddBCTri2D(const int Nelements,
 
       dfloat dudxP=0, dudyP=0, uP=0;
 
-      if(bc>0) {
+      if(bc==1) {
         ellipticBoundaryConditions2D(bc, t, x[id], y[id], 0.f, 0.f, \
                                       0.f, 0.f, 0.f,                \
                                       uP, dudxP, dudyP);
