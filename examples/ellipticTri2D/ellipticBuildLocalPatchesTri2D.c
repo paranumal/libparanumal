@@ -11,6 +11,9 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
                         dfloat *MS, iint eM, dfloat *A);
 
+//returns the C0FEM patch A matrix for element eM
+void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda, iint* BCType,
+                        iint eM, dfloat *A);
 
 void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
@@ -528,3 +531,40 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
   free(Gx); free(Gy);
 }
 
+//returns the continuous C0 patch A matrix for element eM
+void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
+                                  iint eM, dfloat *A) {
+
+  iint gbase = eM*mesh->Nggeo;
+  dfloat Grr = mesh->ggeo[gbase + G00ID];
+  dfloat Grs = mesh->ggeo[gbase + G01ID];
+  dfloat Gss = mesh->ggeo[gbase + G11ID];
+  dfloat J   = mesh->ggeo[gbase + GWJID];
+
+  /* start with stiffness matrix  */
+  for(iint n=0;n<mesh->Np;++n){
+    if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
+      for(iint m=0;m<mesh->Np;++m){
+        if (mesh->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
+        A[n*mesh->Np+m] += Grr*mesh->Srr[m+n*mesh->Np];
+        A[n*mesh->Np+m] += Grs*mesh->Srs[m+n*mesh->Np];
+        A[n*mesh->Np+m] += Grs*mesh->Ssr[m+n*mesh->Np];
+        A[n*mesh->Np+m] += Gss*mesh->Sss[m+n*mesh->Np];
+        A[n*mesh->Np+m] += J*lambda*mesh->MM[m+n*mesh->Np];
+      }
+    } else {
+      A[n+n*mesh->Np] = 1; //just put a 1 so A is invertable
+    }
+  }
+
+  //add the rank boost for the allNeumann Poisson problem
+  if (solver->allNeumann) {
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){
+        A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+      }
+    }
+  }
+  
+  free(Ae);
+}

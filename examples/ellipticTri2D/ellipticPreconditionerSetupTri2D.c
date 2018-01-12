@@ -80,7 +80,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       // extra storage for smoothing op
       levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
 
-            dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+      dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
       if(strstr(options, "EXACT")){
         rateTolerance = 0.0;
       } else {
