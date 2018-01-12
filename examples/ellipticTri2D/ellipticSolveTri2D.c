@@ -2,549 +2,549 @@
 
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
-  mesh_t *mesh = solver->mesh;
+	mesh_t *mesh = solver->mesh;
 
-  occaTimerTic(mesh->device,"AxKernel");
+	occaTimerTic(mesh->device,"AxKernel");
 
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-  dfloat *gradSendBuffer = solver->gradSendBuffer;
-  dfloat *gradRecvBuffer = solver->gradRecvBuffer;
+	dfloat *sendBuffer = solver->sendBuffer;
+	dfloat *recvBuffer = solver->recvBuffer;
+	dfloat *gradSendBuffer = solver->gradSendBuffer;
+	dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
-  dfloat alpha = 0., alphaG =0.;
-  iint Nblock = solver->Nblock;
-  dfloat *tmp = solver->tmp;
-  occa::memory &o_tmp = solver->o_tmp;
+	dfloat alpha = 0., alphaG =0.;
+	iint Nblock = solver->Nblock;
+	dfloat *tmp = solver->tmp;
+	occa::memory &o_tmp = solver->o_tmp;
 
-  if(strstr(options, "CONTINUOUS")){
-    ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo;
+	if(strstr(options, "CONTINUOUS")){
+		ogs_t *nonHalo = solver->nonHalo;
+		ogs_t *halo = solver->halo;
 
-    //pre-mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_q, mesh->o_mask, o_q);
+		//pre-mask
+		solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_q, mesh->o_mask, o_q);
 
-    if(solver->allNeumann)
-      //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+		if(solver->allNeumann)
+			//solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
+			mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(halo->Ngather) {
-      if (strstr(options, "SPARSE")){
-        solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
-            mesh->o_MM, lambda, o_q, o_Aq);
-      } else{
-        solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-            mesh->o_MM, lambda, o_q, o_Aq);
-      }
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
-      halo->o_gatherTmp.copyTo(halo->gatherTmp);
-    }
-    if(nonHalo->Ngather){
-      if (strstr(options, "SPARSE")){
-        solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
-            mesh->o_MM, lambda, o_q, o_Aq);
-      } else {
-        solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-            mesh->o_MM, lambda, o_q, o_Aq);
-      }
-    }
-    if(solver->allNeumann) {
-      o_tmp.copyTo(tmp);
+		if(halo->Ngather) {
+			if (strstr(options, "SPARSE")){
+				solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+						mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
+						mesh->o_MM, lambda, o_q, o_Aq);
+			} else{
+				solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
+						mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+						mesh->o_MM, lambda, o_q, o_Aq);
+			}
+			mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
+			halo->o_gatherTmp.copyTo(halo->gatherTmp);
+		}
+		if(nonHalo->Ngather){
+			if (strstr(options, "SPARSE")){
+				solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+						mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
+						mesh->o_MM, lambda, o_q, o_Aq);
+			} else {
+				solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
+						mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
+						mesh->o_MM, lambda, o_q, o_Aq);
+			}
+		}
+		if(solver->allNeumann) {
+			o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
-        alpha += tmp[n];
+			for(iint n=0;n<Nblock;++n)
+				alpha += tmp[n];
 
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
-    }
+			MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+			alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+		}
 
-    // C0 halo gather-scatter (on data stream)
-    if(halo->Ngather) {
-      occa::streamTag tag;
+		// C0 halo gather-scatter (on data stream)
+		if(halo->Ngather) {
+			occa::streamTag tag;
 
-      // MPI based gather scatter using libgs
-      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add");
+			// MPI based gather scatter using libgs
+			gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add");
 
-      // copy totally gather halo data back from HOST to DEVICE
-      mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
+			// copy totally gather halo data back from HOST to DEVICE
+			mesh->device.setStream(solver->dataStream);
+			halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
 
-      // wait for async copy
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
+			// wait for async copy
+			tag = mesh->device.tagStream();
+			mesh->device.waitFor(tag);
 
-      // do scatter back to local nodes
-      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
+			// do scatter back to local nodes
+			mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
 
-      // make sure the scatter has finished on the data stream
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-    }
+			// make sure the scatter has finished on the data stream
+			tag = mesh->device.tagStream();
+			mesh->device.waitFor(tag);
+		}
 
-    if(solver->allNeumann) {
-      mesh->addScalarKernel((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np, alphaG, o_Aq);
-      //dfloat one = 1.f;
-      //solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
-    }
+		if(solver->allNeumann) {
+			mesh->addScalarKernel((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np, alphaG, o_Aq);
+			//dfloat one = 1.f;
+			//solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
+		}
 
-    // finalize gather using local and global contributions
-    mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather) {
-      if (strstr(options,"SPARSE")) { //TODO need to make the sign slip correction for the halo too
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
-        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
-      } else {
-        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-      }
-    }
+		// finalize gather using local and global contributions
+		mesh->device.setStream(solver->defaultStream);
+		if(nonHalo->Ngather) {
+			if (strstr(options,"SPARSE")) { //TODO need to make the sign slip correction for the halo too
+				solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+				mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+				solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+			} else {
+				mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+			}
+		}
 
-    //post-mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mask, o_Aq);
+		//post-mask
+		solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mask, o_Aq);
 
-  } else if(strstr(options, "IPDG")) {
-    iint offset = 0;
-    dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
-    dfloat *tmp = solver->tmp;
-    occa::memory &o_tmp = solver->o_tmp;
+	} else if(strstr(options, "IPDG")) {
+		iint offset = 0;
+		dfloat alpha = 0., alphaG =0.;
+		iint Nblock = solver->Nblock;
+		dfloat *tmp = solver->tmp;
+		occa::memory &o_tmp = solver->o_tmp;
 
-    ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
+		ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
-    if(strstr(options, "NODAL")) {
-      solver->partialGradientKernel(mesh->Nelements,
-          offset,
-          mesh->o_vgeo,
-          mesh->o_DrT,
-          mesh->o_DsT,
-          o_q,
-          solver->o_grad);
-    } else if(strstr(options, "BERN")) {
-      solver->partialGradientKernel(mesh->Nelements,
-          offset,
-          mesh->o_vgeo,
-          mesh->o_D1ids,
-          mesh->o_D2ids,
-          mesh->o_D3ids,
-          mesh->o_Dvals,
-          o_q,
-          solver->o_grad);
-    }
+		if(strstr(options, "NODAL")) {
+			solver->partialGradientKernel(mesh->Nelements,
+					offset,
+					mesh->o_vgeo,
+					mesh->o_DrT,
+					mesh->o_DsT,
+					o_q,
+					solver->o_grad);
+		} else if(strstr(options, "BERN")) {
+			solver->partialGradientKernel(mesh->Nelements,
+					offset,
+					mesh->o_vgeo,
+					mesh->o_D1ids,
+					mesh->o_D2ids,
+					mesh->o_D3ids,
+					mesh->o_Dvals,
+					o_q,
+					solver->o_grad);
+		}
 
-    ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
+		ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
-    //Start the rank 1 augmentation if all BCs are Neumann
-    //TODO this could probably be moved inside the Ax kernel for better performance
-    if(solver->allNeumann)
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+		//Start the rank 1 augmentation if all BCs are Neumann
+		//TODO this could probably be moved inside the Ax kernel for better performance
+		if(solver->allNeumann)
+			mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(mesh->NinternalElements) {
-      if(strstr(options, "NODAL")) {
-        solver->partialIpdgKernel(mesh->NinternalElements,
-            mesh->o_internalElementIds,
-            mesh->o_vmapM,
-            mesh->o_vmapP,
-            lambda,
-            solver->tau,
-            mesh->o_vgeo,
-            mesh->o_sgeo,
-            solver->o_EToB,
-            mesh->o_DrT,
-            mesh->o_DsT,
-            mesh->o_LIFTT,
-            mesh->o_MM,
-            solver->o_grad,
-            o_Aq);
-      } else if(strstr(options, "BERN")) {
-        solver->partialIpdgKernel(mesh->NinternalElements,
-            mesh->o_internalElementIds,
-            mesh->o_vmapM,
-            mesh->o_vmapP,
-            lambda,
-            solver->tau,
-            mesh->o_vgeo,
-            mesh->o_sgeo,
-            solver->o_EToB,
-            mesh->o_D1ids,
-            mesh->o_D2ids,
-            mesh->o_D3ids,
-            mesh->o_Dvals,
-            mesh->o_L0vals,
-            mesh->o_ELids,
-            mesh->o_ELvals,
-            mesh->o_BBMM,
-            solver->o_grad,
-            o_Aq);
-      }
-    }
+		if(mesh->NinternalElements) {
+			if(strstr(options, "NODAL")) {
+				solver->partialIpdgKernel(mesh->NinternalElements,
+						mesh->o_internalElementIds,
+						mesh->o_vmapM,
+						mesh->o_vmapP,
+						lambda,
+						solver->tau,
+						mesh->o_vgeo,
+						mesh->o_sgeo,
+						solver->o_EToB,
+						mesh->o_DrT,
+						mesh->o_DsT,
+						mesh->o_LIFTT,
+						mesh->o_MM,
+						solver->o_grad,
+						o_Aq);
+			} else if(strstr(options, "BERN")) {
+				solver->partialIpdgKernel(mesh->NinternalElements,
+						mesh->o_internalElementIds,
+						mesh->o_vmapM,
+						mesh->o_vmapP,
+						lambda,
+						solver->tau,
+						mesh->o_vgeo,
+						mesh->o_sgeo,
+						solver->o_EToB,
+						mesh->o_D1ids,
+						mesh->o_D2ids,
+						mesh->o_D3ids,
+						mesh->o_Dvals,
+						mesh->o_L0vals,
+						mesh->o_ELids,
+						mesh->o_ELvals,
+						mesh->o_BBMM,
+						solver->o_grad,
+						o_Aq);
+			}
+		}
 
-    if(solver->allNeumann) {
-      o_tmp.copyTo(tmp);
+		if(solver->allNeumann) {
+			o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
-        alpha += tmp[n];
+			for(iint n=0;n<Nblock;++n)
+				alpha += tmp[n];
 
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
-    }
+			MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+			alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+		}
 
-    ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
+		ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
 
-    if(mesh->totalHaloPairs){
-      offset = mesh->Nelements;
-      if(strstr(options, "NODAL")) {
-        solver->partialGradientKernel(mesh->Nelements,
-            offset,
-            mesh->o_vgeo,
-            mesh->o_DrT,
-            mesh->o_DsT,
-            o_q,
-            solver->o_grad);
-      } else if(strstr(options, "BERN")) {
-        solver->partialGradientKernel(mesh->Nelements,
-            offset,
-            mesh->o_vgeo,
-            mesh->o_D1ids,
-            mesh->o_D2ids,
-            mesh->o_D3ids,
-            mesh->o_Dvals,
-            o_q,
-            solver->o_grad);
-      }
-    }
+		if(mesh->totalHaloPairs){
+			offset = mesh->Nelements;
+			if(strstr(options, "NODAL")) {
+				solver->partialGradientKernel(mesh->Nelements,
+						offset,
+						mesh->o_vgeo,
+						mesh->o_DrT,
+						mesh->o_DsT,
+						o_q,
+						solver->o_grad);
+			} else if(strstr(options, "BERN")) {
+				solver->partialGradientKernel(mesh->Nelements,
+						offset,
+						mesh->o_vgeo,
+						mesh->o_D1ids,
+						mesh->o_D2ids,
+						mesh->o_D3ids,
+						mesh->o_Dvals,
+						o_q,
+						solver->o_grad);
+			}
+		}
 
-    if(mesh->NnotInternalElements) {
-      if(strstr(options, "NODAL")) {
-        solver->partialIpdgKernel(mesh->NnotInternalElements,
-            mesh->o_notInternalElementIds,
-            mesh->o_vmapM,
-            mesh->o_vmapP,
-            lambda,
-            solver->tau,
-            mesh->o_vgeo,
-            mesh->o_sgeo,
-            solver->o_EToB,
-            mesh->o_DrT,
-            mesh->o_DsT,
-            mesh->o_LIFTT,
-            mesh->o_MM,
-            solver->o_grad,
-            o_Aq);
-      } else if(strstr(options, "BERN")) {
-        solver->partialIpdgKernel(mesh->NnotInternalElements,
-            mesh->o_notInternalElementIds,
-            mesh->o_vmapM,
-            mesh->o_vmapP,
-            lambda,
-            solver->tau,
-            mesh->o_vgeo,
-            mesh->o_sgeo,
-            solver->o_EToB,
-            mesh->o_D1ids,
-            mesh->o_D2ids,
-            mesh->o_D3ids,
-            mesh->o_Dvals,
-            mesh->o_L0vals,
-            mesh->o_ELids,
-            mesh->o_ELvals,
-            mesh->o_BBMM,
-            solver->o_grad,
-            o_Aq);
-      }
-    }
+		if(mesh->NnotInternalElements) {
+			if(strstr(options, "NODAL")) {
+				solver->partialIpdgKernel(mesh->NnotInternalElements,
+						mesh->o_notInternalElementIds,
+						mesh->o_vmapM,
+						mesh->o_vmapP,
+						lambda,
+						solver->tau,
+						mesh->o_vgeo,
+						mesh->o_sgeo,
+						solver->o_EToB,
+						mesh->o_DrT,
+						mesh->o_DsT,
+						mesh->o_LIFTT,
+						mesh->o_MM,
+						solver->o_grad,
+						o_Aq);
+			} else if(strstr(options, "BERN")) {
+				solver->partialIpdgKernel(mesh->NnotInternalElements,
+						mesh->o_notInternalElementIds,
+						mesh->o_vmapM,
+						mesh->o_vmapP,
+						lambda,
+						solver->tau,
+						mesh->o_vgeo,
+						mesh->o_sgeo,
+						solver->o_EToB,
+						mesh->o_D1ids,
+						mesh->o_D2ids,
+						mesh->o_D3ids,
+						mesh->o_Dvals,
+						mesh->o_L0vals,
+						mesh->o_ELids,
+						mesh->o_ELvals,
+						mesh->o_BBMM,
+						solver->o_grad,
+						o_Aq);
+			}
+		}
 
-    if(solver->allNeumann)
-      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
+		if(solver->allNeumann)
+			mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
 
-  } else if (strstr(options, "BRDG")){
+	} else if (strstr(options, "BRDG")){
 
-    iint offset = 0;
-    dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
-    dfloat *tmp = solver->tmp;
-    occa::memory &o_tmp = solver->o_tmp;
+		iint offset = 0;
+		dfloat alpha = 0., alphaG =0.;
+		iint Nblock = solver->Nblock;
+		dfloat *tmp = solver->tmp;
+		occa::memory &o_tmp = solver->o_tmp;
 
-    ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
-    ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
+		ellipticStartHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
+		ellipticInterimHaloExchange2D(solver, o_q, mesh->Np, sendBuffer, recvBuffer);
 
-    if(strstr(options, "NODAL")) {
-      solver->BRGradientVolumeKernel(mesh->Nelements,
-          mesh->o_vgeo,
-          mesh->o_DrT,
-          mesh->o_DsT,
-          o_q,
-          solver->o_grad);
-    } else if(strstr(options, "BERN")) {
-      solver->BRGradientVolumeKernel(mesh->Nelements,
-          mesh->o_vgeo,
-          mesh->o_D1ids,
-          mesh->o_D2ids,
-          mesh->o_D3ids,
-          mesh->o_Dvals,
-          o_q,
-          solver->o_grad);
-    }
+		if(strstr(options, "NODAL")) {
+			solver->BRGradientVolumeKernel(mesh->Nelements,
+					mesh->o_vgeo,
+					mesh->o_DrT,
+					mesh->o_DsT,
+					o_q,
+					solver->o_grad);
+		} else if(strstr(options, "BERN")) {
+			solver->BRGradientVolumeKernel(mesh->Nelements,
+					mesh->o_vgeo,
+					mesh->o_D1ids,
+					mesh->o_D2ids,
+					mesh->o_D3ids,
+					mesh->o_Dvals,
+					o_q,
+					solver->o_grad);
+		}
 
-    ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
+		ellipticEndHaloExchange2D(solver, o_q, mesh->Np, recvBuffer);
 
-    if(strstr(options, "NODAL")) {
-      solver->BRGradientSurfaceKernel(mesh->Nelements,
-          mesh->o_vmapM,
-          mesh->o_vmapP,
-          mesh->o_sgeo,
-          solver->o_EToB,
-          mesh->o_LIFTT,
-          o_q,
-          solver->o_grad);
-    } else if(strstr(options, "BERN")) {
-      solver->BRGradientSurfaceKernel(mesh->Nelements,
-          mesh->o_vmapM,
-          mesh->o_vmapP,
-          mesh->o_sgeo,
-          solver->o_EToB,
-          mesh->o_L0vals,
-          mesh->o_ELids,
-          mesh->o_ELvals,
-          o_q,
-          solver->o_grad);
-    }
+		if(strstr(options, "NODAL")) {
+			solver->BRGradientSurfaceKernel(mesh->Nelements,
+					mesh->o_vmapM,
+					mesh->o_vmapP,
+					mesh->o_sgeo,
+					solver->o_EToB,
+					mesh->o_LIFTT,
+					o_q,
+					solver->o_grad);
+		} else if(strstr(options, "BERN")) {
+			solver->BRGradientSurfaceKernel(mesh->Nelements,
+					mesh->o_vmapM,
+					mesh->o_vmapP,
+					mesh->o_sgeo,
+					solver->o_EToB,
+					mesh->o_L0vals,
+					mesh->o_ELids,
+					mesh->o_ELvals,
+					o_q,
+					solver->o_grad);
+		}
 
-    //Start the rank 1 augmentation if all BCs are Neumann
-    //TODO this could probably be moved inside the Ax kernel for better performance
-    if(solver->allNeumann)  {
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+		//Start the rank 1 augmentation if all BCs are Neumann
+		//TODO this could probably be moved inside the Ax kernel for better performance
+		if(solver->allNeumann)  {
+			mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-      o_tmp.copyTo(tmp);
+			o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
-        alpha += tmp[n];
+			for(iint n=0;n<Nblock;++n)
+				alpha += tmp[n];
 
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
-    }
+			MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+			alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+		}
 
-    ellipticStartHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
-    ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
+		ellipticStartHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
+		ellipticInterimHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradSendBuffer, gradRecvBuffer);
 
-    if(strstr(options, "NODAL")) {
-      solver->BRDivergenceVolumeKernel(mesh->Nelements,
-          mesh->o_vgeo,
-          mesh->o_DrT,
-          mesh->o_DsT,
-          solver->o_grad,
-          o_Aq);
-    } else if(strstr(options, "BERN")) {
-      solver->BRDivergenceVolumeKernel(mesh->Nelements,
-          mesh->o_vgeo,
-          mesh->o_D1ids,
-          mesh->o_D2ids,
-          mesh->o_D3ids,
-          mesh->o_Dvals,
-          solver->o_grad,
-          o_Aq);
-    }
+		if(strstr(options, "NODAL")) {
+			solver->BRDivergenceVolumeKernel(mesh->Nelements,
+					mesh->o_vgeo,
+					mesh->o_DrT,
+					mesh->o_DsT,
+					solver->o_grad,
+					o_Aq);
+		} else if(strstr(options, "BERN")) {
+			solver->BRDivergenceVolumeKernel(mesh->Nelements,
+					mesh->o_vgeo,
+					mesh->o_D1ids,
+					mesh->o_D2ids,
+					mesh->o_D3ids,
+					mesh->o_Dvals,
+					solver->o_grad,
+					o_Aq);
+		}
 
-    ellipticEndHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradRecvBuffer);
+		ellipticEndHaloExchange2D(solver, solver->o_grad, 2*mesh->Np, gradRecvBuffer);
 
-    if(strstr(options, "NODAL")) {
-      solver->BRDivergenceSurfaceKernel(mesh->Nelements,
-          mesh->o_vmapM,
-          mesh->o_vmapP,
-          lambda,
-          solver->tau,
-          mesh->o_vgeo,
-          mesh->o_sgeo,
-          solver->o_EToB,
-          mesh->o_LIFTT,
-          mesh->o_MM,
-          o_q,
-          solver->o_grad,
-          o_Aq);
-    } else if(strstr(options, "BERN")) {
-      solver->BRDivergenceSurfaceKernel(mesh->Nelements,
-          mesh->o_vmapM,
-          mesh->o_vmapP,
-          lambda,
-          solver->tau,
-          mesh->o_vgeo,
-          mesh->o_sgeo,
-          solver->o_EToB,
-          mesh->o_L0vals,
-          mesh->o_ELids,
-          mesh->o_ELvals,
-          mesh->o_BBMM,
-          o_q,
-          solver->o_grad,
-          o_Aq);
-    }
+		if(strstr(options, "NODAL")) {
+			solver->BRDivergenceSurfaceKernel(mesh->Nelements,
+					mesh->o_vmapM,
+					mesh->o_vmapP,
+					lambda,
+					solver->tau,
+					mesh->o_vgeo,
+					mesh->o_sgeo,
+					solver->o_EToB,
+					mesh->o_LIFTT,
+					mesh->o_MM,
+					o_q,
+					solver->o_grad,
+					o_Aq);
+		} else if(strstr(options, "BERN")) {
+			solver->BRDivergenceSurfaceKernel(mesh->Nelements,
+					mesh->o_vmapM,
+					mesh->o_vmapP,
+					lambda,
+					solver->tau,
+					mesh->o_vgeo,
+					mesh->o_sgeo,
+					solver->o_EToB,
+					mesh->o_L0vals,
+					mesh->o_ELids,
+					mesh->o_ELvals,
+					mesh->o_BBMM,
+					o_q,
+					solver->o_grad,
+					o_Aq);
+		}
 
-    if(solver->allNeumann)
-      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-  }
-  // o_Aq.copyFrom(o_q);
+		if(solver->allNeumann)
+			mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
+	}
+	// o_Aq.copyFrom(o_q);
 
-  occaTimerToc(mesh->device,"AxKernel");
+	occaTimerToc(mesh->device,"AxKernel");
 }
 
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
-  mesh_t *mesh = solver->mesh;
+	mesh_t *mesh = solver->mesh;
 
-  iint Ntotal = mesh->Nelements*mesh->Np;
+	iint Ntotal = mesh->Nelements*mesh->Np;
 
-  // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
-  occaTimerTic(mesh->device,"scaledAddKernel");
-  solver->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
-  occaTimerToc(mesh->device,"scaledAddKernel");
+	// b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
+	occaTimerTic(mesh->device,"scaledAddKernel");
+	solver->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
+	occaTimerToc(mesh->device,"scaledAddKernel");
 }
 
 dfloat ellipticWeightedInnerProduct(solver_t *solver,
-    occa::memory &o_w,
-    occa::memory &o_a,
-    occa::memory &o_b,
-    const char *options){
+		occa::memory &o_w,
+		occa::memory &o_a,
+		occa::memory &o_b,
+		const char *options){
 
-  mesh_t *mesh = solver->mesh;
-  dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+	mesh_t *mesh = solver->mesh;
+	dfloat *tmp = solver->tmp;
+	iint Nblock = solver->Nblock;
+	iint Ntotal = mesh->Nelements*mesh->Np;
 
-  occa::memory &o_tmp = solver->o_tmp;
+	occa::memory &o_tmp = solver->o_tmp;
 
-  occaTimerTic(mesh->device,"weighted inner product2");
+	occaTimerTic(mesh->device,"weighted inner product2");
 
-  if(strstr(options,"CONTINUOUS"))
-    solver->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
-  else
-    solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+	if(strstr(options,"CONTINUOUS"))
+		solver->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
+	else
+		solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
 
-  occaTimerToc(mesh->device,"weighted inner product2");
+	occaTimerToc(mesh->device,"weighted inner product2");
 
-  o_tmp.copyTo(tmp);
+	o_tmp.copyTo(tmp);
 
-  dfloat wab = 0;
-  for(iint n=0;n<Nblock;++n){
-    wab += tmp[n];
-  }
+	dfloat wab = 0;
+	for(iint n=0;n<Nblock;++n){
+		wab += tmp[n];
+	}
 
-  dfloat globalwab = 0;
-  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+	dfloat globalwab = 0;
+	MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
-  return globalwab;
+	return globalwab;
 }
 
 dfloat ellipticInnerProduct(solver_t *solver,
-    occa::memory &o_a,
-    occa::memory &o_b){
+		occa::memory &o_a,
+		occa::memory &o_b){
 
 
-  mesh_t *mesh = solver->mesh;
-  dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+	mesh_t *mesh = solver->mesh;
+	dfloat *tmp = solver->tmp;
+	iint Nblock = solver->Nblock;
+	iint Ntotal = mesh->Nelements*mesh->Np;
 
-  occa::memory &o_tmp = solver->o_tmp;
+	occa::memory &o_tmp = solver->o_tmp;
 
-  occaTimerTic(mesh->device,"inner product");
-  solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-  occaTimerToc(mesh->device,"inner product");
+	occaTimerTic(mesh->device,"inner product");
+	solver->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
+	occaTimerToc(mesh->device,"inner product");
 
-  o_tmp.copyTo(tmp);
+	o_tmp.copyTo(tmp);
 
-  dfloat ab = 0;
-  for(iint n=0;n<Nblock;++n){
-    ab += tmp[n];
-  }
+	dfloat ab = 0;
+	for(iint n=0;n<Nblock;++n){
+		ab += tmp[n];
+	}
 
-  dfloat globalab = 0;
-  MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+	dfloat globalab = 0;
+	MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
-  return globalab;
+	return globalab;
 }
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
-    occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV){
+		occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV){
 
-  mesh2D *mesh = solver->mesh;
+	mesh2D *mesh = solver->mesh;
 
-  // gather-scatter
-  if(strstr(options, "CONTINUOUS")){
-    if (strstr(options,"SPARSE")) {
-      //sign correction for gs
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-    } else {
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
-    }
-  
-    //mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mask, o_r);
-  }
+	// gather-scatter
+	if(strstr(options, "CONTINUOUS")){
+		if (strstr(options,"SPARSE")) {
+			//sign correction for gs
+			solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
+			ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
+			solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
+		} else {
+			ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
+		}
 
-  int Niter;
-  iint maxIter = 500; 
+		//mask
+		solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mask, o_r);
+	}
 
-  double start, end;
+	int Niter;
+	iint maxIter = 500; 
 
-  if(strstr(options,"VERBOSE")){
-    mesh->device.finish();
-    start = MPI_Wtime(); 
-  }
+	double start, end;
 
-  occaTimerTic(mesh->device,"Linear Solve");
-  if(strstr(options, "GMRES")) {
-    Niter = pgmresm  (solver, options, lambda, o_r, o_x, tol, maxIter);
-  } else if(strstr(options, "BiCGStab")) {
-    Niter = pbicgstab(solver, options, lambda, o_r, o_x, tol, maxIter);
-  } else if(strstr(options, "CG")) {
-    Niter = pcg      (solver, options, lambda, o_r, o_x, tol, maxIter);
-  }
-  occaTimerToc(mesh->device,"Linear Solve");
-  
-  if(strstr(options, "CONTINUOUS")){
-    dfloat zero = 0.;
-    solver->addBCKernel(mesh->Nelements,
-                       zero,
-                       mesh->o_x,
-                       mesh->o_y,
-                       mesh->o_mapB,
-                       o_x);
-  }
+	if(strstr(options,"VERBOSE")){
+		mesh->device.finish();
+		start = MPI_Wtime(); 
+	}
 
-  iint rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	occaTimerTic(mesh->device,"Linear Solve");
+	if(strstr(options, "GMRES")) {
+		Niter = pgmresm  (solver, options, lambda, o_r, o_x, tol, maxIter);
+	} else if(strstr(options, "BiCGStab")) {
+		Niter = pbicgstab(solver, options, lambda, o_r, o_x, tol, maxIter);
+	} else if(strstr(options, "CG")) {
+		Niter = pcg      (solver, options, lambda, o_r, o_x, tol, maxIter);
+	}
+	occaTimerToc(mesh->device,"Linear Solve");
 
-  if(strstr(options,"VERBOSE")){
-    mesh->device.finish();
-    end = MPI_Wtime();
-    double localElapsed = end-start;
+	if(strstr(options, "CONTINUOUS")){
+		dfloat zero = 0.;
+		solver->addBCKernel(mesh->Nelements,
+				zero,
+				mesh->o_x,
+				mesh->o_y,
+				mesh->o_mapB,
+				o_x);
+	}
 
-    occa::printTimer();
+	iint rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    printf("Solver converged in %d iters \n", Niter );
+	if(strstr(options,"VERBOSE")){
+		mesh->device.finish();
+		end = MPI_Wtime();
+		double localElapsed = end-start;
 
-    iint size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+		occa::printTimer();
 
-    iint   localDofs = mesh->Np*mesh->Nelements;
-    iint   localElements = mesh->Nelements;
-    double globalElapsed;
-    iint   globalDofs;
-    iint   globalElements;
+		printf("Solver converged in %d iters \n", Niter );
 
-    MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+		iint size;
+		MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (rank==0){
-      printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
-             size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
-    }
-  }
-  return Niter;
+		iint   localDofs = mesh->Np*mesh->Nelements;
+		iint   localElements = mesh->Nelements;
+		double globalElapsed;
+		iint   globalDofs;
+		iint   globalElements;
+
+		MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+		MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+		MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+
+		if (rank==0){
+			printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+					size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
+		}
+	}
+	return Niter;
 
 }

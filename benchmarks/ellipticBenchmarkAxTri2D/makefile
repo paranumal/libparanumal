@@ -50,7 +50,6 @@ $(ALMONDDIR)/parALMOND.h \
 AOBJS    = \
 ellipticSetupTri2D.o \
 ellipticRunBenchmarkTri2D.o \
-loadElementStiffnessMatricesTri2D.o
 
 # library objects
 LOBJS = \
