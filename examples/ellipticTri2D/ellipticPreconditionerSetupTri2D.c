@@ -80,7 +80,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       // extra storage for smoothing op
       levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
 
-            dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+      dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
       if(strstr(options, "EXACT")){
         rateTolerance = 0.0;
       } else {
@@ -183,9 +183,10 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-    ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
-                                           &V1, &coarseA, &nnzCoarseA,
-                                           &(precon->hgs), coarseGlobalStarts, options);
+    //TODO need to fix this to use the normal builder for OAS to work again
+    //ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+    //                                       &V1, &coarseA, &nnzCoarseA,
+    //                                       &(precon->hgs), coarseGlobalStarts, options);
 
     iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
