@@ -112,7 +112,9 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
   }
 
   // populate parallel nodes to send
-  parallelNode_t *sendNodes = (parallelNode_t*) calloc(Nlocal, sizeof(parallelNode_t));
+  parallelNode_t *sendNodes;
+  if (Nlocal)
+    sendNodes = (parallelNode_t*) calloc(Nlocal, sizeof(parallelNode_t));
   cnt = 0;
   for(iint n=0;n<Nnum;++n){
     if (mask[n] == 0) continue; //skip masked nodes
@@ -127,7 +129,9 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
   // sort by global index
   qsort(sendNodes, Nlocal, sizeof(parallelNode_t), parallelCompareOwners);
   
-  parallelNode_t *recvNodes = (parallelNode_t*) calloc(recvNtotal, sizeof(parallelNode_t));
+  parallelNode_t *recvNodes;
+  if (recvNtotal)
+    recvNodes = (parallelNode_t*) calloc(recvNtotal, sizeof(parallelNode_t));
   
   // load up node data to send (NEED TO SCALE sendCounts, sendOffsets etc by sizeof(parallelNode_t)
   MPI_Alltoallv(sendNodes, sendCounts, sendOffsets, MPI_CHAR,
@@ -141,14 +145,14 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
   cnt = 0;
-  recvNodes[0].newGlobalId = cnt;
+  if (recvNtotal) recvNodes[0].newGlobalId = cnt;
   for(iint n=1;n<recvNtotal;++n){
     if(recvNodes[n].globalId!=recvNodes[n-1].globalId){ // new node
       ++cnt;
     }
     recvNodes[n].newGlobalId = cnt;
   }
-  ++cnt; // increment to actual number of unique nodes on this rank
+  if (recvNtotal) ++cnt; // increment to actual number of unique nodes on this rank
 
   // collect unique node counts from all processes
   MPI_Allgather(&cnt, 1, MPI_IINT, allCounts, 1, MPI_IINT, MPI_COMM_WORLD);

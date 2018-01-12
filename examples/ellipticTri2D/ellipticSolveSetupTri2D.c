@@ -507,16 +507,108 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     }
   }
 
-  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
+   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
   solver->ogs = meshParallelGatherScatterSetup(mesh,
-					       mesh->Np*mesh->Nelements,
-					       sizeof(dfloat),
-					       mesh->gatherLocalIds,
-					       mesh->gatherBaseIds,
-					       mesh->gatherHaloFlags);
+                 mesh->Np*mesh->Nelements,
+                 sizeof(dfloat),
+                 mesh->gatherLocalIds,
+                 mesh->gatherBaseIds,
+                 mesh->gatherHaloFlags);
   occaTimerToc(mesh->device,"GatherScatterSetup");
 
+  /* node degree vector */
+  occaTimerTic(mesh->device,"DegreeVectorSetup");
+  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+
+  // build degree vector
+  for(iint n=0;n<Ntotal;++n) degree[n] = 1;
+
+  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), degree);
+
+  ellipticParallelGatherScatterTri2D(mesh, solver->ogs, solver->o_invDegree, 
+                                      solver->o_invDegree, dfloatString, "add");
+
+  solver->o_invDegree.copyTo(degree);
+
+  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+    if(degree[n] == 0) printf("WARNING!!!!\n");
+    invDegree[n] = 1./degree[n];
+  }
+
+  solver->o_invDegree.copyFrom(invDegree);
+  occaTimerToc(mesh->device,"DegreeVectorSetup");
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(mesh,
+                                     mesh->Np*mesh->Nelements,
+                                     sizeof(dfloat),
+                                     mesh->gatherLocalIds,
+                                     mesh->gatherBaseIds,
+                                     mesh->gatherHaloFlags,
+                                     &(solver->halo),
+                                     &(solver->nonHalo));
+
+  // count elements that contribute to global C0 gather-scatter
+  iint globalCount = 0;
+  iint localCount = 0;
+  iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
+
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n)
+    localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(localHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+      }
+      if(localHaloFlags[e*mesh->Np+n]<0){
+        printf("found halo flag %d\n", localHaloFlags[e*mesh->Np+n]);
+      }
+    }
+    globalCount += isHalo;
+    localCount += 1-isHalo;
+  }
+
+  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
+  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
+
+  globalCount = 0;
+  localCount = 0;
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(localHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+      }
+    }
+    if(isHalo){
+      globalGatherElementList[globalCount++] = e;
+    }
+    else{
+      localGatherElementList[localCount++] = e;
+    }
+  }
+  printf("local = %d, global = %d\n", localCount, globalCount);
+
+  solver->NglobalGatherElements = globalCount;
+  solver->NlocalGatherElements = localCount;
+
+  if(globalCount)
+    solver->o_globalGatherElementList =
+      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
+
+  if(localCount)
+    solver->o_localGatherElementList =
+      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+
+  free(localHaloFlags);
+
+
+  /*preconditioner setup */
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
   #if 0
@@ -609,89 +701,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
   solver->precon->preconBytes = usedBytes;
-
-  occaTimerTic(mesh->device,"DegreeVectorSetup");
-  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-
-  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
-
-  ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
-
-  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-    if(degree[n] == 0) printf("WARNING!!!!\n");
-    invDegree[n] = 1./degree[n];
-  }
-
-  solver->o_invDegree.copyFrom(invDegree);
-  occaTimerToc(mesh->device,"DegreeVectorSetup");
-
-  // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(mesh,
-                                     mesh->Np*mesh->Nelements,
-                                     sizeof(dfloat),
-                                     mesh->gatherLocalIds,
-                                     mesh->gatherBaseIds,
-                                     mesh->gatherHaloFlags,
-                                     &(solver->halo),
-                                     &(solver->nonHalo));
-
-  // count elements that contribute to global C0 gather-scatter
-  iint globalCount = 0;
-  iint localCount = 0;
-  iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
-
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n)
-    localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
-
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint isHalo = 0;
-    for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]>0){
-        isHalo = 1;
-      }
-      if(localHaloFlags[e*mesh->Np+n]<0){
-        printf("found halo flag %d\n", localHaloFlags[e*mesh->Np+n]);
-      }
-    }
-    globalCount += isHalo;
-    localCount += 1-isHalo;
-  }
-
-  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
-  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
-
-  globalCount = 0;
-  localCount = 0;
-
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint isHalo = 0;
-    for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]>0){
-        isHalo = 1;
-      }
-    }
-    if(isHalo){
-      globalGatherElementList[globalCount++] = e;
-    }
-    else{
-      localGatherElementList[localCount++] = e;
-    }
-  }
-  printf("local = %d, global = %d\n", localCount, globalCount);
-
-  solver->NglobalGatherElements = globalCount;
-  solver->NlocalGatherElements = localCount;
-
-  if(globalCount)
-    solver->o_globalGatherElementList =
-      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
-
-  if(localCount)
-    solver->o_localGatherElementList =
-      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
-
-  free(localHaloFlags);
 
   return solver;
 }

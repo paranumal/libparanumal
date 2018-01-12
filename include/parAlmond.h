@@ -158,11 +158,15 @@ typedef struct agmgLevel_t {
   iint *globalRowStarts; //global partitioning of fine level
   iint *globalAggStarts; //global partitioning of coarse level
 
+  bool gatherLevel;
+
   void **AxArgs;
   void **smoothArgs;
   void **smootherArgs;
   void **coarsenArgs;
   void **prolongateArgs;
+  void **gatherArgs;
+  void **scatterArgs;
 
   //operator call-backs
   void (*device_Ax)        (void **args, occa::memory &o_x, occa::memory &o_Ax);
@@ -170,6 +174,8 @@ typedef struct agmgLevel_t {
   void (*device_smoother)  (void **args, occa::memory &o_r, occa::memory &o_Sr);
   void (*device_coarsen)   (void **args, occa::memory &o_x, occa::memory &o_Rx);
   void (*device_prolongate)(void **args, occa::memory &o_x, occa::memory &o_Px);
+  void (*device_gather)    (void **args, occa::memory &o_x, occa::memory &o_Gx);
+  void (*device_scatter)   (void **args, occa::memory &o_x, occa::memory &o_Sx);
 
   //host versions
   void (*Ax)        (void **args, dfloat *x, dfloat *Ax);
@@ -177,6 +183,8 @@ typedef struct agmgLevel_t {
   void (*smoother)  (void **args, dfloat *r, dfloat *Sr);
   void (*coarsen)   (void **args, dfloat *x, dfloat *Rx);
   void (*prolongate)(void **args, dfloat *x, dfloat *Px);
+  void (*gather)    (void **args, dfloat *x, dfloat *Gx);
+  void (*scatter)   (void **args, dfloat *x, dfloat *Sx);
 
   //agmg operators
   csr *A;
@@ -189,9 +197,12 @@ typedef struct agmgLevel_t {
 
   dfloat *rhs, *res, *x;
 
+  dfloat *Srhs, *Sx; //scatter copies
+
   dfloat *ckp1, *vkp1, *wkp1;
 
   occa::memory o_rhs, o_res, o_x;
+  occa::memory o_Srhs, o_Sx;
   occa::memory o_ckp1, o_vkp1, o_wkp1;
 
   dfloat *smoother_params;

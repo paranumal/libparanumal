@@ -129,6 +129,8 @@ void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dflo
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
+void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
 void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 

@@ -34,6 +34,29 @@ void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
   precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
 }
 
+void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
+
+  solver_t *solver = (solver_t *) args[0];
+  hgs_t *hgs       = (hgs_t *) args[1];
+  char *options    = (char *) args[2];
+  mesh_t *mesh     = solver->mesh;
+
+  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_x, mesh->o_mapSgn, o_x);
+  meshParallelGather(mesh, hgs, o_x, o_Gx);
+  solver->dotMultiplyKernel(hgs->Ngather, hgs->o_invDegree, o_Gx, o_Gx);
+}
+
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
+
+  solver_t *solver = (solver_t *) args[0];
+  hgs_t *hgs       = (hgs_t *) args[1];
+  char *options    = (char *) args[2];
+  mesh_t *mesh     = solver->mesh;
+
+  meshParallelScatter(mesh, hgs, o_x, o_Sx);
+  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Sx, mesh->o_mapSgn, o_Sx);
+}
+
 dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* options) {
 
   //TODO We can build the coarsen matrix either from the interRaise or interpLower matrices. Need to check which is better
@@ -132,7 +155,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levelDegree= (int *) calloc(numLevels,sizeof(int));
     for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - 2*n; //decrease by two
     levelDegree[numLevels-1] = 1; //ensure the last level is degree 1
-  } else if (strstr(options,"HALFDOFS")) {
+  } else { //default "HALFDOFS"
     // pick the degrees so the dofs of each level halfs (roughly)
     //start by counting the number of levels neccessary
     numLevels = 1;
@@ -175,14 +198,16 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   for (int n=0;n<numLevels;n++) {
     solver_t *solverL;
 
+    hgs_t *coarsehgs;
+
     if (n==0) {
       solverL = solver;
     } else {
       //build ops for this level
       printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", levelDegree[n]);
-      solverL = ellipticBuildMultigridLevelTri2D(solver,levelDegree,n,options);
+      solverL = ellipticBuildMultigridLevelTri2D(solver,levelDegree,n,BCType,options);
 
-      //set the normalization constatnt for the allNeumann POisson problem on this coarse mesh
+      //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
       iint totalElements = 0;
       MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
       solverL->allNeumannScale = 1.0/sqrt(solverL->mesh->Np*totalElements);
@@ -193,7 +218,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       // build degree 1 matrix problem
       nonZero_t *coarseA;
       iint nnzCoarseA;
-      hgs_t *coarsehgs;
 
       int basisNp = solverL->mesh->Np;
       dfloat *basis = NULL;
@@ -210,26 +234,26 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
         ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
       }
 
-      // Build coarse grid element basis functions
-      dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rn = mesh->r[n];
-        dfloat sn = mesh->s[n];
+      // // Build coarse grid element basis functions
+      // dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+      // for(iint n=0;n<mesh->Np;++n){
+      //   dfloat rn = mesh->r[n];
+      //   dfloat sn = mesh->s[n];
 
-        V1[0*mesh->Np+n] = -0.5*(rn+sn);
-        V1[1*mesh->Np+n] = +0.5*(1.+rn);
-        V1[2*mesh->Np+n] = +0.5*(1.+sn);
-      }
-      precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
+      //   V1[0*mesh->Np+n] = -0.5*(rn+sn);
+      //   V1[1*mesh->Np+n] = +0.5*(1.+rn);
+      //   V1[2*mesh->Np+n] = +0.5*(1.+sn);
+      // }
+      // precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
       iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
       iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
       dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-      for (iint n=0;n<nnzCoarseA;n++) {
-        Rows[n] = coarseA[n].row;
-        Cols[n] = coarseA[n].col;
-        Vals[n] = coarseA[n].val;
+      for (iint i=0;i<nnzCoarseA;i++) {
+        Rows[i] = coarseA[i].row;
+        Cols[i] = coarseA[i].col;
+        Vals[i] = coarseA[i].val;
       }
 
       // build amg starting at level 1
@@ -244,64 +268,84 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       free(coarseA); free(Rows); free(Cols); free(Vals);
 
+      //tell parAlmond to gather this level
+      if (strstr(options,"CONTINUOUS")) {
+        precon->parAlmond->levels[n]->gatherLevel = true;
+        precon->parAlmond->levels[n]->Srhs = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
+        precon->parAlmond->levels[n]->Sx   = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
+        precon->parAlmond->levels[n]->o_Srhs = mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),precon->parAlmond->levels[n]->Srhs);
+        precon->parAlmond->levels[n]->o_Sx   = mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),precon->parAlmond->levels[n]->Sx);
+
+        precon->parAlmond->levels[n]->gatherArgs = (void **) calloc(3,sizeof(void*));  
+        precon->parAlmond->levels[n]->gatherArgs[0] = (void *) solverL;
+        precon->parAlmond->levels[n]->gatherArgs[1] = (void *) coarsehgs;
+        precon->parAlmond->levels[n]->gatherArgs[2] = (void *) options;
+        precon->parAlmond->levels[n]->scatterArgs = precon->parAlmond->levels[n]->gatherArgs;
+
+        precon->parAlmond->levels[n]->device_gather  = ellipticGather;
+        precon->parAlmond->levels[n]->device_scatter = ellipticScatter;        
+      }
+
     } else {
       //build the level manually
       precon->parAlmond->numLevels++;
       levels[n] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
-    }
+      levels[n]->gatherLevel = false;
 
-    //use the matrix free Ax
-    levels[n]->AxArgs = (void **) calloc(3,sizeof(void*));
-    levels[n]->AxArgs[0] = (void *) solverL;
-    levels[n]->AxArgs[1] = (void *) vlambda;
-    levels[n]->AxArgs[2] = (void *) options;
-    levels[n]->device_Ax = AxTri2D;
+      //use the matrix free Ax
+      levels[n]->AxArgs = (void **) calloc(3,sizeof(void*));
+      levels[n]->AxArgs[0] = (void *) solverL;
+      levels[n]->AxArgs[1] = (void *) vlambda;
+      levels[n]->AxArgs[2] = (void *) options;
+      levels[n]->device_Ax = AxTri2D;
 
-    levels[n]->smoothArgs = (void **) calloc(2,sizeof(void*));
-    levels[n]->smoothArgs[0] = (void *) solverL;
-    levels[n]->smoothArgs[1] = (void *) levels[n];
+      levels[n]->smoothArgs = (void **) calloc(2,sizeof(void*));
+      levels[n]->smoothArgs[0] = (void *) solverL;
+      levels[n]->smoothArgs[1] = (void *) levels[n];
 
-    levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
-    levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
+      levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
+      levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
 
-    if (strstr(options,"CHEBYSHEV")) {
-      levels[n]->device_smooth = smoothChebyshevTri2D;
+      if (strstr(options,"CHEBYSHEV")) {
+        levels[n]->device_smooth = smoothChebyshevTri2D;
 
-      levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
+        levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
 
-      // extra storage for smoothing op
-      levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
-      levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
-      levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
-    } else {
-      levels[n]->device_smooth = smoothTri2D;
+        // extra storage for smoothing op
+        levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
+        levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
+        levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
+      } else {
+        levels[n]->device_smooth = smoothTri2D;
 
-      // extra storage for smoothing op
-      levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
-    }
+        // extra storage for smoothing op
+        levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
+      }
 
-    levels[n]->smootherArgs = (void **) calloc(1,sizeof(void*));
-    levels[n]->smootherArgs[0] = (void *) solverL;
+      levels[n]->smootherArgs = (void **) calloc(2,sizeof(void*));
+      levels[n]->smootherArgs[0] = (void *) solverL;
+      levels[n]->smootherArgs[1] = (void *) options;
 
-    dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
-    if(strstr(options, "EXACT")){
-      rateTolerance = 0.0;
-    } else {
-      rateTolerance = 1.0;
-    }
+      dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+      if(strstr(options, "EXACT")){
+        rateTolerance = 0.0;
+      } else {
+        rateTolerance = 1.0;
+      }
 
 
-    //set up the fine problem smoothing
-    if(strstr(options, "OVERLAPPINGPATCH")){
-      ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-    } else if(strstr(options, "FULLPATCH")){
-      ellipticSetupSmootherFullPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-    } else if(strstr(options, "FACEPATCH")){
-      ellipticSetupSmootherFacePatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-    } else if(strstr(options, "LOCALPATCH")){
-      ellipticSetupSmootherLocalPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-    } else { //default to damped jacobi
-      ellipticSetupSmootherDampedJacobi(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      //set up the fine problem smoothing
+      if(strstr(options, "OVERLAPPINGPATCH")){
+        ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      } else if(strstr(options, "FULLPATCH")){
+        ellipticSetupSmootherFullPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "FACEPATCH")){
+        ellipticSetupSmootherFacePatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+      } else if(strstr(options, "LOCALPATCH")){
+        ellipticSetupSmootherLocalPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+      } else { //default to damped jacobi
+        ellipticSetupSmootherDampedJacobi(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+      }
     }
 
     //reallocate vectors at N=1 since we're using the matrix free ops
@@ -340,12 +384,12 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     R[n] = buildCoarsenerTri2D(meshLevels, N, Nc, options);
     o_R[n] = mesh->device.malloc(meshLevels[N]->Np*meshLevels[Nc]->Np*sizeof(dfloat), R[n]);
 
-    levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));
+    levels[n]->coarsenArgs = (void **) calloc(4,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
     levels[n]->coarsenArgs[1] = (void *) &(o_R[n]);
-    levels[n]->device_coarsen = coarsenTri2D;
-
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
+    
+    levels[n]->device_coarsen = coarsenTri2D;
     levels[n]->device_prolongate = prolongateTri2D;
   }
 

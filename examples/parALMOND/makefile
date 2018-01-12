@@ -24,7 +24,7 @@ ifeq ($(DEBUG), 1)
 flags += -g
 else
 # <> For debugging purposes
-flags += -O3 -DNDEBUG
+flags += -O3 -DNDEBUG -g
 endif
 
 #flags += -DINS_MPI=$(INS_MPI) -DINS_RENDER=$(INS_RENDER) -DINS_CLUSTER=$(INS_CLUSTER)
