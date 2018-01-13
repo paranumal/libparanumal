@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "mesh2D.h"
+#include "mesh3D.h"
 
-void meshPhysicalNodesTri2D(mesh2D *mesh){
+void meshPhysicalNodesTri3D(mesh3D *mesh){
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));

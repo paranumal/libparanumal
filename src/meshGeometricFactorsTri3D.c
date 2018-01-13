@@ -74,7 +74,7 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
       if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
       
       /* store geometric factors */
-      int base = mesh->Nvgeo*mesh->Np*e + j*mesh->Nq + i;
+      int base = mesh->Nvgeo*mesh->Np*e + n;
 
       mesh->vgeo[base + mesh->Np*RXID] = rx;
       mesh->vgeo[base + mesh->Np*RYID] = ry;
