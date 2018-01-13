@@ -49,8 +49,8 @@ void boltzmannRunTri3D(solver_t *solver){
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
-			 mesh->o_Dr,
-			 mesh->o_Ds,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
