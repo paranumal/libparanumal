@@ -34,8 +34,13 @@ void kcycle(parAlmond_t *parAlmond, int k){
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
   vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
-  // coarsen the residual to next level
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->Srhs);
+    levels[k+1]->gather (levels[k+1]->gatherArgs,  levels[k+1]->Srhs, levels[k+1]->rhs);
+  } else {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  }
 
   if(k>2) {
     vcycle(parAlmond,k+1);
@@ -118,7 +123,12 @@ void kcycle(parAlmond_t *parAlmond, int k){
     }
   }
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->scatter(levels[k+1]->scatterArgs,  levels[k+1]->x, levels[k+1]->Sx);
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->Sx, levels[k]->x);
+  } else {
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  }
 
   levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, false);
 
@@ -160,9 +170,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
-  // coarsen the residual to next level
-  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
-
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_Srhs);
+    levels[k+1]->device_gather (levels[k+1]->gatherArgs,  levels[k+1]->o_Srhs, levels[k+1]->o_rhs);
+  } else {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  }
 
   if(k>2) {
     device_vcycle(parAlmond,k+1);
@@ -255,7 +269,12 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     }
   }
 
-  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_scatter   (levels[k+1]->scatterArgs,  levels[k+1]->o_x, levels[k+1]->o_Sx);
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_Sx, levels[k]->o_x);
+  } else {
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  }
 
   levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, false);
 
@@ -296,11 +315,22 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
   vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->Srhs);
+    levels[k+1]->gather (levels[k+1]->gatherArgs,  levels[k+1]->Srhs, levels[k+1]->rhs);
+  } else {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  }
 
   vcycle(parAlmond,k+1);
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->scatter(levels[k+1]->scatterArgs,  levels[k+1]->x, levels[k+1]->Sx);
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->Sx, levels[k]->x);
+  } else {
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  }
 
   levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x,false);
 
@@ -347,12 +377,22 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
-  // coarsen the residual to next level
-  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_Srhs);
+    levels[k+1]->device_gather (levels[k+1]->gatherArgs,  levels[k+1]->o_Srhs, levels[k+1]->o_rhs);
+  } else {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  }
 
   device_vcycle(parAlmond, k+1);
 
-  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_scatter   (levels[k+1]->scatterArgs,  levels[k+1]->o_x, levels[k+1]->o_Sx);
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_Sx, levels[k]->o_x);
+  } else {
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  }
 
   levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x,false);
 

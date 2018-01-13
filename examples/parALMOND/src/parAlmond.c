@@ -2,11 +2,17 @@
 
 void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rhs) {
 
-  parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
+  agmgLevel *baseLevel = parAlmond->levels[0];
+
+  if (baseLevel->gatherLevel==true) {// gather rhs
+    baseLevel->device_gather(baseLevel->gatherArgs, o_rhs, baseLevel->o_rhs);
+  } else {
+    baseLevel->o_rhs.copyFrom(o_rhs);
+  }
 
   if (strstr(parAlmond->options,"HOST")) {
     //host versions
-    parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
+    baseLevel->o_rhs.copyTo(baseLevel->rhs);
     if(strstr(parAlmond->options,"EXACT")) {
       if(parAlmond->ktype == PCG) {
         pcg(parAlmond,1000,1e-8);
@@ -18,7 +24,7 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       vcycle(parAlmond, 0);
     }
-    parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
+    baseLevel->o_x.copyFrom(baseLevel->x);
   } else {
     if(strstr(parAlmond->options,"EXACT")) {
       if(parAlmond->ktype == PCG) {
@@ -33,7 +39,11 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     }
   }
 
-  parAlmond->levels[0]->o_x.copyTo(o_x);
+  if (baseLevel->gatherLevel==true) {// scatter solution
+    baseLevel->device_scatter(baseLevel->scatterArgs, baseLevel->o_x, o_x);
+  } else {
+    baseLevel->o_x.copyTo(o_x);
+  }
 }
 
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {

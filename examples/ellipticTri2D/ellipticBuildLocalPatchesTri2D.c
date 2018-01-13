@@ -560,11 +560,12 @@ void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
   //add the rank boost for the allNeumann Poisson problem
   if (solver->allNeumann) {
     for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){
-        A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
-      }
+      if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
+        for(iint m=0;m<mesh->Np;++m){
+          if (mesh->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
+          A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        }
+      } 
     }
   }
-  
-  free(Ae);
 }
