@@ -93,14 +93,22 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat dwdz = (wP-wM)/(2*delta);
 
       dfloat divu = dudx + dvdy + dwdz;
-      
+
+#if 1
       dfloat sigma11 = nu*(dudx+dudx - (2*divu/3));
       dfloat sigma12 = nu*(dvdx+dudy);
       dfloat sigma13 = nu*(dwdx+dudz);
       dfloat sigma22 = nu*(dvdy+dvdy - (2*divu/3));
       dfloat sigma23 = nu*(dwdy+dvdz);
       dfloat sigma33 = nu*(dwdz+dwdz - (2*divu/3));
-			     
+#else
+      dfloat sigma11 = 0;
+      dfloat sigma12 = 0;
+      dfloat sigma13 = 0;
+      dfloat sigma22 = 0;
+      dfloat sigma23 = 0;
+      dfloat sigma33 = 0;
+#endif
       dfloat q1bar = rho;
       dfloat q2bar = rho*umod/mesh->sqrtRT;
       dfloat q3bar = rho*vmod/mesh->sqrtRT;
@@ -174,6 +182,8 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+
+  dt = mymin(dt, cfl/mesh->tauInv);
   
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
@@ -201,7 +211,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //  sprintf(deviceConfig, "mode = Serial");	  

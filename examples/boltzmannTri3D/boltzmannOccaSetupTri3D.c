@@ -23,7 +23,8 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
     }
   }
 
-  dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+  dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,
+				   sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
@@ -33,14 +34,15 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
 
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),
+			mesh->q);
+
   mesh->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
+			mesh->rhsq);
   mesh->o_resq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
-
-  mesh->o_D = mesh->device.malloc((mesh->N+1)*(mesh->N+1)*sizeof(dfloat), mesh->D);
-
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
+			mesh->resq);
 
   mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
       mesh->Dr);
@@ -71,33 +73,29 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-        mesh->vmapM);
+			mesh->vmapM);
 
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-        mesh->vmapP);
-
-  mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
-        mesh->EToB);
-
+			mesh->vmapP);
+  
   mesh->o_x =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->x);
+			mesh->x);
 
   mesh->o_y =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->y);
-
-
+			mesh->y);
+  
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->z);
-
+			mesh->z);
+  
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint),
+			  mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
