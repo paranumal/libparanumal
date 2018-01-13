@@ -16,17 +16,17 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
 
     for(int n=0;n<mesh->Np;++n){
       
-      dfloat xij = mesh->x[n+e*mesh->Np];
-      dfloat yij = mesh->y[n+e*mesh->Np];
-      dfloat zij = mesh->z[n+e*mesh->Np];
+      dfloat xn = mesh->x[n+e*mesh->Np];
+      dfloat yn = mesh->y[n+e*mesh->Np];
+      dfloat zn = mesh->z[n+e*mesh->Np];
       
       dfloat xr = 0, yr = 0, zr = 0;
       dfloat xs = 0, ys = 0, zs = 0;
       
-      for(int m=0;m<mesh->Nq;++m){
+      for(int m=0;m<mesh->Np;++m){
 	
-	dfloat Drnm = mesh->Dr[n*mesh->Nq+m];
-	dfloat Dsnm = mesh->Ds[n*mesh->Nq+m];
+	dfloat Drnm = mesh->Dr[n*mesh->Np+m];
+	dfloat Dsnm = mesh->Ds[n*mesh->Np+m];
 	
 	xr += Drnm*mesh->x[m+e*mesh->Np];
 	yr += Drnm*mesh->y[m+e*mesh->Np];
@@ -38,13 +38,13 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
 	
       }
       
-      dfloat rx = ys*zij - zs*yij; // dXds x X
-      dfloat ry = zs*xij - xs*zij;
-      dfloat rz = xs*yij - ys*xij;
+      dfloat rx = ys*zn - zs*yn; // dXds x X
+      dfloat ry = zs*xn - xs*zn;
+      dfloat rz = xs*yn - ys*xn;
       
-      dfloat sx = zr*yij - yr*zij; // -dXdr x X
-      dfloat sy = xr*zij - zr*xij;
-      dfloat sz = yr*xij - xr*yij;
+      dfloat sx = zr*yn - yr*zn; // -dXdr x X
+      dfloat sy = xr*zn - zr*xn;
+      dfloat sz = yr*xn - xr*yn;
       
       dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
       dfloat ty = zr*xs - xr*zs;
@@ -52,7 +52,7 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
       
       dfloat Gx = tx, Gy = ty, Gz = tz;
       
-      dfloat J = xij*tx + yij*ty + zij*tz;
+      dfloat J = xn*tx + yn*ty + zn*tz;
       
       if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
       

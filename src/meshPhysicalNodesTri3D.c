@@ -42,6 +42,7 @@ void meshPhysicalNodesTri3D(mesh3D *mesh){
       mesh->y[cnt] = ylin/rlin; 
       mesh->z[cnt] = zlin/rlin; 
       
+      //      printf("x,y,z,rlin=%g,%g,%g,%g\n", xlin/rlin, ylin/rlin, zlin/rlin, rlin);
       ++cnt;
 
     }

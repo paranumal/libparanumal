@@ -30,7 +30,7 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	if(e<Nelements){
 	  const int base = n + p_Nfields*p_Np*e;
 	  for(int fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][es][j][i] = q[base+fld*p_Np];
+	    s_q[fld][es][n] = q[base+fld*p_Np];
 	  }
 	}
       }
@@ -66,17 +66,17 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	      dqds[fld] = 0;
 	    }
 	  
-	  occaUnroll(p_Nq)
+	  occaUnroll(p_Np)
 	    for(iint m=0;m<p_Np;++m){
-	      const dfloat Dim = DrT[n+m*p_Np]; // L1
-	      const dfloat Djm = DsT[n+m*p_Np];
+	      const dfloat Drnm = DrT[n+m*p_Np]; // L1
+	      const dfloat Dsnm = DsT[n+m*p_Np];
 	      
 	      // differentiate q components with respect to 'r' & 's'
 	      occaUnroll(p_Nfields)
 		for(int fld=0;fld<p_Nfields;++fld) {
 		  const dfloat qm = s_q[fld][es][m];
-		  dqdr[fld] += Dim*qm; // 2 bytes per flop (4TF max)
-		  dqds[fld] += Djm*qm;
+		  dqdr[fld] += Drnm*qm; // 2 bytes per flop (4TF max)
+		  dqds[fld] += Dsnm*qm;
 		}
 	    }
 	  
@@ -137,21 +137,21 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	  const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*p_invsqrt2*invq1);
 	  
 	  // constrain momentum changes to lie on sphere
-	  const dfloat xij = x[n+e*p_Np];
-	  const dfloat yij = y[n+e*p_Np];
-	  const dfloat zij = z[n+e*p_Np];
+	  const dfloat xn = x[n+e*p_Np];
+	  const dfloat yn = y[n+e*p_Np];
+	  const dfloat zn = z[n+e*p_Np];
 	  
 	  // add coriolis force to momentum equation
-	  rhsq2 -= p_fainv*zij*(yij*q4-zij*q3);
-	  rhsq3 -= p_fainv*zij*(zij*q2-xij*q4);
-	  rhsq4 -= p_fainv*zij*(xij*q3-yij*q2);
+	  rhsq2 -= p_fainv*zn*(yn*q4-zn*q3);
+	  rhsq3 -= p_fainv*zn*(zn*q2-xn*q4);
+	  rhsq4 -= p_fainv*zn*(xn*q3-yn*q2);
 	  
 	  // remove radial component of momentum change
-	  const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
+	  const dfloat xdotrhsq = (rhsq2*xn + rhsq3*yn + rhsq4*zn)*p_invRadiusSq;
 	  
-	  rhsq2 -= xij*xdotrhsq; 
-	  rhsq3 -= yij*xdotrhsq;
-	  rhsq4 -= zij*xdotrhsq;
+	  rhsq2 -= xn*xdotrhsq; 
+	  rhsq3 -= yn*xdotrhsq;
+	  rhsq4 -= zn*xdotrhsq;
 	  
 	  const iint base = e*p_Np*p_Nfields+n;
 	  

@@ -12,12 +12,24 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
 
   occa::initTimer(mesh->device);
 
+
+  // build Dr, Ds, LIFT transposes
+  dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Np;++m){
+      DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+      DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+    }
+  }
+
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   for(iint n=0;n<mesh->Np;++n){
     for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
+
 
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
@@ -27,7 +39,20 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  mesh->o_D = mesh->device.malloc((mesh->N+1)*(mesh->N+1)*sizeof(dfloat), mesh->D);
+
+
+  mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+      mesh->Dr);
+
+  mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+      mesh->Ds);
+
+  mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+      DrT);
+
+  mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+      DsT);
 
   mesh->o_LIFT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
@@ -100,6 +125,7 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
   kernelInfo.addDefine("p_Nfp", mesh->Nfp);
   kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
   kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
+  kernelInfo.addDefine("p_Nmaxnodes", mymax(mesh->Np,mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
   kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
