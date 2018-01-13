@@ -2,7 +2,7 @@
 
 #define p_isq12 (1.f/occaSqrt(12.f))
 #define p_isq6 (1.f/occaSqrt(6.f))
-#define PML_ENABLED 1
+#define PML_ENABLED 0
 
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat q1M, const dfloat q2M, const dfloat q3M,
@@ -388,7 +388,7 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
 
         // const iint e  = pmlElementIds[et];
         const iint pmlId    = pmlIds[et];
-        const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+        const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
         const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
         // Update 

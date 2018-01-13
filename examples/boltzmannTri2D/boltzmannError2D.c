@@ -100,7 +100,7 @@ else{
     iint fld = 2;
     iint tstep = (time-mesh->startTime)/mesh->dt;
     char errname[BUFSIZ];
-    sprintf(errname, "err_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+    sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
     meshPlotVTU2D(mesh, errname,fld);
       
     iint tmethod = 0; 

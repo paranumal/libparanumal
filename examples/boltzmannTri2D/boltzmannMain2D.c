@@ -21,7 +21,7 @@ int main(int argc, char **argv){
   // pmlprofile  = CONSTANT, QUADRATIC
   
   char options[BUFSIZ];
-  strcpy(options,"out = REPORT+VTU, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=CONSTANT");
+  strcpy(options,"out = REPORT, MR_GROUPS, relaxation = CUBATURE, bc=NONE, pmlprofile=QUADRATIC");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 

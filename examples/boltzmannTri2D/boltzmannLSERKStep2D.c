@@ -5,7 +5,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
-   mesh->shiftIndex = 0; 	
+   // mesh->shiftIndex = 0; 	
 
   // LSERK4 stages
   for(iint rk=0;rk<mesh->Nrk;++rk){
@@ -246,9 +246,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
     dfloat rampUpdate, drampdtUpdate;
     boltzmannRampFunction2D(tupdate, &rampUpdate, &drampdtUpdate);
-    //rampUpdate = 1.0f; drampdtUpdate = 0.0f;
-
-
+   
     //UPDATE
     mesh->device.finish();
     occa::tic("updateKernel");
@@ -296,11 +294,14 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::toc("updateKernel");      
     
-  }
+}
 
 
 
-
+// #if 1
+// //rotate index
+//   mesh->shiftIndex = (mesh->shiftIndex+1)%3;
+// #endif
 
 
 }
