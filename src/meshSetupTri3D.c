@@ -1,15 +1,15 @@
 #include "mesh3D.h"
 
-mesh3D *meshSetupTri3D(char *filename, int N){
+mesh3D *meshSetupTri3D(char *filename, int N, double sphereRadius){
 
   // read chunk of elements
   mesh3D *mesh = meshParallelReaderTri3D(filename);
 
+  // set sphere radius (will be used later in building physical nodes)
+  mesh->sphereRadius = sphereRadius;
+  
   // partition elements using Morton ordering & parallel sort
- 
   meshGeometricPartition3D(mesh);
-
-  //printf("Space-filling is off\n");
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
