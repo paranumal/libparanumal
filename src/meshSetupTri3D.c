@@ -21,6 +21,7 @@ mesh3D *meshSetupTri3D(char *filename, int N){
   meshConnectBoundary(mesh);
 
   // load reference (r,s) element nodes
+  void meshLoadReferenceNodesTri2D(mesh_t *mesh, int N);
   meshLoadReferenceNodesTri2D(mesh, N);
 
   // compute physical (x,y) locations of the element nodes

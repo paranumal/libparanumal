@@ -149,7 +149,6 @@ void boltzmannPlotVTUTri3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	vort[n+2*mesh->Np] = dvdx - dudy;
 
       }
-    }
     
     for(iint n=0;n<mesh->plotNp;++n){
       
@@ -186,7 +185,7 @@ void boltzmannPlotVTUTri3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-
+  
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"RadialVorticity\" NumberOfComponents=\"1\" Format=\"ascii\">\n");
 
   for(iint e=0;e<mesh->Nelements;++e){
