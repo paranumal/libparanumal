@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include "mpi.h"
 
-#include "boltzmannQuad3D.h"
+#include "boltzmannTri3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
+void boltzmannPlotVTUTri3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -102,10 +102,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   for(iint e=0;e<mesh->Nelements;++e){
 
     // compute vorticity
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
-
-	int n = i+mesh->Nq*j;
+    for(iint n=0;n<mesh->Np;++n){
 	iint gbase = e*mesh->Np*mesh->Nvgeo + n;
 	dfloat rx = mesh->vgeo[gbase+mesh->Np*RXID];
 	dfloat sx = mesh->vgeo[gbase+mesh->Np*SXID];
@@ -123,19 +120,18 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	dfloat dvdr = 0, dvds = 0;
 	dfloat dwdr = 0, dwds = 0;
 	
-	for(iint m=0;m<mesh->Nq;++m){
-	  int basejm = m + j*mesh->Nq + mesh->Nfields*mesh->Np*e;
-	  int basemi = i + m*mesh->Nq + mesh->Nfields*mesh->Np*e;
-	  dfloat Dim = mesh->D[i*mesh->Nq+m];
-	  dfloat Djm = mesh->D[j*mesh->Nq+m];
-	  dudr += Dim*mesh->q[basejm + 1*mesh->Np]/mesh->q[basejm];
-	  duds += Djm*mesh->q[basemi + 1*mesh->Np]/mesh->q[basemi];
-	  dvdr += Dim*mesh->q[basejm + 2*mesh->Np]/mesh->q[basejm];
-	  dvds += Djm*mesh->q[basemi + 2*mesh->Np]/mesh->q[basemi];
-	  dwdr += Dim*mesh->q[basejm + 3*mesh->Np]/mesh->q[basejm];
-	  dwds += Djm*mesh->q[basemi + 3*mesh->Np]/mesh->q[basemi];
+	for(iint m=0;m<mesh->Np;++m){
+	  int basem = m + mesh->Nfields*mesh->Np*e;
+	  dfloat Dr = mesh->Dr[n*mesh->Np+m];
+	  dfloat Ds = mesh->Ds[n*mesh->Np+m];
+	  dudr += Dr*mesh->q[basem + 1*mesh->Np]/mesh->q[basem];
+	  duds += Ds*mesh->q[basem + 1*mesh->Np]/mesh->q[basem];
+	  dvdr += Dr*mesh->q[basem + 2*mesh->Np]/mesh->q[basem];
+	  dvds += Ds*mesh->q[basem + 2*mesh->Np]/mesh->q[basem];
+	  dwdr += Dr*mesh->q[basem + 3*mesh->Np]/mesh->q[basem];
+	  dwds += Ds*mesh->q[basem + 3*mesh->Np]/mesh->q[basem];
 	}
-	int base = i + j*mesh->Nq + e*mesh->Np*mesh->Nfields;
+	int base = n + e*mesh->Np*mesh->Nfields;
 	dfloat dudx = rx*dudr + sx*duds + tx*mesh->q[base + 1*mesh->Np]/mesh->q[base];
 	dfloat dudy = ry*dudr + sy*duds + ty*mesh->q[base + 1*mesh->Np]/mesh->q[base];
 	dfloat dudz = rz*dudr + sz*duds + tz*mesh->q[base + 1*mesh->Np]/mesh->q[base];
@@ -148,10 +144,9 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	dfloat dwdy = ry*dwdr + sy*dwds + ty*mesh->q[base + 3*mesh->Np]/mesh->q[base];
 	dfloat dwdz = rz*dwdr + sz*dwds + tz*mesh->q[base + 3*mesh->Np]/mesh->q[base];
 
-	base = i + j*mesh->Nq;
-	vort[base+0*mesh->Np] = dwdy - dvdz;
-	vort[base+1*mesh->Np] = dudz - dwdx;
-	vort[base+2*mesh->Np] = dvdx - dudy;
+	vort[n+0*mesh->Np] = dwdy - dvdz;
+	vort[n+1*mesh->Np] = dudz - dwdx;
+	vort[n+2*mesh->Np] = dvdx - dudy;
 
       }
     }
@@ -207,28 +202,6 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
   free(vort);
   free(plotVortRadial);
-
-  // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  // for(iint e=0;e<mesh->Nelements;++e){
-  //   for(iint n=0;n<mesh->plotNp;++n){
-  //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
-  //     for(iint m=0;m<mesh->Np;++m){
-  //       dfloat wx = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wy = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wz = mesh->q[6 + mesh->Nfields*(m+e*mesh->Np)];
-  //       //
-  //       plotwxn += mesh->plotInterp[n*mesh->Np+m]*wx;
-  //       plotwyn += mesh->plotInterp[n*mesh->Np+m]*wy;
-  //       plotwzn += mesh->plotInterp[n*mesh->Np+m]*wz;
-  //     }
-      
-  //     fprintf(fp, "       ");
-  //     fprintf(fp, "%g %g %g\n", plotwxn, plotwyn,plotwzn);
-  //   }
-  // }
-  // fprintf(fp, "       </DataArray>\n");
-
-
 
   fprintf(fp, "     </PointData>\n");
   
