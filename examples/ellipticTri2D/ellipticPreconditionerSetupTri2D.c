@@ -55,30 +55,47 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     free(A); free(Rows); free(Cols); free(Vals);
 
+    if (strstr(options,"CONTINUOUS")) {//tell parAlmond to gather this level
+      agmgLevel *baseLevel = precon->parAlmond->levels[0];
+
+      baseLevel->gatherLevel = true;
+      baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+      baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+
+      baseLevel->gatherArgs = (void **) calloc(2,sizeof(void*));  
+      baseLevel->gatherArgs[0] = (void *) solver;
+      baseLevel->gatherArgs[1] = (void *) precon->hgs;
+      baseLevel->gatherArgs[2] = (void *) options;
+      baseLevel->scatterArgs = baseLevel->gatherArgs;
+
+      baseLevel->device_gather  = ellipticGather;
+      baseLevel->device_scatter = ellipticScatter;        
+    }
+
     if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
-      agmgLevel **levels = precon->parAlmond->levels;
+      agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
       dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
       *vlambda = lambda;
-      levels[0]->AxArgs = (void **) calloc(3,sizeof(void*));
-      levels[0]->AxArgs[0] = (void *) solver;
-      levels[0]->AxArgs[1] = (void *) vlambda;
-      levels[0]->AxArgs[2] = (void *) options;
-      levels[0]->device_Ax = AxTri2D;
+      baseLevel->AxArgs = (void **) calloc(3,sizeof(void*));
+      baseLevel->AxArgs[0] = (void *) solver;
+      baseLevel->AxArgs[1] = (void *) vlambda;
+      baseLevel->AxArgs[2] = (void *) options;
+      baseLevel->device_Ax = AxTri2D;
 
-      levels[0]->smoothArgs = (void **) calloc(2,sizeof(void*));
-      levels[0]->smoothArgs[0] = (void *) solver;
-      levels[0]->smoothArgs[1] = (void *) levels[0];
-      levels[0]->device_smooth = smoothTri2D;
+      baseLevel->smoothArgs = (void **) calloc(2,sizeof(void*));
+      baseLevel->smoothArgs[0] = (void *) solver;
+      baseLevel->smoothArgs[1] = (void *) baseLevel;
+      baseLevel->device_smooth = smoothTri2D;
 
-      levels[0]->smootherArgs = (void **) calloc(1,sizeof(void*));
-      levels[0]->smootherArgs[0] = (void *) solver;
+      baseLevel->smootherArgs = (void **) calloc(1,sizeof(void*));
+      baseLevel->smootherArgs[0] = (void *) solver;
 
-      levels[0]->Nrows = mesh->Nelements*mesh->Np;
-      levels[0]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+      baseLevel->Nrows = mesh->Nelements*mesh->Np;
+      baseLevel->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
       // extra storage for smoothing op
-      levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
+      baseLevel->o_smootherResidual = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat),baseLevel->x);
 
       dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
       if(strstr(options, "EXACT")){
@@ -89,15 +106,15 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
       //set up the fine problem smoothing
       if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatch(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherOverlappingPatch(solver, precon, baseLevel, tau, lambda, BCType, options);
       } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFullPatch(solver, precon, baseLevel, tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFacePatch(solver, precon, baseLevel, tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherLocalPatch(solver, precon, baseLevel, tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobi(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherDampedJacobi(solver, precon, baseLevel, tau, lambda, BCType, options);
       }
     }
 
@@ -132,6 +149,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     //create a dummy parAlmond level to store the OAS smoother
     agmgLevel *OASLevel = (agmgLevel *) calloc(1,sizeof(agmgLevel));
     precon->OASLevel = OASLevel;
+    precon->OASLevel->gatherLevel = false;
     precon->OASsmoothArgs = (void **) calloc(2,sizeof(void*));
     precon->OASsmoothArgs[0] = (void *) solver;
     precon->OASsmoothArgs[1] = (void *) precon->OASLevel;

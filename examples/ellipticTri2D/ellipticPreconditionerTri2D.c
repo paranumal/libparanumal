@@ -22,37 +22,11 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
-    if(strstr(options,"CONTINUOUS")) {
-      if (strstr(options,"SPARSE")) {
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_z);
-        meshParallelGather(mesh, precon->hgs, o_z, precon->o_Gr);
-      } else {
-        meshParallelGather(mesh, precon->hgs, o_r, precon->o_Gr);  
-      }
-      solver->dotMultiplyKernel(precon->hgs->Ngather, precon->hgs->o_invDegree, precon->o_Gr, precon->o_Gr);
-
-      occaTimerTic(mesh->device,"parALMOND");
-      parAlmondPrecon(precon->parAlmond, precon->o_Gz, precon->o_Gr);
-      occaTimerToc(mesh->device,"parALMOND");
-
-      //scatter the result
-      meshParallelScatter(mesh, precon->hgs, precon->o_Gz, o_z);
-      if (strstr(options,"SPARSE")) 
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_z, mesh->o_mapSgn, o_z);
-
-    } else {
-      occaTimerTic(mesh->device,"parALMOND");
-      parAlmondPrecon(precon->parAlmond, o_z, o_r);
-      occaTimerToc(mesh->device,"parALMOND");
-    }
+    occaTimerTic(mesh->device,"parALMOND");
+    parAlmondPrecon(precon->parAlmond, o_z, o_r);
+    occaTimerToc(mesh->device,"parALMOND");
 
   } else if(strstr(options, "OAS")){
-    //L2 project weighting
-    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-    //  ellipticParallelGatherScatterTri2D(mesh,ogs,o_r,o_r,dfloatString,"add");
-    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_r,o_r);
-    //}
-
     //patch solve
     //ellipticPatchSmootherTri2D(solver,o_r,o_z,options);
     smoothTri2D(precon->OASsmoothArgs, o_r, o_z,true);
@@ -74,12 +48,6 @@ void ellipticPreconditioner2D(solver_t *solver,
     occaTimerToc(mesh->device,"prolongateKernel");
 
     occaTimerToc(mesh->device,"coarseGrid");
-
-    //project weighting
-    //if(strstr(options,"CONTINUOUS")||strstr(options,"PROJECT")) {
-    //  mesh->dotMultiplyKernel(mesh->Np*mesh->Nelements,mesh->o_projectL2,o_z,o_z);
-    //  ellipticParallelGatherScatterTri2D(mesh, ogs, o_z, o_z, dfloatString, "add");
-    //}
 
   } else if(strstr(options, "MASSMATRIX")){
 
