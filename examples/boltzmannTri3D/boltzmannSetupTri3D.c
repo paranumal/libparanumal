@@ -190,7 +190,7 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100*mesh->Nq;
+  mesh->errorStep = 100*(mesh->N+1);
 
   printf("dt = %g\n", mesh->dt);
 
@@ -213,10 +213,10 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   
   // quad stuff
   
-  kernelInfo.addDefine("p_Nq", mesh->Nq);
+  kernelInfo.addDefine("p_Nq", mesh->N+1);
   
-  printf("mesh->Nq = %d\n", mesh->Nq);
-  mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  printf("mesh->Nq = %d\n", mesh->N+1);
+  mesh->o_D  = mesh->device.malloc((mesh->N+1)*(mesh->N+1)*sizeof(dfloat), mesh->D);
 
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
@@ -230,7 +230,7 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
 
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   
-  int maxNodes = mesh->Nfp;
+  int maxNodes = mymax(mesh->Np,mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
   int NblockV = 256/mesh->Np; // works for CUDA

@@ -33,7 +33,7 @@ void meshSurfaceGeometricFactorsTri3D(mesh_t *mesh){
       dfloat xrn = 0, yrn = 0, zrn = 0;
       dfloat xsn = 0, ysn = 0, zsn = 0;
       
-      for(int m=0;m<mesh->Nq;++m){
+      for(int m=0;m<mesh->Np;++m){
 	
 	dfloat Dr = mesh->Dr[n*mesh->Np+m];
 	dfloat Ds = mesh->Ds[n*mesh->Np+m];
@@ -67,11 +67,9 @@ void meshSurfaceGeometricFactorsTri3D(mesh_t *mesh){
       J[n] = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
     }
     
-    
-    // face 0
     for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->Nq;++n){
-	int id = mesh->faceNodes[n+f*mesh->Nq];
+      for(int n=0;n<mesh->Nfp;++n){
+	int id = mesh->faceNodes[n+f*mesh->Nfp];
 	
 	dfloat xid = mesh->x[id+e*mesh->Np];
 	dfloat yid = mesh->y[id+e*mesh->Np];
@@ -112,24 +110,23 @@ void meshSurfaceGeometricFactorsTri3D(mesh_t *mesh){
 	
 	if(sJ<1e-8) { printf("Negative or small surface Jacobian: %g\n", sJ); exit(-1);}
 	
-	int base = e*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq;
+	int base = e*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nfp;
 	
-	mesh->sgeo[base+mesh->Nq*mesh->Nfaces*NXID] = nx;
-	mesh->sgeo[base+mesh->Nq*mesh->Nfaces*NYID] = ny;
-	mesh->sgeo[base+mesh->Nq*mesh->Nfaces*NZID] = nz;
-	mesh->sgeo[base+mesh->Nq*mesh->Nfaces*SJID] = sJ;
+	mesh->sgeo[base+mesh->Nfp*mesh->Nfaces*NXID] = nx;
+	mesh->sgeo[base+mesh->Nfp*mesh->Nfaces*NYID] = ny;
+	mesh->sgeo[base+mesh->Nfp*mesh->Nfaces*NZID] = nz;
+	mesh->sgeo[base+mesh->Nfp*mesh->Nfaces*SJID] = sJ;
 	
-	mesh->sgeo[base+mesh->Nq*mesh->Nfaces*IJID] = 1./Jid;
+	mesh->sgeo[base+mesh->Nfp*mesh->Nfaces*IJID] = 1./Jid;
       }
     }
   }
 
-
 #if 0
   for(int e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->Nq;++n){
-	int idM = n+f*mesh->Nq+e*mesh->Nfaces*mesh->Nq;
+      for(int n=0;n<mesh->Nfp;++n){
+	int idM = n+f*mesh->Nfp+e*mesh->Nfaces*mesh->Nfp;
 	int idP = mesh->mapP[idM];
 	int eP = idP/(mesh->Nq*mesh->Nfaces);
 	int fP = (idP%(mesh->Nq*mesh->Nfaces))/mesh->Nq;
