@@ -3,8 +3,8 @@
 void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma = 80.,  ysigma  = 80.;
-  dfloat cxsigma =80, cysigma = 80;
+  dfloat xsigma  = 100. , ysigma  = 100.;
+  dfloat cxsigma = 20. , cysigma = 20.;
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -103,11 +103,12 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
 
 
 
+    iint order = 4; 
 
-    dfloat xmaxScale = pow(pmlxmax-xmax,2);
-    dfloat xminScale = pow(pmlxmin-xmin,2);
-    dfloat ymaxScale = pow(pmlymax-ymax,2);
-    dfloat yminScale = pow(pmlymin-ymin,2);
+    dfloat xmaxScale = pow(pmlxmax-xmax,order);
+    dfloat xminScale = pow(pmlxmin-xmin,order);
+    dfloat ymaxScale = pow(pmlymax-ymax,order);
+    dfloat yminScale = pow(pmlymin-ymin,order);
 
     //set up the damping factor
     for (iint es=0;es<mesh->pmlNelements;es++){
@@ -132,24 +133,29 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
 
           if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,2)/xmaxScale;
+              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,2)/xminScale;
+              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,2)/ymaxScale;
+              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,2)/yminScale;
+              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,2)/xmaxScale;
+              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,2)/xminScale;
+              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,2)/ymaxScale;
+              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,2)/yminScale;
+              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
+
+
+        // printf("%.6f %.6f\n", mesh->pmlSigmaX[mesh->Np*pmlId + n],mesh->pmlSigmaY[mesh->Np*pmlId + n]);
+
+
 
         }
 

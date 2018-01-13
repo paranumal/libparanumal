@@ -447,6 +447,12 @@ typedef struct {
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
+  
+
+  // Just for test will be deleted after temporal testsAK
+  occa::kernel RKupdateKernel;
+  occa::kernel RKpmlUpdateKernel;
+
 
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;

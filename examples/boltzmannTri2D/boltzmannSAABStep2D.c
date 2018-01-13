@@ -169,9 +169,6 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
 
-
-
-
   const iint id = mrab_order*3;
 
   if (mesh->nonPmlNelements)

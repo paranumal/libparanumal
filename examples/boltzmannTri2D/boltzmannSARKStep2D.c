@@ -171,7 +171,7 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 
 
 
-     //rotate index
+    //rotate index
     mesh->shiftIndex = (mesh->shiftIndex+1)%3;
 
 
@@ -256,6 +256,8 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                   mesh->o_qS,
                   mesh->o_q);
     }
+
+
         
   }   
 }

@@ -97,15 +97,13 @@ occa::initTimer(mesh->device);
     occa::tic("Boltzmann Solver");
 
  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-  // for(iint tstep=0;tstep<1;++tstep){
+  // for(iint tstep=0;tstep<100;++tstep){
 
-     if(strstr(options, "REPORT")){
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep, options);
-      }
-     }
-
-
+     // if(strstr(options, "REPORT")){
+     //  if((tstep%mesh->errorStep)==0){
+     //    boltzmannReport2D(mesh, tstep, options);
+     //  }
+     // }
       if(strstr(options, "MRAB")){
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
@@ -115,11 +113,12 @@ occa::initTimer(mesh->device);
       }
 
       if(strstr(options, "SRAB")){
+
       boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
       if(strstr(options, "SAAB")){
-      boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
        if(strstr(options, "LSERK")){ 
@@ -132,10 +131,7 @@ occa::initTimer(mesh->device);
 
        if(strstr(options, "LSIMEX")){
       boltzmannLSIMEXStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
-
-      
-    
+      }    
 
   }
 
@@ -145,7 +141,7 @@ mesh->device.finish();
 occa::toc("Boltzmann Solver");
  
 printf("writing Final data\n");  
-//   // // For Final Time
+// For Final Time
 boltzmannReport2D(mesh, mesh->NtimeSteps,options);
 
 occa::printTimer();

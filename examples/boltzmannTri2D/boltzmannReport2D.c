@@ -37,6 +37,18 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     sprintf(fname, "foo_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
    }
+
+
+  if(strstr(options, "TEC")){ 
+    char fname[BUFSIZ];
+    sprintf(fname, "foo_%04d.dat",rank);
+    // boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);
+    boltzmannPlotTEC2D(mesh, fname, t);
+  }
+
+
+
+
   }
   else{
    
@@ -53,6 +65,15 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
   }
+
+  
+  if(strstr(options, "TEC")){ 
+    char fname[BUFSIZ];
+    sprintf(fname, "foo_%04d.vtu",rank);
+    boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);
+  }
+
+
   
    // do error stuff on host
     boltzmannError2D(mesh, t, options);

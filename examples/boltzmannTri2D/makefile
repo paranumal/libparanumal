@@ -50,6 +50,7 @@ boltzmannSARKStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 boltzmannPlotVTU2D.o \
+boltzmannPlotTEC2D.o \
 boltzmannMRABSetup2D.o \
 boltzmannMRABPmlSetup2D.o \
 boltzmannPmlSetup2D.o \
