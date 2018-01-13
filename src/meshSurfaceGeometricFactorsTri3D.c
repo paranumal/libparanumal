@@ -122,7 +122,7 @@ void meshSurfaceGeometricFactorsTri3D(mesh_t *mesh){
     }
   }
 
-#if 1
+#if 0
   for(int e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
       for(int n=0;n<mesh->Nfp;++n){

@@ -20,8 +20,6 @@ void boltzmannRunTri3D(solver_t *solver){
     
     for(iint rk=0;rk<mesh->Nrk;++rk){
 
-      //      printf("RK %d --------------------\n", rk);
-      
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -44,7 +42,6 @@ void boltzmannRunTri3D(solver_t *solver){
 			      sendBuffer,
 			      recvBuffer);
       }
-
 
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,

@@ -59,7 +59,8 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   /* load nodes */
   for(n=0;n<mesh->Nnodes;++n){
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat, VX+n, VY+n, VZ+n);
+    sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
+	   VX+n, VY+n, VZ+n);
   }
 
   /* look for section with Element node data */
