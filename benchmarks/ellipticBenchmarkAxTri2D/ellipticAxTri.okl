@@ -1,15 +1,15 @@
-kernel void ellipticAxTri2D_v1(const int Nelements,
+kernel void ellipticAxTri2D_v1(
+		const int Nelements,
 		const iint   * restrict elementList,
 		const dfloat * restrict ggeo,
 		const char4  * restrict IndT,
 		const dfloat * restrict Srr,
 		const dfloat * restrict Srs,
-		const dfloat * restrict Sss,             
+		const dfloat * restrict Sss,
 		const dfloat * restrict MM,
 		const dfloat lambda,
 		const dfloat * restrict q,
 		dfloat * restrict Aq){
-
 	// needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 	for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 		shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
@@ -350,18 +350,18 @@ kernel void ellipticAxTri2D_v4(const int Nelements,
 }
 
 
-kernel void ellipticAxTri2D_v0(const int Nelements,
+kernel void ellipticAxTri2D_v0(
+		const int Nelements,
 		const iint   * restrict elementList,
 		const dfloat * restrict ggeo,
+		const char4  * restrict IndT,
 		const dfloat4 * restrict Srr,
 		const dfloat4 * restrict Srs,
-		const char4  * restrict IndT,
 		const dfloat4 * restrict Sss,
 		const dfloat * restrict MM,
 		const dfloat lambda,
 		const dfloat * restrict q,
 		dfloat * restrict Aq){
-
 	// needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 	for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 		shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];

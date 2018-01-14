@@ -136,8 +136,6 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 	// add custom defines
 	kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
 	kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-	kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
-	printf("sparse NNZ %d \n", mesh->SparseNnzPerRow);  
 	//sizes for the coarsen and prolongation kernels. degree N to degree 1
 	kernelInfo.addDefine("p_NpFine", mesh->Np);
 	kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
@@ -191,6 +189,12 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 			}
 		}
 	}
+
+
+
+	kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
+	printf("sparse NNZ %d \n", paddedRowSize);  
+
 
 	mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
 	mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
