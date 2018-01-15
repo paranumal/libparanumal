@@ -122,19 +122,19 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	  const dfloat dq10dy = drdy*dqdr[9] + dsdy*dqds[9] + dtdy*q10;
 	  const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9] + dtdz*q10;
 	  
-	  const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);	
+	  const dfloat rhsq1 = -(dq2dx + dq3dy + dq4dz);	
 	  
-	  dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);	
-	  dfloat rhsq3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy + dq8dx + dq10dz);
-	  dfloat rhsq4 = -p_sqrtRT*(dq1dz + p_sqrt2*dq7dz + dq9dx + dq10dy);
+	  dfloat rhsq2 = -(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);	
+	  dfloat rhsq3 = -(dq1dy + p_sqrt2*dq6dy + dq8dx + dq10dz);
+	  dfloat rhsq4 = -(dq1dz + p_sqrt2*dq7dz + dq9dx + dq10dy);
 	  
-	  const dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx -p_tauInv*(q5 - q2*q2*p_invsqrt2*invq1);
-	  const dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy -p_tauInv*(q6 - q3*q3*p_invsqrt2*invq1);
-	  const dfloat rhsq7 = -p_sqrtRT*p_sqrt2*dq4dz -p_tauInv*(q7 - q4*q4*p_invsqrt2*invq1);
+	  const dfloat rhsq5 = -p_sqrt2*dq2dx -p_tauInv*(q5 - q2*q2*p_invsqrt2*invq1);
+	  const dfloat rhsq6 = -p_sqrt2*dq3dy -p_tauInv*(q6 - q3*q3*p_invsqrt2*invq1);
+	  const dfloat rhsq7 = -p_sqrt2*dq4dz -p_tauInv*(q7 - q4*q4*p_invsqrt2*invq1);
 	  
-	  const dfloat rhsq8  = -p_sqrtRT*(dq3dx+dq2dy) -p_tauInv*(q8  - q2*q3*p_invsqrt2*invq1);
-	  const dfloat rhsq9  = -p_sqrtRT*(dq4dx+dq2dz) -p_tauInv*(q9  - q2*q4*p_invsqrt2*invq1);
-	  const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*p_invsqrt2*invq1);
+	  const dfloat rhsq8  = -(dq3dx+dq2dy) -p_tauInv*(q8  - q2*q3*p_invsqrt2*invq1);
+	  const dfloat rhsq9  = -(dq4dx+dq2dz) -p_tauInv*(q9  - q2*q4*p_invsqrt2*invq1);
+	  const dfloat rhsq10 = -(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*p_invsqrt2*invq1);
 	  
 	  // constrain momentum changes to lie on sphere
 	  const dfloat xn = x[n+e*p_Np];
