@@ -11,7 +11,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 	int NKernels;
 	char kernelName[BUFSIZ];
 
-	NKernels = 2;
+	NKernels = 5;
 	sprintf(kernelName, "ellipticAxTri2D");
 
 	//  kernelInfo.addCompilerFlag("-G");
@@ -23,7 +23,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 	for(iint i=0; i<NKernels; i++) {
 
 		sprintf(testkernelName, "%s_v%d", kernelName,  i);
-		printf("%s Kernel #%02d\n", kernelFileName, i);
+		printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
 		printf("Np = %d sizeof(dfloat) = %d Nelements = %d \n", mesh->Np, sizeof(dfloat), mesh->Nelements);
 
 		testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
@@ -50,6 +50,9 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 		// time Ax
 		double timeAx = 0.0f;
 		double kernelElapsed =0.0f;;
+		
+		mesh->device.finish();
+	
 		occa::streamTag start[Ntrials], end[Ntrials];
 		for(int it=0;it<Ntrials;++it){
 			mesh->device.finish();
