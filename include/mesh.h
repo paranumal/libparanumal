@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-#if 1
+#if 0
 #define iint int
 #define dfloat float
 #define MPI_IINT MPI_INT
@@ -199,6 +199,7 @@ typedef struct {
   dfloat *sparseMM;
   int* FaceModes;
   int SparseNnzPerRow;
+  int SparseNnzPerRowNonPadded;
   int *sparseStackedNZ;
   dfloat *sparseSrrT;
   dfloat *sparseSrsT;

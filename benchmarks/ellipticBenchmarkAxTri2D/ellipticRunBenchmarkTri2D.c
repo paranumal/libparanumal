@@ -20,7 +20,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
 	char testkernelName[BUFSIZ];
 	occa::kernel testKernel;
-	for(iint i=0; i<NKernels; i++) {
+	for(iint i=1; i<NKernels; i++) {
 
 		sprintf(testkernelName, "%s_v%d", kernelName,  i);
 		printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
@@ -102,12 +102,13 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 			// count actual number of non-zeros
 			int nnzs = 0;
 
-			for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRow;++n){
+			for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRowNonPadded;++n){
 				nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
 				nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
 				nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
+
 			}
-			printf("nnzs = %d matrix size %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow);
+			printf("nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
 
 
 			// 6 flops per non-zero plus chain rule
