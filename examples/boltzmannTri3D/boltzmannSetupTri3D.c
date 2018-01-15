@@ -30,6 +30,8 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
+
+  mesh->finalTime = 50;
   
   mesh->Nfields = 10;
   
@@ -43,7 +45,8 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
 
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
-  mesh->sqrtRT = sqrt(mesh->RT);  
+  mesh->sqrtRT = sqrt(mesh->RT);
+
   dfloat nu = 2.e-4;  // was 6.e-3
   
   // initial conditions
@@ -154,7 +157,7 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   //    dfloat nu = 1.e-2; TW works for start up fence
 
   mesh->tauInv = mesh->RT/nu; // TW
-  
+
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){  
@@ -184,6 +187,15 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
 
   dt = mymin(dt, cfl/mesh->tauInv);
+
+  
+  // normalization to remove sqrt(RT) from equations
+  // \tilde{t} = t*sqrt(RT)
+  // \tilde{tau} = tau*sqrt(RT)
+  // \tilde{dt} = dt*sqrt(RT)
+  mesh->finalTime *= mesh->sqrtRT;
+  mesh->tauInv /= mesh->sqrtRT;
+  mesh->dt *= mesh->sqrtRT;
   
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
@@ -196,7 +208,7 @@ solver_t *boltzmannSetupTri3D(mesh_t *mesh){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 50;
+
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 

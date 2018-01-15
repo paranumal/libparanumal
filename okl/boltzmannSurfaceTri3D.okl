@@ -4,19 +4,19 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 	  const dfloat * restrict dq,
 	  dfloat * restrict fluxq){
 
-  fluxq[0] = alpha*dq[0] - beta*p_sqrtRT*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
+  fluxq[0] = alpha*dq[0] - beta*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
 
-  fluxq[1] = alpha*dq[1] - beta*p_sqrtRT*(nx*dq[0] + nx*p_sqrt2*dq[4] + ny*dq[7] + nz*dq[8]);
-  fluxq[2] = alpha*dq[2] - beta*p_sqrtRT*(ny*dq[0] + ny*p_sqrt2*dq[5] + nx*dq[7] + nz*dq[9]);
-  fluxq[3] = alpha*dq[3] - beta*p_sqrtRT*(nz*dq[0] + nz*p_sqrt2*dq[6] + nx*dq[8] + ny*dq[9]);
+  fluxq[1] = alpha*dq[1] - beta*(nx*dq[0] + nx*p_sqrt2*dq[4] + ny*dq[7] + nz*dq[8]);
+  fluxq[2] = alpha*dq[2] - beta*(ny*dq[0] + ny*p_sqrt2*dq[5] + nx*dq[7] + nz*dq[9]);
+  fluxq[3] = alpha*dq[3] - beta*(nz*dq[0] + nz*p_sqrt2*dq[6] + nx*dq[8] + ny*dq[9]);
 
-  fluxq[4] = alpha*dq[4] - beta*p_sqrtRT*(p_sqrt2*nx*dq[1]);
-  fluxq[5] = alpha*dq[5] - beta*p_sqrtRT*(p_sqrt2*ny*dq[2]);
-  fluxq[6] = alpha*dq[6] - beta*p_sqrtRT*(p_sqrt2*nz*dq[3]);
+  fluxq[4] = alpha*dq[4] - beta*(p_sqrt2*nx*dq[1]);
+  fluxq[5] = alpha*dq[5] - beta*(p_sqrt2*ny*dq[2]);
+  fluxq[6] = alpha*dq[6] - beta*(p_sqrt2*nz*dq[3]);
 
-  fluxq[7] = alpha*dq[7] - beta*p_sqrtRT*(nx*dq[2]+ny*dq[1]);
-  fluxq[8] = alpha*dq[8] - beta*p_sqrtRT*(nx*dq[3]+nz*dq[1]);
-  fluxq[9] = alpha*dq[9] - beta*p_sqrtRT*(ny*dq[3]+nz*dq[2]);
+  fluxq[7] = alpha*dq[7] - beta*(nx*dq[2]+ny*dq[1]);
+  fluxq[8] = alpha*dq[8] - beta*(nx*dq[3]+nz*dq[1]);
+  fluxq[9] = alpha*dq[9] - beta*(ny*dq[3]+nz*dq[2]);
 }
 
 
@@ -76,7 +76,7 @@ kernel void boltzmannSurfaceTri3D(const iint Nelements,
 	  
 	  // D = nx*A + ny*B + nz*C
 	  // compute 0.5*[q] + 0.5*D*[q]/sqrt(RT)
-	  const dfloat alpha = 0.5, beta = 0.5*p_invsqrtRT;
+	  const dfloat alpha = 0.5, beta = 0.5; // was 0.5*p_invsqrtRT
 	  
 	  flux(nx, ny, nz, alpha, beta, dq, fluxq);
 	  
