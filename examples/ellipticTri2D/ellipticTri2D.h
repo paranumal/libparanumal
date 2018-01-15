@@ -19,6 +19,9 @@ typedef struct {
 
   precon_t *precon;
 
+  void *hostGsh;  //gs handle on host
+  iint *globalIds;
+
   ogs_t *ogs;
 
   ogs_t *ogsDg;
@@ -41,6 +44,7 @@ typedef struct {
 
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
+  dfloat *invDegree;
 
   int *EToB;
   dfloat *sendBuffer, *recvBuffer;
@@ -178,7 +182,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau,
 void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
-dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options);
 
 void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
                               dfloat tau, dfloat lambda, iint *BCType,

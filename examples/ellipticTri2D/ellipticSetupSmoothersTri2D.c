@@ -249,7 +249,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx(solver, level);
+    dfloat rho = maxEigSmoothAx(solver, level, options);
 
     if (strstr(options,"CHEBYSHEV")) {
 
@@ -312,7 +312,7 @@ void ellipticSetupSmootherFullPatch(solver_t *solver, precon_t *precon, agmgLeve
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx(solver, level);
+    dfloat rho = maxEigSmoothAx(solver, level, options);
 
     if (strstr(options,"CHEBYSHEV")) {
 
@@ -384,7 +384,7 @@ void ellipticSetupSmootherFacePatch(solver_t *solver, precon_t *precon, agmgLeve
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx(solver, level);
+    dfloat rho = maxEigSmoothAx(solver, level, options);
 
     if (strstr(options,"CHEBYSHEV")) {
 
@@ -444,7 +444,7 @@ void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLev
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx(solver, level);
+    dfloat rho = maxEigSmoothAx(solver, level, options);
 
     if (strstr(options,"CHEBYSHEV")) {
 
@@ -485,13 +485,13 @@ void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgL
   ellipticBuildJacobiTri2D(solver,mesh,basisNp,basis,tau, lambda, BCType, &invDiagA,options);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-
+    
   level->device_smoother = dampedJacobi;
 
   //check if stabilization is needed
   if (strstr(options,"MULTIGRID")||strstr(options,"FULLALMOND")) {
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx(solver, level);
+    dfloat rho = maxEigSmoothAx(solver, level, options);
 
     if (strstr(options,"CHEBYSHEV")) {
 
@@ -547,7 +547,7 @@ static void eig(const int Nrows, double *A, double *WR, double *WI){
   delete [] WORK;
 }
 
-dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level,const char* options){
 
   mesh_t *mesh = solver->mesh;
 
@@ -562,8 +562,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
 
   iint Ntotal=0;
   MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
-  if(k > Ntotal)
-    k = Ntotal;
+  if(k > Ntotal) k = Ntotal;
 
   // do an arnoldi
 
@@ -571,77 +570,56 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
   double *H = (double *) calloc(k*k,sizeof(double));
 
   // allocate memory for basis
-  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
-  dfloat *Vx = (dfloat *) calloc(M, sizeof(dfloat));
-
+  dfloat *Vx = (dfloat*) calloc(M, sizeof(dfloat));
+  occa::memory *o_V = (occa::memory *) calloc(k+1, sizeof(occa::memory));
+  
   occa::memory o_Vx  = mesh->device.malloc(M*sizeof(dfloat),Vx);
   occa::memory o_AVx = mesh->device.malloc(M*sizeof(dfloat),Vx);
 
   for(int i=0; i<=k; i++)
-    V[i] = (dfloat *) calloc(N, sizeof(dfloat));
+    o_V[i] = mesh->device.malloc(M*sizeof(dfloat),Vx);
 
   // generate a random vector for initial basis vector
-  for (iint i=0;i<N;i++)
-    Vx[i] = (dfloat) drand48();
+  for (iint i=0;i<N;i++) Vx[i] = (dfloat) drand48(); 
 
-  dfloat norm_vo = 0.;
-  for (iint i=0;i<N;i++)
-    norm_vo += Vx[i]*Vx[i];
+  //gather-scatter 
+  if (strstr(options,"CONTINUOUS")) {
+    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) Vx[n] *= mesh->mapSgn[n];
+    gsParallelGatherScatter(solver->hostGsh, Vx, dfloatString, "add"); 
+    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) Vx[n] *= mesh->mapSgn[n];
+  
+    for (iint i=0;i<N;i++) Vx[i] *= mesh->mask[i];
+  }
 
-  dfloat gNorm_vo = 0;
-  MPI_Allreduce(&norm_vo, &gNorm_vo, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-  gNorm_vo = sqrt(gNorm_vo);
+  o_Vx.copyFrom(Vx); //copy to device
+  dfloat norm_vo = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_Vx, o_Vx, options);
+  norm_vo = sqrt(norm_vo);
 
-  for (iint i=0;i<N;i++)
-    Vx[i] /= gNorm_vo;
-
-  for (iint i=0;i<N;i++)
-    V[0][i] = Vx[i];
+  ellipticScaledAdd(solver, 1./norm_vo, o_Vx, 0. , o_V[0]);
 
   for(int j=0; j<k; j++){
-
-    for (iint i=0;i<N;i++)
-      Vx[i] = V[j][i];
-
-    o_Vx.copyFrom(Vx); //send to device
-
     // v[j+1] = invD*(A*v[j])
-    level->device_Ax(level->AxArgs,o_Vx,o_AVx);
-    level->device_smoother(level->smootherArgs, o_AVx, o_AVx);
-
-    o_AVx.copyTo(V[j+1],N*sizeof(dfloat)); //send result to host
+    level->device_Ax(level->AxArgs,o_V[j],o_AVx);
+    level->device_smoother(level->smootherArgs, o_AVx, o_V[j+1]);
 
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      dfloat hij = 0.;
-      for (iint n=0;n<N;n++)
-        hij += V[i][n]*V[j+1][n];
-
-      dfloat ghij = 0;
-      MPI_Allreduce(&hij, &ghij, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+      dfloat hij = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_V[i], o_V[j+1], options);
 
       // v[j+1] = v[j+1] - hij*v[i]
-      for (iint n=0;n<N;n++)
-        V[j+1][n] -= ghij*V[i][n];
+      ellipticScaledAdd(solver, -hij, o_V[i], 1., o_V[j+1]);
 
-      H[i + j*k] = (double) ghij;
+      H[i + j*k] = (double) hij;
     }
 
     if(j+1 < k){
-
-      dfloat norm_vj = 0.;
-      for (iint n=0;n<N;n++)
-        norm_vj += V[j+1][n]*V[j+1][n];
-
-      dfloat gNorm_vj =0.;
-      MPI_Allreduce(&norm_vj, &gNorm_vj, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      gNorm_vj = sqrt(gNorm_vj);
-
-      H[j+1+ j*k] = (double) gNorm_vj;
-
-      for (iint n=0;n<N;n++)
-        V[j+1][n] *= 1./H[j+1 + j*k];
+      // v[j+1] = v[j+1]/||v[j+1]||
+      dfloat norm_vj = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_V[j+1], o_V[j+1], options);
+      norm_vj = sqrt(norm_vj);
+      ellipticScaledAdd(solver, 1/norm_vj, o_V[j+1], 0., o_V[j+1]);
+      
+      H[j+1+ j*k] = (double) norm_vj;
     }
   }
 
@@ -660,17 +638,16 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
     }
   }
 
+  // free memory
   free(H);
   free(WR);
   free(WI);
 
-  // free memory
-  for(int i=0; i<=k; i++){
-    free(V[i]);
-  }
-
+  free(Vx);
   o_Vx.free();
   o_AVx.free();
+  for(int i=0; i<=k; i++) o_V[i].free();
+  free((void*)o_V);
 
   return rho;
 }

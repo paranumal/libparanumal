@@ -173,17 +173,4 @@ void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   occa::memory o_invDiagA = solver->precon->o_invDiagA;
 
   solver->dotMultiplyKernel(mesh->Np*mesh->Nelements,o_invDiagA,o_r,o_Sr);
-   if(strstr(options, "CONTINUOUS")){
-    if (strstr(options,"SPARSE")) {
-      //sign correction for gs
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Sr, mesh->o_mapSgn, o_Sr);
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_Sr, o_Sr, dfloatString, "add");  
-      solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Sr, mesh->o_mapSgn, o_Sr);
-    } else {
-      ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_Sr, o_Sr, dfloatString, "add");  
-    }
-  
-    //mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Sr, mesh->o_mask, o_Sr);
-  }
 }

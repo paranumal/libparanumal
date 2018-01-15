@@ -545,12 +545,15 @@ void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
   for(iint n=0;n<mesh->Np;++n){
     if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
       for(iint m=0;m<mesh->Np;++m){
-        if (mesh->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
-        A[n*mesh->Np+m] += Grr*mesh->Srr[m+n*mesh->Np];
-        A[n*mesh->Np+m] += Grs*mesh->Srs[m+n*mesh->Np];
-        A[n*mesh->Np+m] += Grs*mesh->Ssr[m+n*mesh->Np];
-        A[n*mesh->Np+m] += Gss*mesh->Sss[m+n*mesh->Np];
-        A[n*mesh->Np+m] += J*lambda*mesh->MM[m+n*mesh->Np];
+        if (mesh->mapB[m+eM*mesh->Np]!=1) {//dont fill rows for masked nodes
+          A[n*mesh->Np+m] = J*lambda*mesh->MM[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Grr*mesh->Srr[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Grs*mesh->Srs[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Grs*mesh->Ssr[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Gss*mesh->Sss[m+n*mesh->Np];
+        } else {
+          A[n*mesh->Np+m] = 0;
+        }
       }
     } else {
       A[n+n*mesh->Np] = 1; //just put a 1 so A is invertable
