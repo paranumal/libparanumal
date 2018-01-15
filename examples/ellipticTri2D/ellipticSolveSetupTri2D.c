@@ -207,10 +207,10 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   }
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  iint *gatherIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) gatherIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
+  solver->globalIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) solver->globalIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
 
-  void *allGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, gatherIds);
+  solver->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, solver->globalIds);
   
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   mesh->mask = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
@@ -227,7 +227,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       }
     }
   }
-  gsParallelGatherScatter(allGsh, mesh->mapB, "int", "min"); // should use iint
+  gsParallelGatherScatter(solver->hostGsh, mesh->mapB, "int", "min"); // should use iint
 
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1E9) {
@@ -242,9 +242,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   }
   mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
-
-  gsParallelGatherScatterDestroy(allGsh);
-  free(gatherIds);
 
   //copy boundary flags
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
@@ -519,7 +516,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   /* node degree vector */
   occaTimerTic(mesh->device,"DegreeVectorSetup");
-  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  solver->invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
   // build degree vector
@@ -534,10 +531,10 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
-    invDegree[n] = 1./degree[n];
+    solver->invDegree[n] = 1./degree[n];
   }
 
-  solver->o_invDegree.copyFrom(invDegree);
+  solver->o_invDegree.copyFrom(solver->invDegree);
   occaTimerToc(mesh->device,"DegreeVectorSetup");
 
   // set up separate gather scatter infrastructure for halo and non halo nodes

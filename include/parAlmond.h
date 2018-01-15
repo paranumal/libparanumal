@@ -159,6 +159,7 @@ typedef struct agmgLevel_t {
   iint *globalAggStarts; //global partitioning of coarse level
 
   bool gatherLevel;
+  bool weightedInnerProds;
 
   void **AxArgs;
   void **smoothArgs;
@@ -201,9 +202,13 @@ typedef struct agmgLevel_t {
 
   dfloat *ckp1, *vkp1, *wkp1;
 
+  dfloat *weight;
+
   occa::memory o_rhs, o_res, o_x;
   occa::memory o_Srhs, o_Sx;
   occa::memory o_ckp1, o_vkp1, o_wkp1;
+
+  occa::memory o_weight;
 
   dfloat *smoother_params;
   dfloat *smootherResidual;
@@ -269,6 +274,9 @@ typedef struct {
   occa::kernel vectorAddInnerProdKernel;
   occa::kernel kcycleCombinedOp1Kernel;
   occa::kernel kcycleCombinedOp2Kernel;
+  occa::kernel vectorAddWeightedInnerProdKernel;
+  occa::kernel kcycleWeightedCombinedOp1Kernel;
+  occa::kernel kcycleWeightedCombinedOp2Kernel;
 
 } parAlmond_t;
 

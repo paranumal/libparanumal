@@ -83,3 +83,90 @@ kernel void kcycleCombinedOp2Kernel(const iint Nblocks,
   }
 }
     
+// w.a.b, w.a.c, w.b.b
+kernel void kcycleWeightedCombinedOp1Kernel(const iint Nblocks,
+                const iint   N,
+                const dfloat *restrict a,
+                const dfloat *restrict b,
+                const dfloat *restrict c,
+                const dfloat *restrict w,
+                      dfloat *restrict ips){
+
+  for(iint g=0;g<Nblocks;++g;outer0){
+
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
+
+    exclusive dfloat abi, aci, bbi;
+    
+    for(int ty=0;ty<p_RDIMY;++ty;inner1){
+      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+        iint i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
+
+        abi = 0.f;
+        aci = 0.f;
+        bbi = 0.f;
+        
+        while(i<N){ // scan through whole array
+          const dfloat ai =  a[i];
+          const dfloat bi =  b[i];
+          const dfloat ci =  c[i];
+          const dfloat wi =  w[i];
+          abi += wi*ai*bi;
+          aci += wi*ai*ci;
+          bbi += wi*bi*bi;
+          i += Nblocks*p_RDIMX*p_RDIMY; 
+        }
+      }
+    }
+
+    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
+    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
+    twoPhaseReduction(bbi, s_ip, s_res, (ips+2));
+  }
+}
+
+// w.a.b, w.a.c, w.b.b
+kernel void kcycleWeightedCombinedOp2Kernel(const iint Nblocks,
+                const iint   N,
+                const dfloat *restrict a,
+                const dfloat *restrict b,
+                const dfloat *restrict c,
+                const dfloat *restrict d,
+                const dfloat *restrict w,
+                      dfloat *restrict ips){
+
+  for(iint g=0;g<Nblocks;++g;outer0){
+
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
+
+    exclusive dfloat abi, aci, adi;
+    
+    for(int ty=0;ty<p_RDIMY;++ty;inner1){
+      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+        iint i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
+
+        abi = 0.f;
+        aci = 0.f;
+        adi = 0.f;
+        
+        while(i<N){ // scan through whole array
+          const dfloat ai =  a[i];
+          const dfloat bi =  b[i];
+          const dfloat ci =  c[i];
+          const dfloat di =  d[i];
+          const dfloat wi =  w[i];
+          abi += wi*ai*bi;
+          aci += wi*ai*ci;
+          adi += wi*ai*di;
+          i += Nblocks*p_RDIMX*p_RDIMY; 
+        }
+      }
+    }
+
+    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
+    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
+    twoPhaseReduction(adi, s_ip, s_res, (ips+2));
+  }
+}
