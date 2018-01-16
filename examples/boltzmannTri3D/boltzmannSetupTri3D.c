@@ -1,4 +1,4 @@
-#include "boltzmannQuad3D.h"
+#include "boltzmannTri3D.h"
 
 void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
 		 dfloat x, dfloat y, dfloat z,
@@ -25,11 +25,13 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
   *w = wout - udotx*z/(sphereRadius*sphereRadius);
 
 }
-solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
+solver_t *boltzmannSetupTri3D(mesh_t *mesh){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
+
+  mesh->finalTime = 50;
   
   mesh->Nfields = 10;
   
@@ -43,7 +45,8 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
-  mesh->sqrtRT = sqrt(mesh->RT);  
+  mesh->sqrtRT = sqrt(mesh->RT);
+
   dfloat nu = 2.e-4;  // was 6.e-3
   
   // initial conditions
@@ -107,7 +110,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
       dfloat sigma13 = 0;
       dfloat sigma22 = 0;
       dfloat sigma23 = 0;
-      dfloat sigma33 = 0;
+      dfloat sigma33 = 0;      
 #endif
       dfloat q1bar = rho;
       dfloat q2bar = rho*umod/mesh->sqrtRT;
@@ -154,17 +157,17 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   //    dfloat nu = 1.e-2; TW works for start up fence
 
   mesh->tauInv = mesh->RT/nu; // TW
-  
+
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){  
 
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
-	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nfp*f+n;
 
-	dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
-	dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
+	dfloat sJ   = mesh->sgeo[sid + mesh->Nfp*mesh->Nfaces*SJID];
+	dfloat invJ = mesh->sgeo[sid + mesh->Nfp*mesh->Nfaces*IJID];
 	
 	// A = 0.5*h*L
 	// => J*2 = 0.5*h*sJ*2
@@ -184,23 +187,33 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
 
   dt = mymin(dt, cfl/mesh->tauInv);
+
+  
+  // normalization to remove sqrt(RT) from equations
+  // \tilde{t} = t*sqrt(RT)
+  // \tilde{tau} = tau*sqrt(RT)
+  // \tilde{dt} = dt*sqrt(RT)
+  mesh->finalTime *= mesh->sqrtRT;
+  mesh->tauInv /= mesh->sqrtRT;
+  mesh->dt *= mesh->sqrtRT;
   
   printf("hmin = %g\n", hmin);
   printf("hmax = %g\n", hmax);
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
   printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
+  printf("dt*tau = %g\n", mesh->tauInv*dt);
   
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 50;
+
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100*mesh->Nq;
+  mesh->errorStep = 500*(mesh->N+1);
 
   printf("dt = %g\n", mesh->dt);
 
@@ -211,23 +224,15 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
-  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
+  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //  sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
 
-  // fixed to set up quad info on device too
-  boltzmannOccaSetupQuad3D(mesh, deviceConfig,  kernelInfo);
+  boltzmannOccaSetupTri3D(mesh, deviceConfig,  kernelInfo);
   
-  // quad stuff
-  
-  kernelInfo.addDefine("p_Nq", mesh->Nq);
-  
-  printf("mesh->Nq = %d\n", mesh->Nq);
-  mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
@@ -236,17 +241,15 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
 
-  // specialization for Boltzmann
-
   kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
   
-  int maxNodes = mesh->Nfp;
+  int maxNodes = mymax(mesh->Np,mesh->Nfp*mesh->Nfaces);
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = 128/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   // physics 
@@ -263,26 +266,25 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
   
   mesh->volumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
-				       "boltzmannVolumeQuad3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeTri3D.okl",
+				       "boltzmannVolumeTri3D",
 				       kernelInfo);
   printf("starting surface\n");
   mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceQuad3D.okl",
-				       "boltzmannSurfaceQuad3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceTri3D.okl",
+				       "boltzmannSurfaceTri3D",
 				       kernelInfo);
   printf("ending surface\n");
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannUpdateQuad3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateTri3D.okl",
+				       "boltzmannUpdateTri3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-
 
   return solver;
 }

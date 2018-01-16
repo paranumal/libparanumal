@@ -43,27 +43,24 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
     // for all faces (global barrier at end of body of this loop)
     for(iint face=0;face<p_Nfaces;++face){      
 
-      // wait for all global memory writes of the previous inner loop to complete
-      barrier(globalMemFence);
       
       for(iint es=0;es<p_NblockS;++es;inner1){
 	for(iint i=0;i<p_Nq;++i;inner0){ 
 
 	  const iint eM = eo + es;
-	  const iint n = i+face*p_Nq;
 	  
 	  if(eM<Nelements){
 	    
 	    // load surface geofactors for this face
-	    const iint sid = eM*p_Nsgeo*p_Nfp*p_Nfaces + face*p_Nsgeo*p_Nfp + i; 
-	    const dfloat nx = sgeo[sid+0*p_Nfp];
-	    const dfloat ny = sgeo[sid+1*p_Nfp];
-	    const dfloat nz = sgeo[sid+2*p_Nfp];
-	    const dfloat sJ = sgeo[sid+3*p_Nfp];
-	    const dfloat invJ = sgeo[sid+4*p_Nfp];
+	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+	    const dfloat nx = sgeo[sid+0*p_Nq];
+	    const dfloat ny = sgeo[sid+1*p_Nq];
+	    const dfloat nz = sgeo[sid+2*p_Nq];
+	    const dfloat sJ = sgeo[sid+3*p_Nq];
+	    const dfloat invJ = sgeo[sid+4*p_Nq];
 
 	    // indices of negative and positive traces of face node
-	    const iint id  = eM*p_Nfp*p_Nfaces + n;
+	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
 	    const int idM = vmapM[id];
 	    const int idP = vmapP[id];
 	    const int eP = idP/p_Np;
@@ -81,13 +78,14 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	      }
 
 	    // D = nx*A + ny*B + nz*C
-   	    // compute 0.5*[q] + 0.5*D*[q]
-	    const dfloat ave = 0.5, beta = 0.5*p_invsqrtRT;
+   	    // compute 0.5*[q] + 0.5*D*[q]/sqrt(RT)
+	    const dfloat alpha = 0.5, beta = 0.5*p_invsqrtRT;
 
-	    flux(nx, ny, nz, ave, beta, dq, fluxq);
+	    flux(nx, ny, nz, alpha, beta, dq, fluxq);
 
 	    const dfloat one = 1.0, zero = 0.0;
 
+	    // compute D*(0.5*[q] + 0.5*D*[q])
 	    flux(nx, ny, nz, zero, one, fluxq, dq);
 	    
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
@@ -100,6 +98,10 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	  }
 	}
       }
+
+      // wait for all global memory writes of the previous inner loop to complete
+      barrier(globalMemFence);
+
       
     }
   }
