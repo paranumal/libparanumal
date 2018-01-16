@@ -18,9 +18,6 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
       }
     }
 
-
-printf("Number of pmlElements: %d \n", mesh->pmlNelements);
-
   //set up the pml
   if (mesh->pmlNelements) {
 
@@ -103,7 +100,7 @@ printf("Number of pmlElements: %d \n", mesh->pmlNelements);
 
 
 
-    iint order = 4; 
+    iint order = 2; 
 
     dfloat xmaxScale = pow(pmlxmax-xmax,order);
     dfloat xminScale = pow(pmlxmin-xmin,order);

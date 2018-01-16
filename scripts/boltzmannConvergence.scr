@@ -1,5 +1,20 @@
 cd ../examples/boltzmannTri2D;
 make -j; 
+
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D_w0.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D_w1.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D_w2.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D_w3.msh 3 LSERK;
+./boltzmannMain2D ../../meshes/boltzmannVortex2DNonPml.msh 3 LSERK;
+
+
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D.msh 5 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D.msh 5 LSERK;
+
+
+
 //
 // # TIME="LSERK SAAB SARK LSIMEX"
 // # MESH="../../meshes/boltzmannCouette2D_h0.msh

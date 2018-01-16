@@ -14,7 +14,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   
   mesh->Nfields = 6;
 
-
+  dfloat RE[4]; 
+  RE[0] = 20;  RE[1] = 50; RE[2] = 100; RE[3] = 200;
 
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
     mesh->Nrhs = 3;
@@ -59,23 +60,23 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    Ma = 0.1;    //Set Mach number
-    Re = 1000.;  // Set Reynolds number was 1000
+    mesh->Ma = 0.1;    //Set Mach number
+    mesh->Re = RE[mesh->Ntscale];  // Set Reynolds number was 1000
     //
     Uref = 0.5;  // Set Uref was 0.5
     Lref = 1.;   // set Lref
     //
-    mesh->RT      = Uref*Uref/(Ma*Ma);
+    mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
     mesh->sqrtRT  = sqrt(mesh->RT);  
     //
-    nu            = Uref*Lref/Re; 
+    nu            = Uref*Lref/mesh->Re; 
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
     rho = 1.0, u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 3.0;
+    mesh->finalTime = 6.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -134,7 +135,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      #if 1
+      #if 0
 
       dfloat uex = y ; 
       dfloat sex = 0.0; 
@@ -157,7 +158,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       #endif
 
 
-      #if 0
+      #if 1
 
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
@@ -256,7 +257,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   //   // dt = pow(2,mesh->Ntscale)*1e-6; 
   //   dt = mesh->Ntscale*1e-5;   
   // #endif
-
+  
+   dt = 10e-6; // !!!!!!!!!!!!!!!!
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
@@ -279,7 +281,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
 
-  mesh->errorStep = 10000;
+  mesh->errorStep = 2000;
   if(rank==0){
     printf("dt   = %g ",   mesh->dt);
     printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
@@ -289,14 +291,28 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
      printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt,  mesh->startTime + mesh->dt*mesh->NtimeSteps);
   }
  
+ 
 
+  if(strstr(options, "PROBE")){
+    mesh->probeNTotal = 1; 
+    dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    // Fill probe coordinates
+    pX[0] = 0.90;   //pX[1] = 0.65; pX[2] = 0.60; 
+    pY[0] = 0.00;   //pY[1] = 0.60; pY[2] = 0.55; 
+
+    meshProbeSetup2D(mesh, pX, pY);
+
+    free(pX); free(pY);
+
+  }
   
 
 
 //SetupOcca
   char deviceConfig[BUFSIZ];
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%4);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  

@@ -62,7 +62,7 @@ void boundaryConditions2D(const iint bc,
   }
   if(bc==2){ // Inflow
     *q1B = 1.f; 
-    *q2B = 1.f/p_sqrtRT; //Uniform Velocity
+    *q2B = 0.5f/p_sqrtRT; //Uniform Velocity
     //*q2B = 0.1; //Uniform Velocity
     *q3B = -q3M;
     *q4B = q4M;

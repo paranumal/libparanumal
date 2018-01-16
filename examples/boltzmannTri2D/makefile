@@ -22,7 +22,7 @@ CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."
 LDFLAGS	= $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -55,7 +55,6 @@ boltzmannMRABSetup2D.o \
 boltzmannMRABPmlSetup2D.o \
 boltzmannPmlSetup2D.o \
 boltzmannMRRun2D.o \
-boltzmannSACoefs2D.o \
 
 # library objects
 LOBJS = \
@@ -86,7 +85,8 @@ LOBJS = \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/meshProbeSetup2D.o \
 
 boltzmannMain2D:$(AOBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS) 

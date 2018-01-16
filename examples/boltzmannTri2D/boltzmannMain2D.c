@@ -21,7 +21,7 @@ int main(int argc, char **argv){
   // pmlprofile  = CONSTANT, QUADRATIC
   
   char options[BUFSIZ];
-  strcpy(options,"out = REPORT, MR_GROUPS, relaxation = CUBATURE, bc=NONE, pmlprofile=QUADRATIC");
+  strcpy(options,"out = REPORT + PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=QUADRATIC");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 
@@ -82,11 +82,11 @@ int main(int argc, char **argv){
        exit(-1);
     }  
     
-    for(iint i=0; i<1;i+=2){
+    for(iint i=0; i<3;i++){
 
-      if(i==0)
-      mesh->Ntscale=1;
-      else
+      // if(i==0)
+      // mesh->Ntscale=1;
+      // else
       mesh->Ntscale=i;
 
       printf("Setup Boltzmann Solver: \n");
