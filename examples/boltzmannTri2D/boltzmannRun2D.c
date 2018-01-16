@@ -5,8 +5,21 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
-  iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+  iint haloBytes;
+
+  if(strstr(options,"MRAB") || strstr(options,"MRSAAB"))
+    haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+  else
+    haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  
+   
+
+
   if (haloBytes) {
+    // // Allocate MPI send buffer for single rate integrators
+    // sendBuffer = (dfloat*) malloc(haloBytes);
+    // recvBuffer = (dfloat*) malloc(haloBytes);
+    
     occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
     occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
     sendBuffer = (dfloat*) o_sendBufferPinned.getMappedPointer();
@@ -99,11 +112,11 @@ occa::initTimer(mesh->device);
  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
   // for(iint tstep=0;tstep<100;++tstep){
 
-     // if(strstr(options, "REPORT")){
-     //  if((tstep%mesh->errorStep)==0){
-     //    boltzmannReport2D(mesh, tstep, options);
-     //  }
-     // }
+     if(strstr(options, "REPORT")){
+      if((tstep%mesh->errorStep)==0){
+        boltzmannReport2D(mesh, tstep, options);
+      }
+     }
       if(strstr(options, "MRAB")){
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }

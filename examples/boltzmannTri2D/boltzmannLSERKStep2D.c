@@ -14,7 +14,6 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat t = mesh->startTime + tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
     
    if(mesh->totalHaloPairs>0){
-    // extract halo on DEVICE
     #if ASYNC 
       mesh->device.setStream(dataStream);
     #endif
@@ -154,6 +153,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 
 
   if(mesh->totalHaloPairs>0){
+    
     #if ASYNC 
       mesh->device.setStream(dataStream);
     #endif

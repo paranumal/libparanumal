@@ -141,6 +141,16 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels);
 void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
 
+
+// Setup probe information
+// Probe Setup : AK
+void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY);
+void meshVandermonde2D(iint N, iint sizeR, dfloat *r, dfloat *s, dfloat *V);
+dfloat meshSimplex2D(dfloat a, dfloat b, iint i, iint j);
+dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, iint N);
+dfloat meshFactorial(iint n);
+
+
 #define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
 
 /* offsets for geometric factors */

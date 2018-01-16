@@ -302,9 +302,12 @@ typedef struct {
   dfloat *rhspmlq; // right hand side data array
   dfloat *respmlq; // residual data array (for LSERK time-stepping)
 
-
-
-
+  // Probe Data
+  iint probeN, probeNTotal; 
+  dfloat *probeR, *probeS, *probeT;
+  // dfloat *probeX, *probeY, *probeZ;  
+  iint *probeElementIds;  
+  dfloat *probeI; 
 
 
 
@@ -604,6 +607,22 @@ extern "C"
       void* rhs);
 
   void xxtFree(void* A) ;
+}
+
+extern "C"
+{
+ void dgesv_ ( int     *N, int     *NRHS, double  *A,
+                int     *LDA,
+                int     *IPIV, 
+                double  *B,
+                int     *LDB,
+                int     *INFO );
+
+void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
+
+void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
+void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
+
 }
 
 #endif

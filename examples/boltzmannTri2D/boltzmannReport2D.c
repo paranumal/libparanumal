@@ -15,6 +15,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   // report ramp function
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   if(rank==0){
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
@@ -23,16 +24,21 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   
   
 
-  if(strstr(options, "PML")){ 
-    // do error stuff on host
+  // do error stuff on host
     boltzmannError2D(mesh, t, options);
+
+
+
+
+  if(strstr(options, "PML")){ 
+    
 
    
     if(strstr(options, "VTU")){ 
     // compute vorticity
     //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
-    iint fld = 1;
+    //iint fld = 1;
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
@@ -47,13 +53,8 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   }
 
 
-
-
   }
   else{
-   
-  
-
 
    if(strstr(options, "VTU")){ 
     //boltzmannCouetteError2D(mesh, t);
@@ -62,7 +63,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     // output field files
     // iint fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
+    sprintf(fname, "foo2_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
   }
 
@@ -71,13 +72,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d.vtu",rank);
     boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);
-  }
-
-
-  
-   // do error stuff on host
-    boltzmannError2D(mesh, t, options);
-    
+  }    
   }
   
 }

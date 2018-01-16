@@ -4,6 +4,51 @@
 void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
 
+
+ if(strstr(options,"PROBE")){
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+      printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
+
+      if(mesh->probeN){
+
+      char fname[BUFSIZ];
+      sprintf(fname, "ReferenceData_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+      
+      fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
+
+      for(iint p=0; p<mesh->probeN; p++){
+         iint e = mesh->probeElementIds[p];        
+         dfloat srho = 0.0; 
+         dfloat su = 0.0; 
+         dfloat sv = 0.0; 
+         for(iint n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          srho        += mesh->probeI[p*mesh->Np+n]*rho*mesh->RT;
+          su          += mesh->probeI[p*mesh->Np+n]*um;
+          sv          += mesh->probeI[p*mesh->Np+n]*vm;
+         }
+
+        fprintf(fp, "%02d %.8e %.8e %.8e ",p, srho, su, sv); 
+      }
+    fprintf(fp, "\n"); 
+    fclose(fp);
+    }
+
+  }
+
+
+
+
+
+
+
  if(strstr(options, "PML")){
 
     dfloat maxQ1 = 0, minQ1 = 1e9;
@@ -35,7 +80,6 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
     if(isnan(globalMinQ1) || isnan(globalMaxQ1))
       exit(EXIT_FAILURE);
-  
 
 }
 else{
