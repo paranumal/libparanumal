@@ -174,10 +174,10 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   for (int n=0;n<mesh->Np*mesh->Np;n++)
     mesh->invSparseV[n] = mesh->sparseV[n];
-
-  	//int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
+#if 0
+  //int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
   int paddedRowSize = mesh->SparseNnzPerRow + (16-mesh->SparseNnzPerRow%16);
-printf("row size %d padded %d \n ", mesh->SparseNnzPerRow, paddedRowSize);
+  printf("row size %d padded %d \n ", mesh->SparseNnzPerRow, paddedRowSize);
   char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
 
   for (int m=0;m<paddedRowSize/4;m++) {
@@ -185,8 +185,8 @@ printf("row size %d padded %d \n ", mesh->SparseNnzPerRow, paddedRowSize);
       for (int k=0;k<4;k++) {
         if (k+4*m < mesh->SparseNnzPerRow) {
           IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];
-printf("putting %d in indT %d \n", k+4*n+m*4*mesh->Np,mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np]);  
-      } else {
+          //printf("putting %d in indT %d \n", k+4*n+m*4*mesh->Np,mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np]);  
+        } else {
           IndTchar[k+4*n+m*4*mesh->Np] = 0;
         }
       }
@@ -213,16 +213,16 @@ printf("putting %d in indT %d \n", k+4*n+m*4*mesh->Np,mesh->sparseStackedNZ[n+(k
 
   kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
   printf("sparse NNZ %d \n", paddedRowSize);  
-mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
+  mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
   mesh->SparseNnzPerRow = paddedRowSize;
 
 
   mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), sparseSrrTResized);
- mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), sparseSrsTResized);
+  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), sparseSrsTResized);
   mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), sparseSssTResized);
-//  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
-//  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
-//  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
+  //  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
+  //  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
+  //  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
 
   mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(char), IndTchar);
 
@@ -231,6 +231,70 @@ mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
   free(sparseSrsTResized);
   free(sparseSssTResized);
   return solver;
+#else
+  int * India = (int*) calloc(mesh->Np, sizeof(int));
+
+  char * Indja = (char*) calloc(mesh->Np*mesh->SparseNnzPerRow, sizeof(char));
+  dfloat * Srr = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
+  dfloat * Srs = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
+  dfloat * Sss = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
+
+
+  //CSR setup(brute force, no padding)
+  int count = -1;
+  India[0] = 1;
+  for (int m=0;m<mesh->Np;m++) {
+    int countRow = 0;
+
+    for (int n=0;n<mesh->SparseNnzPerRow;n++) {
+      if (mesh->sparseStackedNZ[m+mesh->Np*n]){
+        count++;
+        countRow++;
+        Indja[count] = (char)mesh->sparseStackedNZ[m+mesh->Np*n];
+        Srr[count] =  mesh->sparseSrrT[m+mesh->Np*n];
+        Srs[count] =  mesh->sparseSrsT[m+mesh->Np*n];
+        Sss[count] =  mesh->sparseSssT[m+mesh->Np*n];
+
+      }
+    }
+    India[m+1] = India[m]+countRow;
+  }
+  for (int m=0; m<mesh->Np+1; ++m){
+    printf( "%d, ", India[m]);
+    if (m<mesh->Np){
+      printf("\n Row %d \n", m);
+      for (int k=India[m]-1; k<India[m+1]-1; ++k){
+        printf(" %d, ", Indja[k]);      
+      }
+      printf("\n");
+
+      for (int k=India[m]-1; k<India[m+1]-1; ++k){
+        printf(" %.16f, ", Srr[k]);      
+      }
+      printf("\n"); 
+      for (int k=India[m]-1; k<India[m+1]-1; ++k){
+        printf(" %.16f, ", Srs[k]);      
+      }
+      printf("\n");
+      for (int k=India[m]-1; k<India[m+1]-1; ++k){
+        printf(" %.16f, ", Sss[k]);      
+      }
+
+
+      printf("\n\n");
+    }
+  }
+
+  mesh->o_India = mesh->device.malloc((mesh->Np+1)*sizeof(int), India);
+  mesh->o_Indja = mesh->device.malloc((India[mesh->Np])*sizeof(char), Indja);
+  
+  mesh->o_Srr = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srr);
+  mesh->o_Srs = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srs);
+  mesh->o_Sss = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Sss);
+  mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
+
+return solver;
+#endif
 }
 
 
