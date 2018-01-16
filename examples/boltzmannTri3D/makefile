@@ -14,10 +14,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' -O3
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' 
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -O3
+LDFLAGS	= $(compilerFlags) $(flags) 
 
 # libraries to be linked in
 LIBS	=  $(links)
@@ -31,19 +31,18 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 OBJS    = \
-boltzmannMainQuad3D.o \
-boltzmannRunQuad3D.o \
-boltzmannSetupQuad3D.o \
-boltzmannPlotVTUQuad3D.o \
-boltzmannPlotVTUQuad3DV2.o \
-boltzmannOccaSetupQuad3D.o \
-../../src/meshParallelReaderQuad3D.o \
-../../src/meshSetupQuad3D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshSurfaceGeometricFactorsQuad3D.o \
-../../src/meshPhysicalNodesQuad3D.o \
+boltzmannMainTri3D.o \
+boltzmannRunTri3D.o \
+boltzmannSetupTri3D.o \
+boltzmannPlotVTUTri3DV2.o \
+boltzmannOccaSetupTri3D.o \
+../../src/meshParallelReaderTri3D.o \
+../../src/meshSetupTri3D.o \
+../../src/meshLoadReferenceNodesTri2D.o \
+../../src/meshSurfaceGeometricFactorsTri3D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshParallelConnectNodes.o\
-../../src/meshGeometricFactorsQuad3D.o \
+../../src/meshGeometricFactorsTri3D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes3D.o \
@@ -60,8 +59,8 @@ boltzmannOccaSetupQuad3D.o \
 ../../src/parallelSort.o \
 ../../src/hash.o
 
-boltzmannMainQuad3D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o boltzmannMainQuad3D $(OBJS) $(paths) $(LIBS) 
+boltzmannMainTri3D:$(OBJS) 
+	$(LD)  $(LDFLAGS)  -o boltzmannMainTri3D $(OBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :

@@ -1,6 +1,6 @@
-#include "boltzmannQuad3D.h"
+#include "boltzmannTri3D.h"
 
-void boltzmannRunQuad3D(solver_t *solver){
+void boltzmannRunTri3D(solver_t *solver){
 
   //
   mesh_t *mesh = solver->mesh;
@@ -11,7 +11,7 @@ void boltzmannRunQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   iint fld = 0;
-  boltzmannPlotVTUQuad3D(mesh, "bah.vtu", fld);
+  //  boltzmannPlotVTUTri3D(mesh, "bah.vtu", fld);
   
   occa::initTimer(mesh->device);
   
@@ -20,8 +20,6 @@ void boltzmannRunQuad3D(solver_t *solver){
     
     for(iint rk=0;rk<mesh->Nrk;++rk){
 
-      //      printf("RK %d --------------------\n", rk);
-      
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -45,11 +43,11 @@ void boltzmannRunQuad3D(solver_t *solver){
 			      recvBuffer);
       }
 
-
       // compute volume contribution to DG boltzmann RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
-			 mesh->o_D,
+			 mesh->o_DrT,
+			 mesh->o_DsT,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
@@ -68,7 +66,6 @@ void boltzmannRunQuad3D(solver_t *solver){
       mesh->device.finish();
       occa::tic("surfaceKernel");
 
-#if 1
       // compute surface contribution to DG boltzmann RHS
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
@@ -81,7 +78,6 @@ void boltzmannRunQuad3D(solver_t *solver){
 			  mesh->o_z,
 			  mesh->o_q,
 			  mesh->o_rhsq);
-#endif
       
       mesh->device.finish();
       occa::toc("surfaceKernel");
@@ -120,20 +116,10 @@ void boltzmannRunQuad3D(solver_t *solver){
 	}
       }
 	  
-      
-      // do error stuff on host
-      //      boltzmannErrorQuad2D(mesh, mesh->dt*(tstep+1));
-
-      // compute vorticity
-      //      boltzmannComputeVorticityQuad2D(mesh, mesh->q, 0, mesh->Nfields);
-      
       // output field files
       iint fld = 0;
       char fname[BUFSIZ];
-      //      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
-
-      //      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
-      boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
+      boltzmannPlotVTUTri3DV2(mesh, "foo", tstep/mesh->errorStep);
     }
   }
 
