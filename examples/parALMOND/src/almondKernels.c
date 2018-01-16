@@ -91,4 +91,13 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
 
   parAlmond->kcycleCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
              "kcycleCombinedOp2Kernel", defs);
+
+  parAlmond->vectorAddWeightedInnerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAddInnerProduct.okl",
+             "vectorAddWeightedInnerProductKernel", defs);
+
+  parAlmond->kcycleWeightedCombinedOp1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
+             "kcycleWeightedCombinedOp1Kernel", defs);
+
+  parAlmond->kcycleWeightedCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
+             "kcycleWeightedCombinedOp2Kernel", defs);
 }

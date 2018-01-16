@@ -16,11 +16,20 @@ void coarsenTri2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
   occa::memory *o_V = (occa::memory *) args[1];
+  char *options    = (char *) args[2];
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
 
   precon->coarsenKernel(mesh->Nelements, *o_V, o_x, o_Rx);
+
+  // gather-scatter
+  //sign correction for gs
+  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Rx, mesh->o_mapSgn, o_Rx);
+  ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_Rx, o_Rx, dfloatString, "add");  
+  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Rx, mesh->o_mapSgn, o_Rx);       
+  
+  solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Rx, solver->o_invDegree, o_Rx);
 }
 
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
@@ -215,6 +224,62 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     //check if we're at the degree 1 problem
     if (n==numLevels-1) {
+      //report the upper multigrid levels
+      if (strstr(options,"VERBOSE")) {
+        if((rank==0)&&(numLevels>1)) {
+          printf("------------------Multigrid Report---------------------\n");
+          printf("-------------------------------------------------------\n");
+          printf("level|  Degree  |    dimension   |      Smoother       \n");
+          printf("     |  Degree  |  (min,max,avg) |      Smoother       \n");
+          printf("-------------------------------------------------------\n");
+        }
+
+        for(int lev=0; lev<numLevels-1; lev++){
+
+          iint Nrows = levels[lev]->Nrows;
+
+          iint minNrows=0, maxNrows=0, totalNrows=0;
+          dfloat avgNrows;
+          MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
+          MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+          avgNrows = (dfloat) totalNrows/size;
+
+          if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
+          MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+
+          char *smootherString;
+          if(strstr(options, "OVERLAPPINGPATCH")){
+            smootherString = strdup("OVERLAPPINGPATCH");
+          } else if(strstr(options, "FULLPATCH")){
+            smootherString = strdup("FULLPATCH");
+          } else if(strstr(options, "FACEPATCH")){
+            smootherString = strdup("FACEPATCH");
+          } else if(strstr(options, "LOCALPATCH")){
+            smootherString = strdup("LOCALPATCH");
+          } else { //default to damped jacobi
+            smootherString = strdup("DAMPEDJACOBI");
+          }
+
+          char *smootherOptions1 = strdup(" ");
+          char *smootherOptions2 = strdup(" ");
+          if (strstr(options,"EXACT")) {
+            smootherOptions1 = strdup("EXACT");
+          }
+          if (strstr(options,"CHEBYSHEV")) {
+            smootherOptions2 = strdup("CHEBYSHEV");
+          }
+
+          if (rank==0){
+            printf(" %3d |   %3d    |    %10.2f  |   %s  \n",
+              lev, levelDegree[lev], (dfloat)minNrows, smootherString);
+            printf("     |          |    %10.2f  |   %s %s  \n", (dfloat)maxNrows, smootherOptions1, smootherOptions2);
+            printf("     |          |    %10.2f  |   \n", avgNrows);
+          }
+        }
+        if((rank==0)&&(numLevels>1)) 
+          printf("-------------------------------------------------------\n");
+      }
+
       // build degree 1 matrix problem
       nonZero_t *coarseA;
       iint nnzCoarseA;
@@ -271,6 +336,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       //tell parAlmond to gather this level
       if (strstr(options,"CONTINUOUS")) {
         precon->parAlmond->levels[n]->gatherLevel = true;
+        precon->parAlmond->levels[n]->weightedInnerProds = false;
         precon->parAlmond->levels[n]->Srhs = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
         precon->parAlmond->levels[n]->Sx   = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
         precon->parAlmond->levels[n]->o_Srhs = mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),precon->parAlmond->levels[n]->Srhs);
@@ -290,7 +356,12 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       //build the level manually
       precon->parAlmond->numLevels++;
       levels[n] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
-      levels[n]->gatherLevel = false;
+      levels[n]->gatherLevel = false;   //dont gather this level
+      if (strstr(options,"CONTINUOUS")) {//use weighted inner products
+        precon->parAlmond->levels[n]->weightedInnerProds = true;
+        precon->parAlmond->levels[n]->o_weight = solverL->o_invDegree;
+        precon->parAlmond->levels[n]->weight = solverL->invDegree;
+      }
 
       //use the matrix free Ax
       levels[n]->AxArgs = (void **) calloc(3,sizeof(void*));
@@ -349,31 +420,31 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     }
 
     //reallocate vectors at N=1 since we're using the matrix free ops
-    if (n==numLevels-1) {
-      if (n>0) {//kcycle vectors
-        if (levels[n]->Ncols) levels[n]->ckp1 = (dfloat *) realloc(levels[n]->ckp1,levels[n]->Ncols*sizeof(dfloat));
-        if (levels[n]->Nrows) levels[n]->vkp1 = (dfloat *) realloc(levels[n]->vkp1,levels[n]->Nrows*sizeof(dfloat));
-        if (levels[n]->Nrows) levels[n]->wkp1 = (dfloat *) realloc(levels[n]->wkp1,levels[n]->Nrows*sizeof(dfloat));
+    // if (n==numLevels-1) {
+    //   if (n>0) {//kcycle vectors
+    //     if (levels[n]->Ncols) levels[n]->ckp1 = (dfloat *) realloc(levels[n]->ckp1,levels[n]->Ncols*sizeof(dfloat));
+    //     if (levels[n]->Nrows) levels[n]->vkp1 = (dfloat *) realloc(levels[n]->vkp1,levels[n]->Nrows*sizeof(dfloat));
+    //     if (levels[n]->Nrows) levels[n]->wkp1 = (dfloat *) realloc(levels[n]->wkp1,levels[n]->Nrows*sizeof(dfloat));
 
-        if (levels[n]->Ncols) levels[n]->o_ckp1.free();
-        if (levels[n]->Nrows) levels[n]->o_vkp1.free();
-        if (levels[n]->Nrows) levels[n]->o_wkp1.free();
-        if (levels[n]->Ncols) levels[n]->o_ckp1 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->ckp1);
-        if (levels[n]->Nrows) levels[n]->o_vkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->vkp1);
-        if (levels[n]->Nrows) levels[n]->o_wkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->wkp1);
-      }
+    //     if (levels[n]->Ncols) levels[n]->o_ckp1.free();
+    //     if (levels[n]->Nrows) levels[n]->o_vkp1.free();
+    //     if (levels[n]->Nrows) levels[n]->o_wkp1.free();
+    //     if (levels[n]->Ncols) levels[n]->o_ckp1 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->ckp1);
+    //     if (levels[n]->Nrows) levels[n]->o_vkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->vkp1);
+    //     if (levels[n]->Nrows) levels[n]->o_wkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->wkp1);
+    //   }
 
-      if (levels[n]->Ncols) levels[n]->x    = (dfloat *) realloc(levels[n]->x  ,levels[n]->Ncols*sizeof(dfloat));
-      if (levels[n]->Ncols) levels[n]->res  = (dfloat *) realloc(levels[n]->res,levels[n]->Ncols*sizeof(dfloat));
-      if (levels[n]->Nrows) levels[n]->rhs  = (dfloat *) realloc(levels[n]->rhs,levels[n]->Nrows*sizeof(dfloat));
+    //   if (levels[n]->Ncols) levels[n]->x    = (dfloat *) realloc(levels[n]->x  ,levels[n]->Ncols*sizeof(dfloat));
+    //   if (levels[n]->Ncols) levels[n]->res  = (dfloat *) realloc(levels[n]->res,levels[n]->Ncols*sizeof(dfloat));
+    //   if (levels[n]->Nrows) levels[n]->rhs  = (dfloat *) realloc(levels[n]->rhs,levels[n]->Nrows*sizeof(dfloat));
 
-      if (levels[n]->Ncols) levels[n]->o_x.free();
-      if (levels[n]->Ncols) levels[n]->o_res.free();
-      if (levels[n]->Nrows) levels[n]->o_rhs.free();
-      if (levels[n]->Ncols) levels[n]->o_x   = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->x);
-      if (levels[n]->Ncols) levels[n]->o_res = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->res);
-      if (levels[n]->Nrows) levels[n]->o_rhs = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->rhs);
-    }
+    //   if (levels[n]->Ncols) levels[n]->o_x.free();
+    //   if (levels[n]->Ncols) levels[n]->o_res.free();
+    //   if (levels[n]->Nrows) levels[n]->o_rhs.free();
+    //   if (levels[n]->Ncols) levels[n]->o_x   = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->x);
+    //   if (levels[n]->Ncols) levels[n]->o_res = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->res);
+    //   if (levels[n]->Nrows) levels[n]->o_rhs = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->rhs);
+    // }
 
     if (n==0) continue; //dont need restriction and prolongation ops at top level
 
@@ -387,66 +458,11 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     levels[n]->coarsenArgs = (void **) calloc(4,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
     levels[n]->coarsenArgs[1] = (void *) &(o_R[n]);
+    levels[n]->coarsenArgs[2] = (void *) options;
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
     
     levels[n]->device_coarsen = coarsenTri2D;
     levels[n]->device_prolongate = prolongateTri2D;
-  }
-
-  //report the multigrid levels
-  if (strstr(options,"VERBOSE")) {
-    if(rank==0) {
-      printf("------------------Multigrid Report---------------------\n");
-      printf("-------------------------------------------------------\n");
-      printf("level|  Degree  |    dimension   |      Smoother       \n");
-      printf("     |  Degree  |  (min,max,avg) |      Smoother       \n");
-      printf("-------------------------------------------------------\n");
-    }
-
-    for(int lev=0; lev<numLevels; lev++){
-
-      iint Nrows = levels[lev]->Nrows;
-
-      iint minNrows=0, maxNrows=0, totalNrows=0;
-      dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
-      avgNrows = (dfloat) totalNrows/size;
-
-      if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
-
-      char *smootherString;
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        smootherString = strdup("OVERLAPPINGPATCH");
-      } else if(strstr(options, "FULLPATCH")){
-        smootherString = strdup("FULLPATCH");
-      } else if(strstr(options, "FACEPATCH")){
-        smootherString = strdup("FACEPATCH");
-      } else if(strstr(options, "LOCALPATCH")){
-        smootherString = strdup("LOCALPATCH");
-      } else { //default to damped jacobi
-        smootherString = strdup("DAMPEDJACOBI");
-      }
-
-      char *smootherOptions1 = strdup(" ");
-      char *smootherOptions2 = strdup(" ");
-      if (strstr(options,"EXACT")) {
-        smootherOptions1 = strdup("EXACT");
-      }
-      if (strstr(options,"CHEBYSHEV")) {
-        smootherOptions2 = strdup("CHEBYSHEV");
-      }
-
-      if (rank==0){
-        printf(" %3d |   %3d    |    %10.2f  |   %s  \n",
-          lev, levelDegree[lev], (dfloat)minNrows, smootherString);
-        printf("     |          |    %10.2f  |   %s %s  \n", (dfloat)maxNrows, smootherOptions1, smootherOptions2);
-        printf("     |          |    %10.2f  |   \n", avgNrows);
-      }
-    }
-    if(rank==0)
-      printf("-------------------------------------------------------\n");
   }
 
   for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);

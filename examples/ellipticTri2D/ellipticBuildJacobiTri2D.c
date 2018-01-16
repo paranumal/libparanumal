@@ -43,7 +43,7 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
 
   iint diagNnum = basisNp*mesh->Nelements;
 
-  *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
+  dfloat *diagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -59,12 +59,24 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
       BuildLocalContinuousPatchAx(solver, mesh, lambda, eM, patchA);
     }
 
-    // compute the diagonal entries
-    for(iint n=0;n<mesh->Np;++n){
-      (*invDiagA)[eM*mesh->Np + n] = 1./patchA[n*mesh->Np+n]; //store the inverse diagonal entry
+    for(iint n=0;n<mesh->Np;++n) {
+      diagA[eM*mesh->Np + n] = patchA[n*mesh->Np+n]; //store the diagonal entry
     }
   }
 
+  if (strstr(options,"CONTINUOUS")) {
+    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) diagA[n] *= mesh->mapSgn[n];
+    gsParallelGatherScatter(solver->hostGsh, diagA, dfloatString, "add"); 
+    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) diagA[n] *= mesh->mapSgn[n];
+  }
+
+  *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (strstr(options,"CONTINUOUS")&&(mesh->mask[n]==0)) continue;
+    (*invDiagA)[n] = 1/diagA[n];
+  }
+
+  free(diagA);
   free(patchA);
   free(MS);
 }
