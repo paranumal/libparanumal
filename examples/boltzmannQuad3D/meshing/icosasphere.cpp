@@ -4,6 +4,9 @@
 #include <map>
 #include <array>
 
+#include <iostream>
+using namespace std;
+
 // reference icosasphere meshing from https://github.com/softwareschneiderei/meshing-samples/blob/master/main.cpp
 
 //g++ -g -std=c++11  -o icosasphere icosasphere.cpp  
@@ -230,23 +233,69 @@ TriangleList subdivide_2(ColorVertexList& vertices,
 using IndexedMesh=std::pair<VertexList, TriangleList>;
 using ColoredIndexMesh=std::pair<ColorVertexList, TriangleList>;
 
-IndexedMesh make_icosphere(int subdivisions)
+void make_icosphere(int subdivisions, VertexList &vertices, TriangleList &triangles)
 {
-  VertexList vertices=icosahedron::vertices;
-  TriangleList triangles=icosahedron::triangles;
+  //  VertexList vertices=icosahedron::vertices;
+  //  TriangleList triangles=icosahedron::triangles;
+
+  vertices=icosahedron::vertices;
+  triangles=icosahedron::triangles;
 
   for (int i=0; i<subdivisions; ++i)
     {
       triangles=subdivide_4(vertices, triangles);
     }
 
-  return{vertices, triangles};
+  //  return{vertices, triangles};
 }
 
 
 int main(int argc, char **argv){
 
-  IndexedMesh mesh = make_icosphere(2);
+  int Nref = (argc==2) ? atoi(argv[1]): 0;
+  
+  VertexList vertices;
+  TriangleList triangles;
+  
+  //  IndexedMesh mesh = make_icosphere(2);
+  make_icosphere(Nref, vertices, triangles);
 
+  // output
+  cout << "$MeshFormat" << endl;
+  cout << "2.2 0 8" << endl;
+  cout << "$EndMeshFormat" << endl;
+  cout << "$Nodes" << endl;
+  cout <<  vertices.size() << endl;
+
+  cout.precision(15);
+  cout << scientific;  
+
+  // output coordinates of vertices
+  
+  for(std::vector<int>::size_type i = 0; i != vertices.size(); i++) {
+    cout << i+1 << " " 
+      <<  vertices[i].data[0] << " "
+      <<  vertices[i].data[1] << " "
+      <<  vertices[i].data[2] << endl;
+      
+  }
+
+  cout << "$EndNodes" << endl;
+  cout << "$Elements" << endl;
+  cout << triangles.size() << endl;
+
+  for(std::vector<int>::size_type i = 0; i != triangles.size(); i++) {
+    cout
+      << i+1 << " "
+      << " 2 2 0 1 " 
+      <<  triangles[i].vertex[0]+1 << " "
+      <<  triangles[i].vertex[2]+1 << " "
+      <<  triangles[i].vertex[1]+1 << " "
+      <<  endl;
+  }
+  
+  cout << "$EndElements" << endl;
+
+  
   return 0;
 }
