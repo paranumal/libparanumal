@@ -4,6 +4,8 @@
 #include <map>
 #include <array>
 
+// reference icosasphere meshing from https://github.com/softwareschneiderei/meshing-samples/blob/master/main.cpp
+
 //g++ -g -std=c++11  -o icosasphere icosasphere.cpp  
 
 struct v3
