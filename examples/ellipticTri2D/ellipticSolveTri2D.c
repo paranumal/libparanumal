@@ -481,7 +481,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   }
 
   int Niter;
-  iint maxIter = 500; 
+  iint maxIter = 5000; 
 
   double start, end;
 

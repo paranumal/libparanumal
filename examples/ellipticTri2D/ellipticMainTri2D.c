@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -221,7 +221,7 @@ int main(int argc, char **argv){
   }
 
   // convergence tolerance
-  dfloat tol = 1e-6;
+  dfloat tol = 1e-8;
   ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options, NblockV, NnodesV);
 
   // copy solution from DEVICE to HOST
@@ -240,7 +240,7 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      //mesh->q[id] -= exact;
+      mesh->q[id] -= exact;
     }
   }
 
