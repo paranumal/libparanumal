@@ -1,0 +1,19 @@
+FILERoof="roof1.txt"
+FILEData="data1.txt" 
+for N in `seq 1 15`;
+do
+echo $N >> $FILERoof
+echo $N >> $FILEData
+echo "=[" >> $FILERoof
+echo "=[" >> $FILEData
+     for volBlk in `seq 1 1 16`;
+     do
+   for volNod in `seq 1 1 8`;
+   do
+./ellipticBenchmarkTri2D ellipticAxTriCSRCSC.okl ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep PARAMETERS >> $FILEData
+./ellipticBenchmarkTri2D ellipticAxTriCSRCSC.okl ../../meshes/cavityH005.msh $N $volBlk $volNod |& grep ROOFLINE >> $FILERoof 
+  done
+     done
+echo "];" >> $FILERoof
+echo "];" >> $FILEData
+ done

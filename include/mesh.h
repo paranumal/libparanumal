@@ -204,6 +204,7 @@ typedef struct {
   dfloat *sparseSrrT;
   dfloat *sparseSrsT;
   dfloat *sparseSssT;
+  
 
   iint *mmapM, *mmapP, *mmapS;
   dfloat *mapSgn;
@@ -334,6 +335,7 @@ typedef struct {
   occa::memory o_SsrT, o_SssT, o_SstT;
   occa::memory o_Sss, o_Srr, o_Srs; // for char4-based kernels
   occa::memory o_IndT, o_IndTchar;
+occa::memory o_India, o_Indja;
   occa::memory o_StrT, o_StsT, o_SttT;
   occa::memory o_Ind; // for sparse index storage
 
