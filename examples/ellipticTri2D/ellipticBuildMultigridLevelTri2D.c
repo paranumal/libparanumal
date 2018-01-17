@@ -1,7 +1,7 @@
 #include "ellipticTri2D.h"
 
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegree, int n, int* BCType, const char *options){
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -11,11 +11,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   memcpy(mesh,baseSolver->mesh,sizeof(mesh2D));
 
   solver->mesh = mesh;
-
-  int N = levelDegree[n];
-  int NFine = levelDegree[n-1];
-  int NpFine = (NFine+1)*(NFine+2)/2;
-  int NpCoarse = (N+1)*(N+2)/2;
 
   // load reference (r,s) element nodes
   meshLoadReferenceNodesTri2D(mesh, N);
@@ -248,6 +243,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
 
+  //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
+  iint totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+
   // info for kernel construction
   occa::kernelInfo kernelInfo;
 
@@ -329,10 +329,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
@@ -514,16 +510,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                "ellipticFooTri2D",
                kernelInfo);
 
-  solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
-               kernelInfo);
-
-  solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
-               kernelInfo);
-
   solver->precon->blockJacobiKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
                "ellipticBlockJacobiPreconTri2D",
@@ -618,6 +604,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
 
   free(VBq); free(PBq);
   free(L0vals); free(ELids ); free(ELvals);
+
+  solver->kernelInfo = kernelInfo;
 
   return solver;
 }
