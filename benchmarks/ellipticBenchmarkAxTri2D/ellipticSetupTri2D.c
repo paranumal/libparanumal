@@ -240,6 +240,26 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
 
   //CSR setup(brute force, no padding)
+  /*
+     int count = -1;
+     India[0] = 1;
+     for (int m=0;m<mesh->Np;m++) {
+     int countRow = 0;
+
+     for (int n=0;n<mesh->SparseNnzPerRow;n++) {
+     if (mesh->sparseStackedNZ[m+mesh->Np*n]){
+     count++;
+     countRow++;
+     Indja[count] = (char)mesh->sparseStackedNZ[m+mesh->Np*n];
+     Srr[count] =  mesh->sparseSrrT[m+mesh->Np*n];
+     Srs[count] =  mesh->sparseSrsT[m+mesh->Np*n];
+     Sss[count] =  mesh->sparseSssT[m+mesh->Np*n];
+
+     }
+     }
+     India[m+1] = India[m]+countRow;
+     }*/
+  //CSR padded
   int count = -1;
   India[0] = 1;
   for (int m=0;m<mesh->Np;m++) {
@@ -256,8 +276,18 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
       }
     }
+    while (countRow%4){
+      //add some extra zeros
+      count++;
+      countRow++; 
+      Srr[count] = 0.0f;
+      Srs[count] = 0.0f;
+      Sss[count] = 0.0f;
+      Indja[count] = (char) 0;
+    }
     India[m+1] = India[m]+countRow;
   }
+
   for (int m=0; m<mesh->Np+1; ++m){
     printf( "%d, ", India[m]);
     if (m<mesh->Np){
@@ -286,14 +316,14 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   mesh->o_India = mesh->device.malloc((mesh->Np+1)*sizeof(int), India);
   mesh->o_Indja = mesh->device.malloc((India[mesh->Np])*sizeof(char), Indja);
-  
+
   mesh->o_Srr = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srr);
   mesh->o_Srs = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srs);
   mesh->o_Sss = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Sss);
   mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
   kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
 
-return solver;
+  return solver;
 #endif
 }
 
