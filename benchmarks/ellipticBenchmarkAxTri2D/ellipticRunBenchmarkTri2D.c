@@ -17,6 +17,19 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
+printf("test 0 \n");
+
+int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
+printf("test 1 \n");
+mesh->o_India.copyTo(test);
+printf("test 2\n");
+
+printf("test 1 \n");
+printf("\n");
+for (int nn=0; nn<mesh->Np+1; ++nn){
+printf(" %d ",  test[nn]);
+}
+
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
@@ -123,12 +136,6 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
       }
 #else
-int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
-mesh->o_India.copyTo(test);
-printf("\n");
-for (int nn=0; nn<mesh->Np+1; ++nn){
-printf(" %d ",  test[nn]);
-}
 nnzs = test[mesh->Np];
 #endif
       printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
