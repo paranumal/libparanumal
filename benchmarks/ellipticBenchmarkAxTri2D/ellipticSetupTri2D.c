@@ -342,6 +342,7 @@ printf(" allocated 2\n");
 
  // mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
   kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
+kernelInfo.addDefine("p_NnzTotal", India[mesh->Np]-1);
 //printf("info: Nnodes = %d Nblocks = %d Nngeo = %d ", );
   return solver;
 #endif
