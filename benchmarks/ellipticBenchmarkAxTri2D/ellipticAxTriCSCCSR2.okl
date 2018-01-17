@@ -75,19 +75,22 @@ kernel void ellipticAxConvTri2D_v0(
 
         //here
         int numberOfQuadruplets = (r_India[1]-r_India[0])/4;
-        if ((eo+es)==0){
-          printf("number of qudruplets %d \n", numberOfQuadruplets);
-        }    
+        //  if ((eo+es)==0){
+        //  printf("number of qudruplets %d \n", numberOfQuadruplets);
+        //}    
         for (int k=0;k<numberOfQuadruplets;k++) {
           int ref = (r_India[0]-1)/4 + k;
-  // if ((eo+es)==0){
-          printf("ref =  %d r_India[0]= %d\n", ref, r_India[0]);
-    //    }
-         const char4 Indn = Indja[ref];
+          // if ((eo+es)==0){
+          //    printf("ref =  %d r_India[0]= %d\n", ref, r_India[0]);
+          // }
+
+          const char4 Indn = Indja[ref];
           const char * pt_Indn = (char *) &Indn;
           for (int k2=0; k2<4; k2++){  
-            char Indjak = pt_Indn[k2]-1;
-            if (((int) Indjak) == -1){
+            int Indjak = (int) (pt_Indn[k2])-1;
+
+
+            if ((Indjak) == -1){
               break;}
             else{
 
@@ -109,8 +112,8 @@ kernel void ellipticAxConvTri2D_v0(
                 }
             }
           }//k2
- 
-       }//for k
+
+        }//for k
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV)

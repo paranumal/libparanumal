@@ -231,13 +231,21 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   free(sparseSssTResized);
   return solver;
 #else
-  int * India = (int*) calloc(mesh->Np, sizeof(int));
+//special case 
+
+//if (mesh->SparseNnzPerRow>=mesh->Np){
+//pad it
+mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
+mesh->SparseNnzPerRow = mesh->SparseNnzPerRow + 4-(mesh->SparseNnzPerRow%4);
+//}
+
+  int * India = (int*) calloc((mesh->Np)+1, sizeof(int));
 
   char * Indja = (char*) calloc(mesh->Np*mesh->SparseNnzPerRow, sizeof(char));
   dfloat * Srr = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
   dfloat * Srs = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
   dfloat * Sss = (dfloat *) calloc(mesh->SparseNnzPerRow*mesh->Np,sizeof(dfloat));
-
+printf("arraySize %d\n", mesh->SparseNnzPerRow*mesh->Np);
 
   //CSR setup(brute force, no padding)
   /*
@@ -265,7 +273,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   for (int m=0;m<mesh->Np;m++) {
     int countRow = 0;
 
-    for (int n=0;n<mesh->SparseNnzPerRow;n++) {
+    for (int n=0;n<mesh->SparseNnzPerRowNonPadded;n++) {
       if (mesh->sparseStackedNZ[m+mesh->Np*n]){
         count++;
         countRow++;
@@ -276,6 +284,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
       }
     }
+printf("this is row %d, I counted %d \n", m, countRow);
     while (countRow%4){
       //add some extra zeros
       count++;
@@ -283,7 +292,8 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
       Srr[count] = 0.0f;
       Srs[count] = 0.0f;
       Sss[count] = 0.0f;
-      Indja[count] = (char) 0;
+      printf("putting 0 in place %d\n", count);
+      Indja[count] =(char) 0;
     }
     India[m+1] = India[m]+countRow;
   }
@@ -314,15 +324,25 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
     }
   }
 
-  mesh->o_India = mesh->device.malloc((mesh->Np+1)*sizeof(int), India);
-  mesh->o_Indja = mesh->device.malloc((India[mesh->Np])*sizeof(char), Indja);
 
+printf("trying to allocate, size %d, nnz %d, max Nz per row %d \n", mesh->Np+1, India[mesh->Np], mesh->SparseNnzPerRow);
+//comment
+//comment
+//
   mesh->o_Srr = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srr);
   mesh->o_Srs = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Srs);
   mesh->o_Sss = mesh->device.malloc((India[mesh->Np])*sizeof(dfloat), Sss);
-  mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
-  kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
+printf(" allocated 0\n");
 
+  mesh->o_Indja = mesh->device.malloc((India[mesh->Np])*sizeof(char), Indja);
+printf(" allocated 1\n");
+
+  mesh->o_India = mesh->device.malloc(((mesh->Np)+1)*sizeof(int), India);
+printf(" allocated 2\n");
+
+ // mesh->SparseNnzPerRowNonPadded = mesh->SparseNnzPerRow;
+  kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
+//printf("info: Nnodes = %d Nblocks = %d Nngeo = %d ", );
   return solver;
 #endif
 }
