@@ -470,6 +470,53 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   mesh2D *mesh = solver->mesh;
 
+/*
+  dfloat *t = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  dfloat *Pt = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  occa::memory o_t = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  occa::memory o_Pt = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  
+  char fname[BUFSIZ];
+  sprintf(fname, "Precon.m");
+  FILE *fp = fopen(fname, "w");
+
+  fprintf(fp, "P = [");
+  agmgLevel **levels = solver->precon->parAlmond->levels;
+  for (iint n=0;n<mesh->Np*mesh->Nelements;n++) {
+    for (iint m=0;m<mesh->Np*mesh->Nelements;m++) t[m] =0;
+    o_Pt.copyFrom(t);
+
+    //if (mesh->mask[n] == 0) {
+      //for (iint m=0;m<mesh->Np*mesh->Nelements;m++) Pt[m] =0;
+    //} else {
+      t[n] = 1;
+
+      //gsParallelGatherScatter(solver->hostGsh, t, dfloatString, "add");
+
+      o_t.copyFrom(t);
+      ellipticPreconditioner2D(solver, lambda, o_t, o_Pt, options);
+      //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, true);
+      //ellipticOperator2D(solver, lambda, o_t, o_Pt, options);
+
+      //levels[1]->device_coarsen(levels[1]->coarsenArgs, o_t, levels[1]->o_Srhs);
+      //levels[1]->device_gather (levels[1]->gatherArgs,  levels[1]->o_Srhs, levels[1]->o_rhs);
+      //levels[1]->device_scatter   (levels[1]->scatterArgs,  levels[1]->o_rhs, levels[1]->o_Sx);
+      //levels[1]->device_prolongate(levels[1]->prolongateArgs, levels[1]->o_Srhs, o_Pt);
+
+      o_Pt.copyTo(Pt);
+    //}
+
+    for (iint m=0;m<mesh->Np*mesh->Nelements;m++) 
+      fprintf(fp, "%.10e,", Pt[m]);
+
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "];\n");
+  fclose(fp);
+*/
+
+
+
   // gather-scatter
   if(strstr(options, "CONTINUOUS")){
     //sign correction for gs
