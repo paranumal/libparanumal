@@ -145,6 +145,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   iint m = levels[k]->Nrows;
   iint n = levels[k]->Ncols;
 
+  if(m < GPU_CPU_SWITCH_SIZE){
+    levels[k]->o_rhs.copyTo(levels[k]->rhs, m*sizeof(dfloat));
+    kcycle(parAlmond, k);
+    levels[k]->o_x.copyFrom(levels[k]->x, m*sizeof(dfloat));
+    return;
+  }
+
   //check for base level
   if(k==parAlmond->numLevels-1) {
     if (parAlmond->invCoarseA != NULL) {
@@ -234,6 +241,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       //      levels[k+1]->x = (alpha1/rho1)*x
       scaleVector(parAlmond,mCoarse, levels[k+1]->o_x, alpha1/rho1);
     } else{
+    
       device_kcycle(parAlmond,k+1);
 
       // w = A*x
@@ -366,7 +374,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   }
 
   //check for base level
-  if(k==parAlmond->numLevels-1) {
+  if (k==parAlmond->numLevels-1) {
     if (parAlmond->invCoarseA != NULL) {
       //use exact sovler
       device_exactCoarseSolve(parAlmond, m, levels[k]->o_rhs, levels[k]->o_x);
