@@ -11,28 +11,49 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 1;
+  NKernels = 2;
   sprintf(kernelName, "ellipticAxConvTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
-printf("test 0 \n");
+  printf("test 0 \n");
 
-int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
-printf("test 1 \n");
-mesh->o_India.copyTo(test);
-printf("test 2\n");
+  int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
+  printf("test 1 \n");
+  mesh->o_India.copyTo(test);
+  printf("test 2\n");
 
-printf("test 1 \n");
-printf("\n");
-for (int nn=0; nn<mesh->Np+1; ++nn){
-printf(" %d ",  test[nn]);
-}
+  printf("test 1 \n");
+  printf("\n");
+  for (int nn=0; nn<mesh->Np+1; ++nn){
+    printf(" %d ",  test[nn]);
+  }
 
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
+
+  iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
+  //add the matrices (?)
+  //Nbytes += (test[mesh->Np]-1)*3;
+  Nbytes /= 2;
+  occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
+  occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
+  mesh->device.finish();
+
+  occa::streamTag startCopy = mesh->device.tagStream();
+  for(int it=0;it<Ntrials;++it){
+    o_bah.copyTo(o_foo);
+  }
+  occa::streamTag endCopy = mesh->device.tagStream();
+  mesh->device.finish();
+
+  double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
+  printf("copied \n");
+
+
+
   for(iint i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
@@ -44,21 +65,6 @@ printf(" %d ",  test[nn]);
     dfloat lambda = 0;
     // sync processes
 
-    iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
-    Nbytes /= 2;
-    occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
-    occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
-    mesh->device.finish();
-
-    occa::streamTag startCopy = mesh->device.tagStream();
-    for(int it=0;it<Ntrials;++it){
-      o_bah.copyTo(o_foo);
-    }
-    occa::streamTag endCopy = mesh->device.tagStream();
-    mesh->device.finish();
-
-    double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
-    printf("copied \n");
 
     // time Ax
     double timeAx = 0.0f;
@@ -136,7 +142,7 @@ printf(" %d ",  test[nn]);
 
       }
 #else
-nnzs = test[mesh->Np];
+      nnzs = test[mesh->Np];
 #endif
       printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
 
