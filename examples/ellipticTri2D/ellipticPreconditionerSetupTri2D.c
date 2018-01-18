@@ -59,15 +59,18 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
       baseLevel->gatherLevel = true;
+      baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
       baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
       baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
 
       baseLevel->weightedInnerProds = false;
 
-      baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
+      baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
       baseLevel->gatherArgs[0] = (void *) solver;
       baseLevel->gatherArgs[1] = (void *) precon->hgs;
-      baseLevel->gatherArgs[2] = (void *) options;
+      baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+      baseLevel->gatherArgs[3] = (void *) options;
       baseLevel->scatterArgs = baseLevel->gatherArgs;
 
       baseLevel->device_gather  = ellipticGather;
