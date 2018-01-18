@@ -36,11 +36,16 @@ void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
 
   solver_t *solver = (solver_t *) args[0];
   hgs_t *hgs       = (hgs_t *) args[1];
-  char *options    = (char *) args[2];
+  occa::memory *o_s= (occa::memory *) args[2];
+  char *options    = (char *) args[3];
   mesh_t *mesh     = solver->mesh;
 
-  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_x, mesh->o_mapSgn, o_x);
-  meshParallelGather(mesh, hgs, o_x, o_Gx);
+  if (strstr(options,"SPARSE")) {
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_x, mesh->o_mapSgn, *o_s);
+    meshParallelGather(mesh, hgs, *o_s, o_Gx);
+  } else {
+    meshParallelGather(mesh, hgs, o_x, o_Gx);  
+  }
   solver->dotMultiplyKernel(hgs->Ngather, hgs->o_invDegree, o_Gx, o_Gx);
 }
 
@@ -48,11 +53,17 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
 
   solver_t *solver = (solver_t *) args[0];
   hgs_t *hgs       = (hgs_t *) args[1];
-  char *options    = (char *) args[2];
+  occa::memory *o_s= (occa::memory *) args[2];
+  char *options    = (char *) args[3];
   mesh_t *mesh     = solver->mesh;
 
-  meshParallelScatter(mesh, hgs, o_x, o_Sx);
-  if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Sx, mesh->o_mapSgn, o_Sx);
+  
+  if (strstr(options,"SPARSE")) {
+    meshParallelScatter(mesh, hgs, o_x, *o_s);
+    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, *o_s, mesh->o_mapSgn, o_Sx);
+  } else {
+    meshParallelScatter(mesh, hgs, o_x, o_Sx);  
+  }
 }
 
 void buildCoarsenerTri2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options);
@@ -309,15 +320,17 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   if (strstr(options,"CONTINUOUS")) {
     coarseLevel->gatherLevel = true;
     coarseLevel->weightedInnerProds = false;
+    
     coarseLevel->Srhs = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
     coarseLevel->Sx   = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
-    coarseLevel->o_Srhs = mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),coarseLevel->Srhs);
-    coarseLevel->o_Sx   = mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),coarseLevel->Sx);
+    coarseLevel->o_Srhs = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
+    coarseLevel->o_Sx   = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
 
-    coarseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
+    coarseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
     coarseLevel->gatherArgs[0] = (void *) solverL;
     coarseLevel->gatherArgs[1] = (void *) coarsehgs;
-    coarseLevel->gatherArgs[2] = (void *) options;
+    coarseLevel->gatherArgs[2] = (void *) &(coarseLevel->o_Sx);
+    coarseLevel->gatherArgs[3] = (void *) options;
     coarseLevel->scatterArgs = coarseLevel->gatherArgs;
 
     coarseLevel->device_gather  = ellipticGather;
