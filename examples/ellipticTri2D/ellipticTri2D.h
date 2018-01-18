@@ -57,8 +57,6 @@ typedef struct {
   dfloat *HH;
   occa::memory *o_V;  
 
-  occa::kernelInfo kernelInfo;
-
   occa::stream defaultStream;
   occa::stream dataStream;
 
@@ -123,7 +121,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory
 
 solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, iint NblockV, iint NnodesV);
 
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int n, int* BCType, const char *options);
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
 
 void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
