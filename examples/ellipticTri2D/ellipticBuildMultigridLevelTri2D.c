@@ -1,7 +1,9 @@
 #include "ellipticTri2D.h"
 
+void matrixInverse(int N, dfloat *A);
+
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCType, const char *options){
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -13,7 +15,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
   solver->mesh = mesh;
 
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesTri2D(mesh, N);
+  meshLoadReferenceNodesTri2D(mesh, Nc);
 
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesTri2D(mesh);
@@ -32,6 +34,22 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
+
+  if (strstr(options,"SPARSE")) {
+    //connect the face modes between each element 
+    meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
+    //use the mmaps constructed and overwrite vmap and FaceNodes
+    for (iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+      mesh->vmapM[n] = mesh->mmapM[n];
+      mesh->vmapP[n] = mesh->mmapP[n];
+    }
+    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) { //overwrite facenodes
+      mesh->faceNodes[n] = mesh->FaceModes[n];
+    }
+    for (int n=0;n<mesh->Nverts;n++) { //overwrite vertex nodes (assumes their first in the list)
+      mesh->vertexNodes[n] = n;
+    }
+  }
 
   // global nodes
   meshParallelConnectNodes(mesh);
@@ -205,6 +223,53 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
   mesh->o_ELvals =
     mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
 
+  /* sparse basis setup */
+  //build inverse vandermonde matrix
+  mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->Np;n++)
+    mesh->invSparseV[n] = mesh->sparseV[n];
+  matrixInverse(mesh->Np,mesh->invSparseV);
+
+  int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
+
+  char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
+  for (int m=0;m<paddedRowSize/4;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int k=0;k<4;k++) {
+        if (k+4*m < mesh->SparseNnzPerRow) {
+          IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
+        } else {
+          IndTchar[k+4*n+m*4*mesh->Np] = 0;
+        }
+      }
+    }
+  }
+  
+  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
+  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
+  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
+  
+  mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*paddedRowSize*sizeof(char), IndTchar);
+  free(IndTchar);
+
+  if (strstr(options,"SPARSE")) {
+    // make the gs sign change array for flipped trace modes
+    //TODO this is a hack that likely will need updating for MPI
+    mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+
+    for (iint e=0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+        iint id = n+e*mesh->Nfp*mesh->Nfaces;
+        if (mesh->mmapS[id]==-1) { //sign flipped
+          if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
+            mesh->mapSgn[mesh->vmapM[id]]= -1;
+          } 
+        } 
+      }
+    }
+    mesh->o_mapSgn = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), mesh->mapSgn);
+  }
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   solver->globalIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
@@ -329,6 +394,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+  kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
@@ -337,7 +403,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
   int NblockV = 256/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  //kernelInfo.addDefine("p_NblockV", NblockV);
+
+  int one = 1; //set to one for now. TODO: try optimizing over these
+  kernelInfo.addDefine("p_NblockV", one);
+  kernelInfo.addDefine("p_NnodesV", one);
 
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
@@ -400,15 +470,27 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
            "dotMultiply",
            kernelInfo);
 
-  solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
-               kernelInfo);
+  if (strstr(options,"SPARSE")) {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticAxTri2D_v0",
+                 kernelInfo);
 
-  solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
-               kernelInfo);
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticPartialAxTri2D_v0",
+                 kernelInfo);
+  } else {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticAxTri2D",
+                 kernelInfo);
+
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticPartialAxTri2D",
+                 kernelInfo);
+  }
 
   if (strstr(options,"BERN")) {
 
@@ -555,6 +637,23 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
 
+
+  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+  int NpFine   = (Nf+1)*(Nf+2)/2;
+  int NpCoarse = (Nc+1)*(Nc+2)/2;
+  kernelInfo.addDefine("p_NpFine", NpFine);
+  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+
+  solver->precon->coarsenKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+             "ellipticPreconCoarsen",
+             kernelInfo);
+
+  solver->precon->prolongateKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+             "ellipticPreconProlongate",
+             kernelInfo);
+
     // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
   occaTimerTic(mesh->device,"GatherScatterSetup");
   solver->ogs = meshParallelGatherScatterSetup(mesh,
@@ -604,8 +703,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int N, int* BCT
 
   free(VBq); free(PBq);
   free(L0vals); free(ELids ); free(ELvals);
-
-  solver->kernelInfo = kernelInfo;
 
   return solver;
 }
