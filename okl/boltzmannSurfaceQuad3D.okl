@@ -19,7 +19,9 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
   fluxq[9] = alpha*dq[9] - beta*p_sqrtRT*(ny*dq[3]+nz*dq[2]);
 }
 
-
+void boundaryCondition(dfloat *qP, const dfloat qM) {
+     *qP = -qM;
+}
 
 // pointwise SEM-DG lift
 kernel void boltzmannSurfaceQuad3D(const iint Nelements,
@@ -73,7 +75,9 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
-		const dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+		if (eP < 0) boundaryCondition(&qP,qM);
+		
 		dq[fld] = qP-qM;
 	      }
 

@@ -117,7 +117,7 @@ namespace prism
 
   static const QuadList quads=
     {
-      {0,5,7,2},{5,1,3,7},{1,4,6,3},{4,0,2,6}
+      {0,2,7,5},{5,7,3,1},{1,3,6,4},{4,6,2,0}
     };
 }
 
@@ -181,9 +181,9 @@ QuadList subdivide_4(VertexList& vertices,
       mid[4] = vertex_for_edge(lookup, vertices, mid[0],mid[2]);
 
       result.push_back({each.vertex[0],mid[0],mid[4],mid[3]});
-      result.push_back({each.vertex[1], mid[0],mid[4], mid[1]});
-      result.push_back({each.vertex[2], mid[1],mid[4], mid[2]});
-      result.push_back({each.vertex[3], mid[2],mid[4], mid[3]});
+      result.push_back({each.vertex[1], mid[1],mid[4], mid[0]});
+      result.push_back({each.vertex[2], mid[2],mid[4], mid[1]});
+      result.push_back({each.vertex[3], mid[3],mid[4], mid[2]});
     }
 
   return result;
