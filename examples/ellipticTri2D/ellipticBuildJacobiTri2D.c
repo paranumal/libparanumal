@@ -101,12 +101,9 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
     }
   }
 
-  if (strstr(options,"CONTINUOUS")) {
-    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) diagA[n] *= mesh->mapSgn[n];
+  if (strstr(options,"CONTINUOUS")) 
     gsParallelGatherScatter(solver->hostGsh, diagA, dfloatString, "add"); 
-    if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) diagA[n] *= mesh->mapSgn[n];
-  }
-
+    
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (strstr(options,"CONTINUOUS")&&(mesh->mask[n]==0)) continue;
