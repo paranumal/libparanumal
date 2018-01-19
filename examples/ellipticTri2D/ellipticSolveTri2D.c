@@ -21,7 +21,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ogs_t *halo = solver->halo;
 
     //pre-mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_q, mesh->o_mask, o_q);
+    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_q);
 
     if(solver->allNeumann)
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
@@ -103,7 +103,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     }
 
     //post-mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mask, o_Aq);
+    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
     iint offset = 0;
@@ -524,7 +524,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");  
     if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);       
     //mask
-    solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mask, o_r);
+    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
   }
 
   int Niter;
@@ -567,7 +567,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
 
     occa::printTimer();
 
-    printf("Solver converged in %d iters \n", Niter );
+    if(rank==0) printf("Solver converged in %d iters \n", Niter );
 
     iint size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);

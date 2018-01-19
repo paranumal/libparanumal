@@ -19,9 +19,6 @@ typedef struct {
 
   precon_t *precon;
 
-  void *hostGsh;  //gs handle on host
-  iint *globalIds;
-
   ogs_t *ogs;
 
   ogs_t *ogsDg;

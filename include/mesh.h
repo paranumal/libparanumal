@@ -129,7 +129,6 @@ typedef struct {
   iint *vmapP;     // list of volume nodes that are paired with face nodes
   iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
   int *mapB;      // boundary flag of face nodes
-  dfloat *mask;
   int *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
@@ -257,6 +256,13 @@ typedef struct {
 
   occa::memory o_SEMFEMInterp;
   occa::memory o_SEMFEMAnterp;
+
+  //C0-FEM mask data
+  iint Nmasked;
+  iint *maskIds;
+
+  occa::memory o_maskIds;
+  
 
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
@@ -441,13 +447,17 @@ occa::memory o_India, o_Indja;
 
 
   // CG gather-scatter info
-  void *gsh; // gslib struct pointer
+  void *gsh, *hostGsh; // gslib struct pointer
+
+  iint *globalIds;
 
   iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
   iint *gatherBaseIds;  // gather index of ""
   iint *gatherBaseRanks; // base rank
   iint *gatherMaxRanks;  // maximum rank connected to each sorted node
   iint *gatherHaloFlags;  // maximum rank connected to each sorted node
+
+
 
   iint NuniqueBases; // number of unique bases on this rank
   occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
@@ -490,6 +500,7 @@ occa::memory o_India, o_Indja;
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
 
+  occa::kernel maskKernel;
 
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
@@ -559,8 +570,8 @@ void parallelSort(iint N, void *vv, size_t sz,
   void meshParallelConnectNodes(mesh_t *mesh);
 
   /* renumber global nodes to remove gaps */
-  void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
-      iint *globalOwners, iint *globalStarts, dfloat *mask);
+  void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh, iint Nnum, iint *globalNumbering,
+      iint *globalOwners, iint *globalStarts);
 
 void meshHaloSetup(mesh_t *mesh);
 

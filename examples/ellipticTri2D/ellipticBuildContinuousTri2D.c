@@ -32,10 +32,12 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
     iint id = mesh->gatherLocalIds[n];
     globalNumbering[id] = mesh->gatherBaseIds[n];
   }
+  for (iint n=0;n<mesh->Nmasked;n++) //mask nodes
+    globalNumbering[mesh->maskIds[n]] = -1;
 
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts, mesh->mask);
-  
+  meshParallelConsecutiveGlobalNumbering(mesh, Nnum, globalNumbering, globalOwners, globalStarts);
+
   //use the ordering to define a gather+scatter for assembly
   *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
@@ -80,8 +82,9 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
     }
   }
 
+  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+
   //Build unassembed non-zeros
-  printf("Building full matrix system\n"); 
   iint cnt =0;
   for (iint e=0;e<mesh->Nelements;e++) {
     for (iint n=0;n<mesh->Np;n++) {
@@ -158,6 +161,8 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
     }
   }
   *nnz = cnt+1;
+
+  if(rank==0) printf("done.\n");
 
   free(globalNumbering); free(globalOwners);
   free(sendNonZeros);

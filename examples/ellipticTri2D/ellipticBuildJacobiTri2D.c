@@ -16,6 +16,9 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
                                    iint *BCType, dfloat **invDiagA,
                                    const char *options){
 
+  iint rank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
   if(!basis) { // default to degree N Lagrange basis
     basisNp = mesh->Np;
     basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
@@ -85,6 +88,8 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
+  if(rank==0) printf("Building diagonal...");fflush(stdout);
+
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
@@ -102,13 +107,15 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
   }
 
   if (strstr(options,"CONTINUOUS")) 
-    gsParallelGatherScatter(solver->hostGsh, diagA, dfloatString, "add"); 
+    gsParallelGatherScatter(mesh->hostGsh, diagA, dfloatString, "add"); 
     
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (strstr(options,"CONTINUOUS")&&(mesh->mask[n]==0)) continue;
+    if (strstr(options,"CONTINUOUS")) continue;
     (*invDiagA)[n] = 1/diagA[n];
   }
+
+  if(rank==0) printf("done.\n");
 
   if (strstr(options,"CONTINUOUS")) {
     free(Srr);

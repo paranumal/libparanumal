@@ -47,6 +47,20 @@ void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
     meshParallelGather(mesh, hgs, o_x, o_Gx);  
   }
   solver->dotMultiplyKernel(hgs->Ngather, hgs->o_invDegree, o_Gx, o_Gx);
+
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  MPI_Comm_size(MPI_COMM_WORLD,&size);
+  dfloat *d = (dfloat *) calloc(hgs->Ngather,sizeof(dfloat));
+  o_Gx.copyTo(d);
+  for (int r=0;r<size;r++) {
+    if (rank==r)
+    for (int n=0;n<hgs->Ngather;n++) {
+      printf("rank %d: d[%d] = %f\n", rank, n, d[n]);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {

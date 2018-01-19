@@ -20,7 +20,7 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-#if 1
+#if 0
   // already done in first PGS
   // ------------------------------------------------------------
   // 0. propagate halo flags uniformly using a disposable gs instance
@@ -46,6 +46,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
 
   iint nHalo = 0;
   iint nNonHalo = 0;
+
+  //gather halo flags then count? 
 
   for(iint n=0;n<Nlocal;++n){
     iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
