@@ -58,11 +58,11 @@ int parallelCompareOwners(const void *a, const void *b){
 
 
 // squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
-void meshParallelConsecutiveGlobalNumbering(iint Nnum,
-                    					    iint *globalNumbering, 
-                                  iint *globalOwners, 
-                                  iint *globalStarts,
-                                  dfloat *mask){
+void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
+                                            iint Nnum,
+                              					    iint *globalNumbering, 
+                                            iint *globalOwners, 
+                                            iint *globalStarts){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -76,7 +76,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
     ranks[n] = rank;
   
   // find lowest rank process that contains each node (decides ownership)
-  gsParallelGatherScatter(gsh, ranks, "int", "min"); // should use iint
+  gsParallelGatherScatter(mesh->gsh, ranks, iintString, "min");
 
   // clean up
   gsParallelGatherScatterDestroy(gsh);
@@ -93,7 +93,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
   
   iint cnt = 0;
   for(iint n=0;n<Nnum;++n) {
-    if (mask[n] == 0) continue; //skip masked nodes
+    //if (mask[n] == 0) continue; //skip masked nodes
     sendCounts[ranks[n]] += sizeof(parallelNode_t);
     cnt++;
   }
@@ -117,7 +117,7 @@ void meshParallelConsecutiveGlobalNumbering(iint Nnum,
     sendNodes = (parallelNode_t*) calloc(Nlocal, sizeof(parallelNode_t));
   cnt = 0;
   for(iint n=0;n<Nnum;++n){
-    if (mask[n] == 0) continue; //skip masked nodes
+    //if (mask[n] == 0) continue; //skip masked nodes
     sendNodes[cnt].localId = n;
     sendNodes[cnt].globalId = globalNumbering[n];
     sendNodes[cnt].newGlobalId = -1;

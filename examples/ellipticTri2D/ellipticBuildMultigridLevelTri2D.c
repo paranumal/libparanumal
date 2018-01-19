@@ -272,13 +272,12 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   }
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  solver->globalIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) solver->globalIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
+  mesh->globalIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->globalIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
 
-  solver->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, solver->globalIds);
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
   
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  mesh->mask = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   for (iint e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
@@ -292,21 +291,25 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
       }
     }
   }
-  gsParallelGatherScatter(solver->hostGsh, mesh->mapB, "int", "min"); // should use iint
+  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
 
+  mesh->Nmasked = 0;
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1E9) {
       mesh->mapB[n] = 0.;
-      mesh->mask[n] = 1.; //reset internal mask to 1
     } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
       mesh->mapB[n] = 1.;
-      mesh->mask[n] = 0.;
-    } else { //Neumann or Robin boundary
-      mesh->mask[n] = 1.;
+      mesh->Nmasked++;
     }
   }
-  mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+  
+  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->Nmasked =0; //reset
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
+  }
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
 
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
   iint totalElements = 0;

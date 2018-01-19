@@ -98,8 +98,6 @@ void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s){
 
       level->smoother_params[0] = (4./3.)/rho;
 
-      printf("weight = %g \n", level->smoother_params[0]);
-
       //temp storage for smoothing
       if (level->Ncols) level->smootherResidual = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
       if (level->Ncols) level->o_smootherResidual = parAlmond->device.malloc(level->Ncols*sizeof(dfloat),level->smootherResidual);
@@ -111,8 +109,6 @@ void setupSmoother(parAlmond_t *parAlmond, agmgLevel *level, SmoothType s){
       level->ChebyshevIterations = 2;
       level->smoother_params[0] = rho;
       level->smoother_params[1] = rho/10.;
-
-      printf("weight = %g \n", level->smoother_params[0]);
 
       //temp storage for smoothing
       if (level->Ncols) level->smootherResidual = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
@@ -267,6 +263,8 @@ dfloat rhoDinvA(parAlmond_t* parAlmond,csr *A, dfloat *invD){
     free(V[i]);
   }
 
+  if (rank==0) printf("weight = %g \n", rho);
+
   return rho;
 }
 
@@ -290,6 +288,8 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   iint *rows;
   iint *cols;
   dfloat *vals;
+
+  if(rank==0) printf("Setting up coarse solver...");fflush(stdout);
 
   if(!nullSpace) {
     //if no nullspace, use sparse A
@@ -416,7 +416,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
     free(coarseA);
   }
 
-  printf("Done UberCoarse setup\n");
+  if(rank==0) printf("done.\n");
 }
 
 
