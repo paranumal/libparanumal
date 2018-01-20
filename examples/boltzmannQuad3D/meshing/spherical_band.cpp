@@ -50,12 +50,25 @@ struct v3
     return *this;
   }
 
+  void print() {
+    std::cout << "cheese " << data[0] << " " << data[1] << " " << data[2] << endl;
+  }
+  
   float squared() const
   {
     float result=0.f;
     for (int i=0; i<3; ++i)
       result+=data[i]*data[i];
     return result;
+  }
+
+  //now exclusively for equatorial projection.  Values should already be on the preimage surface.
+  v3& normalize()
+  {
+    float scale = std::sqrt((1 - data[2]*data[2])/(data[0]*data[0]+data[1]*data[1]));
+    data[0] = data[0]*scale;
+    data[1] = data[1]*scale;
+    return *this;
   }
 
   float data[3];
@@ -79,11 +92,6 @@ v3 operator*(v3 lhs, float rhs)
 v3 operator/(v3 lhs, float rhs)
 {
   return lhs*=(1.f/rhs);
-}
-
-v3 normalize(v3 rhs)
-{
-  return rhs/std::sqrt(rhs.squared());
 }
 
 using Index=std::uint32_t;
@@ -136,12 +144,12 @@ using Lookup=std::map<std::pair<Index, Index>, Index>;
 
 inline v3 split(v3 lhs, v3 rhs)
 {
-  return normalize(lhs+rhs);
+  return ((lhs+rhs)/2).normalize();
 }
 
 inline ColorPosition split(ColorPosition lhs, ColorPosition rhs)
 {
-  return{(lhs.color+rhs.color)*0.5f, normalize(lhs.position+rhs.position)};
+  return{(lhs.color+rhs.color)*0.5f, ((lhs.position+rhs.position)/2).normalize()};
 }
 
 template <typename VertexList>
