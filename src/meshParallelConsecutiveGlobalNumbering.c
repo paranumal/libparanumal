@@ -4,6 +4,12 @@
 
 #include "mesh.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+
+#include "mesh.h"
+
 typedef struct {
 
   iint localId;
@@ -13,13 +19,13 @@ typedef struct {
   iint originalRank;
   iint ownerRank;
   
-}parallelNode_t;
+}parallelNode2_t;
 
 // compare on global indices 
 int parallelCompareGlobalIndices(const void *a, const void *b){
 
-  parallelNode_t *fa = (parallelNode_t*) a;
-  parallelNode_t *fb = (parallelNode_t*) b;
+  parallelNode2_t *fa = (parallelNode2_t*) a;
+  parallelNode2_t *fb = (parallelNode2_t*) b;
 
   if(fa->globalId < fb->globalId) return -1;
   if(fa->globalId > fb->globalId) return +1;
@@ -30,8 +36,8 @@ int parallelCompareGlobalIndices(const void *a, const void *b){
 // compare on global indices 
 int parallelCompareSourceIndices(const void *a, const void *b){
 
-  parallelNode_t *fa = (parallelNode_t*) a;
-  parallelNode_t *fb = (parallelNode_t*) b;
+  parallelNode2_t *fa = (parallelNode2_t*) a;
+  parallelNode2_t *fb = (parallelNode2_t*) b;
   
   if(fa->originalRank < fb->originalRank) return -1;
   if(fa->originalRank > fb->originalRank) return +1;
@@ -44,10 +50,10 @@ int parallelCompareSourceIndices(const void *a, const void *b){
 }
 
 // compare on global indices 
-int parallelCompareOwners(const void *a, const void *b){
+int parallelCompareOwners2(const void *a, const void *b){
 
-  parallelNode_t *fa = (parallelNode_t*) a;
-  parallelNode_t *fb = (parallelNode_t*) b;
+  parallelNode2_t *fa = (parallelNode2_t*) a;
+  parallelNode2_t *fb = (parallelNode2_t*) b;
 
   if(fa->ownerRank < fb->ownerRank) return -1;
   if(fa->ownerRank > fb->ownerRank) return +1;
@@ -55,12 +61,10 @@ int parallelCompareOwners(const void *a, const void *b){
   return 0;  
 }
 
-
-
 // squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
 void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
                                             iint Nnum,
-                              					    iint *globalNumbering, 
+                                            iint *globalNumbering, 
                                             iint *globalOwners, 
                                             iint *globalStarts){
 
@@ -68,23 +72,9 @@ void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // build GS for this numbering
-  void *gsh = gsParallelGatherScatterSetup(Nnum, globalNumbering);
 
-  iint *ranks = (iint*) calloc(Nnum, sizeof(iint));
-  for(iint n=0;n<Nnum;++n)
-    ranks[n] = rank;
-  
-  // find lowest rank process that contains each node (decides ownership)
-  gsParallelGatherScatter(mesh->gsh, ranks, iintString, "min");
-
-  // clean up
-  gsParallelGatherScatterDestroy(gsh);
-  
   // count how many nodes to send to each process
-  
   iint *allCounts   = (iint*) calloc(size, sizeof(iint));
-  iint *allOffsets  = (iint*) calloc(size+1, sizeof(iint));
 
   iint *sendCounts = (iint *) calloc(size,sizeof(iint));
   iint *recvCounts = (iint *) calloc(size,sizeof(iint));
@@ -93,8 +83,8 @@ void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
   
   iint cnt = 0;
   for(iint n=0;n<Nnum;++n) {
-    //if (mask[n] == 0) continue; //skip masked nodes
-    sendCounts[ranks[n]] += sizeof(parallelNode_t);
+    if (globalNumbering[n] < 0) continue; //skip negative ids
+    sendCounts[globalOwners[n]] += sizeof(parallelNode2_t);
     cnt++;
   }
 
@@ -108,40 +98,40 @@ void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
   for(iint r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(parallelNode_t);
+    recvNtotal += recvCounts[r]/sizeof(parallelNode2_t);
   }
 
   // populate parallel nodes to send
-  parallelNode_t *sendNodes;
+  parallelNode2_t *sendNodes;
   if (Nlocal)
-    sendNodes = (parallelNode_t*) calloc(Nlocal, sizeof(parallelNode_t));
+    sendNodes = (parallelNode2_t*) calloc(Nlocal, sizeof(parallelNode2_t));
   cnt = 0;
   for(iint n=0;n<Nnum;++n){
-    //if (mask[n] == 0) continue; //skip masked nodes
+    if (globalNumbering[n] < 0) continue; //skip negative ids
     sendNodes[cnt].localId = n;
     sendNodes[cnt].globalId = globalNumbering[n];
     sendNodes[cnt].newGlobalId = -1;
     sendNodes[cnt].originalRank = rank;
-    sendNodes[cnt].ownerRank = ranks[n];
+    sendNodes[cnt].ownerRank = globalOwners[n];
     cnt++;
   }
 
   // sort by global index
-  qsort(sendNodes, Nlocal, sizeof(parallelNode_t), parallelCompareOwners);
+  qsort(sendNodes, Nlocal, sizeof(parallelNode2_t), parallelCompareOwners2);
   
-  parallelNode_t *recvNodes;
+  parallelNode2_t *recvNodes;
   if (recvNtotal)
-    recvNodes = (parallelNode_t*) calloc(recvNtotal, sizeof(parallelNode_t));
+    recvNodes = (parallelNode2_t*) calloc(recvNtotal, sizeof(parallelNode2_t));
   
-  // load up node data to send (NEED TO SCALE sendCounts, sendOffsets etc by sizeof(parallelNode_t)
+  // load up node data to send (NEED TO SCALE sendCounts, sendOffsets etc by sizeof(parallelNode2_t)
   MPI_Alltoallv(sendNodes, sendCounts, sendOffsets, MPI_CHAR,
-		recvNodes, recvCounts, recvOffsets, MPI_CHAR,
-		MPI_COMM_WORLD);
+    recvNodes, recvCounts, recvOffsets, MPI_CHAR,
+    MPI_COMM_WORLD);
 
   for (iint n = 0; n<recvNtotal;n++) recvNodes[n].recvId = n;
 
   // sort by global index
-  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareGlobalIndices);
+  qsort(recvNodes, recvNtotal, sizeof(parallelNode2_t), parallelCompareGlobalIndices);
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
   cnt = 0;
@@ -159,43 +149,32 @@ void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
 
   // cumulative sum of unique node counts => starting node index for each process
   for(iint r=0;r<size;++r)
-    allOffsets[r+1] = allOffsets[r] + allCounts[r];
-
-  memcpy(globalStarts, allOffsets, (size+1)*sizeof(iint));
+    globalStarts[r+1] = globalStarts[r] + allCounts[r];
   
   // shift numbering
   for(iint n=0;n<recvNtotal;++n)
-    recvNodes[n].newGlobalId += allOffsets[rank];
+    recvNodes[n].newGlobalId += globalStarts[rank];
   
   // sort by rank, local index
-  qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareSourceIndices);
+  qsort(recvNodes, recvNtotal, sizeof(parallelNode2_t), parallelCompareSourceIndices);
 
   // reverse all to all to reclaim nodes
   MPI_Alltoallv(recvNodes, recvCounts, recvOffsets, MPI_CHAR,
-		sendNodes, sendCounts, sendOffsets, MPI_CHAR,
-		MPI_COMM_WORLD);
-
-  //set up globalNumbering and globalOwners to ignore masked nodes
-  for(iint n=0;n<Nnum;++n){
-    globalNumbering[n] = -1;
-    globalOwners[n] = rank;
-  }
+    sendNodes, sendCounts, sendOffsets, MPI_CHAR,
+    MPI_COMM_WORLD);
 
   // extract new global indices and push back to original numbering array
   for(iint n=0;n<Nlocal;++n){
     // shuffle incoming nodes based on local id
     iint id = sendNodes[n].localId;
     globalNumbering[id] = sendNodes[n].newGlobalId;
-    globalOwners[id] = sendNodes[n].ownerRank;
   }
 
-  free(ranks);
   free(sendCounts);
   free(recvCounts);
   free(sendOffsets);
   free(recvOffsets);
   free(allCounts);
-  free(allOffsets);
   free(sendNodes);
   free(recvNodes);
 }

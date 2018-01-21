@@ -35,48 +35,34 @@ void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
 
   solver_t *solver = (solver_t *) args[0];
-  hgs_t *hgs       = (hgs_t *) args[1];
+  ogs_t *ogs       = (ogs_t *) args[1];
   occa::memory *o_s= (occa::memory *) args[2];
   char *options    = (char *) args[3];
   mesh_t *mesh     = solver->mesh;
 
   if (strstr(options,"SPARSE")) {
     solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_x, mesh->o_mapSgn, *o_s);
-    meshParallelGather(mesh, hgs, *o_s, o_Gx);
+    meshParallelGather(mesh, ogs, *o_s, o_Gx);
   } else {
-    meshParallelGather(mesh, hgs, o_x, o_Gx);  
+    meshParallelGather(mesh, ogs, o_x, o_Gx);  
   }
-  solver->dotMultiplyKernel(hgs->Ngather, hgs->o_invDegree, o_Gx, o_Gx);
-
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  MPI_Comm_size(MPI_COMM_WORLD,&size);
-  dfloat *d = (dfloat *) calloc(hgs->Ngather,sizeof(dfloat));
-  o_Gx.copyTo(d);
-  for (int r=0;r<size;r++) {
-    if (rank==r)
-    for (int n=0;n<hgs->Ngather;n++) {
-      printf("rank %d: d[%d] = %f\n", rank, n, d[n]);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
+  solver->dotMultiplyKernel(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx, o_Gx);
 }
 
 void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
 
   solver_t *solver = (solver_t *) args[0];
-  hgs_t *hgs       = (hgs_t *) args[1];
+  ogs_t *ogs       = (ogs_t *) args[1];
   occa::memory *o_s= (occa::memory *) args[2];
   char *options    = (char *) args[3];
   mesh_t *mesh     = solver->mesh;
 
   
   if (strstr(options,"SPARSE")) {
-    meshParallelScatter(mesh, hgs, o_x, *o_s);
+    meshParallelScatter(mesh, ogs, o_x, *o_s);
     solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, *o_s, mesh->o_mapSgn, o_Sx);
   } else {
-    meshParallelScatter(mesh, hgs, o_x, o_Sx);  
+    meshParallelScatter(mesh, ogs, o_x, o_Sx);  
   }
 }
 
@@ -289,7 +275,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   /* build degree 1 problem and pass to AMG */
   nonZero_t *coarseA;
   iint nnzCoarseA;
-  hgs_t *coarsehgs;
+  ogs_t *coarseogs;
 
   solver_t* solverL = solversN[1];
   int basisNp = solverL->mesh->Np;
@@ -304,7 +290,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   } else if (strstr(options,"BRDG")) {
     ellipticBuildBRdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
   } else if (strstr(options,"CONTINUOUS")) {
-    ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
+    ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
   }
 
   iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
@@ -342,7 +328,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     coarseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
     coarseLevel->gatherArgs[0] = (void *) solverL;
-    coarseLevel->gatherArgs[1] = (void *) coarsehgs;
+    coarseLevel->gatherArgs[1] = (void *) coarseogs;
     coarseLevel->gatherArgs[2] = (void *) &(coarseLevel->o_Sx);
     coarseLevel->gatherArgs[3] = (void *) options;
     coarseLevel->scatterArgs = coarseLevel->gatherArgs;

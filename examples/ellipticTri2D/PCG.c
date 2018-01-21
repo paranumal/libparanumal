@@ -37,7 +37,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
   } 
 
   if (strstr(options,"VERBOSE")&&(rank==0)) 
-    printf("CG: initial res norm^2 %12.12f WE NEED TO GET TO %12.12f \n", rdotr0, TOL);
+    printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner2D(solver, lambda, o_r, o_z, options);
@@ -73,7 +73,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
     if (strstr(options,"VERBOSE")&&(rank==0)) 
-      printf("CG: it %d r norm^2 %12.12f alpha = %f \n",Niter, rdotr1, alpha);
+      printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
 
     if(rdotr1 < TOL) {

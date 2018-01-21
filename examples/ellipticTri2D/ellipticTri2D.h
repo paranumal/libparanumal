@@ -35,6 +35,8 @@ typedef struct {
 
   dfloat tau;
 
+  int *BCType;
+
   bool allNeumann;
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
@@ -103,7 +105,7 @@ typedef struct {
 
 }solver_t;
 
-void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
+void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char *options);
 
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
@@ -114,9 +116,9 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 
-int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV);
+int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, iint NblockV, iint NnodesV);
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
 solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
 
@@ -126,15 +128,7 @@ void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nent
 
 void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
-void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-          iint Nlocal,     // number of local nodes
-          iint Nbytes,     // number of bytes per node
-          iint *gatherLocalIds,  // local index of nodes
-          iint *gatherBaseIds,   // global index of their base nodes
-          iint *gatherHaloFlags,
-          ogs_t **halo,
-          ogs_t **nonHalo);   // 1 for halo node, 0 for not
-
+void ellipticParallelGatherScatterSetup(solver_t *solver);
 
 //Linear solvers
 int pcg      (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
@@ -183,6 +177,8 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau,
 void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
+
+void matrixInverse(int N, dfloat *A);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options);
 
 void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,

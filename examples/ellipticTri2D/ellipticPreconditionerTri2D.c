@@ -62,11 +62,11 @@ void ellipticPreconditioner2D(solver_t *solver,
     o_z.copyFrom(o_r);
     solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
     precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
-    meshParallelGather(mesh, precon->hgs, precon->o_rFEM, precon->o_GrFEM);
+    meshParallelGather(mesh, precon->FEMogs, precon->o_rFEM, precon->o_GrFEM);
     occaTimerTic(mesh->device,"parALMOND");
     parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
     occaTimerToc(mesh->device,"parALMOND");
-    meshParallelScatter(mesh, precon->hgs, precon->o_GzFEM, precon->o_zFEM);
+    meshParallelScatter(mesh, precon->FEMogs, precon->o_GzFEM, precon->o_zFEM);
     precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
     solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
 

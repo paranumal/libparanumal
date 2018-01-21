@@ -1,147 +1,160 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-
-#include <mpi.h>
-
-#include "mesh.h"
+#include "ellipticTri2D.h"
 
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
-void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-                                        iint Nlocal,     // number of local nodes
-                                        iint Nbytes,     // number of bytes per node
-                                        iint *gatherLocalIds,  // local index of nodes
-                                        iint *gatherBaseIds,   // global index of their base nodes
-                                        iint *gatherHaloFlags,
-                                        ogs_t **halo,
-                                        ogs_t **nonHalo){   // 1 for halo node, 0 for not
+void ellipticParallelGatherScatterSetup(solver_t* solver){  
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-#if 0
-  // already done in first PGS
-  // ------------------------------------------------------------
-  // 0. propagate halo flags uniformly using a disposable gs instance
-
-  void *allGsh = gsParallelGatherScatterSetup(Nlocal, gatherBaseIds);
-
-  // compute max halo flag using global numbering
-  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use iint
-
-  // tidy up
-  gsParallelGatherScatterDestroy(allGsh);
-  if(rank==0)
-    printf("finished temporary GS setup\n");
-#endif
   // initialize gather structs
-  *halo    = (ogs_t*) calloc(1, sizeof(ogs_t));
-  *nonHalo = (ogs_t*) calloc(1, sizeof(ogs_t));
+  solver->halo    = (ogs_t*) calloc(1, sizeof(ogs_t));
+  solver->nonHalo = (ogs_t*) calloc(1, sizeof(ogs_t));
+
+  mesh_t *mesh = solver->mesh;
+
+  iint Nlocal = mesh->Np*mesh->Nelements;
 
   // ------------------------------------------------------------
   // 1. count number of unique base nodes on this process
-  (*halo)->Ngather = 0;
-  (*nonHalo)->Ngather = 0;
+  solver->halo->Ngather = 0;
+  solver->nonHalo->Ngather = 0;
 
   iint nHalo = 0;
   iint nNonHalo = 0;
 
-  //gather halo flags then count? 
-
   for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
-    if(gatherHaloFlags[n]==1){
-      (*halo)->Ngather += test;
+    iint test = (n==0) ? 1: (mesh->gatherBaseIds[n] != mesh->gatherBaseIds[n-1]);
+    if(mesh->gatherHaloFlags[n]==1){
+      solver->halo->Ngather += test;
       ++nHalo;
     }
   }
 
-
   for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
-
-    if(gatherHaloFlags[n]!=1){
-      (*nonHalo)->Ngather += test;
+    iint test = (n==0) ? 1: (mesh->gatherBaseIds[n] != mesh->gatherBaseIds[n-1]);
+    if(mesh->gatherHaloFlags[n]!=1){
+      solver->nonHalo->Ngather += test;
       ++nNonHalo;
     }
   }
 
-  (*halo)->gatherOffsets  = (iint*) calloc((*halo)->Ngather+1, sizeof(iint));
-  (*halo)->gatherLocalIds = (iint*) calloc(nHalo, sizeof(iint));
-  (*halo)->gatherBaseIds  = (iint*) calloc((*halo)->Ngather, sizeof(iint));
+  solver->halo->gatherOffsets  = (iint*) calloc(solver->halo->Ngather+1, sizeof(iint));
+  solver->halo->gatherLocalIds = (iint*) calloc(nHalo, sizeof(iint));
+  solver->halo->gatherBaseIds  = (iint*) calloc(solver->halo->Ngather, sizeof(iint));
 
-  (*nonHalo)->gatherOffsets  = (iint*) calloc((*nonHalo)->Ngather+1, sizeof(iint));
-  (*nonHalo)->gatherLocalIds = (iint*) calloc(nNonHalo, sizeof(iint));
-  (*nonHalo)->gatherBaseIds  = (iint*) calloc((*nonHalo)->Ngather, sizeof(iint));
+  solver->nonHalo->gatherOffsets  = (iint*) calloc(solver->nonHalo->Ngather+1, sizeof(iint));
+  solver->nonHalo->gatherLocalIds = (iint*) calloc(nNonHalo, sizeof(iint));
+  solver->nonHalo->gatherBaseIds  = (iint*) calloc(solver->nonHalo->Ngather, sizeof(iint));
 
   // only finds bases
   nHalo = 0;
   nNonHalo = 0;
-  (*halo)->Ngather = 0; // reset counter
-  (*nonHalo)->Ngather = 0; // reset counter
-
-#if 0
-  for(iint n=0;n<Nlocal;++n){
-    printf("rank%d: n=%d, base=%d, local=%d, halo=%d\n", rank, n, gatherBaseIds[n], gatherLocalIds[n], gatherHaloFlags[n]);
-  }
-#endif
+  solver->halo->Ngather = 0; // reset counter
+  solver->nonHalo->Ngather = 0; // reset counter
 
   for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+    iint test = (n==0) ? 1: (mesh->gatherBaseIds[n] != mesh->gatherBaseIds[n-1]);
 
     // increment unique base counter and record index into shuffled list of nodes
-    if(gatherHaloFlags[n]==1){
+    if(mesh->gatherHaloFlags[n]==1){
       if(test){
-        (*halo)->gatherOffsets[(*halo)->Ngather] = nHalo;
-        (*halo)->gatherBaseIds[(*halo)->Ngather] = gatherBaseIds[n];
-  ++((*halo)->Ngather);
+        solver->halo->gatherOffsets[solver->halo->Ngather] = nHalo;
+        solver->halo->gatherBaseIds[solver->halo->Ngather] = mesh->gatherBaseIds[n];
+        ++(solver->halo->Ngather);
       }
-      (*halo)->gatherLocalIds[nHalo] = gatherLocalIds[n];
+      solver->halo->gatherLocalIds[nHalo] = mesh->gatherLocalIds[n];
       ++nHalo;
     }
   }
 
   for(iint n=0;n<Nlocal;++n){
+    iint test = (n==0) ? 1: (mesh->gatherBaseIds[n] != mesh->gatherBaseIds[n-1]);
 
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
-
-    if(gatherHaloFlags[n]!=1){
+    if(mesh->gatherHaloFlags[n]!=1){
       if(test){
-  (*nonHalo)->gatherOffsets[(*nonHalo)->Ngather] = nNonHalo;
-  ++((*nonHalo)->Ngather);
+        solver->nonHalo->gatherOffsets[solver->nonHalo->Ngather] = nNonHalo;
+        ++(solver->nonHalo->Ngather);
       }
-      (*nonHalo)->gatherLocalIds[nNonHalo] = gatherLocalIds[n];
+      solver->nonHalo->gatherLocalIds[nNonHalo] = mesh->gatherLocalIds[n];
       ++nNonHalo;
     }
   }
-  (*halo)->gatherOffsets[(*halo)->Ngather] = nHalo;
-  (*nonHalo)->gatherOffsets[(*nonHalo)->Ngather] = nNonHalo;
+  solver->halo->gatherOffsets[solver->halo->Ngather] = nHalo;
+  solver->nonHalo->gatherOffsets[solver->nonHalo->Ngather] = nNonHalo;
 
   // if there are halo nodes to gather
-  if((*halo)->Ngather){
+  if(solver->halo->Ngather){
 
-    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc((*halo)->Ngather*Nbytes, NULL);
-    (*halo)->gatherTmp = (char*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
-    printf("host gatherTmp = %p, Nbytes = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), Nbytes, (*halo)->Ngather);
+    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(solver->halo->Ngather*sizeof(dfloat), NULL);
+    solver->halo->gatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc(solver->halo->Ngather*sizeof(dfloat), sizeof(char));
+    //printf("host gatherTmp = %p, sizeof(dfloat) = %d, Ngather = %d\n",  o_gatherTmpPinned.getMappedPointer(), sizeof(dfloat), solver->halo->Ngather);
 
-    //    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
+    //    solver->halo->gatherTmp = (char*) calloc(solver->halo->Ngather*sizeof(dfloat), sizeof(char));
 
-    (*halo)->o_gatherTmp      = mesh->device.malloc((*halo)->Ngather*Nbytes,           (*halo)->gatherTmp);
-    (*halo)->o_gatherOffsets  = mesh->device.malloc(((*halo)->Ngather+1)*sizeof(iint), (*halo)->gatherOffsets);
-    (*halo)->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(iint),                (*halo)->gatherLocalIds);
+    solver->halo->o_gatherTmp      = mesh->device.malloc(solver->halo->Ngather*sizeof(dfloat),           solver->halo->gatherTmp);
+    solver->halo->o_gatherOffsets  = mesh->device.malloc((solver->halo->Ngather+1)*sizeof(iint), solver->halo->gatherOffsets);
+    solver->halo->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(iint),                solver->halo->gatherLocalIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
-    (*halo)->gatherGsh = gsParallelGatherScatterSetup((*halo)->Ngather, (*halo)->gatherBaseIds);
+    solver->halo->haloGsh = gsParallelGatherScatterSetup(solver->halo->Ngather, solver->halo->gatherBaseIds);
   }
 
   // if there are non-halo nodes to gather
-  if((*nonHalo)->Ngather){
+  if(solver->nonHalo->Ngather){
 
-    (*nonHalo)->gatherGsh = NULL;
+    solver->nonHalo->haloGsh = NULL;
 
-    (*nonHalo)->o_gatherOffsets  = mesh->device.malloc(((*nonHalo)->Ngather+1)*sizeof(iint), (*nonHalo)->gatherOffsets);
-    (*nonHalo)->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(iint),                (*nonHalo)->gatherLocalIds);
+    solver->nonHalo->o_gatherOffsets  = mesh->device.malloc((solver->nonHalo->Ngather+1)*sizeof(iint), solver->nonHalo->gatherOffsets);
+    solver->nonHalo->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(iint),                solver->nonHalo->gatherLocalIds);
   }
-  return;
+  
+
+  // count elements that contribute to global C0 gather-scatter
+  iint globalCount = 0;
+  iint localCount = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    int isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->globalHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+        break;
+      }
+    }
+    globalCount += isHalo;
+    localCount += 1-isHalo;
+  }
+
+  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
+  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
+
+  globalCount = 0;
+  localCount = 0;
+
+  for(iint e=0;e<mesh->Nelements;++e){
+    int isHalo = 0;
+    for(iint n=0;n<mesh->Np;++n){
+      if(mesh->globalHaloFlags[e*mesh->Np+n]>0){
+        isHalo = 1;
+        break;
+      }
+    }
+    if(isHalo){
+      globalGatherElementList[globalCount++] = e;
+    } else{
+      localGatherElementList[localCount++] = e;
+    }
+  }
+  //printf("local = %d, global = %d\n", localCount, globalCount);
+
+  solver->NglobalGatherElements = globalCount;
+  solver->NlocalGatherElements = localCount;
+
+  if(globalCount)
+    solver->o_globalGatherElementList =
+      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
+
+  if(localCount)
+    solver->o_localGatherElementList =
+      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
 }

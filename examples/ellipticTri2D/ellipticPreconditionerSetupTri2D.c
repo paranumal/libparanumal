@@ -27,16 +27,13 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     } else if (strstr(options,"BRDG")) {
       ellipticBuildBRdgTri2D(mesh, basisNp, basis, tau, lambda, BCType, &A, &nnz, globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz,&(precon->hgs),globalStarts, options);
-
-      precon->o_Gr = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
-      precon->o_Gz = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
+      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz, &(precon->ogs), globalStarts, options);
     }
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
     iint *Cols = (iint *) calloc(nnz, sizeof(iint));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
-
+    
     for (iint n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
@@ -68,7 +65,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
       baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
       baseLevel->gatherArgs[0] = (void *) solver;
-      baseLevel->gatherArgs[1] = (void *) precon->hgs;
+      baseLevel->gatherArgs[1] = (void *) precon->ogs;
       baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
       baseLevel->gatherArgs[3] = (void *) options;
       baseLevel->scatterArgs = baseLevel->gatherArgs;

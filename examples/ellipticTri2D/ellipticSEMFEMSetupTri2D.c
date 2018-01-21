@@ -259,7 +259,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   printf("done. \n");
 
-  ellipticBuildContinuousTri2D(femMesh,lambda,&A,&nnz,&(precon->hgs),globalStarts,options);
+  ellipticBuildContinuousTri2D(femMesh,lambda,&A,&nnz,&(precon->ogs),globalStarts,options);
 
   iint *Rows = (iint *) calloc(nnz, sizeof(iint));
   iint *Cols = (iint *) calloc(nnz, sizeof(iint));
@@ -308,16 +308,17 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   dfloat *femMask; //TODO need to fill this
 
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Nnum, globalNumbering, globalOwners, globalStarts);
+  /* TODO depreciated, needs fixing */
+  //meshParallelConsecutiveGlobalNumbering(mesh, Nnum, globalNumbering, globalOwners, globalStarts);
 
   //use the ordering to define a gather+scatter for assembly
-  precon->hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+  //precon->FEMogs = meshParallelGatherScatterSetup(mesh);
 
   precon->o_rFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
   precon->o_zFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
 
-  precon->o_GrFEM = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
-  precon->o_GzFEM = mesh->device.malloc(precon->hgs->Ngather*sizeof(dfloat));
+  precon->o_GrFEM = mesh->device.malloc(precon->FEMogs->Ngather*sizeof(dfloat));
+  precon->o_GzFEM = mesh->device.malloc(precon->FEMogs->Ngather*sizeof(dfloat));
 
   free(FEMverts);
   free(faceMap);
