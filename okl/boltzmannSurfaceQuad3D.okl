@@ -21,14 +21,19 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 
 void boundaryCondition(dfloat *qP, const dfloat qM,const dfloat nx, const dfloat ny, const dfloat nz,const dfloat q2, const dfloat q3, const dfloat q4, int fld) {
      if (fld == 1)
-     	*qP = -2*(q2*nx + q3*ny + q4*nz)*nx;
+     	*qP = qM-(q2*nx + q3*ny + q4*nz)*nx;
      else if (fld == 2)
-        *qP = -2*(q2*nx + q3*ny + q4*nz)*ny;
+        *qP = qM-(q2*nx + q3*ny + q4*nz)*ny;
      else if (fld == 3)
-        *qP = -2*(q2*nx + q3*ny + q4*nz)*nz;
+        *qP = qM-(q2*nx + q3*ny + q4*nz)*nz;
      else
      	 *qP = qM;
 }
+
+void boundaryCondition(dfloat *qP,const dfloat qM, int fld) {
+     if ((fld >= 1) && (fld <= 3)) *qP = -qM;
+     else *qP = qM;
+     }
 
 // pointwise SEM-DG lift
 kernel void boltzmannSurfaceQuad3D(const iint Nelements,
@@ -84,6 +89,7 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
 		if(eP < 0) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
+		//if (eP < 0) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
 	      }
 
