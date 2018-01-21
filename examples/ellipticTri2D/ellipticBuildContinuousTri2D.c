@@ -16,32 +16,35 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // ------------------------------------------------------------------------------------
-  // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Np*mesh->Nelements;
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+  /* Build a gather-scatter to assemble the global masked problem */
+  iint Ntotal = mesh->Np*mesh->Nelements;
 
-  for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n];
-    globalNumbering[id] = mesh->gatherBaseIds[n];
-  }
-  for (iint n=0;n<mesh->Nmasked;n++) //mask nodes
+  iint *globalNumbering = (iint *) calloc(Ntotal,sizeof(iint));
+  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(iint)); 
+  for (iint n=0;n<mesh->Nmasked;n++) 
     globalNumbering[mesh->maskIds[n]] = -1;
 
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Nnum, globalNumbering, globalOwners, globalStarts);
+  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
 
-  //use the ordering to define a gather+scatter for assembly
-  *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+  iint *gatherMaskedBaseIds   = (iint *) calloc(Ntotal,sizeof(iint));
+  for (iint n=0;n<Ntotal;n++) {
+    iint id = mesh->gatherLocalIds[n];
+    gatherMaskedBaseIds[n] = globalNumbering[id];
+  }
 
-  // 2. Build non-zeros of stiffness matrix (unassembled)
+  //build gather scatter with masked nodes
+  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
+                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
+                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags);
+
+  // Build non-zeros of stiffness matrix (unassembled)
   iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
@@ -82,15 +85,18 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
     }
   }
 
+  int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
+  for (iint n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
+
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
   iint cnt =0;
   for (iint e=0;e<mesh->Nelements;e++) {
     for (iint n=0;n<mesh->Np;n++) {
-      if (globalNumbering[e*mesh->Np + n]<0) continue; //skip masked nodes
+      if (mask[e*mesh->Np + n]) continue; //skip masked nodes
       for (iint m=0;m<mesh->Np;m++) {
-        if (globalNumbering[e*mesh->Np + m]<0) continue; //skip masked nodes
+        if (mask[e*mesh->Np + m]) continue; //skip masked nodes
 
         dfloat val = 0.;
 
@@ -113,7 +119,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
           sendNonZeros[cnt].val = val;
           sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
           sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
-          sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + n];
+          sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
           cnt++;
         }
       }
@@ -164,8 +170,8 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
 
   if(rank==0) printf("done.\n");
 
-  free(globalNumbering); free(globalOwners);
   free(sendNonZeros);
+  free(globalNumbering);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -176,4 +182,5 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   free(Srs);
   free(Sss);
   free(MM );
+  free(mask);
 }

@@ -111,7 +111,6 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
     
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (strstr(options,"CONTINUOUS")) continue;
     (*invDiagA)[n] = 1/diagA[n];
   }
 

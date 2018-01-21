@@ -133,12 +133,14 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
   }
 
   // make preconBaseIds => preconNumbering
-  precon->ogsDg = meshParallelGatherScatterSetup(mesh,
-                                               NlocalDg,
-                                               sizeof(dfloat),
-                                               gatherLocalIdsDg,
-                                               gatherBaseIdsDg,
-                                               gatherHaloFlagsDg);
+
+  /* depreciated */
+  // precon->ogsDg = meshParallelGatherScatterSetup(mesh,
+  //                                              NlocalDg,
+  //                                              sizeof(dfloat),
+  //                                              gatherLocalIdsDg,
+  //                                              gatherBaseIdsDg,
+  //                                              gatherHaloFlagsDg);
 
   //correction for full patch
   NpP = mesh->NpP;
@@ -153,7 +155,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
     degree[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
-  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg, dfloatString, "add");
+  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg);
   o_deg.copyTo(degree);
   mesh->device.finish();
   o_deg.free();

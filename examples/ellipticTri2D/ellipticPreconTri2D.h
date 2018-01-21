@@ -11,8 +11,8 @@ typedef struct {
 
   long long int preconBytes;
 
-  hgs_t *hgs;
-  hgs_t *FEMhgs;
+  ogs_t *ogs;
+  ogs_t *FEMogs;
 
   dfloat *zP;
   occa::memory o_zP;
@@ -61,7 +61,6 @@ typedef struct {
   occa::kernel SEMFEMAnterpKernel;
 
   ogs_t *ogsP, *ogsDg;
-  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invDiagA;
@@ -118,12 +117,9 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                               dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
                               iint *nnzA, iint *globalStarts, const char *options);
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
-
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, 
+                                  iint *nnz, ogs_t **ogs, iint *globalStarts, 
+                                  const char* options);
 
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
