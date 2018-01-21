@@ -194,7 +194,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-  mesh->finalTime = .0667111f;
+  mesh->finalTime = .25f;
   //mesh->finalTime = 50;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   printf("steps = %d\n", mesh->NtimeSteps);
