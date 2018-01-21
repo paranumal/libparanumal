@@ -194,8 +194,8 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-  mesh->finalTime = .0667111f;
-  //mesh->finalTime = 50;
+  //mesh->finalTime = .0667111f;
+  mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   printf("steps = %d\n", mesh->NtimeSteps);
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
@@ -212,10 +212,10 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
-  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = (rank+1)%2, platformID = 0");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-    sprintf(deviceConfig, "mode = Serial");	  
+  //sprintf(deviceConfig, "mode = Serial");	  
 
   occa::kernelInfo kernelInfo;
 

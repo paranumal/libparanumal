@@ -13,18 +13,18 @@ using namespace std;
 
 struct v3
 {
-  v3(float x, float y, float z)
+  v3(double x, double y, double z)
   {
     data[0]=x;
     data[1]=y;
     data[2]=z;
   }
 
-  v3(float v=0.f) : v3(v,v,v)
+  v3(double v=0.f) : v3(v,v,v)
   {
   }
 
-  operator const float*() const
+  operator const double*() const
   {
     return data;
   }
@@ -43,22 +43,35 @@ struct v3
     return *this;
   }
 
-  v3& operator*=(float rhs)
+  v3& operator*=(double rhs)
   {
     for (int i=0; i<3; ++i)
       data[i]*=rhs;
     return *this;
   }
 
-  float squared() const
+  void print() {
+    std::cout << "cheese " << data[0] << " " << data[1] << " " << data[2] << endl;
+  }
+  
+  double squared() const
   {
-    float result=0.f;
+    double result=0.f;
     for (int i=0; i<3; ++i)
       result+=data[i]*data[i];
     return result;
   }
 
-  float data[3];
+  //now exclusively for equatorial projection.  Values should already be on the preimage surface.
+  v3& normalize()
+  {
+    double scale = std::sqrt((1 - data[2]*data[2])/(data[0]*data[0]+data[1]*data[1]));
+    data[0] = data[0]*scale;
+    data[1] = data[1]*scale;
+    return *this;
+  }
+
+  double data[3];
 };
 
 v3 operator+(v3 lhs, v3 const& rhs)
@@ -71,19 +84,14 @@ v3 operator-(v3 lhs, v3 const& rhs)
   return lhs-=rhs;
 }
 
-v3 operator*(v3 lhs, float rhs)
+v3 operator*(v3 lhs, double rhs)
 {
   return lhs*=rhs;
 }
 
-v3 operator/(v3 lhs, float rhs)
+v3 operator/(v3 lhs, double rhs)
 {
   return lhs*=(1.f/rhs);
-}
-
-v3 normalize(v3 rhs)
-{
-  return rhs/std::sqrt(rhs.squared());
 }
 
 using Index=std::uint32_t;
@@ -103,11 +111,11 @@ using QuadList=std::vector<Quad>;
 using VertexList=std::vector<v3>;
 using ColorVertexList=std::vector<ColorPosition>;
 
-namespace prism
+/*namespace prism
 {
-  const float Z=0.95f;
-  const float X=std::sqrt(1-Z*Z); //autogenerate X from Z
-  const float N=0.f;
+  const double Z=0.95f;
+  const double X=std::sqrt(1-Z*Z); //autogenerate X from Z
+  const double N=0.f;
 
   static const VertexList vertices=
     {
@@ -119,7 +127,28 @@ namespace prism
     {
       {0,2,7,5},{5,7,3,1},{1,3,6,4},{4,6,2,0}
     };
-}
+    }*/
+
+namespace prism
+{
+  const double Z=0.95f;
+  const double r=std::sqrt(1 - Z*Z);
+  const double X=0.5*r; //autogenerate X from Z
+  const double N=std::sqrt(3)/2*r;
+
+  static const VertexList vertices=
+    {
+      {-r,0,Z},{X,N,Z},{X,-N,Z},
+      {-r,0,-Z},{X,N,-Z},{X,-N,-Z}
+    };
+
+  static const QuadList quads=
+    {
+      {0,1,4,3},{1,2,5,4},{2,0,3,5}
+    };
+    }
+
+
 
 namespace color
 {
@@ -136,12 +165,12 @@ using Lookup=std::map<std::pair<Index, Index>, Index>;
 
 inline v3 split(v3 lhs, v3 rhs)
 {
-  return normalize(lhs+rhs);
+  return ((lhs+rhs)/2).normalize();
 }
 
 inline ColorPosition split(ColorPosition lhs, ColorPosition rhs)
 {
-  return{(lhs.color+rhs.color)*0.5f, normalize(lhs.position+rhs.position)};
+  return{(lhs.color+rhs.color)*0.5f, ((lhs.position+rhs.position)/2).normalize()};
 }
 
 template <typename VertexList>
@@ -191,13 +220,13 @@ QuadList subdivide_4(VertexList& vertices,
 
 int longest_edge(ColorVertexList& vertices, Quad const& quad)
 {
-  float best=0.f;
+  double best=0.f;
   int result=0;
   for (int i=0; i<4; ++i)
     {
       auto a=vertices[quad.vertex[i]].position;
       auto b=vertices[quad.vertex[(i+1)%4]].position;
-      float contest =(a-b).squared();
+      double contest =(a-b).squared();
       if (contest>best)
 	{
 	  best=contest;
