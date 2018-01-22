@@ -11,15 +11,15 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 2;
-  sprintf(kernelName, "ellipticAxConvTri2D");
+  NKernels = 1;
+  sprintf(kernelName, "ellipticAxNEWTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
   printf("test 0 \n");
 
-  int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
+  /*int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
   printf("test 1 \n");
   mesh->o_India.copyTo(test);
   printf("test 2\n");
@@ -29,14 +29,14 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   for (int nn=0; nn<mesh->Np+1; ++nn){
     printf(" %d ",  test[nn]);
   }
-
+*/
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
 
   iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
   //add the matrices (?)
-  //Nbytes += (test[mesh->Np]-1)*3;
+  //Nbytes += sizeof(dfloat)*(test[mesh->Np]-1)*3;
   Nbytes /= 2;
   occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
   occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
@@ -88,12 +88,24 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
           lambda,
           solver->o_p,
           solver->o_grad);
-#else
+
       testKernel(mesh->Nelements, 
           solver->o_localGatherElementList,
           mesh->o_ggeo, 
           mesh->o_India,
           mesh->o_Indja, 
+          mesh->o_Srr, 
+          mesh->o_Srs, 
+          mesh->o_Sss,              
+          mesh->o_MM, 
+          lambda,
+          solver->o_p,
+          solver->o_grad);
+#else
+      testKernel(mesh->Nelements, 
+          solver->o_localGatherElementList,
+          mesh->o_ggeo, 
+          mesh->o_rowData,          
           mesh->o_Srr, 
           mesh->o_Srs, 
           mesh->o_Sss,              
@@ -134,7 +146,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
       // count actual number of non-zeros
       int nnzs = 0;
-#if 0
+#if 1
       for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRowNonPadded;++n){
         nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
         nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
@@ -142,13 +154,13 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
       }
 #else
-      nnzs = test[mesh->Np];
+      nnzs = test[mesh->Np]-1;
 #endif
       printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
 
 
       // 6 flops per non-zero plus chain rule
-      double flops = nnzs*2 + mesh->Np*5;
+      double flops = nnzs*6 + mesh->Np*5;
       double eqflops = mesh->Np*mesh->Np*6 + mesh->Np*5;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
