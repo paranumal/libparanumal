@@ -22,15 +22,15 @@ int main(int argc, char **argv){
 
 
   char *velSolverOptions =
-    strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
+    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=MASSMATRIX");
   char *velParAlmondOptions =
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-   // strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE, method=IPDG basis=NODAL preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");

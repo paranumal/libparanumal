@@ -6,107 +6,136 @@
 
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
-ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint Nbytes,     // number of bytes per node
-				      iint *gatherLocalIds,  // local index of nodes
-				      iint *gatherBaseIds,   // global index of their base nodes
-				      iint *gatherHaloFlags){   // 1 for halo node, 0 for not
+ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
+                                      iint Nlocal,
+                                      iint *gatherLocalIds,
+                                      iint *gatherBaseIds,
+                                      iint *gatherBaseRanks,
+                                      int  *gatherHaloFlags) { 
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
 
-  // ------------------------------------------------------------
-  // 0. propagate halo flags uniformly using a disposable gs instance
+  // 0. squeeze out negative globalIds
+  iint *baseIds   = (iint*) calloc(Nlocal,sizeof(iint));
+  iint *localIds  = (iint*) calloc(Nlocal,sizeof(iint));
+  iint *baseRanks = (iint*) calloc(Nlocal,sizeof(iint));
+  int  *haloFlags = (iint*) calloc(Nlocal,sizeof(int));
 
-  void *allGsh = gsParallelGatherScatterSetup(Nlocal, gatherBaseIds);
-
-  // compute max halo flag using global numbering
-  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use iint
-
-  // tidy up
-  gsParallelGatherScatterDestroy(allGsh);
+  iint Ntotal = 0;
+  for (iint n=0;n<Nlocal;n++) {
+    if(gatherBaseIds[n]<0) continue;
+    localIds[Ntotal]  = gatherLocalIds[n]; 
+    baseIds[Ntotal]   = gatherBaseIds[n];   
+    baseRanks[Ntotal] = gatherBaseRanks[n]; 
+    haloFlags[Ntotal] = gatherHaloFlags[n];
+    Ntotal++;
+  }
 
   // ------------------------------------------------------------
   // 1. count number of unique base nodes on this process
-  ogs->Ngather = 0; // assumes at least one base node
-  for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
-    ogs->Ngather += test;
+  ogs->NtotalGather = 0; // assumes at least one base node
+  for(iint n=0;n<Ntotal;++n){
+    int test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
+    ogs->NtotalGather += test;
   }
 
-  iint *gatherOffsets = (iint*) calloc(ogs->Ngather+1, sizeof(iint)); // offset into sorted list of nodes
+  ogs->gatherOffsets = (iint*) calloc(ogs->NtotalGather+1, sizeof(iint)); // offset into sorted list of nodes
 
   // only finds bases
-  ogs->Ngather = 0; // reset counter
-  for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+  ogs->NtotalGather = 0; // reset counter
+  for(iint n=0;n<Ntotal;++n){
+    iint test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
     if(test){
-      gatherOffsets[ogs->Ngather++] = n;  // increment unique base counter and record index into shuffled list of ndoes
+      ogs->gatherOffsets[ogs->NtotalGather++] = n;  // increment unique base counter and record index into shuffled list of ndoes
     }
   }
-  gatherOffsets[ogs->Ngather] = Nlocal;
+  ogs->gatherOffsets[ogs->NtotalGather] = Ntotal;
 
-  char *gatherTmp = (char*) calloc(ogs->Ngather*Nbytes, sizeof(char));
+  ogs->gatherTmp = (dfloat*) calloc(ogs->NtotalGather, sizeof(dfloat));
 
   // allocate buffers on DEVICE
-  ogs->o_gatherTmp      = mesh->device.malloc(ogs->Ngather*Nbytes, gatherTmp);
-  ogs->o_gatherOffsets  = mesh->device.malloc((ogs->Ngather+1)*sizeof(iint), gatherOffsets);
-  ogs->o_gatherLocalIds = mesh->device.malloc(Nlocal*sizeof(iint), gatherLocalIds);
+  ogs->o_gatherTmp      = mesh->device.malloc(ogs->NtotalGather*sizeof(dfloat), ogs->gatherTmp);
+  ogs->o_gatherOffsets  = mesh->device.malloc((ogs->NtotalGather+1)*sizeof(iint), ogs->gatherOffsets);
+  ogs->o_gatherLocalIds = mesh->device.malloc(Ntotal*sizeof(iint), localIds);
 
-  ogs->gatherLocalIds  = gatherLocalIds;
-  ogs->gatherBaseIds   = gatherBaseIds;
-  ogs->gatherHaloFlags = gatherHaloFlags;
+  ogs->gatherLocalIds  = localIds;
+  ogs->gatherBaseIds   = baseIds;
+  ogs->gatherHaloFlags = haloFlags;
 
   // list of nodes to extract from DEVICE gathered array
   ogs->Nhalo = 0;
-  for(iint n=0;n<ogs->Ngather;++n){ // could be this?
-    for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-      if(gatherHaloFlags[id]){ // if any of these are labelled as halo then mark
-	++ogs->Nhalo;
-	break;
+  ogs->NownedHalo = 0;
+  for(iint n=0;n<ogs->NtotalGather;++n){
+    for(iint id=ogs->gatherOffsets[n];id<ogs->gatherOffsets[n+1];++id){
+      if(haloFlags[id]){ // if any of these are labelled as halo then mark
+        ++ogs->Nhalo;
+        if (baseRanks[id]==rank) ++ogs->NownedHalo;
+        break;
       }
     }
   }
 
-  // set up gather-scatter of halo nodes
-  ogs->gatherGsh = NULL;
-  if(ogs->Nhalo){
+  //number of owned gathered nodes
+  ogs->Ngather = ogs->NtotalGather+ogs->NownedHalo-ogs->Nhalo; 
 
-    iint *haloLocalIds  = (iint*) calloc(ogs->Nhalo, sizeof(iint));
-    iint *haloGlobalIds = (iint*) calloc(ogs->Nhalo, sizeof(iint));
+  // set up gather-scatter of halo nodes
+  ogs->haloGsh = NULL;
+
+  //node list is sorted by owners, locally-owned nodes first. So the first part of the 
+  //  haloIds are the locally-owned halo nodes
+  if(ogs->Nhalo){
+    ogs->haloLocalIds  = (iint*) calloc(ogs->Nhalo, sizeof(iint));
+    ogs->haloGlobalIds = (iint*) calloc(ogs->Nhalo, sizeof(iint));
 
     ogs->Nhalo = 0;
-    for(iint n=0;n<ogs->Ngather;++n){
-      for(iint id=gatherOffsets[n];id<gatherOffsets[n+1];++id){
-      	if(gatherHaloFlags[id]){
-      	  haloLocalIds[ogs->Nhalo] = n;
-      	  haloGlobalIds[ogs->Nhalo] = gatherBaseIds[id];
-      	  ++ogs->Nhalo;
-      	  break;
-      	}
+    for(iint n=0;n<ogs->NtotalGather;++n){
+      for(iint id=ogs->gatherOffsets[n];id<ogs->gatherOffsets[n+1];++id){
+        if(haloFlags[id]){
+          ogs->haloLocalIds[ogs->Nhalo] = n;
+          ogs->haloGlobalIds[ogs->Nhalo] = baseIds[id];
+          ++ogs->Nhalo;
+          break;
+        }
       }
     }
 
     // list of halo node indices
-    ogs->o_haloLocalIds = mesh->device.malloc(ogs->Nhalo*sizeof(iint), haloLocalIds);
-
-    // allocate buffer for gathering on halo nodes (danger on size of buffer)
-    if(Nbytes != sizeof(dfloat)) printf("DANGER WILL ROBINSON\n");
-
+    ogs->o_haloLocalIds = mesh->device.malloc(ogs->Nhalo*sizeof(iint), ogs->haloLocalIds);
+    
     ogs->haloTmp = (dfloat*) calloc(ogs->Nhalo, sizeof(dfloat));
-    ogs->o_haloTmp  = mesh->device.malloc(ogs->Nhalo*Nbytes, ogs->haloTmp);
+    ogs->o_haloTmp  = mesh->device.malloc(ogs->Nhalo*sizeof(dfloat), ogs->haloTmp);
 
     // initiate gslib gather-scatter comm pattern
-    ogs->gatherGsh = gsParallelGatherScatterSetup(ogs->Nhalo, haloGlobalIds);
-
-    free(haloGlobalIds);
-    free(haloLocalIds);
+    ogs->haloGsh = gsParallelGatherScatterSetup(ogs->Nhalo, ogs->haloGlobalIds);
   }
 
-  free(gatherOffsets);
+  // build degree vectors
+  ogs->invDegree = (dfloat*) calloc(Nlocal, sizeof(dfloat));
+  ogs->gatherInvDegree = (dfloat*) calloc(Nlocal, sizeof(dfloat));
+  for(iint n=0;n<Nlocal;++n) ogs->invDegree[n] = 1;
+
+  ogs->o_invDegree = mesh->device.malloc(Nlocal*sizeof(dfloat), ogs->invDegree);
+  ogs->o_gatherInvDegree = mesh->device.malloc(Nlocal*sizeof(dfloat), ogs->gatherInvDegree);
+  
+  meshParallelGather(mesh, ogs, ogs->o_invDegree, ogs->o_gatherInvDegree);
+
+  ogs->o_gatherInvDegree.copyTo(ogs->gatherInvDegree);
+
+  meshParallelScatter(mesh, ogs, ogs->o_gatherInvDegree, ogs->o_invDegree);
+
+  ogs->o_invDegree.copyTo(ogs->invDegree);  
+  
+  for(iint n=0;n<Nlocal;++n) 
+    ogs->invDegree[n] = 1./ogs->invDegree[n];
+  
+  for(iint n=0;n<ogs->Ngather;++n)
+    ogs->gatherInvDegree[n] = 1./ogs->gatherInvDegree[n];
+
+  ogs->o_gatherInvDegree.copyFrom(ogs->gatherInvDegree);
+  ogs->o_invDegree.copyFrom(ogs->invDegree);
 
   return ogs;
 }

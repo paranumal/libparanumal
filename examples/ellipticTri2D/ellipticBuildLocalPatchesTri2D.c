@@ -12,8 +12,9 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
                         dfloat *MS, iint eM, dfloat *A);
 
 //returns the C0FEM patch A matrix for element eM
-void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda, iint* BCType,
-                        iint eM, dfloat *A);
+void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
+                                  iint eM, dfloat *Srr, dfloat *Srs, 
+                                  dfloat *Sss, dfloat *MM, dfloat *A);
 
 void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
@@ -533,7 +534,8 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
 //returns the continuous C0 patch A matrix for element eM
 void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
-                                  iint eM, dfloat *A) {
+                                  iint eM, dfloat *Srr, dfloat *Srs, 
+                                  dfloat *Sss, dfloat *MM, dfloat *A) {
 
   iint gbase = eM*mesh->Nggeo;
   dfloat Grr = mesh->ggeo[gbase + G00ID];
@@ -546,11 +548,10 @@ void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
     if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
       for(iint m=0;m<mesh->Np;++m){
         if (mesh->mapB[m+eM*mesh->Np]!=1) {//dont fill rows for masked nodes
-          A[n*mesh->Np+m] = J*lambda*mesh->MM[m+n*mesh->Np];
-          A[n*mesh->Np+m] += Grr*mesh->Srr[m+n*mesh->Np];
-          A[n*mesh->Np+m] += Grs*mesh->Srs[m+n*mesh->Np];
-          A[n*mesh->Np+m] += Grs*mesh->Ssr[m+n*mesh->Np];
-          A[n*mesh->Np+m] += Gss*mesh->Sss[m+n*mesh->Np];
+          A[n*mesh->Np+m] = J*lambda*MM[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Grr*Srr[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Grs*Srs[m+n*mesh->Np];
+          A[n*mesh->Np+m] += Gss*Sss[m+n*mesh->Np];
         } else {
           A[n*mesh->Np+m] = 0;
         }

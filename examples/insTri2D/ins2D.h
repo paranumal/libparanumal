@@ -96,6 +96,8 @@ typedef struct {
   occa::kernel poissonRhsNeumannKernel; // SS
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
+  occa::kernel poissonRhsBCKernel;
+  occa::kernel poissonAddBCKernel;
   occa::kernel poissonPenaltyKernel;
 
   occa::kernel advectionCubatureVolumeKernel;

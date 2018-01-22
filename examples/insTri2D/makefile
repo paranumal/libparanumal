@@ -61,7 +61,6 @@ insAdvectionSubCycleStep2D.o \
 insHelmholtzStep2D.o \
 insPoissonStep2D.o \
 insUpdateStep2D.o \
-insBuildVectorIpdgTri2D.o \
 insAdvectionStepSS2D.o \
 insPoissonStepSS2D.o \
 insHelmholtzStepSS2D.o \
@@ -71,6 +70,7 @@ LOBJS = \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
+../../src/meshConnectFaceModes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloSetup.o \
@@ -87,10 +87,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \

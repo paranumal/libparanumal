@@ -86,6 +86,7 @@ LOBJS = \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshParallelConnectNodes.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshVTU2D.o \
@@ -94,12 +95,8 @@ LOBJS = \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\

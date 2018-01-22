@@ -1,28 +1,7 @@
 #include "ellipticTri2D.h"
 
-void matrixInverse(int N, dfloat *A);
-
-void ellipticComputeDegreeVector(mesh2D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
-
-  // build degree vector
-  for(iint n=0;n<Ntotal;++n)
-    deg[n] = 1;
-
-  occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
-
-  o_deg.copyFrom(deg);
-
-  ellipticParallelGatherScatterTri2D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
-
-  o_deg.copyTo(deg);
-
-  mesh->device.finish();
-  o_deg.free();
-
-}
-
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
-                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, iint NblockV, iint NnodesV){
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType,
+                      occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -34,6 +13,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->tau = tau;
 
   solver->mesh = mesh;
+
+  solver->BCType = BCType;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -101,9 +82,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
-
-  // flag boundary nodes
-
 
   //set up memory for linear solver
   if(strstr(options,"GMRES")) {
@@ -187,62 +165,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*paddedRowSize*sizeof(char), IndTchar);
   free(IndTchar);
 
-  if (strstr(options,"SPARSE")) {
-    // make the gs sign change array for flipped trace modes
-    //TODO this is a hack that likely will need updating for MPI
-    mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
-
-    for (iint e=0;e<mesh->Nelements;e++) {
-      for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
-        iint id = n+e*mesh->Nfp*mesh->Nfaces;
-        if (mesh->mmapS[id]==-1) { //sign flipped
-          if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
-            mesh->mapSgn[mesh->vmapM[id]]= -1;
-          } 
-        } 
-      }
-    }
-    mesh->o_mapSgn = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), mesh->mapSgn);
-  }
-
-  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  solver->globalIds = (iint *) calloc(mesh->Nelements*mesh->Np,sizeof(iint));
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) solver->globalIds[mesh->gatherLocalIds[n]] = mesh->gatherBaseIds[n];
-
-  solver->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, solver->globalIds);
-  
-  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  mesh->mask = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  for (iint e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
-    for (int f=0;f<mesh->Nfaces;f++) {
-      int bc = mesh->EToB[f+e*mesh->Nfaces];
-      if (bc>0) {
-        int BCflag = BCType[bc]; //translate the mesh bc flag
-        for (int n=0;n<mesh->Nfp;n++) {
-          int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = BCflag;
-        }
-      }
-    }
-  }
-  gsParallelGatherScatter(solver->hostGsh, mesh->mapB, "int", "min"); // should use iint
-
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (mesh->mapB[n] == 1E9) {
-      mesh->mapB[n] = 0.;
-      mesh->mask[n] = 1.; //reset internal mask to 1
-    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
-      mesh->mapB[n] = 1.;
-      mesh->mask[n] = 0.;
-    } else { //Neumann or Robin boundary
-      mesh->mask[n] = 1.;
-    }
-  }
-  mesh->o_mask = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->mask);
-  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
-
   //copy boundary flags
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
@@ -277,7 +199,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-//  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = 256/mesh->Np; // works for CUDA
+  int NnodesV = 1; //hard coded for now
   kernelInfo.addDefine("p_NblockV", NblockV);
   kernelInfo.addDefine("p_NnodesV", NnodesV);
 
@@ -330,6 +253,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   mesh->addScalarKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
                "addScalar",
+               kernelInfo);
+
+  mesh->maskKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
+               "mask",
                kernelInfo);
 
   if (strstr(options,"SPARSE")) {
@@ -504,118 +432,86 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     }
   }
 
-   // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  occaTimerTic(mesh->device,"GatherScatterSetup");
-  solver->ogs = meshParallelGatherScatterSetup(mesh,
-                 mesh->Np*mesh->Nelements,
-                 sizeof(dfloat),
-                 mesh->gatherLocalIds,
-                 mesh->gatherBaseIds,
-                 mesh->gatherHaloFlags);
-  occaTimerToc(mesh->device,"GatherScatterSetup");
 
-  /* node degree vector */
-  occaTimerTic(mesh->device,"DegreeVectorSetup");
-  solver->invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  //on-host version of gather-scatter
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
 
-  // build degree vector
-  for(iint n=0;n<Ntotal;++n) degree[n] = 1;
-
-  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), degree);
-
-  ellipticParallelGatherScatterTri2D(mesh, solver->ogs, solver->o_invDegree, 
-                                      solver->o_invDegree, dfloatString, "add");
-
-  solver->o_invDegree.copyTo(degree);
-
-  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-    if(degree[n] == 0) printf("WARNING!!!!\n");
-    solver->invDegree[n] = 1./degree[n];
-  }
-
-  solver->o_invDegree.copyFrom(solver->invDegree);
-  occaTimerToc(mesh->device,"DegreeVectorSetup");
+  // setup occa gather scatter
+  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
+                                             mesh->gatherLocalIds,
+                                             mesh->gatherBaseIds,
+                                             mesh->gatherBaseRanks,
+                                             mesh->gatherHaloFlags);
+  solver->o_invDegree = mesh->ogs->o_invDegree;
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(mesh,
-                                     mesh->Np*mesh->Nelements,
-                                     sizeof(dfloat),
-                                     mesh->gatherLocalIds,
-                                     mesh->gatherBaseIds,
-                                     mesh->gatherHaloFlags,
-                                     &(solver->halo),
-                                     &(solver->nonHalo));
+  ellipticParallelGatherScatterSetup(solver);
 
-  // count elements that contribute to global C0 gather-scatter
-  iint globalCount = 0;
-  iint localCount = 0;
-  iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
-
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n)
-    localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
-
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint isHalo = 0;
-    for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]>0){
-        isHalo = 1;
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mesh->mapB[fid+e*mesh->Np] = BCFlag;
+        }
       }
-      if(localHaloFlags[e*mesh->Np+n]<0){
-        printf("found halo flag %d\n", localHaloFlags[e*mesh->Np+n]);
-      }
-    }
-    globalCount += isHalo;
-    localCount += 1-isHalo;
-  }
-
-  iint *globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
-  iint *localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
-
-  globalCount = 0;
-  localCount = 0;
-
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint isHalo = 0;
-    for(iint n=0;n<mesh->Np;++n){
-      if(localHaloFlags[e*mesh->Np+n]>0){
-        isHalo = 1;
-      }
-    }
-    if(isHalo){
-      globalGatherElementList[globalCount++] = e;
-    }
-    else{
-      localGatherElementList[localCount++] = e;
     }
   }
-  printf("local = %d, global = %d\n", localCount, globalCount);
+  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
 
-  solver->NglobalGatherElements = globalCount;
-  solver->NlocalGatherElements = localCount;
+  //use the bc flags to find masked ids
+  mesh->Nmasked = 0;
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1E9) {
+      mesh->mapB[n] = 0.;
+    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
+      mesh->mapB[n] = 1.;
+      mesh->Nmasked++;
+    }
+  }
+  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+  
+  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->Nmasked =0; //reset
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
+  }
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
 
-  if(globalCount)
-    solver->o_globalGatherElementList =
-      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
 
-  if(localCount)
-    solver->o_localGatherElementList =
-      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+  if (strstr(options,"SPARSE")) {
+    // make the gs sign change array for flipped trace modes
+    //TODO this is a hack that likely will need updating for MPI and/or 3D
+    mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
 
-  free(localHaloFlags);
+    for (iint e=0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+        iint id = n+e*mesh->Nfp*mesh->Nfaces;
+        if (mesh->mmapS[id]==-1) { //sign flipped
+          if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
+            mesh->mapSgn[mesh->vmapM[id]]= -1;
+          } 
+        } 
+      }
+    }
+    mesh->o_mapSgn = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), mesh->mapSgn);
+  }
 
 
   /*preconditioner setup */
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
   #if 0
-
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
                "ellipticOasPreconTri2D",
                kernelInfo);
-
-
   #endif
 
   solver->precon->restrictKernel =

@@ -105,7 +105,8 @@ kernel void ellipticPartialAxTri2D(const int Nelements,
       for(int n=0;n<p_Np;++n;inner0){
         if (e<Nelements) {
           const iint es = e-eo;
-          const iint gid = e*p_Nggeo;
+          const iint element = elementList[e];
+          const iint gid = element*p_Nggeo;
 
           const dfloat Grr = ggeo[gid + p_G00ID];
           const dfloat Grs = ggeo[gid + p_G01ID];
@@ -126,8 +127,7 @@ kernel void ellipticPartialAxTri2D(const int Nelements,
               qss += SssT[n+k*p_Np]*s_q[es][k];
               qM  += MM[n+k*p_Np]*s_q[es][k];
             }
-
-          const iint element = elementList[e];
+            
           const iint id = n + element*p_Np;
 
           Aq[id] = Grr*qrr+Grs*qrs+Grs*qsr+Gss*qss + J*lambda*qM;
