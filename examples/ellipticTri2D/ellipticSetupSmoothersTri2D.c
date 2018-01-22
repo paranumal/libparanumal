@@ -133,12 +133,14 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
   }
 
   // make preconBaseIds => preconNumbering
-  precon->ogsDg = meshParallelGatherScatterSetup(mesh,
-                                               NlocalDg,
-                                               sizeof(dfloat),
-                                               gatherLocalIdsDg,
-                                               gatherBaseIdsDg,
-                                               gatherHaloFlagsDg);
+
+  /* depreciated */
+  // precon->ogsDg = meshParallelGatherScatterSetup(mesh,
+  //                                              NlocalDg,
+  //                                              sizeof(dfloat),
+  //                                              gatherLocalIdsDg,
+  //                                              gatherBaseIdsDg,
+  //                                              gatherHaloFlagsDg);
 
   //correction for full patch
   NpP = mesh->NpP;
@@ -153,7 +155,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
     degree[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
-  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg, dfloatString, "add");
+  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg);
   o_deg.copyTo(degree);
   mesh->device.finish();
   o_deg.free();
@@ -264,8 +266,6 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
       //set the stabilty weight (jacobi-type interation)
       dfloat weight = (4./3.)/rho;
 
-      printf("weight = %g \n", weight);
-
       for (iint n=0;n<NpP*mesh->Nelements;n++)
         diagInvOpDg[n] *= weight;
 
@@ -326,8 +326,6 @@ void ellipticSetupSmootherFullPatch(solver_t *solver, precon_t *precon, agmgLeve
 
       //set the stabilty weight (jacobi-type interation)
       dfloat weight = (4./3.)/rho;
-
-      printf("weight = %g \n", weight);
 
       for (iint e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
@@ -399,8 +397,6 @@ void ellipticSetupSmootherFacePatch(solver_t *solver, precon_t *precon, agmgLeve
       //set the stabilty weight (jacobi-type interation)
       dfloat weight = (4./3.)/rho;
 
-      printf("weight = %g \n", weight);
-
       for (iint e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
 
@@ -459,8 +455,6 @@ void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLev
       //set the stabilty weight (jacobi-type interation)
       dfloat weight = (4./3.)/rho;
 
-      printf("weight = %g \n", weight);
-
       for (iint e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
 
@@ -501,14 +495,10 @@ void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgL
       level->smoother_params[0] = rho;
       level->smoother_params[1] = rho/10.;
 
-      printf("weight = %g \n", rho);
-
     } else {
 
       //set the stabilty weight (jacobi-type interation)
       dfloat weight = (4./3.)/rho;
-
-      printf("weight = %g \n", weight);
 
       for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
         invDiagA[n] *= weight;
@@ -585,10 +575,10 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level,const char* options){
   //gather-scatter 
   if (strstr(options,"CONTINUOUS")) {
     if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) Vx[n] *= mesh->mapSgn[n];
-    gsParallelGatherScatter(solver->hostGsh, Vx, dfloatString, "add"); 
+    gsParallelGatherScatter(mesh->hostGsh, Vx, dfloatString, "add"); 
     if (strstr(options,"SPARSE")) for (iint n=0;n<mesh->Nelements*mesh->Np;n++) Vx[n] *= mesh->mapSgn[n];
   
-    for (iint i=0;i<N;i++) Vx[i] *= mesh->mask[i];
+    for (iint i=0;i<mesh->Nmasked;i++) Vx[mesh->maskIds[i]] = 0.;
   }
 
   o_Vx.copyFrom(Vx); //copy to device
@@ -648,6 +638,8 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level,const char* options){
   o_AVx.free();
   for(int i=0; i<=k; i++) o_V[i].free();
   free((void*)o_V);
+
+  if(rank==0) printf("weight = %g \n", rho);
 
   return rho;
 }

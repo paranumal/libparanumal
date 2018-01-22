@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=SPARSE preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
 
@@ -65,40 +65,8 @@ int main(int argc, char **argv){
   //   parAlmondOptions = strdup(argv[5]);
   // }
 
-  iint NblockV = 1;
-  iint NnodesV = 1;
-
-  if (argc == 5){
-    NblockV = atoi(argv[3]);
-    NnodesV = atoi(argv[4]);
-  }
-
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
-  ogs_t *ogs;
-  precon_t *precon;
-
-  if (strstr(options,"SPARSE")) {
-    //connect the face modes between each element 
-    meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
-    //use the mmaps constructed and overwrite vmap and FaceNodes
-    for (iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
-      mesh->vmapM[n] = mesh->mmapM[n];
-      mesh->vmapP[n] = mesh->mmapP[n];
-    }
-    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) { //overwrite facenodes
-      mesh->faceNodes[n] = mesh->FaceModes[n];
-    }
-    for (int n=0;n<mesh->Nverts;n++) { //overwrite vertex nodes (assumes their first in the list)
-      mesh->vertexNodes[n] = n;
-    }
-    //free the old gather scatter arrays and re-run the connect nodes function using this updated connectivity
-    free(mesh->gatherLocalIds );
-    free(mesh->gatherBaseIds  );
-    free(mesh->gatherBaseRanks);
-    free(mesh->gatherHaloFlags);
-    meshParallelConnectNodes(mesh);
-  }
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
@@ -111,7 +79,7 @@ int main(int argc, char **argv){
 
   // set up
   occa::kernelInfo kernelInfo;
-  ellipticSetupTri2D(mesh, kernelInfo);
+  ellipticSetupTri2D(mesh, kernelInfo, options);
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
@@ -123,7 +91,8 @@ int main(int argc, char **argv){
     tau = 1.0;
   }
 
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
+  
   iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -222,7 +191,19 @@ int main(int argc, char **argv){
 
   // convergence tolerance
   dfloat tol = 1e-8;
-  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options, NblockV, NnodesV);
+  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
+
+
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       mesh->o_mapB,
+                       o_x);
+  }
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
@@ -240,7 +221,7 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 
@@ -249,7 +230,9 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU2D(mesh, "foo.vtu", 0);
+  char filename[BUFSIZ];
+  sprintf(filename, "foo_%d.vtu", rank);
+  meshPlotVTU2D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

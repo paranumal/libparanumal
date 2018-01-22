@@ -40,6 +40,7 @@ mesh2D *meshSetupTri2D(char *filename, int N){
 
   // global nodes
   meshParallelConnectNodes(mesh);
+  
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

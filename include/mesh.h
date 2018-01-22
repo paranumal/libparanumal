@@ -27,7 +27,6 @@
 #endif
 
 #include "ogs_t.h"
-#include "hgs_t.h"
 
 typedef struct {
 
@@ -129,7 +128,6 @@ typedef struct {
   iint *vmapP;     // list of volume nodes that are paired with face nodes
   iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
   int *mapB;      // boundary flag of face nodes
-  dfloat *mask;
   int *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
@@ -258,6 +256,13 @@ typedef struct {
   occa::memory o_SEMFEMInterp;
   occa::memory o_SEMFEMAnterp;
 
+  //C0-FEM mask data
+  iint Nmasked;
+  iint *maskIds;
+
+  occa::memory o_maskIds;
+  
+
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
 
@@ -335,7 +340,7 @@ typedef struct {
   occa::memory o_SsrT, o_SssT, o_SstT;
   occa::memory o_Sss, o_Srr, o_Srs; // for char4-based kernels
   occa::memory o_IndT, o_IndTchar;
-occa::memory o_India, o_Indja;
+  occa::memory o_India, o_Indja;
   occa::memory o_StrT, o_StsT, o_SttT;
   occa::memory o_Ind; // for sparse index storage
 
@@ -441,13 +446,20 @@ occa::memory o_India, o_Indja;
 
 
   // CG gather-scatter info
-  void *gsh; // gslib struct pointer
+  void *gsh, *hostGsh; // gslib struct pointer
+  ogs_t *ogs; //occa gs pointer
+
+  iint *globalIds;
+  iint *globalOwners;
+  iint *globalHaloFlags;
 
   iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
   iint *gatherBaseIds;  // gather index of ""
   iint *gatherBaseRanks; // base rank
+  iint *gatherOffsets; 
   iint *gatherMaxRanks;  // maximum rank connected to each sorted node
   iint *gatherHaloFlags;  // maximum rank connected to each sorted node
+  iint *gatherGlobalStarts;
 
   iint NuniqueBases; // number of unique bases on this rank
   occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
@@ -490,6 +502,7 @@ occa::memory o_India, o_Indja;
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
 
+  occa::kernel maskKernel;
 
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
@@ -546,21 +559,17 @@ void parallelSort(iint N, void *vv, size_t sz,
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
 
-  /* hash function */
-  unsigned int hash(const unsigned int value) ;
+/* hash function */
+unsigned int hash(const unsigned int value) ;
 
-  /* dimension independent mesh operations */
-  void meshConnect(mesh_t *mesh);
+/* dimension independent mesh operations */
+void meshConnect(mesh_t *mesh);
 
-  /* build parallel face connectivity */
-  void meshParallelConnect(mesh_t *mesh);
+/* build parallel face connectivity */
+void meshParallelConnect(mesh_t *mesh);
 
-  /* build global connectivity in parallel */
-  void meshParallelConnectNodes(mesh_t *mesh);
-
-  /* renumber global nodes to remove gaps */
-  void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
-      iint *globalOwners, iint *globalStarts, dfloat *mask);
+/* build global connectivity in parallel */
+void meshParallelConnectNodes(mesh_t *mesh);
 
 void meshHaloSetup(mesh_t *mesh);
 
@@ -584,16 +593,26 @@ void meshHaloExchangeFinish(mesh_t *mesh);
 // print out parallel partition i
 void meshPartitionStatistics(mesh_t *mesh);
 
-
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
-hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
-    iint Nlocal,     // number of local nodes
-    iint *globalNumbering,  // global index of nodes
-    iint *globalOwners);
-void meshParallelGather(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_gv);
-void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_sv);
+// squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
+void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
+                                            iint Nnum,
+                                            iint *globalNumbering, 
+                                            iint *globalOwners, 
+                                            iint *globalStarts);
+
+ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
+                                      iint Nlocal,
+                                      iint *gatherLocalIds,
+                                      iint *gatherBaseIds,
+                                      iint *gatherBaseRanks,
+                                      int  *gatherHaloFlags);
+
+void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv);
+void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
+void meshParallelScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_sv);
 
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);

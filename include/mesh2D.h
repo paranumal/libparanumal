@@ -110,22 +110,6 @@ void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
-void meshParallelGatherScatter(mesh2D *mesh,
-			       ogs_t *ogs, 
-			       occa::memory &o_v,
-			       occa::memory &o_gsv,
-			       const char *type,
-			       const char *op);
-
-
-ogs_t *meshParallelGatherScatterSetup(mesh2D *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint Nbytes,     // number of bytes per node
-				      iint *localIds,  // local index of nodes
-				      iint *baseIds,   // gather index of their base nodes
-				      iint *haloFlags); // 1 for halo node, 0 for not
-
-
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 

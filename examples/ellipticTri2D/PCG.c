@@ -4,6 +4,9 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
     occa::memory &o_r, occa::memory &o_x, 
     const dfloat tol, const int MAXIT) {
 
+  iint rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   mesh_t *mesh = solver->mesh;
 
   /*aux variables */
@@ -28,13 +31,13 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
 
   //sanity check
   if (rdotr0<=(TOL)) {
-    if (strstr(options, "VERBOSE")){
+    if (strstr(options, "VERBOSE")&&(rank==0)){
       printf("converged in ZERO iterations. Stopping.\n");}
     return 0;
   } 
 
-  if (strstr(options,"VERBOSE")) 
-    printf("CG: initial res norm^2 %12.12f WE NEED TO GET TO %12.12f \n", rdotr0, TOL);
+  if (strstr(options,"VERBOSE")&&(rank==0)) 
+    printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner2D(solver, lambda, o_r, o_z, options);
@@ -69,8 +72,8 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-    if (strstr(options,"VERBOSE")) 
-      printf("CG: it %d r norm^2 %12.12f alpha = %f \n",Niter, rdotr1, alpha);
+    if (strstr(options,"VERBOSE")&&(rank==0)) 
+      printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
 
     if(rdotr1 < TOL) {

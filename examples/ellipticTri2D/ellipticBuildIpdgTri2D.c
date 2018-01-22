@@ -89,6 +89,8 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
   dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
 
+  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+
   // loop over all elements
   for(iint eM=0;eM<Nelements;++eM){
 
@@ -299,11 +301,13 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
     }
   }
 
-  printf("nnz = %d\n", nnz);
+  //printf("nnz = %d\n", nnz);
 
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
+
+  if(rankM==0) printf("done.\n");
 
 #if 0
   dfloat* Ap = (dfloat *) calloc(Np*Np*Nelements*Nelements,sizeof(dfloat));
