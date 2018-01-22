@@ -619,10 +619,10 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
-        int BCflag = BCType[bc]; //translate the mesh bc flag
         for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = BCflag;
+          mesh->mapB[fid+e*mesh->Np] = BCFlag;
         }
       }
     }
