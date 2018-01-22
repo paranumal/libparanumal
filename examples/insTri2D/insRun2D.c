@@ -33,7 +33,7 @@ void insRun2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-   ins->NtimeSteps=100;
+  ins->NtimeSteps=100;
   
   double tic_tot = 0.f, elp_tot = 0.f; 
   double tic_adv = 0.f, elp_adv = 0.f;
@@ -44,7 +44,7 @@ void insRun2D(ins_t *ins, char *options){
   // MPI_Barrier(MPI_COMM_WORLD); 
   tic_tot = MPI_Wtime(); 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
-   if(tstep<1){
+    if(tstep<1){
        //advection, first order in time, increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
       ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
@@ -55,20 +55,17 @@ void insRun2D(ins_t *ins, char *options){
       ins->lambda = ins->g0 / (ins->dt * ins->nu);
       ins->idt = 1.0/ins->dt; 
       ins->ig0 = 1.0/ins->g0; 
-   }
-    else 
-      //if(tstep<2) 
-    {
-    //advection, second order in time, no increment
-    ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
-    ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
-    ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-    ins->g0 =  1.5f;
-    ins->ExplicitOrder=2;
+    } else { //if(tstep<2) 
+      //advection, second order in time, no increment
+      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
+      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
+      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
+      ins->g0 =  1.5f;
+      ins->ExplicitOrder=2;
 
-    ins->lambda = ins->g0 / (ins->dt * ins->nu);
-    ins->idt = 1.0/ins->dt; 
-    ins->ig0 = 1.0/ins->g0; 
+      ins->lambda = ins->g0 / (ins->dt * ins->nu);
+      ins->idt = 1.0/ins->dt; 
+      ins->ig0 = 1.0/ins->g0; 
     }
     // else{
     // //advection, second order in time, no increment
@@ -133,17 +130,20 @@ void insRun2D(ins_t *ins, char *options){
 
     // printf("tstep = %d of %d\n", tstep,ins->NtimeSteps);
     
-    #if 0
+    #if 1
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "VTU")){
       if(((tstep+1)%(ins->errorStep))==0){
+        printf("\n");
         insReport2D(ins, tstep+1,options);
       }
     }
 
+    printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
+        printf("\n");
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
@@ -222,7 +222,7 @@ if(rank==0){
 
 
 
-#if 0
+#if 1
 dfloat finalTime = ins->NtimeSteps*ins->dt;
 insReport2D(ins, ins->NtimeSteps,options);
 insErrorNorms2D(ins, finalTime, options);

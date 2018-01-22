@@ -193,6 +193,18 @@ int main(int argc, char **argv){
   dfloat tol = 1e-8;
   ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
 
+
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       mesh->o_mapB,
+                       o_x);
+  }
+
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 

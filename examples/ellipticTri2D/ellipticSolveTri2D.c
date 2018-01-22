@@ -549,16 +549,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
     Niter = pcg      (solver, options, lambda, o_r, o_x, tol, maxIter);
   }
   occaTimerToc(mesh->device,"Linear Solve");
-  
-  if(strstr(options, "CONTINUOUS")){
-    dfloat zero = 0.;
-    solver->addBCKernel(mesh->Nelements,
-                       zero,
-                       mesh->o_x,
-                       mesh->o_y,
-                       mesh->o_mapB,
-                       o_x);
-  }
 
   iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
