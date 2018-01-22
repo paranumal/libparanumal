@@ -29,7 +29,7 @@ int main(int argc, char **argv){
   char *prSolverOptions =
     //strdup("solver=PCG,FLEXIBLE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
-    strdup("solver=PCG,FLEXIBLE, method=IPDG basis=NODAL preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE, method=IPDG basis=NODAL preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
 
   char *prParAlmondOptions =
