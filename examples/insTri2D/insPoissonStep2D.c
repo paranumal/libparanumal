@@ -15,8 +15,9 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   iint offset  = mesh->Nelements+mesh->totalHaloPairs;
   iint ioffset = index1*offset;
 
-
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  /* note: the surface kernel isn't needed with continuous pressure. Just the inflow boundary 
+           contributions to the surface */
+  //if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
       ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
@@ -35,7 +36,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                            sendBuffer,
                            recvBuffer);
     }
-  }
+  //}
   
   occaTimerTic(mesh->device,"DivergenceVolume");
   // computes div u^(n+1) volume term
@@ -49,7 +50,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                              ins->o_rhsP);
    occaTimerToc(mesh->device,"DivergenceVolume");
 
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  //if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
@@ -80,7 +81,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                 ins->o_V,
                                 ins->o_rhsP);
     occaTimerToc(mesh->device,"DivergenceSurface");
-  }
+  //}
 
   
   occaTimerTic(mesh->device,"PoissonRhsForcing");
