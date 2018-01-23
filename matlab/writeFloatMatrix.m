@@ -1,5 +1,5 @@
 
-function writeMatrix(file, A, label)
+function writeFloatMatrix(file, A, label)
   
   fprintf(file, '******************************************\n');
   fprintf(file, '%s\n', label);
