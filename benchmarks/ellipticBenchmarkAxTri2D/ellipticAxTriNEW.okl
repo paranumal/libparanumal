@@ -17,10 +17,10 @@ kernel void ellipticAxNEWTri2D_v0(
     shared dfloat s_ggeo[p_NnodesV][p_NblockV][p_Nggeo];
     //p_NnzTotal is AT MOST p_maxNNZ per row x Np
     //maxNnz per row is bigger than Np only for N=1 and N=2
-
-    shared dfloat s_Srra[p_SparseNnzPerRow*p_Np];
-    shared dfloat s_Srsa[p_SparseNnzPerRow*p_Np];
-    shared dfloat s_Sssa[p_SparseNnzPerRow*p_Np];
+    // DONT EVEN TRY
+    // shared dfloat s_Srra[p_SparseNnzPerRow*p_Np];
+    // shared dfloat s_Srsa[p_SparseNnzPerRow*p_Np];
+    // shared dfloat s_Sssa[p_SparseNnzPerRow*p_Np];
     exclusive char r_rowData[6]; 
     for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
@@ -32,17 +32,9 @@ kernel void ellipticAxNEWTri2D_v0(
         r_rowData[5] = rowData[5*p_Np+n]; 
 
         //load operators to shared
-        int    t = n;
-        while (t<p_SparseNnzPerRow*p_Np){
-          s_Srra[t] = Srra[t];
-          s_Srsa[t] = Srsa[t];
-          s_Sssa[t] = Sssa[t];
-          t+=p_SparseNnzPerRow; 
-        }
-
 
         // coalesced read of ggeo 
-        t = n + p_Np*es;
+        int t = n + p_Np*es;
         while(t<p_NnodesV*p_NblockV*p_Nggeo && eo*p_Nggeo+t<Nelements*p_Nggeo){          
           s_ggeo[0][0][t] = ggeo[eo*p_Nggeo+t];
           t += p_Np*p_NblockV;
@@ -85,15 +77,15 @@ kernel void ellipticAxNEWTri2D_v0(
             //if (es+eo == 0){
             //printf("GRPUP %d (%d %d)  k=%d idx = %d r= %d \n", gr,r_rowData[gr], r_rowData[gr+1], k, idx, r);
             //}          
-            const dfloat Srr_nk = s_Srra[idx];
-            const dfloat Srs_nk = s_Srsa[idx];
-            const dfloat Sss_nk = s_Sssa[idx];
+            const dfloat Srr_nk = Srra[idx];
+            const dfloat Srs_nk = Srsa[idx];
+            const dfloat Sss_nk = Sssa[idx];
             occaUnroll(p_NnodesV)
               for(iint et=0;et<p_NnodesV;++et){
                 const iint e = eo + es + et*p_NblockV;
                 // fetch from shared (for reuse three times)
                 // 6 flops per 8 bytes
-                const dfloat r_qk = s_q[et][es][k];
+                const dfloat r_qk = s_q[et][es][k-1];
 
                 r_qrr[et] += Srr_nk*r_qk;
                 r_qrs[et] += Srs_nk*r_qk;
@@ -122,4 +114,127 @@ kernel void ellipticAxNEWTri2D_v0(
   }
 }
 
+kernel void ellipticAxNEWTri2D_v1(
+    const int Nelements,
+    const iint   * restrict elementList,
+    const dfloat * restrict ggeo,
+    const char4 * restrict rowData,
+    const dfloat * restrict Srra,
+    const dfloat * restrict Srsa,
+    const dfloat * restrict Sssa,
+    const dfloat * restrict MM,
+    const dfloat lambda,
+    const dfloat * restrict q,
+    dfloat * restrict Aq){
+  // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+    shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
+    shared dfloat s_ggeo[p_NnodesV][p_NblockV][p_Nggeo];
+    //p_NnzTotal is AT MOST p_maxNNZ per row x Np
+    //maxNnz per row is bigger than Np only for N=1 and N=2
+    // DONT EVEN TRY
+    // shared dfloat s_Srra[p_SparseNnzPerRow*p_Np];
+    // shared dfloat s_Srsa[p_SparseNnzPerRow*p_Np];
+    // shared dfloat s_Sssa[p_SparseNnzPerRow*p_Np];
+
+    //const char * pt_Indn = (char *) &Indn;
+    exclusive char r_rowData[6]; 
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const char4 Indn1 = rowData[0*p_Np+n];
+        const char4 Indn2 = rowData[1*p_Np+n];
+
+        //if (es+eo==0){
+        //printf("requesting %d and %d, I got %d %d %d %d %d %d \n ", n, p_Np+n, Indn1.x, Indn1.y, Indn1.z, Indn1.w, Indn2.x, Indn2.y);
+        //}
+
+        r_rowData[0] = Indn1.x;
+        r_rowData[1] = Indn1.y; 
+        r_rowData[2] = Indn1.z;
+        r_rowData[3] = Indn1.w; 
+        r_rowData[4] = Indn2.x;
+        r_rowData[5] = Indn2.y; 
+
+
+        // coalesced read of ggeo 
+        int t = n + p_Np*es;
+        while(t<p_NnodesV*p_NblockV*p_Nggeo && eo*p_Nggeo+t<Nelements*p_Nggeo){          
+          s_ggeo[0][0][t] = ggeo[eo*p_Nggeo+t];
+          t += p_Np*p_NblockV;
+        }
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+            if(e<Nelements){
+
+              const iint id = n + e*p_Np;
+              s_q[et][es][n] = q[id];
+            } 
+          } 
+      }   
+    } 
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        // do this part irrespective of e
+        dfloat r_qrr[p_NnodesV];
+        dfloat r_qrs[p_NnodesV];
+        dfloat r_qss[p_NnodesV];
+
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            r_qrr[et] = 0;
+            r_qrs[et] = 0;
+            r_qss[et] = 0;
+          } 
+        //here
+        //int numberOfQuadruplets = (r_India[1]-r_India[0])/4;
+        //first set
+        for (int gr = 0; gr<6; gr+=2){
+          int r = 0;
+          for (int k=(int)r_rowData[gr]; k<(int)r_rowData[gr+1]+1; ++k){
+            int idx =  n + r*p_Np;
+            //if (es+eo == 0){
+            //printf("n = %d GROUP %d (%d %d)  k=%d idx = %d r= %d \n",n, gr/2,r_rowData[gr], r_rowData[gr+1], k, idx, r);
+            //}          
+
+            const dfloat Srr_nk = Srra[idx];
+            const dfloat Srs_nk = Srsa[idx];
+            const dfloat Sss_nk = Sssa[idx];
+              occaUnroll(p_NnodesV)
+              for(iint et=0;et<p_NnodesV;++et){
+                const iint e = eo + es + et*p_NblockV;
+                // fetch from shared (for reuse three times)
+                // 6 flops per 8 bytes
+                const dfloat r_qk = s_q[et][es][k-1];
+
+                r_qrr[et] += Srr_nk*r_qk;
+                r_qrs[et] += Srs_nk*r_qk;
+                r_qss[et] += Sss_nk*r_qk;
+              }
+            r++;
+          }         
+        }
+
+        // this part has to check for element index validity
+        occaUnroll(p_NnodesV)
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
+            if (e<Nelements) {
+
+              dfloat res1 = s_ggeo[et][es][p_G00ID]*r_qrr[et];
+              dfloat res2 = s_ggeo[et][es][p_G01ID]*r_qrs[et];
+              dfloat res3 = s_ggeo[et][es][p_G11ID]*r_qss[et];
+
+              const iint id = n + e*p_Np;
+              Aq[id] = res1+res2+res3;
+            }
+          }
+      }
+    }
+  }
+}
 
