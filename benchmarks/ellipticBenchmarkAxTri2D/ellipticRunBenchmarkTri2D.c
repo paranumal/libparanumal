@@ -11,7 +11,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 2;
+  NKernels = 3;
   sprintf(kernelName, "ellipticAxNEWTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
@@ -20,16 +20,16 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   printf("test 0 \n");
 
   /*int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
-  printf("test 1 \n");
-  mesh->o_India.copyTo(test);
-  printf("test 2\n");
+    printf("test 1 \n");
+    mesh->o_India.copyTo(test);
+    printf("test 2\n");
 
-  printf("test 1 \n");
-  printf("\n");
-  for (int nn=0; nn<mesh->Np+1; ++nn){
+    printf("test 1 \n");
+    printf("\n");
+    for (int nn=0; nn<mesh->Np+1; ++nn){
     printf(" %d ",  test[nn]);
-  }
-*/
+    }
+    */
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
@@ -74,7 +74,6 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
     occa::streamTag start[Ntrials], end[Ntrials];
     for(int it=0;it<Ntrials;++it){
-      mesh->device.finish();
       start[it] = mesh->device.tagStream();
 #if 0
       testKernel(mesh->Nelements, 
@@ -117,6 +116,9 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 #endif
 
       end[it] = mesh->device.tagStream();
+    }
+    mesh->device.finish();
+    for(int it=0;it<Ntrials;++it){
       timeAx = mesh->device.timeBetween(start[it],end[it]);
       kernelElapsed +=timeAx;    
     }
@@ -147,15 +149,15 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       // count actual number of non-zeros
 #if 1
       int nnzs = 0;
-printf("sparse nnz per row: %d \n", mesh->SparseNnzPerRow);
+      printf("sparse nnz per row: %d \n", mesh->SparseNnzPerRow);
       for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRow;++n){
-//        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
-  //      nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
-    //    nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
-//printf("%16.16f %16.16f %16.16f \n", mesh->sparseSrrT[n],  mesh->sparseSrsT[n],  mesh->sparseSssT[n]);
-nnzs += (mesh->sparseStackedNZ[n]>0); 
-    }
-//nnzs*=3;
+        //        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
+        //      nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
+        //    nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
+        //printf("%16.16f %16.16f %16.16f \n", mesh->sparseSrrT[n],  mesh->sparseSrsT[n],  mesh->sparseSssT[n]);
+        nnzs += (mesh->sparseStackedNZ[n]>0); 
+      }
+      //nnzs*=3;
 #else
       nnzs = test[mesh->Np]-1;
 #endif

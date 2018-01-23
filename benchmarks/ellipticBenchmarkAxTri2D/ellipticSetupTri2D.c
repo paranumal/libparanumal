@@ -406,12 +406,26 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   for (int i=0; i<mesh->Np; ++i){
     for (int j=0; j<4; j++){
       //    rowDataTransposed[mesh->Np*j+i]  = rowData[8*i+j];
-      rowDataTransposed[4*i+j] = (char) rowData[8*i+j];    
-      printf("putting %d in place %d \n", rowData[8*i+j],4*i+j );  
+      // rowDataTransposed[4*i+j] = (char) rowData[8*i+j];    
+      if (j==0){
+        rowDataTransposed[4*i+0] = (char) 1;
+        rowDataTransposed[4*i+1] = (char) 4;
+        rowDataTransposed[4*i+2] = (char) 1;
+        rowDataTransposed[4*i+3] = (char) 0;  
+      }
+      //      printf("putting %d in place %d \n", rowData[8*i+j],4*i+j );  
     }
     for (int j=0; j<4; j++){
-      rowDataTransposed[mesh->Np*4 + 4*i+j] = (char) rowData[8*i+j+4];
-      printf("putting %d in place %d \n", rowData[8*i+j],mesh->Np*4 + 4*i+j );
+      //rowDataTransposed[mesh->Np*4 + 4*i+j] = (char) rowData[8*i+j+4];
+      if (j==0){
+        rowDataTransposed[mesh->Np*4 + 4*i+0] = (char) 1;
+        rowDataTransposed[mesh->Np*4 + 4*i+1] = (char) 0;
+        rowDataTransposed[mesh->Np*4 + 4*i+2] = (char) 0;
+        rowDataTransposed[mesh->Np*4 + 4*i+3] = (char) 0;  
+      }
+
+      //    printf("putting %d in place %d \n", rowData[8*i+j],mesh->Np*4 + 4*i+j );
+
     }
 
   }
@@ -428,9 +442,6 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   printf("\n MAX IS %d \n", mesh->Np*8);
   mesh->o_rowData = mesh->device.malloc(mesh->Np*8*sizeof(char), rowDataTransposed);
   printf("alloc!\n");  
-  //  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
-  //  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
-  //  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
   mesh->o_Srr = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat),mesh->sparseSrrT);
   mesh->o_Srs = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
   mesh->o_Sss = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);  
