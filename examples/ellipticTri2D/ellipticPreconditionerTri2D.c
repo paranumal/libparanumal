@@ -70,7 +70,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
     solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
 
-    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_z, o_z, dfloatString, "add");
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_z, o_z, dfloatString, "add");
 
   } else if(strstr(options, "JACOBI")){
 
