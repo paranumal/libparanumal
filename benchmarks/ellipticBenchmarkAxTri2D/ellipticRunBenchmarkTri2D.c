@@ -11,7 +11,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 1;
+  NKernels = 2;
   sprintf(kernelName, "ellipticAxNEWTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
@@ -54,7 +54,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
 
 
-  for(iint i=0; i<NKernels; i++) {
+  for(iint i=1; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
@@ -145,14 +145,17 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("Ntrials = %d global copy el %f local copy el %f size(dfloat) %d \n",Ntrials, globalCopyElapsed, copyElapsed, sizeof(dfloat));
 
       // count actual number of non-zeros
-      int nnzs = 0;
 #if 1
-      for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRowNonPadded;++n){
-        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
-        nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
-        nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
-
-      }
+      int nnzs = 0;
+printf("sparse nnz per row: %d \n", mesh->SparseNnzPerRow);
+      for(iint n=0;n<mesh->Np*mesh->SparseNnzPerRow;++n){
+//        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
+  //      nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
+    //    nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
+//printf("%16.16f %16.16f %16.16f \n", mesh->sparseSrrT[n],  mesh->sparseSrsT[n],  mesh->sparseSssT[n]);
+nnzs += (mesh->sparseStackedNZ[n]>0); 
+    }
+//nnzs*=3;
 #else
       nnzs = test[mesh->Np]-1;
 #endif
@@ -160,11 +163,11 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
 
       // 6 flops per non-zero plus chain rule
-      double flops = nnzs*6 + mesh->Np*5;
+      double flops = (double)(nnzs*6 + mesh->Np*5);
       double eqflops = mesh->Np*mesh->Np*6 + mesh->Np*5;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
-      printf("Nelements = %d flops = %f Ntrials = %d copy elapsed scaled = %f kernelElapsed %16.16f\n",mesh->Nelements, flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
+      printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f kernelElapsed %16.16f\n",mesh->Nelements, (int) flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
 
       double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
       double kernelBandwidth = mesh->Nelements*((Nbytes*2.)/(1e9*kernelElapsed));
