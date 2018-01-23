@@ -42,7 +42,7 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
   if (baseLevel->gatherLevel==true) {// scatter solution
     baseLevel->device_scatter(baseLevel->scatterArgs, baseLevel->o_x, o_x);
   } else {
-    baseLevel->o_x.copyTo(o_x);
+    baseLevel->o_x.copyTo(o_x,baseLevel->Nrows*sizeof(dfloat));
   }
 }
 

@@ -1,5 +1,5 @@
 
-function writeIntegerMatrix(file, A, label)
+function writeIntMatrix(file, A, label)
   
   fprintf(file, '******************************************\n');
   fprintf(file, '%s\n', label);

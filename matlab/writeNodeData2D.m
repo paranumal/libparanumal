@@ -296,7 +296,15 @@ if (N<13)
   [rFEM,sFEM] = NewNodes2D(N,'EIKappaNp1');
   [rFEM,sFEM] = xytors(rFEM,sFEM);
 
-  %triplot(FEMEToV+1,req,seq)
+  FEMEToV
+  
+  req
+  seq
+  
+  rFEM
+  sFEM
+  
+  triplot(FEMEToV+1,req,seq)
 
   NpFEM = length(rFEM);
   NelFEM = size(FEMEToV,1);
