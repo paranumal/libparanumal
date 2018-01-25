@@ -5,7 +5,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
-   // mesh->shiftIndex = 0; 	
+   mesh->shiftIndex = 0; 	
 
   // LSERK4 stages
   for(iint rk=0;rk<mesh->Nrk;++rk){
@@ -113,7 +113,23 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			mesh->device.finish();
            occa::tic("PML_relaxationKernel");
 
-		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+		  // mesh->pmlRelaxationKernel(mesh->pmlNelements,
+    //                             mesh->o_pmlElementIds,
+    //                             mesh->o_pmlIds,
+    //                             mesh->Nrhs,
+    //                             mesh->shiftIndex,
+    //                             mesh->o_cubInterpT,
+    //                             mesh->o_cubProjectT,
+    //                             mesh->o_pmlSigmaX,
+    //                             mesh->o_pmlSigmaY,
+    //                             mesh->o_q,
+    //                             mesh->o_pmlqx,
+    //                             mesh->o_pmlqy,
+    //                             mesh->o_rhsq,
+    //                             mesh->o_pmlrhsqx,
+    //                             mesh->o_pmlrhsqy);
+
+        mesh->pmlRelaxationKernel(mesh->pmlNelements,
                                 mesh->o_pmlElementIds,
                                 mesh->o_pmlIds,
                                 mesh->Nrhs,
@@ -122,6 +138,9 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                                 mesh->o_cubProjectT,
                                 mesh->o_q,
                                 mesh->o_rhsq);
+
+
+
 
 		   mesh->device.finish();
            occa::toc("PML_relaxationKernel");

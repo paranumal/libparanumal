@@ -2,7 +2,7 @@
 
 #define p_isq12 (1.f/occaSqrt(12.f))
 #define p_isq6 (1.f/occaSqrt(6.f))
-#define PML_ENABLED 0
+#define PML_ENABLED 1
 
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat q1M, const dfloat q2M, const dfloat q3M,
@@ -41,7 +41,7 @@ void boundaryConditions2D(const iint bc,
     *q6B =  q6M;
   }
 
-   else if (1<bc)   // NBN: testing inflow
+   else if (1<bc)   // 
   { 
     *q1B = 2.f*p_q1bar - q1M; 
     *q2B = 2.f*ramp*p_q2bar - q2M; 
@@ -50,7 +50,39 @@ void boundaryConditions2D(const iint bc,
     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
- 
+
+  //  else if (1<bc)   // 
+  // { 
+  //   *q1B  = 0.f; 
+  //   *q2B  = 0.f;
+  //   *q3B  = 0.f;
+  //   *q4B  = 0.f;
+  //   *q5B  = 0.f;
+  //   *q6B  = 0.f;
+  // }
+
+  //  else if (bc==2)   // // NBN: testing inflow
+  // { 
+  //   *q1B = 1.f; 
+  //   *q2B = 0.5f/p_sqrtRT; //Uniform Velocity
+    
+  //   *q3B = -q3M;
+  //   *q4B = q4M;
+  //   *q5B = q5M;
+  //   *q6B = q6M;
+  // }
+
+
+  //  else if (bc==3)   // // NBN: testing inflow
+  // { 
+  //   *q1B = 2.f*p_q1bar - q1M; 
+  //   // *q2B = 2.f*ramp*p_q2bar - q2M; 
+  //   // *q3B = 2.f*ramp*p_q3bar - q3M; 
+  //   // *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+  //   // *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+  //   // *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+  // }
+  
  #else
   if(bc==1){ // Wall 
     *q1B = 1.f; 
@@ -70,7 +102,7 @@ void boundaryConditions2D(const iint bc,
     *q6B = q6M;
   }
   if(bc==3){ // Outflow // do nothing
-    *q1B = 1.0f; // Define at least one parameter
+    *q1B = 2.f*p_q1bar - q1M;    // // Define at least one parameter
     // *q2B = q2M;
     // *q3B = q3M;
     // *q4B = q4M;

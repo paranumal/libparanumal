@@ -116,8 +116,23 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                             mesh->MRABshiftIndex[l],
                             mesh->o_cubInterpT,
                             mesh->o_cubProjectT,
+                            mesh->o_pmlSigmaX,
+                            mesh->o_pmlSigmaY,
                             mesh->o_q,
-                            mesh->o_rhsq);
+                            mesh->o_pmlqx,
+                            mesh->o_pmlqy,
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsqx,
+                            mesh->o_pmlrhsqy);
+             // mesh->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
+             //                mesh->o_MRABpmlElementIds[l],
+             //                mesh->o_MRABpmlIds[l],
+             //                mesh->Nrhs,
+             //                mesh->MRABshiftIndex[l],
+             //                mesh->o_cubInterpT,
+             //                mesh->o_cubProjectT,
+             //                mesh->o_q,
+             //                mesh->o_rhsq);
       }
     }
 
