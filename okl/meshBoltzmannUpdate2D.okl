@@ -17,4 +17,3 @@ kernel void meshBoltzmannUpdate2D(const iint Ntotal,
     }
   }
 }
-

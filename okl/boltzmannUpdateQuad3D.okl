@@ -33,4 +33,111 @@ kernel void boltzmannUpdateQuad3D(const iint Nelements,
   }
 }
 
+// This kernel does not use float 4 format, 
+kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat expdt, 
+            const dfloat ab1,
+            const dfloat ab2,
+            const dfloat ab3,
+            const dfloat saab1,
+            const dfloat saab2,
+            const dfloat saab3,
+            const iint   shift,
+            const dfloat * restrict rhsq,
+                  dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint es=0;es<Nelements;++es;outer0){
 
+    shared dfloat s_q[p_Np*p_Nfields];
+    exclusive iint e; 
+
+    for(iint n=0;n<p_maxNodes;++n;inner0){
+      e  = elementIds[es];
+      if(n<p_Np){
+        const iint id = n + e*p_Np*p_Nfields;
+	const iint rid = n + e*p_Np*p_Nfields*3;
+
+        // hard-coded for 3th order
+        const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
+        const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
+        const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
+
+        //
+        s_q[n+0*p_Np] = q[id+0*p_Np] + ab1*rhsq[rhsId1+0*p_Np] + ab2*rhsq[rhsId2+0*p_Np] + ab3*rhsq[rhsId3+0*p_Np];
+        s_q[n+1*p_Np] = q[id+1*p_Np] + ab1*rhsq[rhsId1+1*p_Np] + ab2*rhsq[rhsId2+1*p_Np] + ab3*rhsq[rhsId3+1*p_Np];
+        s_q[n+2*p_Np] = q[id+2*p_Np] + ab1*rhsq[rhsId1+2*p_Np] + ab2*rhsq[rhsId2+2*p_Np] + ab3*rhsq[rhsId3+2*p_Np];
+        //
+        s_q[n+3*p_Np] = expdt*q[id+3*p_Np] + saab1*rhsq[rhsId1+3*p_Np] + saab2*rhsq[rhsId2+3*p_Np] + saab3*rhsq[rhsId3+3*p_Np];
+        s_q[n+4*p_Np] = expdt*q[id+4*p_Np] + saab1*rhsq[rhsId1+4*p_Np] + saab2*rhsq[rhsId2+4*p_Np] + saab3*rhsq[rhsId3+4*p_Np];
+        s_q[n+5*p_Np] = expdt*q[id+5*p_Np] + saab1*rhsq[rhsId1+5*p_Np] + saab2*rhsq[rhsId2+5*p_Np] + saab3*rhsq[rhsId3+5*p_Np];
+	s_q[n+6*p_Np] = expdt*q[id+6*p_Np] + saab1*rhsq[rhsId1+6*p_Np] + saab2*rhsq[rhsId2+6*p_Np] + saab3*rhsq[rhsId3+6*p_Np];
+        s_q[n+7*p_Np] = expdt*q[id+7*p_Np] + saab1*rhsq[rhsId1+7*p_Np] + saab2*rhsq[rhsId2+7*p_Np] + saab3*rhsq[rhsId3+7*p_Np];
+        s_q[n+8*p_Np] = expdt*q[id+8*p_Np] + saab1*rhsq[rhsId1+8*p_Np] + saab2*rhsq[rhsId2+8*p_Np] + saab3*rhsq[rhsId3+8*p_Np];
+        s_q[n+9*p_Np] = expdt*q[id+9*p_Np] + saab1*rhsq[rhsId1+9*p_Np] + saab2*rhsq[rhsId2+9*p_Np] + saab3*rhsq[rhsId3+9*p_Np];
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint n=0;n<p_maxNodes;++n;inner0){
+
+      // Update q
+      if(n<p_Np){
+
+        const iint id = p_Nfields*e*p_Np + n;
+
+        for (iint fld = 0; fld < p_Nfields; ++fld){
+          q[id+fld*p_Np]   = s_q[n+fld*p_Np];
+        } 
+
+      }
+
+    }
+    
+  }
+}
+
+// This kernel does not use float4 format, 
+kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
+            const iint * restrict elementIds,
+            const dfloat expdt, 
+            const dfloat ab1,
+            const dfloat ab2,
+            const dfloat ab3,
+            const dfloat saab1,
+            const dfloat saab2,
+            const dfloat saab3,
+            const iint   shift,
+            const dfloat * restrict rhsq,
+            const dfloat * restrict q){
+  
+  // Low storage Runge Kutta time step update
+  for(iint es=0;es<Nelements;++es;outer0){
+
+    shared dfloat s_q[p_Np*p_Nfields];
+    exclusive iint e; 
+
+    for(iint n=0;n<p_maxNodes;++n;inner0){
+      e  = elementIds[es];
+      if(n<p_Np){
+        const iint id = n + e*p_Np*p_Nfields;
+	const iint rid = n + e*p_Np*p_Nfields*3;
+
+        // hard-coded for 3th order
+        const iint rhsId1 = id + ((shift+0)%3)*p_Nfields*p_Np;
+        const iint rhsId2 = id + ((shift+1)%3)*p_Nfields*p_Np;
+        const iint rhsId3 = id + ((shift+2)%3)*p_Nfields*p_Np;
+
+          for(iint fld=0; fld< p_Nfields; ++fld){
+            if(fld<3)
+              s_q[n+fld*p_Np] = q[id+fld*p_Np]+ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
+            else
+              s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*rhsq[rhsId1+fld*p_Np] + saab2*rhsq[rhsId2+fld*p_Np] + saab3*rhsq[rhsId3+fld*p_Np];
+          }
+      }
+    }
+  }
+}
