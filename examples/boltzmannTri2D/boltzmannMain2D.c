@@ -82,7 +82,7 @@ int main(int argc, char **argv){
        exit(-1);
     }  
     
-    for(iint i=0; i<3;i++){
+    for(iint i=0; i<1;i++){
 
       // if(i==0)
       // mesh->Ntscale=1;

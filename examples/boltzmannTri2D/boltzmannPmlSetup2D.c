@@ -3,9 +3,19 @@
 void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma  = 100. , ysigma  = 100.;
-  dfloat cxsigma = 20. , cysigma = 20.;
+  //dfloat xsigma  = 100. , ysigma  = 100.;
 
+  // dfloat Sigma[4]; Sigma[0]=20; Sigma[1] = 50; Sigma[2] = 200; Sigma[3] = 400; 
+
+  // dfloat xsigma  = Sigma[mesh->Ntscale]; dfloat  ysigma  = Sigma[mesh->Ntscale];
+
+
+  dfloat xsigma  = 0., ysigma  = 0.;
+  
+  dfloat xsmin = -3.0, xsmax = 3.0; // map x to this range to control erf profile 
+  dfloat ysmin = -3.0, ysmax = 3.0; // map y to this range to control erf profile 
+
+  printf(" Sigma Scale: %d\n",mesh->Ntscale);
   //count the pml elements
   mesh->pmlNelements=0;
 
@@ -59,12 +69,23 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
       mesh->nonPmlElementIds = (iint*) realloc(mesh->nonPmlElementIds,mesh->nonPmlNelements*sizeof(iint));
      
 
-
-
-    //set up damping parameter
-    mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-    mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-
+    iint Nnodes = 0;
+    // if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+    //   //
+    //   printf("Setting PML Coefficient for Cubature Integration\n");
+    //   //set up damping parameter
+    //   mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+    //   mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
+    //   Nnodes = mesh->cubNp;    
+    // }
+    //  else{
+      printf("Setting PML Coefficients for Nodal Collocation Integration\n");
+      //set up damping parameter
+      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      Nnodes = mesh->Np; 
+    // }
+   
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
     dfloat ymin = 1e9, ymax =-1e9;
@@ -98,20 +119,29 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
 
 
-
-
-    iint order = 2; 
+    iint order = 0;
+    //
+    if(strstr(options,"CONSTANT"))
+      order = 0; 
+    if(strstr(options,"LINEAR"))
+      order = 1; 
+    if(strstr(options,"QUADRATIC"))
+      order = 2;
+    if(strstr(options, "ERFFUNCTION"))
+      order =1;
 
     dfloat xmaxScale = pow(pmlxmax-xmax,order);
     dfloat xminScale = pow(pmlxmin-xmin,order);
     dfloat ymaxScale = pow(pmlymax-ymax,order);
     dfloat yminScale = pow(pmlymin-ymin,order);
 
+    printf("xmaxScale = %.10e \n", xmaxScale);
+
     //set up the damping factor
     for (iint es=0;es<mesh->pmlNelements;es++){
         iint e     = mesh->pmlElementIds[es];
         iint pmlId = mesh->pmlIds[es];
-        int type = mesh->elementInfo[e];
+        iint type = mesh->elementInfo[e];
         iint id = e*mesh->Nverts;
 
         dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
@@ -122,162 +152,193 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
         dfloat ye2 = mesh->EY[id+1];
         dfloat ye3 = mesh->EY[id+2];
 
-        for(iint n=0;n<mesh->Np;++n){ /* for each node */
-          dfloat x = mesh->x[n + e*mesh->Np];
-          dfloat y = mesh->y[n + e*mesh->Np];
+        for(iint n=0;n<Nnodes;++n){ /* for each node */
+          dfloat x = 0, y = 0; 
 
-         if(strstr(options,"QUADRATIC")){
-
+          if(Nnodes==mesh->cubNp){
+            dfloat rn = mesh->cubr[n];
+            dfloat sn = mesh->cubs[n]; 
+            x = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+            y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
+          }
+          else{
+            x = mesh->x[n + e*mesh->Np];
+            y = mesh->y[n + e*mesh->Np];
+          }
+          
+          if(!strstr(options,"ERFFUNCTION")){
           if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
-
-
-        // printf("%.6f %.6f\n", mesh->pmlSigmaX[mesh->Np*pmlId + n],mesh->pmlSigmaY[mesh->Np*pmlId + n]);
-
-
-
         }
 
-        if(strstr(options,"CONSTANT")){
-
-           if (type==100) { //X Pml
+        else{
+          if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
           }
-
-         //printf("%.6f %.6f\n", mesh->pmlSigmaX[mesh->Np*pmlId + n],mesh->pmlSigmaY[mesh->Np*pmlId + n]);
-
-        }
         }
       }
+
+    }
 
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
-    mesh->pmlNfields = 6;
+    //mesh->Nfields = 6;
 
     if(strstr(options,"SAAB")  || strstr(options,"SRAB") ){
-      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
 
       // set up PML on DEVICE    
-      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqx);
 
-      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqy);
     }
 
 
 
     if(strstr(options,"LSERK")){
-      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlresqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlresqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlresqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlresqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
 
       // set up PML on DEVICE    
-      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
-      mesh->o_pmlresqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlresqx);
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqx);
+      mesh->o_pmlresqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlresqx);
 
-      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
-      mesh->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlresqy);
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqy);
+      mesh->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlresqy);
     }
 
 
     if(strstr(options,"SARK")){
-      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
 
       // set up PML on DEVICE    
-      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqx);
 
-      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqy);
     }
 
 
     if(strstr(options,"LSIMEX")){
-      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
       // set up PML on DEVICE 
-      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);   
-      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_qYx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_qZx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);   
+      mesh->o_qSx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qYx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+      mesh->o_qZx       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
 
-      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_qYy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_qZy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qSy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qYy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+      mesh->o_qZy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
     }
 
-
-    
-
-
-    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->Np*sizeof(dfloat),mesh->pmlSigmaX);
-    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->Np*sizeof(dfloat),mesh->pmlSigmaY);
-
-
-
-
-      if (mesh->pmlNelements) {
-        mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);
-        mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
-      }
+    if (mesh->pmlNelements) {
+      mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
+      mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
+      mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);
+      mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
+    }
       
-   // free(pmlIds);
+   free(pmlIds);
+ //    //
+ //    printf("Wwitting Pml profile\n" );
+ //     iint fid = 0; 
+ // for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];   
+ //    for(iint n=0;n<Nnodes;n++){
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlSigmaX[Nnodes*pmlId + n];
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlSigmaY[Nnodes*pmlId + n];
+ //    }
+  // }
+  
+ //   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+ //   mesh->o_cubProjectT.copyTo(cubProjectT);
+ //    // free(pmlIds);
+ //     iint fid = 0; 
+ // for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];   
+ //    for(iint n=0;n<mesh->Np;n++)
+ //    {
+ //      dfloat q1 = 0; dfloat q2 = 0; 
+ //      for(iint m=0; m<mesh->cubNp;++m){
+ //         dfloat prj = cubProjectT[m*mesh->Np+n];
+ //         q1 += prj*mesh->pmlSigmaX[Nnodes*pmlId + m];
+ //         q2 += prj*mesh->pmlSigmaY[Nnodes*pmlId + m];
+ //      }
+
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
+ //    }
+ //  }
+  
+
+ //  char fname[BUFSIZ];
+ //  sprintf(fname, "pmlProfile1.vtu");
+ //  boltzmannPlotVTU2D(mesh, fname);
+  
   }
+
 }

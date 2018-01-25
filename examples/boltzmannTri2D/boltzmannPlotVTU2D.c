@@ -41,9 +41,9 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
       fprintf(fp, "%g %g %g\n", plotxn,plotyn,0.);
     }
   }
+  
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
-  
   
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
@@ -56,6 +56,7 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
 	        iint base = mesh->Nfields*(m + e*mesh->Np);
           dfloat rho = mesh->q[base + 0];
           dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; // need to be modified
+          //dfloat pm = rho; 
           plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 
@@ -64,7 +65,28 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
     }
   }
   fprintf(fp, "       </DataArray>\n");
+  
+  
 
+   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"v-velocity\" Format=\"ascii\">\n");
+   for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotun = 0, plotvn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
+        dfloat rho = mesh->q[base];
+        dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        //dfloat vm = mesh->q[1 + base];
+        plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+        
+      }
+    
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotvn);
+    }
+  }
+
+  fprintf(fp, "       </DataArray>\n");
 
 
   // calculate plot vorticity
@@ -158,7 +180,6 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   //   }
   // }
   // fprintf(fp, "       </DataArray>\n");
-
 
 
   fprintf(fp, "     </PointData>\n");

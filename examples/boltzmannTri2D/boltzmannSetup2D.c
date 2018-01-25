@@ -60,8 +60,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.1;    //Set Mach number
-    mesh->Re = RE[mesh->Ntscale];  // Set Reynolds number was 1000
+    mesh->Ma = 0.1;    // Set Mach number
+    mesh->Re = 100; //RE[mesh->Ntscale];  // Set Reynolds number was 1000
     //
     Uref = 0.5;  // Set Uref was 0.5
     Lref = 1.;   // set Lref
@@ -76,7 +76,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     rho = 1.0, u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 6.0;
+    mesh->finalTime = 10.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -118,7 +118,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // Define Initial Mean Velocity
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(0, &ramp, &drampdt);
-
+  
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
   dfloat q3bar = rho*v/mesh->sqrtRT;
@@ -162,7 +162,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
-      dfloat b     = 0.2;
+      dfloat b     = 0.1;
 
       dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
 
@@ -170,12 +170,20 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
       dfloat theta = atan2(y,x);
 
-      mesh->q[cnt+0] = rhor; // uniform density, zero flow
-      mesh->q[cnt+1] = ramp*rhor*(-Ur*sin(theta) + u)/mesh->sqrtRT;
-      mesh->q[cnt+2] = ramp*rhor*( Ur*cos(theta) + v)/mesh->sqrtRT;
-      mesh->q[cnt+3] = ramp*ramp*q4bar;
-      mesh->q[cnt+4] = ramp*ramp*q5bar;
-      mesh->q[cnt+5] = ramp*ramp*q6bar;  
+      mesh->q[cnt+0] = rhor; 
+      mesh->q[cnt+1] = rhor*(-Ur*sin(theta) +u)/mesh->sqrtRT;
+      mesh->q[cnt+2] = rhor*( Ur*cos(theta) +v)/mesh->sqrtRT;
+      mesh->q[cnt+3] = q4bar;
+      mesh->q[cnt+4] = q5bar;
+      mesh->q[cnt+5] = q6bar;  
+      
+      // mesh->q[cnt+0] = exp(-30*(x*x+y*y)); // uniform density, zero flow
+      // mesh->q[cnt+1] = 0.f;
+      // mesh->q[cnt+2] = 0.f;
+      // mesh->q[cnt+3] = 0.f;
+      // mesh->q[cnt+4] = 0.f;
+      // mesh->q[cnt+5] = 0.f;  
+
       #endif
 
 
@@ -188,9 +196,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       mesh->q[cnt+4] = ramp*ramp*q5bar;
       mesh->q[cnt+5] = ramp*ramp*q6bar;  
       #endif
-
-
-
 
       cnt += mesh->Nfields;
     }
@@ -252,13 +257,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   else{
     
-  // #if 1
-  //   printf("Time step size scaling with %d", mesh->Ntscale);
-  //   // dt = pow(2,mesh->Ntscale)*1e-6; 
-  //   dt = mesh->Ntscale*1e-5;   
-  // #endif
   
+   //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
    dt = 10e-6; // !!!!!!!!!!!!!!!!
+   //!!!!!!
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
@@ -312,7 +314,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 //SetupOcca
   char deviceConfig[BUFSIZ];
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%4);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
@@ -323,7 +325,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
     // Setup MRAB PML
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
-
+     printf("Preparing Pml for multirate rate\n");
     boltzmannMRABPmlSetup2D(mesh, options);
   // 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
@@ -358,6 +360,8 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
   if(mesh->MRABNlevels==0)
     Nlevels =1;
+  else
+    Nlevels = mesh->MRABNlevels;
 
   
   const iint Nr = 32; 
@@ -381,6 +385,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   for(iint l = 0; l<Nlevels; ++l){
     // MRSAAB coefficients
     dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
+    //dfloat alpha=0.0;
     dfloat h  = mesh->dt * pow(2,l); 
     //
     for (iint order=0; order<3; ++order){
@@ -497,6 +502,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
     // Exponential part
     mesh->MRSAAB_C[l]    = exp(alpha);
+    //printf("Coefficient: %.5f \n", mesh->MRSAAB_C[l]);
     mesh->MRAB_C[l]      =   h ;
    }
 
@@ -657,13 +663,13 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
 
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = 128/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockCub = 256/mesh->cubNp; // works for CUDA
+  int NblockCub = 128/mesh->cubNp; // works for CUDA
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   // physics 
@@ -685,7 +691,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (float).2);
+  kernelInfo.addDefine("p_pmlAlpha", (float).0f);
 
 
 
@@ -842,37 +848,35 @@ else if(strstr(options, "LSIMEX")){
          "boltzmannSRABPmlUpdate2D",
             kernelInfo);
 
+     //   printf("Compiling LSERK update kernel\n");
+     // mesh->RKupdateKernel =
+     // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannLSERKUpdate2D",
+     //        kernelInfo);
 
-
-       printf("Compiling LSERK update kernel\n");
-     mesh->RKupdateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannLSERKUpdate2D",
-            kernelInfo);
-
-      printf("Compiling LSERK PML update kernel\n");
-      mesh->RKpmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannLSERKPmlUpdate2D",
-            kernelInfo);
+     //  printf("Compiling LSERK PML update kernel\n");
+     //  mesh->RKpmlUpdateKernel =
+     //  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannLSERKPmlUpdate2D",
+     //        kernelInfo);
 
 
      }
 
 
-     else if(strstr(options,"SAAB")){
-     printf("Compiling SAAB update kernel\n");
-     mesh->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSAABUpdate2D",
-            kernelInfo);
+     // else if(strstr(options,"SAAB")){
+     // printf("Compiling SAAB update kernel\n");
+     // mesh->updateKernel =
+     // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannSAABUpdate2D",
+     //        kernelInfo);
 
-      printf("Compiling SAAB PML update kernel\n");
-      mesh->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSAABPmlUpdate2D",
-            kernelInfo);
-     }
+     //  printf("Compiling SAAB PML update kernel\n");
+     //  mesh->pmlUpdateKernel =
+     //  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannSAABPmlUpdate2D",
+     //        kernelInfo);
+     // }
 
      else if(strstr(options,"LSERK")){
      printf("Compiling LSERK update kernel\n");
@@ -919,6 +923,12 @@ else if(strstr(options, "LSIMEX")){
     kernelInfo); 
     }
 
+
+
+
+
+
+
     // Surface Kernels
     if(strstr(options,"MRAB") || strstr(options,"MRSAAB")){  
     printf("Compiling surface kernel\n");
@@ -947,6 +957,11 @@ else if(strstr(options, "LSIMEX")){
        "boltzmannPmlSurface2D",
        kernelInfo);
     }
+
+
+
+
+
 
 
     // IMEX Kernels

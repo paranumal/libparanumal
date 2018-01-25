@@ -85,7 +85,7 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
 
             // load negative and positive trace node values of q
             const dfloat uM = fQM[idM+0], vM = fQM[idM+1], pM = fQM[idM+2];
-            dfloat uP = fQP[idP+0], vP = fQP[idP+1], pP = fQP[idP+2];
+                  dfloat uP = fQP[idP+0], vP = fQP[idP+1], pP = fQP[idP+2];
 
             // apply boundary condition
             const iint bc = EToB[face+p_Nfaces*e];

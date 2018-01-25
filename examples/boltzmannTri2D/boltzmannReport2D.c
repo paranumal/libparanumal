@@ -31,16 +31,14 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
 
 
   if(strstr(options, "PML")){ 
-    
-
-   
+       
     if(strstr(options, "VTU")){ 
     // compute vorticity
     //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
     //iint fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "foo_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
+    sprintf(fname, "TestErrProfile_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
    }
 

@@ -109,8 +109,8 @@ occa::initTimer(mesh->device);
     mesh->device.finish();
     occa::tic("Boltzmann Solver");
 
- for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-  // for(iint tstep=0;tstep<100;++tstep){
+for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  // for(iint tstep=0;tstep<1000;++tstep){
 
      if(strstr(options, "REPORT")){
       if((tstep%mesh->errorStep)==0){
@@ -130,9 +130,9 @@ occa::initTimer(mesh->device);
       boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
-      if(strstr(options, "SAAB")){
-        boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }
+      // if(strstr(options, "SAAB")){
+      //   boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+      // }
 
        if(strstr(options, "LSERK")){ 
       boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);

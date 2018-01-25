@@ -11,11 +11,9 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
  //
 
  mesh->probeN = 0; 
- // mesh->Nprobes = (iint) sizeof(pX) / sizeof(dfloat);
- //printf("Setting Probes, Nprobes = %d \n", mesh->Nprobes);
-
- mesh->probeR           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
- mesh->probeS           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
+ 
+ dfloat *probeR           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
+ dfloat *probeS           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
  mesh->probeElementIds  = (iint *)   calloc(mesh->probeNTotal,sizeof(iint));
 
 // mesh->Nprobes =3; 
@@ -24,8 +22,6 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
  iint   *IPIV     = (iint *)   calloc(mesh->Nverts,sizeof(iint)); 
  iint   *IPIV2    = (iint *)   calloc((mesh->Np+1),sizeof(iint)); 
  
- //dfloat *mindist = (dfloat *) calloc(mesh->Nprobes,sizeof(dfloat));   
-
  dfloat *b       = (dfloat *) calloc((mesh->dim+1)*mesh->probeNTotal,sizeof(dfloat));
  dfloat *q       = (dfloat *) calloc(mesh->Nverts*mesh->probeNTotal,sizeof(dfloat));
 
@@ -98,16 +94,15 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
          mesh->probeN++;
          // hold element ids
          mesh->probeElementIds[n] = e; 
-         // mesh->probeIds[n] = n;   
          // hold local r,s coordinates
          dfloat l1 =  q[n*mesh->probeNTotal + 2]; 
          dfloat l2 =  q[n*mesh->probeNTotal + 0]; 
          dfloat l3 =  q[n*mesh->probeNTotal + 1]; 
 
-         mesh->probeR[n] = 2.*l3 -1.; 
-         mesh->probeS[n] = 2.*l1 -1.;
+         probeR[n] = 2.*l3 -1.; 
+         probeS[n] = 2.*l1 -1.;
 
-         printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, mesh->probeR[n],mesh->probeS[n]); 
+         printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[n],probeS[n]); 
 
         }
     }
@@ -130,7 +125,7 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
   
   // Compute Vandermonde matrix of probes
   dfloat *Vprobe = (dfloat *) calloc(mesh->probeN*mesh->Np,sizeof(dfloat));
-  meshVandermonde2D(mesh->N, mesh->probeN, mesh->probeR, mesh->probeS, Vprobe);
+  meshVandermonde2D(mesh->N, mesh->probeN, probeR, probeS, Vprobe);
   
 
   mesh->probeI = (dfloat *) calloc(mesh->probeN*mesh->Np, sizeof(dfloat));
@@ -153,6 +148,8 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
 
 free(IPIV);
 free(IPIV2);
+free(probeR);
+free(probeS);
 free(A);
 free(b);
 free(q);
