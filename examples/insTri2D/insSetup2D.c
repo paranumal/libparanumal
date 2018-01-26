@@ -209,10 +209,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->idt = 1.0/ins->dt;
   
   // errorStep
-   if(strstr(options,"SUBCYCLING"))
-     ins->errorStep =100*32/ins->Nsubsteps;
-   else
-     ins->errorStep = 1;
+  if(strstr(options,"SUBCYCLING"))
+    // ins->errorStep =100*32/ins->Nsubsteps;
+    ins->errorStep =100/ins->Nsubsteps;
+  else
+    ins->errorStep = 100;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -376,6 +377,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
+
+    ins->scaledAddKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+           "scaledAddwOffset",
+           kernelInfo);
 
     printf("Compiling SubCycle Advection volume kernel \n");
     ins->subCycleVolumeKernel =
@@ -681,65 +687,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
 
  // }   
-#if 0
-  void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
-			       iint *BCType, nonZero_t **A, iint *nnzA,
-			       hgs_t **hgs, iint *globalStarts, const char *options);
 
-  nonZero_t *A;
-  iint nnz;
-  hgs_t *hgs;
-  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
-  dfloat sigma = 100;
-
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-  for(iint r=0;r<size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
-
-  insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
-
-  //collect global assembled matrix
-  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
-  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&nnz, 1, MPI_IINT,
-                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
-  globalnnzOffset[0] = 0;
-  for (iint n=0;n<size;n++)
-    globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
-
-  iint globalnnzTotal = globalnnzOffset[size];
-
-  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
-  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
-  for (iint n=0;n<size;n++){
-    globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
-    globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
-  }
-  nonZero_t *globalNonZero = (nonZero_t*) calloc(globalnnzTotal, sizeof(nonZero_t));
-
-  MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
-                globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
-
-  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
-  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
-  dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
-
-  for (iint n=0;n<globalnnzTotal;n++) {
-    globalRows[n] = globalNonZero[n].row;
-    globalCols[n] = globalNonZero[n].col;
-    globalVals[n] = globalNonZero[n].val;
-  }
-
-  ins->precon = (precon_t *) calloc(1,sizeof(precon_t));
-  ins->precon->parAlmond = parAlmondSetup(mesh,
-					  globalStarts,
-					  globalnnzTotal,
-					  globalRows,
-					  globalCols,
-					  globalVals,
-					  hgs,
-					  vSolverOptions);       //rhs will be passed gather-scattered
-#endif
   return ins;
 }
 

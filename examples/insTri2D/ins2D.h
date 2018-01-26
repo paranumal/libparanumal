@@ -1,7 +1,8 @@
-
-#include <stdio.h>
 #include <math.h>
-#include <mpi.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "mpi.h"
 #include "mesh2D.h"
 #include "ellipticTri2D.h"
 
@@ -78,6 +79,8 @@ typedef struct {
 
 
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
+
+  occa::kernel scaledAddKernel;
 
   occa::kernel totalHaloExtractKernel;
   occa::kernel totalHaloScatterKernel;
