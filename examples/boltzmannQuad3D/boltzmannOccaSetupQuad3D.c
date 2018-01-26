@@ -22,8 +22,9 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+  //nrhs here is added for mr.  Should just be harmless memory bloat otherwise.
   mesh->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    mesh->device.malloc(mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
@@ -140,13 +141,14 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    printf("shouldn't get here...\n\n\n\n\n\n");
     kernelInfo.addCompilerFlag("--ftz=true");
     kernelInfo.addCompilerFlag("--prec-div=false");
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
-
+  
   kernelInfo.addDefine("p_RXID", RXID);
   kernelInfo.addDefine("p_SXID", SXID);
   kernelInfo.addDefine("p_TXID", TXID);

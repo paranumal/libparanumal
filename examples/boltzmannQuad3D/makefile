@@ -32,8 +32,8 @@ LIBS	=  $(links)
 # list of objects to be compiled
 OBJS    = \
 boltzmannMainQuad3D.o \
-boltzmannRunQuad3D.o \
-boltzmannSetupQuad3D.o \
+boltzmannRunMRSAABQuad3D.o \
+boltzmannSetupMRQuad3D.o \
 boltzmannPlotVTUQuad3D.o \
 boltzmannPlotVTUQuad3DV2.o \
 boltzmannOccaSetupQuad3D.o \
@@ -58,7 +58,11 @@ boltzmannOccaSetupQuad3D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
-../../src/hash.o
+../../src/hash.o \
+../../src/meshMRABWeightedPartitionQuad3D.o \
+../../src/meshMRABSetupQuad3D.o \
+../../src/meshClusteredGeometricPartition3D.o \
+../../src/meshBuildMRABClusters3D.o
 
 boltzmannMainQuad3D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannMainQuad3D $(OBJS) $(paths) $(LIBS) 

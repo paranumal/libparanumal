@@ -88,8 +88,8 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
-		if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
-		//if (eP == eM) boundaryCondition(&qP,qM,fld);
+		//if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
+		if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
 	      }
 
@@ -182,8 +182,8 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
-		if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
-		//if (eP == eM) boundaryCondition(&qP,qM,fld);
+		//if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
+		if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
 	      }
 
@@ -203,11 +203,11 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
 	    //account for new layout of rhsq
-	    vidM = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + (idM%p_Np);
+	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + (idM%p_Np);
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+		rhsq[vidNew+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
 	      }
 	  }
 	}

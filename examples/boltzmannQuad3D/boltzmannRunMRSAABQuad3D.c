@@ -1,10 +1,10 @@
 #include "boltzmannQuad3D.h"
 
-void boltzmannRunQuad3D(solver_t *solver){
+void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
   //
   mesh_t *mesh = solver->mesh;
-
+  
   occa::initTimer(mesh->device);
   
   // MPI send buffer
@@ -13,7 +13,7 @@ void boltzmannRunQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-    for (iint Ntick=0; Ntick < pow(2,mesh->MrabNlevels-1);Ntick++) {
+    for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
       iint mrab_order = 0; 
       
@@ -88,7 +88,7 @@ void boltzmannRunQuad3D(solver_t *solver){
 	  mesh->surfaceKernel(mesh->MRABNelements[l],
 			      mesh->o_MRABelementIds[l],
 			      mesh->Nrhs,
-			      msh->MRABshiftIndex[l],
+			      mesh->MRABshiftIndex[l],
 			      mesh->o_sgeo,
 			      mesh->o_LIFTT,
 			      mesh->o_vmapM,
@@ -102,15 +102,12 @@ void boltzmannRunQuad3D(solver_t *solver){
       }
 
       occa::toc("surfaceKernel");
-      
+
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
-
-      //RK is now single stage, so use the same time interval
-
+      
       for (iint l = 0; l < lev; l++) {
-	const iint id = mrab_order*mesh->MRABNlevels*mesh->nrhs + l*mesh->nrhs;
-	
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
 
       occa::tic("updateKernel");
 
@@ -128,14 +125,14 @@ void boltzmannRunQuad3D(solver_t *solver){
 			   mesh->o_rhsq,
 			   mesh->o_q);
       
-	mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->nrhs;
+	mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->Nrhs;
       }
 
       occa::toc("updateKernel");
-
+      
       if (lev<mesh->MRABNlevels) {
 	
-	const iint id = mrab_order*mesh->MRABNlevels*mesh->nrhs + (lev-1)*mesh->nrhs;
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + (lev-1)*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev])
 	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
@@ -151,7 +148,7 @@ void boltzmannRunQuad3D(solver_t *solver){
 				  mesh->o_rhsq,
 				  mesh->o_q);
 
-      }      
+      }
     
       // estimate maximum error
       if((tstep%mesh->errorStep)==0){

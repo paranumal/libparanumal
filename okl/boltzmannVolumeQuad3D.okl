@@ -204,7 +204,7 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
 	  
-	  iint e = eo+es; // element in block
+	  iint e = elementIds[eo+es]; // element in block
 	  if(e<Nelements){
 	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
 	    for(int fld=0;fld<p_Nfields;++fld){
@@ -220,11 +220,11 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
     
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-
+    
     for(iint es=0;es<p_NblockV;++es;inner2){
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
-	  iint e = eo+es; // element in block
+	  iint e = elementIds[eo+es]; // element in block
 
 	  if(e<Nelements){
 

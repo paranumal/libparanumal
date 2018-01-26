@@ -19,10 +19,10 @@ int main(int argc, char **argv){
   mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius);
 
   // set up boltzmann stuff
-  solver_t *solver = boltzmannSetupQuad3D(mesh);
+  solver_t *solver = boltzmannSetupMRQuad3D(mesh);
 
   // time step Boltzmann equations
-  boltzmannRunQuad3D(solver);
+  boltzmannRunMRSAABQuad3D(solver);
 
   // close down MPI
   MPI_Finalize();

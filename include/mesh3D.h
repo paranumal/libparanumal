@@ -121,11 +121,15 @@ ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
 				      iint *baseIds,   // gather index of their base nodes
 				      iint *haloFlags); // 1 for halo node, 0 for not
 
-void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
+void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
+void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
                                       iint numLevels, iint *levels);
+
+void meshMRABWeightedPartitionQuad3D(mesh3D *mesh, dfloat *weights,
+				     iint numLevels, iint *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 

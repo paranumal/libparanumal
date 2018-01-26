@@ -28,7 +28,7 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
 
 void rk_coeffs(mesh_t *mesh) {
 
-  Nlevels = mesh->MRABNlevels;
+  iint Nlevels = mesh->MRABNlevels;
   
   const iint Nr = 32; 
   dfloat complex R[Nr]; 
@@ -39,14 +39,14 @@ void rk_coeffs(mesh_t *mesh) {
   }
   
 
-  mesh->MRSAAB_A = (dfloat *) calloc(3*mesh->nrhs*Nlevels,sizeof(dfloat));
-  mesh->MRSAAB_B = (dfloat *) calloc(3*mesh->nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_A = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_B = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
   mesh->MRSAAB_C = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
-  mesh->MRAB_A   = (dfloat *) calloc(3*mesh->nrhs*Nlevels,sizeof(dfloat));
-  mesh->MRAB_B   = (dfloat *) calloc(3*mesh->nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRAB_A   = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRAB_B   = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
   mesh->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
 
-  iint MRABorder = mesh->nrhs; 
+  iint MRABorder = mesh->Nrhs; 
 
   for(iint l = 0; l<Nlevels; ++l){
     // MRSAAB coefficients
@@ -170,13 +170,13 @@ void rk_coeffs(mesh_t *mesh) {
   }
 }
 
-solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
+solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
 
-  mesh->nrhs = 3; //hardcoded order of multirate solver  
+  mesh->Nrhs = 3; //hardcoded order of multirate solver  
   
   mesh->Nfields = 10;
 
@@ -186,7 +186,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->rhsq = (dfloat*) calloc(mesh->Nelements*msh->nrhs*mesh->Np*mesh->Nfields,
+  mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Nrhs*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
@@ -340,7 +340,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   //dt = mymin(dt, cfl/mesh->tauInv);
 
   iint maxLevels=100;
-  meshMRABSetup2D(mesh,EtoDT,maxLevels);
+  meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
 
   mesh->shiftIndex=0;
 
@@ -370,10 +370,10 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //  sprintf(deviceConfig, "mode = Serial");
+    sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -395,6 +395,14 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
 	mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			    mesh->sgeo);
 
+      mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+      for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
+	if (mesh->MRABNelements[lev])
+	  mesh->o_MRABelementIds[lev]
+	    = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+				  mesh->MRABelementIds[lev]);
+      }
+      
       // specialization for Boltzmann
 
       kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
