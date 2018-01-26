@@ -10,7 +10,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
+  
   FILE *fp;
   char fileName[BUFSIZ];
   sprintf(fileName, "%s_%04d_%04d.vtu", fileNameBase, rank, tstep);
@@ -18,12 +18,13 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   printf("FILE = %s\n", fileName);
 
   fp = fopen(fileName, "w");
-
+  
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
-    mesh->Nelements*mesh->plotNp, 
-    mesh->Nelements*mesh->plotNelements);
+	  mesh->Nelements*mesh->plotNp, 
+	  mesh->Nelements*mesh->plotNelements);
+
   
   // write out nodes
   fprintf(fp, "      <Points>\n");
@@ -46,7 +47,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
   
-
+  
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
 
@@ -68,7 +69,6 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
@@ -96,6 +96,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   }
   fprintf(fp, "       </DataArray>\n");
 
+  
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticit\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   dfloat *vort = (dfloat*) calloc(mesh->Np*mesh->dim, sizeof(dfloat));
   dfloat *plotVortRadial = (dfloat*) calloc(mesh->plotNp*mesh->Nelements, sizeof(dfloat));
@@ -191,7 +192,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-
+  
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"RadialVorticity\" NumberOfComponents=\"1\" Format=\"ascii\">\n");
 
   for(iint e=0;e<mesh->Nelements;++e){
@@ -204,7 +205,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   }
 
   fprintf(fp, "       </DataArray>\n");
-
+  
   free(vort);
   free(plotVortRadial);
 

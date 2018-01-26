@@ -51,6 +51,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      sendBuffer,
 			      recvBuffer);
       }
+
       
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l])
@@ -69,7 +70,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
 
       }
-
+      
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);
@@ -83,6 +84,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       
       occa::tic("surfaceKernel");
 
+      
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l])
 	  mesh->surfaceKernel(mesh->MRABNelements[l],
@@ -110,7 +112,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
 
       occa::tic("updateKernel");
-
+      
       if (mesh->MRABNelements[l])
 	mesh->updateKernel(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
@@ -182,8 +184,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	//      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
 	boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
       }
-    
-    
+          
       occa::printTimer();
       
       free(recvBuffer);

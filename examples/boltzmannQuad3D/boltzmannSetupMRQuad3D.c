@@ -39,11 +39,11 @@ void rk_coeffs(mesh_t *mesh) {
   }
   
 
-  mesh->MRSAAB_A = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
-  mesh->MRSAAB_B = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_A = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_B = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRSAAB_C = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
-  mesh->MRAB_A   = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
-  mesh->MRAB_B   = (dfloat *) calloc(3*mesh->Nrhs*Nlevels,sizeof(dfloat));
+  mesh->MRAB_A   = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
+  mesh->MRAB_B   = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
 
   iint MRABorder = mesh->Nrhs; 
@@ -370,10 +370,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-    sprintf(deviceConfig, "mode = Serial");
+  // sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 

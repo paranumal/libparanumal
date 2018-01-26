@@ -141,7 +141,6 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    printf("shouldn't get here...\n\n\n\n\n\n");
     kernelInfo.addCompilerFlag("--ftz=true");
     kernelInfo.addCompilerFlag("--prec-div=false");
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
