@@ -186,10 +186,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
           
       occa::printTimer();
-      
-      free(recvBuffer);
-      free(sendBuffer);
     }
   }
+  
+  free(recvBuffer);
+  free(sendBuffer);
 }
 

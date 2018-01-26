@@ -37,7 +37,9 @@ void rk_coeffs(mesh_t *mesh) {
     const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
     R[ind-1] = cexp(I*M_PI* theta);
   }
-  
+
+  printf("a,b size = %d",3*3*Nlevels);
+  printf("c size = %d",Nlevels);
 
   mesh->MRSAAB_A = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRSAAB_B = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
@@ -179,9 +181,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->Nrhs = 3; //hardcoded order of multirate solver  
   
   mesh->Nfields = 10;
-
-  //break out computation of rk coefficients
-  rk_coeffs(mesh);
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -396,12 +395,22 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 			    mesh->sgeo);
 
       mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+      mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
       for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
 	if (mesh->MRABNelements[lev])
 	  mesh->o_MRABelementIds[lev]
 	    = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
 				  mesh->MRABelementIds[lev]);
+	if (mesh->MRABNhaloElements[lev])
+	  mesh->o_MRABhaloIds[lev]
+	    = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+				  mesh->MRABhaloIds[lev]);
       }
+
+      //break out computation of rk coefficients
+      //needs to be last so we have mrab levels
+      rk_coeffs(mesh);
+
       
       // specialization for Boltzmann
 

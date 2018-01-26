@@ -204,8 +204,9 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
 	  
-	  iint e = elementIds[eo+es]; // element in block
-	  if(e<Nelements){
+	  iint eT = eo+es; // element in block
+	  if(eT<Nelements){
+	    iint e = elementIds[eT];
 	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      s_q[fld][es][j][i] = q[base+fld*p_Np];
@@ -224,10 +225,11 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
     for(iint es=0;es<p_NblockV;++es;inner2){
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
-	  iint e = elementIds[eo+es]; // element in block
+	  iint eT = eo+es; // element in block
 
-	  if(e<Nelements){
+	  if(eT<Nelements){
 
+	    const iint e = elementIds[eT];
 	    const iint n=j*p_Nq+i;
 
 	    // prefetch geometric factors (constant on triangle)
