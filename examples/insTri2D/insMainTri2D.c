@@ -1,9 +1,3 @@
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "mpi.h"
-#include "mesh2D.h"
 #include "ins2D.h"
 
 int main(int argc, char **argv){
@@ -56,7 +50,8 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  int Ns = 0; // Default no-subcycling 
+  //int Ns = 0; // Default no-subcycling 
+  int Ns = 4; // Default no-subcycling 
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   

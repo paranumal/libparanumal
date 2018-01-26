@@ -25,7 +25,7 @@ CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -
 		
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ALMONDDIR) -lparALMOND -L$(ELLIPTICDIR) -lellipticTri2D
+			-L$(ELLIPTICDIR) -lellipticTri2D -L$(ALMONDDIR) -lparALMOND 
 
 # libraries to be linked in
 LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran

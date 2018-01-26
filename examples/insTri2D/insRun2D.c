@@ -33,7 +33,7 @@ void insRun2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  ins->NtimeSteps=100;
+  ins->NtimeSteps=1000;
   
   double tic_tot = 0.f, elp_tot = 0.f; 
   double tic_adv = 0.f, elp_adv = 0.f;
@@ -134,16 +134,16 @@ void insRun2D(ins_t *ins, char *options){
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "VTU")){
       if(((tstep+1)%(ins->errorStep))==0){
-        printf("\n");
+        printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         insReport2D(ins, tstep+1,options);
       }
     }
 
-    printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
-        printf("\n");
+        printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
@@ -205,6 +205,7 @@ MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 if(rank==0){
+  printf("\n");
   printf("%2d %2d %.5e %.5e %.5e %.5e %.5e\n", mesh->N,size,gelp_tot, gelp_adv, gelp_vel, gelp_pre, gelp_upd); 
   
   char fname[BUFSIZ]; sprintf(fname, "insScaling2D.dat");
@@ -224,6 +225,7 @@ if(rank==0){
 
 #if 1
 dfloat finalTime = ins->NtimeSteps*ins->dt;
+printf("\n");
 insReport2D(ins, ins->NtimeSteps,options);
 insErrorNorms2D(ins, finalTime, options);
 #endif
