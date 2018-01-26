@@ -145,8 +145,6 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
   
   // for all elements
   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-
-    exclusive iint eM;
     
     // for all faces (global barrier at end of body of this loop)
     for(iint face=0;face<p_Nfaces;++face){      
@@ -158,7 +156,8 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	  const iint e = eo + es;
 	  
 	  if(e<Nelements){
-	    eM = elementIds[e];
+	    const iint eM = elementIds[e];
+
 	    // load surface geofactors for this face
 	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
 	    const dfloat nx = sgeo[sid+0*p_Nq];

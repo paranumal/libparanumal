@@ -50,11 +50,10 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
 
-    shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e; 
+    shared dfloat s_q[p_Np*p_Nfields]; 
 
     for(iint n=0;n<p_maxNodes;++n;inner0){
-      e  = elementIds[es];
+      const iint e  = elementIds[es];
       if(n<p_Np){
         const iint id = n + e*p_Np*p_Nfields;
 	const iint rid = n + e*p_Np*p_Nfields*3;
@@ -83,7 +82,7 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
     barrier(localMemFence);
 
     for(iint n=0;n<p_maxNodes;++n;inner0){
-
+      const iint e = elementIds[es];
       // Update q
       if(n<p_Np){
 

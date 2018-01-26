@@ -111,7 +111,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_q,
 			      mesh->o_rhsq);
 
-	  mesh->o_q.copyTo(test_q);
+	  mesh->o_rhsq.copyTo(test_q);
 	  printf("blame surface code %lf %lf %lf\n",test_q[0],test_q[mesh->Np*mesh->Nfields],test_q[2*mesh->Np*mesh->Nfields]);
 	}
       }
