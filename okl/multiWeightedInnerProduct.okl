@@ -1,0 +1,114 @@
+
+//computes multiple weighted inner products.
+// x holds several vectors x_l 
+// returns partial redcutons of w . x_l . y
+kernel void multiWeightedInnerProduct(const int L,
+                                      const iint Nblock,
+                                      const iint N,
+                                      const dfloat * restrict w,
+                                      const dfloat * restrict x,
+                                      const dfloat * restrict y,
+                                      dfloat * restrict wxy){
+  
+
+  for(iint b=0;b<Nblock;++b;outer0){
+    
+    volatile shared dfloat s_wxy[p_blockSize*p_maxMultiVectors];
+
+    for(iint t=0;t<p_blockSize;++t;inner0){
+      const iint id = t + p_blockSize*b;
+      
+      for (int l=0;l<L;l++) {
+        s_wxy[t+l*p_blockSize] = (id<N) ? w[id]*x[id+l*N]*y[id] : 0.f;  
+      }
+    }
+
+    barrier(localMemFence);
+
+#if p_blockSize>512
+    
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<512) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+512];
+        }
+      }
+    }
+    barrier(localMemFence);
+
+#endif
+#if p_blockSize>256
+
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<256) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+256];
+        }
+      }
+    }
+    barrier(localMemFence);
+
+#endif
+
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<128) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+128];
+        }
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<64) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+64];
+        }
+      }
+    }
+    barrier(localMemFence);
+
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<32) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+32];
+        }
+      }
+    }
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<16) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+16];
+        }
+      }
+    }
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<8) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+8];
+        }
+      }
+    }
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<4) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+4];
+        }
+      }
+    }
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<2) {
+        for (int l=0;l<L;l++) {
+          s_wxy[t+l*p_blockSize] += s_wxy[t+l*p_blockSize+2];
+        }
+      }
+    }
+    for(iint t=0;t<p_blockSize;++t;inner0) {
+      if(t<1) {
+        for (int l=0;l<L;l++) {
+          wxy[b+l*Nblock] = s_wxy[0+l*p_blockSize] + s_wxy[1+l*p_blockSize];
+        }
+      }
+    }
+  }
+}

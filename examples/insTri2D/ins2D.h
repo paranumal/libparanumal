@@ -76,6 +76,23 @@ typedef struct {
   occa::memory o_Ut, o_Vt, o_Pt, o_WN; 
 
 
+  // multiple RHS pressure projection variables
+  int maxPresHistory, NpresHistory;
+  int Nblock;
+
+  dfloat *presAlpha, *presLocalAlpha; 
+  occa::memory o_presAlpha;
+
+  dfloat *presHistory;
+  occa::memory o_PIbar, o_APIbar, o_presHistory;
+
+  dfloat *blockReduction;
+  occa::memory o_blockReduction;
+
+  occa::kernel multiWeightedInnerProductKernel;
+  occa::kernel multiInnerProductKernel;
+  occa::kernel multiScaledAddKernel;
+
 
 
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
