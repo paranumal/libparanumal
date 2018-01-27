@@ -57,9 +57,9 @@ int main(int argc, char **argv){
   
   char *options; 
   if(Ns==0)
-      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN, pres=PRESSURE_HISTORY"); // SUBCYCLING
+      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN, "); // SUBCYCLING pres=PRESSURE_HISTORY
   else
-      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN, pres=PRESSURE_HISTORY"); 
+      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN");  //pres=PRESSURE_HISTORY
 
     #if 1
      printf("Setup INS Solver: \n");

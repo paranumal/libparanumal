@@ -213,9 +213,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   // errorStep
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
-    ins->errorStep =100/ins->Nsubsteps;
+    ins->errorStep =400/ins->Nsubsteps;
   else
-    ins->errorStep = 100;
+    ins->errorStep = 400;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -422,7 +422,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->maxPresHistory =0;
   if(strstr(options,"PRESSURE_HISTORY")){
 
-    ins->maxPresHistory = 10; //adjust this to hold more pressure histories (potentially reduce iteration in pressure solve)
+    ins->maxPresHistory = 20; //adjust this to hold more pressure histories (potentially reduce iteration in pressure solve)
 
     ins->NpresHistory = 0;
     ins->blockReduction   = (dfloat*) calloc(ins->maxPresHistory*ins->Nblock, sizeof(dfloat));

@@ -33,7 +33,7 @@ void insRun2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  ins->NtimeSteps=1000;
+  ins->NtimeSteps=10000;
   
   double tic_tot = 0.f, elp_tot = 0.f; 
   double tic_adv = 0.f, elp_adv = 0.f;
@@ -57,8 +57,8 @@ void insRun2D(ins_t *ins, char *options){
       ins->ig0 = 1.0/ins->g0; 
     } else if(tstep<2) {
       //advection, second order in time, increment
-      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
+      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 2.0f;  // 2
+      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = -1.0f; // -1
       ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
       ins->g0 =  1.5f;
       ins->ExplicitOrder=2;
