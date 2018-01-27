@@ -17,7 +17,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
 
   /*compute norm b, set the tolerance */
   dfloat normB = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
-  dfloat TOL =  tol*tol*normB;
+  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
   // compute A*x
   ellipticOperator2D(solver, lambda, o_x, solver->o_Ax, options);
 

@@ -14,7 +14,6 @@ int main(int argc, char **argv){
   //char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   
 
-
   char *velSolverOptions =
     strdup("solver=PCG method=IPDG basis=NODAL preconditioner=MASSMATRIX");
   char *velParAlmondOptions =
@@ -51,16 +50,16 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   //int Ns = 0; // Default no-subcycling 
-  int Ns = 4; // Default no-subcycling 
+  int Ns = 4; 
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
   
   char *options; 
   if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN, pres=PRESSURE_HISTORY"); // SUBCYCLING
   else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN, pres=PRESSURE_HISTORY"); 
 
     #if 1
      printf("Setup INS Solver: \n");

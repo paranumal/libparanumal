@@ -32,6 +32,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   ins->mesh = mesh;
 
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  ins->Nblock = (Ntotal+blockSize-1)/blockSize;
 
   int Nstages = 4;
   if(strstr(options, "ALGEBRAIC")){
@@ -86,7 +88,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
   }
- 
+
   // SET SOLVER OPTIONS
   // Initial Conditions, Flow Properties
   printf("Starting initial conditions for INS2D\n");
@@ -278,6 +280,8 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   }
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
   
+  kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -377,12 +381,6 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
-
-    ins->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-           "scaledAddwOffset",
-           kernelInfo);
-
     printf("Compiling SubCycle Advection volume kernel \n");
     ins->subCycleVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
@@ -421,6 +419,44 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   }
 
+  ins->maxPresHistory =0;
+  if(strstr(options,"PRESSURE_HISTORY")){
+
+    ins->maxPresHistory = 10; //adjust this to hold more pressure histories (potentially reduce iteration in pressure solve)
+
+    ins->NpresHistory = 0;
+    ins->blockReduction   = (dfloat*) calloc(ins->maxPresHistory*ins->Nblock, sizeof(dfloat));
+    ins->o_blockReduction = mesh->device.malloc(ins->maxPresHistory*ins->Nblock*sizeof(dfloat), ins->blockReduction);
+
+    ins->presHistory   = (dfloat*) calloc(ins->maxPresHistory*Ntotal, sizeof(dfloat));
+    ins->o_presHistory = mesh->device.malloc(ins->maxPresHistory*Ntotal*sizeof(dfloat), ins->presHistory);    
+
+    ins->presLocalAlpha = (dfloat*) calloc(ins->maxPresHistory, sizeof(dfloat));
+    ins->presAlpha      = (dfloat*) calloc(ins->maxPresHistory, sizeof(dfloat));
+    ins->o_presAlpha    = mesh->device.malloc(ins->maxPresHistory*sizeof(dfloat), ins->presAlpha);
+
+    ins->o_PIbar  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+    ins->o_APIbar = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+
+    kernelInfo.addDefine("p_maxMultiVectors", ins->maxPresHistory);
+
+    ins->multiWeightedInnerProductKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiWeightedInnerProduct.okl",
+           "multiWeightedInnerProduct",
+           kernelInfo);
+
+    ins->multiInnerProductKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiInnerProduct.okl",
+           "multiInnerProduct",
+           kernelInfo);
+
+    ins->multiScaledAddKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiScaledAdd.okl",
+           "multiScaledAdd",
+           kernelInfo);
+
+  }
+
 
   if(mesh->totalHaloPairs){
     ins->o_tHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
@@ -431,6 +467,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->mesh = mesh;
 
    // ===========================================================================
+
+  ins->scaledAddKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+           "scaledAddwOffset",
+           kernelInfo);
  
   printf("Compiling INS Helmholtz Halo Extract Kernel\n");
   ins->totalHaloExtractKernel=

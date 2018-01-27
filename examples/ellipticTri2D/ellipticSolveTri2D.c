@@ -518,18 +518,6 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   fclose(fp);
 */
 
-
-
-  // gather-scatter
-  if(strstr(options, "CONTINUOUS")){
-    //sign correction for gs
-    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_r, o_r, dfloatString, "add");  
-    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);       
-    //mask
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
-  }
-
   int Niter;
   iint maxIter = 5000; 
 
