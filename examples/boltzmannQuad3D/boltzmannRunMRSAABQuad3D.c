@@ -77,8 +77,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
-	  /*mesh->o_rhsq.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  mesh->o_rhsq.copyTo(test_q);
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    for (int i = 0; i < mesh->Np; ++i) {
 	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 40*mesh->Np*mesh->Nrhs*mesh->Nfields]);
 	    }
@@ -125,14 +125,18 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_q,
 			      mesh->o_rhsq);
-	  /*mesh->o_rhsq.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  mesh->o_rhsq.copyTo(test_q);
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    for (int i = 0; i < mesh->Np; ++i) {
 	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 40*mesh->Np*mesh->Nrhs*mesh->Nfields]);
 	    }
 	    printf("\n\n");
 	  }
 	  printf("\n\n\n\n\n");*/
+	  for (int j = 0; j < mesh->Nfields; ++j) {
+	    printf("%lf   %lf   %lf\n",test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
+	  }
+	  printf("\n\n\n");
 	}
       }
       occa::toc("surfaceKernel");
