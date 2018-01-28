@@ -59,3 +59,4 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
 
 void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 
+void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, iint tstep);

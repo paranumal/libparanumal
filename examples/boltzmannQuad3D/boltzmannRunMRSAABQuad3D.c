@@ -77,8 +77,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
-	  /*mesh->o_rhsq.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  mesh->o_rhsq.copyTo(test_q);
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    for (int i = 0; i < mesh->Np; ++i) {
 	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 40*mesh->Np*mesh->Nrhs*mesh->Nfields]);
 	    }
@@ -193,7 +193,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
 	}
       }
-      
+    }
       // estimate maximum error
       if((tstep%mesh->errorStep)==0){
 	dfloat t = (tstep+1)*mesh->dt;
@@ -210,8 +210,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	    exit(-1);
 	  }
 	}
-	
-            
 	// do error stuff on host
 	//      boltzmannErrorQuad2D(mesh, mesh->dt*(tstep+1));
 	
@@ -225,10 +223,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	
 	//      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
 	boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
-      }
-          
+	//boltzmannPlotLevels(mesh,"foo",tstep/mesh->errorStep);
+      }        
       occa::printTimer();
-    }
   }
   
   free(recvBuffer);

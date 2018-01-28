@@ -37,6 +37,7 @@ boltzmannSetupMRQuad3D.o \
 boltzmannPlotVTUQuad3D.o \
 boltzmannPlotVTUQuad3DV2.o \
 boltzmannOccaSetupQuad3D.o \
+boltzmannPlotLevels.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshLoadReferenceNodesQuad2D.o \

@@ -308,7 +308,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->tauInv = mesh->RT/nu; // TW
 
   // set time step
-  dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat lmin = 1e9, lmax = 0;
     for(iint f=0;f<mesh->Nfaces;++f){
@@ -326,9 +325,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
 	lmin = mymin(lmin, hest);
 	lmax = mymax(lmax, hest);
-
-	hmin = mymin(hmin, hest);
-	hmax = mymax(hmax, hest);
       }
     }
     EtoDT[e]  = cfl*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
@@ -347,8 +343,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   mesh->shiftIndex=0;
 
-  printf("hmin = %g\n", hmin);
-  printf("hmax = %g\n", hmax);
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
   printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
