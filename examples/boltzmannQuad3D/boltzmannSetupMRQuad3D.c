@@ -55,111 +55,111 @@ void rk_coeffs(mesh_t *mesh) {
     for (iint order=0; order<3; ++order){
       // computation of coefficients based on magnitude
       const iint id = order*Nlevels*3 + l*3;
-            if(order==0){
+      if(order==0){
 
-	      double complex a1 = 0. + 0.* I; 
-	      double complex b1 = 0. + 0.* I; 
+	double complex a1 = 0. + 0.* I; 
+	double complex b1 = 0. + 0.* I; 
 	      
-	      for(iint i = 0; i<Nr; ++i ){
-		double complex lr = alpha  + R[i];
-		a1 +=  h*(cexp(lr) - 1.)/lr;
-		b1 +=  h*(cexp(lr/2.) - 1.)/lr;
-	      }
-	      // Full dt coeeficients
-	      mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	      mesh->MRSAAB_A[id + 1] = 0.f;
-	      mesh->MRSAAB_A[id + 2] = 0.f;
-	      // Half coefficients
-	      mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	      mesh->MRSAAB_B[id + 1] = 0.f;
-	      mesh->MRSAAB_B[id + 2] = 0.f;
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(cexp(lr) - 1.)/lr;
+	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = 0.f;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = 0.f;
+	mesh->MRSAAB_B[id + 2] = 0.f;
 	      
-	      // MRAB coefficients
-	      mesh->MRAB_A[id + 0]   =  h ;
-	      mesh->MRAB_A[id + 1]   =  0.f ;
-	      mesh->MRAB_A[id + 2]   =  0.f ;
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  h ;
+	mesh->MRAB_A[id + 1]   =  0.f ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
 	      
-	      mesh->MRAB_B[id+0]     =  h/2. ;
-	      mesh->MRAB_B[id+1]     =  0.f ;
-	      mesh->MRAB_B[id+2]     =  0.f ;
-	    }
+	mesh->MRAB_B[id+0]     =  h/2. ;
+	mesh->MRAB_B[id+1]     =  0.f ;
+	mesh->MRAB_B[id+2]     =  0.f ;
+      }
 	    
-	    else if(order==1){
+      else if(order==1){
 	      
-	      double complex a1 = 0. + 0.* I; 
-	      double complex b1 = 0. + 0.* I; 
-	      double complex a2 = 0. + 0.* I; 
-	      double complex b2 = 0. + 0.* I; 
+	double complex a1 = 0. + 0.* I; 
+	double complex b1 = 0. + 0.* I; 
+	double complex a2 = 0. + 0.* I; 
+	double complex b2 = 0. + 0.* I; 
 	      
-	      for(iint i = 0; i<Nr; ++i ){
-		double complex lr = alpha  + R[i];
-		a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
-		a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
-		b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
-		b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
-	      }
-	      // Full dt coeeficients
-	      mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	      mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
-	      mesh->MRSAAB_A[id + 2] = 0.f;
-	      // Half coefficients
-	      mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	      mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
-	      mesh->MRSAAB_B[id + 2] = 0.f;
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
+	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
+	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
+	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id + 2] = 0.f;
 	      
 	      
-	      // MRAB coefficients
-	      mesh->MRAB_A[id + 0]   =  3.*h/2. ;
-	      mesh->MRAB_A[id + 1]   = -1.*h/2. ;
-	      mesh->MRAB_A[id + 2]   =  0.f ;
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  3.*h/2. ;
+	mesh->MRAB_A[id + 1]   = -1.*h/2. ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
 	      
-	      mesh->MRAB_B[id + 0]   =  5.*h/8. ;
-	      mesh->MRAB_B[id + 1]   = -1.*h/8. ;
-	      mesh->MRAB_B[id + 2]   =   0.f ;
-	    }
+	mesh->MRAB_B[id + 0]   =  5.*h/8. ;
+	mesh->MRAB_B[id + 1]   = -1.*h/8. ;
+	mesh->MRAB_B[id + 2]   =   0.f ;
+      }
 	    
-	    else{
-	      double complex a1 = 0. + 0.* I; 
-	      double complex b1 = 0. + 0.* I; 
-	      double complex a2 = 0. + 0.* I; 
-	      double complex b2 = 0. + 0.* I; 
-	      double complex a3 = 0. + 0.* I; 
-	      double complex b3 = 0. + 0.* I; 
+      else{
+	double complex a1 = 0. + 0.* I; 
+	double complex b1 = 0. + 0.* I; 
+	double complex a2 = 0. + 0.* I; 
+	double complex b2 = 0. + 0.* I; 
+	double complex a3 = 0. + 0.* I; 
+	double complex b3 = 0. + 0.* I; 
 
-	      for(iint i = 0; i<Nr; ++i ){
-		double complex lr = alpha  + R[i];
-		a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-		a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-		a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-		b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
-		b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-		b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
-	      }
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
+	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
+	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
+	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
+	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
+	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+	}
 
 	      
-	      // Full dt coeeficients
-	      mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
-	      mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
-	      mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
-	      // Half coefficients
-	      mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
-	      mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
-	      mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+	// Half coefficients
+	mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
 	      
-	      // MRAB coefficients
-	      mesh->MRAB_A[id+0]   =  23.*h/12. ;
-	      mesh->MRAB_A[id+1]   = -16.*h/12. ;
-	      mesh->MRAB_A[id+2]   =  5. *h/12. ;
+	// MRAB coefficients
+	mesh->MRAB_A[id+0]   =  23.*h/12. ;
+	mesh->MRAB_A[id+1]   = -16.*h/12. ;
+	mesh->MRAB_A[id+2]   =  5. *h/12. ;
 	      
-	      mesh->MRAB_B[id+0]   =  17.*h/24. ;
-	      mesh->MRAB_B[id+1]   = - 7.*h/24. ;
-	      mesh->MRAB_B[id+2]   =   2.*h/24. ;
+	mesh->MRAB_B[id+0]   =  17.*h/24. ;
+	mesh->MRAB_B[id+1]   = - 7.*h/24. ;
+	mesh->MRAB_B[id+2]   =   2.*h/24. ;
 	      
 	      
-	    }
+      }
 	    
-	    printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
-		   mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
+      printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
+	     mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
 	    
     }
 
@@ -190,7 +190,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
   mesh->sqrtRT = sqrt(mesh->RT);
-  dfloat nu = 2.e-4;  // was 6.e-3
+  dfloat nu = 4e-4; 8.9e-5; 9.8e-4;  // was 6.e-3
 
   // initial conditions
   dfloat sR = mesh->sphereRadius;
@@ -240,21 +240,21 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
       dfloat divu = dudx + dvdy + dwdz;
 
-      #if 1
+#if 1
       dfloat sigma11 = nu*(dudx+dudx - (2*divu/3));
       dfloat sigma12 = nu*(dvdx+dudy);
       dfloat sigma13 = nu*(dwdx+dudz);
       dfloat sigma22 = nu*(dvdy+dvdy - (2*divu/3));
       dfloat sigma23 = nu*(dwdy+dvdz);
       dfloat sigma33 = nu*(dwdz+dwdz - (2*divu/3));
-      #else
+#else
       dfloat sigma11 = 0;
       dfloat sigma12 = 0;
       dfloat sigma13 = 0;
       dfloat sigma22 = 0;
       dfloat sigma23 = 0;
       dfloat sigma33 = 0;
-      #endif
+#endif
       dfloat q1bar = rho;
       dfloat q2bar = rho*umod/mesh->sqrtRT;
       dfloat q3bar = rho*vmod/mesh->sqrtRT;
@@ -270,10 +270,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
       int base = n + e*mesh->Np*mesh->Nfields;
 
-      #if 0
+#if 0
       // Gaussian pulse centered at X=(1,0,0)
       q1bar = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
-      #endif
+#endif
 
 
       mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
@@ -298,12 +298,14 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl = 0.2; // depends on the stability region size (was .4, then 2)
+  dfloat cfl = 0.15; // depends on the stability region size (was .4, then 2)
 
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
   mesh->tauInv = mesh->RT/nu; // TW
 
+
+  dfloat glmin = 1e9, glmax = -1e9;
   // set time step
   for(iint e=0;e<mesh->Nelements;++e){
     dfloat lmin = 1e9, lmax = 0;
@@ -326,6 +328,9 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     }
     EtoDT[e]  = cfl*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
 
+    glmin = mymin(glmin, lmin);
+    glmax = mymax(glmax, lmax);
+    
   }
 
   //dt = mymin(dt, cfl/mesh->tauInv);
@@ -343,6 +348,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
   printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
+  printf("global h in [%g,%g]\n", glmin, glmax);
   
   // errorStep
   mesh->errorStep = 100*mesh->Nq;
@@ -359,7 +365,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  // sprintf(deviceConfig, "mode = Serial");
+  //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -373,84 +379,84 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   printf("mesh->Nq = %d\n", mesh->Nq);
   mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
 
-    mesh->o_vgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
-			  mesh->vgeo);
+  mesh->o_vgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
+			mesh->vgeo);
 
-      mesh->o_sgeo =
-	mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
-			    mesh->sgeo);
+  mesh->o_sgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
+			mesh->sgeo);
 
-      mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-      mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-      for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
-	if (mesh->MRABNelements[lev])
-	  mesh->o_MRABelementIds[lev]
-	    = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
-				  mesh->MRABelementIds[lev]);
-	if (mesh->MRABNhaloElements[lev])
-	  mesh->o_MRABhaloIds[lev]
-	    = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
-				  mesh->MRABhaloIds[lev]);
-      }
+  mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+  for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
+    if (mesh->MRABNelements[lev])
+      mesh->o_MRABelementIds[lev]
+	= mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+			      mesh->MRABelementIds[lev]);
+    if (mesh->MRABNhaloElements[lev])
+      mesh->o_MRABhaloIds[lev]
+	= mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+			      mesh->MRABhaloIds[lev]);
+  }
 
-      //break out computation of rk coefficients
-      //needs to be last so we have mrab levels
-      rk_coeffs(mesh);
+  //break out computation of rk coefficients
+  //needs to be last so we have mrab levels
+  rk_coeffs(mesh);
 
       
-      // specialization for Boltzmann
+  // specialization for Boltzmann
 
-      kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
+  kernelInfo.addDefine("p_maxNodesVolume", mymax(mesh->cubNp,mesh->Np));
 
-      int maxNodes = mesh->Nfp;
-      kernelInfo.addDefine("p_maxNodes", maxNodes);
+  int maxNodes = mesh->Nfp;
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-      int NblockV = 256/mesh->Np; // works for CUDA
-      kernelInfo.addDefine("p_NblockV", NblockV);
+  int NblockV = 256/mesh->Np; // works for CUDA
+  kernelInfo.addDefine("p_NblockV", NblockV);
 
-      int NblockS = 256/maxNodes; // works for CUDA
-      kernelInfo.addDefine("p_NblockS", NblockS);
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
 
-      // physics
-      kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-      kernelInfo.addDefine("p_invsqrtRT", (dfloat)(1./mesh->sqrtRT));
-      kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
-      kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
-      kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
-      kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
-      kernelInfo.addDefine("p_tauInv", mesh->tauInv);
+  // physics
+  kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
+  kernelInfo.addDefine("p_invsqrtRT", (dfloat)(1./mesh->sqrtRT));
+  kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
+  kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
+  kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
+  kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
-      kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
+  kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
 
-      kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
+  kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
 
-        mesh->volumeKernel =
-	  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
-					     "boltzmannVolumeSAQuad3D",
-					     kernelInfo);
-	printf("starting surface\n");
-	  mesh->surfaceKernel =
-	    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceQuad3D.okl",
-					       "boltzmannSurfaceMRQuad3D",
-					       kernelInfo);
-	  printf("ending surface\n");
+  mesh->volumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
+				       "boltzmannVolumeSAQuad3D",
+				       kernelInfo);
+  printf("starting surface\n");
+  mesh->surfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceQuad3D.okl",
+				       "boltzmannSurfaceMRQuad3D",
+				       kernelInfo);
+  printf("ending surface\n");
 
-	    mesh->updateKernel =
-	      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-						 "boltzmannMRSAABUpdateQuad3D",
-						 kernelInfo);
+  mesh->updateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannMRSAABUpdateQuad3D",
+				       kernelInfo);
 
-	    mesh->traceUpdateKernel =
-	      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-						 "boltzmannMRSAABTraceUpdateQuad3D",
-						 kernelInfo);
+  mesh->traceUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannMRSAABTraceUpdateQuad3D",
+				       kernelInfo);
 
-	      mesh->haloExtractKernel =
-		mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-						   "meshHaloExtract2D",
-						   kernelInfo);
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+				       "meshHaloExtract2D",
+				       kernelInfo);
 
 
-	      return solver;
+  return solver;
 }

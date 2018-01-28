@@ -54,15 +54,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      recvBuffer);
       }
 
-      /*mesh->o_q.copyTo(test_q);
-      for (int j = 0; j < mesh->Nfields; ++j) {
-	for (int i = 0; i < mesh->Np; ++i) {
-	  printf("  %lf",test_q[i + j*mesh->Np + 40*mesh->Np*mesh->Nfields]);
-	}
-	printf("\n\n");
-      }
-      printf("\n\n\n\n\n");*/
-
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  // compute volume contribution to DG boltzmann RHS
@@ -77,19 +68,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
-	  mesh->o_rhsq.copyTo(test_q);
-	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    for (int i = 0; i < mesh->Np; ++i) {
-	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 300*mesh->Np*mesh->Nrhs*mesh->Nfields]);
-	    }
-	    printf("\n\n");
-	  }
-	  printf("\n\n\n\n\n");*/
-
-	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    printf("%lf   %lf   %lf\n",test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
-	  }
-	  printf("\n\n\n");*/
 	}
       } 
 
@@ -125,18 +103,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_q,
 			      mesh->o_rhsq);
-	  mesh->o_rhsq.copyTo(test_q);
-	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    for (int i = 0; i < mesh->Np; ++i) {
-	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 40*mesh->Np*mesh->Nrhs*mesh->Nfields]);
-	    }
-	    printf("\n\n");
-	  }
-	  printf("\n\n\n\n\n");*/
-	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    printf("%lf   %lf   %lf\n",test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
-	  }
-	  printf("\n\n\n");*/
 	}
       }
       occa::toc("surfaceKernel");
@@ -150,8 +116,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	occa::tic("updateKernel");
 	
 	if (mesh->MRABNelements[l]) {
-	  mesh->o_q.copyTo(test_q);
-	  
 	  mesh->updateKernel(mesh->MRABNelements[l],
 			     mesh->o_MRABelementIds[l],
 			     mesh->MRSAAB_C[l],
@@ -165,14 +129,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_rhsq,
 			     mesh->o_q);
 
-	  mesh->o_q.copyTo(test_q);
-	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    for (int i = 0; i < mesh->Np; ++i) {
-	      printf("  %lf",test_q[i + j*mesh->Np + 40*mesh->Np*mesh->Nfields]);
-	    }
-	    printf("\n\n");
-	  }
-	  printf("\n\n\n\n\n");*/
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->Nrhs;
 	}
       }
@@ -198,52 +154,36 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_rhsq,
 			     mesh->o_q);
 
-	  /*mesh->o_q.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
-	    for (int i = 0; i < mesh->Np; ++i) {
-	      printf("  %lf",test_q[i + j*mesh->Np + 40*mesh->Np*mesh->Nfields]);
-	    }
-	    printf("\n\n");
-	  }
-	  printf("\n\n\n\n\n");*/
-	
-	  //printf("blame trace code %lf\n",test_q[0]);
-
       	}
       }
     }
-      // estimate maximum error
-      if((tstep%mesh->errorStep)==0){
-	dfloat t = (tstep+1)*mesh->dt;
+
+    // estimate maximum error
+    if((tstep%mesh->errorStep)==0){
+      //	dfloat t = (tstep+1)*mesh->dt;
+      dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
-	printf("tstep = %d, t = %g\n", tstep, t);
+      printf("tstep = %d, t = %g\n", tstep, t);
+  	
+      // copy data back to host
+      mesh->o_q.copyTo(mesh->q);
 	
-	// copy data back to host
-	mesh->o_q.copyTo(mesh->q);
-	
-	// check for nans
-	for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
-	  if(isnan(mesh->q[n])){
-	    printf("found nan\n");
-	    exit(-1);
-	  }
+      // check for nans
+      for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
+	if(isnan(mesh->q[n])){
+	  printf("found nan\n");
+	  exit(-1);
 	}
-	// do error stuff on host
-	//      boltzmannErrorQuad2D(mesh, mesh->dt*(tstep+1));
-	
-	// compute vorticity
-	//      boltzmannComputeVorticityQuad2D(mesh, mesh->q, 0, mesh->Nfields);
-	
-	// output field files
-	iint fld = 0;
-	char fname[BUFSIZ];
-	//      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
-	
-	//      sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
-	boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
-	//boltzmannPlotLevels(mesh,"foo",tstep/mesh->errorStep);
-      }        
-      occa::printTimer();
+      }
+
+      // output field files
+      iint fld = 0;
+      char fname[BUFSIZ];
+
+      boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
+
+    }        
+    occa::printTimer();
   }
   
   free(recvBuffer);
