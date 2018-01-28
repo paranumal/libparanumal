@@ -111,7 +111,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
             const dfloat saab3,
             const iint   shift,
             const dfloat * restrict rhsq,
-            const dfloat * restrict q){
+            dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
@@ -138,5 +138,20 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
           }
       }
     }
+        // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint n=0;n<p_maxNodes;++n;inner0){
+      const iint e = elementIds[es];
+      // Update q
+      if(n<p_Np){
+
+        const iint id = p_Nfields*e*p_Np + n;
+
+        for (iint fld = 0; fld < p_Nfields; ++fld){
+          q[id+fld*p_Np]   = s_q[n+fld*p_Np];
+        } 
+
+      }
   }
 }

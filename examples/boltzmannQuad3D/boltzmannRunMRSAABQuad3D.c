@@ -165,8 +165,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_rhsq,
 			     mesh->o_q);
 
-	  /*mesh->o_q.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  mesh->o_q.copyTo(test_q);
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    for (int i = 0; i < mesh->Np; ++i) {
 	      printf("  %lf",test_q[i + j*mesh->Np + 40*mesh->Np*mesh->Nfields]);
 	    }
@@ -184,8 +184,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + (lev-1)*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
-	  mesh->o_q.copyTo(test_q);
-
+	  
 	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
 				  mesh->o_MRABhaloIds[lev],
 				  mesh->MRSAAB_C[lev-1], //
@@ -198,6 +197,15 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRABshiftIndex[lev],
 				  mesh->o_rhsq,
 				  mesh->o_q);
+
+	  /*mesh->o_q.copyTo(test_q);
+	  for (int j = 0; j < mesh->Nfields; ++j) {
+	    for (int i = 0; i < mesh->Np; ++i) {
+	      printf("  %lf",test_q[i + j*mesh->Np + 40*mesh->Np*mesh->Nfields]);
+	    }
+	    printf("\n\n");
+	  }
+	  printf("\n\n\n\n\n");*/
 	
 	  //printf("blame trace code %lf\n",test_q[0]);
 
