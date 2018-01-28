@@ -38,9 +38,6 @@ void rk_coeffs(mesh_t *mesh) {
     R[ind-1] = cexp(I*M_PI* theta);
   }
 
-  printf("a,b size = %d",3*3*Nlevels);
-  printf("c size = %d",Nlevels);
-
   mesh->MRSAAB_A = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRSAAB_B = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRSAAB_C = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
