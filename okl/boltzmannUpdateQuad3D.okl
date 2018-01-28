@@ -67,8 +67,8 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
         s_q[n+0*p_Np] = q[id+0*p_Np] + ab1*rhsq[rhsId1+0*p_Np] + ab2*rhsq[rhsId2+0*p_Np] + ab3*rhsq[rhsId3+0*p_Np];
         s_q[n+1*p_Np] = q[id+1*p_Np] + ab1*rhsq[rhsId1+1*p_Np] + ab2*rhsq[rhsId2+1*p_Np] + ab3*rhsq[rhsId3+1*p_Np];
         s_q[n+2*p_Np] = q[id+2*p_Np] + ab1*rhsq[rhsId1+2*p_Np] + ab2*rhsq[rhsId2+2*p_Np] + ab3*rhsq[rhsId3+2*p_Np];
-        //
-        s_q[n+3*p_Np] = expdt*q[id+3*p_Np] + saab1*rhsq[rhsId1+3*p_Np] + saab2*rhsq[rhsId2+3*p_Np] + saab3*rhsq[rhsId3+3*p_Np];
+        s_q[n+3*p_Np] = q[id+2*p_Np] + ab1*rhsq[rhsId1+2*p_Np] + ab2*rhsq[rhsId2+2*p_Np] + ab3*rhsq[rhsId3+2*p_Np];
+	//
         s_q[n+4*p_Np] = expdt*q[id+4*p_Np] + saab1*rhsq[rhsId1+4*p_Np] + saab2*rhsq[rhsId2+4*p_Np] + saab3*rhsq[rhsId3+4*p_Np];
         s_q[n+5*p_Np] = expdt*q[id+5*p_Np] + saab1*rhsq[rhsId1+5*p_Np] + saab2*rhsq[rhsId2+5*p_Np] + saab3*rhsq[rhsId3+5*p_Np];
 	s_q[n+6*p_Np] = expdt*q[id+6*p_Np] + saab1*rhsq[rhsId1+6*p_Np] + saab2*rhsq[rhsId2+6*p_Np] + saab3*rhsq[rhsId3+6*p_Np];
