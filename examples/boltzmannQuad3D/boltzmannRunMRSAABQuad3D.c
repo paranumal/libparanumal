@@ -86,14 +86,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	  }
 	  printf("\n\n\n\n\n");*/
 
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    printf("%lf   %lf   %lf\n",test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
 	  }
-	  printf("\n\n\n");
+	  printf("\n\n\n");*/
 	}
       } 
 
-      printf("done\n");
+      //printf("done\n");
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);

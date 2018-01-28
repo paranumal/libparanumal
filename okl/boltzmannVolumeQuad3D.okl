@@ -322,9 +322,9 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    const dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy -p_tauInv*(q6 - q3*q3*p_invsqrt2*invq1);
 	    const dfloat rhsq7 = -p_sqrtRT*p_sqrt2*dq4dz -p_tauInv*(q7 - q4*q4*p_invsqrt2*invq1);
 
-	    const dfloat rhsq8  = -p_sqrtRT*(dq3dx+dq2dy) -p_tauInv*(q8  - q2*q3*invq1*p_invsqrt2);
-	    const dfloat rhsq9  = -p_sqrtRT*(dq4dx+dq2dz) -p_tauInv*(q9  - q2*q4*invq1*p_invsqrt2);
-	    const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*invq1*p_invsqrt2);
+	    const dfloat rhsq8  = -p_sqrtRT*(dq3dx+dq2dy) -p_tauInv*(q8  - q2*q3*invq1);
+	    const dfloat rhsq9  = -p_sqrtRT*(dq4dx+dq2dz) -p_tauInv*(q9  - q2*q4*invq1);
+	    const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz) -p_tauInv*(q10 - q3*q4*invq1);
 
 	    // constrain momentum changes to lie on sphere
 	    const dfloat xij = x[i+j*p_Nq+e*p_Np];
