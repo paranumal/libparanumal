@@ -138,7 +138,9 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
 				     const dfloat * restrict q,
-				     dfloat * restrict rhsq){
+				     	   dfloat * restrict fQM,
+					   dfloat * restrict fQP,
+				           dfloat * restrict rhsq){
   
   
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
@@ -179,8 +181,8 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		const dfloat qM = q[vidM+fld*p_Np];
-		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+		const dfloat qM = fQM[vidM+fld*p_Np];
+		dfloat qP = fQP[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
 		if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
 		//if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;

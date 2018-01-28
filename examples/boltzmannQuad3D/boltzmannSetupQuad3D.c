@@ -41,6 +41,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
+  mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+  mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
   mesh->sqrtRT = sqrt(mesh->RT);

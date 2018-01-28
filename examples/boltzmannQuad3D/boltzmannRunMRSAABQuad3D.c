@@ -102,6 +102,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_y,
 			      mesh->o_z,
 			      mesh->o_q,
+			      mesh->o_fQM,
+			      mesh->o_fQP,
 			      mesh->o_rhsq);
 	}
       }
@@ -126,6 +128,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+1],
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRABshiftIndex[l],
+			     mesh->o_fQM,
+			     mesh->o_fQP,
 			     mesh->o_rhsq,
 			     mesh->o_q);
 
@@ -141,19 +145,20 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  
-	  mesh->updateKernel(mesh->MRABNhaloElements[lev],
-			     mesh->o_MRABhaloIds[lev],
-			     mesh->MRSAAB_C[lev-1], //
-			     mesh->MRAB_B[id+0], //
-			     mesh->MRAB_B[id+1],
-			     mesh->MRAB_B[id+2], //
-			     mesh->MRSAAB_B[id+0], //
-			     mesh->MRSAAB_B[id+1],
-			     mesh->MRSAAB_B[id+2], 
-			     mesh->MRABshiftIndex[lev],
-			     mesh->o_rhsq,
-			     mesh->o_q);
-
+	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+				  mesh->o_MRABhaloIds[lev],
+				  mesh->MRSAAB_C[lev-1], //
+				  mesh->MRAB_B[id+0], //
+				  mesh->MRAB_B[id+1],
+				  mesh->MRAB_B[id+2], //
+				  mesh->MRSAAB_B[id+0], //
+				  mesh->MRSAAB_B[id+1],
+				  mesh->MRSAAB_B[id+2], 
+				  mesh->MRABshiftIndex[lev],
+				  mesh->o_rhsq,
+				  mesh->o_fQM,
+				  mesh->o_fQP,
+				  mesh->o_q);
       	}
       }
     }
