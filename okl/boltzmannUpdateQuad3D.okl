@@ -131,7 +131,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
         const iint rhsId3 = id + ((shift+2)%3)*p_Nfields*p_Np;
 
           for(iint fld=0; fld< p_Nfields; ++fld){
-            if(fld<3)
+            if(fld<4)
               s_q[n+fld*p_Np] = q[id+fld*p_Np]+ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
             else
               s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*rhsq[rhsId1+fld*p_Np] + saab2*rhsq[rhsId2+fld*p_Np] + saab3*rhsq[rhsId3+fld*p_Np];
