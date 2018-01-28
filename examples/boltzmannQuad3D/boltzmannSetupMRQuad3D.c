@@ -335,13 +335,15 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   }
 
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-
-
   //dt = mymin(dt, cfl/mesh->tauInv);
+
+  mesh->finalTime = 10;
+  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
   meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
+
+  dfloat dt = mesh->dt;
 
   mesh->shiftIndex=0;
 
@@ -350,15 +352,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
   printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
-
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-
-  //
-  mesh->finalTime = 10;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  mesh->dt = mesh->finalTime/mesh->NtimeSteps;
-
+  
   // errorStep
   mesh->errorStep = 100*mesh->Nq;
 
