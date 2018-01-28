@@ -301,6 +301,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
+  dfloat cfl = 0.13; // depends on the stability region size (was .4, then 2)
 
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -309,9 +310,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){
-
-    EtoDT[e]=1e9;
-
+    dfloat lmin = 1e9, lmax = 0;
     for(iint f=0;f<mesh->Nfaces;++f){
       for(iint n=0;n<mesh->Nfp;++n){
 	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
@@ -323,21 +322,24 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 	// => J*2 = 0.5*h*sJ*2
 	// => h = 2*J/sJ
 
-	dfloat hest = 2./(sJ*invJ);
+        dfloat hest = 2./(sJ*invJ);
+
+	lmin = mymin(lmin, hest);
+	lmax = mymax(lmax, hest);
 
 	hmin = mymin(hmin, hest);
 	hmax = mymax(hmax, hest);
       }
     }
+    EtoDT[e]  = cfl*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+
   }
 
-  dfloat cfl = 0.1; // depends on the stability region size (was .4, then 2)
-
-  // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
 
-  //dt = mymin(dt, cfl/mesh->tauInv);
 
+  //dt = mymin(dt, cfl/mesh->tauInv);
+  
   iint maxLevels=100;
   meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
 
