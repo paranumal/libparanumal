@@ -77,17 +77,17 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
-	  /*mesh->o_rhsq.copyTo(test_q);
-	  for (int j = 0; j < mesh->Nfields; ++j) {
+	  mesh->o_rhsq.copyTo(test_q);
+	  /*for (int j = 0; j < mesh->Nfields; ++j) {
 	    for (int i = 0; i < mesh->Np; ++i) {
-	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 40*mesh->Np*mesh->Nrhs*mesh->Nfields]);
+	      printf("  %lf",test_q[i + j*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields + 300*mesh->Np*mesh->Nrhs*mesh->Nfields]);
 	    }
 	    printf("\n\n");
 	  }
 	  printf("\n\n\n\n\n");*/
 
 	  /*for (int j = 0; j < mesh->Nfields; ++j) {
-	    printf("%lf   %lf   %lf\n",test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[10*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
+	    printf("%lf   %lf   %lf\n",test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + j*mesh->Np],test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + mesh->Np*mesh->Nfields + j*mesh->Np],test_q[300*mesh->Nrhs*mesh->Np*mesh->Nfields + 2*mesh->Np*mesh->Nfields + j*mesh->Np]);
 	  }
 	  printf("\n\n\n");*/
 	}
@@ -179,24 +179,24 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
       occa::toc("updateKernel");
       
-      /*      if (lev<mesh->MRABNlevels) {
+      if (lev<mesh->MRABNlevels) {
 	
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + (lev-1)*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  
-	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
-				  mesh->o_MRABhaloIds[lev],
-				  mesh->MRSAAB_C[lev-1], //
-				  mesh->MRAB_B[id+0], //
-				  mesh->MRAB_B[id+1],
-				  mesh->MRAB_B[id+2], //
-				  mesh->MRSAAB_B[id+0], //
-				  mesh->MRSAAB_B[id+1],
-				  mesh->MRSAAB_B[id+2], 
-				  mesh->MRABshiftIndex[lev],
-				  mesh->o_rhsq,
-				  mesh->o_q);*/
+	  mesh->updateKernel(mesh->MRABNhaloElements[lev],
+			     mesh->o_MRABhaloIds[lev],
+			     mesh->MRSAAB_C[lev-1], //
+			     mesh->MRAB_B[id+0], //
+			     mesh->MRAB_B[id+1],
+			     mesh->MRAB_B[id+2], //
+			     mesh->MRSAAB_B[id+0], //
+			     mesh->MRSAAB_B[id+1],
+			     mesh->MRSAAB_B[id+2], 
+			     mesh->MRABshiftIndex[lev],
+			     mesh->o_rhsq,
+			     mesh->o_q);
 
 	  /*mesh->o_q.copyTo(test_q);
 	  for (int j = 0; j < mesh->Nfields; ++j) {
@@ -209,8 +209,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	
 	  //printf("blame trace code %lf\n",test_q[0]);
 
-      //	}
-      //}
+      	}
+      }
     }
       // estimate maximum error
       if((tstep%mesh->errorStep)==0){
