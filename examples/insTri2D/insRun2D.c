@@ -4,6 +4,10 @@
 
 void insRun2D(ins_t *ins, char *options){
 
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
   mesh2D *mesh = ins->mesh;
   
   // Write Initial Data
@@ -33,7 +37,7 @@ void insRun2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  ins->NtimeSteps=10000;
+  ins->NtimeSteps=32000;
   
   double tic_tot = 0.f, elp_tot = 0.f; 
   double tic_adv = 0.f, elp_adv = 0.f;
@@ -66,18 +70,18 @@ void insRun2D(ins_t *ins, char *options){
       ins->lambda = ins->g0 / (ins->dt * ins->nu);
       ins->idt = 1.0/ins->dt; 
       ins->ig0 = 1.0/ins->g0; 
-    } //else {
-    //   //advection, third order in time, increment
-    //   ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-    //   ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
-    //   ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-    //   ins->g0 =  11.f/6.f;
-    //   ins->ExplicitOrder=3;
+    } else {
+      //advection, third order in time, increment
+      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 2.0f;
+      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = -1.0f;
+      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
+      ins->g0 =  11.f/6.f;
+      ins->ExplicitOrder=3;
 
-    //   ins->lambda = ins->g0 / (ins->dt * ins->nu);
-    //   ins->idt = 1.0/ins->dt; 
-    //   ins->ig0 = 1.0/ins->g0; 
-    // }
+      ins->lambda = ins->g0 / (ins->dt * ins->nu);
+      ins->idt = 1.0/ins->dt; 
+      ins->ig0 = 1.0/ins->g0; 
+    }
 
    
     tic_adv = MPI_Wtime(); 
@@ -137,16 +141,16 @@ void insRun2D(ins_t *ins, char *options){
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "VTU")){
       if(((tstep+1)%(ins->errorStep))==0){
-        printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         insReport2D(ins, tstep+1,options);
       }
     }
 
-    printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
-        printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (rank==0)  printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         insErrorNorms2D(ins, (tstep+1)*ins->dt, options);
       }
     }
@@ -200,12 +204,6 @@ elp_tot = MPI_Wtime() - tic_tot;
   MPI_Allreduce(&elp_vel, &gelp_vel, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&elp_pre, &gelp_pre, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&elp_upd, &gelp_upd, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-
-
-int rank, size;
-MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 if(rank==0){
   printf("\n");
