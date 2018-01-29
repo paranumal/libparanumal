@@ -187,14 +187,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
-  mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-                        mesh->vmapM);
-
-  mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-                        mesh->vmapP);
-
 
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;

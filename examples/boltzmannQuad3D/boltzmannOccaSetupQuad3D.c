@@ -8,6 +8,7 @@
 
 void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
 
+
   mesh->device.setup(deviceConfig);
 
   occa::initTimer(mesh->device);
@@ -18,10 +19,10 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
-
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
   //nrhs here is added for mr.  Should just be harmless memory bloat otherwise.
   mesh->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
@@ -44,7 +45,7 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
-
+  
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
         mesh->vmapM);
@@ -53,9 +54,12 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
         mesh->vmapP);
 
+
+  printf("test element\n");
   mesh->o_mapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
         mesh->mapP);
+  printf("element passed\n");
 
   mesh->o_EToB =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),

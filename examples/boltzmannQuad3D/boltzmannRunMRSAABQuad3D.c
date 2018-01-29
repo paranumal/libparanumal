@@ -68,10 +68,17 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
+	  mesh->o_q.copyTo(test_q);
+	  for (int i = 0; i < mesh->Nfields; ++i) {
+	    for (int j = 0; j < mesh->Np; ++j) {
+	      printf("%lf",test_q[300*mesh->Nfields*mesh->Nrhs*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Nfields*mesh->Np + i*mesh->Np + j]);
+	    }
+	    printf("\n\n");
+	  }
+	  printf("\n\n\n\n\n");
 	}
-      } 
+      }
 
-      //printf("done\n");
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);
@@ -163,6 +170,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_q);
       	}
       }
+      if (mesh->MRABshiftIndex[0] == 0) 
+	printf("done\n");
     }
 
     // estimate maximum error
