@@ -96,7 +96,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -139,7 +139,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
 
       #if 1 // Zero flow
-            ins->U[id] = 0.0;
+            ins->U[id] = 1.0;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
       #endif
@@ -180,7 +180,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 1.5; // pretty good estimate (at least for subcycling LSERK4)
  
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -213,9 +213,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   // errorStep
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
-    ins->errorStep =400/ins->Nsubsteps;
+    ins->errorStep =800/ins->Nsubsteps;
   else
-    ins->errorStep = 400;
+    ins->errorStep = 800;
 
   printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 

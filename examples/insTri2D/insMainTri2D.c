@@ -50,7 +50,7 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   //int Ns = 0; // Default no-subcycling 
-  int Ns = 4; 
+  int Ns = 8; 
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
