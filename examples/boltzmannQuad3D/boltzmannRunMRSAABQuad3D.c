@@ -96,7 +96,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_sgeo,
 			      mesh->o_LIFTT,
 			      mesh->o_vmapM,
-			      mesh->o_vmapP,
+			      mesh->o_mapP,
 			      t,
 			      mesh->o_x,
 			      mesh->o_y,

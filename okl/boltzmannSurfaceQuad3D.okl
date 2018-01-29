@@ -132,7 +132,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
 				     const iint   * restrict vmapM,
-				     const iint   * restrict vmapP,
+				     const iint   * restrict mapP,
 				     const dfloat time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
@@ -171,7 +171,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    // indices of negative and positive traces of face node
 	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
 	    const int idM = vmapM[id];
-	    const int idP = vmapP[id];
+	    const int idP = mapP[id];
 	    const int eP = idP/p_Np;
 
 	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
