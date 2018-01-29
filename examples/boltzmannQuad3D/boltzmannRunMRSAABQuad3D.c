@@ -68,14 +68,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_z,
 			     mesh->o_q,
 			     mesh->o_rhsq);
-	  mesh->o_q.copyTo(test_q);
+	  /*mesh->o_rhsq.copyTo(test_q);
 	  for (int i = 0; i < mesh->Nfields; ++i) {
 	    for (int j = 0; j < mesh->Np; ++j) {
-	      printf("%lf",test_q[300*mesh->Nfields*mesh->Nrhs*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Nfields*mesh->Np + i*mesh->Np + j]);
+	      printf("%lf  ",test_q[300*mesh->Nfields*mesh->Nrhs*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Nfields*mesh->Np + i*mesh->Np + j]);
 	    }
 	    printf("\n\n");
 	  }
-	  printf("\n\n\n\n\n");
+	  printf("\n\n\n\n\n");*/
 	}
       }
 
@@ -112,6 +112,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_fQM,
 			      mesh->o_fQP,
 			      mesh->o_rhsq);
+	  /*mesh->o_rhsq.copyTo(test_q);
+	  for (int i = 0; i < mesh->Nfields; ++i) {
+	    for (int j = 0; j < mesh->Np; ++j) {
+	      printf("%lf  ",test_q[300*mesh->Nfields*mesh->Nrhs*mesh->Np + mesh->MRABshiftIndex[l]*mesh->Nfields*mesh->Np + i*mesh->Np + j]);
+	    }
+	    printf("\n\n");
+	  }
+	  printf("\n\n\n\n\n");*/
 	}
       }
       occa::toc("surfaceKernel");
@@ -140,6 +148,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_fQM,
 			     mesh->o_fQP,
 			     mesh->o_q);
+	  /*mesh->o_fQM.copyTo(test_q);
+	  for (int i = 0; i < mesh->Nfields; ++i) {
+	    for (int j = 0; j < mesh->Nfp*mesh->Nfaces; ++j) {
+	      printf("%lf  ",test_q[300*mesh->Nfields*mesh->Nfp*mesh->Nfaces + i*mesh->Nfp*mesh->Nfaces + j]);
+	    }
+	    printf("\n\n");
+	  }
+	  printf("\n\n\n\n\n");*/
 
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->Nrhs;
 	}
@@ -152,7 +168,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + (lev-1)*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
-	  
 	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
 				  mesh->o_MRABhaloIds[lev],
 				  mesh->MRSAAB_C[lev-1], //
@@ -168,10 +183,16 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_fQM,
 				  mesh->o_fQP,
 				  mesh->o_q);
+	  /*mesh->o_fQM.copyTo(test_q);
+	  for (int i = 0; i < mesh->Nfields; ++i) {
+	    for (int j = 0; j < mesh->Nfp*mesh->Nfaces; ++j) {
+	      printf("%lf  ",test_q[300*mesh->Nfields*mesh->Nfp*mesh->Nfaces + i*mesh->Nfp*mesh->Nfaces + j]);
+	    }
+	    printf("\n\n");
+	  }
+	  printf("\n\n\n\n\n");*/
       	}
       }
-      if (mesh->MRABshiftIndex[0] == 0) 
-	printf("done\n");
     }
 
     // estimate maximum error

@@ -174,8 +174,8 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    const int idP = mapP[id];
 	    const int eP = idP/p_Np;
 
-	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
-	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
+	    const iint vidM = eM*p_Nfp*p_Nfaces*p_Nfields + (idM%p_Np);
+	    const iint vidP = eP*p_Nfp*p_Nfaces*p_Nfields + (idP%p_Np);
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
