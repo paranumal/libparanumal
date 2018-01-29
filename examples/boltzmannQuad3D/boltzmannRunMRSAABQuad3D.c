@@ -128,9 +128,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+1],
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRABshiftIndex[l],
+			     mesh->o_rhsq,
+			     mesh->vmapM,
 			     mesh->o_fQM,
 			     mesh->o_fQP,
-			     mesh->o_rhsq,
 			     mesh->o_q);
 
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->Nrhs;
@@ -156,6 +157,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRSAAB_B[id+2], 
 				  mesh->MRABshiftIndex[lev],
 				  mesh->o_rhsq,
+				  mesh->vmapM,
 				  mesh->o_fQM,
 				  mesh->o_fQP,
 				  mesh->o_q);
