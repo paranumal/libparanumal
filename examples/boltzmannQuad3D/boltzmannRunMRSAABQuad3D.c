@@ -129,7 +129,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRABshiftIndex[l],
 			     mesh->o_rhsq,
-			     mesh->vmapM,
+			     mesh->o_vmapM,
 			     mesh->o_fQM,
 			     mesh->o_fQP,
 			     mesh->o_q);
@@ -157,7 +157,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRSAAB_B[id+2], 
 				  mesh->MRABshiftIndex[lev],
 				  mesh->o_rhsq,
-				  mesh->vmapM,
+				  mesh->o_vmapM,
 				  mesh->o_fQM,
 				  mesh->o_fQP,
 				  mesh->o_q);
@@ -171,7 +171,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
       printf("tstep = %d, t = %g\n", tstep, t);
-  	
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
 	
