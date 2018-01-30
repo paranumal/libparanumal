@@ -19,7 +19,7 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
   fluxq[9] = alpha*dq[9] - beta*p_sqrtRT*(ny*dq[3]+nz*dq[2]);
 }
 
-void boundaryCondition(dfloat *qP, const dfloat qM,const dfloat nx, const dfloat ny, const dfloat nz,const dfloat q2, const dfloat q3, const dfloat q4, int fld) {
+/*void boundaryCondition(dfloat *qP, const dfloat qM,const dfloat nx, const dfloat ny, const dfloat nz,const dfloat q2, const dfloat q3, const dfloat q4, int fld) {
      if (fld == 1)
      	*qP = qM-(q2*nx + q3*ny + q4*nz)*nx;
      else if (fld == 2)
@@ -28,12 +28,12 @@ void boundaryCondition(dfloat *qP, const dfloat qM,const dfloat nx, const dfloat
         *qP = qM-(q2*nx + q3*ny + q4*nz)*nz;
      else
      	 *qP = qM;
-}
+}*/
 
-/*void boundaryCondition(dfloat *qP,const dfloat qM, int fld) {
+void boundaryCondition(dfloat *qP,const dfloat qM, int fld) {
      if ((fld >= 1) && (fld <= 3)) *qP = -qM;
      else *qP = qM;
-     }*/
+     }
 
 // pointwise SEM-DG lift
 kernel void boltzmannSurfaceQuad3D(const iint Nelements,
@@ -88,8 +88,8 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
-		if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
-		//if (eP == eM) boundaryCondition(&qP,qM,fld);
+		//if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
+		if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
 	      }
 
@@ -170,12 +170,11 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 
 	    // indices of negative and positive traces of face node
 	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
-	    const int idM = vmapM[id];
 	    const int idP = mapP[id];
-	    const int eP = idP/p_Np;
+	    const int eP = idP/(p_Nfaces*p_Nq);
 
-	    const iint vidM = eM*p_Nfp*p_Nfaces*p_Nfields + (idM%p_Np);
-	    const iint vidP = eP*p_Nfp*p_Nfaces*p_Nfields + (idP%p_Np);
+	    const int vidM = eM*p_Nq*p_Nfaces*p_Nfields + face*p_Nq + i;
+	    const int vidP = eP*p_Nq*p_Nfaces*p_Nfields + idP - eP*p_Nfaces*p_Nq;
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
@@ -183,8 +182,8 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = fQM[vidM+fld*p_Nfp*p_Nfaces];
 		dfloat qP = fQP[vidP+fld*p_Nfp*p_Nfaces]; // assumes chunks of p_Np*p_Nfields per element
-		if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
-		//if (eP == eM) boundaryCondition(&qP,qM,fld);
+		//if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
+		if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
 	      }
 
@@ -204,7 +203,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
 	    //account for new layout of rhsq
-	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + (idM%p_Np);
+	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + face*p_Nq + i;
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
