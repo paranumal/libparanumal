@@ -1,4 +1,3 @@
-
 void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 	  const dfloat alpha, const dfloat beta,
 	  const dfloat * restrict dq,
@@ -170,18 +169,20 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 
 	    // indices of negative and positive traces of face node
 	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
-	    const int idP = mapP[id];
-	    const int eP = idP/(p_Nfaces*p_Nq);
+	    const iint idP = mapP[id];
+	    const iint eP = idP/(p_Nfaces*p_Nq);
+	    const iint vM = vmapM[id]%p_Np;
+	    const iint vP = idP - eP*p_Nfaces*p_Nq;
 
-	    const int vidM = eM*p_Nq*p_Nfaces*p_Nfields + face*p_Nq + i;
-	    const int vidP = eP*p_Nq*p_Nfaces*p_Nfields + idP - eP*p_Nfaces*p_Nq;
+	    const iint vidM = eM*p_Nq*p_Nfaces*p_Nfields + face*p_Nq + i;
+	    const iint vidP = eP*p_Nq*p_Nfaces*p_Nfields + vP;
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = fQM[vidM+fld*p_Nfp*p_Nfaces];
-		dfloat qP = fQP[vidP+fld*p_Nfp*p_Nfaces]; // assumes chunks of p_Np*p_Nfields per element
+		dfloat qP = fQP[vidP+fld*p_Nfp*p_Nfaces]; 
 		//if(eP == eM) boundaryCondition(&qP,qM,nx,ny,nz,q[vidM+p_Np],q[vidM+2*p_Np],q[vidM+3*p_Np], fld);
 		if (eP == eM) boundaryCondition(&qP,qM,fld);
 		dq[fld] = qP-qM;
@@ -203,7 +204,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
 	    //account for new layout of rhsq
-	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + face*p_Nq + i;
+	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + vM;
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){

@@ -183,14 +183,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_fQM,
 				  mesh->o_fQP,
 				  mesh->o_q);
-	   mesh->o_q.copyTo(test_q);
+	  /*mesh->o_q.copyTo(test_q);
 	  for (int i = 0; i < mesh->Nfields; ++i) {
 	    for (int j = 0; j < mesh->Nfp*mesh->Nfaces; ++j) {
 	      printf("%lf  ",test_q[300*mesh->Nfields*mesh->Nfp*mesh->Nfaces + i*mesh->Nfp*mesh->Nfaces + j]);
 	    }
 	    printf("\n\n");
 	  }
-	  printf("\n\n\n\n\n");
+	  printf("\n\n\n\n\n");*/
       	}
       }
     }
