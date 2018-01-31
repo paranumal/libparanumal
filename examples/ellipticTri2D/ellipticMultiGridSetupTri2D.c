@@ -191,9 +191,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
     }
 
-    levels[n]->smootherArgs = (void **) calloc(2,sizeof(void*));
+    levels[n]->smootherArgs = (void **) calloc(3,sizeof(void*));
     levels[n]->smootherArgs[0] = (void *) solverL;
     levels[n]->smootherArgs[1] = (void *) options;
+    levels[n]->smootherArgs[2] = (void *) vlambda;
 
     dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
     if(strstr(options, "EXACT")){
