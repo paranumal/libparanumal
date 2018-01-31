@@ -179,6 +179,9 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   }
 
+  if(mesh->device.mode()=="Serial")
+    kernelInfo.addCompilerFlag("-g");
+
   kernelInfo.addDefine("p_blockSize", blockSize);
 
   // add custom defines
@@ -584,6 +587,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterpTri2D.okl",
                "ellipticSEMFEMAnterpTri2D",
                kernelInfo);
+
+  solver->precon->CGLocalPatchKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCGLocalPatchTri2D.okl",
+               "ellipticCGLocalPatchTri2D",
+               kernelInfo);
+
 
   long long int pre = mesh->device.memoryAllocated();
 

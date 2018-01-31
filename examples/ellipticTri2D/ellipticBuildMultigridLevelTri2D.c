@@ -581,6 +581,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
 
+  solver->precon->CGLocalPatchKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCGLocalPatchTri2D.okl",
+               "ellipticCGLocalPatchTri2D",
+               kernelInfo);
+
 
   //sizes for the coarsen and prolongation kernels. degree NFine to degree N
   int NpFine   = (Nf+1)*(Nf+2)/2;

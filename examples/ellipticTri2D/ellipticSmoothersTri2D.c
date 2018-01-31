@@ -155,12 +155,30 @@ void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   precon_t *precon = solver->precon;
 
   occaTimerTic(mesh->device,"approxBlockJacobiSolveKernel");
-  precon->approxBlockJacobiSolverKernel(mesh->Nelements,
-                            precon->o_patchesIndex,
-                            precon->o_invAP,
-                            precon->o_invDegreeAP,
-                            o_r,
-                            o_Sr);
+  // precon->approxBlockJacobiSolverKernel(mesh->Nelements,
+  //                           precon->o_patchesIndex,
+  //                           precon->o_invAP,
+  //                           precon->o_invDegreeAP,
+  //                           o_r,
+  //                           o_Sr);
+  dfloat tol = 1E-6;
+  dfloat *lambda = (dfloat *) args[2];
+
+  precon->CGLocalPatchKernel(mesh->Nelements,
+                             mesh->o_vmapM,
+                             *lambda,
+                             solver->tau,
+                             mesh->o_vgeo,
+                             mesh->o_sgeo,
+                             mesh->o_EToB,
+                             mesh->o_DrT,
+                             mesh->o_DsT,
+                             mesh->o_LIFTT,
+                             mesh->o_MM,
+                             precon->o_invDegreeAP,
+                             o_r,
+                             o_Sr,
+                             tol);
   occaTimerToc(mesh->device,"approxBlockJacobiSolveKernel");
 }
 

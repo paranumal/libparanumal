@@ -50,7 +50,7 @@ typedef struct {
   occa::kernel approxBlockJacobiSolverKernel;
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
-
+  occa::kernel CGLocalPatchKernel;
 
   occa::memory o_rFEM;
   occa::memory o_zFEM;
