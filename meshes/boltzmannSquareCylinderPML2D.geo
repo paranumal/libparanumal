@@ -1,24 +1,24 @@
 cl__1 = 1;
 
 r_0 = DefineNumber[0.5];
-r_1 = DefineNumber[0.025];
+r_1 = DefineNumber[0.1];
 
 
-xmin = DefineNumber[-4.0];
-xmax = DefineNumber[ 8.0];
-ymin = DefineNumber[-4.0];
-ymax = DefineNumber[ 4.0];
+xmin = DefineNumber[-5.0];
+xmax = DefineNumber[ 9.0];
+ymin = DefineNumber[-5.0];
+ymax = DefineNumber[ 5.0];
 
-xpmlmin = DefineNumber[-5.0];
-xpmlmax = DefineNumber[ 9.0];
-ypmlmin = DefineNumber[-5.0];
-ypmlmax = DefineNumber[ 5.0];
+xpmlmin = DefineNumber[-7.0];
+xpmlmax = DefineNumber[ 11.0];
+ypmlmin = DefineNumber[-7.0];
+ypmlmax = DefineNumber[ 7.0];
 
 
-xcmin = DefineNumber[-0.25];
-xcmax = DefineNumber[ 0.25];
-ycmin = DefineNumber[-0.25];
-ycmax = DefineNumber[ 0.25];
+xcmin = DefineNumber[-0.5];
+xcmax = DefineNumber[ 0.5];
+ycmin = DefineNumber[-0.5];
+ycmax = DefineNumber[ 0.5];
 
 Point(1) = {xmin, ymin, 0, r_0};
 Point(2) = {xmax, ymin, 0, r_0};
@@ -100,9 +100,8 @@ Plane Surface(47) = {46};
 
 
 Physical Line("Wall",1) = {1, 2, 3, 4};
-Physical Line("Inflow",2) = {12, 28, 26};
+Physical Line("Inflow",2) = {12, 28, 26, 25, 23, 21, 15, 13, 9};
 Physical Line("Outflow",3) = {16, 18, 20};
-Physical Line("Slip",4) = {25, 23, 21, 15, 13, 9};
 
 Physical Surface("Interior",9) = {31};
 
