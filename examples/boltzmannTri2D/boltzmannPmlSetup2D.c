@@ -86,21 +86,21 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
 
     iint Nnodes = 0;
-    if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
-      //
-      printf("Setting PML Coefficient for Cubature Integration\n");
-      //set up damping parameter
-      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
-      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
-      Nnodes = mesh->cubNp;    
-    }
-     else{
+    // if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+    //   //
+    //   printf("Setting PML Coefficient for Cubature Integration\n");
+    //   //set up damping parameter
+    //   mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+    //   mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
+    //   Nnodes = mesh->cubNp;    
+    // }
+    //  else{
       printf("Setting PML Coefficients for Nodal Collocation Integration\n");
       //set up damping parameter
       mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
       mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
       Nnodes = mesh->Np; 
-    }
+    // }
    
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
