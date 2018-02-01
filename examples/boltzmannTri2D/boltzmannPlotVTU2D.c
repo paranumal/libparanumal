@@ -55,8 +55,8 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
       for(iint m=0;m<mesh->Np;++m){
 	        iint base = mesh->Nfields*(m + e*mesh->Np);
           dfloat rho = mesh->q[base + 0];
-          dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; // need to be modified
-          //dfloat pm = rho; 
+           dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; // need to be modified
+           //dfloat pm = rho; 
           plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 
@@ -159,6 +159,8 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
     }
   }
   fprintf(fp, "       </DataArray>\n");
+
+
 
 
   // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");

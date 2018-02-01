@@ -373,7 +373,7 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
 
 
 
-kernel void boltzmannPmlVolumeCub2D_v0(const iint pmlNelements,
+kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
               const iint * restrict pmlElementIds,
               const iint * restrict pmlIds,
               const dfloat ramp,
@@ -515,9 +515,7 @@ kernel void boltzmannPmlVolumeCub2D_v0(const iint pmlNelements,
 
 
 
-
-
-kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
+kernel void boltzmannPmlVolumeCub2D_v0(const iint pmlNelements,
               const iint * restrict pmlElementIds,
               const iint * restrict pmlIds,
               const dfloat ramp,

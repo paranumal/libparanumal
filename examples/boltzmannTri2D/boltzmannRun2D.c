@@ -130,9 +130,9 @@ for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
       boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
       }
 
-      // if(strstr(options, "SAAB")){
-      //   boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      // }
+      if(strstr(options, "SAAB")){
+        boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+      }
 
        if(strstr(options, "LSERK")){ 
       boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
