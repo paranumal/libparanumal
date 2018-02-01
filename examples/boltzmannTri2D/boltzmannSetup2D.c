@@ -15,7 +15,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   mesh->Nfields = 6;
 
   dfloat RE[4]; 
-  RE[0] = 20;  RE[1] = 50; RE[2] = 100; RE[3] = 200;
+  RE[0] = 50;  RE[1] = 100; RE[2] = 200; RE[3] = 400;
 
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
     mesh->Nrhs = 3;
@@ -61,10 +61,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
     mesh->Ma = 0.1;    // Set Mach number
-    mesh->Re = 100; //RE[mesh->Ntscale];  // Set Reynolds number was 1000
+    mesh->Re = 100.;  // Set Reynolds number was 1000
     //
-    Uref = 0.5;  // Set Uref was 0.5
-    Lref = 1.;   // set Lref
+    Uref = 1.0;  // Set Uref was 0.5
+    Lref = 1.0;   // set Lref
     //
     mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
     mesh->sqrtRT  = sqrt(mesh->RT);  
@@ -73,10 +73,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0, u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 10.0;
+    mesh->finalTime = 50.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -158,7 +158,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       #endif
 
 
-      #if 1
+      #if 0
 
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
@@ -186,8 +186,29 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
       #endif
 
+       #if 0
+      
+      dfloat b     = 0.1;
+      dfloat epsilon = 0.5; 
+      dfloat rhor  = epsilon*exp(-log(2.)*(x*x + y*y)/b);
+      mesh->q[cnt+0] = q1bar+rhor; 
+      mesh->q[cnt+1] = q2bar;
+      mesh->q[cnt+2] = q3bar;
+      mesh->q[cnt+3] = q4bar;
+      mesh->q[cnt+4] = q5bar;
+      mesh->q[cnt+5] = q6bar;  
+      
+      // mesh->q[cnt+0] = exp(-30*(x*x+y*y)); // uniform density, zero flow
+      // mesh->q[cnt+1] = 0.f;
+      // mesh->q[cnt+2] = 0.f;
+      // mesh->q[cnt+3] = 0.f;
+      // mesh->q[cnt+4] = 0.f;
+      // mesh->q[cnt+5] = 0.f;  
 
-      #if 0
+      #endif
+
+
+      #if 1
 
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
       mesh->q[cnt+1] = ramp*q2bar;
@@ -204,7 +225,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   //
 
   // Set stable time step size for each element
-  dfloat cfl          = 0.2; 
+  dfloat cfl          = 0.25; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -259,7 +280,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     
   
    //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-   dt = 10e-6; // !!!!!!!!!!!!!!!!
+   // dt = 10e-6; // !!!!!!!!!!!!!!!!
    //!!!!!!
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -864,19 +885,19 @@ else if(strstr(options, "LSIMEX")){
      }
 
 
-     // else if(strstr(options,"SAAB")){
-     // printf("Compiling SAAB update kernel\n");
-     // mesh->updateKernel =
-     // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-     //     "boltzmannSAABUpdate2D",
-     //        kernelInfo);
+     else if(strstr(options,"SAAB")){
+     printf("Compiling SAAB update kernel\n");
+     mesh->updateKernel =
+     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+         "boltzmannSAABUpdate2D",
+            kernelInfo);
 
-     //  printf("Compiling SAAB PML update kernel\n");
-     //  mesh->pmlUpdateKernel =
-     //  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-     //     "boltzmannSAABPmlUpdate2D",
-     //        kernelInfo);
-     // }
+      printf("Compiling SAAB PML update kernel\n");
+      mesh->pmlUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+         "boltzmannSAABPmlUpdate2D",
+            kernelInfo);
+     }
 
      else if(strstr(options,"LSERK")){
      printf("Compiling LSERK update kernel\n");

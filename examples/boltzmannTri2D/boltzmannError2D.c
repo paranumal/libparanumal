@@ -14,7 +14,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       if(mesh->probeN){
 
       char fname[BUFSIZ];
-      sprintf(fname, "ReynoldsTest_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
+      sprintf(fname, "PML_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
 
       FILE *fp; 
       fp = fopen(fname, "a");      
