@@ -6,24 +6,24 @@
 void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
  
 
- //dfloat tol     =-1.0e-8;        // set tolerance
- dfloat mindist = -1.e-9; // Set minum distance
- //
+  //dfloat tol     =-1.0e-8;        // set tolerance
+  dfloat mindist = -1.e-9; // Set minum distance
+  //
 
- mesh->probeN = 0; 
+  mesh->probeN = 0; 
  
- dfloat *probeR           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
- dfloat *probeS           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
- mesh->probeElementIds  = (iint *)   calloc(mesh->probeNTotal,sizeof(iint));
+  dfloat *probeR           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
+  dfloat *probeS           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
+  mesh->probeElementIds  = (iint *)   calloc(mesh->probeNTotal,sizeof(iint));
 
-// mesh->Nprobes =3; 
+  // mesh->Nprobes =3; 
 
- dfloat *A        = (dfloat *) calloc((mesh->dim+1)*mesh->Nverts,sizeof(dfloat)); 
- iint   *IPIV     = (iint *)   calloc(mesh->Nverts,sizeof(iint)); 
- iint   *IPIV2    = (iint *)   calloc((mesh->Np+1),sizeof(iint)); 
+  double *A        = (double *) calloc((mesh->dim+1)*mesh->Nverts,sizeof(double)); 
+  iint   *IPIV     = (iint *)   calloc(mesh->Nverts,sizeof(iint)); 
+  iint   *IPIV2    = (iint *)   calloc((mesh->Np+1),sizeof(iint)); 
  
- dfloat *b       = (dfloat *) calloc((mesh->dim+1)*mesh->probeNTotal,sizeof(dfloat));
- dfloat *q       = (dfloat *) calloc(mesh->Nverts*mesh->probeNTotal,sizeof(dfloat));
+  dfloat *b       = (dfloat *) calloc((mesh->dim+1)*mesh->probeNTotal,sizeof(dfloat));
+  double *q       = (double *) calloc(mesh->Nverts*mesh->probeNTotal,sizeof(double));
 
   for(iint n=0; n<mesh->Nverts;n++)
     IPIV[n] = 1; 
@@ -32,11 +32,11 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
     IPIV2[n] = 1; 
 
 
- iint N    = (mesh->dim+1); // A->Nrwos
- iint NRHS =  mesh->probeNTotal; // B->Ncolumns
- iint LDA  = N; 
- iint LDB  = (mesh->dim + 1); // B->Nrows
- iint INFO;
+  iint N    = (mesh->dim+1); // A->Nrwos
+  iint NRHS =  mesh->probeNTotal; // B->Ncolumns
+  iint LDA  = N; 
+  iint LDB  = (mesh->dim + 1); // B->Nrows
+  iint INFO;
 
   // for(iint n=0; n<mesh->mesh->probeNTotal; n++){
   // // Coordinates of probe
@@ -54,7 +54,7 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
   
   //
   for (iint e=0;e<mesh->Nelements;e++) {
-  // Create A[1 vx vy]
+    // Create A[1 vx vy]
     for (iint n=0;n<mesh->Nverts;n++) {
       dfloat vx = mesh->EX[e*mesh->Nverts+n];
       dfloat vy = mesh->EY[e*mesh->Nverts+n];
@@ -69,14 +69,13 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
       q[n] = b[n]; 
     
   
-  // Find barycentric coordinates
-  // q = A^-1*b
+    // Find barycentric coordinates
+    // q = A^-1*b
 
-   if(sizeof(dfloat) == sizeof(double))
-    dgesv_(&N,&NRHS,A,&LDA,IPIV,q,&LDB,&INFO);
+    dgesv_(&N,&NRHS,(double*) A,&LDA,IPIV, (double*) q,&LDB,&INFO);
 
-   if(INFO)
-    printf("DGSEV error: %d \n", INFO);
+    if(INFO)
+      printf("DGSEV error: %d \n", INFO);
 
     // if(sizeof(dfloat) == sizeof(float))
     // sgesv_(&N,&NRHS,A,&LDA,IPIV,q,&LDB,&INFO);
@@ -85,81 +84,88 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
     // Assumes a probe can be represented by single element!!!!
     for(iint n=0; n<mesh->probeNTotal; n++){
 
-       dfloat qmin = q[n*mesh->probeN + 0]; 
-       for(iint i =1; i<(mesh->dim+1); i++)
-          qmin = mymin(qmin, q[n*mesh->probeNTotal + i]);
+      dfloat qmin = q[n*mesh->probeN + 0]; 
+      for(iint i =1; i<(mesh->dim+1); i++)
+	qmin = mymin(qmin, q[n*mesh->probeNTotal + i]);
         
-        // Catch the element
-        if(qmin>mindist){
-         mesh->probeN++;
-         // hold element ids
-         mesh->probeElementIds[n] = e; 
-         // hold local r,s coordinates
-         dfloat l1 =  q[n*mesh->probeNTotal + 2]; 
-         dfloat l2 =  q[n*mesh->probeNTotal + 0]; 
-         dfloat l3 =  q[n*mesh->probeNTotal + 1]; 
+      // Catch the element
+      if(qmin>mindist){
+	mesh->probeN++;
+	// hold element ids
+	mesh->probeElementIds[n] = e; 
+	// hold local r,s coordinates
+	dfloat l1 =  q[n*mesh->probeNTotal + 2]; 
+	dfloat l2 =  q[n*mesh->probeNTotal + 0]; 
+	dfloat l3 =  q[n*mesh->probeNTotal + 1]; 
 
-         probeR[n] = 2.*l3 -1.; 
-         probeS[n] = 2.*l1 -1.;
+	probeR[n] = 2.*l3 -1.; 
+	probeS[n] = 2.*l1 -1.;
 
-         printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[n],probeS[n]); 
+	printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[n],probeS[n]); 
 
-        }
+      }
     }
   }
  
   if(mesh->probeN){
-  // Compute Vandermonde Matrix and invert  it
-  dfloat *V       = (dfloat *) calloc(mesh->Np* (mesh->N+1)*(mesh->N+2)/2, sizeof(dfloat));
-  meshVandermonde2D(mesh->N, mesh->Np, mesh->r, mesh->s, V);
+    // Compute Vandermonde Matrix and invert  it
+    dfloat *V = (dfloat *) calloc(mesh->Np* (mesh->N+1)*(mesh->N+2)/2, sizeof(dfloat));
+    meshVandermonde2D(mesh->N, mesh->Np, mesh->r, mesh->s, V);
 
-  //
-  N    = mesh->Np; 
-  iint LWORK = mesh->Np*mesh->Np;
-  dfloat *WORK = (dfloat *) calloc(LWORK, sizeof(dfloat));
-  dgetrf_(&N,&N,V,&N,IPIV2,&INFO);
-  dgetri_(&N,V,&N,IPIV2,WORK,&LWORK,&INFO);
-  if(INFO)
-    printf("DGE_TRI/TRF error: %d \n", INFO);
+    double *dV = (double*) calloc(mesh->Np* (mesh->N+1)*(mesh->N+2)/2, sizeof(double));
+    for(int n=0;n<mesh->Np*(mesh->N+1)*(mesh->N+2)/2;++n)
+      dV[n] = V[n];
+    
+    //
+    N    = mesh->Np; 
+    iint LWORK = mesh->Np*mesh->Np;
+    double *WORK = (double *) calloc(LWORK, sizeof(double));
+
+    dgetrf_(&N,&N,(double*)dV,&N,IPIV2,&INFO);
+    dgetri_(&N,(double*)dV,&N,IPIV2,(double*)WORK,&LWORK,&INFO);
+    
+    if(INFO)
+      printf("DGE_TRI/TRF error: %d \n", INFO);
 
   
-  // Compute Vandermonde matrix of probes
-  dfloat *Vprobe = (dfloat *) calloc(mesh->probeN*mesh->Np,sizeof(dfloat));
-  meshVandermonde2D(mesh->N, mesh->probeN, probeR, probeS, Vprobe);
+    // Compute Vandermonde matrix of probes
+    dfloat *Vprobe = (dfloat *) calloc(mesh->probeN*mesh->Np,sizeof(dfloat));
+    meshVandermonde2D(mesh->N, mesh->probeN, probeR, probeS, Vprobe);
   
 
-  mesh->probeI = (dfloat *) calloc(mesh->probeN*mesh->Np, sizeof(dfloat));
+    mesh->probeI = (dfloat *) calloc(mesh->probeN*mesh->Np, sizeof(dfloat));
 
-  for(iint r=0; r<mesh->probeN; r++){
-    for(iint c=0; c<mesh->Np; c++){
-      dfloat s = Vprobe[r*mesh->Np+0]*V[0*mesh->Np + c];
-      for(iint i=1; i<mesh->Np; i++){
-        s += Vprobe[r*mesh->Np+i]*V[i*mesh->Np + c];
+    for(iint r=0; r<mesh->probeN; r++){
+      for(iint c=0; c<mesh->Np; c++){
+	dfloat s = 0;
+	for(iint i=0; i<mesh->Np; i++){
+	  s += Vprobe[r*mesh->Np+i]*dV[i*mesh->Np + c];
+	}
+	mesh->probeI[r*mesh->Np + c] = s;
       }
-      mesh->probeI[r*mesh->Np + c] = s;
+
     }
+
+    free(V);
+    free(dV);
+    free(WORK);
 
   }
 
-  free(V);
-  free(WORK);
-
-}
-
-free(IPIV);
-free(IPIV2);
-free(probeR);
-free(probeS);
-free(A);
-free(b);
-free(q);
+  free(IPIV);
+  free(IPIV2);
+  free(probeR);
+  free(probeS);
+  free(A);
+  free(b);
+  free(q);
 
 }
 
 
 void meshVandermonde2D(iint N, iint Npoints, dfloat *r, dfloat *s, dfloat *V){
 
-// First convert to ab coordinates
+  // First convert to ab coordinates
   dfloat *a = (dfloat *) calloc(Npoints, sizeof(dfloat));
   dfloat *b = (dfloat *) calloc(Npoints, sizeof(dfloat));
   for(iint n=0; n<Npoints; n++){
@@ -182,7 +188,7 @@ void meshVandermonde2D(iint N, iint Npoints, dfloat *r, dfloat *s, dfloat *V){
       for(iint n=0; n<Npoints; n++){
         V[n*Np + sk] = meshSimplex2D(a[n], b[n], i, j);
       }
-    sk++;
+      sk++;
     }
   }
 
@@ -195,36 +201,36 @@ void meshVandermonde2D(iint N, iint Npoints, dfloat *r, dfloat *s, dfloat *V){
 
 
 dfloat meshSimplex2D(dfloat a, dfloat b, iint i, iint j){
-// 
- dfloat p1 = meshJacobiP(a,0,0,i);
- dfloat p2 = meshJacobiP(b,2*i+1,0,j);
- dfloat P = sqrt(2.0)*p1*p2*pow(1-b,i);
+  // 
+  dfloat p1 = meshJacobiP(a,0,0,i);
+  dfloat p2 = meshJacobiP(b,2*i+1,0,j);
+  dfloat P = sqrt(2.0)*p1*p2*pow(1-b,i);
 
- return P; 
+  return P; 
 }
 
 
 dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, iint N){
 
-dfloat ax = a; 
+  dfloat ax = a; 
 
-dfloat *P = (dfloat *) calloc((N+1), sizeof(dfloat));
+  dfloat *P = (dfloat *) calloc((N+1), sizeof(dfloat));
 
-// Zero order
-dfloat gamma0 = pow(2,(alpha+beta+1))/(alpha+beta+1)*meshFactorial(alpha)*meshFactorial(beta)/meshFactorial(alpha+beta);
-dfloat p0     = 1.0/sqrt(gamma0);
+  // Zero order
+  dfloat gamma0 = pow(2,(alpha+beta+1))/(alpha+beta+1)*meshFactorial(alpha)*meshFactorial(beta)/meshFactorial(alpha+beta);
+  dfloat p0     = 1.0/sqrt(gamma0);
 
   if (N==0){ free(P); return p0;}
-P[0] = p0; 
+  P[0] = p0; 
 
-// first order
-dfloat gamma1 = (alpha+1)*(beta+1)/(alpha+beta+3)*gamma0;
-dfloat p1     = ((alpha+beta+2)*ax/2 + (alpha-beta)/2)/sqrt(gamma1);
+  // first order
+  dfloat gamma1 = (alpha+1)*(beta+1)/(alpha+beta+3)*gamma0;
+  dfloat p1     = ((alpha+beta+2)*ax/2 + (alpha-beta)/2)/sqrt(gamma1);
   if (N==1){free(P); return p1;} 
 
-P[1] = p1;
+  P[1] = p1;
 
- /// Repeat value in recurrence.
+  /// Repeat value in recurrence.
   dfloat aold = 2/(2+alpha+beta)*sqrt((alpha+1.)*(beta+1.)/(alpha+beta+3.));
   /// Forward recurrence using the symmetry of the recurrence.
   for(iint i=1;i<=N-1;++i){
@@ -235,9 +241,9 @@ P[1] = p1;
     aold =anew;
   }
   
- dfloat pN = P[N]; 
- free(P);
-   return pN;
+  dfloat pN = P[N]; 
+  free(P);
+  return pN;
 
 }
 
