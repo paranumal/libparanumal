@@ -46,9 +46,9 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=LOCALPATCH");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=LOCALPATCH,EXACT");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=SEMFEM");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=LOCALPATCH");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be KCYCLE, or VCYCLE
@@ -70,7 +70,7 @@ int main(int argc, char **argv){
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
-  dfloat lambda = 1;
+  dfloat lambda = 0;
 
   if (strstr(options,"SPARSE")&&(lambda!=0)) { //sanity check
     printf("SPARSE not currently supported for screened Poisson\n");

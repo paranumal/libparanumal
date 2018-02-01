@@ -161,7 +161,7 @@ void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
   //                           precon->o_invDegreeAP,
   //                           o_r,
   //                           o_Sr);
-  dfloat tol = 1E-6;
+  dfloat tol = 1E-12;
   dfloat *lambda = (dfloat *) args[2];
 
   precon->CGLocalPatchKernel(mesh->Nelements,

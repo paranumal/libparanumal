@@ -247,6 +247,14 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     ellipticSEMFEMSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
+  } else if(strstr(options,"LOCALPATCH")) {
+
+    dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
+    for (iint e=0;e<mesh->Nelements;e++) {
+      invDegree[e] = 1.0;
+    }
+    precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
+
   } else if(strstr(options,"JACOBI")) {
 
     dfloat *invDiagA;
