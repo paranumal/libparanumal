@@ -72,6 +72,25 @@ void ellipticPreconditioner2D(solver_t *solver,
 
     ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_z, o_z, dfloatString, "add");
 
+  } else if(strstr(options, "LOCALPATCH")){
+
+    dfloat tol = 1E-12;
+    precon->CGLocalPatchKernel(mesh->Nelements,
+                               mesh->o_vmapM,
+                               lambda,
+                               solver->tau,
+                               mesh->o_vgeo,
+                               mesh->o_sgeo,
+                               mesh->o_EToB,
+                               mesh->o_DrT,
+                               mesh->o_DsT,
+                               mesh->o_LIFTT,
+                               mesh->o_MM,
+                               precon->o_invDegreeAP,
+                               o_r,
+                               o_z,
+                               tol);
+    
   } else if(strstr(options, "JACOBI")){
 
     iint Ntotal = mesh->Np*mesh->Nelements;

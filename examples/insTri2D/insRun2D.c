@@ -37,7 +37,7 @@ void insRun2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  ins->NtimeSteps=160*1300;
+  ins->NtimeSteps=32000;
   
   double tic_tot = 0.f, elp_tot = 0.f; 
   double tic_adv = 0.f, elp_adv = 0.f;
