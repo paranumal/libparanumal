@@ -391,7 +391,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
-  mesh->o_fQP  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
   
   for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
@@ -452,11 +451,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannMRSAABUpdateQuad3D",
-				       kernelInfo);
-
-  mesh->traceUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAABTraceUpdateQuad3D",
 				       kernelInfo);
 
   mesh->haloExtractKernel =
