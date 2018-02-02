@@ -143,7 +143,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  //trace update using same kernel
-	  mesh->UpdateKernel(mesh->MRABNhaloElements[lev],
+	  mesh->updateKernel(mesh->MRABNhaloElements[lev],
 			     mesh->o_MRABhaloIds[lev],
 			     mesh->MRSAAB_C[lev-1], //
 			     mesh->MRAB_B[id+0], //
