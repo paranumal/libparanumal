@@ -90,8 +90,9 @@ using Index=std::uint32_t;
 
 struct Quad
 {
-  Index vertex[4];
-  bool on_edge[4];
+  Index vertex[4]; //the physical location of the quad
+  bool on_edge[4]; //marks the edge
+  int face; //which face of the cube the quad is on
 };
 
 struct ColorPosition
@@ -118,12 +119,12 @@ namespace prism
 
   static const QuadList quads=
     {
-      {{0,2,7,5},{true,true,true,true}},
-      {{5,7,6,4},{true,true,true,true}},
-      {{4,6,3,1},{true,true,true,true}},
-      {{1,3,2,0},{true,true,true,true}},
-      {{0,5,4,1},{true,true,true,true}},
-      {{2,3,6,7},{true,true,true,true}}
+      {{0,2,7,5},{true,true,true,true},0},
+      {{5,7,6,4},{true,true,true,true},1},
+      {{4,6,3,1},{true,true,true,true},2},
+      {{1,3,2,0},{true,true,true,true},3},
+      {{0,5,4,1},{true,true,true,true},4},
+      {{2,3,6,7},{true,true,true,true},5}
     };
 }
 
@@ -189,10 +190,10 @@ QuadList subdivide_4(VertexList& vertices,
       mid[4] = vertex_for_edge(lookup, vertices, mark_verts, mid[0],mid[2]);
       mark_verts.back() = false;
 
-      result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]}});
-      result.push_back({{each.vertex[1], mid[1],mid[4], mid[0]},{each.on_edge[1],false,false,each.on_edge[0]}});
-      result.push_back({{each.vertex[2], mid[2],mid[4], mid[1]},{each.on_edge[2],false,false,each.on_edge[1]}});
-      result.push_back({{each.vertex[3], mid[3],mid[4], mid[2]},{each.on_edge[3],false,false,each.on_edge[2]}});
+      result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face});
+      result.push_back({{each.vertex[1], mid[1],mid[4], mid[0]},{each.on_edge[1],false,false,each.on_edge[0]},each.face});
+      result.push_back({{each.vertex[2], mid[2],mid[4], mid[1]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
+      result.push_back({{each.vertex[3], mid[3],mid[4], mid[2]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
     }
 
   return result;
@@ -235,7 +236,8 @@ void make_icosphere(int subdivisions, VertexList &vertices, std::vector<bool> &m
 
 int main(int argc, char **argv){
 
-  bool trim_edge = false;
+  bool trim_edge = false; //set to true to remove cube edge entirely
+  bool mark_edge = true; //adds a tag to mark cube face matching each element face
 
   int Nref = (argc==2) ? atoi(argv[1]): 0;
   
@@ -283,16 +285,33 @@ int main(int argc, char **argv){
   
   j = 1;
   for(std::vector<int>::size_type i = 0; i != quads.size(); i++) {
-    if (!(quads[i].on_edge[0] || quads[i].on_edge[1] || quads[i].on_edge[2] || quads[i].on_edge[3]) || !trim_edge)
+    //
+    if (!trim_edge || !(quads[i].on_edge[0] ||
+			quads[i].on_edge[1] ||
+			quads[i].on_edge[2] ||
+			quads[i].on_edge[3]))
       {
-	cout
-	  << j << " "
-	  << " 3 2 2 6 " 
-	  <<  vertex_offsets[quads[i].vertex[0]] << " "
-	  <<  vertex_offsets[quads[i].vertex[1]] << " "
-	  <<  vertex_offsets[quads[i].vertex[2]] << " "
-	  <<  vertex_offsets[quads[i].vertex[3]]
-	  <<  endl;
+
+	if (mark_edge) 
+	  cout
+	    << j << " "
+	    << " 3 3 2 6 "
+	    <<  quads[i].face << " "
+	    <<  vertex_offsets[quads[i].vertex[0]] << " "
+	    <<  vertex_offsets[quads[i].vertex[1]] << " "
+	    <<  vertex_offsets[quads[i].vertex[2]] << " "
+	    <<  vertex_offsets[quads[i].vertex[3]]
+	    <<  endl;
+	else
+	  cout
+	    << j << " "
+	    << " 3 2 2 6 "
+	    <<  vertex_offsets[quads[i].vertex[0]] << " "
+	    <<  vertex_offsets[quads[i].vertex[1]] << " "
+	    <<  vertex_offsets[quads[i].vertex[2]] << " "
+	    <<  vertex_offsets[quads[i].vertex[3]]
+	    <<  endl;
+	  
 	++j;
       }
   }
