@@ -40,7 +40,7 @@ boltzmannOccaSetupQuad3D.o \
 boltzmannPlotLevels.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
+../../src/meshLoadReferenceNodesQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshParallelConnectNodes.o\

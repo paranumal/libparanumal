@@ -305,8 +305,8 @@ typedef struct {
 
 
 
-  iint *cubeFaceNumber; //ST: Mesh boundary logic for cubed sphere
-
+  iint *cubeFaceNumber;   //ST: Mesh boundary logic for cubed sphere
+  dfloat *dualProjMatrix; //    Fixed matrix applies the dual mapping
 
 
 
