@@ -48,7 +48,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     if(mesh->pmlNelements){	
     	mesh->device.finish();
        occa::tic("PML_volumeKernel");
-
+     
     // mesh->pmlVolumeKernel(mesh->pmlNelements,
     //                       mesh->o_pmlElementIds,
     //                       mesh->o_pmlIds,
@@ -67,8 +67,11 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     //                       mesh->o_rhsq,
     //                       mesh->o_pmlrhsqx,
     //                       mesh->o_pmlrhsqy);
+    
 
 
+    // Just testing advection trick
+    if(strstr(options, "CUBATURE")){ 
      mesh->pmlVolumeKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
@@ -87,6 +90,32 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_rhsq,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
+    }
+
+    else{
+       mesh->pmlVolumeKernel(mesh->pmlNelements,
+                          mesh->o_pmlElementIds,
+                          mesh->o_pmlIds,
+                          ramp, 
+                          drampdt,
+                          mesh->Nrhs,
+                          mesh->shiftIndex,
+                          mesh->o_vgeo,
+                          mesh->o_pmlSigmaX,
+                          mesh->o_pmlSigmaY,
+                          mesh->o_pmlBetaX,
+                          mesh->o_pmlBetaY,
+                          mesh->o_DrT,
+                          mesh->o_DsT,
+                          mesh->o_q,
+                          mesh->o_pmlqx,
+                          mesh->o_pmlqy,
+                          mesh->o_rhsq,
+                          mesh->o_pmlrhsqx,
+                          mesh->o_pmlrhsqy);
+
+    }
+
       //
        mesh->device.finish();
       occa::toc("PML_volumeKernel");	

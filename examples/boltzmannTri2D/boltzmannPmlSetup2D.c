@@ -528,82 +528,103 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
       
    free(pmlIds);
- //    //
-    printf("Wwitting Pml profile\n" );
-     iint fid = 0; 
- for (iint es=0;es<mesh->pmlNelements;es++){
-       iint e     = mesh->pmlElementIds[es];
-       iint pmlId = mesh->pmlIds[es];   
-    for(iint n=0;n<Nnodes;n++){
-      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlBetaX[mesh->Np*e+n];
-      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlBetaY[mesh->Np*e+n];
-    }
-  }
 
 
+
+  #if 0
+       //
+ //    printf("Wwitting Pml profile\n" );
+ //     iint fid = 0; 
+ // for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];   
+ //    for(iint n=0;n<mesh->Np;n++){
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlBetaX[mesh->Np*e+n];
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlBetaY[mesh->Np*e+n];
+ //    }
+ //  }
+ 
   char fname[BUFSIZ];
   sprintf(fname, "pmlProfile1.vtu");
   boltzmannPlotVTU2D(mesh, fname);
 
-  #if 0
-   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-   mesh->o_cubProjectT.copyTo(cubProjectT);
-    // free(pmlIds);
-     iint fid = 0; 
- for (iint es=0;es<mesh->pmlNelements;es++){
-       iint e     = mesh->pmlElementIds[es];
-       iint pmlId = mesh->pmlIds[es];   
-    for(iint n=0;n<mesh->Np;n++)
-    {
-      dfloat q1 = 0; dfloat q2 = 0; 
-      for(iint m=0; m<mesh->cubNp;++m){
-         dfloat prj = cubProjectT[m*mesh->Np+n];
-         q1 += prj*mesh->pmlSigmaX[Nnodes*pmlId + m];
-         q2 += prj*mesh->pmlSigmaY[Nnodes*pmlId + m];
-      }
+  //    //
+ //    printf("Wwitting Pml profile\n" );
+ //     iint fid = 0; 
+ // for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];   
+ //    for(iint n=0;n<Nnodes;n++){
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlSigmaX[mesh->Np*e+n];
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlSigmaY[mesh->Np*e+n];
+ //    }
+ //  }
 
-      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
-      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
-    }
-  }
+
+ //  char fname[BUFSIZ];
+ //  sprintf(fname, "pmlProfile1.vtu");
+ //  boltzmannPlotVTU2D(mesh, fname);
+
+
+
+ //   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+ //   mesh->o_cubProjectT.copyTo(cubProjectT);
+ //    // free(pmlIds);
+ //     iint fid = 0; 
+ // for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];   
+ //    for(iint n=0;n<mesh->Np;n++)
+ //    {
+ //      dfloat q1 = 0; dfloat q2 = 0; 
+ //      for(iint m=0; m<mesh->cubNp;++m){
+ //         dfloat prj = cubProjectT[m*mesh->Np+n];
+ //         q1 += prj*mesh->pmlSigmaX[Nnodes*pmlId + m];
+ //         q2 += prj*mesh->pmlSigmaY[Nnodes*pmlId + m];
+ //      }
+
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
+ //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
+ //    }
+ //  }
   
 
-  // char fname[BUFSIZ];
-  // sprintf(fname, "pmlProfile1.vtu");
-  // boltzmannPlotVTU2D(mesh, fname);
+ //  // char fname[BUFSIZ];
+ //  // sprintf(fname, "pmlProfile1.vtu");
+ //  // boltzmannPlotVTU2D(mesh, fname);
 
-   //
-  printf("NonPmlElements: %d  PmlElements: %d \n", mesh->nonPmlNelements, mesh->pmlNelements);
+ //   //
+ //  printf("NonPmlElements: %d  PmlElements: %d \n", mesh->nonPmlNelements, mesh->pmlNelements);
 
   
-  for (iint es=0;es<mesh->nonPmlNelements;es++){
-       iint e      = mesh->nonPmlElementIds[es];
-       iint id = e*mesh->Nverts;  
-        dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
-        dfloat x2 = mesh->EX[id+1];
-        dfloat x3 = mesh->EX[id+2];
+ //  for (iint es=0;es<mesh->nonPmlNelements;es++){
+ //       iint e      = mesh->nonPmlElementIds[es];
+ //       iint id = e*mesh->Nverts;  
+ //        dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+ //        dfloat x2 = mesh->EX[id+1];
+ //        dfloat x3 = mesh->EX[id+2];
 
-        dfloat y1 = mesh->EY[id+0]; /* y-coordinates of vertices */
-        dfloat y2 = mesh->EY[id+1];
-        dfloat y3 = mesh->EY[id+2];
-       printf("Element: %d  x1: %.5f x2: %.5f x3: %.5f y1: %.5f y2: %.5f y3: %.5f \n", e, x1,x2,x3,y1,y2,y3);
-  }   
+ //        dfloat y1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+ //        dfloat y2 = mesh->EY[id+1];
+ //        dfloat y3 = mesh->EY[id+2];
+ //       printf("Element: %d  x1: %.5f x2: %.5f x3: %.5f y1: %.5f y2: %.5f y3: %.5f \n", e, x1,x2,x3,y1,y2,y3);
+ //  }   
 
 
-  for (iint es=0;es<mesh->pmlNelements;es++){
-       iint e     = mesh->pmlElementIds[es];
-       iint pmlId = mesh->pmlIds[es];
-       iint id = e*mesh->Nverts;  
-       //
-       dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
-        dfloat x2 = mesh->EX[id+1];
-        dfloat x3 = mesh->EX[id+2];
+ //  for (iint es=0;es<mesh->pmlNelements;es++){
+ //       iint e     = mesh->pmlElementIds[es];
+ //       iint pmlId = mesh->pmlIds[es];
+ //       iint id = e*mesh->Nverts;  
+ //       //
+ //       dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+ //        dfloat x2 = mesh->EX[id+1];
+ //        dfloat x3 = mesh->EX[id+2];
 
-        dfloat y1 = mesh->EY[id+0]; /* y-coordinates of vertices */
-        dfloat y2 = mesh->EY[id+1];
-        dfloat y3 = mesh->EY[id+2];
-       printf("Element: %d   PmlId = %d x1: %.5f x2: %.5f x3: %.5f y1: %.5f y2: %.5f y3: %.5f\n", e, pmlId, x1,x2,x3,y1,y2,y3);
-  }   
+ //        dfloat y1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+ //        dfloat y2 = mesh->EY[id+1];
+ //        dfloat y3 = mesh->EY[id+2];
+ //       printf("Element: %d   PmlId = %d x1: %.5f x2: %.5f x3: %.5f y1: %.5f y2: %.5f y3: %.5f\n", e, pmlId, x1,x2,x3,y1,y2,y3);
+ //  }   
 
 
 
