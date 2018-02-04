@@ -305,7 +305,7 @@ typedef struct {
 
 
 
-  dfloat *cubeFaceNumber; //ST: Mesh boundary logic for cubed sphere
+  iint *cubeFaceNumber; //ST: Mesh boundary logic for cubed sphere
 
 
 

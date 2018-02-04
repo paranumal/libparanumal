@@ -96,7 +96,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->cubeFaceNumber
-    = (dfloat *) calloc(NquadrilateralsLocal,sizeof(dfloat));
+    = (iint *) calloc(NquadrilateralsLocal,sizeof(iint));
   
   mesh->EToV 
     = (iint*) calloc(NquadrilateralsLocal*mesh->Nverts, 
@@ -105,6 +105,11 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
   mesh->elementInfo
     = (int*) calloc(NquadrilateralsLocal,sizeof(int));
 
+  //allocate space to store reference vertices
+  //(needed to enforce rotation)
+
+  dfloat *refNodes = (dfloat *) calloc(6*mesh->Nverts*3,sizeof(dfloat));
+  
   /* scan through file looking for quadrilateral elements */
   int cnt=0, bcnt=0;
   Nquadrilaterals = 0;
@@ -125,28 +130,156 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
-	sscanf(buf, "%*d%*d%*d %d %*d %d %d%d%d%d", 
+	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d%d%d", 
 	       mesh->elementInfo+cnt,mesh->cubeFaceNumber+cnt,&v1, &v2, &v3, &v4);
-
-#if 0
-	// check orientation
-	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
-	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
-	dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
-	if(J<0){
+	
+	// check orientation using a*(bxc) > 0
+	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1];
+	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye3 = VY[v3-1];
+	dfloat ze1 = VZ[v1-1], ze2 = VZ[v2-1], ze3 = VZ[v3-1];
+	dfloat J = xe1*ye2*ze3 - xe1*ze2*ye3 + ye1*ze2*xe3 - ye1*xe2*ze3 + ze1*xe2*ye3 - ze1*ye2*xe3;
+	if (J<0) {
 	  iint v4tmp = v4;
 	  v4 = v2;
 	  v2 = v4tmp;
 	  printf("unwarping element\n");
 	}
-#endif
 	
-	/* read vertex triplet for trianngle */
-	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
-	mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
-	mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
-	mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
-	++cnt;
+	int faceId = mesh->cubeFaceNumber[cnt];
+	
+	//check if we have a new reference node
+	if (refNodes[faceId*12] == 0 && refNodes[faceId*12+1] == 0 && refNodes[faceId*12+2] == 0) {
+	  //printf("adding ref node %d\n",faceId);
+	  
+	  refNodes[faceId*12] = VX[v1 - 1];
+	  refNodes[faceId*12+1] = VY[v1 - 1];
+	  refNodes[faceId*12+2] = VZ[v1 - 1];
+
+	  refNodes[faceId*12+3] = VX[v2 - 1];
+	  refNodes[faceId*12+4] = VY[v2 - 1];
+	  refNodes[faceId*12+5] = VZ[v2 - 1];
+
+	  refNodes[faceId*12+6] = VX[v3 - 1];
+	  refNodes[faceId*12+7] = VY[v3 - 1];
+	  refNodes[faceId*12+8] = VZ[v3 - 1];
+
+	  refNodes[faceId*12+9] = VX[v4 - 1];
+	  refNodes[faceId*12+10] = VY[v4 - 1];
+	  refNodes[faceId*12+11] = VZ[v4 - 1];
+
+	  /* read vertex triplet for trianngle */
+	  mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
+	  mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
+	  mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
+	  mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
+	  ++cnt;
+	}
+	//otherwise, check orientation against reference
+	//maximize ((a1 + a2)x(b1+a2))*((a1+a2)x(a1+b2))
+	else {
+	  dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1], xe4 = VX[v4-1];
+	  dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye3 = VY[v3-1], ye4 = VY[v4-1];
+	  dfloat ze1 = VZ[v1-1], ze2 = VZ[v2-1], ze3 = VZ[v3-1], ze4 = VZ[v4-1];
+
+	  dfloat xr1 = refNodes[faceId*12], xr2 = refNodes[faceId*12+3],
+	         xr3 = refNodes[faceId*12+6], xr4 = refNodes[faceId*12+9];
+	  dfloat yr1 = refNodes[faceId*12+1], yr2 = refNodes[faceId*12+4],
+	         yr3 = refNodes[faceId*12+7], yr4 = refNodes[faceId*12+10];
+	  dfloat zr1 = refNodes[faceId*12+2], zr2 = refNodes[faceId*12+5],
+         	 zr3 = refNodes[faceId*12+8], zr4 = refNodes[faceId*12+11];
+	  int maxNode = -1;
+	  dfloat maxVal = -1;
+
+	  /*printf("refx: %lf %lf %lf %lf \n",xr1,xr2,xr3,xr4);
+	  printf("refy: %lf %lf %lf %lf \n",yr1,yr2,yr3,yr4);
+	  printf("refz: %lf %lf %lf %lf \n",zr1,zr2,zr3,zr4);
+
+	  printf("elemx: %lf %lf %lf %lf \n",xe1,xe2,xe3,xe4);
+	  printf("elemy: %lf %lf %lf %lf \n",ye1,ye2,ye3,ye4);
+	  printf("elemz: %lf %lf %lf %lf \n",ze1,ze2,ze3,ze4);*/
+	  
+	  //test first edge pairing
+	  
+	  //find elements of cross product
+	  dfloat cross1x = (ye1+yr1)*(ze2+zr1) - (ze1+zr1)*(ye2+yr1);
+	  dfloat cross1y = (ze1+zr1)*(xr1+xe2) - (xe1+xr1)*(ze2+zr1);
+	  dfloat cross1z = (xe1+xr1)*(ye2+yr1) - (ye1+yr1)*(xe2+xr1);
+	  
+	  dfloat cross2x = (ye1+yr1)*(zr2+ze1) - (zr1+ze1)*(yr2+ye1);
+	  dfloat cross2y = (ze1+zr1)*(xr2+xe1) - (xr1+xe1)*(zr2+ze1);
+	  dfloat cross2z = (xe1+xr1)*(yr2+ye1) - (yr1+ye1)*(xr2+xe1);
+
+	  dfloat dotp = cross1x*cross2x + cross1y*cross2y + cross1z*cross2z;
+
+	  //printf("%lf   ",dotp);
+	  
+	  maxVal = mymax(maxVal,dotp);
+	  if (maxVal == dotp) maxNode = 0;
+
+	  //test second edge pairing
+
+	  //find elements of cross product
+	  cross1x = (ye2+yr1)*(ze3+zr1) - (ze2+zr1)*(ye3+yr1);
+	  cross1y = (ze2+zr1)*(xr1+xe3) - (xe2+xr1)*(ze3+zr1);
+	  cross1z = (xe2+xr1)*(ye3+yr1) - (ye2+yr1)*(xe3+xr1);
+	  
+	  cross2x = (ye2+yr1)*(zr2+ze2) - (zr1+ze2)*(yr2+ye2);
+	  cross2y = (ze2+zr1)*(xr2+xe2) - (xr1+xe2)*(zr2+ze2);
+	  cross2z = (xe2+xr1)*(yr2+ye2) - (yr1+ye2)*(xr2+xe2);
+
+	  dotp = cross1x*cross2x + cross1y*cross2y + cross1z*cross2z;
+
+	  //printf("%lf   ",dotp);
+	  
+	  maxVal = mymax(maxVal,dotp);
+	  if (maxVal == dotp) maxNode = 1;
+
+	  //test third edge pairing
+
+	  //find elements of cross product
+	  cross1x = (ye3+yr1)*(ze4+zr1) - (ze3+zr1)*(ye4+yr1);
+	  cross1y = (ze3+zr1)*(xr1+xe4) - (xe3+xr1)*(ze4+zr1);
+	  cross1z = (xe3+xr1)*(ye4+yr1) - (ye3+yr1)*(xe4+xr1);
+	  
+	  cross2x = (ye3+yr1)*(zr2+ze3) - (zr1+ze3)*(yr2+ye3);
+	  cross2y = (ze3+zr1)*(xr2+xe3) - (xr1+xe3)*(zr2+ze3);
+	  cross2z = (xe3+xr1)*(yr2+ye3) - (yr1+ye3)*(xr2+xe3);
+
+	  dotp = cross1x*cross2x + cross1y*cross2y + cross1z*cross2z;
+
+	  //printf("%lf   ",dotp);
+	  
+	  maxVal = mymax(maxVal,dotp);
+	  if (maxVal == dotp) maxNode = 2;	  
+
+	  //test final edge pairing
+
+	  //find elements of cross product
+	  cross1x = (ye4+yr1)*(ze1+zr1) - (ze4+zr1)*(ye1+yr1);
+	  cross1y = (ze4+zr1)*(xr1+xe1) - (xe4+xr1)*(ze1+zr1);
+	  cross1z = (xe4+xr1)*(ye1+yr1) - (ye4+yr1)*(xe1+xr1);
+	  
+	  cross2x = (ye4+yr1)*(zr2+ze4) - (zr1+ze4)*(yr2+ye4);
+	  cross2y = (ze4+zr1)*(xr2+xe4) - (xr1+xe4)*(zr2+ze4);
+	  cross2z = (xe4+xr1)*(yr2+ye4) - (yr1+ye4)*(xr2+xe4);
+
+	  dotp = cross1x*cross2x + cross1y*cross2y + cross1z*cross2z;
+
+	  //printf("%lf   ",dotp);
+
+	  maxVal = mymax(maxVal,dotp);
+	  if (maxVal == dotp) maxNode = 3;
+
+	  if (maxNode == -1) {printf("Bad element alignment. Check face numbering\n");}
+	  else {
+	    /* read shifted vertex triplet for trianngle */
+	    mesh->EToV[cnt*mesh->Nverts+((0+maxNode)%4)] = v1-1;
+	    mesh->EToV[cnt*mesh->Nverts+((1+maxNode)%4)] = v2-1;
+	    mesh->EToV[cnt*mesh->Nverts+((2+maxNode)%4)] = v3-1;
+	    mesh->EToV[cnt*mesh->Nverts+((3+maxNode)%4)] = v4-1;
+	    ++cnt;
+	  }
+	}
       }
       ++Nquadrilaterals;
     }
