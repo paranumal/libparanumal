@@ -60,8 +60,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.1;    // Set Mach number
-    mesh->Re = 100.;  // Set Reynolds number was 1000
+    mesh->Ma = 0.2;    // Set Mach number
+    mesh->Re = 200;  // Set Reynolds number was 100
     //
     Uref = 1.0;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
@@ -76,7 +76,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 50.0;
+    mesh->finalTime = 100.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -158,7 +158,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       #endif
 
 
-      #if 0
+#if 0
 
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
@@ -176,39 +176,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       mesh->q[cnt+3] = q4bar;
       mesh->q[cnt+4] = q5bar;
       mesh->q[cnt+5] = q6bar;  
-      
-      // mesh->q[cnt+0] = exp(-30*(x*x+y*y)); // uniform density, zero flow
-      // mesh->q[cnt+1] = 0.f;
-      // mesh->q[cnt+2] = 0.f;
-      // mesh->q[cnt+3] = 0.f;
-      // mesh->q[cnt+4] = 0.f;
-      // mesh->q[cnt+5] = 0.f;  
+    
+#endif
 
-      #endif
-
-       #if 0
-      
-      dfloat b     = 0.1;
-      dfloat epsilon = 0.5; 
-      dfloat rhor  = epsilon*exp(-log(2.)*(x*x + y*y)/b);
-      mesh->q[cnt+0] = q1bar+rhor; 
-      mesh->q[cnt+1] = q2bar;
-      mesh->q[cnt+2] = q3bar;
-      mesh->q[cnt+3] = q4bar;
-      mesh->q[cnt+4] = q5bar;
-      mesh->q[cnt+5] = q6bar;  
-      
-      // mesh->q[cnt+0] = exp(-30*(x*x+y*y)); // uniform density, zero flow
-      // mesh->q[cnt+1] = 0.f;
-      // mesh->q[cnt+2] = 0.f;
-      // mesh->q[cnt+3] = 0.f;
-      // mesh->q[cnt+4] = 0.f;
-      // mesh->q[cnt+5] = 0.f;  
-
-      #endif
-
-
-      #if 1
+#if 1
 
       mesh->q[cnt+0] = q1bar; // uniform density, zero flow
       mesh->q[cnt+1] = ramp*q2bar;
@@ -216,7 +187,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       mesh->q[cnt+3] = ramp*ramp*q4bar;
       mesh->q[cnt+4] = ramp*ramp*q5bar;
       mesh->q[cnt+5] = ramp*ramp*q6bar;  
-      #endif
+#endif
 
       cnt += mesh->Nfields;
     }
@@ -225,7 +196,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   //
 
   // Set stable time step size for each element
-  dfloat cfl          = 0.25; 
+  dfloat cfl          = 0.333; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -245,7 +216,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
-      dfloat htest = 0.5/(sJ*invJ);
+      dfloat htest = 2.0/(sJ*invJ);
       hmin = mymin(hmin, htest); 
     }
 
@@ -280,7 +251,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     
   
    //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-   // dt = 10e-6; // !!!!!!!!!!!!!!!!
+   //dt = 10e-6; // !!!!!!!!!!!!!!!!
    //!!!!!!
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -712,7 +683,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (float).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (float).0f);
+  kernelInfo.addDefine("p_pmlAlpha", (float)0.0f);
 
 
 

@@ -256,7 +256,8 @@ typedef struct {
   iint   *pmlElementList; // deprecated
 
   iint Ntscale; // Will be removed, for time accuracy test
-
+  
+  dfloat *pmlBetaX, *pmlBetaY;
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
@@ -381,7 +382,7 @@ typedef struct {
 
   occa::memory o_pmlElementList;
 
-  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
+  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ, o_pmlBetaX, o_pmlBetaY;
   occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
   occa::memory o_pmlqx,o_pmlqy, o_pmlqz; 
   occa::memory o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;

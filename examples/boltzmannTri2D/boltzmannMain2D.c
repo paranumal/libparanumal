@@ -84,9 +84,6 @@ int main(int argc, char **argv){
     
     for(iint i=0; i<1;i++){
 
-      // if(i==0)
-      // mesh->Ntscale=1;
-      // else
       mesh->Ntscale=i;
 
       printf("Setup Boltzmann Solver: \n");

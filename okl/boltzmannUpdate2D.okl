@@ -261,8 +261,8 @@ kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
         const iint pmlId = pmlIds[es];
         const iint id  = p_Nfields*(e*p_Np + n);
         const iint pid = p_Nfields*(pmlId*p_Np + n);
-
-
+        //
+        
       for (iint fld =0; fld<p_Nfields; ++fld){
 
         const dfloat r_q  = q [id  + fld];

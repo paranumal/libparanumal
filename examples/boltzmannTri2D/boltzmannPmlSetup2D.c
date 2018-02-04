@@ -10,13 +10,14 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   // dfloat xsigma  = Sigma[mesh->Ntscale]; dfloat  ysigma  = Sigma[mesh->Ntscale];
 
 
-  dfloat xsigma  = 200., ysigma  = 200.;
+  dfloat xsigma    = 100., ysigma  = 100.;
   
-  dfloat xsmin = -2.0, xsmax = 2.0; // map x to this range to control erf profile 
-  dfloat ysmin = -2.0, ysmax = 2.0; // map y to this range to control erf profile 
+  dfloat xsmin    = -2.0, xsmax = 2.0; // map x to this range to control erf profile 
+  dfloat ysmin    = -2.0, ysmax = 2.0; // map y to this range to control erf profile 
 
-  dfloat q1    = 0.2, q2 = 0.8;    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
-
+  dfloat q1       = 0.0, q2 = sqrt(2);    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
+  dfloat alphamax = 0.2; 
+  dfloat betamax  = 1.0; 
 // fifth order polynomialcoefficients for q1=0.2 and q2=0.8;
   dfloat c5 =  6.0 ;
   dfloat c4 = -15.0;
@@ -86,21 +87,21 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
 
     iint Nnodes = 0;
-    // if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
-    //   //
-    //   printf("Setting PML Coefficient for Cubature Integration\n");
-    //   //set up damping parameter
-    //   mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
-    //   mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
-    //   Nnodes = mesh->cubNp;    
-    // }
-    //  else{
+    if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+      //
+      printf("Setting PML Coefficient for Cubature Integration\n");
+      //set up damping parameter
+      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
+      Nnodes = mesh->cubNp;    
+    }
+     else{
       printf("Setting PML Coefficients for Nodal Collocation Integration\n");
       //set up damping parameter
       mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
       mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
       Nnodes = mesh->Np; 
-    // }
+    }
    
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
@@ -152,6 +153,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     dfloat xminScale = pow(pmlxmin-xmin,order);
     dfloat ymaxScale = pow(pmlymax-ymax,order);
     dfloat yminScale = pow(pmlymin-ymin,order);
+
 
     printf("xmaxScale = %.10e \n", xmaxScale);
 
@@ -327,11 +329,114 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
             if(y>ymax || y<ymin)
              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
           }
+
+
         }
 
       }
 
     }
+
+
+    
+    // Setup Pml Parameter beta and initiliaze to zero 
+    mesh->pmlBetaX = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    mesh->pmlBetaY = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+
+    dfloat betap =  1.0; 
+    dfloat betam =  1.0; // was -1.0
+
+    dfloat betaxMax = sqrt(3.0);  // was 1.0
+    dfloat betayMax = sqrt(3.0); // was 1.0
+   
+    for (iint es=0;es<mesh->pmlNelements;es++){
+        iint e     = mesh->pmlElementIds[es];
+        iint pmlId = mesh->pmlIds[es];
+        iint type  = mesh->elementInfo[e];
+        iint id    = e*mesh->Nverts;
+
+        dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
+        dfloat xe2 = mesh->EX[id+1];
+        dfloat xe3 = mesh->EX[id+2];
+
+        dfloat ye1 = mesh->EY[id+0]; /* y-coordinates of vertices */
+        dfloat ye2 = mesh->EY[id+1];
+        dfloat ye3 = mesh->EY[id+2];
+
+        for(iint n=0;n<mesh->Np;++n){ /* for each node */
+            dfloat x = mesh->x[n + e*mesh->Np];
+            dfloat y = mesh->y[n + e*mesh->Np];
+            //
+          if (type==100) { //X Pml
+            if(x>xmax)
+              mesh->pmlBetaX[mesh->Np*e + n] = betap*betaxMax*pow(x-xmax,order)/xmaxScale;
+            if(x<xmin)
+              mesh->pmlBetaX[mesh->Np*e + n] = betam*betaxMax*pow(x-xmin,order)/xminScale;
+          } else if (type==200) { //Y Pml
+            if(y>ymax)
+              mesh->pmlBetaY[mesh->Np*e + n] = betap*betayMax*pow(y-ymax,order)/ymaxScale;
+            if(y<ymin)
+              mesh->pmlBetaY[mesh->Np*e + n] = betam*betayMax*pow(y-ymin,order)/yminScale;
+          } else if (type==300) { //XY Pml
+            if(x>xmax)
+              mesh->pmlBetaX[mesh->Np*e + n] = betap*betaxMax*pow(x-xmax,order)/xmaxScale;
+            if(x<xmin)
+              mesh->pmlBetaX[mesh->Np*e + n] = betam*betaxMax*pow(x-xmin,order)/xminScale;
+            if(y>ymax)
+              mesh->pmlBetaY[mesh->Np*e + n] = betap*betayMax*pow(y-ymax,order)/ymaxScale;
+            if(y<ymin)
+              mesh->pmlBetaY[mesh->Np*e + n] = betam*betayMax*pow(y-ymin,order)/yminScale;
+          }  
+
+#if 0
+          dfloat qx=0,      qy = 0, taux = 0,  tauy = 0;
+
+          if (type==100) { //X Pml
+            if(x>xmax)
+              qx   = (x-xmax)/(pmlxmax-xmax);
+            if(x<xmin)
+              qx    = (x-xmin)/(pmlxmin-xmin);
+          } else if (type==200) { //Y Pml
+            if(y>ymax)
+              qy    = (y-ymax)/(pmlymax-ymax);
+            if(y<ymin)
+              qy    = (y-ymin)/(pmlymin-ymin);
+          } else if (type==300) { //XY Pml
+            if(x>xmax)
+             qx   = (x-xmax)/(pmlxmax-xmax);
+            if(x<xmin)
+             qx    = (x-xmin)/(pmlxmin-xmin);
+            if(y>ymax)
+             qy    = (y-ymax)/(pmlymax-ymax);
+            if(y<ymin)
+             qy    = (y-ymin)/(pmlymin-ymin);
+          }
+          // Strech field to  q1< field <q2
+          taux  =  (qx-q1)/(q2-q1);  tauy  =  (qy-q1)/(q2-q1);
+
+
+           if (type==100) { //X Pml
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+          } else if (type==200) { //Y Pml
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+          } else if (type==300) { //XY Pml
+            if(x>xmax || x<xmin)
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+            if(y>ymax || y<ymin)
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+          }
+          dfloat dist = sqrt(taux*taux + tauy*tauy); // r coordinate
+          dfloat beta = pow(dist,2);  // use quadratic profile
+
+          beta = dist<=q1 ? 0. : beta;  
+          beta = dist>=q2 ? 1. : beta; 
+          mesh->pmlBeta[mesh->Np*e + n] = betamax*beta;
+          printf("%d :  %.8e\n", e, betamax*beta );
+#endif
+        }
+      } 
+
+
 
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
@@ -412,24 +517,34 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     }
 
     if (mesh->pmlNelements) {
+      mesh->o_pmlBetaX      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaX);
+      mesh->o_pmlBetaY      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaY);
       mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
       mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
       mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);
       mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
     }
+
+
       
    free(pmlIds);
  //    //
- //    printf("Wwitting Pml profile\n" );
- //     iint fid = 0; 
- // for (iint es=0;es<mesh->pmlNelements;es++){
- //       iint e     = mesh->pmlElementIds[es];
- //       iint pmlId = mesh->pmlIds[es];   
- //    for(iint n=0;n<Nnodes;n++){
- //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlSigmaX[Nnodes*pmlId + n];
- //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlSigmaY[Nnodes*pmlId + n];
- //    }
-  // }
+    printf("Wwitting Pml profile\n" );
+     iint fid = 0; 
+ for (iint es=0;es<mesh->pmlNelements;es++){
+       iint e     = mesh->pmlElementIds[es];
+       iint pmlId = mesh->pmlIds[es];   
+    for(iint n=0;n<Nnodes;n++){
+      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlBetaX[mesh->Np*e+n];
+      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlBetaY[mesh->Np*e+n];
+    }
+  }
+
+
+  char fname[BUFSIZ];
+  sprintf(fname, "pmlProfile1.vtu");
+  boltzmannPlotVTU2D(mesh, fname);
+
   #if 0
    dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
    mesh->o_cubProjectT.copyTo(cubProjectT);
@@ -453,9 +568,9 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   }
   
 
-  char fname[BUFSIZ];
-  sprintf(fname, "pmlProfile1.vtu");
-  boltzmannPlotVTU2D(mesh, fname);
+  // char fname[BUFSIZ];
+  // sprintf(fname, "pmlProfile1.vtu");
+  // boltzmannPlotVTU2D(mesh, fname);
 
    //
   printf("NonPmlElements: %d  PmlElements: %d \n", mesh->nonPmlNelements, mesh->pmlNelements);
