@@ -13,7 +13,6 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
     iint nnz;
     nonZero_t *A;
-    hgs_t *hgs;
 
     iint Nnum = mesh->Np*mesh->Nelements;
     iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
@@ -21,7 +20,7 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTet3D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTet3D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+      ellipticBuildContinuousTet3D(mesh,lambda,&A,&nnz,&(precon->ogs),globalStarts, options);
     }
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
@@ -42,10 +41,31 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Cols,
                        Vals,
                        solver->allNeumann,
-                       solver->allNeumannPenalty,
-                       hgs);
+                       solver->allNeumannPenalty);
 
     free(A); free(Rows); free(Cols); free(Vals);
+
+    if (strstr(options,"CONTINUOUS")) {//tell parAlmond to gather this level
+      agmgLevel *baseLevel = precon->parAlmond->levels[0];
+
+      baseLevel->gatherLevel = true;
+      baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+      baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+
+      baseLevel->weightedInnerProds = false;
+
+      baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
+      baseLevel->gatherArgs[0] = (void *) solver;
+      baseLevel->gatherArgs[1] = (void *) precon->ogs;
+      baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+      baseLevel->gatherArgs[3] = (void *) options;
+      baseLevel->scatterArgs = baseLevel->gatherArgs;
+
+      baseLevel->device_gather  = ellipticGather;
+      baseLevel->device_scatter = ellipticScatter;        
+    }
 
     if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
       agmgLevel **levels = precon->parAlmond->levels;
@@ -81,15 +101,15 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
       //set up the fine problem smoothing
       if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherOverlappingPatch(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFullPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFacePatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherLocalPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherDampedJacobi(solver, precon, levels[0], tau, lambda, BCType, options);
       }
     }
 

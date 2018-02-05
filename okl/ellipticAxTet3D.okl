@@ -73,3 +73,82 @@ kernel void ellipticAxTet3D(const int Nelements,
     }
   }
 }
+
+
+kernel void ellipticPartialAxTet3D(const int Nelements,
+                                  const iint   * restrict elementList,
+                                  const dfloat * restrict ggeo,
+                                  const dfloat * restrict SrrT,
+                                  const dfloat * restrict SrsT,
+                                  const dfloat * restrict SrtT,
+                                  const dfloat * restrict SsrT,
+                                  const dfloat * restrict SssT,
+                                  const dfloat * restrict SstT,
+                                  const dfloat * restrict StrT,
+                                  const dfloat * restrict StsT,
+                                  const dfloat * restrict SttT,
+                                  const dfloat * restrict MM,
+                                  const dfloat lambda,
+                                  const dfloat  * restrict q,
+                                  dfloat  * restrict Aq){
+  
+  for(iint e=0;e<Nelements;e++;outer0){
+
+    shared dfloat s_q[p_Np];
+
+    for(int n=0;n<p_Np;++n;inner0){
+      //prefetch q
+      const iint element = elementList[e];
+      const iint id = n + element*p_Np;
+      s_q[n] = q[id];
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_Np;++n;inner0){
+      const iint element = elementList[e];
+      const iint gid = element*p_Nggeo;
+
+      const dfloat Grr = ggeo[gid + p_G00ID];
+      const dfloat Grs = ggeo[gid + p_G01ID];
+      const dfloat Grt = ggeo[gid + p_G02ID];
+      const dfloat Gss = ggeo[gid + p_G11ID];
+      const dfloat Gst = ggeo[gid + p_G12ID];
+      const dfloat Gtt = ggeo[gid + p_G22ID];
+      const dfloat J   = ggeo[gid + p_GWJID];
+
+      dfloat qrr = 0.;
+      dfloat qrs = 0.;
+      dfloat qrt = 0.;
+      dfloat qsr = 0.;
+      dfloat qss = 0.;
+      dfloat qst = 0.;
+      dfloat qtr = 0.;
+      dfloat qts = 0.;
+      dfloat qtt = 0.;
+      dfloat qM = 0.;
+
+      occaUnroll(p_Np)
+        for (int k=0;k<p_Np;k++) {
+          qrr += SrrT[n+k*p_Np]*s_q[k];
+          qrs += SrsT[n+k*p_Np]*s_q[k];
+          qrt += SrtT[n+k*p_Np]*s_q[k];
+          qsr += SsrT[n+k*p_Np]*s_q[k];
+          qss += SssT[n+k*p_Np]*s_q[k];
+          qst += SstT[n+k*p_Np]*s_q[k];
+          qtr += StrT[n+k*p_Np]*s_q[k];
+          qts += StsT[n+k*p_Np]*s_q[k];
+          qtt += SttT[n+k*p_Np]*s_q[k];
+          qM  += MM[n+k*p_Np]*s_q[k];
+        }
+
+
+      const iint id = n + element*p_Np;
+
+      Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
+              +Grs*qsr+Gss*qss+Gst*qst 
+              +Grt*qtr+Gst*qts+Gtt*qtt 
+              +J*lambda*qM;
+    }
+  }
+}

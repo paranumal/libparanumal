@@ -1,36 +1,51 @@
 #include "ellipticTet3D.h"
 
 
-int parallelCompareRowColumn(const void *a, const void *b);
+// compare on global indices
+int parallelCompareRowColumn(const void *a, const void *b){
 
-void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
+  nonZero_t *fa = (nonZero_t*) a;
+  nonZero_t *fb = (nonZero_t*) b;
+
+  if(fa->row < fb->row) return -1;
+  if(fa->row > fb->row) return +1;
+
+  if(fa->col < fb->col) return -1;
+  if(fa->col > fb->col) return +1;
+
+  return 0;
+}
+
+void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // ------------------------------------------------------------------------------------
-  // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Np*mesh->Nelements;
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+  /* Build a gather-scatter to assemble the global masked problem */
+  iint Ntotal = mesh->Np*mesh->Nelements;
 
-  for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n];
-    globalNumbering[id] = mesh->gatherBaseIds[n];
-  }
+  iint *globalNumbering = (iint *) calloc(Ntotal,sizeof(iint));
+  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(iint)); 
+  for (iint n=0;n<mesh->Nmasked;n++) 
+    globalNumbering[mesh->maskIds[n]] = -1;
 
   // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
+  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
 
-  //use the ordering to define a gather+scatter for assembly
-  *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
+  iint *gatherMaskedBaseIds   = (iint *) calloc(Ntotal,sizeof(iint));
+  for (iint n=0;n<Ntotal;n++) {
+    iint id = mesh->gatherLocalIds[n];
+    gatherMaskedBaseIds[n] = globalNumbering[id];
+  }
 
-  // 2. Build non-zeros of stiffness matrix (unassembled)
+  //build gather scatter with masked nodes
+  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
+                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
+                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags);
+
+  // Build non-zeros of stiffness matrix (unassembled)
   iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
-  iint   *rows = (iint*) calloc(nnzLocal, sizeof(iint));
-  iint   *cols = (iint*) calloc(nnzLocal, sizeof(iint));
-  dfloat *vals = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
@@ -38,8 +53,12 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
+  int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
+  for (iint n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
+
   //Build unassembed non-zeros
-  printf("Building full matrix system\n");
+  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+
   iint cnt =0;
   for (iint e=0;e<mesh->Nelements;e++) {
 
@@ -52,7 +71,9 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
     dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
     for (iint n=0;n<mesh->Np;n++) {
+      if (mask[e*mesh->Np + n]) continue; //skip masked nodes
       for (iint m=0;m<mesh->Np;m++) {
+        if (mask[e*mesh->Np + m]) continue; //skip masked nodes
         dfloat val = 0.;
 
         val += Grr*mesh->Srr[m+n*mesh->Np];
@@ -68,16 +89,11 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-
-          vals[cnt] = val;
-          rows[cnt] = e*mesh->Np + n;
-          cols[cnt] = e*mesh->Np + m;
-
           // pack non-zero
           sendNonZeros[cnt].val = val;
           sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
           sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
-          sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + n];
+          sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
           cnt++;
         }
       }
@@ -126,9 +142,10 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   }
   *nnz = cnt+1;
 
-  free(globalNumbering); free(globalOwners);
-  free(rows); free(cols); free(vals);
+  if(rank==0) printf("done.\n");
+
   free(sendNonZeros);
+  free(globalNumbering);
 
   free(AsendCounts);
   free(ArecvCounts);

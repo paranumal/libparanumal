@@ -13,7 +13,7 @@ void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char* 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", 0);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");

@@ -27,9 +27,9 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -80,7 +80,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[n+e*mesh->Np];
 
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
-      //x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+      x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
-      x[id] = 0.;
+      //x[id] = 0.;
 
       mesh->q[id] = nrhs[n];
     }
@@ -136,9 +136,61 @@ int main(int argc, char **argv){
                            o_r);
   }
 
+  if (strstr(options,"CONTINUOUS")) {
+    solver->rhsBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCTet3D.okl",
+          "ellipticRhsBCTet3D",
+          kernelInfo);
+
+    solver->addBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAddBCTet3D.okl",
+          "ellipticAddBCTet3D",
+          kernelInfo);
+
+    dfloat zero = 0.f;
+    solver->rhsBCKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        mesh->o_sgeo,
+                        mesh->o_SrrT, mesh->o_SrsT, mesh->o_SrtT,
+                        mesh->o_SsrT, mesh->o_SssT, mesh->o_SstT,
+                        mesh->o_StrT, mesh->o_StsT, mesh->o_SttT,
+                        mesh->o_MM,
+                        mesh->o_vmapM,
+                        mesh->o_sMT,
+                        lambda,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_z,
+                        mesh->o_mapB,
+                        o_r);
+  }
+
+  // gather-scatter
+  if(strstr(options, "CONTINUOUS")){
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_r, o_r, dfloatString, "add");  
+    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
+  }
+
   // convergence tolerance
   dfloat tol = 1e-8;
   ellipticSolveTet3D(solver, lambda, tol, o_r, o_x, options);
+  //o_x.copyFrom(o_r);
+  //o_r.copyTo(r);
+  //ellipticOperator3D(solver, lambda, o_x, solver->o_Ax, options);
+  //o_x.copyFrom(solver->o_Ax);
+
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       mesh->o_z,
+                       mesh->o_mapB,
+                       o_x);
+  }
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
@@ -154,6 +206,8 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
+
+      //mesh->q[id] -= r[id];
     }
   }
 
@@ -162,7 +216,9 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU3D(mesh, "foo.vtu", 0);
+  char filename[BUFSIZ];
+  sprintf(filename, "foo_%d.vtu", rank);
+  meshPlotVTU3D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

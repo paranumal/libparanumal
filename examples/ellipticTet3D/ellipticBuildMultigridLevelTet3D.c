@@ -1,7 +1,9 @@
 #include "ellipticTet3D.h"
 
+void matrixInverse(int N, dfloat *A);
+
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
+solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf, int *BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -12,13 +14,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
 
   solver->mesh = mesh;
 
-  int N = levelDegree[n];
-  int NFine = levelDegree[n-1];
-  int NpFine = (NFine+1)*(NFine+2)*(NFine+3)/6;
-  int NpCoarse = (N+1)*(N+2)*(N+3)/6;
-
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesTet3D(mesh, N);
+  meshLoadReferenceNodesTet3D(mesh, Nc);
 
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesTet3D(mesh);
@@ -41,13 +38,20 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   meshConnectFaceNodes3D(mesh);
 
   // global nodes
-  //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
+  meshParallelConnectNodes(mesh); 
 
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
   free(mesh->z);
   free(sendBuffer);
+
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
+
+  solver->Nblock = Nblock;
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -136,6 +140,12 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
       mesh->vmapP);
 
+
+  //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
+  iint totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+
   // info for kernel construction
   occa::kernelInfo kernelInfo;
 
@@ -217,13 +227,6 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_JWID", JWID);
 
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
-
-  solver->Nblock = Nblock;
-
   //add standard boundary functions
   char *boundaryHeaderFileName;
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
@@ -236,10 +239,6 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
@@ -255,6 +254,46 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   else NblockG = mymax(1,256/mesh->Np);
   kernelInfo.addDefine("p_NblockG", NblockG);
 
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+               "meshHaloExtract3D",
+               kernelInfo);
+
+  mesh->gatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+               "gather",
+               kernelInfo);
+
+  mesh->scatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+               "scatter",
+               kernelInfo);
+
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+               "gatherScatter",
+               kernelInfo);
+
+  mesh->getKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+               "get",
+               kernelInfo);
+
+  mesh->putKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+               "put",
+               kernelInfo);
+
+  mesh->sumKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+               "sum",
+               kernelInfo);
+
+  mesh->addScalarKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+               "addScalar",
+               kernelInfo);
+
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
            "scaledAdd",
@@ -265,28 +304,47 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
            "dotMultiply",
            kernelInfo);
 
+
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
                "ellipticAxTet3D",
                kernelInfo);
+
+  solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+                 "ellipticPartialAxTet3D",
+                 kernelInfo);
+
 
   solver->gradientKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
                "ellipticGradientTet3D",
            kernelInfo);
 
+  solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
+                 "ellipticPartialGradientTet3D",
+                  kernelInfo);
+
   solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
                "ellipticAxIpdgTet3D",
                kernelInfo);
 
+  solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
+                 "ellipticPartialAxIpdgTet3D",
+                 kernelInfo);
+
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
+#if 0
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl",
                "ellipticOasPreconTet3D",
                kernelInfo);
+#endif
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl",
@@ -347,6 +405,71 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
                "ellipticExactBlockJacobiSolver3D",
                kernelInfo);
+
+  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+  int NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+  int NpCoarse = (Nc+1)*(Nc+2)*(Nf+3)/6;
+  kernelInfo.addDefine("p_NpFine", NpFine);
+  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+
+  solver->precon->coarsenKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+             "ellipticPreconCoarsen",
+             kernelInfo);
+
+  solver->precon->prolongateKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+             "ellipticPreconProlongate",
+             kernelInfo);
+
+  //on host gather-scatter
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
+
+  // setup occa gather scatter
+  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
+                                             mesh->gatherLocalIds,
+                                             mesh->gatherBaseIds,
+                                             mesh->gatherBaseRanks,
+                                             mesh->gatherHaloFlags);
+  solver->o_invDegree = mesh->ogs->o_invDegree;
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(solver);
+
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)  
+  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mesh->mapB[fid+e*mesh->Np] = BCFlag;
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
+
+  mesh->Nmasked = 0;
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1E9) {
+      mesh->mapB[n] = 0.;
+    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
+      mesh->mapB[n] = 1.;
+      mesh->Nmasked++;
+    }
+  }
+  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+  
+  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->Nmasked =0; //reset
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
+  }
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
 
   free(DrT); free(DsT); free(DtT); free(LIFTT);
 

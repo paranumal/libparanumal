@@ -492,7 +492,6 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
         m += SIMDSIZE;
       } 
     }
-
     for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 16) s_xy[n] += s_xy[n+16];
     for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 8)  s_xy[n] += s_xy[n+8];
     for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 4)  s_xy[n] += s_xy[n+4];
@@ -555,11 +554,11 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           dfloat qr = 0.f, qs = 0.f;
           occaUnroll(p_Np)
             for(iint i=0;i<p_Np;++i){
-	      const dfloat p_i = s_p[i];
+              const dfloat p_i = s_p[i];
               qr += DrT[m+i*p_Np]*p_i;
               qs += DsT[m+i*p_Np]*p_i;
             }
-	  
+    
           s_dpdx[m] = drdx*qr + dsdx*qs;
           s_dpdy[m] = drdy*qr + dsdy*qs;
           m += SIMDSIZE;
@@ -757,21 +756,20 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
       /*---------------------End r.r -----------------*/    
 
       for(int n=0;n<SIMDSIZE;++n;inner0) {
-        if(s_rdotr1 < TOL*TOL)
-	  {
-	    break;
-	  }
+        if(s_rdotr1 < TOL*TOL) {
+          break;
+        }
       }
       //precon would go here
     
       /*--------------------- p = beta*p + r -----------------*/    
       for(int n=0;n<SIMDSIZE;++n;inner0){
-	int m = n;
-	while(m<p_Np) {
-	  s_p[m] = s_beta*s_p[m]+s_r[m];
-	  m += SIMDSIZE;
-	}
-	if(n==0) s_rdotr = s_rdotr1;
+        int m = n;
+        while(m<p_Np) {
+          s_p[m] = s_beta*s_p[m]+s_r[m];
+          m += SIMDSIZE;
+        }
+        if(n==0) s_rdotr = s_rdotr1;
       }
     }
     
@@ -787,4 +785,388 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
 }
 #undef SIMDSIZE
 
+#if 0
+//kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
+#define SIMDSIZE 32
+#define Nnodes 4
+occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
+                                      const iint * restrict vmapM,
+                                      const dfloat lambda,
+                                      const dfloat tau,
+                                      const dfloat * restrict vgeo,
+                                      const dfloat * restrict sgeo,
+                                      const iint   * restrict EToB,
+                                      const dfloat * restrict DrT,
+                                      const dfloat * restrict DsT,
+                                      const dfloat * restrict LIFTT,
+                                      const dfloat * restrict MM,
+                                      const dfloat * restrict invDegree,
+                                      const dfloat * restrict q,
+                                            dfloat * restrict Sq,
+                                      const dfloat TOL) {
 
+  for(iint es=0;es<Nelements;es+=Nnodes;outer0){
+    volatile shared  dfloat s_x[Nnodes][p_Np];
+    volatile shared  dfloat s_r[Nnodes][p_Np];
+    volatile shared  dfloat s_p[Nnodes][p_Np];
+    volatile shared  dfloat s_Ap[Nnodes][p_Np];
+
+    volatile shared dfloat s_xy[Nnodes][SIMDSIZE];
+
+    volatile shared dfloat s_rdotr[Nnodes], s_rdotr1[Nnodes], s_pAp[Nnodes], s_alpha[Nnodes], s_beta[Nnodes];
+    volatile shared dfloat s_avgrdotr;
+
+    volatile shared  dfloat s_dpdx[Nnodes][p_Np];
+    volatile shared  dfloat s_dpdy[Nnodes][p_Np];
+    volatile shared  dfloat s_lapq[Nnodes][p_Np];
+    volatile shared  dfloat s_nxdq[Nnodes][p_NfacesNfp];
+    volatile shared  dfloat s_nydq[Nnodes][p_NfacesNfp];
+    volatile shared  dfloat s_lapflux[Nnodes][p_NfacesNfp];
+    volatile shared  dfloat s_Lnxdq[Nnodes][p_Np];
+    volatile shared  dfloat s_Lnydq[Nnodes][p_Np];
+    volatile shared  dfloat s_vgeo[Nnodes][p_Nvgeo];
+    volatile shared  dfloat s_sgeo[Nnodes][p_Nfaces][p_Nsgeo];
+    volatile shared    iint s_idM[Nnodes][p_NfacesNfp], s_bc[Nnodes][p_NfacesNfp];
+    
+    //fetch q into rhs
+    for(int n=0;n<SIMDSIZE;++n;inner0){
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) {
+        int m = n;
+        while (m<p_Np) {
+          s_r[k][m] = q[(es+k)*p_Np+m];
+          s_p[k][m] = q[(es+k)*p_Np+m];
+          s_x[k][m] = 0.f;
+          m += SIMDSIZE;
+        }
+      }
+    }
+
+    // sanity check
+    /*---------------------Local Inner product -----------------*/    
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) {
+        s_xy[k][n] = 0.f;
+        int m = n;
+        while (m<p_Np) {
+          s_xy[k][n] += s_r[k][m]*s_r[k][m];
+          m += SIMDSIZE;
+        } 
+      }
+    }
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) 
+        if(n< 16) s_xy[k][n] += s_xy[k][n+16];
+    }
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) 
+        if(n< 8) s_xy[k][n] += s_xy[k][n+8];
+    }
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) 
+        if(n< 4) s_xy[k][n] += s_xy[k][n+4];
+    }
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) 
+        if(n< 2) s_xy[k][n] += s_xy[k][n+2];
+    }
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      occaUnroll(Nnodes)
+      for (int k=0;k<Nnodes;k++) 
+        if(n==0)  s_rdotr[k] = s_xy[k][0] + s_xy[k][1]; 
+
+    }
+    /*---------------------End Local Inner product -----------------*/    
+
+    if (s_rdotr<TOL*TOL) {
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        int m = n;
+        while (m<p_Np) {
+          Sq[e*p_Np+m] = invDegree[e]*s_r[m];
+          m += SIMDSIZE;
+        } 
+        return;
+      }
+    }
+    // read in geo data to shared
+    for(int n=0;n<SIMDSIZE;++n;inner0){
+      int m = n;
+      const iint gid = e*p_Nvgeo;
+      while(m<p_Nvgeo){
+        s_vgeo[m] = vgeo[gid + m];
+        m+=SIMDSIZE;
+      }
+
+      m = n;
+      const iint sid = p_Nsgeo*e*p_Nfaces;
+      while(m<p_Nsgeo*p_Nfaces){
+        s_sgeo[0][m] = sgeo[sid + m];
+        m+=SIMDSIZE;
+      }
+
+      m = n;
+      while(m<p_NfacesNfp){
+        const iint id  = m + e*p_Nfaces*p_Nfp;
+        s_idM[m] = vmapM[id]%p_Np; //local id
+         // find face that owns this node
+        const int face = m/p_Nfp;
+        s_bc[m] = EToB[face+p_Nfaces*e];
+        m+=SIMDSIZE;
+      }
+    }
+
+    //do an inner CG solve
+    while(s_rdotr>TOL*TOL) {
+
+    //for (int k=0;k<p_Np;k++) {
+
+      /*---------------------Local Ax operator -----------------*/
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        const dfloat drdx = s_vgeo[p_RXID];
+        const dfloat drdy = s_vgeo[p_RYID];
+        const dfloat dsdx = s_vgeo[p_SXID];
+        const dfloat dsdy = s_vgeo[p_SYID];
+
+        while(m<p_Np){  
+          // compute 1D derivatives
+          dfloat qr = 0.f, qs = 0.f;
+          occaUnroll(p_Np)
+            for(iint i=0;i<p_Np;++i){
+              const dfloat p_i = s_p[i];
+              qr += DrT[m+i*p_Np]*p_i;
+              qs += DsT[m+i*p_Np]*p_i;
+            }
+    
+          s_dpdx[m] = drdx*qr + dsdx*qs;
+          s_dpdy[m] = drdy*qr + dsdy*qs;
+          m += SIMDSIZE;
+        }
+      }
+
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        while(m<p_Np){
+          s_lapq[m] = lambda*s_p[m];
+          m += SIMDSIZE;
+        }
+        
+        m = n;
+        while(m<p_NfacesNfp){
+          // load surface geofactors for this face
+          const int face = m/p_Nfp;
+          const dfloat nx   = s_sgeo[face][p_NXID];
+          const dfloat ny   = s_sgeo[face][p_NYID];
+          const dfloat sJ   = s_sgeo[face][p_SJID];
+          const dfloat invJ = s_sgeo[face][p_IJID];
+          const dfloat hinv = s_sgeo[face][p_IHID];
+          
+          const iint idm = s_idM[m];
+          const dfloat qM = s_p[idm];
+          const dfloat qxM = s_dpdx[idm];
+          const dfloat qyM = s_dpdy[idm];
+          
+          dfloat qP = 0.f;
+          dfloat qxP = 0.f;
+          dfloat qyP = 0.f;
+          
+          if(s_bc[m]>0) {
+            ellipticHomogeneousBC2D(s_bc[m], qM, qxM, qyM, qP, qxP, qyP);
+            qP = 2.f*qP - qM;
+            qxP = 2.f*qxP - qxM;
+            qyP = 2.f*qyP - qyM;
+          }
+          
+          const dfloat dq = qP - qM;
+          const dfloat half = 0.5f;
+
+          s_nxdq[m]    = half*sJ*invJ*nx*dq;
+          s_nydq[m]    = half*sJ*invJ*ny*dq;
+          s_lapflux[m] = half*sJ*invJ*(-nx*(qxP-qxM)-ny*(qyP-qyM)-tau*hinv*dq);
+          m += SIMDSIZE;
+        }
+      }
+
+      
+      // dqdx += LIFT*(sJ/J)*nx*dq
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        const dfloat drdx = s_vgeo[p_RXID];
+        const dfloat drdy = s_vgeo[p_RYID];
+        const dfloat dsdx = s_vgeo[p_SXID];
+        const dfloat dsdy = s_vgeo[p_SYID];
+        
+        int m = n;
+        while(m<p_Np){          
+          dfloat Lnxdq = 0.f;
+          dfloat Lnydq = 0.f;
+
+          occaUnroll(p_NfacesNfp)
+          for(iint i=0;i<p_NfacesNfp;++i){
+            Lnxdq += LIFTT[m+i*p_Np]*s_nxdq[i];
+            Lnydq += LIFTT[m+i*p_Np]*s_nydq[i];
+          }
+
+          dfloat dqdx = s_dpdx[m] + Lnxdq;
+          dfloat dqdy = s_dpdy[m] + Lnydq;
+          s_dpdx[m] = drdx*dqdx + drdy*dqdy; // abuse of notation
+          s_dpdy[m] = dsdx*dqdx + dsdy*dqdy;
+
+          s_Lnxdq[m] = Lnxdq;
+          s_Lnydq[m] = Lnydq;
+          m += SIMDSIZE;
+        }
+      }
+
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        while(m<p_NfacesNfp){
+          const int face = m/p_Nfp;
+          const iint idm = s_idM[m];
+          const dfloat nx   = s_sgeo[face][p_NXID];
+          const dfloat ny   = s_sgeo[face][p_NYID];
+          const dfloat sJ   = s_sgeo[face][p_SJID];
+          const dfloat invJ = s_sgeo[face][p_IJID];
+
+          s_lapflux[m] += sJ*invJ*(nx*s_Lnxdq[idm]+ny*s_Lnydq[idm]);
+          m += SIMDSIZE;
+        }
+
+        m = n;
+        while(m<p_Np){
+          dfloat lapr = 0.f, laps = 0.f;
+
+          occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            lapr += DrT[m+i*p_Np]*s_dpdx[i];
+            laps += DsT[m+i*p_Np]*s_dpdy[i];
+          }
+
+          s_lapq[m] -= (lapr+laps);
+          m += SIMDSIZE;
+        }
+      }
+
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        while(m<p_Np){
+          dfloat lap = 0.f;
+
+          // lift remaining surface terms
+          occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            lap += LIFTT[m+i*p_Np]*s_lapflux[i];
+          }
+
+          s_lapq[m] += lap;
+          m += SIMDSIZE;
+        }
+      }
+
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m =n;
+        while(m<p_Np){
+          const dfloat J = s_vgeo[p_JID];
+
+          dfloat Mlapq = 0.f;
+
+          // multiply by mass matrix
+          occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            Mlapq += MM[m+i*p_Np]*s_lapq[i];
+          }
+          s_Ap[m] = J*Mlapq;
+          m += SIMDSIZE;
+        }
+      }
+
+      
+      /*---------------------p.Ap -----------------*/
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        s_xy[n] = 0.f;
+        int m = n;
+        while(m<p_Np) {
+          s_xy[n] += s_p[m]*s_Ap[m];
+          m += SIMDSIZE;
+        }
+      }
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        if(n==0) {
+          s_pAp = s_xy[0] + s_xy[1];
+          s_alpha = s_rdotr/s_pAp;
+        }
+      }
+      /*---------------------End p.Ap -----------------*/    
+
+      /*--------------------- x += alpha*p -----------------*/    
+      /*--------------------- r -= alpha*Ap -----------------*/    
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        while(m<p_Np) {
+          s_x[m] += s_alpha* s_p[m];
+          s_r[m] -= s_alpha*s_Ap[m];
+          m += SIMDSIZE;
+        } 
+      } 
+
+      /*---------------------r.r -----------------*/
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        s_xy[n] = 0.f;
+        int m = n;
+        while(m<p_Np) {
+          s_xy[n] += s_r[m]*s_r[m];
+          m += SIMDSIZE;
+        }
+      }
+
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        if(n==0) {
+          s_rdotr1 = s_xy[0] + s_xy[1];
+          s_beta = s_rdotr1/s_rdotr;
+        }
+      }
+      /*---------------------End r.r -----------------*/    
+
+      for(int n=0;n<SIMDSIZE;++n;inner0) {
+        if(s_rdotr1 < TOL*TOL) {
+          break;
+        }
+      }
+      //precon would go here
+    
+      /*--------------------- p = beta*p + r -----------------*/    
+      for(int n=0;n<SIMDSIZE;++n;inner0){
+        int m = n;
+        while(m<p_Np) {
+          s_p[m] = s_beta*s_p[m]+s_r[m];
+          m += SIMDSIZE;
+        }
+        if(n==0) s_rdotr = s_rdotr1;
+      }
+    }
+    
+    
+    for(int n=0;n<SIMDSIZE;++n;inner0) {
+      int m = n;
+      while(m<p_Np) {
+        Sq[e*p_Np+m] = invDegree[e]*s_x[m];
+        m += SIMDSIZE;
+      }
+    }
+  }
+}
+#undef SIMDSIZE
+
+#endif
