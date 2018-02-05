@@ -8,7 +8,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   sprintf(fname, DHOLMES "/nodes/quad3dN%02d.dat", N);
 
   FILE *fp = fopen(fname, "r");
-
+  
   char buf[BUFSIZ];
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
