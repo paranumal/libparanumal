@@ -32,8 +32,8 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 #endif
   
   // load reference (r,s) element nodes
-  void meshLoadReferenceNodesQuad2D(mesh_t *mesh, int N);
-  meshLoadReferenceNodesQuad2D(mesh, N);
+  void meshLoadReferenceNodesQuad3D(mesh_t *mesh, int N);
+  meshLoadReferenceNodesQuad3D(mesh, N);
 
   // compute physical (x,y,z) locations of the element nodes
   meshPhysicalNodesQuad3D(mesh);

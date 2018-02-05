@@ -363,10 +363,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");
+  sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
@@ -377,9 +377,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   kernelInfo.addDefine("p_Nq", mesh->Nq);
 
-  printf("mesh->Nq = %d\n", mesh->Nq);
   mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
@@ -391,7 +389,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
-  
+  printf("start\n");
   mesh->o_dualProjMatrix =
     mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
 
@@ -400,7 +398,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   mesh->o_EToE =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
-  
+  printf("end\n");
   for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
       mesh->o_MRABelementIds[lev]
