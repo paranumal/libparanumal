@@ -161,6 +161,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
 
       for (iint l = 0; l < lev; l++) {
+
 	mesh->filterKernel(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
 			   mesh->o_dualProjMatrix,
@@ -176,7 +177,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   mesh->o_EToE,
 			   1,
 			   mesh->o_q);
-			   }
+      }
     }
 
     // estimate maximum error
@@ -187,7 +188,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       printf("tstep = %d, t = %g\n", tstep, t);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      
+
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
 	if(isnan(mesh->q[n])){

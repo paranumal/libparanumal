@@ -6,7 +6,7 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 				      const iint dir,
 				      dfloat * restrict q) {
 
-  for (iint eo = 0; eo < Nelements;++eo) {
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
     exclusive iint eA[3]; //three elements to operate on
     exclusive dfloat qLocal[p_Nq*3]; //
 
