@@ -159,6 +159,24 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_q);
       	}
       }
+
+      for (iint l = 0; l < lev; l++) {
+	mesh->filterKernel(mesh->MRABNelements[l],
+			   mesh->o_MRABelementIds[l],
+			   mesh->o_dualProjMatrix,
+			   mesh->o_cubeFaceNumber,
+			   mesh->o_EToE,
+			   0,
+			   mesh->o_q);
+
+	mesh->filterKernel(mesh->MRABNelements[l],
+			   mesh->o_MRABelementIds[l],
+			   mesh->o_dualProjMatrix,
+			   mesh->o_cubeFaceNumber,
+			   mesh->o_EToE,
+			   1,
+			   mesh->o_q);
+			   }
     }
 
     // estimate maximum error
@@ -169,7 +187,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       printf("tstep = %d, t = %g\n", tstep, t);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-	
+      
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
 	if(isnan(mesh->q[n])){
@@ -183,7 +201,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       char fname[BUFSIZ];
 
       boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
-
+    
     }        
     occa::printTimer();
   }

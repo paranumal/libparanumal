@@ -335,6 +335,8 @@ typedef struct {
 
   occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
+  occa::memory o_cubeFaceNumber,o_dualProjMatrix;
+  
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
@@ -444,6 +446,7 @@ typedef struct {
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
+  occa::kernel filterKernel;
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;

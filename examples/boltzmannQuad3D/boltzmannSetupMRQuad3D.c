@@ -392,6 +392,15 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
   
+  mesh->o_dualProjMatrix =
+    mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
+
+  mesh->o_cubeFaceNumber =
+    mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeFaceNumber);
+
+  mesh->o_EToE =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
+  
   for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
       mesh->o_MRABelementIds[lev]
@@ -458,6 +467,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				       "meshHaloExtract2D",
 				       kernelInfo);
 
+  mesh->filterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterDualQuad3D.okl",
+				       "boltzmannFilterDualQuad3D",
+				       kernelInfo);
 
   return solver;
 }
