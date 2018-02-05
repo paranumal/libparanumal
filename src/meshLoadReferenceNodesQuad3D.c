@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mesh2D.h"
 
-void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
+void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
   char fname[BUFSIZ];
   sprintf(fname, DHOLMES "/nodes/quad3dN%02d.dat", N);
