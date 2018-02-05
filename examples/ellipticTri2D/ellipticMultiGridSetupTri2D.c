@@ -132,6 +132,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
 
+  //storage for restriction matrices
+  dfloat **R = (dfloat **) calloc(numLevels,sizeof(dfloat*));
+  occa::memory *o_R = (occa::memory *) calloc(numLevels,sizeof(occa::memory));
+
   //initialize parAlmond
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
   agmgLevel **levels = precon->parAlmond->levels;
@@ -363,8 +367,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
 
 void buildCoarsenerTri2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options) {
-
-  //use the Raise for now (essentally an L2 projection)
 
   int NpFine   = meshLevels[Nf]->Np;
   int NpCoarse = meshLevels[Nc]->Np;

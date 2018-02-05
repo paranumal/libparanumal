@@ -4,7 +4,7 @@ void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &
 
   // use gather map for gather and scatter
   occaTimerTic(mesh->device,"meshParallelGatherScatter3D");
-  meshParallelGatherScatter(mesh, ogs, o_q, o_gsq, type, op);
+  meshParallelGatherScatter(mesh, ogs, o_q, o_gsq);
   occaTimerToc(mesh->device,"meshParallelGatherScatter3D");
   
 }

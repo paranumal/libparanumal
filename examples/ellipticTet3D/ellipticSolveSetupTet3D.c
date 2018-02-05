@@ -1,24 +1,5 @@
 #include "ellipticTet3D.h"
 
-void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
-
-  // build degree vector
-  for(iint n=0;n<Ntotal;++n)
-    deg[n] = 1;
-
-  occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
-
-  o_deg.copyFrom(deg);
-
-  ellipticParallelGatherScatterTet3D(mesh, ogs, o_deg, o_deg, dfloatString, "add");
-
-  o_deg.copyTo(deg);
-
-  mesh->device.finish();
-  o_deg.free();
-
-}
-
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
@@ -32,6 +13,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->tau = tau;
 
   solver->mesh = mesh;
+
+  solver->BCType = BCType;
 
   solver->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   solver->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -53,9 +36,29 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 
-  // use this for OAS precon pairwise halo exchange
-  solver->sendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
-  solver->recvBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(dfloat));
+  //setup async halo stream
+  solver->defaultStream = mesh->device.getStream();
+  solver->dataStream = mesh->device.createStream();
+  mesh->device.setStream(solver->defaultStream);
+
+  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  if(Nbytes>0){
+    occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+    occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
+
+    solver->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
+    solver->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+
+    occa::memory o_gradSendBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+    occa::memory o_gradRecvBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
+
+    solver->gradSendBuffer = (dfloat*) o_gradSendBuffer.getMappedPointer();
+    solver->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
+  }else{
+    solver->sendBuffer = NULL;
+    solver->recvBuffer = NULL;
+  }
+  mesh->device.setStream(solver->defaultStream);
 
   solver->type = strdup(dfloatString);
 
@@ -80,6 +83,12 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
   }
 
+  //build inverse of mass matrix
+  mesh->invMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->Np;n++)
+    mesh->invMM[n] = mesh->MM[n];
+  matrixInverse(mesh->Np,mesh->invMM);
+
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
   solver->allNeumannPenalty = 1;
@@ -101,6 +110,20 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
   printf("allNeumann = %d \n", solver->allNeumann);
 
+  //set surface mass matrix for continuous boundary conditions
+  mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
+  for (iint n=0;n<mesh->Np;n++) {
+    for (iint m=0;m<mesh->Nfp*mesh->Nfaces;m++) {
+      dfloat MSnm = 0;
+      for (int i=0;i<mesh->Np;i++){
+        MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[m+i*mesh->Nfp*mesh->Nfaces];
+      }
+      mesh->sMT[n+m*mesh->Np]  = MSnm;
+    }
+  }
+  mesh->o_sMT = mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), mesh->sMT);
+
+  //copy boundary flags
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
 
@@ -130,7 +153,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   int NblockV = mymax(1,256/mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = mymax(1,512/(5*mesh->Np)); // get close to 256 threads
+  int NblockP = mymax(1,256/(5*mesh->Np)); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -153,6 +176,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 				       "scatter",
 				       kernelInfo);
 
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+               "gatherScatter",
+               kernelInfo);
+
   mesh->getKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
 				       "get",
@@ -173,10 +201,20 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                "addScalar",
                kernelInfo);
 
+  mesh->maskKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
+               "mask",
+               kernelInfo);
+
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
                "ellipticAxTet3D",
                kernelInfo);
+
+  solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+                 "ellipticPartialAxTet3D",
+                 kernelInfo);
 
   solver->weightedInnerProduct1Kernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
@@ -214,21 +252,71 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 				       "ellipticGradientTet3D",
 					 kernelInfo);
 
+  solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
+             "ellipticPartialGradientTet3D",
+           kernelInfo);
+
   solver->ipdgKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
 				       "ellipticAxIpdgTet3D",
 				       kernelInfo);
 
+  solver->partialIpdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
+                   "ellipticPartialAxIpdgTet3D",
+                   kernelInfo);
 
-  // set up gslib MPI gather-scatter and OCCA gather/scatter arrays
-  occaTimerTic(mesh->device,"GatherScatterSetup");
-  solver->ogs = meshParallelGatherScatterSetup(mesh,
-					       mesh->Np*mesh->Nelements,
-					       sizeof(dfloat),
-					       mesh->gatherLocalIds,
-					       mesh->gatherBaseIds,
-					       mesh->gatherHaloFlags);
-  occaTimerToc(mesh->device,"GatherScatterSetup");
+  //on-host version of gather-scatter
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
+
+  // setup occa gather scatter
+  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
+                                             mesh->gatherLocalIds,
+                                             mesh->gatherBaseIds,
+                                             mesh->gatherBaseRanks,
+                                             mesh->gatherHaloFlags);
+  solver->o_invDegree = mesh->ogs->o_invDegree;
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(solver);
+
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mesh->mapB[fid+e*mesh->Np] = BCFlag;
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
+
+  //use the bc flags to find masked ids
+  mesh->Nmasked = 0;
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1E9) {
+      mesh->mapB[n] = 0.;
+    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
+      mesh->mapB[n] = 1.;
+      mesh->Nmasked++;
+    }
+  }
+  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+  
+  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->Nmasked =0; //reset
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
+  }
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
+
 
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
@@ -310,22 +398,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
   solver->precon->preconBytes = usedBytes;
-
-  occaTimerTic(mesh->device,"DegreeVectorSetup");
-  dfloat *invDegree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  dfloat *degree = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-
-  solver->o_invDegree = mesh->device.malloc(Ntotal*sizeof(dfloat), invDegree);
-
-  ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
-
-  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
-    if(degree[n] == 0) printf("WARNING!!!!\n");
-    invDegree[n] = 1./degree[n];
-  }
-
-  solver->o_invDegree.copyFrom(invDegree);
-  occaTimerToc(mesh->device,"DegreeVectorSetup");
 
   return solver;
 }

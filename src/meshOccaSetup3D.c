@@ -240,7 +240,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   dfloat *SrrT, *SrsT, *SrtT;
   dfloat *SsrT, *SssT, *SstT;
   dfloat *StrT, *StsT, *SttT;
-  if (mesh->Nverts==4 && 0) {
+  if (mesh->Nverts==4) {
     mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
