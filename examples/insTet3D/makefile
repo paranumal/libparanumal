@@ -36,7 +36,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh3D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 $(ELLIPTICDIR)/ellipticTet3D.h \
 $(ELLIPTICDIR)/ellipticPreconTet3D.h  
@@ -82,10 +81,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshLoadReferenceNodesTet3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup3D.o \

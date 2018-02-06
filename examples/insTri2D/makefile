@@ -35,7 +35,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 $(ELLIPTICDIR)/ellipticTri2D.h \
 $(ELLIPTICDIR)/ellipticPreconTri2D.h  
