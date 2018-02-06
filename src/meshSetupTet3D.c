@@ -8,11 +8,11 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
   
-  // print out connectivity statistics
-  //  meshPartitionStatistics3D(mesh);
-  
   // connect elements using parallel sort
   meshParallelConnect(mesh);
+
+  // print out connectivity statistics
+  meshPartitionStatistics(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary(mesh);

@@ -18,6 +18,8 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   FILE *fp = fopen(fileName, "r");
   int n;
 
+  char *status;
+
   mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
 
   mesh->dim = 3;
@@ -38,11 +40,11 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   char buf[BUFSIZ];
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
@@ -52,18 +54,18 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   /* load nodes */
   for(n=0;n<mesh->Nnodes;++n){
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
 	   VX+n, VY+n, VZ+n);
   }
   
   /* look for section with Element node data */
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nelements));
 
   /* find # of tets */
@@ -72,7 +74,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   int Ntets = 0, NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
     iint elementType;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==4) ++Ntets; // tet code is 4
     if(elementType==2) ++NboundaryFaces;
@@ -103,7 +105,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*4, sizeof(iint));
   for(n=0;n<mesh->Nelements;++n){
     iint elementType, v1, v2, v3, v4;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==2){ // boundary face
       sscanf(buf, "%*d%*d %*d%d%*d %d%d%d", 

@@ -27,9 +27,9 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 1000;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -80,7 +80,7 @@ int main(int argc, char **argv){
       dfloat zn = mesh->z[n+e*mesh->Np];
 
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
-      x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+      //x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
     for(iint n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
       iint id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
-      //x[id] = 0.;
+      x[id] = 0.;
 
       mesh->q[id] = nrhs[n];
     }
@@ -218,7 +218,7 @@ int main(int argc, char **argv){
 
   char filename[BUFSIZ];
   sprintf(filename, "foo_%d.vtu", rank);
-  meshPlotVTU3D(mesh, filename, 0);
+  //meshPlotVTU3D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

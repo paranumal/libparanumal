@@ -254,6 +254,12 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   else NblockG = mymax(1,256/mesh->Np);
   kernelInfo.addDefine("p_NblockG", NblockG);
 
+  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+  int NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+  int NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
+  kernelInfo.addDefine("p_NpFine", NpFine);
+  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
                "meshHaloExtract3D",
@@ -406,11 +412,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
                "ellipticExactBlockJacobiSolver3D",
                kernelInfo);
 
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  int NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
-  int NpCoarse = (Nc+1)*(Nc+2)*(Nf+3)/6;
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+  // //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+  // int NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+  // int NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
+  // kernelInfo.addDefine("p_NpFine", NpFine);
+  // kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
   solver->precon->coarsenKernel =
     solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
