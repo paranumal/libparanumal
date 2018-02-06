@@ -469,10 +469,15 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				       "meshHaloExtract2D",
 				       kernelInfo);
 
-  mesh->filterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterDualQuad3D.okl",
-				       "boltzmannFilterDualQuad3D",
+  mesh->filterKernelH =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterHQuad3D",
 				       kernelInfo);
 
+  mesh->filterKernelV =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterVQuad3D",
+				       kernelInfo);
+  
   return solver;
 }

@@ -1,11 +1,10 @@
-kernel void boltzmannFilterDualQuad3D(const iint Nelements,
-       	    			      const iint * restrict elementIds,
-				      const dfloat * restrict dualMatrix,
-				      const iint * restrict cubeFaceNumber,
-				      const iint * restrict EToE,
-				      const iint dir,
-				      const dfloat * restrict qIn,
-				      dfloat * restrict qOut) {
+kernel void boltzmannFilterVQuad3D(const iint Nelements,
+				   const iint * restrict elementIds,
+				   const dfloat * restrict dualMatrix,
+				   const iint * restrict cubeFaceNumber,
+				   const iint * restrict EToE,
+				   const dfloat * restrict qIn,
+				   dfloat * restrict qOut) {
 
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
     
@@ -19,8 +18,8 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 
 	  eA[1] = elementIds[eo]; //center element
 
-	  eA[0] = EToE[eA[1]*p_Nfaces+2+dir]; //left element
-	  eA[2] = EToE[eA[1]*p_Nfaces+dir]; //right element
+	  eA[0] = EToE[eA[1]*p_Nfaces+3]; //left element
+	  eA[2] = EToE[eA[1]*p_Nfaces+1]; //right element
 	  
 	  //put filter matrix in L1 (one row only)
 	  for (iint k = 0; k < 3*p_Nq; ++k) {
@@ -36,16 +35,8 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	    
 	    for (iint k0 = 0; k0 < 3; ++k0) {
 	      for (iint k1 = 0; k1 < p_Nq; ++k1) {
-		//columns
-		if (dir == 0) {
-		  qLocal[k0*p_Nq + k1]
-		    = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + (p_Nq - k1 - 1)*p_Nq + j];
-		}
-		//rows
-		else {
-		  qLocal[k0*p_Nq + k1]
-		    = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
-		}
+		qLocal[k0*p_Nq + k1]
+		  = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
 	      }
 	    }
 	      
@@ -53,12 +44,7 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	    for (iint k=0;k<3*p_Nq;++k) {
 	      q_new += qLocal[k]*localMatrix[k];
 	    }
-	    if (dir == 0) {
-	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + (p_Nq - i)*p_Nq + j] = q_new;
-	    }
-	    else {
-	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new;
-	    } 
+	    qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new; 
 	  }
 	}
       }

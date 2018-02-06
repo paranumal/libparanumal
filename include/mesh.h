@@ -446,7 +446,8 @@ typedef struct {
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
-  occa::kernel filterKernel;
+  occa::kernel filterKernelH;
+  occa::kernel filterKernelV;
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;

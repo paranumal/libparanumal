@@ -162,12 +162,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
       for (iint l = 0; l < lev; l++) {
 
-	mesh->filterKernel(mesh->MRABNelements[l],
+	mesh->filterKernelH(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
 			   mesh->o_dualProjMatrix,
 			   mesh->o_cubeFaceNumber,
 			   mesh->o_EToE,
-			   0,
 			   mesh->o_q,
 			   mesh->o_qFilter);
 
@@ -180,12 +179,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
 	printf("\n\n\n\n");
 	
-	mesh->filterKernel(mesh->MRABNelements[l],
+	mesh->filterKernelV(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
 			   mesh->o_dualProjMatrix,
 			   mesh->o_cubeFaceNumber,
 			   mesh->o_EToE,
-			   1,
 			   mesh->o_qFilter,
 			   mesh->o_q);
       }
