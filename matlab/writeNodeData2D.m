@@ -109,11 +109,6 @@ sV = Vandermonde2D(N, ir(:), is(:));
 sInterp = sV/V;
 iInterp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
 
-bInterp = [];
-bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
-bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
-bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
-
 %integration node lift matrix
 iLIFT = V*V'*sInterp'*diag(iw(:));
 
@@ -125,13 +120,13 @@ writeFloatMatrix(fid, iLIFT, 'Cubature Surface Lift Matrix');
 addpath('./bern')
 tol=1e-5;
 r1D = JacobiGL(0,0,N);
-[r1Dq w1Dq] = JacobiGQ(0,0,N);
+[r1Dq,w1Dq] = JacobiGQ(0,0,N);
 V1Dq = bern_basis_1D(N,r1Dq);
 VB1D = bern_basis_1D(N,r1D);
 
-[VB Vr Vs V0 V1 V2] = bern_basis_tri(N,r,s);
-[D0ids D0vals D1ids D1vals D2ids D2vals] = bern_basis_diff2D(N,V,VB,V0,V1,V2);
-[L0vals ELids ELvals] = bern_basis_lift2D(N,V,VB,r,s);
+[VB,Vr,Vs,V0,V1,V2] = bern_basis_tri(N,r,s);
+[D0ids,D0vals,D1ids,D1vals,D2ids,D2vals] = bern_basis_diff2D(N,V,VB,V0,V1,V2);
+[L0vals,ELids,ELvals] = bern_basis_lift2D(N,V,VB,r,s);
 
 invVB = inv(VB);
 
