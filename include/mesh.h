@@ -406,7 +406,7 @@ typedef struct {
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
 
-
+  occa::memory o_qFilter;
 
 
 

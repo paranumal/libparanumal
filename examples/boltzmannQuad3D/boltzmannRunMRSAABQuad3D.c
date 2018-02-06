@@ -13,10 +13,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
-
+  
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-    for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-
+     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+       
       iint mrab_order = 0; 
       
       if(tstep==0)
@@ -168,9 +168,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   mesh->o_cubeFaceNumber,
 			   mesh->o_EToE,
 			   0,
-			   mesh->o_q);
+			   mesh->o_q,
+			   mesh->o_qFilter);
 
-	mesh->o_q.copyTo(test_q);
+	mesh->o_qFilter.copyTo(test_q);
 	for (int i = 0; i < mesh->Nfields;++i) {
 	  for (int j = 0; j < mesh->Np; ++j) {
 	    printf("%lf ",test_q[40*mesh->Nfields*mesh->Np+i*mesh->Np + j]);
@@ -185,6 +186,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   mesh->o_cubeFaceNumber,
 			   mesh->o_EToE,
 			   1,
+			   mesh->o_qFilter,
 			   mesh->o_q);
       }
     }
