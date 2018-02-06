@@ -53,7 +53,12 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	    for (iint k=0;k<3*p_Nq;++k) {
 	      q_new += qLocal[fld][j][k]*localMatrix[k];
 	    }
-	    qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + i*p_Nq + j] = q_new;
+	    if (dir == 0) {
+	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + i*p_Nq + j] = q_new;
+	    }
+	    else {
+	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new;
+	    } 
 	  }
 	}
       }
