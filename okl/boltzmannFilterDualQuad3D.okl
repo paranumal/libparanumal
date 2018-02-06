@@ -8,7 +8,7 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
     exclusive iint eA[3]; //three elements to operate on
-    exclusive dfloat qLocal[p_Nq*3]; //
+    shared dfloat qLocal[p_Nfields][p_Nq][p_Nq*3]; //
 
     for (iint fld=0; fld<p_Nfields; ++fld; inner2) {
       for (iint i=0; i<p_Nq; ++i; inner1) {
@@ -22,8 +22,16 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	  //no boundary checks for now.  Need to see how EToE is formatted
 	  for (iint k0 = 0; k0 < 3; ++k0) {
 	    for (iint k1 = 0; k1 < p_Nq; ++k1) {
-	      qLocal[k0*p_Nq + k1]
-		= q[eA[k0]*p_Nfields*p_Np + fld*p_Np + k1*p_Nq + j];
+	      //rows are horizontal
+	      if (dir == 0) {
+		qLocal[fld][j][k0*p_Nq + k1]
+		  = q[eA[k0]*p_Nfields*p_Np + fld*p_Np + k1*p_Nq + j];
+	      }
+	      //columns are vertical
+	      else {
+		qLocal[fld][j][k0*p_Nq + k1]
+		  = q[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
+	      }
 	    }
 	  }
 	}
@@ -47,14 +55,12 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	    const iint faceC = cubeFaceNumber[eA[1]];
 	    const iint faceL = cubeFaceNumber[eA[0]];
 	    const iint faceR = cubeFaceNumber[eA[2]];
-	    
-	    dfloat qLocal[p_Nq];
-	    
+	    	    
 	    if((faceC == faceL) && (faceC == faceR)) {
 	      
 	      dfloat q_new = 0;
 	      for (iint k=0;k<3*p_Nq;++k) {
-		q_new += qLocal[j]*localMatrix[i];
+		q_new += qLocal[fld][j][k]*localMatrix[k];
 	      }
 	      q[eA[1]*p_Nfields*p_Np + fld*p_Np + i*p_Nq + j] = q_new;
 	    }

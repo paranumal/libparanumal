@@ -170,6 +170,15 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   0,
 			   mesh->o_q);
 
+	mesh->o_q.copyTo(test_q);
+	for (int i = 0; i < mesh->Nfields;++i) {
+	  for (int j = 0; j < mesh->Np; ++j) {
+	    printf("%lf ",test_q[40*mesh->Nfields*mesh->Np+i*mesh->Np + j]);
+	  }
+	  printf("\n\n");
+	}
+	printf("\n\n\n\n");
+	
 	mesh->filterKernel(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
 			   mesh->o_dualProjMatrix,

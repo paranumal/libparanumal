@@ -299,7 +299,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl = 0.2; // depends on the stability region size (was .4, then 2)
+  dfloat cfl = 0.1; // depends on the stability region size (was .4, then 2)
 
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -363,10 +363,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  //sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  sprintf(deviceConfig, "mode = Serial");
+  //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;
 
