@@ -15,12 +15,12 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	  
 	  dfloat localMatrix[3*p_Nq];
 	  iint eA[3];
-	  dfloat qLocal[p_Nfields][p_Nq][p_Nq*3];
+	  dfloat qLocal[p_Nq*3];
 
 	  eA[1] = elementIds[eo]; //center element
 
-	  eA[0] = EToE[eA[1]*p_Nfaces+dir]; //left element
-	  eA[2] = EToE[eA[1]*p_Nfaces+2+dir]; //right element
+	  eA[0] = EToE[eA[1]*p_Nfaces+2+dir]; //left element
+	  eA[2] = EToE[eA[1]*p_Nfaces+dir]; //right element
 	  
 	  //put filter matrix in L1 (one row only)
 	  for (iint k = 0; k < 3*p_Nq; ++k) {
@@ -36,14 +36,14 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	    
 	    for (iint k0 = 0; k0 < 3; ++k0) {
 	      for (iint k1 = 0; k1 < p_Nq; ++k1) {
-		//rows are horizontal
+		//columns
 		if (dir == 0) {
-		  qLocal[fld][j][k0*p_Nq + k1]
-		    = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + k1*p_Nq + j];
+		  qLocal[k0*p_Nq + k1]
+		    = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + (p_Nq - k1 - 1)*p_Nq + j];
 		}
-		//columns are vertical
+		//rows
 		else {
-		  qLocal[fld][j][k0*p_Nq + k1]
+		  qLocal[k0*p_Nq + k1]
 		    = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
 		}
 	      }
@@ -51,10 +51,10 @@ kernel void boltzmannFilterDualQuad3D(const iint Nelements,
 	      
 	    dfloat q_new = 0;
 	    for (iint k=0;k<3*p_Nq;++k) {
-	      q_new += qLocal[fld][j][k]*localMatrix[k];
+	      q_new += qLocal[k]*localMatrix[k];
 	    }
 	    if (dir == 0) {
-	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + i*p_Nq + j] = q_new;
+	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + (p_Nq - i)*p_Nq + j] = q_new;
 	    }
 	    else {
 	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new;
