@@ -9,7 +9,7 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
   mesh->sphereRadius = sphereRadius;
 
   // partition elements using Morton ordering & parallel sort
-  meshGeometricPartition3D(mesh); // need to double check this
+  //meshGeometricPartition3D(mesh); // need to double check this
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);

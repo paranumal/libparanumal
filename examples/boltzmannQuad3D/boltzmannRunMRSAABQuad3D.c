@@ -162,12 +162,12 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
       for (iint l = 0; l < lev; l++) {
 
-	for (int e = 0; e < mesh->Nelements; ++e) {
+	/*for (int e = 0; e < mesh->Nelements; ++e) {
 	  for (int i = 0; i < mesh->Np; ++i) {
 	    test_q[e*mesh->Nfields*mesh->Np + i] = mesh->x[e*mesh->Np + i];
 	  }
 	}
-	mesh->o_q.copyFrom(test_q);
+	mesh->o_q.copyFrom(test_q);*/
 	
 	mesh->filterKernelH(mesh->MRABNelements[l],
 			   mesh->o_MRABelementIds[l],
@@ -184,13 +184,13 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   mesh->o_EToE,
 			   mesh->o_qFilter,
 			   mesh->o_q);
-	mesh->o_q.copyTo(mesh->q);
+	/*mesh->o_q.copyTo(mesh->q);
 	for(int e = 0; e < mesh->Nelements; ++e) {
 	  for (int i = 0; i < mesh->Np; ++i) {
 	    mesh->q[e*mesh->Nfields*mesh->Np + i] -= mesh->x[e*mesh->Np + i];
 	  }
 	}
-	boltzmannPlotLevels(mesh,"bar",tstep);
+	boltzmannPlotLevels(mesh,"bar",tstep);*/
 	
       }
     }

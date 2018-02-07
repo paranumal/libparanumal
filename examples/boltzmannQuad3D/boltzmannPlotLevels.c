@@ -71,6 +71,17 @@ void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep){
     }
   }
   fprintf(fp, "       </DataArray>\n");
+
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"cube_faces\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotpn = mesh->cubeFaceNumber[e];
+      //      plotpn = plotpn*mesh->rho; // Get Pressure
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "     </PointData>\n");
   
