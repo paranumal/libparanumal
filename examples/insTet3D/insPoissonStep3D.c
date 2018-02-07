@@ -117,7 +117,33 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   #if 1// if time dependent BC or Pressure Solve not Increment
-  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+  const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
+  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+    ins->poissonRhsBCKernel(mesh->Nelements,
+                            pressure_solve,
+                            mesh->o_ggeo,
+                            mesh->o_sgeo,
+                            mesh->o_SrrT,
+                            mesh->o_SrsT,
+                            mesh->o_SrtT,
+                            mesh->o_SsrT,
+                            mesh->o_SssT,
+                            mesh->o_SstT,
+                            mesh->o_StrT,
+                            mesh->o_StsT,
+                            mesh->o_SttT,
+                            mesh->o_MM,
+                            mesh->o_vmapM,
+                            mesh->o_sMT,
+                            t,
+                            ins->dt,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            mesh->o_mapB,
+                            ins->o_rhsP);
+  } else if (strstr(ins->pSolverOptions,"IPDG")) {
+    ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
@@ -135,17 +161,28 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 ins->o_rhsP);
+  }
   #endif
 
-  //occaTimerTic(mesh->device,"Pr Solve");
-  //occaTimerTic(mesh->device,"KernelTime");
-  mesh->device.finish();  
-  double tic = MPI_Wtime();  
-  ins->NiterP= ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
-  mesh->device.finish(); 
-  double toc = MPI_Wtime();
+  // gather-scatter
+  if(strstr(ins->pSolverOptions, "CONTINUOUS")){
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, ins->o_rhsP, dfloatString, "add");  
+    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
+  }
 
-  ins->prtime = toc-tic; 
-  //occaTimerToc(mesh->device,"Pr Solve"); 
 
+  ins->NiterP = ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
+
+
+  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+    ins->poissonAddBCKernel(mesh->Nelements,
+                            pressure_solve,
+                            t,
+                            ins->dt,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            mesh->o_mapB,
+                            ins->o_PI);
+  }
 }

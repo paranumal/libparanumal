@@ -200,7 +200,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       notInternalElementIds[NnotInterior++] = e;
   }
 
-  printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
+  //printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
 
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
@@ -254,7 +254,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
           mesh->ggeo);
   }
   else{
-    printf("LOADING TRIANGLE MASS MATRIX\n");
     mesh->o_MM =
       mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
           mesh->MM);
@@ -400,7 +399,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
 
-  printf("adding p_cubNp\n");
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
   kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);

@@ -2,6 +2,9 @@
 
 void buildAlmondKernels(parAlmond_t *parAlmond){
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   occa::kernelInfo defs;
 
   defs.addDefine("bdim", AGMGBDIM);
@@ -36,7 +39,7 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
     defs.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
-  printf("Compiling parALMOND Kernels \n");
+  if (rank==0) printf("Compiling parALMOND Kernels \n");
 
   parAlmond->ellAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
 		   "ellAXPY", defs);

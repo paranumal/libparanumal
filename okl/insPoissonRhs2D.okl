@@ -394,7 +394,7 @@ kernel void insPoissonRhsIpdgBC2D(const int Nelements,
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        const int gid = e*p_Nvgeo;
+        const iint gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat dsdx = vgeo[gid + p_SXID];

@@ -611,7 +611,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options){
   for(int i=0; i<=k; i++) o_V[i].free();
   free((void*)o_V);
 
-  if(rank==0) printf("weight = %g \n", rho);
+  if((rank==0)&&strstr(options,"VERBOSE")) printf("weight = %g \n", rho);
 
   return rho;
 }

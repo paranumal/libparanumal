@@ -248,7 +248,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
       }
     }
   }
-  printf("nnz = %d\n", nnz);
+  
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   // free up unused storage
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));

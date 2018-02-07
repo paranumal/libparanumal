@@ -123,7 +123,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        const int gid = e*p_Nvgeo;
+        const iint gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat drdz = vgeo[gid + p_RZID];
@@ -212,6 +212,167 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
         const iint id = e*p_Np+n;
         rhsP[id] -=  J*Mlapp;
       }
+    }
+  }
+}
+
+//RHS contributions for continuous solver
+kernel void insPoissonRhsBC3D(const int Nelements,
+                              const iint pressure_solve,
+                              const dfloat * restrict ggeo,
+                              const dfloat * restrict sgeo,
+                              const dfloat * restrict SrrT,
+                              const dfloat * restrict SrsT,
+                              const dfloat * restrict SrtT,
+                              const dfloat * restrict SsrT,
+                              const dfloat * restrict SssT,
+                              const dfloat * restrict SstT,
+                              const dfloat * restrict StrT,
+                              const dfloat * restrict StsT,
+                              const dfloat * restrict SttT,
+                              const dfloat * restrict MM,
+                              const iint   * restrict vmapM,
+                              const dfloat * restrict sMT,
+                              const dfloat time,
+                              const dfloat dt,
+                              const dfloat * restrict x,
+                              const dfloat * restrict y,
+                              const dfloat * restrict z,
+                              const int    * restrict mapB,
+                              dfloat  * restrict rhsP){
+  
+  for(iint e=0;e<Nelements;e++;outer0){
+    shared dfloat s_q[p_Np];
+    shared dfloat s_ndq[p_Nfp*p_Nfaces];
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+        s_q[n] = 0.;
+      }
+      if(n<p_NfacesNfp){
+        s_ndq[n] = 0.;
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_NfacesNfp){
+        const iint id  = n + e*p_Nfaces*p_Nfp;
+        const iint idM = vmapM[id];          
+        const iint nid = idM%p_Np; 
+
+        const iint face = n/p_Nfp;
+
+        dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;
+        
+        // load surface geofactors for this face
+        const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+          insPoissonBoundaryConditions3D(bc,time, dt, x[idM], y[idM], z[idM], nx,ny,nz, &pP,&dpdxP,&dpdyP,&dpdzP);
+          if(pressure_solve==0){ // if the pressure increment is in use
+            dfloat pPm1, dpdxPm1, dpdyPm1, dpdzPm1;
+            insPoissonBoundaryConditions3D(bc,time-dt, dt, x[idM], y[idM], z[idM], nx,ny,nz, &pPm1, &dpdxPm1, &dpdyPm1, &dpdzPm1);
+            pP = pP - pPm1;
+            dpdxP = dpdxP - dpdxPm1;
+            dpdyP = dpdyP - dpdyPm1;
+            dpdzP = dpdzP - dpdzPm1;
+          }
+        } 
+
+        s_q[nid] = pP;
+        s_ndq[n] = sJ*(nx*dpdxP + ny*dpdyP + ny*dpdzP);
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_maxNodes;++n;inner0){ 
+      if(n<p_Np){
+        //volume Dirichlet data
+        const iint id = n + e*p_Np;
+        const iint gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Grt = ggeo[gid + p_G02ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+        const dfloat Gst = ggeo[gid + p_G12ID];
+        const dfloat Gtt = ggeo[gid + p_G22ID];
+        const dfloat J   = ggeo[gid + p_GWJID];
+
+        dfloat qrr = 0.;
+        dfloat qrs = 0.;
+        dfloat qrt = 0.;
+        dfloat qsr = 0.;
+        dfloat qss = 0.;
+        dfloat qst = 0.;
+        dfloat qtr = 0.;
+        dfloat qts = 0.;
+        dfloat qtt = 0.;
+
+        occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+            qrr += SrrT[n+k*p_Np]*s_q[k];
+            qrs += SrsT[n+k*p_Np]*s_q[k];
+            qrt += SrtT[n+k*p_Np]*s_q[k];
+            qsr += SsrT[n+k*p_Np]*s_q[k];
+            qss += SssT[n+k*p_Np]*s_q[k];
+            qst += SstT[n+k*p_Np]*s_q[k];
+            qtr += StrT[n+k*p_Np]*s_q[k];
+            qts += StsT[n+k*p_Np]*s_q[k];
+            qtt += SttT[n+k*p_Np]*s_q[k];
+          }
+
+        dfloat Lndq = 0;            
+        // surface mass * surface terms
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            Lndq += sMT[n+i*p_Np]*s_ndq[i];
+          }
+
+        rhsP[id] -= Grr*qrr+Grs*qrs+Grt*qrt
+                   +Grs*qsr+Gss*qss+Gst*qst 
+                   +Grt*qtr+Gst*qts+Gtt*qtt  - Lndq;
+      }
+    }
+  }
+}
+
+kernel void insPoissonAddBCKernel(const iint Nelements,
+                              const int pressure_solve,
+                              const dfloat time,
+                              const dfloat dt,
+                              const dfloat * restrict x,
+                              const dfloat * restrict y,
+                              const dfloat * restrict z,
+                              const int    * restrict mapB,
+                              dfloat  * restrict p){
+  
+  for(iint e=0;e<Nelements;e++;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const iint id = n+e*p_Np;
+      const int bc = mapB[n+e*p_Np];
+
+      dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;
+
+      if(bc>0) {
+        insPoissonBoundaryConditions3D(bc,time, dt, x[idM], y[idM], z[idM], nx,ny,nz, &pP,&dpdxP,&dpdyP,&dpdzP);
+        if(pressure_solve==0){ // if the pressure increment is in use
+          dfloat pPm1, dpdxPm1, dpdyPm1, dpdzPm1;
+          insPoissonBoundaryConditions3D(bc,time-dt, dt, x[idM], y[idM], z[idM], nx,ny,nz, &pPm1, &dpdxPm1, &dpdyPm1, &dpdzPm1);
+          pP = pP - pPm1;
+          dpdxP = dpdxP - dpdxPm1;
+          dpdyP = dpdyP - dpdyPm1;
+          dpdzP = dpdzP - dpdzPm1;
+        }
+        p[id] += pP;
+      }    
     }
   }
 }

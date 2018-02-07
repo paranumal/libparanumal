@@ -1036,7 +1036,7 @@ kernel void insSubCycleSurface2D(const iint Nelements,
      // apply boundary condition
      iint bc = EToB[face+p_Nfaces*e];
      if(bc>0)
-       insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, pxM, pyM, &pxP, &pxP);
+       insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, pxM, pyM, &pxP, &pyP);
      // Find max normal velocity on the face
      dfloat unM   = occaFabs(nx*uxM + ny*uyM);
      dfloat unP   = occaFabs(nx*uxP + ny*uyP);    

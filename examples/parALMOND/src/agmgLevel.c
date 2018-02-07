@@ -263,7 +263,7 @@ dfloat rhoDinvA(parAlmond_t* parAlmond,csr *A, dfloat *invD){
     free(V[i]);
   }
 
-  if (rank==0) printf("weight = %g \n", rho);
+  if ((rank==0)&&strstr(parAlmond->options,"VERBOSE")) printf("weight = %g \n", rho);
 
   return rho;
 }
@@ -289,7 +289,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   iint *cols;
   dfloat *vals;
 
-  if(rank==0) printf("Setting up coarse solver...");fflush(stdout);
+  if((rank==0)&&strstr(parAlmond->options,"VERBOSE")) printf("Setting up coarse solver...");fflush(stdout);
 
   if(!nullSpace) {
     //if no nullspace, use sparse A
@@ -416,7 +416,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
     free(coarseA);
   }
 
-  if(rank==0) printf("done.\n");
+  if((rank==0)&&strstr(parAlmond->options,"VERBOSE")) printf("done.\n");
 }
 
 

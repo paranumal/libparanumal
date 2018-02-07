@@ -27,9 +27,9 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=NONE");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1000;
+  dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
