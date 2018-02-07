@@ -5,6 +5,9 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   // SET OPTIONS
   // method = ALGEBRAIC, STIFFLYSTABLE (default for now)
   // grad-div   = WEAK, NODAL (default nodal)
@@ -15,7 +18,7 @@ int main(int argc, char **argv){
   
 
   char *velSolverOptions =
-    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=LOCALPATCH");
+    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=MASSMATRIX");
   char *velParAlmondOptions =
     strdup("solver= smoother= partition=");
 
@@ -62,10 +65,10 @@ int main(int argc, char **argv){
       options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN");  //pres=PRESSURE_HISTORY
 
     #if 1
-     printf("Setup INS Solver: \n");
+    if (rank==0) printf("Setup INS Solver: \n");
     ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
                             prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
-    printf("Running INS solver\n");
+    if (rank==0) printf("Running INS solver\n");
     insRun2D(ins,options);
     #else
     printf("OCCA Run Timer: \n");

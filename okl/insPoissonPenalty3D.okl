@@ -39,9 +39,9 @@ kernel void insPoissonPenalty3D(const int Nelements,
 
         // load surface geofactors for this face
         iint sid = p_Nsgeo*(e*p_Nfaces+face);
-        // dfloat nx   = sgeo[sid+p_NXID];
-        // dfloat ny   = sgeo[sid+p_NYID];
-        // dfloat nz   = sgeo[sid+p_NZID];
+        dfloat nx   = sgeo[sid+p_NXID];
+        dfloat ny   = sgeo[sid+p_NYID];
+        dfloat nz   = sgeo[sid+p_NZID];
         dfloat sJ   = sgeo[sid+p_SJID];
         dfloat invJ = sgeo[sid+p_IJID];
         dfloat hinv = sgeo[sid+p_IHID];

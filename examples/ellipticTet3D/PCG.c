@@ -26,8 +26,6 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
 
-  printf("rdotr0 = %f\n", rdotr0);
-
   dfloat rdotz0 = 0;
   int Niter = 0;
 

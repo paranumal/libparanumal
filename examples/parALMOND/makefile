@@ -16,7 +16,7 @@ flags = -I${OCCA_DIR}/include -I$(iDir) -I../../include
 libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas
 
 flags  += -D DPWD='"${CURDIR}"'
-CC =  mpic++ #${CXX}#mpicxx
+CC =  mpic++.openmpi 
 #flags += -fopenmp
 
 # Debug Option

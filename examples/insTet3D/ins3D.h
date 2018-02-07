@@ -31,17 +31,16 @@ typedef struct {
   //solver tolerances
   iint NiterU, NiterV, NiterW, NiterP;
 
-  dfloat presTOL, velTOL, prtime ; // delete prtime
-
-  dfloat inu, idt;
+  dfloat presTOL, velTOL;
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
+  dfloat idt, ig0, inu; // hold some inverses
+
   dfloat *rhsU, *rhsV, *rhsW, *rhsP;
   dfloat *U, *V, *W, *P; 
   
   dfloat *Ud, *Vd, *Wd, *Ue, *Ve, *We, *resU, *resV, *resW, sdt;
   occa::memory o_Ud, o_Vd, o_Wd, o_Ue, o_Ve, o_We,  o_resU, o_resV, o_resW;
-  //dfloat dtfactor;
 
   dfloat *NU, *NV, *NW;
   dfloat *Px, *Py, *Pz;
@@ -53,8 +52,8 @@ typedef struct {
   // dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   // occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
-  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
-  occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
+  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel;
+  occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
@@ -69,6 +68,8 @@ typedef struct {
   occa::memory o_PI, o_PIx, o_PIy, o_PIz;
 
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
+
+  occa::kernel scaledAddKernel;
 
   occa::kernel totalHaloExtractKernel;
   occa::kernel totalHaloScatterKernel;
@@ -94,6 +95,8 @@ typedef struct {
 
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
+  occa::kernel poissonRhsBCKernel;
+  occa::kernel poissonAddBCKernel;
   occa::kernel poissonPenaltyKernel;
   
   occa::kernel updateUpdateKernel;
@@ -114,6 +117,11 @@ void insPlotVTU3D(ins_t *solver, char *fileNameBase);
 
 void insAdvectionStep3D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+
+
+void insAdvectionSubCycleStep3D(ins_t *solver, iint tstep,
+                     dfloat * tsendBuffer, dfloat *trecvBuffer, 
+                     dfloat * sendBuffer, dfloat *recvBuffer,char * options);
 
 void insHelmholtzStep3D(ins_t *solver, iint tstep, iint haloBytes,
 	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);

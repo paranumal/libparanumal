@@ -3,6 +3,9 @@
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
   iint Nhalo = mesh->Np*mesh->totalHaloPairs;
@@ -108,7 +111,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     }
   }
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
-  printf("allNeumann = %d \n", solver->allNeumann);
+  if (rank==0) printf("allNeumann = %d \n", solver->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
@@ -126,6 +129,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   //copy boundary flags
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
+  //if (rank!=0) 
+    occa::setVerboseCompilation(false);
 
   //add standard boundary functions
   char *boundaryHeaderFileName;

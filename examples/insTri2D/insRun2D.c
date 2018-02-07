@@ -225,19 +225,19 @@ if(rank==0){
 
 
 #if 1
-dfloat finalTime = ins->NtimeSteps*ins->dt;
-printf("\n");
-insReport2D(ins, ins->NtimeSteps,options);
-insErrorNorms2D(ins, finalTime, options);
+  dfloat finalTime = ins->NtimeSteps*ins->dt;
+  printf("\n");
+  insReport2D(ins, ins->NtimeSteps,options);
+  insErrorNorms2D(ins, finalTime, options);
 #endif
 
-// Deallocate Halo MPI storage
-free(tSendBuffer);
-free(tRecvBuffer);
-free(vSendBuffer);
-free(vRecvBuffer);
-free(pSendBuffer);
-free(pRecvBuffer);
+  // Deallocate Halo MPI storage
+  free(tSendBuffer);
+  free(tRecvBuffer);
+  free(vSendBuffer);
+  free(vRecvBuffer);
+  free(pSendBuffer);
+  free(pRecvBuffer);
 
 
 

@@ -91,7 +91,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // SET SOLVER OPTIONS
   // Initial Conditions, Flow Properties
-  printf("Starting initial conditions for INS2D\n");
+  if (rank==0) printf("Starting initial conditions for INS2D\n");
 
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
@@ -105,7 +105,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 3.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
+  ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -146,7 +146,6 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     }
   }
 
-  printf("starting parameters\n");
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   for(iint e=0;e<mesh->Nelements;++e){
@@ -185,10 +184,12 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
-  printf("hmin = %g\n", hmin);
-  printf("hmax = %g\n", hmax);
-  printf("cfl = %g\n",  cfl);
-  printf("dt = %g\n",   dt);
+  if (rank==0) {
+    printf("hmin = %g\n", hmin);
+    printf("hmax = %g\n", hmax);
+    printf("cfl = %g\n",  cfl);
+    printf("dt = %g\n",   dt);
+  }
 
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -199,7 +200,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->dt         = ins->finalTime/ins->NtimeSteps;
     ins->sdt        = ins->dt/ins->Nsubsteps;
 
-    printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
+    if (rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
   } else{
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
@@ -218,7 +219,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   else
     ins->errorStep = 800;
 
-  printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
+  if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
@@ -229,7 +230,10 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   occa::kernelInfo kernelInfoV  = kernelInfo;
   occa::kernelInfo kernelInfoP  = kernelInfo;
 
-  printf("==================ELLIPTIC SOLVE SETUP=========================\n");
+  //if (rank!=0) 
+    occa::setVerboseCompilation(false);
+
+  if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
   int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
@@ -240,14 +244,14 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->velTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  printf("==================VELOCITY SOLVE SETUP=========================\n");
+  if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
   solver_t *vSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
   ins->vSolver        = vSolver;
   ins->vSolverOptions = vSolverOptions;
 
-  printf("==================PRESSURE SOLVE SETUP========================\n");
+  if (rank==0) printf("==================PRESSURE SOLVE SETUP========================\n");
   // SETUP PRESSURE and VELOCITY SOLVERS
   dfloat zero =0.0;
   solver_t *pSolver   = ellipticSolveSetupTri2D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
@@ -304,18 +308,18 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   int cubNblockS = mymax(1,256/maxNodesSurfaceCub); // works for CUDA
   //
 
-  printf("p_cubNblockV=%d\n", cubNblockV);
-  printf("p_cubNblockS=%d\n", cubNblockS);
+  if (rank==0) printf("p_cubNblockV=%d\n", cubNblockV);
+  if (rank==0) printf("p_cubNblockS=%d\n", cubNblockS);
 
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
 
 
-   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
-   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
+  if (rank==0) printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+  if (rank==0) printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
-   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+  if (rank==0) printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
 
   // ADD-DEFINES
   kernelInfo.addDefine("p_Lambda2", 0.5f);
@@ -382,32 +386,26 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
 
-    printf("Compiling SubCycle Advection volume kernel \n");
     ins->subCycleVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 					 "insSubCycleVolume2D",
 					 kernelInfo);
 
-    printf("Compiling SubCycle Advection surface kernel\n");
     ins->subCycleSurfaceKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 					 "insSubCycleSurface2D",
 					 kernelInfo);
 
-    printf("Compiling SubCycle Advection cubature  volume kernel \n");
     ins->subCycleCubatureVolumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 					 "insSubCycleCubatureVolume2D",
 					 kernelInfo);
 
-    printf("Compiling SubCycle Advection cubature surface kernel\n");
     ins->subCycleCubatureSurfaceKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 					 "insSubCycleCubatureSurface2D",
 					 kernelInfo);
 
-
-    printf("Compiling SubCycle Advection RK update kernel\n");
     ins->subCycleRKUpdateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
 					 "insSubCycleRKUpdate2D",
@@ -474,36 +472,30 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
            "scaledAddwOffset",
            kernelInfo);
  
-  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
   ins->totalHaloExtractKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insTotalHaloExtract2D",
              kernelInfo);
 
-  printf("Compiling INS Helmholtz Halo Extract Kernel\n");
   ins->totalHaloScatterKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insTotalHaloScatter2D",
              kernelInfo);
-   printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->velocityHaloExtractKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
             "insVelocityHaloExtract2D",
              kernelInfo);
 
-  printf("Compiling INS PoissonHalo Extract Kernel\n");
   ins->velocityHaloScatterKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insVelocityHaloScatter2D",
              kernelInfo);
 
-  printf("Compiling INS Poisson Halo Extract Kernel\n");
   ins->pressureHaloExtractKernel=
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insPressureHaloExtract",
              kernelInfo);
 
-  printf("Compiling INS PoissonHalo Extract Kernel\n");
   ins->pressureHaloScatterKernel=
    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
              "insPressureHaloScatter",
@@ -513,82 +505,69 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 // if(strstr(options, "ALGEBRAIC")){
  
   // ===========================================================================
-  printf("Compiling Advection volume kernel with cubature integration\n");
   ins->advectionCubatureVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
 				       "insAdvectionCubatureVolume2D",
 				       kernelInfo);
 
-  printf("Compiling Advection surface kernel with cubature integration\n");
   ins->advectionCubatureSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
 				       "insAdvectionCubatureSurface2D",
 				       kernelInfo);
 
-  printf("Compiling Advection volume kernel with collocation integration\n");
   ins->advectionVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
 				       "insAdvectionVolume2D",
 				       kernelInfo);
 
-  printf("Compiling Advection surface kernel with collocation integration\n");
   ins->advectionSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
 				       "insAdvectionSurface2D",
 				       kernelInfo);
 
-   printf("Compiling SubCycle Advection RK update kernel\n");
     ins->subCycleRKUpdateKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
            "insSubCycleRKUpdate2D",
            kernelInfo);
   // ===========================================================================
-  printf("Compiling Gradient volume kernel with collocation integration\n");
   ins->gradientVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
 				       "insGradientVolume2D",
 				       kernelInfo);
 
-  printf("Compiling Gradient volume kernel with collocation integration\n");
   ins->gradientSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient2D.okl",
 				       "insGradientSurface2D",
 				       kernelInfo);
 
   // ===========================================================================
-  printf("Compiling Divergence volume kernel with collocation integration\n");
   ins->divergenceVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
 				       "insDivergenceVolume2D",
 				       kernelInfo);
 
-  printf("Compiling Divergencesurface kernel with collocation integration\n");
   ins->divergenceSurfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence2D.okl",
 				       "insDivergenceSurface2D",
 				       kernelInfo);
 
   // ===========================================================================
-  printf("Compiling Helmholtz Rhs Forcing  kernel\n");
   ins->helmholtzRhsForcingKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
 				       "insHelmholtzRhsForcing2D",
 				       kernelInfo);
 
-  printf("Compiling Helmholtz IPDG RHS kernel with collocation integration\n");
   ins->helmholtzRhsIpdgBCKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs2D.okl",
 				       "insHelmholtzRhsIpdgBC2D",
 				       kernelInfo);
 
   // ===========================================================================
-  printf("Compiling Helmholtz volume update kernel\n");
   ins->poissonRhsForcingKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
 				       "insPoissonRhsForcing2D",
 				       kernelInfo);
 
-  printf("Compiling Poisson IPDG surface kernel with collocation integration\n");
   ins->poissonRhsIpdgBCKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs2D.okl",
 				       "insPoissonRhsIpdgBC2D",
@@ -604,13 +583,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
                "insPoissonAddBCKernel",
                kernelInfo);
 
-  printf("Compiling Poisson penalty surface kernel\n");
   ins->poissonPenaltyKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
 				       "insPoissonPenalty2D",
 				       kernelInfo);
 
-  printf("Compiling Poisson surface kernel with collocation integration\n");
   ins->updateUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
 				       "insUpdateUpdate2D",
