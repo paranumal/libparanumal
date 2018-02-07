@@ -184,13 +184,18 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			   mesh->o_EToE,
 			   mesh->o_qFilter,
 			   mesh->o_q);
-	/*mesh->o_q.copyTo(mesh->q);
+
+	mesh->o_q.copyTo(mesh->q);
+#if 0
+	
 	for(int e = 0; e < mesh->Nelements; ++e) {
 	  for (int i = 0; i < mesh->Np; ++i) {
 	    mesh->q[e*mesh->Nfields*mesh->Np + i] -= mesh->x[e*mesh->Np + i];
 	  }
 	}
-	boltzmannPlotLevels(mesh,"bar",tstep);*/
+#endif
+	boltzmannPlotLevels(mesh,"bar",tstep);
+	exit(-1);
 	
       }
     }

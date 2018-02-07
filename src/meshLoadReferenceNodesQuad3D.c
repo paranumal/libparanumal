@@ -20,12 +20,16 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->Nfp = N+1;
 
   fgets(buf, BUFSIZ, fp); // read comment
+
+  printf("got message: %s\n", buf);
+  
   fgets(buf, BUFSIZ, fp);
   int Npcheck;
   sscanf(buf, "%d", &Npcheck);
   mesh->Np = Npcheck;
 
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got message: %s\n", buf);
   mesh->r = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   mesh->s = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np;++n){
@@ -48,6 +52,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   }
   
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got Dr message: %s\n", buf);
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->Dr+n);
@@ -55,6 +60,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
 
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got Ds message: %s\n", buf);
   mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Np*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->Ds+n);
@@ -62,6 +68,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read EOL
 
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got faceNodes message: %s\n", buf);
   mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int f=0;f<mesh->Nfaces;++f){
     for(int n=0;n<mesh->Nfp;++n){
@@ -72,6 +79,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
     
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got LIFT message: %s\n", buf);
   mesh->LIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->LIFT+n);
@@ -80,7 +88,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
-
+  printf("got D message: %s\n", buf);
   mesh->D = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
@@ -91,6 +99,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
   /* 1D GLL node coordinates */
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got gllz message: %s\n", buf);
   mesh->gllz = (dfloat*) calloc(mesh->N+1, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     fscanf(fp, dfloatFormat, mesh->gllz+n);
@@ -99,6 +108,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   
   /* 1D GLL node coordinates */
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got gllw message: %s\n", buf);
   mesh->gllw = (dfloat*) calloc(mesh->N+1, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     fscanf(fp, dfloatFormat, mesh->gllw+n);
@@ -107,6 +117,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got message: %s\n", buf);
   fgets(buf, BUFSIZ, fp); 
   sscanf(buf, iintFormat, &(mesh->plotNp));
 
@@ -114,6 +125,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   mesh->plotS = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got message: %s\n", buf);
   for(int n=0;n<mesh->plotNp;++n){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n);
@@ -122,6 +134,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   // read plot interpolation matrix
   mesh->plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got plotInterp: %s\n", buf);
   for(int n=0;n<mesh->plotNp;++n){
     for(int m=0;m<mesh->Np;++m){
       fscanf(fp, dfloatFormat, mesh->plotInterp+n*mesh->Np+m);
@@ -131,7 +144,10 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
 
   // read number of elements in plot node triangulation
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); 
+  printf("got plotTri message: %s\n", buf);
+  
+  fgets(buf, BUFSIZ, fp);
+
   sscanf(buf, iintFormat, &(mesh->plotNelements));
 
   // read number of vertices per plot element
@@ -142,6 +158,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   // build and read in plot node triangulation
   mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got plotEToV message: %s\n", buf);
   for(int n=0;n<mesh->plotNelements;++n){
     for(int m=0;m<mesh->plotNverts;++m){
       fscanf(fp, iintFormat, mesh->plotEToV+m + mesh->plotNverts*n);
@@ -149,8 +166,11 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+#if 0
+  
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got oasForward message: %s\n", buf);
   fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->NqP));
   fgets(buf, BUFSIZ, fp);
@@ -178,8 +198,10 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
+  printf("got oasForwardDG message: %s\n", buf);
   fgets(buf, BUFSIZ, fp);
   sscanf(buf, iintFormat, &(mesh->NqP));
   fgets(buf, BUFSIZ, fp);
@@ -192,6 +214,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   }
 
   fgets(buf, BUFSIZ, fp);
+  printf("got oasForwardDG message: %s\n", buf);
   mesh->oasDiagOpDg = (dfloat*) calloc(mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
     fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
@@ -226,6 +249,9 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   // read cubature weak 'r' differentiation matrix
   mesh->cubDrW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+
+  printf("got cubDrW message: %s\n", buf);
+  
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->cubNp;++m){
       fscanf(fp, dfloatFormat, mesh->cubDrW+n*mesh->cubNp+m);
@@ -235,6 +261,9 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   // read cubature weak 's' differentiation matrix
   mesh->cubDsW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+
+  printf("got cubDsW message: %s\n", buf);
+  
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->cubNp;++m){
       fscanf(fp, dfloatFormat, mesh->cubDsW+n*mesh->cubNp+m);
@@ -245,6 +274,9 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     // read cubature projection matrix
   mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+
+  printf("got cubProject message: %s\n", buf);
+  
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->cubNp;++m){
       fscanf(fp, dfloatFormat, mesh->cubProject+n*mesh->cubNp+m);
@@ -262,6 +294,9 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->intInterp 
     = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
+
+  printf("got intInterp message: %s\n", buf);
+  
   for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
     for(int m=0;m<mesh->Nfp;++m){
       fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
@@ -273,25 +308,27 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
 
+  printf("got int lif message: %s\n", buf);
+  
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
       fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
-      //      printf("%g ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
+      printf("%lg ", mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m]);
     }
-    //    printf("\n");
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
-
+#endif
   // read lift matrix from surface integration to volume nodes
   mesh->dualProjMatrix = (dfloat*) calloc(mesh->Nq*mesh->Nq*3, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
-
+  printf("got dual message: %s\n", buf);
   for(int n=0;n<mesh->Nq;++n){
     for(int m=0;m<3*mesh->Nq;++m){
       fscanf(fp, dfloatFormat, mesh->dualProjMatrix+n*3*mesh->Nq+m);
-      //      printf("%g ", mesh->dualProjMatrix[n*3*mesh->Nq+m]);
+      printf("%lg ", mesh->dualProjMatrix[n*3*mesh->Nq+m]);
     }
-    //    printf("\n");
+    printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
   

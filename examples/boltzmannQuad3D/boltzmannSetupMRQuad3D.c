@@ -4,7 +4,7 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
 		 dfloat x, dfloat y, dfloat z,
 		 dfloat *u, dfloat *v, dfloat *w){
 
-  dfloat Utangential = 0.25*(1+tanh(bmRho*(-z+0.5)))*(1+tanh(bmRho*(0.5+z)));
+  dfloat Utangential = 0.25*(1+tanh(bmRho*(-z+0.25)))*(1+tanh(bmRho*(0.25+z)));
 
   dfloat uout, vout;
 
@@ -205,7 +205,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
       dfloat z = mesh->z[n + mesh->Np*e];
 
       // Brown Minion shear layer roll up
-      dfloat bmRho = 40;
+      dfloat bmRho = 10; // was 40
       dfloat bmDelta  = 0.05;
 
       dfloat rho = 1;
@@ -365,7 +365,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
-  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
   occa::kernelInfo kernelInfo;

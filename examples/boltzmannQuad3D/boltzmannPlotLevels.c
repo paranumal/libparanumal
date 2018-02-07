@@ -64,8 +64,12 @@ void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_value\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
-      dfloat plotpn = mesh->q[e*mesh->Np*mesh->Nfields + n];
-      //      plotpn = plotpn*mesh->rho; // Get Pressure
+
+      dfloat plotpn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+	plotpn += mesh->plotInterp[n*mesh->Np+m]*mesh->q[m+1*mesh->Np+e*mesh->Np*mesh->Nfields];
+      }
+      
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }

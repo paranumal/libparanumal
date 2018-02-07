@@ -1,3 +1,4 @@
+
 kernel void boltzmannFilterHQuad3D(const iint Nelements,
 				   const iint * restrict elementIds,
 				   const dfloat * restrict F,
@@ -17,7 +18,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
 	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
 	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
-	
+
 	eC = elementIds[eo];
 	eL = EToE[eC*p_Nfaces+3];
 	eR = EToE[eC*p_Nfaces+1];

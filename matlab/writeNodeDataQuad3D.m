@@ -146,6 +146,9 @@ for n=1:plotNelements
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3));
 end
 
+	  %% TW
+	  if(0)
+	  
 %%%% ---
 
 %% 1D 
@@ -204,6 +207,7 @@ gllwP = diag([w1d(2),2*w1d(1),w1d(2:end-1),2*w1d(1),w1d(2)]);
 P = vSP;
 invP = inv(gllwP*vSP);
 diagOp = diag(dSP); % need to divide to get inverse
+
 
 fprintf(fid, '%% stencil size for H0 OAS NqP\n');
 fprintf(fid, '%d\n', NqP);
@@ -417,6 +421,8 @@ sJ = [ones(Nfi,1);ones(Nfi,1);ones(Nfi,1);ones(Nfi,1)];
 cubDrT*ones(Ncub,1) - iLIFT*(nr.*sJ)
 cubDsT*ones(Ncub,1) - iLIFT*(ns.*sJ)
 
+end
+	  
 %% Filter matrix for dual projection
 
 Nq = N+1;
