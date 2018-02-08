@@ -16,7 +16,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
 
   //filter the initial state
-  for (iint l=0;l<mesh->MRABNlevels;l++) {
+    for (iint l=0;l<mesh->MRABNlevels;l++) {
     
     mesh->filterKernelH(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
@@ -43,7 +43,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_z,
 			mesh->o_qFilter,
 			mesh->o_q);
-  }
+			}
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {

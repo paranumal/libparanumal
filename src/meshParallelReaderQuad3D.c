@@ -273,10 +273,10 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	  if (maxNode == -1) {printf("Bad element alignment. Check face numbering\n");}
 	  else {
 	    /* read shifted vertex triplet for trianngle */
-	    mesh->EToV[cnt*mesh->Nverts+((0+maxNode)%4)] = v1-1;
-	    mesh->EToV[cnt*mesh->Nverts+((1+maxNode)%4)] = v2-1;
-	    mesh->EToV[cnt*mesh->Nverts+((2+maxNode)%4)] = v3-1;
-	    mesh->EToV[cnt*mesh->Nverts+((3+maxNode)%4)] = v4-1;
+	    mesh->EToV[cnt*mesh->Nverts+((0+mesh->Nverts-maxNode)%4)] = v1-1;
+	    mesh->EToV[cnt*mesh->Nverts+((1+mesh->Nverts-maxNode)%4)] = v2-1;
+	    mesh->EToV[cnt*mesh->Nverts+((2+mesh->Nverts-maxNode)%4)] = v3-1;
+	    mesh->EToV[cnt*mesh->Nverts+((3+mesh->Nverts-maxNode)%4)] = v4-1;
 	    ++cnt;
 	  }
 	}
