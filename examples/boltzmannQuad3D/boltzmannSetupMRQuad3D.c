@@ -384,7 +384,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   //initialization isn't strictly necessary here.
   mesh->o_qFilter =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->q);
+    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
   
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),

@@ -1,9 +1,14 @@
 
 kernel void boltzmannFilterHQuad3D(const iint Nelements,
 				   const iint * restrict elementIds,
+				   const iint nrhs,
+				   const iint shift,
 				   const dfloat * restrict F,
 				   const iint * restrict cubeFaceNumber,
 				   const iint * restrict EToE,
+				   const dfloat * restrict x,
+				   const dfloat * restrict y,
+				   const dfloat * restrict z,
 				   const dfloat * restrict qIn,
 				   dfloat * restrict Fq) {
   
@@ -28,12 +33,12 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shift*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    
 	    if(faceC==faceL)
-	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shift*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    if(faceC==faceR)
-	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shift*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	  }
       }
     }
@@ -71,10 +76,22 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	      Fqij[fld] = s_q[fld][1][j][i];
 	    }
 	}
+
+	// constrain momentum changes to lie on sphere
+	const dfloat xij = x[i+j*p_Nq+eC*p_Np];
+	const dfloat yij = y[i+j*p_Nq+eC*p_Np];
+	const dfloat zij = z[i+j*p_Nq+eC*p_Np];
+	
+	// remove radial component of momentum change
+	const dfloat xdotrhsq = (Fqij[2]*xij + Fqij[3]*yij + Fqij[4]*zij)*p_invRadiusSq;
+	
+//	Fqij[2] -= xij*xdotrhsq; 
+//	Fqij[3] -= yij*xdotrhsq;
+//	Fqij[4] -= zij*xdotrhsq;
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    Fq[eC*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
+	    Fq[eC*p_Nfields*p_Np*nrhs + shift*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
 	  }
       }
     }

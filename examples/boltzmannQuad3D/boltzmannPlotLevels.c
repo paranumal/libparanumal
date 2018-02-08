@@ -6,7 +6,7 @@
 #include "boltzmannQuad3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep){
+void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -67,7 +67,7 @@ void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep){
 
       dfloat plotpn = 0;
       for(iint m=0;m<mesh->Np;++m){
-	plotpn += mesh->plotInterp[n*mesh->Np+m]*mesh->q[m+1*mesh->Np+e*mesh->Np*mesh->Nfields];
+	plotpn += mesh->plotInterp[n*mesh->Np+m]*q[m+1*mesh->Np+e*mesh->Nrhs*mesh->Np*mesh->Nfields];
       }
       
       fprintf(fp, "       ");

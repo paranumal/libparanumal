@@ -13,6 +13,37 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
+
+
+  //filter the initial state
+  for (iint l=0;l<mesh->MRABNlevels;l++) {
+    
+    mesh->filterKernelH(mesh->MRABNelements[l],
+			mesh->o_MRABelementIds[l],
+			1, //fake rhsq
+			0, //fake rhsq
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_q,
+			mesh->o_qFilter);
+    
+    mesh->filterKernelV(mesh->MRABNelements[l],
+			mesh->o_MRABelementIds[l],
+			1, //fake rhsq
+			0, //fake rhsq
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_qFilter,
+			mesh->o_q);
+  }
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -107,6 +138,55 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
+      for (iint l = 0; l < lev; l++) {
+
+	/*for (int e = 0; e < mesh->Nelements; ++e) {
+	  for (int i = 0; i < mesh->Np; ++i) {
+	    test_q[e*mesh->Nfields*mesh->Np + i] = mesh->x[e*mesh->Np + i];
+	  }
+	}
+	mesh->o_q.copyFrom(test_q);*/
+	
+	mesh->filterKernelH(mesh->MRABNelements[l],
+			    mesh->o_MRABelementIds[l],
+			    mesh->Nrhs,
+			    mesh->MRABshiftIndex[l],
+			    mesh->o_dualProjMatrix,
+			    mesh->o_cubeFaceNumber,
+			    mesh->o_EToE,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    mesh->o_rhsq,
+			    mesh->o_qFilter);
+	
+	mesh->filterKernelV(mesh->MRABNelements[l],
+			    mesh->o_MRABelementIds[l],
+			    mesh->Nrhs,
+			    mesh->MRABshiftIndex[l],
+			    mesh->o_dualProjMatrix,
+			    mesh->o_cubeFaceNumber,
+			    mesh->o_EToE,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    mesh->o_qFilter,
+			    mesh->o_rhsq);
+
+	//mesh->o_rhsq.copyTo(test_q);
+#if 0
+	
+	for(int e = 0; e < mesh->Nelements; ++e) {
+	  for (int i = 0; i < mesh->Np; ++i) {
+	    mesh->q[e*mesh->Nfields*mesh->Np + i] -= mesh->x[e*mesh->Np + i];
+	  }
+	}
+#endif
+	//	boltzmannPlotLevels(mesh,"bar",tstep,test_q+mesh->MRABshiftIndex[l]);
+	//exit(-1);
+	
+      }
+      
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
       
@@ -158,45 +238,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_fQM,
 			     mesh->o_q);
       	}
-      }
-
-      for (iint l = 0; l < lev; l++) {
-
-	/*for (int e = 0; e < mesh->Nelements; ++e) {
-	  for (int i = 0; i < mesh->Np; ++i) {
-	    test_q[e*mesh->Nfields*mesh->Np + i] = mesh->x[e*mesh->Np + i];
-	  }
-	}
-	mesh->o_q.copyFrom(test_q);*/
-	
-	mesh->filterKernelH(mesh->MRABNelements[l],
-			   mesh->o_MRABelementIds[l],
-			   mesh->o_dualProjMatrix,
-			   mesh->o_cubeFaceNumber,
-			   mesh->o_EToE,
-			   mesh->o_q,
-			   mesh->o_qFilter);
-	
-	mesh->filterKernelV(mesh->MRABNelements[l],
-			   mesh->o_MRABelementIds[l],
-			   mesh->o_dualProjMatrix,
-			   mesh->o_cubeFaceNumber,
-			   mesh->o_EToE,
-			   mesh->o_qFilter,
-			   mesh->o_q);
-
-	mesh->o_q.copyTo(mesh->q);
-#if 0
-	
-	for(int e = 0; e < mesh->Nelements; ++e) {
-	  for (int i = 0; i < mesh->Np; ++i) {
-	    mesh->q[e*mesh->Nfields*mesh->Np + i] -= mesh->x[e*mesh->Np + i];
-	  }
-	}
-#endif
-	boltzmannPlotLevels(mesh,"bar",tstep);
-	exit(-1);
-	
       }
     }
 
