@@ -74,16 +74,16 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	  const dfloat zij = z[i+j*p_Nq+eC*p_Np];
 
 	  //coriolis effect, from volume kernel
-	  Fqij[2] -= p_fainv*zij*(yij*s_q[4][1][j][i]-zij*s_q[3][1][j][i]);
-	  Fqij[3] -= p_fainv*zij*(zij*s_q[2][1][j][i]-xij*s_q[4][1][j][i]);
-	  Fqij[4] -= p_fainv*zij*(xij*s_q[3][1][j][i]-yij*s_q[2][1][j][i]);
+	  Fqij[1] -= p_fainv*zij*(yij*s_q[3][1][j][i]-zij*s_q[2][1][j][i]);
+	  Fqij[2] -= p_fainv*zij*(zij*s_q[1][1][j][i]-xij*s_q[3][1][j][i]);
+	  Fqij[3] -= p_fainv*zij*(xij*s_q[2][1][j][i]-yij*s_q[1][1][j][i]);
 	  
 	  // remove radial component of momentum change
-	  const dfloat xdotrhsq = (Fqij[2]*xij + Fqij[3]*yij + Fqij[4]*zij)*p_invRadiusSq;
+	  const dfloat xdotrhsq = (Fqij[1]*xij + Fqij[2]*yij + Fqij[3]*zij)*p_invRadiusSq;
 	  
-	  //Fqij[2] -= xij*xdotrhsq; 
-	  //Fqij[3] -= yij*xdotrhsq;
-	  //Fqij[4] -= zij*xdotrhsq;
+	  Fqij[1] -= xij*xdotrhsq; 
+	  Fqij[2] -= yij*xdotrhsq;
+	  Fqij[3] -= zij*xdotrhsq;
 	}
 	else{
 	  
