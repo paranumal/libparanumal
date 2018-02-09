@@ -49,6 +49,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
 void meshPhysicalNodesTri3D(mesh3D *mesh);
 void meshPhysicalNodesQuad3D(mesh3D *mesh);
+void meshSphericalNodesQuad3D(mesh3D *mesh);
 void meshPhysicalNodesTet3D(mesh3D *mesh);
 void meshPhysicalNodesHex3D(mesh3D *mesh);
 
