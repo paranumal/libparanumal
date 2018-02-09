@@ -92,9 +92,8 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
     dfloat ze2 = mesh->EZ[id+1];
     dfloat ze3 = mesh->EZ[id+2];
     dfloat ze4 = mesh->EZ[id+3];
-
+    
     //phi equatorial in the (x,y) plane, theta on the z axis
-    //TODO: make sure acos doesn't break
     dfloat theta1 = acos(ze1/mesh->sphereRadius);
     dfloat theta2 = acos(ze2/mesh->sphereRadius);
     dfloat theta3 = acos(ze3/mesh->sphereRadius);
@@ -104,6 +103,33 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
     dfloat phi2 = atan2(ye2,xe2);
     dfloat phi3 = atan2(ye3,xe3);
     dfloat phi4 = atan2(ye4,xe4);
+
+    //correct azimuthal branch on nodes that straddle -M_PI
+
+    //first go in a loop and make sure we take the short way around
+    if (abs(phi2 - phi1) > M_PI) {
+      if (phi2 > phi1) phi1 += 2*M_PI;
+      else phi2 += 2*M_PI;
+    }
+    if (abs(phi3 - phi2) > M_PI) {
+      if (phi3 > phi2) phi2 += 2*M_PI;
+      else phi3 += 2*M_PI;
+    }
+    if (abs(phi4 - phi3) > M_PI) {
+      if (phi4 > phi3) phi3 += 2*M_PI;
+      else phi4 += 2*M_PI;
+    }
+    if (abs(phi1 - phi4) > M_PI) {
+      if (phi1 > phi4) phi4 += 2*M_PI;
+      else phi1 += 2*M_PI;
+    }
+
+    //some elements might have been stranded before, so check diagonals
+    if (abs(phi1 - phi2) > M_PI) {
+      if (phi1 > phi2) phi2 += 2*M_PI;
+      else phi1 += 2*M_PI;
+    }
+
     
     for(iint n=0;n<mesh->Np;++n){ /* for each node */
       
