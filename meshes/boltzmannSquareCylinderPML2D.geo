@@ -9,10 +9,15 @@ xmax = DefineNumber[ 9.0];
 ymin = DefineNumber[-5.0];
 ymax = DefineNumber[ 5.0];
 
-xpmlmin = DefineNumber[-40.0];
-xpmlmax = DefineNumber[ 200.0]; //+ 13
-ypmlmin = DefineNumber[-40.0];
-ypmlmax = DefineNumber[ 40.0];
+//+xpmlmin = DefineNumber[-40.0];
+//+xpmlmax = DefineNumber[ 200.0]; //+ 13
+//+ypmlmin = DefineNumber[-40.0];
+//+ypmlmax = DefineNumber[ 40.0];
+
+xpmlmin = DefineNumber[-9.0];
+xpmlmax = DefineNumber[ 13.0]; //+ 13
+ypmlmin = DefineNumber[-9.0];
+ypmlmax = DefineNumber[ 9.0];
 
 xcmin = DefineNumber[-0.5];
 xcmax = DefineNumber[ 0.5];
@@ -102,10 +107,10 @@ Physical Line("Wall",1) = {1, 2, 3, 4};
 Physical Line("Inflow",2) = {12, 28, 26, 25, 23, 21, 15, 13, 9};
 Physical Line("Outflow",3) = {16, 18, 20};
 
-//+Physical Surface("Interior",9) = {31};
-//+Physical Surface("XPML",100) = {39,47};
-//+Physical Surface("YPML",200) = {35,43};
-//+Physical Surface("XYPML",300) = {33, 37, 41, 45};
+Physical Surface("Interior",9) = {31};
+Physical Surface("XPML",100) = {39,47};
+Physical Surface("YPML",200) = {35,43};
+Physical Surface("XYPML",300) = {33, 37, 41, 45};
 
-Physical Surface("Interior",9) = {31,39,47,35,43,33, 37, 41, 45};
+//+Physical Surface("Interior",9) = {31,39,47,35,43,33, 37, 41, 45};
 Coherence;
