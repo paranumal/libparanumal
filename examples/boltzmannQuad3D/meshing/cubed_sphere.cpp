@@ -143,7 +143,8 @@ using Lookup=std::map<std::pair<Index, Index>, Index>;
 
 inline v3 split(v3 lhs, v3 rhs)
 {
-  return normalize(lhs+rhs);
+  //return normalize(lhs+rhs);
+  return (lhs+rhs)/2;
 }
 
 inline ColorPosition split(ColorPosition lhs, ColorPosition rhs)
