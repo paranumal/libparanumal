@@ -104,6 +104,37 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
     dfloat phi2 = atan2(ye2,xe2);
     dfloat phi3 = atan2(ye3,xe3);
     dfloat phi4 = atan2(ye4,xe4);
+
+    //correct azimuthal branch on nodes that straddle -M_PI
+
+    //first go in a loop and make sure we take the short way around
+    if (abs(phi2 - phi1) > M_PI) {
+      if (phi2 > phi1) phi1 += M_PI;
+      else phi2 += M_PI;
+    }
+    if (abs(phi3 - phi2) > M_PI) {
+      if (phi3 > phi2) phi2 += M_PI;
+      else phi3 += M_PI;
+    }
+    if (abs(phi4 - phi3) > M_PI) {
+      if (phi4 > phi3) phi3 += M_PI;
+      else phi4 += M_PI;
+    }
+    if (abs(phi1 - phi4) > M_PI) {
+      if (phi1 > phi4) phi4 += M_PI;
+      else phi1 += M_PI;
+    }
+
+    //some elements might have been stranded before, so check diagonals
+    if (abs(phi1 - phi3) > M_PI) {
+      if (phi1 > phi3) phi3 += M_PI;
+      else phi1 += M_PI;
+    }
+    if (abs(phi2 - phi4) > M_PI) {
+      if (phi2 > phi4) phi4 += M_PI;
+      else phi2 += M_PI;
+    }    
+
     
     for(iint n=0;n<mesh->Np;++n){ /* for each node */
       
