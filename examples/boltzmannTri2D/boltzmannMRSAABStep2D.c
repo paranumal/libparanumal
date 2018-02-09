@@ -259,14 +259,15 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                   mesh->o_fQM,
                                   mesh->o_fQP);
 
-          //rotate index
+          // //rotate index
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
         }
 
 
         if (lev<mesh->MRABNlevels) {
 
-          const iint id = mrab_order*mesh->MRABNlevels*3 + (lev-1)*3;
+          // const iint id = mrab_order*mesh->MRABNlevels*3 + (lev-1)*3; // !!!!!
+          const iint id = mrab_order*mesh->MRABNlevels*3 + (lev)*3;
 
           if (mesh->MRABNhaloElements[lev])
             mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
@@ -307,6 +308,9 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                       mesh->o_fQM,
                                       mesh->o_fQP);
         }
+
+
+
 
 }
 

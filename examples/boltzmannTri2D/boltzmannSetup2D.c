@@ -27,7 +27,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
   }
 
-  else if(strstr(options,"SAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
+  else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
     mesh->Nrhs = 3;
     // compute samples of q at interpolation nodes
     mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
@@ -73,15 +73,15 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref; v = 0; sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
     mesh->finalTime = 100.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
-    mesh->Ma = 0.1;     //Set Mach number
-    mesh->Re = 10.;   // Set Reynolds number
+    mesh->Ma = 0.2;     //Set Mach number
+    mesh->Re = 200.;   // Set Reynolds number
     
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -92,7 +92,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     nu = Uref*Lref/mesh->Re; 
     mesh->tauInv = mesh->RT/nu;
     
-    #if 1
+    #if 0
     // Create Periodic Boundaries
     printf("Creating periodic connections if exist \n");
     dfloat xper = 1.0;   dfloat yper = 0.0;
@@ -100,10 +100,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     #endif
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0, u = 1.0, v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1.0, u = Uref, v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->startTime = 0.5; 
-    mesh->finalTime = 1.5;
+    mesh->startTime = 0.0; 
+    mesh->finalTime = 100.;
   }
 
   // set penalty parameter
@@ -196,7 +196,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   //
 
   // Set stable time step size for each element
-  dfloat cfl          = 0.333; 
+  dfloat cfl          = 0.15; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -224,7 +224,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
     dfloat dtex   = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
     dfloat dtim   = 1.f/(mesh->tauInv);
-
     dfloat dtest = 1e9;
     
     if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB"))
@@ -248,8 +247,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     meshMRABSetup2D(mesh,EtoDT,maxLevels);
   }
   else{
-    
-  
+      
    //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
    //dt = 10e-6; // !!!!!!!!!!!!!!!!
    //!!!!!!
@@ -288,12 +286,24 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
  
 
   if(strstr(options, "PROBE")){
-    mesh->probeNTotal = 1; 
+    mesh->probeNTotal = 9; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     // Fill probe coordinates
-    pX[0] = 0.90;   //pX[1] = 0.65; pX[2] = 0.60; 
-    pY[0] = 0.00;   //pY[1] = 0.60; pY[2] = 0.55; 
+    // pX[0] = 8.00;  pX[1] = 9.00; pX[2] = 10.00; pX[3] = 10.50; 
+    // pY[0] = 0.00;  pY[1] = 0.00; pY[2] =  0.00; pY[3] =  0.00; 
+
+    pX[0] =  2.00;  pX[1] = 2.00; pX[2] =  2.00; 
+    pY[0] = -1.00;  pY[1] = 0.00; pY[2] =  1.00; 
+
+    pX[3] =  4.00;  pX[4] = 4.00; pX[5] =  4.00; 
+    pY[3] = -1.00;  pY[4] = 0.00; pY[5] =  1.00; 
+
+
+    pX[6] =  8.00;  pX[7] = 8.00; pX[8] =  8.00; 
+    pY[6] = -1.00;  pY[7] = 0.00; pY[8] =  1.00; 
+
+
 
     meshProbeSetup2D(mesh, pX, pY);
 
@@ -321,7 +331,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     boltzmannMRABPmlSetup2D(mesh, options);
   // 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABNelements[lev])
         mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
@@ -341,14 +351,43 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   
 
-  
+
+#if 1
+mesh2D *meshsave = mesh;
+iint fld = 0; 
+  for(iint lev=0; lev<mesh->MRABNlevels; lev++){
+
+        for(iint m=0; m<mesh->MRABNelements[lev]; m++){
+          iint e = mesh->MRABelementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
+             mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
+          }
+        }
+
+
+        for(iint m=0; m<mesh->MRABpmlNelements[lev]; m++){
+          iint e = mesh->MRABpmlElementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
+             mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
+          }
+        }
+  }
+
+ char fname[BUFSIZ];
+ sprintf(fname, "ElementGroups.vtu");
+ meshPlotVTU2D(mesh, fname,fld);
+
+
+mesh = meshsave; 
+
+#endif
 
 
 if(strstr(options,"MRSAAB") || strstr(options,"MRAB") || 
    strstr(options,"SRAB")   || strstr(options,"SAAB") ){
 
 
-  iint Nlevels = 1;
+  iint Nlevels = 0;
 
   if(mesh->MRABNlevels==0)
     Nlevels =1;
@@ -487,8 +526,8 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
         
       }
 
-      printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
-                                                           mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
+      // printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
+                                                           // mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
 
     }
 
@@ -501,7 +540,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
 
   // 
-  printf("Setting Rhs for SRAB\n");
+  printf("Setting Rhs for AB\n");
   mesh->o_rhsq.free();
   mesh->o_rhsq = mesh->device.malloc(3*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
 
@@ -667,10 +706,10 @@ else if(strstr(options, "LSIMEX")){
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
-  kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
-  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
+  kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
+  kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
+  kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
 
@@ -682,8 +721,9 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q4bar", q4bar);
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
-  kernelInfo.addDefine("p_alpha0", (float).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (float)0.0f);
+  kernelInfo.addDefine("p_alpha0", (dfloat).01f);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f);
+  // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
 
 
 
@@ -856,7 +896,7 @@ else if(strstr(options, "LSIMEX")){
      }
 
 
-     else if(strstr(options,"SAAB")){
+     else if(strstr(options,"SRSAAB")){
      printf("Compiling SAAB update kernel\n");
      mesh->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",

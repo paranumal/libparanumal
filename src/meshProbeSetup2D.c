@@ -6,18 +6,118 @@
 void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
  
 
-  //dfloat tol     =-1.0e-8;        // set tolerance
-  dfloat mindist = -1.e-9; // Set minum distance
+ dfloat mindist = -1.e-12; // Set minum distance
   //
 
   mesh->probeN = 0; 
+
+
+  #if 1
+ 
+  dfloat *probeR           = (dfloat *) calloc(10*mesh->probeNTotal,sizeof(dfloat));
+  dfloat *probeS           = (dfloat *) calloc(10*mesh->probeNTotal,sizeof(dfloat));
+  mesh->probeElementIds    = (iint *)   calloc(10*mesh->probeNTotal,sizeof(iint));
+  mesh->probeIds           = (iint *)   calloc(10*mesh->probeNTotal,sizeof(iint));
+
+ 
+  double *A        = (double *) calloc((mesh->dim+1)*mesh->Nverts,sizeof(double)); 
+  iint   *IPIV     = (iint *)   calloc(mesh->Nverts,sizeof(iint)); 
+  iint   *IPIV2    = (iint *)   calloc((mesh->Np+1),sizeof(iint)); 
+ 
+  dfloat *b       = (dfloat *) calloc((mesh->dim+1),sizeof(dfloat));
+  double *q       = (double *) calloc(mesh->Nverts,sizeof(double));
+
+  for(iint n=0; n<mesh->Nverts;n++)
+    IPIV[n] = 1; 
+
+  for(iint n=0; n<(mesh->Np+1);n++)
+    IPIV2[n] = 1; 
+
+
+  iint N    = (mesh->dim+1); // A->Nrwos
+  iint NRHS =  1; // B->Ncolumns
+  iint LDA  = N; 
+  iint LDB  = (mesh->dim + 1); // B->Nrows
+  iint INFO;
+
+  // for(iint n=0; n<mesh->mesh->probeNTotal; n++){
+  // // Coordinates of probe
+  // printf("Probe %d  pX: %g pY:%g \n",n, pX[n], pY[n]);
+  // }
+
+// Assumes each probe is in one element, may change later 
+  for(iint n=0; n<mesh->probeNTotal; n++){
+    // Coordinates of probe
+    b[0] = 1.0; 
+    b[1] = pX[n]; 
+    b[2] = pY[n]; 
+
+    for (iint e=0;e<mesh->Nelements;e++) {
+    // Create A[1 vx vy]
+      for (iint v=0;v<mesh->Nverts;v++) {
+        dfloat vx = mesh->EX[e*mesh->Nverts+v];
+        dfloat vy = mesh->EY[e*mesh->Nverts+v];
+        //
+        A[v*mesh->Nverts + 0] = 1.0;
+        A[v*mesh->Nverts + 1] = vx;
+        A[v*mesh->Nverts + 2] = vy;
+      } 
+     
+     for(iint l=0; l<(mesh->dim+1); l++)
+     q[l] = b[l]; 
+
+
+    dgesv_(&N,&NRHS,(double*) A,&LDA,IPIV, (double*) q,&LDB,&INFO);
+
+    if(INFO)
+      printf("DGSEV error: %d \n", INFO);
+
+    // Check all non-negative barycentric coordinates 
+    // Assumes a probe can be represented by single element!!!!
+
+      dfloat qmin = q[0]; 
+      for(iint i =1; i<(mesh->dim+1); i++)
+       qmin = mymin(qmin, q[i]);
+        
+      
+      // Catch the element
+      if(qmin>mindist){
+
+        // Increase number of probes        
+        mesh->probeIds[mesh->probeN] = n;
+        // hold element ids
+        mesh->probeElementIds[mesh->probeN] = e; 
+        // hold local r,s coordinates
+        dfloat l1 =  q[2]; 
+        dfloat l2 =  q[0]; 
+        dfloat l3 =  q[1]; 
+
+        probeR[mesh->probeN] = 2.*l3 -1.; 
+        probeS[mesh->probeN] = 2.*l1 -1.;
+
+        printf("element: %d probe Id: %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[mesh->probeN],probeS[mesh->probeN]); 
+        //
+        mesh->probeN++;
+
+      }
+    }
+
+
+
+  }
+
+
+
+
+#else
+
+mesh->probeN = 0; 
  
   dfloat *probeR           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
   dfloat *probeS           = (dfloat *) calloc(mesh->probeNTotal,sizeof(dfloat));
-  mesh->probeElementIds  = (iint *)   calloc(mesh->probeNTotal,sizeof(iint));
+  mesh->probeElementIds    = (iint *)   calloc(mesh->probeNTotal,sizeof(iint));
 
-  // mesh->Nprobes =3; 
-
+ 
   double *A        = (double *) calloc((mesh->dim+1)*mesh->Nverts,sizeof(double)); 
   iint   *IPIV     = (iint *)   calloc(mesh->Nverts,sizeof(iint)); 
   iint   *IPIV2    = (iint *)   calloc((mesh->Np+1),sizeof(iint)); 
@@ -38,35 +138,32 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
   iint LDB  = (mesh->dim + 1); // B->Nrows
   iint INFO;
 
-  // for(iint n=0; n<mesh->mesh->probeNTotal; n++){
-  // // Coordinates of probe
-  // printf("Probe %d  pX: %g pY:%g \n",n, pX[n], pY[n]);
-  // }
+
 
   // Assumes each probe is in one element, may change later 
   for(iint n=0; n<mesh->probeNTotal; n++){
     // Coordinates of probe
-    b[n*mesh->probeN + 0] = 1.0; 
-    b[n*mesh->probeN + 1] = pX[n]; 
-    b[n*mesh->probeN + 2] = pY[n]; 
+    b[n*mesh->probeNTotal + 0] = 1.0; 
+    b[n*mesh->probeNTotal + 1] = pX[n]; 
+    b[n*mesh->probeNTotal + 2] = pY[n]; 
   }
   
   
   //
   for (iint e=0;e<mesh->Nelements;e++) {
     // Create A[1 vx vy]
-    for (iint n=0;n<mesh->Nverts;n++) {
-      dfloat vx = mesh->EX[e*mesh->Nverts+n];
-      dfloat vy = mesh->EY[e*mesh->Nverts+n];
+    for (iint v=0;v<mesh->Nverts;v++) {
+      dfloat vx = mesh->EX[e*mesh->Nverts+v];
+      dfloat vy = mesh->EY[e*mesh->Nverts+v];
       //
-      A[n*mesh->Nverts + 0] = 1.0;
-      A[n*mesh->Nverts + 1] = vx;
-      A[n*mesh->Nverts + 2] = vy;
+      A[v*mesh->Nverts + 0] = 1.0;
+      A[v*mesh->Nverts + 1] = vx;
+      A[v*mesh->Nverts + 2] = vy;
     } 
 
 
-    for(iint n=0; n<mesh->probeNTotal*(mesh->dim+1); n++)
-      q[n] = b[n]; 
+    for(iint l=0; l<mesh->probeNTotal*(mesh->dim+1); l++)
+      q[l] = b[l]; 
     
   
     // Find barycentric coordinates
@@ -77,37 +174,47 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
     if(INFO)
       printf("DGSEV error: %d \n", INFO);
 
-    // if(sizeof(dfloat) == sizeof(float))
-    // sgesv_(&N,&NRHS,A,&LDA,IPIV,q,&LDB,&INFO);
-
     // Check all non-negative barycentric coordinates 
     // Assumes a probe can be represented by single element!!!!
     for(iint n=0; n<mesh->probeNTotal; n++){
 
-      dfloat qmin = q[n*mesh->probeN + 0]; 
+      dfloat qmin = q[n*mesh->probeNTotal + 0]; 
       for(iint i =1; i<(mesh->dim+1); i++)
-	qmin = mymin(qmin, q[n*mesh->probeNTotal + i]);
+	     qmin = mymin(qmin, q[n*mesh->probeNTotal + i]);
         
       // Catch the element
       if(qmin>mindist){
-	mesh->probeN++;
-	// hold element ids
-	mesh->probeElementIds[n] = e; 
-	// hold local r,s coordinates
-	dfloat l1 =  q[n*mesh->probeNTotal + 2]; 
-	dfloat l2 =  q[n*mesh->probeNTotal + 0]; 
-	dfloat l3 =  q[n*mesh->probeNTotal + 1]; 
+      	mesh->probeN++;
+      	// hold element ids
+      	mesh->probeElementIds[n] = e; 
+      	// hold local r,s coordinates
+      	dfloat l1 =  q[n*mesh->probeNTotal + 2]; 
+      	dfloat l2 =  q[n*mesh->probeNTotal + 0]; 
+      	dfloat l3 =  q[n*mesh->probeNTotal + 1]; 
 
-	probeR[n] = 2.*l3 -1.; 
-	probeS[n] = 2.*l1 -1.;
+      	probeR[n] = 2.*l3 -1.; 
+      	probeS[n] = 2.*l1 -1.;
 
-	printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[n],probeS[n]); 
+      	printf("element: %d probe %d qmin:%.5e R: %.5e S:%.5e\n", e, n, qmin, probeR[n],probeS[n]); 
 
       }
     }
   }
  
+#endif
+
+
+ printf("probe Number: %d \n", mesh->probeN); 
+
+
+
   if(mesh->probeN){
+    //Reallocate ProbeIds and Element Ids, Now take cares of  cares 
+    mesh->probeIds        = (iint *)   realloc(mesh->probeIds,        mesh->probeN*sizeof(iint));
+    mesh->probeElementIds = (iint *)   realloc(mesh->probeElementIds, mesh->probeN*sizeof(iint));
+    probeR                = (dfloat *) realloc(probeR, mesh->probeN*sizeof(dfloat));
+    probeS                = (dfloat *) realloc(probeS, mesh->probeN*sizeof(dfloat));
+
     // Compute Vandermonde Matrix and invert  it
     dfloat *V = (dfloat *) calloc(mesh->Np* (mesh->N+1)*(mesh->N+2)/2, sizeof(dfloat));
     meshVandermonde2D(mesh->N, mesh->Np, mesh->r, mesh->s, V);
@@ -137,11 +244,11 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
 
     for(iint r=0; r<mesh->probeN; r++){
       for(iint c=0; c<mesh->Np; c++){
-	dfloat s = 0;
-	for(iint i=0; i<mesh->Np; i++){
-	  s += Vprobe[r*mesh->Np+i]*dV[i*mesh->Np + c];
-	}
-	mesh->probeI[r*mesh->Np + c] = s;
+      	dfloat s = 0;
+      	for(iint i=0; i<mesh->Np; i++){
+      	  s += Vprobe[r*mesh->Np+i]*dV[i*mesh->Np + c];
+      	}
+      	mesh->probeI[r*mesh->Np + c] = s;
       }
 
     }

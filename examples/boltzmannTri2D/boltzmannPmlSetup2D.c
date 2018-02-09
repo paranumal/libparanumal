@@ -338,13 +338,13 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     }
 
 
-    
+ #if 0   
     // Setup Pml Parameter beta and initiliaze to zero 
     mesh->pmlBetaX = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
     mesh->pmlBetaY = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
-    dfloat betap =  1.0; 
-    dfloat betam =  1.0; // was -1.0
+    dfloat betap =   1.0; 
+    dfloat betam =  -1.0; // was -1.0
 
     dfloat betaxMax = sqrt(3.0);  // was 1.0
     dfloat betayMax = sqrt(3.0); // was 1.0
@@ -388,55 +388,16 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
               mesh->pmlBetaY[mesh->Np*e + n] = betam*betayMax*pow(y-ymin,order)/yminScale;
           }  
 
-#if 0
-          dfloat qx=0,      qy = 0, taux = 0,  tauy = 0;
 
-          if (type==100) { //X Pml
-            if(x>xmax)
-              qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-              qx    = (x-xmin)/(pmlxmin-xmin);
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-              qy    = (y-ymin)/(pmlymin-ymin);
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-             qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-             qx    = (x-xmin)/(pmlxmin-xmin);
-            if(y>ymax)
-             qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-             qy    = (y-ymin)/(pmlymin-ymin);
-          }
-          // Strech field to  q1< field <q2
-          taux  =  (qx-q1)/(q2-q1);  tauy  =  (qy-q1)/(q2-q1);
+          
 
-
-           if (type==100) { //X Pml
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
-          } else if (type==200) { //Y Pml
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
-          } else if (type==300) { //XY Pml
-            if(x>xmax || x<xmin)
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
-            if(y>ymax || y<ymin)
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
-          }
-          dfloat dist = sqrt(taux*taux + tauy*tauy); // r coordinate
-          dfloat beta = pow(dist,2);  // use quadratic profile
-
-          beta = dist<=q1 ? 0. : beta;  
-          beta = dist>=q2 ? 1. : beta; 
-          mesh->pmlBeta[mesh->Np*e + n] = betamax*beta;
-          printf("%d :  %.8e\n", e, betamax*beta );
-#endif
         }
-      } 
+      }
 
+      mesh->o_pmlBetaX      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaX);
+      mesh->o_pmlBetaY      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaY); 
 
+#endif
 
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
@@ -517,8 +478,6 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     }
 
     if (mesh->pmlNelements) {
-      mesh->o_pmlBetaX      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaX);
-      mesh->o_pmlBetaY      = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->pmlBetaY);
       mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
       mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
       mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);

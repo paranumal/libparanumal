@@ -14,7 +14,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       if(mesh->probeN){
 
       char fname[BUFSIZ];
-      sprintf(fname, "ReynoldTest_%d_%.f_%05d_%04d_Alpha.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
+      sprintf(fname, "ProbeData_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
 
       FILE *fp; 
       fp = fopen(fname, "a");      
@@ -22,7 +22,8 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
 
       for(iint p=0; p<mesh->probeN; p++){
-         iint e = mesh->probeElementIds[p];        
+         iint pid  = mesh->probeIds[p];
+         iint e    = mesh->probeElementIds[p];        
          dfloat srho = 0.0; 
          dfloat su = 0.0; 
          dfloat sv = 0.0; 
@@ -36,7 +37,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
           sv          += mesh->probeI[p*mesh->Np+n]*vm;
          }
 
-        fprintf(fp, "%02d %.8e %.8e %.8e ",p, srho, su, sv); 
+        fprintf(fp, "%02d %04d %.8e %.8e %.8e ",pid, e, srho, su, sv); 
       }
     fprintf(fp, "\n"); 
     fclose(fp);
