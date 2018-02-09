@@ -238,7 +238,6 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
                 r_rhsq[fld]  = 0.f;
                 r_rhsqx[fld] = 0.f;
                 r_rhsqy[fld] = 0.f;
-                // r_rhsqt[fld] = 0.f;
               }
            
            
@@ -252,7 +251,6 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
                   } 
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
-                  // r_rhsqt[fld] += Pnc*s_cubqt[es][fld][m];
                  }
               }
             
@@ -261,7 +259,6 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];
                 rhsq[rhsId + fld]        += (r_rhsqx[fld] + r_rhsqy[fld] + r_rhsq[fld]);
-                // rhsq[rhsId + fld]        += (r_rhsqx[fld] + r_rhsqy[fld] + r_rhsq[fld] + r_rhsqt[fld]);
               }   
           }
         }
@@ -388,10 +385,6 @@ kernel void boltzmannSARelaxationCub2D(const iint Nelements,
 
 
 
-
-
-
-
 // 
 kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
                                     const iint * restrict pmlElementIds,
@@ -412,14 +405,14 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
    for(iint eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
-    shared dfloat  s_q[p_NblockV][p_Nfields][p_Np];
-    shared dfloat s_qx[p_NblockV][p_Nfields][p_Np];
-    shared dfloat s_qy[p_NblockV][p_Nfields][p_Np];
+    shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
+    shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
+    shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubq[p_NblockV][3][p_cubNp];
-    shared dfloat s_cubqx[p_NblockV][p_Nfields][p_cubNp];
-    shared dfloat s_cubqy[p_NblockV][p_Nfields][p_cubNp];
+    shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
+    shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
+    shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
 
     exclusive iint e, pmlId;
 
@@ -474,24 +467,36 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
             }
             //
             
-            dfloat icubq1 = 1.f/r_q[0];
-
-            // BGK relaxation approximation to the Boltzmann collision operator
-            s_cubq[es][0][n] = p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-            s_cubq[es][1][n] = p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-            s_cubq[es][2][n] = p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-
              // Prefetch sigma
             const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp+n];
             const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp+n];
 
-            const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+            const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha; //
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
             
             for(iint fld=0; fld<p_Nfields;++fld){
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
+              s_cubq[es][fld][n] = -msigmaxe*r_qx[fld] - msigmaye*r_qy[fld];  
             }
+            
+
+            // // !!!!!!!!
+            //  s_cubq [es][5][n] = -msigmaxe*r_qx[5]   -msigmaye*r_qy[5];
+
+
+            dfloat icubq1 = 1.f/r_q[0];
+            // BGK relaxation approximation to the Boltzmann collision operator
+            s_cubq[es][3][n] += p_tauInv*(           r_q[1]*r_q[2]*icubq1);
+            s_cubq[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+            s_cubq[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+
+
+             // s_cubqy[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+             // s_cubqx[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+
+
+
           }
         }
       }
@@ -526,9 +531,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];
                 //
                  for(iint fld=0; fld<p_Nfields; fld++){
-                  if(fld<3){
-                    r_rhsq[fld+3] += Pnc*s_cubq[es][fld][m];
-                  } 
+                  r_rhsq[fld]  += Pnc*s_cubq[es][fld][m];
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
                  }
@@ -538,7 +541,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
              for(iint fld=0; fld<p_Nfields;++fld){
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];
-                rhsq[rhsId + fld]        += r_rhsqx[fld] + r_rhsqy[fld] + r_rhsq[fld];
+                rhsq[rhsId + fld]        += r_rhsq[fld];
               }   
           }
         }

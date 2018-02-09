@@ -28,7 +28,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *opt);
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 void boltzmannCouetteError2D(mesh2D *mesh, dfloat time);
 
-
+void boltzmannPlotVTUField2D(mesh2D *mesh, char *fname);
 void boltzmannPlotVTU2D(mesh2D *mesh, char * FileName);
 void boltzmannPlotTEC2D(mesh2D *mesh, char * FileName, dfloat solutionTime);
 void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);

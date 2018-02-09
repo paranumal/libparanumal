@@ -262,7 +262,7 @@ kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
         const iint id  = p_Nfields*(e*p_Np + n);
         const iint pid = p_Nfields*(pmlId*p_Np + n);
         //
-        
+
       for (iint fld =0; fld<p_Nfields; ++fld){
 
         const dfloat r_q  = q [id  + fld];
@@ -713,50 +713,6 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
 
 
 
-
-
-// kernel void boltzmannLSERKUpdate2D_0(const iint Nelements,
-// 				    const iint * restrict elementIds,
-// 				    const dfloat dt,	
-// 				    const dfloat rka,
-// 				    const dfloat rkb,
-// 				    const dfloat4 * restrict rhsq,
-// 				          dfloat4 * restrict resq,
-// 				          dfloat4 * restrict q){
-  
-//   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-
-//       const iint base = 2*(n + element*p_Np);
-
-//       dfloat4 resqa = resq[base+0];
-//       dfloat4 resqb = resq[base+1];
-
-//       dfloat4 rhsqa = rhsq[base+0];
-//       dfloat4 rhsqb = rhsq[base+1];
-
-//       dfloat4 qa = q[base+0];
-//       dfloat4 qb = q[base+1];
-
-//       resqa = rka*resqa + dt*rhsqa;
-//       resqb = rka*resqb + dt*rhsqb;
-
-//       qa += rkb*resqa;
-//       qb += rkb*resqb;
-      
-//       resq[base+0] = resqa;
-//       resq[base+1] = resqb;
-      
-//       q[base+0] = qa;
-//       q[base+1] = qb;
-//     }
-//   }
-// }
-
-
-
 // This kernel does not use float 4 format, 
 kernel void boltzmannMRABUpdate2D(const iint Nelements,
             const iint * restrict elementIds,
@@ -1025,6 +981,26 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
 
           pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
           pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+
+          
+          // //
+          // if(fld==5){
+          // pmlqx[pid+fld] = expdt*pmlqx[pid+fld] + saab1*pmlrhsqx[pmlrhsId1+fld] + saab2*pmlrhsqx[pmlrhsId2+fld] + saab3*pmlrhsqx[pmlrhsId3+fld];
+          // }
+
+          // else{
+          // pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
+          // }
+
+          // if(fld==4){
+          // pmlqy[pid+fld] = expdt*pmlqy[pid+fld] + saab1*pmlrhsqy[pmlrhsId1+fld] + saab2*pmlrhsqy[pmlrhsId2+fld] + saab3*pmlrhsqy[pmlrhsId3+fld];
+          // }
+
+          // else{
+          // pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+          // }
+
+
 
           dfloat n_q = 0.f; 
 

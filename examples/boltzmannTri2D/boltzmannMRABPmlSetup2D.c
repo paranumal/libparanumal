@@ -3,8 +3,10 @@
 void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma  = 100.;
-  dfloat ysigma  = 100.;
+  dfloat xsigma  = 0.0;
+  dfloat ysigma  = 0.0;
+  // dfloat xsigma  = 100.*mesh->sqrtRT;
+  // dfloat ysigma  = 100.*mesh->sqrtRT;
   //dfloat cxsigma = 200, cysigma = 200;
   dfloat q1    = 0.0, q2 = 1.0;    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
 
@@ -215,6 +217,9 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
             y = mesh->y[n + e*mesh->Np];
           }
 
+
+
+
         if(!strstr(options,"SMOOTHPOLYNOMIAL")){
           if (type==100) { //X Pml
             if(x>xmax)
@@ -236,6 +241,34 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
             if(y<ymin)
               mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
+#if 0
+
+           if (type==100) { //X Pml
+            if(x>xmax)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+            if(x<xmin)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+          } else if (type==200) { //Y Pml
+            if(y>ymax)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+            if(y<ymin)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+          } else if (type==300) { //XY Pml
+            if(x>xmax)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+            if(x<xmin)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+            if(y>ymax)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+            if(y<ymin)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+          }
+
+#endif
+
+
+
+
         }
 
         else if(strstr(options,"SMOOTHPOLYNOMIAL")){
