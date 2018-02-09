@@ -14,15 +14,19 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
 
+  //kernel arguments
+  dfloat alpha = 1./mesh->N;
+  dfloat zero = 0;
+  dfloat one = 1;
 
   //filter the initial state
     for (iint l=0;l<mesh->MRABNlevels;l++) {
     
     mesh->filterKernelH(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
-			1, //fake rhsq
-			0, //fake rhsq
-			1.0/mesh->N,
+			one, //fake rhsq
+			zero, //fake rhsq
+			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
 			mesh->o_EToE,
@@ -34,9 +38,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
     
     mesh->filterKernelV(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
-			1, //fake rhsq
-			0, //fake rhsq
-			1.0/mesh->N,
+			one, //fake rhsq
+			zero, //fake rhsq
+			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
 			mesh->o_EToE,
