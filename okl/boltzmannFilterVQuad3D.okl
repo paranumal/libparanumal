@@ -2,6 +2,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 				   const iint * restrict elementIds,
 				   const iint nrhs,
 				   const iint shift,
+				   const dfloat alpha,
 				   const dfloat * restrict F,
 				   const iint * restrict cubeFaceNumber,
 				   const iint * restrict EToE,
@@ -68,6 +69,11 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		  Fqij[fld] += FinR*s_q[fld][2][n][i];
 		}
 	    }
+
+	  for (iint fld=0; fld<p_Nfields;++fld) {
+	    Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+	  }
+
 	  	// constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eC*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eC*p_Np];

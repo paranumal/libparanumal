@@ -22,6 +22,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABelementIds[l],
 			1, //fake rhsq
 			0, //fake rhsq
+			1.0/mesh->N,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
 			mesh->o_EToE,
@@ -35,6 +36,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABelementIds[l],
 			1, //fake rhsq
 			0, //fake rhsq
+			1.0/mesh->N,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
 			mesh->o_EToE,
@@ -151,6 +153,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABelementIds[l],
 			    mesh->Nrhs,
 			    mesh->MRABshiftIndex[l],
+			    1.0/mesh->N,
 			    mesh->o_dualProjMatrix,
 			    mesh->o_cubeFaceNumber,
 			    mesh->o_EToE,
@@ -164,6 +167,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABelementIds[l],
 			    mesh->Nrhs,
 			    mesh->MRABshiftIndex[l],
+			    1.0/mesh->N,
 			    mesh->o_dualProjMatrix,
 			    mesh->o_cubeFaceNumber,
 			    mesh->o_EToE,
