@@ -73,23 +73,6 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	    for (iint fld=0; fld<p_Nfields;++fld) {
 	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
 	    }
-
-	    // constrain momentum changes to lie on sphere
-	  const dfloat xij = x[i+j*p_Nq+eC*p_Np];
-	  const dfloat yij = y[i+j*p_Nq+eC*p_Np];
-	  const dfloat zij = z[i+j*p_Nq+eC*p_Np];
-
-	  //coriolis effect, from volume kernel
-	  Fqij[1] -= p_fainv*zij*(yij*s_q[3][1][j][i]-zij*s_q[2][1][j][i]);
-	  Fqij[2] -= p_fainv*zij*(zij*s_q[1][1][j][i]-xij*s_q[3][1][j][i]);
-	  Fqij[3] -= p_fainv*zij*(xij*s_q[2][1][j][i]-yij*s_q[1][1][j][i]);
-	  
-	  // remove radial component of momentum change
-	  const dfloat xdotrhsq = (Fqij[1]*xij + Fqij[2]*yij + Fqij[3]*zij)*p_invRadiusSq;
-	  
-	  Fqij[1] -= xij*xdotrhsq; 
-	  Fqij[2] -= yij*xdotrhsq;
-	  Fqij[3] -= zij*xdotrhsq;
 	}
 	else{
 	  
