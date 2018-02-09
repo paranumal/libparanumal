@@ -82,7 +82,6 @@ void insUpdateStep3D(ins_t *ins, iint tstep, iint haloBytes,
   }
   
   // U <= U - dt/g0 * d(pressure increment)/dx
-  const dfloat dt_invg0 = ins->dt/ins->g0;
   ins->updateUpdateKernel(mesh->Nelements,
                           ins->dt,
                           ins->ig0,

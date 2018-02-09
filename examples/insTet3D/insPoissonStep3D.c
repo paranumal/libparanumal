@@ -170,9 +170,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
   }
 
-
   ins->NiterP = ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
-
 
   if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
     ins->poissonAddBCKernel(mesh->Nelements,
@@ -182,6 +180,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
+                            mesh->o_vmapM,
                             mesh->o_mapB,
                             ins->o_PI);
   }

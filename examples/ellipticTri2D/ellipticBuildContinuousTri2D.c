@@ -40,9 +40,10 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   //build gather scatter with masked nodes
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
   *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
                                         mesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags);
+                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
 
   // Build non-zeros of stiffness matrix (unassembled)
   iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;

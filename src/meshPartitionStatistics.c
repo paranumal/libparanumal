@@ -39,7 +39,7 @@ void meshPartitionStatistics(mesh_t *mesh){
       for(iint s=0;s<size;++s){
 	printf(" %04d", comms[s]);
       }
-      printf("] (Nmessages=%d, Ncomms=%d)\n", Nmessages, Ncomms);
+      printf("] (Nelements=%d, Nmessages=%d, Ncomms=%d)\n", mesh->Nelements,Nmessages, Ncomms);
       fflush(stdout);
     }
   }

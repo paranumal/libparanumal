@@ -89,7 +89,7 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
     levelDegree= (int *) calloc(numLevels,sizeof(int));
     for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - 2*n; //decrease by two
     levelDegree[numLevels-1] = 1; //ensure the last level is degree 1
-  } else if (strstr(options,"HALFDOFS")) {
+  } else { // default "HALFDOFS"
     // pick the degrees so the dofs of each level halfs (roughly)
     //start by counting the number of levels neccessary
     numLevels = 1;

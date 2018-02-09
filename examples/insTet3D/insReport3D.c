@@ -18,7 +18,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     // do error stuff on host
     insError3D(ins, t, options);
  
-    printf("Writing output file\n");
+    if (rank==0) printf("Writing output file\n");
     // output field files
     char fname[BUFSIZ];
     // sprintf(fname, "/u0/outputs/ins3D/");

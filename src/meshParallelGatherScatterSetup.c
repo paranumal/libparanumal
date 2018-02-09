@@ -11,7 +11,8 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
                                       iint *gatherLocalIds,
                                       iint *gatherBaseIds,
                                       iint *gatherBaseRanks,
-                                      int  *gatherHaloFlags) { 
+                                      int  *gatherHaloFlags,
+                                      int verbose) { 
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -95,7 +96,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
       for(iint id=ogs->gatherOffsets[n];id<ogs->gatherOffsets[n+1];++id){
         if(haloFlags[id]){
           ogs->haloLocalIds[ogs->Nhalo] = n;
-          ogs->haloGlobalIds[ogs->Nhalo] = baseIds[id];
+          ogs->haloGlobalIds[ogs->Nhalo] = baseIds[id]+1;
           ++ogs->Nhalo;
           break;
         }
@@ -109,7 +110,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     ogs->o_haloTmp  = mesh->device.malloc(ogs->Nhalo*sizeof(dfloat), ogs->haloTmp);
 
     // initiate gslib gather-scatter comm pattern
-    ogs->haloGsh = gsParallelGatherScatterSetup(ogs->Nhalo, ogs->haloGlobalIds);
+    ogs->haloGsh = gsParallelGatherScatterSetup(ogs->Nhalo, ogs->haloGlobalIds,verbose);
   }
 
   // build degree vectors

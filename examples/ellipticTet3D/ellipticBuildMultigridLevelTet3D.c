@@ -429,18 +429,20 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
              kernelInfo);
 
   //on host gather-scatter
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
 
   // setup occa gather scatter
   mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
                                              mesh->gatherLocalIds,
                                              mesh->gatherBaseIds,
                                              mesh->gatherBaseRanks,
-                                             mesh->gatherHaloFlags);
+                                             mesh->gatherHaloFlags,
+                                             verbose);
   solver->o_invDegree = mesh->ogs->o_invDegree;
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(solver);
+  ellipticParallelGatherScatterSetup(solver,options);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)  
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
@@ -452,7 +454,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
         for (int n=0;n<mesh->Nfp;n++) {
           int BCFlag = BCType[bc];
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = BCFlag;
+          mesh->mapB[fid+e*mesh->Np] = mymin(BCFlag,mesh->mapB[fid+e*mesh->Np]);
         }
       }
     }

@@ -119,7 +119,7 @@ void ellipticInterimHaloExchange3D(solver_t *solver, occa::memory &o_q, int Nent
 
 void ellipticEndHaloExchange3D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
-void ellipticParallelGatherScatterSetup(solver_t *solver);
+void ellipticParallelGatherScatterSetup(solver_t *solver, const char * options);
 
 //Linear solvers
 int pcg      (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);

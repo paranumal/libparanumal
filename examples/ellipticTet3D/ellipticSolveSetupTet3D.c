@@ -111,7 +111,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     }
   }
   MPI_Allreduce(&allNeumann, &(solver->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
-  if (rank==0) printf("allNeumann = %d \n", solver->allNeumann);
+  if (rank==0&&strstr(options,"VERBOSE")) printf("allNeumann = %d \n", solver->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
@@ -273,18 +273,20 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
                    kernelInfo);
 
   //on-host version of gather-scatter
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds);
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
 
   // setup occa gather scatter
   mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
                                              mesh->gatherLocalIds,
                                              mesh->gatherBaseIds,
                                              mesh->gatherBaseRanks,
-                                             mesh->gatherHaloFlags);
+                                             mesh->gatherHaloFlags,
+                                             verbose);
   solver->o_invDegree = mesh->ogs->o_invDegree;
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(solver);
+  ellipticParallelGatherScatterSetup(solver, options);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
@@ -296,7 +298,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
         for (int n=0;n<mesh->Nfp;n++) {
           int BCFlag = BCType[bc];
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = BCFlag;
+          mesh->mapB[fid+e*mesh->Np] = mymin(BCFlag,mesh->mapB[fid+e*mesh->Np]);
         }
       }
     }
@@ -309,7 +311,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
     if (mesh->mapB[n] == 1E9) {
       mesh->mapB[n] = 0.;
     } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
-      mesh->mapB[n] = 1.;
       mesh->Nmasked++;
     }
   }

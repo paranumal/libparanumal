@@ -40,7 +40,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
       halo->o_gatherTmp.copyTo(halo->gatherTmp);
     }
-    if(nonHalo->Ngather){
+    if(solver->NlocalGatherElements){
       solver->partialAxKernel(solver->NlocalGatherElements, 
                               solver->o_localGatherElementList,
                               mesh->o_ggeo, 

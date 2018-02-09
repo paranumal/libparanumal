@@ -2,7 +2,7 @@
 
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
-void ellipticParallelGatherScatterSetup(solver_t* solver){  
+void ellipticParallelGatherScatterSetup(solver_t* solver, const char *options){  
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -97,7 +97,8 @@ void ellipticParallelGatherScatterSetup(solver_t* solver){
     solver->halo->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(iint),                solver->halo->gatherLocalIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
-    solver->halo->haloGsh = gsParallelGatherScatterSetup(solver->halo->Ngather, solver->halo->gatherBaseIds);
+    int verbose = strstr(options,"VERBOSE") ? 1:0;
+    solver->halo->haloGsh = gsParallelGatherScatterSetup(solver->halo->Ngather, solver->halo->gatherBaseIds,verbose);
   }
 
   // if there are non-halo nodes to gather
