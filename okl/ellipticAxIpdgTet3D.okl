@@ -225,7 +225,7 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
       element = elementList[e];
       if(n<p_Np){
         // assume that this stores (qx, qy, qz, q) as dfloat4
-        const dfloat4 gradqn = gradq[e*p_Np+n];
+        const dfloat4 gradqn = gradq[element*p_Np+n];
 
         s_dqdx[n] = gradqn.x;
         s_dqdy[n] = gradqn.y;

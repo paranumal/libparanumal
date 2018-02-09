@@ -9,14 +9,15 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
   dfloat t = tstep*ins->dt; 
 
   // field offset at this step
-  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  iint  offset  = mesh->Nelements+mesh->totalHaloPairs;  
+  iint ioffset  = ins->index*offset;
   
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){
     ins->totalHaloExtractKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
-                                offset,
+                                ioffset,
                                 ins->o_U,
                                 ins->o_V,
                                 ins->o_W,
@@ -41,7 +42,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                        mesh->o_cubDsWT,
                                        mesh->o_cubDtWT,
                                        mesh->o_cubInterpT,
-                                       offset,
+                                       ioffset,
                                        ins->o_U,
                                        ins->o_V,
                                        ins->o_W,
@@ -54,7 +55,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                mesh->o_DrT,
                                mesh->o_DsT,
                                mesh->o_DtT,
-                               offset,
+                               ioffset,
                                ins->o_U,
                                ins->o_V,
                                ins->o_W,
@@ -69,7 +70,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                             mesh->o_DrT,
                             mesh->o_DsT,
                             mesh->o_DtT,
-                            offset,
+                            ioffset,
                             ins->o_P,
                             ins->o_Px,
                             ins->o_Py,
@@ -85,7 +86,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
-                                offset,
+                                ioffset,
                                 ins->o_U,
                                 ins->o_V,
                                 ins->o_W,
@@ -109,7 +110,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                         mesh->o_intx,
                                         mesh->o_inty,
                                         mesh->o_intz,
-                                        offset,
+                                        ioffset,
                                         ins->o_U,
                                         ins->o_V,
                                         ins->o_W,
@@ -127,7 +128,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                 mesh->o_x,
                                 mesh->o_y,
                                 mesh->o_z,
-                                offset,
+                                ioffset,
                                 ins->o_U,
                                 ins->o_V,
                                 ins->o_W,
@@ -135,6 +136,9 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                 ins->o_NV,
                                 ins->o_NW);
   }
+
+  // Solve pressure gradient for t^(n+1) grad(p^(n+1))
+  t += ins->dt;
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
     const iint solverid = 0; // Pressure Solve
@@ -154,9 +158,9 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                ins->c1,
                                ins->c2,
                                ins->index,
-                               mesh->Nelements+mesh->totalHaloPairs,
+                               offset,
                                solverid, // pressure BCs
-                                     ins->o_PI, //not used
+                               ins->o_PI, //not used
                                ins->o_P,
                                ins->o_Px,
                                ins->o_Py,

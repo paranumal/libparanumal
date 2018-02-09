@@ -11,7 +11,7 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
   dfloat t = tstep*ins->dt + ins->dt;
   
   iint offset = mesh->Nelements+mesh->totalHaloPairs;
-  iint subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
+  int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
   
   
    // compute all forcing i.e. f^(n+1) - grad(Pr)

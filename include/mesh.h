@@ -608,7 +608,8 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
                                       iint *gatherLocalIds,
                                       iint *gatherBaseIds,
                                       iint *gatherBaseRanks,
-                                      int  *gatherHaloFlags);
+                                      int  *gatherHaloFlags,
+                                      int verbose);
 
 void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv);
 void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
@@ -619,7 +620,7 @@ void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds);
+  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
 

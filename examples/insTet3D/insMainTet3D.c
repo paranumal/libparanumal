@@ -10,14 +10,17 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
   char *velSolverOptions = 
-    strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
+    strdup("solver=PCG method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
   char *velParAlmondOptions = 
-    strdup("solver= smoother= partition=");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
 
   char *prSolverOptions =
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE, method=CONTINUOUS  preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
 
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
@@ -43,7 +46,7 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   //int Ns = 0; // Default no-subcycling 
-  int Ns =0;
+  int Ns =4;
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
@@ -54,13 +57,13 @@ int main(int argc, char **argv){
   else
       options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
-  printf("Setup INS Solver: \n");
+  if (rank==0) printf("Setup INS Solver: \n");
   ins_t *ins = insSetup3D(mesh, Ns, options,
                           velSolverOptions,velParAlmondOptions,
                           prSolverOptions, prParAlmondOptions,
                           boundaryHeaderFileName);
 
-  printf("OCCA Run: \n");
+  if (rank==0) printf("OCCA Run: \n");
   insRun3D(ins,options);
 
 

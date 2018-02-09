@@ -8,7 +8,8 @@
 #include "gslib.h"
 
 void *gsParallelGatherScatterSetup(int NuniqueBases,
-				   int *gatherGlobalNodes){
+				   int *gatherGlobalNodes,
+           int verbose){
   
   /* gslib stuff */
   comm_ext world;
@@ -27,7 +28,7 @@ void *gsParallelGatherScatterSetup(int NuniqueBases,
     id[n] = gatherGlobalNodes[n];
   }
 
-  struct gs_data *gsh = gs_setup(id, NuniqueBases, &com, 0, gs_auto, 1);
+  struct gs_data *gsh = gs_setup(id, NuniqueBases, &com, 0, gs_auto, verbose);
 
   free(id);
 

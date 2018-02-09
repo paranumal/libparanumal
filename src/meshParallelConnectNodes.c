@@ -264,7 +264,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
 
   for(iint id=0;id<localNodeCount;++id){
     mesh->gatherLocalIds[id]  = sendNodes[id].element*mesh->Np+sendNodes[id].node;
-    mesh->gatherBaseIds[id]   = sendNodes[id].newGlobalId;
+    mesh->gatherBaseIds[id]   = sendNodes[id].newGlobalId+1;
     mesh->gatherBaseRanks[id] = sendNodes[id].baseRank;
     mesh->gatherHaloFlags[id] = sendNodes[id].haloFlag;
   }

@@ -199,7 +199,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
 
   //on-host version of gather-scatter
-  pmesh->hostGsh = gsParallelGatherScatterSetup(pmesh->Nelements*pmesh->Np, pmesh->globalIds);
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  pmesh->hostGsh = gsParallelGatherScatterSetup(pmesh->Nelements*pmesh->Np, pmesh->globalIds,verbose);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   pmesh->mapB = (int *) calloc(pmesh->Nelements*pmesh->Np,sizeof(int));
@@ -237,7 +238,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   //build gather scatter with masked nodes
   precon->FEMogs = meshParallelGatherScatterSetup(pmesh, pmesh->Nelements*pmesh->Np, 
                                         pmesh->gatherLocalIds,  pmesh->gatherBaseIds, 
-                                        pmesh->gatherBaseRanks, pmesh->gatherHaloFlags);
+                                        pmesh->gatherBaseRanks, pmesh->gatherHaloFlags,verbose);
 
 
 

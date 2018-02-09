@@ -359,18 +359,18 @@ kernel void insHelmholtzRhsIpdgBC3D(const iint Nelements,
         dfloat lawr = 0.f, laws = 0.f, lawt=0.f;
         occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i) {
-              laur += DrT[n+i*p_Np]*s_dudx[i];
-          laus += DsT[n+i*p_Np]*s_dudy[i];
-          laut += DtT[n+i*p_Np]*s_dudz[i];
+            laur += DrT[n+i*p_Np]*s_dudx[i];
+            laus += DsT[n+i*p_Np]*s_dudy[i];
+            laut += DtT[n+i*p_Np]*s_dudz[i];
 
-          lavr += DrT[n+i*p_Np]*s_dvdx[i];
-          lavs += DsT[n+i*p_Np]*s_dvdy[i];
-          lavt += DtT[n+i*p_Np]*s_dvdz[i];
+            lavr += DrT[n+i*p_Np]*s_dvdx[i];
+            lavs += DsT[n+i*p_Np]*s_dvdy[i];
+            lavt += DtT[n+i*p_Np]*s_dvdz[i];
 
-          lawr += DrT[n+i*p_Np]*s_dwdx[i];
-          laws += DsT[n+i*p_Np]*s_dwdy[i];
-          lawt += DtT[n+i*p_Np]*s_dwdz[i];
-            }
+            lawr += DrT[n+i*p_Np]*s_dwdx[i];
+            laws += DsT[n+i*p_Np]*s_dwdy[i];
+            lawt += DtT[n+i*p_Np]*s_dwdz[i];
+          }
 
         s_lapu[n] = -(laur+laus+laut);
         s_lapv[n] = -(lavr+lavs+lavt);
@@ -391,8 +391,8 @@ kernel void insHelmholtzRhsIpdgBC3D(const iint Nelements,
         occaUnroll(p_NfacesNfp)
           for(int i=0;i<p_NfacesNfp;++i){
             lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
-          lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
-          law += LIFTT[n+i*p_Np]*s_lapwflux[i];
+            lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
+            law += LIFTT[n+i*p_Np]*s_lapwflux[i];
           }
 
         s_lapu[n] += lau;

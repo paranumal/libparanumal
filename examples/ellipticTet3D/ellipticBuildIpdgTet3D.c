@@ -253,7 +253,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   // free up unused storage
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
-
+  
   free(globalIds);
 
   free(BM);  free(MS);

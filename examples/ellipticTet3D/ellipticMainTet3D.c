@@ -28,8 +28,8 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
 
@@ -62,6 +62,8 @@ int main(int argc, char **argv){
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
+  //int BCType[4] = {0,1,1,2};
+  //int BCType[4] = {0,2,2,1};
 
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3);
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
@@ -96,6 +98,7 @@ int main(int argc, char **argv){
     }
   }
   free(nrhs);
+
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
@@ -218,7 +221,7 @@ int main(int argc, char **argv){
 
   char filename[BUFSIZ];
   sprintf(filename, "foo_%d.vtu", rank);
-  //meshPlotVTU3D(mesh, filename, 0);
+  meshPlotVTU3D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

@@ -351,13 +351,14 @@ kernel void insPoissonAddBCKernel(const iint Nelements,
                               const dfloat * restrict x,
                               const dfloat * restrict y,
                               const dfloat * restrict z,
+                              const iint   * restrict vmapM,
                               const int    * restrict mapB,
                               dfloat  * restrict p){
   
   for(iint e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const iint id = n+e*p_Np;
-      const int bc = mapB[n+e*p_Np];
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+      const iint idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
 
       dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;
 
@@ -371,7 +372,7 @@ kernel void insPoissonAddBCKernel(const iint Nelements,
           dpdyP = dpdyP - dpdyPm1;
           dpdzP = dpdzP - dpdzPm1;
         }
-        p[id] += pP;
+        p[idM] += pP;
       }    
     }
   }
