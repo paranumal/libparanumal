@@ -53,10 +53,10 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	dfloat Gx = tx, Gy = ty, Gz = tz;
 
-#if 0
+#if 1
 	dfloat foo = xij*tx+yij*ty+zij*tz;
-	printf("foo = %g [%g,%g,%g] [%g,%g,%g]\n", foo,
-	       xij,yij,zij,tx,ty,tz);
+	printf("foo = %g [%g,%g,%g,%g,%g,%g] %d\n", foo,
+	       yr,mesh->x[3+j*mesh->Nq+e*mesh->Np],mesh->D[i*mesh->Nq+3],zr,mesh->D[j*mesh->Nq + 3],mesh->x[i+3*mesh->Nq+e*mesh->Np],mesh->cubeFaceNumber[e]);
 #endif
 	
 	dfloat J = xij*tx + yij*ty + zij*tz;
