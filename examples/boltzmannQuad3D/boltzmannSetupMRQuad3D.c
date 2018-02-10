@@ -174,7 +174,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
-
+  
   mesh->Nrhs = 3; //hardcoded order of multirate solver  
   
   mesh->Nfields = 10;
@@ -368,6 +368,8 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
+  boltzmannPlotVTUQuad3D(mesh, "bah.vtu", 0);
+  
   occa::kernelInfo kernelInfo;
 
   // fixed to set up quad info on device too
