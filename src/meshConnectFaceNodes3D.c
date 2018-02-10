@@ -4,7 +4,7 @@
 #include "mesh3D.h"
 
 iint findBestMatch(dfloat x1, dfloat y1, dfloat z1,
-		   iint Np2, iint *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP){
+		   iint Np2, iint *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP,int face, int faceP){
   
   iint matchIndex;
   dfloat mindist2=1e9;
@@ -24,7 +24,7 @@ iint findBestMatch(dfloat x1, dfloat y1, dfloat z1,
       *nP = n;
     }
   }
-  if(mindist2>1e-3) printf("arggh - bad match: x,y,z=%g,%g,%g\n", x1,y1,z1);
+  if(mindist2>1e-3) printf("arggh - bad match: x,y,z=%g,%g,%g,   %d,%d\n", x1,y1,z1,face,faceP);
 
   return matchIndex;
 }
@@ -60,7 +60,7 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
 				  mesh->faceNodes+fP*mesh->Nfp,
 				  mesh->x+eP*mesh->Np,
 				  mesh->y+eP*mesh->Np,
-				  mesh->z+eP*mesh->Np, &nP);
+				  mesh->z+eP*mesh->Np, &nP,mesh->cubeFaceNumber[e],mesh->cubeFaceNumber[eP]);
 
 	iint   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
 	mesh->vmapM[id] = idM;

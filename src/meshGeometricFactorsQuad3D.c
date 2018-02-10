@@ -61,7 +61,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	
 	dfloat J = xij*tx + yij*ty + zij*tz;
 
-	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+	if(J<1e-8) { printf("Negative or small Jacobian: %g  %d\n", J,mesh->cubeFaceNumber[e]); /*exit(-1);*/}
 	
 	rx /= J;
 	ry /= J;

@@ -29,7 +29,7 @@ void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
       for(iint m=0;m<mesh->Np;++m){
@@ -41,11 +41,11 @@ void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld){
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
     }
-  }
+    }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
   
-  // write out pressure
+   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
   
