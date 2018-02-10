@@ -24,7 +24,7 @@ iint findBestMatch(dfloat x1, dfloat y1, dfloat z1,
       *nP = n;
     }
   }
-  if(mindist2>1e-3) printf("arggh - bad match: x,y,z=%g,%g,%g\n", x1,y1,z1);
+  if(mindist2>1e-2) printf("arggh - bad match: x,y,z=%g,%g,%g\n", x1,y1,z1);
 
   return matchIndex;
 }

@@ -137,20 +137,20 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 	break;
       case 2: //positive constant y
 	cubRad = sqrt(xlin*xlin + zlin*zlin + a*a);
-	xsph =-1 * R/cubRad * xlin;
+	xsph = R/cubRad * xlin;
 	ysph = R/cubRad * a;
 	zsph = R/cubRad * zlin;
 	break;
       case 3: //negative constant x
 	cubRad = sqrt(ylin*ylin + zlin*zlin + a*a);
-	xsph = -1 * R/cubRad * a;
+	xsph = R/cubRad * a;
 	ysph = -1 * R/cubRad * ylin;
-	zsph = -1 * R/cubRad * zlin;
+	zsph = R/cubRad * zlin;
 	break;
       case 4: //negative constant y
 	cubRad = sqrt(xlin*xlin + zlin*zlin + a*a);
 	xsph = R/cubRad * xlin;
-	ysph = -1 * R/cubRad * a;
+	ysph = -1*R/cubRad * a;
 	zsph = R/cubRad * zlin;
 	break;
       case 5: //positive constant z
@@ -161,9 +161,9 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 	break;
       case 6: //negative constant z
 	cubRad = sqrt(xlin*xlin + ylin*ylin + a*a);
-	xsph = R/cubRad * ylin;
+	xsph = -R/cubRad * ylin;
 	ysph = R/cubRad * xlin;
-	zsph = R/cubRad * a;
+	zsph = -1*R/cubRad * a;
 	break;
       }
       
@@ -171,7 +171,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
       mesh->x[cnt] = xsph; 
       mesh->y[cnt] = ysph; 
       mesh->z[cnt] = zsph; 
-	
+      
       ++cnt;
     }
   }
