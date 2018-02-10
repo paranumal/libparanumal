@@ -193,13 +193,8 @@ QuadList subdivide_4(VertexList& vertices,
 
       result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face});
       result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face});
-<<<<<<< HEAD
-      result.push_back({{mid[4], mid[1], each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
-      result.push_back({{mid[4], mid[2],each.vertex[3], mid[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
-=======
       result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
       result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
->>>>>>> 3bc5b38dab1f720b0cfb479f50b1db2a2c246154
     }
 
   return result;
