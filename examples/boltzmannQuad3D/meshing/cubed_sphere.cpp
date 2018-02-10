@@ -119,12 +119,12 @@ namespace prism
 
   static const QuadList quads=
     {
-      {{0,2,7,5},{true,true,true,true},0},
-      {{5,7,6,4},{true,true,true,true},1},
-      {{4,6,3,1},{true,true,true,true},2},
-      {{1,3,2,0},{true,true,true,true},3},
-      {{0,5,4,1},{true,true,true,true},4},
-      {{2,3,6,7},{true,true,true,true},5}
+      {{0,2,7,5},{true,true,true,true},3},
+      {{5,7,6,4},{true,true,true,true},4},
+      {{4,6,3,1},{true,true,true,true},1},
+      {{1,3,2,0},{true,true,true,true},2},
+      {{0,5,4,1},{true,true,true,true},5},
+      {{2,3,6,7},{true,true,true,true},6}
     };
 }
 
