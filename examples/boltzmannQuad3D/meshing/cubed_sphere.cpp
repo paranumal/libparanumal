@@ -119,12 +119,12 @@ namespace prism
 
   static const QuadList quads=
     {
-      {{0,2,7,5},{true,true,true,true},3},
-      {{5,7,6,4},{true,true,true,true},4},
-      {{4,6,3,1},{true,true,true,true},1},
-      {{1,3,2,0},{true,true,true,true},2},
-      {{0,5,4,1},{true,true,true,true},5},
-      {{2,3,6,7},{true,true,true,true},6}
+      {{2,7,5,0},{true,true,true,true},3},
+      {{7,6,4,5},{true,true,true,true},4},
+      {{6,3,1,4},{true,true,true,true},1},
+      {{3,2,0,1},{true,true,true,true},2},
+      {{4,1,0,5},{true,true,true,true},5},
+      {{7,2,3,6},{true,true,true,true},6}
     };
 }
 
@@ -193,8 +193,13 @@ QuadList subdivide_4(VertexList& vertices,
 
       result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face});
       result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face});
+<<<<<<< HEAD
       result.push_back({{mid[4], mid[1], each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
       result.push_back({{mid[4], mid[2],each.vertex[3], mid[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
+=======
+      result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
+      result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
+>>>>>>> 3bc5b38dab1f720b0cfb479f50b1db2a2c246154
     }
 
   return result;
