@@ -6,50 +6,17 @@
 
 void boltzmannSetup2D(mesh2D *mesh, char * options){
 
- iint rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  // SET SOLVER PHYSICAL PARAMETERS
   
+  // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
+  
+  mesh->errorStep = 1000;
 
-  dfloat RE[4]; 
-  RE[0] = 50;  RE[1] = 100; RE[2] = 200; RE[3] = 400;
-
-  if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
-    mesh->Nrhs = 3;
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-
-    mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
-    mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
-  }
-
-  else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
-    mesh->Nrhs = 3;
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-  else if (strstr(options,"LSERK")){ // LSERK, SARK etc.
-    mesh->Nrhs = 1; 
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->resq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-
-  else if (strstr(options,"LSIMEX")){ // LSERK, SARK etc.
-    mesh->Nrhs = 1; 
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-
+  dfloat RE[4];  RE[0] = 50;  RE[1] = 100; RE[2] = 200; RE[3] = 400; // Remove for tests!!!!!
 
   // Initialize
   dfloat Ma      = 0.f,   Re      = 0.f;
@@ -73,7 +40,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref; v = 0; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref/sqrt(2.0); v = Uref/sqrt(2.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
     mesh->finalTime = 100.0;
@@ -110,14 +77,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
 
- 
-
-
- 
   dfloat time = mesh->startTime + 0.0; 
   // Define Initial Mean Velocity
   dfloat ramp, drampdt;
-  boltzmannRampFunction2D(0, &ramp, &drampdt);
+  boltzmannRampFunction2D(time, &ramp, &drampdt);
   
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
@@ -125,77 +88,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q4bar = (rho*u*v - sigma12)/mesh->RT;
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
-  
 
 
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat t = 0;
-      dfloat x = mesh->x[n + mesh->Np*e];
-      dfloat y = mesh->y[n + mesh->Np*e];
-
-      #if 0
-
-      dfloat uex = y ; 
-      dfloat sex = 0.0; 
-        for(iint k=1; k<=10; k++)
-        {
-         dfloat lamda = k*M_PI;
-         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
-         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2. * sqrt(1. - 4.*pow(1./ mesh->tauInv, 2)* mesh->RT*lamda*lamda);
-         uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
-         sex  += 2.*pow(-1,k)*coef/(lamda*lamda)*exp(coef*time)*cos(lamda*y); 
-        }
-
-      
-      mesh->q[cnt+0] = rho; // uniform density, zero flow
-      mesh->q[cnt+1] = rho*uex/mesh->sqrtRT;
-      mesh->q[cnt+2] = 0.0;
-      mesh->q[cnt+3] = sex/mesh->RT;
-      mesh->q[cnt+4] = 0.0;
-      mesh->q[cnt+5] = 0.0;  
-      #endif
 
 
-#if 0
-
-      dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
-      dfloat Umax  = 0.5*u; 
-      dfloat b     = 0.1;
-
-      dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
-
-      dfloat rhor  = rho*exp(-Umax*Umax/(2. * mesh->RT) *exp(1.0-r*r/(b*b)));
-
-      dfloat theta = atan2(y,x);
-
-      mesh->q[cnt+0] = rhor; 
-      mesh->q[cnt+1] = rhor*(-Ur*sin(theta) +u)/mesh->sqrtRT;
-      mesh->q[cnt+2] = rhor*( Ur*cos(theta) +v)/mesh->sqrtRT;
-      mesh->q[cnt+3] = q4bar;
-      mesh->q[cnt+4] = q5bar;
-      mesh->q[cnt+5] = q6bar;  
-    
-#endif
-
-#if 1
-
-      mesh->q[cnt+0] = q1bar; // uniform density, zero flow
-      mesh->q[cnt+1] = ramp*q2bar;
-      mesh->q[cnt+2] = ramp*q3bar;
-      mesh->q[cnt+3] = ramp*ramp*q4bar;
-      mesh->q[cnt+4] = ramp*ramp*q5bar;
-      mesh->q[cnt+5] = ramp*ramp*q6bar;  
-#endif
-
-      cnt += mesh->Nfields;
-    }
-  }
-
-  //
-
-  // Set stable time step size for each element
+  // SET STABLE TIME STEP SIZE
   dfloat cfl          = 0.15; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
@@ -246,34 +143,131 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     iint maxLevels = 100;
     meshMRABSetup2D(mesh,EtoDT,maxLevels);
   }
-  else{
-      
-   //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-   //dt = 10e-6; // !!!!!!!!!!!!!!!!
-   //!!!!!!
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
-  mesh->dt         = (mesh->finalTime-mesh->startTime)/mesh->NtimeSteps;
+  else{    
+    //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
+    //dt = 10e-6; // !!!!!!!!!!!!!!!!
+    // MPI_Allreduce to get global minimum dt
+    MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
+    mesh->dt         = (mesh->finalTime-mesh->startTime)/mesh->NtimeSteps;
 
-   //offset index
-  mesh->shiftIndex = 0;
-  
-  // Set element ids for nonPml region, will be modified if PML exists
-  mesh->nonPmlNelements = mesh->Nelements; 
-  mesh->pmlNelements    = 0; 
-    
-  mesh->nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
-   for(iint e=0;e<mesh->Nelements;++e)
+    //offset index
+    mesh->shiftIndex = 0;
+
+    // Set element ids for nonPml region, will be modified if PML exists
+    mesh->nonPmlNelements = mesh->Nelements; 
+    mesh->pmlNelements    = 0; 
+
+    mesh->nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+    for(iint e=0;e<mesh->Nelements;++e)
      mesh->nonPmlElementIds[e] = e; 
   }
    
 
+
+
+
+
+
+ // INITIALIZE FIELD VARIABLES 
+ if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
+    mesh->Nrhs = 3;
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+
+    mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+    mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+  }
+
+  else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
+    mesh->Nrhs = 3;
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+  else if (strstr(options,"LSERK")){ // LSERK, SARK etc.
+    mesh->Nrhs = 1; 
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->resq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+
+  else if (strstr(options,"LSIMEX")){ // LSERK, SARK etc.
+    mesh->Nrhs = 1; 
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+
+ // INITIALIZE PROBLEM 
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat t = 0;
+      dfloat x = mesh->x[n + mesh->Np*e];
+      dfloat y = mesh->y[n + mesh->Np*e];
+#if 0
+      // Couette Flow 
+      dfloat uex = y ; 
+      dfloat sex = 0.0; 
+      for(iint k=1; k<=10; k++){
+        dfloat lamda = k*M_PI;
+        // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
+        dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2. * sqrt(1. - 4.*pow(1./ mesh->tauInv, 2)* mesh->RT*lamda*lamda);
+        uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
+        sex  += 2.*pow(-1,k)*coef/(lamda*lamda)*exp(coef*time)*cos(lamda*y); 
+      }
+
+      mesh->q[cnt+0] = rho; // uniform density, zero flow
+      mesh->q[cnt+1] = rho*uex/mesh->sqrtRT;
+      mesh->q[cnt+2] = 0.0;
+      mesh->q[cnt+3] = sex/mesh->RT;
+      mesh->q[cnt+4] = 0.0;
+      mesh->q[cnt+5] = 0.0;  
+#endif
+
+
+#if 0
+      // Vortex Problem
+      dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
+      dfloat Umax  = 0.5*u; 
+      dfloat b     = 0.1;
+
+      dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
+
+      dfloat rhor  = rho*exp(-Umax*Umax/(2. * mesh->RT) *exp(1.0-r*r/(b*b)));
+
+      dfloat theta = atan2(y,x);
+
+      mesh->q[cnt+0] = rhor; 
+      mesh->q[cnt+1] = rhor*(-Ur*sin(theta) +u)/mesh->sqrtRT;
+      mesh->q[cnt+2] = rhor*( Ur*cos(theta) +v)/mesh->sqrtRT;
+      mesh->q[cnt+3] = q4bar;
+      mesh->q[cnt+4] = q5bar;
+      mesh->q[cnt+5] = q6bar;  
+    
+#endif
+
+#if 1
+      // Uniform Flow
+      mesh->q[cnt+0] = q1bar; 
+      mesh->q[cnt+1] = ramp*q2bar;
+      mesh->q[cnt+2] = ramp*q3bar;
+      mesh->q[cnt+3] = ramp*ramp*q4bar;
+      mesh->q[cnt+4] = ramp*ramp*q5bar;
+      mesh->q[cnt+5] = ramp*ramp*q6bar;  
+#endif
+
+      cnt += mesh->Nfields;
+    }
+  }
+
   
-
-
-
-  mesh->errorStep = 2000;
+  // Write Problem Info 
   if(rank==0){
     printf("dt   = %g ",   mesh->dt);
     printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
@@ -284,7 +278,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
  
  
-
+  // SET PROBE DATA
   if(strstr(options, "PROBE")){
     mesh->probeNTotal = 9; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
@@ -299,11 +293,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     pX[3] =  4.00;  pX[4] = 4.00; pX[5] =  4.00; 
     pY[3] = -1.00;  pY[4] = 0.00; pY[5] =  1.00; 
 
-
     pX[6] =  8.00;  pX[7] = 8.00; pX[8] =  8.00; 
     pY[6] = -1.00;  pY[7] = 0.00; pY[8] =  1.00; 
-
-
 
     meshProbeSetup2D(mesh, pX, pY);
 
@@ -313,23 +304,23 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   
 
 
-//SetupOcca
+  //OCCCA SETUP
   char deviceConfig[BUFSIZ];
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
+ 
 
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);     
-  
 
-    // Setup MRAB PML
+  // Setup MRAB PML
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
      printf("Preparing Pml for multirate rate\n");
     boltzmannMRABPmlSetup2D(mesh, options);
-  // 
+    
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
@@ -352,7 +343,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   
 
 
-#if 1
+#if 0
 mesh2D *meshsave = mesh;
 iint fld = 0; 
   for(iint lev=0; lev<mesh->MRABNlevels; lev++){
@@ -557,8 +548,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     mesh->fQM);
     mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
     mesh->fQP);
-    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), 
-    mesh->mapP);
+    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), mesh->mapP);
   }
 
 

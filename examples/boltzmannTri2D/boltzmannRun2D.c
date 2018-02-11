@@ -1,7 +1,13 @@
 #include "boltzmann2D.h"
 
 void boltzmannRun2D(mesh2D *mesh, char *options){
+  
 
+  // occa::stream defaultStream = mesh->device.getStream();
+  // occa::stream dataStream    = mesh->device.createStream();
+  // mesh->device.setStream(defaultStream);
+
+  
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
