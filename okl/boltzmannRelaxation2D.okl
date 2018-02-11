@@ -477,7 +477,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
             for(iint fld=0; fld<p_Nfields;++fld){
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
-              s_cubq[es][fld][n] = -msigmaxe*r_qx[fld] - msigmaye*r_qy[fld];  
+              s_cubq[es][fld][n]  = -msigmaxe*r_qx[fld] - msigmaye*r_qy[fld];  
             }
             
 

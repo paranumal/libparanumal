@@ -259,7 +259,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                   mesh->o_fQM,
                                   mesh->o_fQP);
 
-          // //rotate index
+          //rotate index
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
         }
 
