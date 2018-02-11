@@ -166,11 +166,32 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 	zsph = -1*R/cubRad * a;
 	break;
       }
-      
+
+      /*if (rn == mesh->r[0] && sn == mesh->s[0]) {
+	mesh->EX[id + 0] = xsph;
+	mesh->EY[id + 0] = ysph;
+	mesh->EZ[id + 0] = zsph;
+      }
+      else if (rn == mesh->r[0] && sn == mesh->s[mesh->Np - 1]) {
+	mesh->EX[id + 1] = xsph;
+	mesh->EY[id + 1] = ysph;
+	mesh->EZ[id + 1] = zsph;
+      }
+      else if (rn == mesh->r[mesh->Np - 1] && sn == mesh->s[mesh->Np - 1]) {
+	mesh->EX[id + 2] = xsph;
+	mesh->EY[id + 2] = ysph;
+	mesh->EZ[id + 2] = zsph;
+      }
+      else if (rn == mesh->r[0]&& sn == mesh->s[mesh->Np - 1]) {
+	mesh->EX[id + 3] = xsph;
+	mesh->EY[id + 3] = ysph;
+	mesh->EZ[id + 3] = zsph;
+	}*/
+	  
       // project to sphere
       mesh->x[cnt] = xsph; 
       mesh->y[cnt] = ysph; 
-      mesh->z[cnt] = zsph; 
+      mesh->z[cnt] = zsph;
       
       ++cnt;
     }

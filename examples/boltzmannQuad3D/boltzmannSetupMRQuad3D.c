@@ -156,11 +156,7 @@ void rk_coeffs(mesh_t *mesh) {
 	mesh->MRAB_B[id+2]   =   2.*h/24. ;
 	      
 	      
-      }
-	    
-      printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
-	     mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
-	    
+      }	    
     }
 
     // Exponential part
