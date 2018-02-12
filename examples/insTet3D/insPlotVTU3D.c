@@ -1,8 +1,3 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "mpi.h"
-
 #include "ins3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
@@ -20,8 +15,8 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
-	  mesh->Nelements*mesh->plotNp, 
-	  mesh->Nelements*mesh->plotNelements);
+          mesh->Nelements*mesh->plotNp, 
+          mesh->Nelements*mesh->plotNelements);
   
   // write out nodes
   fprintf(fp, "      <Points>\n");
@@ -55,7 +50,7 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
       dfloat plotpn = 0;
       for(iint m=0;m<mesh->Np;++m){
        const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
-	     const iint id     = offset + m+e*mesh->Np;
+             const iint id     = offset + m+e*mesh->Np;
         dfloat pm = ins->P[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -78,14 +73,14 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   //     dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
   //     dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
   //     for(iint m=0;m<mesh->Np;++m){
-  //     	iint id = m+e*mesh->Np;
-  //     	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+  //            iint id = m+e*mesh->Np;
+  //            id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
-  //     	dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
+  //            dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
   //       dUds += mesh->Ds[n*mesh->Np+m]*ins->U[id];
   //       dUdt += mesh->Dt[n*mesh->Np+m]*ins->U[id];
 
-  //     	dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
+  //            dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
   //       dVds += mesh->Ds[n*mesh->Np+m]*ins->V[id];
   //       dVdt += mesh->Dt[n*mesh->Np+m]*ins->V[id];
 
@@ -133,7 +128,7 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   //       plotVxn   += mesh->plotInterp[n*mesh->Np+m]*Vx[m];
   //       plotVyn   += mesh->plotInterp[n*mesh->Np+m]*Vy[m];
   //       plotVzn   += mesh->plotInterp[n*mesh->Np+m]*Vz[m];
-  //       plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m];	
+  //       plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m]; 
   //     }
   //     fprintf(fp, "       ");
   //     fprintf(fp, "%g %g %g %g\n", plotVxn, plotVyn, plotVzn, plotDivUn);
@@ -151,8 +146,8 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn=0;
       for(iint m=0;m<mesh->Np;++m){
-	iint id = m+e*mesh->Np;
-	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+        iint id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         dfloat um = ins->U[id];
         dfloat vm = ins->V[id];
         dfloat wm = ins->W[id];
@@ -178,7 +173,7 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
     for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
-  fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
+        fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
       }
       fprintf(fp, "\n");
     }

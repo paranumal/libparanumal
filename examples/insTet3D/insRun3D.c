@@ -9,7 +9,7 @@ void insRun3D(ins_t *ins, char *options){
   mesh3D *mesh = ins->mesh;
   
   // Write Initial Data
-  //insReport3D(ins, 0, options);
+  insReport3D(ins, 0, options);
   
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
   iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
@@ -28,7 +28,7 @@ void insRun3D(ins_t *ins, char *options){
 
   occa::initTimer(mesh->device);
 
-  ins->NtimeSteps = 100; 
+  ins->NtimeSteps = 271000; 
 
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1){
@@ -76,11 +76,10 @@ void insRun3D(ins_t *ins, char *options){
     insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
     insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
 
-    if(strstr(options, "VTU")){
-      if(((tstep+1)%(ins->errorStep))==0){
-        if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW,  ins->NiterP);
-        //insReport3D(ins, tstep+1,options);
-      }
+    
+    if(((tstep+1)%(ins->errorStep))==0){
+      if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW,  ins->NiterP);
+      insReport3D(ins, tstep+1,options);
     }
 
     if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);

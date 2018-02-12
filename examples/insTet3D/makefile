@@ -54,6 +54,8 @@ insRun3D.o \
 insError3D.o \
 insReport3D.o \
 insPlotVTU3D.o \
+insPlotSlice3D.o \
+insPlotAdaptiveContour3D.o \
 insAdvectionStep3D.o \
 insAdvectionSubCycleStep3D.o \
 insHelmholtzStep3D.o \
@@ -75,6 +77,7 @@ LOBJS = \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshPlotVTU3D.o \
+../../src/meshPlotAdaptiveContour3D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \
 ../../src/meshSetupTet3D.o \

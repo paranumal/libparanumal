@@ -135,7 +135,7 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
   for (int n=1;n<numLevels;n++) {  //build solver for this degree
     int Nf = levelDegree[n-1];
     int Nc = levelDegree[n];
-    printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    if(rank==0) printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
     solversN[Nc] = ellipticBuildMultigridLevelTet3D(solver,Nc,Nf,BCType,options);
   }
 
