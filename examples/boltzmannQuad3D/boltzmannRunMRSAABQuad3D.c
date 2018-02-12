@@ -15,12 +15,12 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = 1./mesh->N;
+  dfloat alpha = 0; //1./mesh->N;
   dfloat zero = 0;
   dfloat one = 1;
 
   for (int e = 0; e < mesh->Nelements; ++e) {
-    if (mesh->EToE[e] == e) printf("boundary\n");
+    if (mesh->EToE[e] == e) printf("boundary %d\n",e);
     //printf("%d %d %d %d\n",mesh->EToF[e],mesh->EToF[e+1],mesh->EToF[e+2],mesh->EToF[e+3]);
     for (int n = 0; n < mesh->Np;++n) {
       if (mesh->vmapM[e*mesh->Np + n] == mesh->vmapP[e*mesh->Np + n]) printf("found it at %d %d\n",e,n);
@@ -232,20 +232,20 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  //trace update using same kernel
-	  mesh->updateKernel(mesh->MRABNhaloElements[lev],
-			     mesh->o_MRABhaloIds[lev],
-			     mesh->MRSAAB_C[lev-1], //
-			     mesh->MRAB_B[id+0], //
-			     mesh->MRAB_B[id+1],
-			     mesh->MRAB_B[id+2], //
-			     mesh->MRSAAB_B[id+0], //
-			     mesh->MRSAAB_B[id+1],
-			     mesh->MRSAAB_B[id+2], 
-			     mesh->MRABshiftIndex[lev],
-			     mesh->o_rhsq,
-			     mesh->o_vmapM,
-			     mesh->o_fQM,
-			     mesh->o_q);
+	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+				  mesh->o_MRABhaloIds[lev],
+				  mesh->MRSAAB_C[lev-1], //
+				  mesh->MRAB_B[id+0], //
+				  mesh->MRAB_B[id+1],
+				  mesh->MRAB_B[id+2], //
+				  mesh->MRSAAB_B[id+0], //
+				  mesh->MRSAAB_B[id+1],
+				  mesh->MRSAAB_B[id+2], 
+				  mesh->MRABshiftIndex[lev],
+				  mesh->o_rhsq,
+				  mesh->o_vmapM,
+				  mesh->o_fQM,
+				  mesh->o_q);
       	}
       }
     }

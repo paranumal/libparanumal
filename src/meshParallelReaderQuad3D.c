@@ -130,8 +130,11 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
+	
 	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d%d%d", 
 	       mesh->elementInfo+cnt,mesh->cubeFaceNumber+cnt,&v1, &v2, &v3, &v4);
+
+	if (v1 == 3 || v2 == 3 || v3 == 3 || v4 == 3) printf(" found node 3\n");
 	
 	// check orientation using a*(bxc) > 0
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1];
@@ -145,7 +148,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	  printf("unwarping element\n");
 	}
 	
-	int faceId = mesh->cubeFaceNumber[cnt];
+	int faceId = mesh->cubeFaceNumber[cnt] - 1;
 	
 	//check if we have a new reference node
 	if (refNodes[faceId*12] == 0 && refNodes[faceId*12+1] == 0 && refNodes[faceId*12+2] == 0) {
@@ -279,6 +282,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	    mesh->EToV[cnt*mesh->Nverts+((3+mesh->Nverts-maxNode)%4)] = v4-1;
 	    ++cnt;
 	  }
+	  if (maxNode != 0) printf("rotating element on face %d\n",mesh->cubeFaceNumber[cnt]);
 	}
       }
       ++Nquadrilaterals;
@@ -288,7 +292,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 
   /* record number of boundary faces found */
   mesh->NboundaryFaces = bcnt;
-  
+
   /* record number of found quadrilaterals */
   mesh->Nelements = NquadrilateralsLocal;
 
