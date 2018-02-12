@@ -22,8 +22,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   for (int e = 0; e < mesh->Nelements; ++e) {
     if (mesh->EToE[e] == e) printf("boundary %d\n",e);
     //printf("%d %d %d %d\n",mesh->EToF[e],mesh->EToF[e+1],mesh->EToF[e+2],mesh->EToF[e+3]);
-    for (int n = 0; n < mesh->Np;++n) {
-      if (mesh->vmapM[e*mesh->Np + n] == mesh->vmapP[e*mesh->Np + n]) printf("found it at %d %d\n",e,n);
+    for (int n = 0; n < mesh->Nfp * mesh->Nfaces;++n) {
+      if (mesh->vmapM[e*mesh->Nfp*mesh->Nfaces + n] == mesh->vmapP[e*mesh->Nfp*mesh->Nfaces + n]) printf("found it at %d %d\n",e,n);
     }
   }
 
