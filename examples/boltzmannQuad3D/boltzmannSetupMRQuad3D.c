@@ -335,7 +335,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
-  iint maxLevels=100;
+  iint maxLevels=1;
   meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
 
   dfloat dt = mesh->dt;
@@ -457,6 +457,11 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				       kernelInfo);
   printf("ending surface\n");
 
+  mesh->traceUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannMRSAABTraceUpdateQuad3D",
+				       kernelInfo);
+  
   mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannMRSAABUpdateQuad3D",
