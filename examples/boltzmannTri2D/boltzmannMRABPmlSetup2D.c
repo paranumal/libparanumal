@@ -3,12 +3,12 @@
 void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma  = 100.0;
-  dfloat ysigma  = 100.0;
+  dfloat xsigma  = 0.0;
+  dfloat ysigma  = 0.0;
   // dfloat xsigma  = 100.*mesh->sqrtRT;
   // dfloat ysigma  = 100.*mesh->sqrtRT;
   //dfloat cxsigma = 200, cysigma = 200;
-  dfloat q1    = 0.0, q2 = 1.0;    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
+  dfloat q1    = 0.2, q2 = 1.0;    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
 
 // fifth order polynomialcoefficients for q1=0.2 and q2=0.8;
   dfloat c5 =  6.0 ;
@@ -271,7 +271,12 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
         }
 
-        else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+
+         else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+
+
+
+          dfloat tsigma = 0.5*xsigma;
 
           dfloat qx=0,      qy = 0;
           dfloat taux = 0,  tauy = 0;
@@ -301,23 +306,77 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
           taux  =  (qx-q1)/(q2-q1);
           tauy  =  (qy-q1)/(q2-q1);
           // Fifth Order
-          polyx = c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
-          polyy = c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
+          polyx = pow(taux,2); //c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
+          polyy = pow(tauy,2); //c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
 
           polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
           polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
            
           if (type==100) { //X Pml
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
           } else if (type==200) { //Y Pml
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
           } else if (type==300) { //XY Pml
             if(x>xmax || x<xmin)
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
             if(y>ymax || y<ymin)
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
           }
+
+          //printf("%.5e \n", qx);
         }
+
+
+
+        // else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+
+        //   dfloat qx=0,      qy = 0;
+        //   dfloat taux = 0,  tauy = 0;
+        //   dfloat polyx = 0, polyy = 0;
+
+        //   if (type==100) { //X Pml
+        //     if(x>xmax)
+        //       qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //       qx    = (x-xmin)/(pmlxmin-xmin);
+        //   } else if (type==200) { //Y Pml
+        //     if(y>ymax)
+        //       qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //       qy    = (y-ymin)/(pmlymin-ymin);
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax)
+        //      qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //      qx    = (x-xmin)/(pmlxmin-xmin);
+        //     if(y>ymax)
+        //      qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //      qy    = (y-ymin)/(pmlymin-ymin);
+        //   }
+        //   // Third Order
+        //   taux  =  (qx-q1)/(q2-q1);
+        //   tauy  =  (qy-q1)/(q2-q1);
+        //   // Fifth Order
+        //   polyx = pow(taux,2); //c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
+        //   polyy = pow(tauy,2); //c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
+
+        //   polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
+        //   polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
+           
+        //   if (type==100) { //X Pml
+        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //   } else if (type==200) { //Y Pml
+        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax || x<xmin)
+        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //     if(y>ymax || y<ymin)
+        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   }
+        // }
 
 
         }
@@ -367,26 +426,39 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
     }
 
     free(pmlIds);
-  }
+  
 
 
 
+
+// dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+// mesh->o_cubProjectT.copyTo(cubProjectT);
 // for (iint lev =0;lev<mesh->MRABNlevels;lev++){
 //   for (iint m=0;m<mesh->MRABpmlNelements[lev];m++) {
-//         iint e = mesh->MRABpmlElementIds[lev][m];
-//         iint pmlId = mesh->MRABpmlIds[lev][m];
+//     iint e = mesh->MRABpmlElementIds[lev][m];
+//     iint pmlId = mesh->MRABpmlIds[lev][m];
 
 //     for(iint n=0;n<mesh->Np;n++){
-//       mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlSigmaX[mesh->Np*pmlId + n];
-//       mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlSigmaY[mesh->Np*pmlId + n];
-//     }
+//        dfloat q1 = 0; dfloat q2 = 0; 
+//         for(iint l=0; l<mesh->cubNp;++l){
+//           dfloat prj = cubProjectT[l*mesh->Np+n];
+//            q1  += prj*mesh->pmlSigmaX[mesh->cubNp*pmlId + l];
+//            q2  += prj*mesh->pmlSigmaY[mesh->cubNp*pmlId + l];
+//         }
+//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
+//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
 //   }
 // }
-  
- 
-  // char fname[BUFSIZ];
-  // sprintf(fname, "pmlProfile1.vtu");
-  // boltzmannPlotVTU2D(mesh, fname);
+// }
 
 
+
+
+//  char fname[BUFSIZ];
+//  sprintf(fname, "pmlProfile11.vtu");
+// boltzmannPlotVTU2D(mesh, fname);
+
+
+
+}
 }

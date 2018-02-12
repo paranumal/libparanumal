@@ -27,10 +27,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.2;    // Set Mach number
+    mesh->Ma = 0.1;    // Set Mach number
     mesh->Re = 200;  // Set Reynolds number was 100
     //
-    Uref = 1.0;  // Set Uref was 0.5
+    Uref = 0.5;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
     //
     mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
@@ -40,10 +40,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref/sqrt(2.0); v = Uref/sqrt(2.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref; v = 0.f; sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 100.0;
+    mesh->finalTime = 10.0;
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -93,7 +93,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl          = 0.15; 
+  dfloat cfl          = 0.333; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -145,7 +145,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   else{    
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-    //dt = 10e-6; // !!!!!!!!!!!!!!!!
+    dt = 100e-6; // !!!!!!!!!!!!!!!!
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
@@ -231,11 +231,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 #endif
 
 
-#if 0
+#if 1
       // Vortex Problem
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
-      dfloat b     = 0.1;
+      dfloat b     = 0.2;
 
       dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
 
@@ -252,7 +252,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     
 #endif
 
-#if 1
+#if 0
       // Uniform Flow
       mesh->q[cnt+0] = q1bar; 
       mesh->q[cnt+1] = ramp*q2bar;
@@ -280,21 +280,21 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
  
   // SET PROBE DATA
   if(strstr(options, "PROBE")){
-    mesh->probeNTotal = 9; 
+    mesh->probeNTotal = 3; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     // Fill probe coordinates
-    // pX[0] = 8.00;  pX[1] = 9.00; pX[2] = 10.00; pX[3] = 10.50; 
-    // pY[0] = 0.00;  pY[1] = 0.00; pY[2] =  0.00; pY[3] =  0.00; 
+    pX[0] = 0.90;  pX[1] = 0.90; pX[2] =  0.90; //pX[3] = 10.50; 
+    pY[0] = 0.00;  pY[1] = 0.25; pY[2] = -0.25; //pY[3] =  0.00; 
 
-    pX[0] =  2.00;  pX[1] = 2.00; pX[2] =  2.00; 
-    pY[0] = -1.00;  pY[1] = 0.00; pY[2] =  1.00; 
+    // pX[0] =  2.00;  pX[1] = 2.00; pX[2] =  2.00; 
+    // pY[0] = -1.00;  pY[1] = 0.00; pY[2] =  1.00; 
 
-    pX[3] =  4.00;  pX[4] = 4.00; pX[5] =  4.00; 
-    pY[3] = -1.00;  pY[4] = 0.00; pY[5] =  1.00; 
+    // pX[3] =  4.00;  pX[4] = 4.00; pX[5] =  4.00; 
+    // pY[3] = -1.00;  pY[4] = 0.00; pY[5] =  1.00; 
 
-    pX[6] =  8.00;  pX[7] = 8.00; pX[8] =  8.00; 
-    pY[6] = -1.00;  pY[7] = 0.00; pY[8] =  1.00; 
+    // pX[6] =  8.00;  pX[7] = 8.00; pX[8] =  8.00; 
+    // pY[6] = -1.00;  pY[7] = 0.00; pY[8] =  1.00; 
 
     meshProbeSetup2D(mesh, pX, pY);
 
@@ -320,7 +320,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
      printf("Preparing Pml for multirate rate\n");
     boltzmannMRABPmlSetup2D(mesh, options);
-    
+
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
@@ -712,7 +712,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.05f);
   // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
 
 
