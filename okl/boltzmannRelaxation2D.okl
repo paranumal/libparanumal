@@ -433,6 +433,15 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
                 s_qx[es][fld][n]  = pmlqx[pid+fld];
                 s_qy[es][fld][n]  = pmlqy[pid+fld];
               }
+              
+              #if 0
+              s_q[es][0][n] += p_q1bar; 
+              s_q[es][1][n] += p_q2bar; 
+              s_q[es][2][n] += p_q3bar; 
+              s_q[es][3][n] += p_q4bar; 
+              s_q[es][4][n] += p_q5bar; 
+              s_q[es][5][n] += p_q6bar; 
+              #endif
             }
          }
        }
@@ -467,6 +476,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
             }
             //
             
+           
              // Prefetch sigma
             const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp+n];
             const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp+n];
@@ -481,19 +491,55 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
             }
             
 
-            // // !!!!!!!!
-            //  s_cubq [es][5][n] = -msigmaxe*r_qx[5]   -msigmaye*r_qy[5];
-
-
             dfloat icubq1 = 1.f/r_q[0];
             // BGK relaxation approximation to the Boltzmann collision operator
             s_cubq[es][3][n] += p_tauInv*(           r_q[1]*r_q[2]*icubq1);
             s_cubq[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
             s_cubq[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
 
+            #if 0
 
-             // s_cubqy[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-             // s_cubqx[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+            // transport operator
+            r_q[0] -= p_q1bar;
+            r_q[1] -= p_q2bar;
+            r_q[2] -= p_q3bar;
+            r_q[3] -= p_q4bar;
+            r_q[4] -= p_q5bar;
+            r_q[5] -= p_q6bar;
+            
+
+
+            const dfloat beta = 0.1;
+            //s_cubqx[es][0][n] += beta*sigmaxe*(r_q[0]);
+            //s_cubqx[es][1][n] += beta*sigmaxe*(r_q[1]);
+            //s_cubqx[es][2][n] += beta*sigmaxe*(r_q[2]);
+            //s_cubqx[es][3][n] += beta*sigmaxe*(r_q[3]);
+            //s_cubqx[es][4][n] += beta*sigmaxe*(r_q[4]);
+            //s_cubqx[es][5][n] += beta*sigmaxe*(r_q[5]);
+
+            //
+            s_cubq[es][0][n] += beta*sigmaxe*(r_q[0]);
+            s_cubq[es][1][n] += beta*sigmaxe*(r_q[1]);
+            s_cubq[es][2][n] += beta*sigmaxe*(r_q[2]);
+            s_cubq[es][3][n] += beta*sigmaxe*(r_q[3]);
+            s_cubq[es][4][n] += beta*sigmaxe*(r_q[4]);
+            s_cubq[es][5][n] += beta*sigmaxe*(r_q[5]);
+
+            // s_cubqx[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
+            // s_cubqx[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
+            // s_cubqx[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
+            // s_cubqx[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
+            // s_cubqx[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
+
+            // //
+            // s_cubq[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
+            // s_cubq[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
+            // s_cubq[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
+            // s_cubq[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
+            // s_cubq[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
+            #endif
+
+
 
 
 
