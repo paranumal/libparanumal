@@ -305,4 +305,41 @@ writeFloatMatrix(fid, IP1, 'Nodal degree raise matrix');
 writeFloatMatrix(fid, IM1, 'Nodal degree lower matrix');
 
 
+% build interpolation matrix (coarse->fine)
+EToVi = [1 5 7 8; 5 2 6 9; 7 6 3 10; 8 9 10 4; 8 5 7 9; 7 5 6 9; 8 9 7 10; 9 6 7 10];
+VXi   = [-1  1 -1 -1  0  0 -1 -1  0 -1];
+VYi   = [-1 -1  1 -1 -1  0  0 -1 -1  0];
+VZi   = [-1 -1 -1  1 -1 -1 -1  0  0  0];
+
+v1 = EToVi(:,1); v2 = EToVi(:,2); v3 = EToVi(:,3); v4 = EToVi(:,4);
+ri = 0.5*(-(r+s+t+1)*VXi(v1) + (1+r)*VXi(v2) + (1+s)*VXi(v3) + (1+t)*VXi(v4) );
+si = 0.5*(-(r+s+t+1)*VYi(v1) + (1+r)*VYi(v2) + (1+s)*VYi(v3) + (1+t)*VYi(v4) );
+ti = 0.5*(-(r+s+t+1)*VZi(v1) + (1+r)*VZi(v2) + (1+s)*VZi(v3) + (1+t)*VZi(v4) );
+
+contourInterp = Vandermonde3D(N, ri(:), si(:), ti(:))*invV;
+ri = [-1;1;-1;-1]; si = [-1;-1;1;-1]; ti = [-1;-1;-1;1]; refNp = length(ri);
+contourInterp1 = Vandermonde3D(N, ri(:), si(:), ti(:))*invV;
+
+sk = 1;
+F = zeros(Np);
+for i=0:N % old ordering
+  for j=0:N - i
+    for k=0:N - i - j
+      if(i+j+k<=1), F(sk,sk) = 1.; end;
+      sk = sk+1;
+    end
+  end
+end
+
+contourFilter = V*F*invV;
+
+writeIntMatrix(fid, EToVi, 'Contour plot EToV');
+writeFloatMatrix(fid, VXi, 'Contour plot VX');
+writeFloatMatrix(fid, VYi, 'Contour plot VY');
+writeFloatMatrix(fid, VZi, 'Contour plot VZ');
+
+writeFloatMatrix(fid, contourInterp, 'Contour plot Interpolation');
+writeFloatMatrix(fid, contourInterp1, 'Contour plot Linear Interpolation');
+writeFloatMatrix(fid, contourFilter, 'Contour plot Filter');
+
 fclose(fid);

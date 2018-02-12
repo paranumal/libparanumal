@@ -48,6 +48,15 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   mesh->plotNelements = Nrows;
   mesh->plotNverts = Ncols;
 
+  readIntArray(fp,"Contour plot EToV", &(mesh->contourEToV), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VX", &(mesh->contourVX), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VY", &(mesh->contourVY), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VZ", &(mesh->contourVZ), &Nrows, &Ncols);
+
+  readDfloatArray(fp, "Contour plot Interpolation",&(mesh->contourInterp), &Nrows, &Ncols);
+  readDfloatArray(fp, "Contour plot Linear Interpolation",&(mesh->contourInterp1), &Nrows, &Ncols);
+  readDfloatArray(fp, "Contour plot Filter",&(mesh->contourFilter), &Nrows, &Ncols);
+
   /* Cubature data */ 
   if (N<7) {
     readDfloatArray(fp, "Cubature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);

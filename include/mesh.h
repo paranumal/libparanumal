@@ -247,6 +247,10 @@ typedef struct {
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
+  int *contourEToV;
+  dfloat *contourVX, *contourVY, *contourVZ;
+  dfloat *contourInterp, *contourInterp1, *contourFilter; 
+
   //SEMFEM data
   int NpFEM, NelFEM;
   int *FEMEToV;
