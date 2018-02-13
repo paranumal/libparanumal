@@ -130,7 +130,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), solver->EToB);
 
   //if (rank!=0) 
-    occa::setVerboseCompilation(false);
+  //  occa::setVerboseCompilation(false);
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
