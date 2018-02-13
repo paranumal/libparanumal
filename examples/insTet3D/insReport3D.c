@@ -70,7 +70,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     
     // output field files
     char fname[BUFSIZ];
-    sprintf(fname, "contour_%04d_%04d.vtu",rank,tstep/ins->errorStep);
+    sprintf(fname, "/scratch/contour_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     insPlotAdaptiveContour3D(ins, fname);
   } 
