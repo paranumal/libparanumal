@@ -76,7 +76,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     //setupSmoother(parAlmond, levels[lev], smoothType);
     done = true;
   }
-
+  if(rank==0) printf("Setting up AMG...");fflush(stdout);
   while(!done){
     // create coarse MG level
     levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
@@ -135,8 +135,9 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
 
     globalSize = globalCoarseSize;
     lev++;
-  }
-
+  } 
+  if(rank==0) printf("done.\n");
+  
   //allocate vectors required
   occa::device device = parAlmond->device;
   for (int n=0;n<parAlmond->numLevels;n++) {

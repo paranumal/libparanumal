@@ -42,10 +42,15 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
  
     if (rank==0) printf("Writing output file\n");
     
-    //slice data
+    //slice data (cylinders)
+    // const int Nslices = 4;
+    // const char *sliceDim[4] = {"x","y","y","z"};
+    // const dfloat sliceX[4] = {0.0,1.0,-1.0,20.};
+
+    //slice data (channel)
     const int Nslices = 4;
-    const char *sliceDim[4] = {"x","y","y","z"};
-    const dfloat sliceX[4] = {0.0,1.0,-1.0,20.};
+    const char *sliceDim[4] = {"x","x","y","z"};
+    const dfloat sliceX[4] = {0.001,5,0.0,0.0};
 
     // output field files
     char fname[BUFSIZ];
