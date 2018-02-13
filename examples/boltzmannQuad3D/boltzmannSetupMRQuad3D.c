@@ -183,6 +183,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
+  mesh->MRABshiftIndex = (iint*) calloc(mesh->MRABNlevels,sizeof(iint));
 
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
@@ -381,7 +382,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
-
+  
   //initialization isn't strictly necessary here.
   mesh->o_qFilter =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
@@ -390,7 +391,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
 
-  mesh->o_MRABlevels = mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->MRABlevel);
+  mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
@@ -477,7 +478,6 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-
   mesh->filterKernelH =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHQuad3D",

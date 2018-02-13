@@ -70,6 +70,10 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		}
 		s_q[fld][0][j][i] = q_sum;
 	      }
+	      else {
+		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      }
+	      
 	      if (lev_updates[lev_numbers[eR]] != lev_updates[l]) {
 		dfloat q_sum = 0;
 		
@@ -93,6 +97,9 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		  q_sum += q_prod;
 		}
 		s_q[fld][2][j][i] = q_sum;
+	      }
+	      else {
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
 	    }
 	  }
