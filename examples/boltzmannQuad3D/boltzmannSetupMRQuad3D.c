@@ -335,12 +335,14 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->finalTime = 10;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
-  iint maxLevels=1;
+  iint maxLevels=100;
   meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
 
   dfloat dt = mesh->dt;
 
   mesh->shiftIndex=0;
+
+  mesh->lev_updates = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
 
   printf("cfl = %g\n", cfl);
   printf("dt = %g\n", dt);
@@ -388,9 +390,13 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
 
+  mesh->o_MRABlevels = mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->MRABlevel);
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
+  mesh->o_lev_updates = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->lev_updates);
+  mesh->o_shift = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->MRABshiftIndex);
+  
   printf("start\n");
   mesh->o_dualProjMatrix =
     mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
