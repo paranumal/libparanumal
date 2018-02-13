@@ -2,8 +2,8 @@ typedef struct{
 
   iint row;
   iint col;
-  iint ownerRank;
   dfloat val;
+  iint ownerRank;
 
 }nonZero_t;
 
