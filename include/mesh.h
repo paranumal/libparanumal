@@ -406,12 +406,14 @@ typedef struct {
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;
 
+  //ST: Parameters added for spherical solver
   occa::memory o_qFilter;
+  occa::memory o_MRABlevels;
+  occa::memory o_lev_updates;
+  occa::memory o_shift;
 
 
-
-
-
+  iint * lev_updates;
 
   // AK: Remove this stuff, rename single rate files
   occa::memory o_rhspmlq,   o_respmlq; // 3D LSERK
