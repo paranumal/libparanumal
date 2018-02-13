@@ -29,15 +29,15 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
       dfloat c4 = (c[i]-coord1)/(coord3-coord1);
       dfloat c5 = (c[i]-coord2)/(coord3-coord2);
 
-      int cnt =0;
-      cnt += ((c0>=0.0)&&(c0<=1.0));
-      cnt += ((c1>=0.0)&&(c1<=1.0));
-      cnt += ((c2>=0.0)&&(c2<=1.0));
-      cnt += ((c3>=0.0)&&(c3<=1.0));
-      cnt += ((c4>=0.0)&&(c4<=1.0));
-      cnt += ((c5>=0.0)&&(c5<=1.0));
+      int cnt = 0;
+      cnt += ((c0>=0.0)&&(c0<1.0));
+      cnt += ((c1>=0.0)&&(c1<1.0));
+      cnt += ((c2>=0.0)&&(c2<1.0));
+      cnt += ((c3>0.0)&&(c3<=1.0));
+      cnt += ((c4>0.0)&&(c4<1.0));
+      cnt += ((c5>0.0)&&(c5<1.0));
 
-      if (cnt>0) {
+      if ((cnt==3)||(cnt==4)) {
         if (sliceFlag[e]==0) NslicedElements++;
         sliceFlag[e] = 1;
       }
@@ -45,6 +45,8 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   }
 
   if (NslicedElements) {
+
+#if 1
     dfloat *Vx   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
     dfloat *Vy   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
     dfloat *Vz   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -287,7 +289,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     free(Vz);
     free(divU);
 
-#if 0
+#else
     int *elementType = (int *) calloc(NslicedElements*mesh->plotNelements,sizeof(int));
 
     dfloat *plotx = (dfloat *) calloc(NslicedElements*mesh->plotNelements*3,sizeof(dfloat));
@@ -320,14 +322,10 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     dfloat *Vortzn = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
     dfloat *Divn = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
 
-    if (strstr(dim,"x")) coord = xn;
-    if (strstr(dim,"y")) coord = yn;
-    if (strstr(dim,"z")) coord = zn;
-
     iint cnt = 0;
     NslicedElements =0;
     for (iint e=0;e<mesh->Nelements;e++) {
-      //if (sliceFlag[e]==0) continue;
+      if (sliceFlag[e]==0) continue;
 
       //compute div and vort
       for(iint n=0;n<mesh->Np;++n){
@@ -413,45 +411,110 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
         int id1 = mesh->plotEToV[n*mesh->Nverts+1];
         int id2 = mesh->plotEToV[n*mesh->Nverts+2];
         int id3 = mesh->plotEToV[n*mesh->Nverts+3];
-      
+              
         //edge vertices
         int cid0[6], cid1[6];
         cid0[0] = id0; cid1[0] = id1;
         cid0[1] = id1; cid1[1] = id2;
         cid0[2] = id2; cid1[2] = id0;
-        cid0[3] = id0; cid1[3] = id3;
+        cid0[3] = id2; cid1[3] = id3;
         cid0[4] = id1; cid1[4] = id3;
-        cid0[5] = id2; cid1[5] = id3;
+        cid0[5] = id0; cid1[5] = id3;
 
-        dfloat cc[6];
-        int ccnt =0;
-        for (int i=0;i<6;i++) {
-          int id0 = cid0[i], id1 = cid1[i];
-          cc[i] = (c-coord[id0])/(coord[id1]-coord[id0]);
-          ccnt += ((cc[i]>=0.0)&&(cc[i]<=1.0));
-        }
-        if (ccnt>4) printf("huh, again?\n");
-        if ((ccnt==3)||(ccnt==4)) { //if sliced, add the data to the array
-          elementType[NslicedElements++] = ccnt;
+        for (int k=0;k<Nslices;k++) {
+          if (strstr(dim[k],"x")) coord = xn;
+          if (strstr(dim[k],"y")) coord = yn;
+          if (strstr(dim[k],"z")) coord = zn;
+
+          dfloat cc[6];
           for (int i=0;i<6;i++) {
-            if ((cc[i]>=0.0)&&(cc[i]<=1.0)) {
-              int id0 = cid0[i], id1 = cid1[i];
-              plotx[cnt] = (1-cc[i])*xn[id0] + cc[i]*xn[id1];
-              ploty[cnt] = (1-cc[i])*yn[id0] + cc[i]*yn[id1];
-              plotz[cnt] = (1-cc[i])*zn[id0] + cc[i]*zn[id1];
-              
-              plotU[cnt] = (1-cc[i])*Un[id0] + cc[i]*Un[id1];
-              plotV[cnt] = (1-cc[i])*Vn[id0] + cc[i]*Vn[id1];
-              plotW[cnt] = (1-cc[i])*Wn[id0] + cc[i]*Wn[id1];
-              plotP[cnt] = (1-cc[i])*Pn[id0] + cc[i]*Pn[id1];
-
-              plotVortx[cnt] = (1-cc[i])*plotVortx[id0] + cc[i]*plotVortx[id1];
-              plotVorty[cnt] = (1-cc[i])*plotVorty[id0] + cc[i]*plotVorty[id1];
-              plotVortz[cnt] = (1-cc[i])*plotVortz[id0] + cc[i]*plotVortz[id1];
-              plotDiv[cnt] = (1-cc[i])*plotDiv[id0] + cc[i]*plotDiv[id1];
-              cnt++;
-            }
+            int id0 = cid0[i], id1 = cid1[i];
+            cc[i] = (c[k]-coord[id0])/(coord[id1]-coord[id0]);
           }
+          int ccnt[7];
+          ccnt[0] = ((cc[0]>=0.0)&&(cc[0]<1.0));
+          ccnt[1] = ((cc[1]>=0.0)&&(cc[1]<1.0));
+          ccnt[2] = ((cc[2]>=0.0)&&(cc[2]<1.0));
+          ccnt[3] = ((cc[3]>0.0) &&(cc[3]<=1.0));
+          ccnt[4] = ((cc[4]>0.0) &&(cc[4]<1.0));
+          ccnt[5] = ((cc[5]>0.0) &&(cc[5]<1.0));
+
+          ccnt[6] = 0;
+          for (int i=0;i<6;i++) ccnt[6] += ccnt[i];
+
+          if (ccnt[6]>4) printf("huh, again?\n");
+          if ((ccnt[6]==3)){ //if sliced, add the data to the array
+            elementType[NslicedElements++] = ccnt[6];
+            for (int i=0;i<6;i++) {
+              if (ccnt[i]) {
+                int id0 = cid0[i], id1 = cid1[i];
+                plotx[cnt] = (1-cc[i])*xn[id0] + cc[i]*xn[id1];
+                ploty[cnt] = (1-cc[i])*yn[id0] + cc[i]*yn[id1];
+                plotz[cnt] = (1-cc[i])*zn[id0] + cc[i]*zn[id1];
+                
+                plotU[cnt] = (1-cc[i])*Un[id0] + cc[i]*Un[id1];
+                plotV[cnt] = (1-cc[i])*Vn[id0] + cc[i]*Vn[id1];
+                plotW[cnt] = (1-cc[i])*Wn[id0] + cc[i]*Wn[id1];
+                plotP[cnt] = (1-cc[i])*Pn[id0] + cc[i]*Pn[id1];
+
+                plotVortx[cnt] = (1-cc[i])*plotVortx[id0] + cc[i]*plotVortx[id1];
+                plotVorty[cnt] = (1-cc[i])*plotVorty[id0] + cc[i]*plotVorty[id1];
+                plotVortz[cnt] = (1-cc[i])*plotVortz[id0] + cc[i]*plotVortz[id1];
+                plotDiv[cnt] = (1-cc[i])*plotDiv[id0] + cc[i]*plotDiv[id1];
+                cnt++;
+              }
+            }
+          } else if ((ccnt[6]==4)){
+            elementType[NslicedElements++] = 3;
+            int m=0;
+            for (int i=0;i<6;i++) {
+              if (ccnt[i]) {
+                int id0 = cid0[i], id1 = cid1[i];
+                plotx[cnt] = (1-cc[i])*xn[id0] + cc[i]*xn[id1];
+                ploty[cnt] = (1-cc[i])*yn[id0] + cc[i]*yn[id1];
+                plotz[cnt] = (1-cc[i])*zn[id0] + cc[i]*zn[id1];
+                
+                plotU[cnt] = (1-cc[i])*Un[id0] + cc[i]*Un[id1];
+                plotV[cnt] = (1-cc[i])*Vn[id0] + cc[i]*Vn[id1];
+                plotW[cnt] = (1-cc[i])*Wn[id0] + cc[i]*Wn[id1];
+                plotP[cnt] = (1-cc[i])*Pn[id0] + cc[i]*Pn[id1];
+
+                plotVortx[cnt] = (1-cc[i])*plotVortx[id0] + cc[i]*plotVortx[id1];
+                plotVorty[cnt] = (1-cc[i])*plotVorty[id0] + cc[i]*plotVorty[id1];
+                plotVortz[cnt] = (1-cc[i])*plotVortz[id0] + cc[i]*plotVortz[id1];
+                plotDiv[cnt] = (1-cc[i])*plotDiv[id0] + cc[i]*plotDiv[id1];
+                cnt++;
+                m++;
+                if (m==3) break;
+              }
+            }
+            elementType[NslicedElements++] = 3;
+            m=0;
+            for (int i=0;i<6;i++) {
+              if (ccnt[i]) {
+                if (m==0) {
+                  m++;
+                  continue;
+                }
+                int id0 = cid0[i], id1 = cid1[i];
+                plotx[cnt] = (1-cc[i])*xn[id0] + cc[i]*xn[id1];
+                ploty[cnt] = (1-cc[i])*yn[id0] + cc[i]*yn[id1];
+                plotz[cnt] = (1-cc[i])*zn[id0] + cc[i]*zn[id1];
+                
+                plotU[cnt] = (1-cc[i])*Un[id0] + cc[i]*Un[id1];
+                plotV[cnt] = (1-cc[i])*Vn[id0] + cc[i]*Vn[id1];
+                plotW[cnt] = (1-cc[i])*Wn[id0] + cc[i]*Wn[id1];
+                plotP[cnt] = (1-cc[i])*Pn[id0] + cc[i]*Pn[id1];
+
+                plotVortx[cnt] = (1-cc[i])*plotVortx[id0] + cc[i]*plotVortx[id1];
+                plotVorty[cnt] = (1-cc[i])*plotVorty[id0] + cc[i]*plotVorty[id1];
+                plotVortz[cnt] = (1-cc[i])*plotVortz[id0] + cc[i]*plotVortz[id1];
+                plotDiv[cnt] = (1-cc[i])*plotDiv[id0] + cc[i]*plotDiv[id1];
+                cnt++;
+                m++;
+              }
+            }
+          } 
         }
       }
     }
@@ -573,7 +636,6 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     free(Vortyn);
     free(Vortzn);
     free(Divn);
-  }
 #endif
   }
   free(sliceFlag);

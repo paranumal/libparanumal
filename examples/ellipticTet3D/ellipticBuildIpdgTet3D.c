@@ -96,6 +96,8 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   // reset non-zero counter
   int nnz = 0;
 
+  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+
   // loop over all elements
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
@@ -253,6 +255,8 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   // free up unused storage
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
+  
+  if(rankM==0) printf("done.\n");
   
   free(globalIds);
 

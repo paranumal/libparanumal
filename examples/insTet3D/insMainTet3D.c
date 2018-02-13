@@ -53,9 +53,9 @@ int main(int argc, char **argv){
   
   char *options; 
  if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=ADAPTIVECONTOUR, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=ADAPTIVECONTOUR, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
   if (rank==0) printf("Setup INS Solver: \n");
   ins_t *ins = insSetup3D(mesh, Ns, options,

@@ -195,9 +195,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   // errorStep
   if(strstr(options,"SUBCYCLING"))
     //ins->errorStep =100*16/ins->Nsubsteps;
-    ins->errorStep = 100;
+    ins->errorStep = 5;
   else
-    ins->errorStep = 100;
+    ins->errorStep = 5;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
