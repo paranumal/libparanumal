@@ -35,7 +35,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
 
   // contourFilter:     ufilt = V*F*invV
 
-  int MAXLEVELS = 3;
+  int MAXLEVELS = 0;
 
   int plotNp = 4;  
   int Nelements = mesh->Nelements;
@@ -46,6 +46,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   dfloat *refy = (dfloat*) calloc(Nelements*Np, sizeof(dfloat));
   dfloat *refz = (dfloat*) calloc(Nelements*Np, sizeof(dfloat));
   
+  //copy in data
   for(int n=0;n<Np*Nelements;++n){
     refu[n] = u[n];
     refx[n] = mesh->x[n];
@@ -57,9 +58,9 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   
   dfloat err = 1;
   int refLevel = 0;
-  while ((err>tol) &&(refLevel<MAXLEVELS)){ // should add max refinement check here
+  while ((err>tol) &&(refLevel<MAXLEVELS)){
     
-    int *refineList = (int*) calloc(Nelements,sizeof(int));
+    int *refineFlag = (int*) calloc(Nelements,sizeof(int));
     int Nrefine = 0;
     for(int e=0;e<Nelements;++e){
       dfloat umin = refu[e*Np+0];
@@ -72,7 +73,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
       
       for (int lev=0;lev<Nlevels;lev++){
         if((umin<=levels[lev]) && (umax>=levels[lev])){
-          refineList[Nrefine] = e;
+          refineFlag[e] = 1;
           ++Nrefine;
           break;
         }  
@@ -85,20 +86,21 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
     newx = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
     newy = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
     newz = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
-
-    for(int n=0;n<Nrefine;++n){
-      int e = refineList[n];
+    iint cnt =0;
+    for(int e=0;e<Nelements;++e){
+      if (refineFlag[e]==0) continue;
       for(int m=0;m<8*Np;++m){
         for(int i=0;i<Np;++i){
           // note layout
-          newu[8*Np*n+m] += mesh->contourInterp[m*Np + i]*refu[e*Np+i];
-          newx[8*Np*n+m] += mesh->contourInterp[m*Np + i]*refx[e*Np+i];
-          newy[8*Np*n+m] += mesh->contourInterp[m*Np + i]*refy[e*Np+i];
-          newz[8*Np*n+m] += mesh->contourInterp[m*Np + i]*refz[e*Np+i];
+          newu[8*Np*cnt+m] += mesh->contourInterp[m*Np + i]*refu[e*Np+i];
+          newx[8*Np*cnt+m] += mesh->contourInterp[m*Np + i]*refx[e*Np+i];
+          newy[8*Np*cnt+m] += mesh->contourInterp[m*Np + i]*refy[e*Np+i];
+          newz[8*Np*cnt+m] += mesh->contourInterp[m*Np + i]*refz[e*Np+i];
+          cnt++;
         }
       }
     }
-    free(refineList);
+    free(refineFlag);
     
     free(refu);
     free(refx);
@@ -123,14 +125,133 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
     refLevel++;
   }
   
-  dfloat *plotx = (dfloat*) calloc(4*Nelements,sizeof(dfloat));
-  dfloat *ploty = (dfloat*) calloc(4*Nelements,sizeof(dfloat));
-  dfloat *plotz = (dfloat*) calloc(4*Nelements,sizeof(dfloat));
-  dfloat *plotu = (dfloat*) calloc(4*Nelements,sizeof(dfloat));
-  
+  int *refineFlag = (int*) calloc(Nelements,sizeof(int));
+  int Nrefine = 0;
   for(int e=0;e<Nelements;++e){
-    for(int n=0;n<plotNp;++n){
+    dfloat umin = refu[e*Np+0];
+    dfloat umax = refu[e*Np+0];
+      
+    for(int n=1;n<Np;++n){
+      umin = mymin(umin, refu[e*Np+n]);
+      umax = mymax(umax, refu[e*Np+n]);
+    }
+      
+    for (int lev=0;lev<Nlevels;lev++){
+      if((umin<=levels[lev]) && (umax>=levels[lev])){
+        refineFlag[e] = 1;
+        ++Nrefine;
+        break;
+      }  
+    }
+  }
+  
+  
 
+  FILE *fp = fopen(fname, "w");
+
+  fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
+  fprintf(fp, "  <UnstructuredGrid>\n");
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
+          Nrefine*mesh->plotNp, 
+          Nrefine*mesh->plotNelements);
+  
+  // write out nodes
+  fprintf(fp, "      <Points>\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  
+  // compute plot node coordinates on the fly
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotxn += mesh->plotInterp[n*mesh->Np+m]*refx[m+e*mesh->Np];
+        plotyn += mesh->plotInterp[n*mesh->Np+m]*refy[m+e*mesh->Np];
+        plotzn += mesh->plotInterp[n*mesh->Np+m]*refz[m+e*mesh->Np];
+      }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
+    }
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Points>\n");
+  
+  fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotpn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        dfloat pm = refu[m+e*mesh->Np];
+        plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
+      }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
+    }
+  }
+
+  fprintf(fp, "       </DataArray>\n");
+  fprintf(fp, "     </PointData>\n");
+  
+  fprintf(fp, "    <Cells>\n");
+  fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
+  
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      fprintf(fp, "       ");
+      for(int m=0;m<mesh->plotNverts;++m){
+        fprintf(fp, "%d ", cnt*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
+      }
+      fprintf(fp, "\n");
+    }
+    cnt++;
+  }
+  
+  fprintf(fp, "        </DataArray>\n");
+  
+  fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
+  cnt=0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      cnt += mesh->plotNverts;
+      fprintf(fp, "       ");
+      fprintf(fp, "%d\n", cnt);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  
+  fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      fprintf(fp, "10\n"); // TET code ?
+    }
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Cells>\n");
+  fprintf(fp, "    </Piece>\n");
+  fprintf(fp, "  </UnstructuredGrid>\n");
+  fprintf(fp, "</VTKFile>\n");
+  fclose(fp);
+
+  free(refineFlag);
+
+#if 0 
+  dfloat *plotx = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
+  dfloat *ploty = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
+  dfloat *plotz = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
+  dfloat *plotu = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
+
+  iint cnt =0;
+  for(int e=0;e<Nelements;++e){
+    if (refineFlag[e]==0) continue;
+    for(int n=0;n<plotNp;++n){
+      
       dfloat px = 0, py = 0, pz = 0, pu = 0;
       
       for(int m=0;m<Np;++m){
@@ -140,14 +261,15 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
         pu += mesh->contourInterp1[n*Np+m]*refu[e*Np+m];
       }
       
-      plotx[e*plotNp+n] = px;
-      ploty[e*plotNp+n] = py;
-      plotz[e*plotNp+n] = pz;
-      plotu[e*plotNp+n] = pu;
-
+      plotx[cnt*plotNp+n] = px;
+      ploty[cnt*plotNp+n] = py;
+      plotz[cnt*plotNp+n] = pz;
+      plotu[cnt*plotNp+n] = pu;
+      cnt++;
     }
   }
   
+  Nelements = Nrefine; 
   int plotNelements = Nelements;
 
   FILE *fp = fopen(fname, "w");
@@ -215,5 +337,6 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "    </Piece>\n");
   fprintf(fp, "  </UnstructuredGrid>\n");
   fprintf(fp, "</VTKFile>\n");
-  fclose(fp); 
+  fclose(fp);
+#endif 
 }
