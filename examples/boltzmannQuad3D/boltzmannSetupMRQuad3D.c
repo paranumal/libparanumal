@@ -166,7 +166,7 @@ void rk_coeffs(mesh_t *mesh) {
 }
 
 solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
-
+  
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
@@ -285,7 +285,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
       mesh->q[base+7*mesh->Np] = q8bar;
       mesh->q[base+8*mesh->Np] = q9bar;
-      mesh->q[base+9*mesh->Np] = q10bar;
+     mesh->q[base+9*mesh->Np] = q10bar;
     }
   }
   // set BGK collision relaxation rate

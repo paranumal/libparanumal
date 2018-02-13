@@ -2,7 +2,6 @@
 
 void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
-  //
   mesh_t *mesh = solver->mesh;
   
   occa::initTimer(mesh->device);
@@ -13,23 +12,14 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
-    
+  
   //kernel arguments
   dfloat alpha = 0; //1./mesh->N;
   dfloat zero = 0;
   dfloat one = 1;
-
-  for (int e = 0; e < mesh->Nelements; ++e) {
-    if (mesh->EToE[e] == e) printf("boundary %d\n",e);
-    //printf("%d %d %d %d\n",mesh->EToF[e],mesh->EToF[e+1],mesh->EToF[e+2],mesh->EToF[e+3]);
-    for (int n = 0; n < mesh->Nfp * mesh->Nfaces;++n) {
-      if (mesh->vmapM[e*mesh->Nfp*mesh->Nfaces + n] == mesh->vmapP[e*mesh->Nfp*mesh->Nfaces + n]) printf("found it at %d %d\n",e,n);
-    }
-  }
-
   
   //filter the initial state
-      for (iint l=0;l<mesh->MRABNlevels;l++) {
+  for (iint l=0;l<mesh->MRABNlevels;l++) {
     
     mesh->filterKernelH(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
