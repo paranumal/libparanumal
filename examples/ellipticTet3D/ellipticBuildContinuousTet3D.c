@@ -22,6 +22,20 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+  /* Setup description of the MPI_NONZERO_T struct */
+  MPI_Datatype MPI_NONZERO_T;
+  MPI_Datatype oldtypes[3] = {MPI_IINT, MPI_DFLOAT, MPI_INT};
+  int blockcounts[3] = {2, 1, 1};
+
+  MPI_Aint dfloatext, iintext;
+  MPI_Type_extent(MPI_IINT, &iintext);
+  MPI_Type_extent(MPI_DFLOAT, &dfloatext);
+  MPI_Aint  nonzeroEntryoffsets[3] = {0, 2*iintext, 2*iintext+dfloatext};
+
+  /* Now define structured type and commit it */
+  MPI_Type_struct(3, blockcounts, nonzeroEntryoffsets, oldtypes, &MPI_NONZERO_T);
+  MPI_Type_commit(&MPI_NONZERO_T);
+
   /* Build a gather-scatter to assemble the global masked problem */
   iint Ntotal = mesh->Np*mesh->Nelements;
 
@@ -103,7 +117,7 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
 
   // count how many non-zeros to send to each process
   for(iint n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+    AsendCounts[sendNonZeros[n].ownerRank] += 1;
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -116,14 +130,14 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   for(iint r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r]/sizeof(nonZero_t);
+    *nnz += ArecvCounts[r];
   }
 
   *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
-    (*A), ArecvCounts, ArecvOffsets, MPI_CHAR,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
+    (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
     MPI_COMM_WORLD);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -144,6 +158,8 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   *nnz = cnt+1;
 
   if(rank==0) printf("done.\n");
+
+  MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
   free(globalNumbering);

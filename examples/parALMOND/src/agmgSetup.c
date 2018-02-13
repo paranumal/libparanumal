@@ -1335,24 +1335,18 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   iint globalAggOffset = globalAggStarts[rank];
 
-  MPI_Datatype mpi_rapEntry_t, oldtypes[2];
-  int blockcounts[2];
+  /* Setup description of the MPI_RAPENTRY_T struct */
+  MPI_Datatype MPI_RAPENTRY_T;
+  MPI_Datatype oldtypes[2] = {MPI_IINT, MPI_DFLOAT};
+  int blockcounts[2] = {2, 1};
 
-  MPI_Aint    rapEntryoffsets[2], extent;
-
-  /* Setup description of the 4 MPI_FLOAT fields x, y, z, velocity */
-  rapEntryoffsets[0] = 0;
-  oldtypes[0] = MPI_IINT;
-  blockcounts[0] = 2;
-
-  MPI_Type_extent(MPI_IINT, &extent);
-  rapEntryoffsets[1] = 2 * extent;
-  oldtypes[1] = MPI_DFLOAT;
-  blockcounts[1] = 1;
+  MPI_Aint iintext;
+  MPI_Type_extent(MPI_IINT, &iintext);
+  MPI_Aint  rapEntryoffsets[2] = {0, 2*iintext};
 
   /* Now define structured type and commit it */
-  MPI_Type_struct(2, blockcounts, rapEntryoffsets, oldtypes, &mpi_rapEntry_t);
-  MPI_Type_commit(&mpi_rapEntry_t);
+  MPI_Type_struct(2, blockcounts, rapEntryoffsets, oldtypes, &MPI_RAPENTRY_T);
+  MPI_Type_commit(&MPI_RAPENTRY_T);
 
   //The galerkin product can be computed as
   // (RAP)_IJ = sum_{i in Agg_I} sum_{j in Agg_j} P_iI A_ij P_jJ
@@ -1456,8 +1450,8 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     recvRAPEntries = (rapEntry_t *) calloc(1,sizeof(rapEntry_t));//MPI_AlltoAll doesnt like null pointers
   }
 
-  MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, mpi_rapEntry_t,
-                recvRAPEntries, recvCounts, recvOffsets, mpi_rapEntry_t,
+  MPI_Alltoallv(RAPEntries, sendCounts, sendOffsets, MPI_RAPENTRY_T,
+                recvRAPEntries, recvCounts, recvOffsets, MPI_RAPENTRY_T,
                 MPI_COMM_WORLD);
 
   //sort entries by the coarse row and col
@@ -1603,6 +1597,8 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   csrHaloSetup(RAP,globalAggStarts);
 
   //clean up
+  MPI_Type_free(&MPI_RAPENTRY_T);
+
   if (M) free(PEntries);
   free(sendCounts); free(recvCounts);
   free(sendOffsets); free(recvOffsets);
