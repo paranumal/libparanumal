@@ -47,7 +47,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     //iint fld = 1;
     
     char fname[BUFSIZ];
-    sprintf(fname, "foo_pml_t0_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
+    sprintf(fname, "foo_pml_%.0f_%04d_%04d.vtu", mesh->Re, rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
    }
 

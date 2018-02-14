@@ -135,7 +135,7 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
     shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubq[p_NblockCub][3][p_cubNp];
+    shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
     // shared dfloat s_cubqt[p_NblockCub][p_Nfields][p_cubNp];
@@ -202,14 +202,15 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
             for(iint fld=0; fld<p_Nfields;++fld){       
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
+              s_cubq [es][fld][n] = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld];
             }
             
             
             dfloat icubq1 = 1.f/r_q[0];
             // BGK relaxation approximation to the Boltzmann collision operator
-            s_cubq[es][0][n] = -p_tauInv*(r_q[3]-(           r_q[1]*r_q[2]*icubq1));
-            s_cubq[es][1][n] = -p_tauInv*(r_q[4]-(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
-            s_cubq[es][2][n] = -p_tauInv*(r_q[5]-(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
+            s_cubq[es][3][n] -= p_tauInv*(r_q[3]-(           r_q[1]*r_q[2]*icubq1));
+            s_cubq[es][4][n] -= p_tauInv*(r_q[4]-(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
+            s_cubq[es][5][n] -= p_tauInv*(r_q[5]-(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
           }
         }
       }
@@ -246,9 +247,7 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];
                 //
                  for(iint fld=0; fld<p_Nfields; fld++){
-                  if(fld<3){
-                    r_rhsq[fld+3] += Pnc*s_cubq[es][fld][m];
-                  } 
+                  r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
                  }
@@ -258,7 +257,7 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
              for(iint fld=0; fld<p_Nfields;++fld){
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];
-                rhsq[rhsId + fld]        += (r_rhsqx[fld] + r_rhsqy[fld] + r_rhsq[fld]);
+                rhsq[rhsId + fld]        += r_rhsq[fld];
               }   
           }
         }
@@ -499,7 +498,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
 
             #if 0
 
-            // transport operator
+            // // transport operator
             r_q[0] -= p_q1bar;
             r_q[1] -= p_q2bar;
             r_q[2] -= p_q3bar;
@@ -509,34 +508,20 @@ kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
             
 
 
-            const dfloat beta = 0.1;
-            //s_cubqx[es][0][n] += beta*sigmaxe*(r_q[0]);
-            //s_cubqx[es][1][n] += beta*sigmaxe*(r_q[1]);
-            //s_cubqx[es][2][n] += beta*sigmaxe*(r_q[2]);
-            //s_cubqx[es][3][n] += beta*sigmaxe*(r_q[3]);
-            //s_cubqx[es][4][n] += beta*sigmaxe*(r_q[4]);
-            //s_cubqx[es][5][n] += beta*sigmaxe*(r_q[5]);
+            const dfloat beta = 0.66667;
+            
+            s_cubqx[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
+            s_cubqx[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
+            s_cubqx[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
+            s_cubqx[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
+            s_cubqx[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
 
             //
-            s_cubq[es][0][n] += beta*sigmaxe*(r_q[0]);
-            s_cubq[es][1][n] += beta*sigmaxe*(r_q[1]);
-            s_cubq[es][2][n] += beta*sigmaxe*(r_q[2]);
-            s_cubq[es][3][n] += beta*sigmaxe*(r_q[3]);
-            s_cubq[es][4][n] += beta*sigmaxe*(r_q[4]);
-            s_cubq[es][5][n] += beta*sigmaxe*(r_q[5]);
-
-            // s_cubqx[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
-            // s_cubqx[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
-            // s_cubqx[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
-            // s_cubqx[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
-            // s_cubqx[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
-
-            // //
-            // s_cubq[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
-            // s_cubq[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
-            // s_cubq[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
-            // s_cubq[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
-            // s_cubq[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
+            s_cubq[es][0][n] += -p_sqrtRT*beta*sigmaxe*(r_q[1]);
+            s_cubq[es][1][n] += -p_sqrtRT*beta*sigmaxe*(r_q[0] + p_sqrt2*r_q[4]);
+            s_cubq[es][2][n] += -p_sqrtRT*beta*sigmaxe*(r_q[3]);
+            s_cubq[es][3][n] += -p_sqrtRT*beta*sigmaxe*(r_q[2]);
+            s_cubq[es][4][n] += -p_sqrtRT*beta*sigmaxe*(p_sqrt2*r_q[1]);
             #endif
 
 
