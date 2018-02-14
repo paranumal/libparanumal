@@ -41,13 +41,9 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	  
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	    
-	    if(faceC==faceL && faceC==faceR && lev_updates[lev_numbers[eL]] == lev_updates[l] &&lev_updates[lev_numbers[eR]] == lev_updates[l]) {
-	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	    }
+
 	    //edge of an mrab level, but not the edge of a face
-	    else if(faceC == faceL && faceC == faceR) {
+	    if(faceC == faceL && faceC == faceR) {
 
 	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
@@ -59,14 +55,14 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  
 		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 		  
-		  
-		  //this is broken with more levels, fix other code first
-		  const dfloat scaleleft = 1 << (l - lev);
+		  const dfloat stepC = lev_updates[l];
+		  const dfloat stepL = lev_updates[lev_numbers[eL]];
+		  const dfloat sizeL = 1<<lev_numbers[eL];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    //for simplicity, scale x so current time is 1, and last interpolation point is 0
 		    if (lj != li) {
-		      q_prod *= (1. + scaleleft*lj)/(scaleleft*lj - scaleleft*li);
+		      q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
 		    }
 		  }
 		  q_sum += q_prod;
@@ -85,15 +81,13 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  const iint rhsNum = (nrhs + shift[lev] - li - 1) % nrhs;
 		  
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
-		  
-		  
-		  //this is broken with more levels, fix other code first
-		  const dfloat scaleleft = 1 << (l - lev);
+
+		  const dfloat stepC = lev_updates[l];
+		  const dfloat stepR = lev_updates[lev_numbers[eR]];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
-		    //for simplicity, scale x so current time is 1, and last interpolation point is 0
 		    if (lj != li) {
-		      q_prod *= (1. + scaleleft*lj)/(scaleleft*lj - scaleleft*li);
+		      q_prod *= (stepC - stepR + lj*sizeR)/(lj*sizeR - li*sizeR);
 		    }
 		  }
 		  q_sum += q_prod;

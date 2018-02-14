@@ -133,8 +133,6 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 	
 	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d%d%d", 
 	       mesh->elementInfo+cnt,mesh->cubeFaceNumber+cnt,&v1, &v2, &v3, &v4);
-
-	if (v1 == 3 || v2 == 3 || v3 == 3 || v4 == 3) printf(" found node 3\n");
 	
 	// check orientation using a*(bxc) > 0
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1];

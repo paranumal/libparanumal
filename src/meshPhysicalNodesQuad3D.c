@@ -167,6 +167,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 	break;
       }
 
+      //Apply coordinate shift to vertex arrays
       /*if (rn == mesh->r[0] && sn == mesh->s[0]) {
 	mesh->EX[id + 0] = xsph;
 	mesh->EY[id + 0] = ysph;

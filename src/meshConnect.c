@@ -79,7 +79,7 @@ void meshConnect(mesh_t *mesh){
       
       faces[cnt].elementNeighbor= -1;
       faces[cnt].faceNeighbor = -1;
-
+      
       ++cnt;
 
     }
@@ -121,7 +121,6 @@ void meshConnect(mesh_t *mesh){
     for(iint f=0;f<mesh->Nfaces;++f){
       mesh->EToE[cnt] = faces[cnt].elementNeighbor;
       mesh->EToF[cnt] = faces[cnt].faceNeighbor;
-
       //      printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
       
       ++cnt;
@@ -130,9 +129,10 @@ void meshConnect(mesh_t *mesh){
 
   iint Nbcs = 0;
   for(iint e=0;e<mesh->Nelements;++e)
-    for(iint f=0;f<mesh->Nfaces;++f)
+    for(iint f=0;f<mesh->Nfaces;++f) {
       if(mesh->EToE[e*mesh->Nfaces+f]==-1)
 	++Nbcs;
+    }
 
   //printf("Nelements = %d, Nbcs = %d\n", mesh->Nelements, Nbcs);
 }
