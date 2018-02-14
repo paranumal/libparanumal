@@ -14,7 +14,8 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
   char *velSolverOptions = 
-    strdup("solver=PCG method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
+    //strdup("solver=PCG method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
+    strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
   char *velParAlmondOptions = 
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
 
@@ -46,16 +47,16 @@ int main(int argc, char **argv){
     boundaryHeaderFileName = strdup(argv[3]);
 
   //int Ns = 0; // Default no-subcycling 
-  int Ns =4;
+  int Ns = 8;
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
   
   char *options; 
  if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=CONTOUR, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=CONTOUR, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
   if (rank==0) printf("Setup INS Solver: \n");
   ins_t *ins = insSetup3D(mesh, Ns, options,

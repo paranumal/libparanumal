@@ -48,16 +48,21 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     // const dfloat sliceX[4] = {0.0,1.0,-1.0,20.};
 
     //slice data (channel)
+    // const int Nslices = 4;
+    // const char *sliceDim[4] = {"x","x","y","z"};
+    // const dfloat sliceX[4] = {0.001,5,0.0,0.0};
+
+    //slice data (channel)
     const int Nslices = 4;
     const char *sliceDim[4] = {"x","x","y","z"};
-    const dfloat sliceX[4] = {0.001,5,0.0,0.0};
+    const dfloat sliceX[4] = {0.001,5,0.5,1.0};
 
     // output field files
     char fname[BUFSIZ];
     sprintf(fname, "slice_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     insPlotSlice3D(ins, fname,Nslices, sliceDim,sliceX);
-  } if(strstr(options, "ADAPTIVECONTOUR")){ 
+  } else if(strstr(options, "CONTOUR")){ 
     // copy data back to host
     ins->o_U.copyTo(ins->U);
     ins->o_V.copyTo(ins->V); 
@@ -75,9 +80,9 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     
     // output field files
     char fname[BUFSIZ];
-    sprintf(fname, "/scratch/contour_%04d_%04d.vtu",rank,tstep/ins->errorStep);
+    sprintf(fname, "contour_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
-    insPlotAdaptiveContour3D(ins, fname);
+    insPlotContour3D(ins, fname, options);
   } 
 }
 

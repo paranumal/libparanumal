@@ -95,3 +95,6 @@ Physical Line("Inflow",2) = {20, 18, 19, 15, 14};
 Physical Line("Wall",1) = {21, 4, 3, 2, 1, 8, 9};
 Physical Line("Outflow",3) = {12, 10};
 Physical Surface("Domain",9) = {33, 31, 23, 29, 27, 25};
+Extrude {0, 0, 2} {
+  Surface{31, 29, 27, 25, 23, 33};
+}
