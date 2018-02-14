@@ -14,9 +14,9 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 1000;
+  mesh->errorStep = 10000; 
 
-  dfloat RE[4];  RE[0] = 50;  RE[1] = 100; RE[2] = 200; RE[3] = 400; // Remove for tests!!!!!
+  dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
   // Initialize
   dfloat Ma      = 0.f,   Re      = 0.f;
@@ -27,10 +27,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.1;    // Set Mach number
-    mesh->Re = 200;  // Set Reynolds number was 100
+    mesh->Ma = 0.2;    // Set Mach number
+    mesh->Re = 150; //RE[mesh->Ntscale]; // Set Reynolds number was 100
     //
-    Uref = 0.5;  // Set Uref was 0.5
+    Uref = 1.0;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
     //
     mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
@@ -40,10 +40,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref; v = 0.f; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 10.0;
+    mesh->finalTime = 50.0;  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -93,7 +93,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl          = 0.333; 
+  dfloat cfl          = 0.2; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -231,7 +231,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 #endif
 
 
-#if 1
+#if 0
       // Vortex Problem
       dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
       dfloat Umax  = 0.5*u; 
@@ -252,7 +252,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     
 #endif
 
-#if 0
+#if 1
       // Uniform Flow
       mesh->q[cnt+0] = q1bar; 
       mesh->q[cnt+1] = ramp*q2bar;
@@ -280,12 +280,15 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
  
   // SET PROBE DATA
   if(strstr(options, "PROBE")){
-    mesh->probeNTotal = 3; 
+    mesh->probeNTotal = 4; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     // Fill probe coordinates
-    pX[0] = 0.90;  pX[1] = 0.90; pX[2] =  0.90; //pX[3] = 10.50; 
-    pY[0] = 0.00;  pY[1] = 0.25; pY[2] = -0.25; //pY[3] =  0.00; 
+     pX[0] = 9.00;  pX[1] = 1.00; pX[2] =  1.00; pX[3] = 1.00; 
+     pY[0] = 0.00;  pY[1] = 0.00; pY[2] = -1.00;  pY[3] = 1.00; 
+
+    // pX[0] = 0.90;  pX[1] = 0.90; pX[2] =  0.90; //pX[3] = 10.50; 
+    // pY[0] = 0.00;  pY[1] = 0.25; pY[2] = -0.25; //pY[3] =  0.00; 
 
     // pX[0] =  2.00;  pX[1] = 2.00; pX[2] =  2.00; 
     // pY[0] = -1.00;  pY[1] = 0.00; pY[2] =  1.00; 
@@ -712,7 +715,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.05f);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.05f); // 0.05
   // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
 
 

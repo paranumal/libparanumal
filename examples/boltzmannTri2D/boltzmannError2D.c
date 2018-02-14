@@ -9,7 +9,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-      printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
+      // printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
 
       if(mesh->probeN){
 
