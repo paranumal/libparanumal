@@ -48,7 +48,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eL];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li - 1) % nrhs;
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
@@ -75,13 +75,13 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eR];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li - 1) % nrhs;
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
-		  const dfloat stepC = level_updates[l];
-		  const dfloat stepR = level_updates[level_numbers[eR]];
-		  const dfloat sizeR = 1<<level_numbers[eR];
+		  const dfloat stepC = lev_updates[l];
+		  const dfloat stepR = lev_updates[lev_numbers[eR]];
+		  const dfloat sizeR = 1<<lev_numbers[eR];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {
@@ -105,7 +105,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(faceC==faceL && faceC==faceR && lev_updates[lev_numbers[eL]] == lev_updates[l] && lev_updates[lev_numbers[eR]] == lev_updates[l]){
+	if(faceC==faceL && faceC==faceR){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;

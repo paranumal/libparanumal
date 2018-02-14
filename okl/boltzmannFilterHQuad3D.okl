@@ -51,7 +51,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eL];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li - 1) % nrhs;
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 		  
@@ -78,12 +78,13 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eR];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li - 1) % nrhs;
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
 		  const dfloat stepC = lev_updates[l];
 		  const dfloat stepR = lev_updates[lev_numbers[eR]];
+		  const dfloat sizeR = 1 << lev_numbers[eR];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {

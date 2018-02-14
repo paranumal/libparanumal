@@ -156,7 +156,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_rhsq);
 	  //mesh->o_rhsq.copyTo(test_q);
 	  //boltzmannPlotLevels(mesh,"bar",tstep,test_q+mesh->MRABshiftIndex[l]);
-
+	  mesh->lev_updates[l] = Ntick;
 	}
       }
       occa::toc("surfaceKernel");
@@ -240,7 +240,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_q);
 
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%mesh->Nrhs;
-	  mesh->lev_updates[l] = Ntick;
 	}
       }
       
