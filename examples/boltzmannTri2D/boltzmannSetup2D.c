@@ -40,7 +40,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
     mesh->finalTime = 50.0;  
@@ -715,7 +716,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.05f); // 0.05
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
   // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
 
 
