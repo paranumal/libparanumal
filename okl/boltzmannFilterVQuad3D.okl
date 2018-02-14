@@ -39,26 +39,26 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	   
-	    //edge of an mrab level, but not the edge of a face
-	    if(faceC == faceL && faceC == faceR) {
-	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
-		dfloat q_sum = 0;
-		
-		for (iint li=0; li<nrhs; ++li) {
-		  const iint lev = lev_numbers[eL];
-		  
-		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
-		  
-		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
-		  const dfloat stepC = lev_updates[l];
-		  const dfloat stepL = lev_updates[lev_numbers[eL]];
-		  const dfloat sizeL = 1 << lev_numbers[eL];
-		  
+
+	    if(faceC == faceL && faceC == faceR) {
+
+	      const dfloat stampC = lev_updates[l];
+	      const iint levL = lev_numbers[eL];
+	      const iint levR = lev_numbers[eR];
+	      const iint stampL = lev_updates[levL];
+	      const iint stampR = lev_updates[levR];
+	      const dfloat stepL = 1<<levL;
+	      const dfloat stepR = 1<<levR;
+	      
+	      if (stampL != stampC) {
+		dfloat q_sum = 0;		
+		for (iint li=0; li<nrhs; ++li) {		  
+		  const iint rhsNum = (nrhs + shift[levL] - li) % nrhs;		  
+		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {
-		      q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
+		      q_prod *= (stampC - stampL + lj*stepL)/(lj*stepL - li*stepL);
 		    }
 		  }
 		  q_sum += q_prod;
@@ -66,26 +66,16 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		s_q[fld][0][j][i] = q_sum;
 	      }
 	      else {
-		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
-	      
-	      if (lev_updates[lev_numbers[eR]] != lev_updates[l]) {
-		dfloat q_sum = 0;
-		
+	      if (stampR != stampC) {
+		dfloat q_sum = 0;		
 		for (iint li=0; li<nrhs; ++li) {
-		  const iint lev = lev_numbers[eR];
-		  
-		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
-		  
+		  const iint rhsNum = (nrhs + shift[levR] - li) % nrhs;
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
-
-		  const dfloat stepC = lev_updates[l];
-		  const dfloat stepR = lev_updates[lev_numbers[eR]];
-		  const dfloat sizeR = 1<<lev_numbers[eR];
-		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {
-		      q_prod *= (stepC - stepR + lj*sizeR)/(lj*sizeR - li*sizeR);
+		      q_prod *= (stampC - stampR + lj*stepR)/(lj*stepR - li*stepR);
 		    }
 		  }
 		  q_sum += q_prod;
