@@ -33,6 +33,7 @@ void meshVTU3D(mesh3D *mesh, char *fileName);
 
 // print out mesh field
 void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
+void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels);
 void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels, dfloat tol);
 
 // compute geometric factors for local to physical map 

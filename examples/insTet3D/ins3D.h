@@ -114,7 +114,7 @@ void insReport3D(ins_t *solver, iint tstep, char *options);
 void insError3D(ins_t *solver, dfloat time, char *options);
 void insPlotVTU3D(ins_t *solver, char *fileNameBase);
 void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
-void insPlotAdaptiveContour3D(ins_t *ins, char *fileName);
+void insPlotContour3D(ins_t *ins, char *fileName, const char*options);
 
 // void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 

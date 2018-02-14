@@ -8,286 +8,307 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   //find number of sliced elements
   dfloat *coord;
   iint NslicedElements = 0;
+  iint NslicedSubElements = 0;
   int *sliceFlag = (int *) calloc(mesh->Nelements,sizeof(int));
-  
+  int *sliceSubFlag = (int*) calloc(mesh->Nelements*mesh->plotNelements,sizeof(int));
+
+  dfloat *plotCoord = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
+
   for (int i=0;i<Nslices;i++) {
-    if (strstr(dim[i],"x")) coord = mesh->EX;
-    if (strstr(dim[i],"y")) coord = mesh->EY;
-    if (strstr(dim[i],"z")) coord = mesh->EZ;
+    if (strstr(dim[i],"x")) coord = mesh->x;
+    if (strstr(dim[i],"y")) coord = mesh->y;
+    if (strstr(dim[i],"z")) coord = mesh->z;
 
     for (iint e=0;e<mesh->Nelements;e++) {
-      iint id = e*mesh->Nverts;
-      dfloat coord0 = coord[id+0];
-      dfloat coord1 = coord[id+1];
-      dfloat coord2 = coord[id+2];
-      dfloat coord3 = coord[id+3];
+      for(int n=0;n<mesh->plotNp;++n){
+        plotCoord[n] = 0;
+        for(int m=0;m<mesh->Np;++m){
+          plotCoord[n] += mesh->plotInterp[n*mesh->Np+m]*coord[m+e*mesh->Np];
+        }
+      }
 
-      dfloat c0 = (c[i]-coord0)/(coord1-coord0);
-      dfloat c1 = (c[i]-coord1)/(coord2-coord1);
-      dfloat c2 = (c[i]-coord2)/(coord0-coord2);
-      dfloat c3 = (c[i]-coord0)/(coord3-coord0);
-      dfloat c4 = (c[i]-coord1)/(coord3-coord1);
-      dfloat c5 = (c[i]-coord2)/(coord3-coord2);
+      for (int k=0;k<mesh->plotNelements;k++) {
+        int id0 = mesh->plotEToV[k*mesh->plotNverts+0];
+        int id1 = mesh->plotEToV[k*mesh->plotNverts+1];
+        int id2 = mesh->plotEToV[k*mesh->plotNverts+2];
+        int id3 = mesh->plotEToV[k*mesh->plotNverts+3];
+        
+        dfloat coord0 = plotCoord[id0];
+        dfloat coord1 = plotCoord[id1];
+        dfloat coord2 = plotCoord[id2];
+        dfloat coord3 = plotCoord[id3];
 
-      int cnt = 0;
-      cnt += ((c0>=0.0)&&(c0<1.0));
-      cnt += ((c1>=0.0)&&(c1<1.0));
-      cnt += ((c2>=0.0)&&(c2<1.0));
-      cnt += ((c3>0.0)&&(c3<=1.0));
-      cnt += ((c4>0.0)&&(c4<1.0));
-      cnt += ((c5>0.0)&&(c5<1.0));
+        dfloat c0 = (c[i]-coord0)/(coord1-coord0);
+        dfloat c1 = (c[i]-coord1)/(coord2-coord1);
+        dfloat c2 = (c[i]-coord2)/(coord0-coord2);
+        dfloat c3 = (c[i]-coord0)/(coord3-coord0);
+        dfloat c4 = (c[i]-coord1)/(coord3-coord1);
+        dfloat c5 = (c[i]-coord2)/(coord3-coord2);
 
-      if ((cnt==3)||(cnt==4)) {
-        if (sliceFlag[e]==0) NslicedElements++;
-        sliceFlag[e] = 1;
+        int cnt = 0;
+        cnt += ((c0>=0.0)&&(c0<=1.0));
+        cnt += ((c1>=0.0)&&(c1<=1.0));
+        cnt += ((c2>=0.0)&&(c2<=1.0));
+        cnt += ((c3>=0.0)&&(c3<=1.0));
+        cnt += ((c4>=0.0)&&(c4<=1.0));
+        cnt += ((c5>=0.0)&&(c5<=1.0));
+
+        if (cnt) {
+          if (sliceFlag[e]==0) NslicedElements++;
+          sliceFlag[e] = 1;
+          if (sliceSubFlag[e*mesh->plotNelements+k]==0) NslicedSubElements++;
+          sliceSubFlag[e*mesh->plotNelements+k] = 1;
+        }
       }
     }
   }
 
-  if (NslicedElements) {
 
 #if 1
-    dfloat *Vx   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    dfloat *Vy   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    dfloat *Vz   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    dfloat *divU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *Vx   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *Vy   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *Vz   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *divU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
 
-    //write sliced data to file
-    FILE *fp;
-    fp = fopen(fileName, "w");
+  //write sliced data to file
+  FILE *fp;
+  fp = fopen(fileName, "w");
 
-    fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
-    fprintf(fp, "  <UnstructuredGrid>\n");
-    fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", NslicedElements*mesh->plotNp, NslicedElements*mesh->plotNelements);
-    
-    // write out nodes
-    fprintf(fp, "      <Points>\n");
-    fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNp;++n){
-        dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-        for(iint m=0;m<mesh->Np;++m){
-          plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
-          plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
-          plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
-        }
-
-        fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
+  fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
+  fprintf(fp, "  <UnstructuredGrid>\n");
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", NslicedElements*mesh->plotNp, NslicedSubElements);
+  
+  // write out nodes
+  fprintf(fp, "      <Points>\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
+        plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
+        plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
       }
+
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
     }
-    fprintf(fp, "        </DataArray>\n");
-    fprintf(fp, "      </Points>\n");
-    
-    // write out pressure
-    fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNp;++n){
-        dfloat plotpn = 0;
-        for(iint m=0;m<mesh->Np;++m){
-         const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
-               const iint id     = offset + m+e*mesh->Np;
-          dfloat pm = ins->P[id];
-          plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
-        }
-        fprintf(fp, "       ");
-        fprintf(fp, "%g\n", plotpn);
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Points>\n");
+  
+  // write out pressure
+  fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotpn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+       const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
+             const iint id     = offset + m+e*mesh->Np;
+        dfloat pm = ins->P[id];
+        plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
     }
-    fprintf(fp, "       </DataArray>\n");
+  }
+  fprintf(fp, "       </DataArray>\n");
 
-    // write out divergence
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Divergence\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
+  // write out divergence
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Divergence\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
 
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
 
-        dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
-        dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
-        dfloat rz = mesh->vgeo[e*mesh->Nvgeo+RZID];    
-        
-        dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
-        dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
-        dfloat sz = mesh->vgeo[e*mesh->Nvgeo+SZID];    
-       
-        dfloat tx = mesh->vgeo[e*mesh->Nvgeo+TXID];
-        dfloat ty = mesh->vgeo[e*mesh->Nvgeo+TYID];
-        dfloat tz = mesh->vgeo[e*mesh->Nvgeo+TZID];    
-
-        for(iint m=0;m<mesh->Np;++m){
-          iint id = m+e*mesh->Np;
-          id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-
-          dfloat Un = ins->U[id];
-          dfloat Vn = ins->V[id];
-          dfloat Wn = ins->W[id];
-
-          dUdr += mesh->Dr[n*mesh->Np+m]*(rx*Un+ry*Vn+rz*Wn);
-          dUds += mesh->Ds[n*mesh->Np+m]*(sx*Un+sy*Vn+sz*Wn);
-          dUdt += mesh->Dt[n*mesh->Np+m]*(tx*Un+ty*Vn+tz*Wn);
-        }
-        
-        // Compute divergence
-        divU[n] = dUdr + dUds + dUdt; 
-      }
-
-      for(iint n=0;n<mesh->plotNp;++n){
-        dfloat plotDiv = 0;
-        for(iint m=0;m<mesh->Np;++m){
-          plotDiv += mesh->plotInterp[n*mesh->Np+m]*divU[m];
-        }
-        fprintf(fp, "       ");
-        fprintf(fp, "%g\n", plotDiv);
-      }
-    }
-    fprintf(fp, "       </DataArray>\n");
-
-    // calculate plot vorticity
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
-        dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
-        dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
-        for(iint m=0;m<mesh->Np;++m){
-          iint id = m+e*mesh->Np;
-          id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-
-          dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
-          dUds += mesh->Ds[n*mesh->Np+m]*ins->U[id];
-          dUdt += mesh->Dt[n*mesh->Np+m]*ins->U[id];
-
-          dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
-          dVds += mesh->Ds[n*mesh->Np+m]*ins->V[id];
-          dVdt += mesh->Dt[n*mesh->Np+m]*ins->V[id];
-
-          dWdr += mesh->Dr[n*mesh->Np+m]*ins->W[id];
-          dWds += mesh->Ds[n*mesh->Np+m]*ins->W[id];
-          dWdt += mesh->Dt[n*mesh->Np+m]*ins->W[id];
-        }
-
-        dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
-        dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
-        dfloat rz = mesh->vgeo[e*mesh->Nvgeo+RZID];    
-        
-        dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
-        dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
-        dfloat sz = mesh->vgeo[e*mesh->Nvgeo+SZID];    
-       
-        dfloat tx = mesh->vgeo[e*mesh->Nvgeo+TXID];
-        dfloat ty = mesh->vgeo[e*mesh->Nvgeo+TYID];
-        dfloat tz = mesh->vgeo[e*mesh->Nvgeo+TZID];    
-
-        dfloat dUdx = rx*dUdr + sx*dUds + tx*dUdt;
-        dfloat dUdy = ry*dUdr + sy*dUds + ty*dUdt;
-        dfloat dUdz = rz*dUdr + sz*dUds + tz*dUdt;
+      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
+      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
+      dfloat rz = mesh->vgeo[e*mesh->Nvgeo+RZID];    
       
-        dfloat dVdx = rx*dVdr + sx*dVds + tx*dVdt;
-        dfloat dVdy = ry*dVdr + sy*dVds + ty*dVdt;
-        dfloat dVdz = rz*dVdr + sz*dVds + tz*dVdt;
-        
-        dfloat dWdx = rx*dWdr + sx*dWds + tx*dWdt;
-        dfloat dWdy = ry*dWdr + sy*dWds + ty*dWdt;
-        dfloat dWdz = rz*dWdr + sz*dWds + tz*dWdt;
-        
-        // Compute vorticity Vector
-        Vx[n] = dWdy-dVdz;
-        Vy[n] = dUdz-dWdx;
-        Vz[n] = dVdx-dUdy;
+      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
+      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
+      dfloat sz = mesh->vgeo[e*mesh->Nvgeo+SZID];    
+     
+      dfloat tx = mesh->vgeo[e*mesh->Nvgeo+TXID];
+      dfloat ty = mesh->vgeo[e*mesh->Nvgeo+TYID];
+      dfloat tz = mesh->vgeo[e*mesh->Nvgeo+TZID];    
+
+      for(iint m=0;m<mesh->Np;++m){
+        iint id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+
+        dfloat Un = ins->U[id];
+        dfloat Vn = ins->V[id];
+        dfloat Wn = ins->W[id];
+
+        dUdr += mesh->Dr[n*mesh->Np+m]*(rx*Un+ry*Vn+rz*Wn);
+        dUds += mesh->Ds[n*mesh->Np+m]*(sx*Un+sy*Vn+sz*Wn);
+        dUdt += mesh->Dt[n*mesh->Np+m]*(tx*Un+ty*Vn+tz*Wn);
       }
       
-      for(iint n=0;n<mesh->plotNp;++n){
-        dfloat plotVxn = 0, plotVyn = 0, plotVzn = 0 ;
-        dfloat plotDivUn = 0;
-        for(iint m=0;m<mesh->Np;++m){
-          plotVxn   += mesh->plotInterp[n*mesh->Np+m]*Vx[m];
-          plotVyn   += mesh->plotInterp[n*mesh->Np+m]*Vy[m];
-          plotVzn   += mesh->plotInterp[n*mesh->Np+m]*Vz[m];
-          plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m]; 
-        }
-        fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", plotVxn, plotVyn, plotVzn);
-      }
+      // Compute divergence
+      divU[n] = dUdr + dUds + dUdt; 
     }
-    fprintf(fp, "       </DataArray>\n");
 
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNp;++n){
-        dfloat plotun = 0, plotvn = 0, plotwn=0;
-        for(iint m=0;m<mesh->Np;++m){
-          iint id = m+e*mesh->Np;
-          id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-          dfloat um = ins->U[id];
-          dfloat vm = ins->V[id];
-          dfloat wm = ins->W[id];
-          //
-          plotun += mesh->plotInterp[n*mesh->Np+m]*um;
-          plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
-          plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
-          
-        }
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotDiv = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotDiv += mesh->plotInterp[n*mesh->Np+m]*divU[m];
+      }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotDiv);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
+  // calculate plot vorticity
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
+      dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
+      dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
+      for(iint m=0;m<mesh->Np;++m){
+        iint id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+
+        dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
+        dUds += mesh->Ds[n*mesh->Np+m]*ins->U[id];
+        dUdt += mesh->Dt[n*mesh->Np+m]*ins->U[id];
+
+        dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
+        dVds += mesh->Ds[n*mesh->Np+m]*ins->V[id];
+        dVdt += mesh->Dt[n*mesh->Np+m]*ins->V[id];
+
+        dWdr += mesh->Dr[n*mesh->Np+m]*ins->W[id];
+        dWds += mesh->Ds[n*mesh->Np+m]*ins->W[id];
+        dWdt += mesh->Dt[n*mesh->Np+m]*ins->W[id];
+      }
+
+      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
+      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
+      dfloat rz = mesh->vgeo[e*mesh->Nvgeo+RZID];    
       
-        fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
-      }
-    }
-    fprintf(fp, "       </DataArray>\n");
-    fprintf(fp, "     </PointData>\n");
-    
-    fprintf(fp, "    <Cells>\n");
-    fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
-    iint ccnt = 0;
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNelements;++n){
-        fprintf(fp, "       ");
-        for(int m=0;m<mesh->plotNverts;++m){
-          fprintf(fp, "%d ", ccnt*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
-        }
-        fprintf(fp, "\n");
-      }
-      ccnt++;
-    }
-    fprintf(fp, "        </DataArray>\n");
-    
-    fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-    ccnt = 0;
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNelements;++n){
-        ccnt += mesh->plotNverts;
-        fprintf(fp, "       ");
-        fprintf(fp, "%d\n", ccnt);
-      }
-    }
-    fprintf(fp, "       </DataArray>\n");
-    
-    fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-    for(iint e=0;e<mesh->Nelements;++e){
-      if (sliceFlag[e]==0) continue;
-      for(iint n=0;n<mesh->plotNelements;++n){
-        fprintf(fp, "10\n"); // TET code ?
-      }
-    }
-    fprintf(fp, "        </DataArray>\n");
-    fprintf(fp, "      </Cells>\n");
-    fprintf(fp, "    </Piece>\n");
-    fprintf(fp, "  </UnstructuredGrid>\n");
-    fprintf(fp, "</VTKFile>\n");
-    fclose(fp);
+      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
+      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
+      dfloat sz = mesh->vgeo[e*mesh->Nvgeo+SZID];    
+     
+      dfloat tx = mesh->vgeo[e*mesh->Nvgeo+TXID];
+      dfloat ty = mesh->vgeo[e*mesh->Nvgeo+TYID];
+      dfloat tz = mesh->vgeo[e*mesh->Nvgeo+TZID];    
 
-    free(Vx);
-    free(Vy);
-    free(Vz);
-    free(divU);
+      dfloat dUdx = rx*dUdr + sx*dUds + tx*dUdt;
+      dfloat dUdy = ry*dUdr + sy*dUds + ty*dUdt;
+      dfloat dUdz = rz*dUdr + sz*dUds + tz*dUdt;
+    
+      dfloat dVdx = rx*dVdr + sx*dVds + tx*dVdt;
+      dfloat dVdy = ry*dVdr + sy*dVds + ty*dVdt;
+      dfloat dVdz = rz*dVdr + sz*dVds + tz*dVdt;
+      
+      dfloat dWdx = rx*dWdr + sx*dWds + tx*dWdt;
+      dfloat dWdy = ry*dWdr + sy*dWds + ty*dWdt;
+      dfloat dWdz = rz*dWdr + sz*dWds + tz*dWdt;
+      
+      // Compute vorticity Vector
+      Vx[n] = dWdy-dVdz;
+      Vy[n] = dUdz-dWdx;
+      Vz[n] = dVdx-dUdy;
+    }
+    
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotVxn = 0, plotVyn = 0, plotVzn = 0 ;
+      dfloat plotDivUn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotVxn   += mesh->plotInterp[n*mesh->Np+m]*Vx[m];
+        plotVyn   += mesh->plotInterp[n*mesh->Np+m]*Vy[m];
+        plotVzn   += mesh->plotInterp[n*mesh->Np+m]*Vz[m];
+        plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m]; 
+      }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotVxn, plotVyn, plotVzn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotun = 0, plotvn = 0, plotwn=0;
+      for(iint m=0;m<mesh->Np;++m){
+        iint id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+        dfloat um = ins->U[id];
+        dfloat vm = ins->V[id];
+        dfloat wm = ins->W[id];
+        //
+        plotun += mesh->plotInterp[n*mesh->Np+m]*um;
+        plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+        plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+        
+      }
+    
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  fprintf(fp, "     </PointData>\n");
+  
+  fprintf(fp, "    <Cells>\n");
+  fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
+  iint ccnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
+      fprintf(fp, "       ");
+      for(int m=0;m<mesh->plotNverts;++m){
+        fprintf(fp, "%d ", ccnt*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
+      }
+      fprintf(fp, "\n");
+    }
+    ccnt++;
+  }
+  fprintf(fp, "        </DataArray>\n");
+  
+  fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
+  ccnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
+      ccnt += mesh->plotNverts;
+      fprintf(fp, "       ");
+      fprintf(fp, "%d\n", ccnt);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  
+  fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (sliceFlag[e]==0) continue;
+    for(iint n=0;n<mesh->plotNelements;++n){
+      if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
+      fprintf(fp, "10\n"); // TET code ?
+    }
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Cells>\n");
+  fprintf(fp, "    </Piece>\n");
+  fprintf(fp, "  </UnstructuredGrid>\n");
+  fprintf(fp, "</VTKFile>\n");
+  fclose(fp);
+
+  free(Vx);
+  free(Vy);
+  free(Vz);
+  free(divU);
 
 #else
     int *elementType = (int *) calloc(NslicedElements*mesh->plotNelements,sizeof(int));
@@ -637,6 +658,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     free(Vortzn);
     free(Divn);
 #endif
-  }
+
   free(sliceFlag);
+  free(sliceSubFlag);
 }

@@ -72,7 +72,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01 ;  // kinematic viscosity,
+  dfloat nu   = 0.001 ;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
@@ -213,8 +213,8 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
-  int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  int vBCType[5] = {0,1,1,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int pBCType[5] = {0,2,2,1,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
   
   //Solver tolerances 
   ins->presTOL = 1E-10;

@@ -400,9 +400,9 @@ kernel void insSubCycleVolume3D(const iint Nelements,
           const dfloat Vn = V[id];
           const dfloat Wn = W[id];
 
-          const dfloat Udn = U[id];
-          const dfloat Vdn = V[id];
-          const dfloat Wdn = W[id];
+          const dfloat Udn = Ud[id];
+          const dfloat Vdn = Vd[id];
+          const dfloat Wdn = Wd[id];
 
           const dfloat cUn = drdx*Un + drdy*Vn + drdz*Wn;
           const dfloat cVn = dsdx*Un + dsdy*Vn + dsdz*Wn;

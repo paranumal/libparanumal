@@ -1,12 +1,13 @@
 #include "ins3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void insPlotAdaptiveContour3D(ins_t *ins, char *fileName){
+void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
 
   mesh3D *mesh = ins->mesh;
 
   int Nlevels = 10;
-  dfloat levels[10] = {1.,2.,3.,4.,5.,6.,7.,8.,9.,10.};
+  //dfloat levels[10] = {0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0};
+  dfloat levels[10] = {1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0};
   dfloat tol = 1E-3;
 
   dfloat *Vort = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
@@ -66,6 +67,8 @@ void insPlotAdaptiveContour3D(ins_t *ins, char *fileName){
       Vort[e*mesh->Np+n] = sqrt(Vx*Vx+Vy*Vy+Vz*Vz);
     }
   }
-  
-  meshPlotAdaptiveContour3D(mesh, fileName, Vort, Nlevels, levels, tol);
+  if (strstr(options,"ADPATIVECONTOUR"))
+    meshPlotAdaptiveContour3D(mesh, fileName, Vort, Nlevels, levels, tol);
+  else 
+    meshPlotContour3D(mesh, fileName, Vort, Nlevels, levels);
 }

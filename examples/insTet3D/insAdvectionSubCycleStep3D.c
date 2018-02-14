@@ -238,6 +238,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                                       mesh->o_vmapM,
                                       mesh->o_vmapP,
                                       mesh->o_EToB,
+                                      bScale,
                                       t,
                                       mesh->o_x,
                                       mesh->o_y,
@@ -286,28 +287,30 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                             ins->o_Py,
                             ins->o_Pz);
  
-  const iint solverid = 0; // Pressure Solve
-  // Compute Surface Conribution
-  ins->gradientSurfaceKernel(mesh->Nelements,
-                             mesh->o_sgeo,
-                             mesh->o_LIFTT,
-                             mesh->o_vmapM,
-                             mesh->o_vmapP,
-                             mesh->o_EToB,
-                             mesh->o_x,
-                             mesh->o_y,
-                             mesh->o_z,
-                             tp1,
-                             ins->dt,
-                             ins->c0,
-                             ins->c1,
-                             ins->c2,
-                             ins->index,
-                             mesh->Nelements+mesh->totalHaloPairs,
-                             solverid, // pressure BCs
-                             ins->o_PI, //not used
-                             ins->o_P,
-                             ins->o_Px,
-                             ins->o_Py,
-                             ins->o_Pz);
+  if (strstr(ins->pSolverOptions,"IPDG")) {
+    const iint solverid = 0; // Pressure Solve
+    // Compute Surface Conribution
+    ins->gradientSurfaceKernel(mesh->Nelements,
+                               mesh->o_sgeo,
+                               mesh->o_LIFTT,
+                               mesh->o_vmapM,
+                               mesh->o_vmapP,
+                               mesh->o_EToB,
+                               mesh->o_x,
+                               mesh->o_y,
+                               mesh->o_z,
+                               tp1,
+                               ins->dt,
+                               ins->c0,
+                               ins->c1,
+                               ins->c2,
+                               ins->index,
+                               mesh->Nelements+mesh->totalHaloPairs,
+                               solverid, // pressure BCs
+                               ins->o_PI, //not used
+                               ins->o_P,
+                               ins->o_Px,
+                               ins->o_Py,
+                               ins->o_Pz);
+  }
 }

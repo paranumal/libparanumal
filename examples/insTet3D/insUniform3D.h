@@ -15,7 +15,11 @@
       *(uB) = uM;							\
       *(vB) = vM;             \
       *(wB) = wM;             \
-    }									\
+    } else if(bc==4){              \
+      *(uB) = uM-(nx*uM+ny*vM+nz*wM)*nx;             \
+      *(vB) = vM-(nx*uM+ny*vM+nz*wM)*ny;             \
+      *(wB) = wM-(nx*uM+ny*vM+nz*wM)*ny;             \
+    }                 \
   }
 
 #define insDivergenceBoundaryConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
@@ -32,7 +36,11 @@
       *(uB) = uM;							\
       *(vB) = vM;             \
       *(wB) = wM;             \
-    }									\
+    }	else if(bc==4){              \
+      *(uB) = uM-(nx*uM+ny*vM+nz*wM)*nx;             \
+      *(vB) = vM-(nx*uM+ny*vM+nz*wM)*ny;             \
+      *(wB) = wM-(nx*uM+ny*vM+nz*wM)*ny;             \
+    }                 \
   }
 
 // Gradient only applies to Pressure and Pressure Incremament
@@ -46,7 +54,9 @@
       *(pB) = pM;						\
     } else if(bc==3){						\
       *(pB) = 0.f;						\
-    }								\
+    }	else if(bc==4){           \
+      *(pB) = 0.f;            \
+    }               \
   }
 
 #define insHelmholtzBoundaryConditionsIpdg3D(bc,t,x,y,z, nx,ny,nz, uB,uxB,uyB,uzB, vB,vxB,vyB,vzB, wB,wxB,wyB,wzB) \
@@ -99,7 +109,22 @@
       *(wxB) = 0.f;             \
       *(wyB) = 0.f;             \
       *(wzB) = 0.f;             \
-    }									\
+    }	else if(bc==4){              \
+      *(uB) =  0.f;             \
+      *(vB) =  0.f;             \
+      *(wB) =  0.f;             \
+      *(uxB) = 0.f;             \
+      *(uyB) = 0.f;             \
+      *(uzB) = 0.f;             \
+                                \
+      *(vxB) = 0.f;             \
+      *(vyB) = 0.f;             \
+      *(vzB) = 0.f;             \
+                                \
+      *(wxB) = 0.f;             \
+      *(wyB) = 0.f;             \
+      *(wzB) = 0.f;             \
+    }                 \
   }
 
 
@@ -112,15 +137,19 @@
       *(pxB) = 0.f;             \
       *(pyB) = 0.f;             \
       *(pzB) = 0.f;              \
-    }                 \
-    if(bc==2){                \
+    } else if(bc==2){                \
       *(pB)  = 0.f;             \
                   \
       *(pxB) = 0.f; \
       *(pyB) = 0.f; \
       *(pzB) = 0.f; \
-    }                 \
-    if(bc==3){                \
+    } else if(bc==3){                \
+      *(pB) = 0.f; \
+                  \
+      *(pxB) = 0.f;             \
+      *(pyB) = 0.f;             \
+      *(pzB) = 0.f;             \
+    } else if(bc==4){                \
       *(pB) = 0.f; \
                   \
       *(pxB) = 0.f;             \
@@ -133,7 +162,7 @@
 // Initial conditions 
 #define insFlowField3D(t,x,y,z,u,v,w,p)		\
   {						\
-    *(u) = 1.0f;				\
+    *(u) = 1.f;				\
     *(v) = 0.0f;        \
     *(w) = 0.0f;        \
     *(p) = 0.0f;				\
