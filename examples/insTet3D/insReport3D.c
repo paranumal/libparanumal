@@ -2,6 +2,9 @@
 
 void insReport3D(ins_t *ins, iint tstep, char *options){
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   dfloat t = (tstep)*ins->dt;
   
   if(strstr(options, "VTU")){ 
@@ -11,9 +14,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     ins->o_W.copyTo(ins->W); 
     ins->o_P.copyTo(ins->P);
 
-    // report ramp function
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   
     
     // do error stuff on host
     insError3D(ins, t, options);
@@ -33,10 +34,6 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     ins->o_W.copyTo(ins->W); 
     ins->o_P.copyTo(ins->P);
 
-    // report ramp function
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    
     // do error stuff on host
     insError3D(ins, t, options);
  
@@ -52,10 +49,10 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     // const char *sliceDim[4] = {"x","x","y","z"};
     // const dfloat sliceX[4] = {0.001,5,0.0,0.0};
 
-    //slice data (channel)
+    //slice data (fence)
     const int Nslices = 4;
     const char *sliceDim[4] = {"x","x","y","z"};
-    const dfloat sliceX[4] = {0.001,5,0.5,1.0};
+    const dfloat sliceX[4] = {0.0,5,0.25,0.0};
 
     // output field files
     char fname[BUFSIZ];
@@ -69,11 +66,6 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
     ins->o_W.copyTo(ins->W); 
     ins->o_P.copyTo(ins->P);
 
-    // report ramp function
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    
-    // do error stuff on host
     insError3D(ins, t, options);
  
     if (rank==0) printf("Writing output file\n");
