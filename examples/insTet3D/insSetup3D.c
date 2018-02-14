@@ -337,38 +337,42 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
     ins->o_resW = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resW);
 
+    for (int r=0;r<size;r++) {
+      if (r==rank) {
+        ins->subCycleVolumeKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleVolume3D",
+               kernelInfo);
 
-    ins->subCycleVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleVolume3D",
-           kernelInfo);
+        ins->subCycleSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleSurface3D",
+               kernelInfo);
 
-    ins->subCycleSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleSurface3D",
-           kernelInfo);
+        ins->subCycleCubatureVolumeKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleCubatureVolume3D",
+               kernelInfo);
 
-    ins->subCycleCubatureVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleCubatureVolume3D",
-           kernelInfo);
-
-    ins->subCycleCubatureSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleCubatureSurface3D",
-           kernelInfo);
+        ins->subCycleCubatureSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleCubatureSurface3D",
+               kernelInfo);
 
 
-    ins->subCycleRKUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleRKUpdate3D",
-           kernelInfo);
+        ins->subCycleRKUpdateKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleRKUpdate3D",
+               kernelInfo);
 
-    ins->subCycleExtKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-           "insSubCycleExt3D",
-           kernelInfo);
-
+        ins->subCycleExtKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
+               "insSubCycleExt3D",
+               kernelInfo);
+            
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
   }
 
 
@@ -378,132 +382,137 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
     ins->o_pHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
   }
 
- ins->mesh = mesh;
+  ins->mesh = mesh;
 
-  // ===========================================================================
-  ins->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-           "scaledAddwOffset",
-           kernelInfo);
-
-  ins->advectionCubatureVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-				       "insAdvectionCubatureVolume3D",
-				       kernelInfo);
-  
-  ins->advectionCubatureSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-				       "insAdvectionCubatureSurface3D",
-				       kernelInfo);
-  
-
-  ins->advectionVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-				       "insAdvectionVolume3D",
-				       kernelInfo);
-
-  ins->advectionSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-				       "insAdvectionSurface3D",
-				       kernelInfo);
-
-  // ===========================================================================
-  ins->gradientVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
-				       "insGradientVolume3D",
-				       kernelInfo);
-
-  ins->gradientSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
-				       "insGradientSurface3D",
-				       kernelInfo);
-
-  // ===========================================================================
-  ins->divergenceVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
-				       "insDivergenceVolume3D",
-				       kernelInfo);
-
-  ins->divergenceSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
-				       "insDivergenceSurface3D",
-				       kernelInfo);
-
-  // ===========================================================================
-  ins->helmholtzRhsForcingKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-				       "insHelmholtzRhsForcing3D",
-				       kernelInfo);
-
-  ins->helmholtzRhsIpdgBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-				       "insHelmholtzRhsIpdgBC3D",
-				       kernelInfo);
-
-
-  ins->totalHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insTotalHaloExtract3D",
-				       kernelInfo);
-
-  ins->totalHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insTotalHaloScatter3D",
-				       kernelInfo);
-
-
-  // ===========================================================================
-  ins->poissonRhsForcingKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-				       "insPoissonRhsForcing3D",
-				       kernelInfo);
-
-  ins->poissonRhsIpdgBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-				       "insPoissonRhsIpdgBC3D",
-				       kernelInfo);
-
-  ins->poissonRhsBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-               "insPoissonRhsBC3D",
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
+      // ===========================================================================
+      ins->scaledAddKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+               "scaledAddwOffset",
                kernelInfo);
 
-  ins->poissonAddBCKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-               "insPoissonAddBCKernel",
-               kernelInfo);
+      ins->advectionCubatureVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+                   "insAdvectionCubatureVolume3D",
+                   kernelInfo);
+      
+      ins->advectionCubatureSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+                   "insAdvectionCubatureSurface3D",
+                   kernelInfo);
+      
 
-  ins->poissonPenaltyKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty3D.okl",
-				       "insPoissonPenalty3D",
-				       kernelInfo);
+      ins->advectionVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+                   "insAdvectionVolume3D",
+                   kernelInfo);
 
-  ins->velocityHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insVelocityHaloExtract3D",
-				       kernelInfo);
+      ins->advectionSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
+                   "insAdvectionSurface3D",
+                   kernelInfo);
 
-  ins->velocityHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insVelocityHaloScatter3D",
-				       kernelInfo);
+      // ===========================================================================
+      ins->gradientVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
+                   "insGradientVolume3D",
+                   kernelInfo);
 
-  ins->updateUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate3D.okl",
-				       "insUpdateUpdate3D",
-				       kernelInfo);
+      ins->gradientSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
+                   "insGradientSurface3D",
+                   kernelInfo);
+
+      // ===========================================================================
+      ins->divergenceVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
+                   "insDivergenceVolume3D",
+                   kernelInfo);
+
+      ins->divergenceSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
+                   "insDivergenceSurface3D",
+                   kernelInfo);
+
+      // ===========================================================================
+      ins->helmholtzRhsForcingKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+                   "insHelmholtzRhsForcing3D",
+                   kernelInfo);
+
+      ins->helmholtzRhsIpdgBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+                   "insHelmholtzRhsIpdgBC3D",
+                   kernelInfo);
 
 
-  ins->pressureHaloExtractKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloExtract",
-				       kernelInfo);
+      ins->totalHaloExtractKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insTotalHaloExtract3D",
+                   kernelInfo);
 
-  ins->pressureHaloScatterKernel=
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
-				       "insPressureHaloScatter",
-				       kernelInfo);
-  // ===========================================================================//
+      ins->totalHaloScatterKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insTotalHaloScatter3D",
+                   kernelInfo);
+
+
+      // ===========================================================================
+      ins->poissonRhsForcingKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+                   "insPoissonRhsForcing3D",
+                   kernelInfo);
+
+      ins->poissonRhsIpdgBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+                   "insPoissonRhsIpdgBC3D",
+                   kernelInfo);
+
+      ins->poissonRhsBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+                   "insPoissonRhsBC3D",
+                   kernelInfo);
+
+      ins->poissonAddBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
+                   "insPoissonAddBCKernel",
+                   kernelInfo);
+
+      ins->poissonPenaltyKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty3D.okl",
+                   "insPoissonPenalty3D",
+                   kernelInfo);
+
+      ins->velocityHaloExtractKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insVelocityHaloExtract3D",
+                   kernelInfo);
+
+      ins->velocityHaloScatterKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insVelocityHaloScatter3D",
+                   kernelInfo);
+
+      ins->updateUpdateKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate3D.okl",
+                   "insUpdateUpdate3D",
+                   kernelInfo);
+
+
+      ins->pressureHaloExtractKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insPressureHaloExtract",
+                   kernelInfo);
+
+      ins->pressureHaloScatterKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
+                   "insPressureHaloScatter",
+                   kernelInfo);
+      // ===========================================================================//
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
 
   return ins;
 }

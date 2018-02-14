@@ -3,8 +3,9 @@
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
-  int rank;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   iint Ntotal = mesh->Np*mesh->Nelements;
   iint Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -166,112 +167,116 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   else NblockG = mymax(1,256/mesh->Np);
   kernelInfo.addDefine("p_NblockG", NblockG);
 
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
-				       "meshHaloExtract3D",
-				       kernelInfo);
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
+      mesh->haloExtractKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+    				       "meshHaloExtract3D",
+    				       kernelInfo);
 
-  mesh->gatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
-				       "gather",
-				       kernelInfo);
+      mesh->gatherKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+    				       "gather",
+    				       kernelInfo);
 
-  mesh->scatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
-				       "scatter",
-				       kernelInfo);
+      mesh->scatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+    				       "scatter",
+    				       kernelInfo);
 
-  mesh->gatherScatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
-               "gatherScatter",
-               kernelInfo);
-
-  mesh->getKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
-				       "get",
-				       kernelInfo);
-
-  mesh->putKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
-				       "put",
-				       kernelInfo);
-
-  mesh->sumKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
-               "sum",
-               kernelInfo);
-
-  mesh->addScalarKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
-               "addScalar",
-               kernelInfo);
-
-  mesh->maskKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
-               "mask",
-               kernelInfo);
-
-  solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
-               "ellipticAxTet3D",
-               kernelInfo);
-
-  solver->partialAxKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
-                 "ellipticPartialAxTet3D",
-                 kernelInfo);
-
-  solver->weightedInnerProduct1Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
-				       "weightedInnerProduct1",
-				       kernelInfo);
-
-  solver->weightedInnerProduct2Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
-				       "weightedInnerProduct2",
-				       kernelInfo);
-
-  solver->innerProductKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
-				       "innerProduct",
-				       kernelInfo);
-
-  solver->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-					 "scaledAdd",
-					 kernelInfo);
-
-  solver->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
-					 "dotMultiply",
-					 kernelInfo);
-
-  solver->dotDivideKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
-					 "dotDivide",
-					 kernelInfo);
-
-
-  solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
-				       "ellipticGradientTet3D",
-					 kernelInfo);
-
-  solver->partialGradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
-             "ellipticPartialGradientTet3D",
-           kernelInfo);
-
-  solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
-				       "ellipticAxIpdgTet3D",
-				       kernelInfo);
-
-  solver->partialIpdgKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
-                   "ellipticPartialAxIpdgTet3D",
+      mesh->gatherScatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+                   "gatherScatter",
                    kernelInfo);
 
+      mesh->getKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+    				       "get",
+    				       kernelInfo);
+
+      mesh->putKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+    				       "put",
+    				       kernelInfo);
+
+      mesh->sumKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+                   "sum",
+                   kernelInfo);
+
+      mesh->addScalarKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+                   "addScalar",
+                   kernelInfo);
+
+      mesh->maskKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
+                   "mask",
+                   kernelInfo);
+
+      solver->AxKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+                   "ellipticAxTet3D",
+                   kernelInfo);
+
+      solver->partialAxKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTet3D.okl",
+                     "ellipticPartialAxTet3D",
+                     kernelInfo);
+
+      solver->weightedInnerProduct1Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
+    				       "weightedInnerProduct1",
+    				       kernelInfo);
+
+      solver->weightedInnerProduct2Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
+    				       "weightedInnerProduct2",
+    				       kernelInfo);
+
+      solver->innerProductKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
+    				       "innerProduct",
+    				       kernelInfo);
+
+      solver->scaledAddKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+    					 "scaledAdd",
+    					 kernelInfo);
+
+      solver->dotMultiplyKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
+    					 "dotMultiply",
+    					 kernelInfo);
+
+      solver->dotDivideKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
+    					 "dotDivide",
+    					 kernelInfo);
+
+
+      solver->gradientKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
+    				       "ellipticGradientTet3D",
+    					 kernelInfo);
+
+      solver->partialGradientKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTet3D.okl",
+                 "ellipticPartialGradientTet3D",
+               kernelInfo);
+
+      solver->ipdgKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
+    				       "ellipticAxIpdgTet3D",
+    				       kernelInfo);
+
+      solver->partialIpdgKernel =
+            mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTet3D.okl",
+                       "ellipticPartialAxIpdgTet3D",
+                       kernelInfo);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
   //on-host version of gather-scatter
   int verbose = strstr(options,"VERBOSE") ? 1:0;
   mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
@@ -326,74 +331,79 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
 
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  #if 0
+  for (int r=0;r<size;r++) {
+    if (r==rank) {      
+      #if 0
 
-  solver->precon->overlappingPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl",
-               "ellipticOasPreconTet3D",
-               kernelInfo);
-  #endif
+      solver->precon->overlappingPatchKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTet3D.okl",
+                   "ellipticOasPreconTet3D",
+                   kernelInfo);
+      #endif
 
-  solver->precon->restrictKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl",
-               "ellipticFooTet3D",
-               kernelInfo);
+      solver->precon->restrictKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTet3D.okl",
+                   "ellipticFooTet3D",
+                   kernelInfo);
 
-  solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
-               kernelInfo);
+      solver->precon->coarsenKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+                   "ellipticPreconCoarsen",
+                   kernelInfo);
 
-  solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
-               kernelInfo);
+      solver->precon->prolongateKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+                   "ellipticPreconProlongate",
+                   kernelInfo);
 
 
-  solver->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
-               "ellipticBlockJacobiPreconTet3D",
-               kernelInfo);
+      solver->precon->blockJacobiKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
+                   "ellipticBlockJacobiPreconTet3D",
+                   kernelInfo);
 
-  solver->precon->approxPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticApproxPatchSolver3D",
-               kernelInfo);
+      solver->precon->approxPatchSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticApproxPatchSolver3D",
+                   kernelInfo);
 
-  solver->precon->exactPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticExactPatchSolver3D",
-               kernelInfo);
+      solver->precon->exactPatchSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticExactPatchSolver3D",
+                   kernelInfo);
 
-  solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticPatchGather",
-               kernelInfo);
+      solver->precon->patchGatherKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+                   "ellipticPatchGather",
+                   kernelInfo);
 
-  solver->precon->approxFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticApproxFacePatchSolver3D",
-               kernelInfo);
+      solver->precon->approxFacePatchSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticApproxFacePatchSolver3D",
+                   kernelInfo);
 
-  solver->precon->exactFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticExactFacePatchSolver3D",
-               kernelInfo);
+      solver->precon->exactFacePatchSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticExactFacePatchSolver3D",
+                   kernelInfo);
 
-  solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticFacePatchGather",
-               kernelInfo);
+      solver->precon->facePatchGatherKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+                   "ellipticFacePatchGather",
+                   kernelInfo);
 
-  solver->precon->approxBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticApproxBlockJacobiSolver3D",
-               kernelInfo);
+      solver->precon->approxBlockJacobiSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticApproxBlockJacobiSolver3D",
+                   kernelInfo);
 
-  solver->precon->exactBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
-               "ellipticExactBlockJacobiSolver3D",
-               kernelInfo);
+      solver->precon->exactBlockJacobiSolverKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+                   "ellipticExactBlockJacobiSolver3D",
+                   kernelInfo);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
 
   long long int pre = mesh->device.memoryAllocated();
 
