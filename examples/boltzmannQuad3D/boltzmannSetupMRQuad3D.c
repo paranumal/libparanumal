@@ -182,6 +182,8 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				sizeof(dfloat));
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
+  mesh->timestamp = (iint*) calloc(mesh->Nelements*mesh->Nrhs,
+				sizeof(dfloat));
 
   mesh->MRABshiftIndex = (iint*) calloc(mesh->MRABNlevels,sizeof(iint));
 
@@ -401,6 +403,8 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   printf("start\n");
   mesh->o_dualProjMatrix =
     mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
+
+  mesh->o_timestamp = mesh->device.malloc(mesh->Nrhs*mesh->Nelements*sizeof(dfloat),mesh->timestamp);
 
   mesh->o_cubeFaceNumber =
     mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeFaceNumber);

@@ -132,13 +132,14 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 				     const dfloat * restrict LIFTT,
 				     const iint   * restrict vmapM,
 				     const iint   * restrict mapP,
-				     const dfloat time,
+				     const iint time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
 				     const dfloat * restrict q,
 				     	   dfloat * restrict fQM,
-				           dfloat * restrict rhsq){
+				           dfloat * restrict rhsq,
+				   iint * restrict timestamp){
   
   
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
@@ -208,6 +209,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
 		rhsq[vidNew+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+		timestamp[eM*nrhs + shift] = time;
 	      }
 	  }
 	}

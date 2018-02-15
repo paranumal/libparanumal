@@ -13,7 +13,8 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 				   const iint * restrict lev_numbers,
 				   const iint l,
 				   const dfloat * restrict qIn,
-				   dfloat * restrict Fq) {
+				   dfloat * restrict Fq,
+				   iint * restrict timestamp) {
   
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
     
@@ -41,24 +42,16 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 
 
+	    //edge of an mrab level, but not the edge of a face
 	    if(faceC == faceL && faceC == faceR) {
-
-	      const dfloat stampC = lev_updates[l];
-	      const iint levL = lev_numbers[eL];
-	      const iint levR = lev_numbers[eR];
-	      const iint stampL = lev_updates[levL];
-	      const iint stampR = lev_updates[levR];
-	      const dfloat stepL = 1<<levL;
-	      const dfloat stepR = 1<<levR;
 	      
-	      if (stampL != stampC) {
+	      if (timestamp[eC*nrhs + shiftl] != timestamp[eL*nrhs+shift[lev_numbers[eL]]]) {
 		dfloat q_sum = 0;		
-		for (iint li=0; li<nrhs; ++li) {		  
-		  const iint rhsNum = (nrhs + shift[levL] - li) % nrhs;		  
-		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];		  
+		for (iint li=0; li<nrhs; ++li) {		  		  
+		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + li*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {
-		      q_prod *= (stampC - stampL + lj*stepL)/(lj*stepL - li*stepL);
+		      q_prod *= (timestamp[eC*nrhs+shiftl] - timestamp[eL*nrhs + lj])/(timestamp[eL*nrhs+li] - timestamp[eL*nrhs+lj]);
 		    }
 		  }
 		  q_sum += q_prod;
@@ -68,14 +61,13 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	      else {
 		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
-	      if (stampR != stampC) {
+	      if (timestamp[eC*nrhs + shiftl] != timestamp[eR*nrhs+shift[lev_numbers[eR]]]) {
 		dfloat q_sum = 0;		
 		for (iint li=0; li<nrhs; ++li) {
-		  const iint rhsNum = (nrhs + shift[levR] - li) % nrhs;
-		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
+		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + li*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 		  for (iint lj = 0; lj < nrhs; ++lj) {
 		    if (lj != li) {
-		      q_prod *= (stampC - stampR + lj*stepR)/(lj*stepR - li*stepR);
+		      q_prod *= (timestamp[eC*nrhs+shiftl] - timestamp[eR*nrhs + lj])/(timestamp[eR*nrhs+li] - timestamp[eR*nrhs+lj]);
 		    }
 		  }
 		  q_sum += q_prod;

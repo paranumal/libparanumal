@@ -45,8 +45,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABlevels,
 		        l,
 			mesh->o_q,
-			mesh->o_qFilter);
-    
+			mesh->o_qFilter,
+			mesh->o_timestamp);
+   }
+   for (iint l=0;l<mesh->MRABNlevels;l++) {   
     mesh->filterKernelV(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
 			one,  //fake rhsq
@@ -62,8 +64,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABlevels,
 		        l,
 			mesh->o_qFilter,
-			mesh->o_q);
-			}
+			mesh->o_q,
+			mesh->o_timestamp);
+   }
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -79,7 +82,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
       
       //synthesize actual stage time
-      dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
+      iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
 
       iint lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
@@ -135,7 +138,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       
       occa::tic("surfaceKernel");
 
-      
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 
@@ -153,9 +155,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_q,
 			      mesh->o_fQM,
-			      mesh->o_rhsq);
-	  //mesh->o_rhsq.copyTo(test_q);
-	  //boltzmannPlotLevels(mesh,"bar",tstep,test_q+mesh->MRABshiftIndex[l]);
+			      mesh->o_rhsq,
+			      mesh->o_timestamp);
 	  mesh->lev_updates[l] = Ntick;
 	}
       }
@@ -193,7 +194,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABlevels,
 			    l,
 			    mesh->o_rhsq,
-			    mesh->o_qFilter);
+			    mesh->o_qFilter,
+			    mesh->o_timestamp);
+      }
+      for (iint l = 0; l < lev; l++) {
 	
 	mesh->filterKernelV(mesh->MRABNelements[l],
 			    mesh->o_MRABelementIds[l],
@@ -210,10 +214,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABlevels,
 			    l,
 			    mesh->o_qFilter,
-			    mesh->o_rhsq);
+			    mesh->o_rhsq,
+			    mesh->o_timestamp);
 	//exit(-1);
 	
-	}
+      }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -277,6 +282,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       printf("tstep = %d, t = %g\n", tstep, t);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
+      //boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
 
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
