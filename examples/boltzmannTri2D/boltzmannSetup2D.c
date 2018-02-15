@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 10000; 
+  mesh->errorStep = 1000; 
 
   dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
@@ -44,7 +44,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 50.0;  
+    mesh->finalTime = 100.0;  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -716,7 +716,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.4f); // 0.05
   // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
 
 
