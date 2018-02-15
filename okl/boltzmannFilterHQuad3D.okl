@@ -1,0 +1,206 @@
+
+kernel void boltzmannFilterHQuad3D(const iint Nelements,
+				   const iint * restrict elementIds,
+				   const iint nrhs,
+				   const iint * restrict shift,
+				   const dfloat alpha,
+				   const dfloat * restrict F,
+				   const iint * restrict cubeFaceNumber,
+				   const iint * restrict EToE,
+				   const dfloat * restrict x,
+				   const dfloat * restrict y,
+				   const dfloat * restrict z,
+				   const iint * restrict lev_updates,
+				   const iint * restrict lev_numbers,
+				   const iint l,
+				   const dfloat * restrict qIn,
+				   dfloat * restrict Fq) {
+  
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
+    
+    shared dfloat s_F[3][p_Nq][p_Nq];
+    shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
+    exclusive iint eC, eL, eR, faceC, faceL, faceR, shiftl;
+    
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+
+	shiftl = shift[l];
+
+	eC = elementIds[eo];
+	eL = EToE[eC*p_Nfaces+3];
+	eR = EToE[eC*p_Nfaces+1];
+	faceC = cubeFaceNumber[eC];
+	faceL = cubeFaceNumber[eL];
+	faceR = cubeFaceNumber[eR];
+	
+	occaUnroll(p_Nfields)
+	  
+	  for(iint fld=0;fld<p_Nfields;++fld){
+	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+
+	    //edge of an mrab level, but not the edge of a face
+	    if(faceC == faceL && faceC == faceR) {
+
+	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
+		dfloat q_sum = 0;
+		
+		for (iint li=0; li<nrhs; ++li) {
+		  const iint lev = lev_numbers[eL];
+		  
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
+		  
+		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
+		  
+		  const dfloat stepC = lev_updates[l];
+		  const dfloat stepL = lev_updates[lev_numbers[eL]];
+		  const dfloat sizeL = 1<<lev_numbers[eL];
+		  
+		  for (iint lj = 0; lj < nrhs; ++lj) {
+		    //for simplicity, scale x so current time is 1, and last interpolation point is 0
+		    if (lj != li) {
+		      q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
+		    }
+		  }
+		  q_sum += q_prod;
+		}
+		s_q[fld][0][j][i] = q_sum;
+	      }
+	      else {
+		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      }
+	      if (lev_updates[lev_numbers[eR]] != lev_updates[l]) {
+		dfloat q_sum = 0;
+		
+		for (iint li=0; li<nrhs; ++li) {
+		  const iint lev = lev_numbers[eR];
+		  
+		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
+		  
+		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
+
+		  const dfloat stepC = lev_updates[l];
+		  const dfloat stepR = lev_updates[lev_numbers[eR]];
+		  const dfloat sizeR = 1 << lev_numbers[eR];
+		  
+		  for (iint lj = 0; lj < nrhs; ++lj) {
+		    if (lj != li) {
+		      q_prod *= (stepC - stepR + lj*sizeR)/(lj*sizeR - li*sizeR);
+		    }
+		  }
+		  q_sum += q_prod;
+		}
+		s_q[fld][2][j][i] = q_sum;
+	      }
+	      else {
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      }
+	    }
+	  }
+      }
+    }
+    barrier(localMemFence);
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	dfloat Fqij[p_Nfields];
+	if(faceC==faceL && faceC==faceR){
+	  
+	  occaUnroll(p_Nfields)
+	    for(iint fld=0;fld<p_Nfields;++fld){
+	      Fqij[fld] = 0;
+	    }
+	  
+	  occaUnroll(p_Nq)
+	    for(int n=0;n<p_Nq;++n){
+	      // fetch once, use p_Nfields times
+	      const dfloat FinL = s_F[0][i][n];
+	      const dfloat FinC = s_F[1][i][n];
+	      const dfloat FinR = s_F[2][i][n];
+	      
+	      // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
+	      occaUnroll(p_Nfields)
+		for(iint fld=0;fld<p_Nfields;++fld){
+		  Fqij[fld] += FinL*s_q[fld][0][j][n];
+		  Fqij[fld] += FinC*s_q[fld][1][j][n];
+		  Fqij[fld] += FinR*s_q[fld][2][j][n];
+		}
+	    }
+
+	    for (iint fld=0; fld<p_Nfields;++fld) {
+	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+	    }
+	}
+	else{
+	  
+	  occaUnroll(p_Nfields)
+	    for(iint fld=0;fld<p_Nfields;++fld){
+	      Fqij[fld] = s_q[fld][1][j][i];
+	    }
+	}
+	
+	occaUnroll(p_Nfields)
+	  for(iint fld=0;fld<p_Nfields;++fld){
+	    Fq[eC*p_Nfields*p_Np*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
+	  }
+      }
+    }
+  }
+}
+
+
+
+kernel void boltzmannFilterHQuad3Dold(const iint Nelements,
+				   const iint * restrict elementIds,
+				   const dfloat * restrict dualMatrix,
+				   const iint * restrict cubeFaceNumber,
+				   const iint * restrict EToE,
+				   const dfloat * restrict qIn,
+				   dfloat * restrict qOut) {
+
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
+      for (iint i=0; i<p_Nq; ++i; inner1) {
+	for (iint j=0; j<p_Nq; ++j; inner0) {
+	  
+	  dfloat localMatrix[3*p_Nq];
+	  iint eA[3];
+	  dfloat qLocal[p_Nq*3];
+	  
+	  eA[1] = elementIds[eo]; //center element
+	  
+	  eA[0] = EToE[eA[1]*p_Nfaces+3]; //left element
+	  eA[2] = EToE[eA[1]*p_Nfaces+1]; //right element
+	  
+	  //put filter matrix in L1 (one row only)
+	  for (iint k = 0; k < 3*p_Nq; ++k) {
+	    localMatrix[k] = dualMatrix[i*3*p_Nq + k];
+	  }
+	  
+	  const iint faceC = cubeFaceNumber[eA[1]];
+	  const iint faceL = cubeFaceNumber[eA[0]];
+	  const iint faceR = cubeFaceNumber[eA[2]];
+
+	  if((faceC == faceL) && (faceC == faceR)) { 
+	    for (iint fld=0; fld<p_Nfields; ++fld) {
+
+	  for (iint k0 = 0; k0 < 3; ++k0) {
+	      for (iint k1 = 0; k1 < p_Nq; ++k1) {
+		qLocal[k0*p_Nq + k1]
+		  = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
+	      }
+	    }
+
+	      dfloat q_new = 0;
+	      for (iint k=0;k<3*p_Nq;++k) {
+		q_new += qLocal[k]*localMatrix[k];
+	      }
+	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new;
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
