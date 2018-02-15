@@ -274,7 +274,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
     }
 
-    // estimate maximum error
+     // estimate maximum error
     if((tstep%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));

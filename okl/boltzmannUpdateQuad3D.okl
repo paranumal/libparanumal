@@ -1,4 +1,3 @@
-
 kernel void boltzmannUpdateQuad3D(const iint Nelements,
 				  const dfloat dt,  
 				  const dfloat rka,
@@ -214,7 +213,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
 	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
 
 	for (iint fld = 0; fld < p_Nfields; ++fld){
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
+	  //fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
 	}
       }
 
