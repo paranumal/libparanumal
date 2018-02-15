@@ -48,18 +48,11 @@ void boundaryConditions2D(const iint bc,
     *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
-    //
-
-    // *q1B = 2.f*p_q1bar - q1M; 
-    // *q2B = 2.f*ramp*p_q2bar - q2M; 
-    // *q3B = 2.f*ramp*p_q3bar - q3M; 
-    // *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
-    // *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
-    // *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
 
    else if (bc==3)   // NBN: testing inflow
   { 
+
     *q1B = 2.f*p_q1bar - q1M; 
     *q2B = 2.f*ramp*p_q2bar - q2M; 
     *q3B = 2.f*ramp*p_q3bar - q3M; 

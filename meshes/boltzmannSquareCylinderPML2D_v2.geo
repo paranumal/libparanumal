@@ -2,22 +2,24 @@ cl__1 = 1;
 
 r_0 = DefineNumber[0.25];
 r_1 = DefineNumber[0.025];
-
+r_2 = DefineNumber[4.0];
 
 xmin = DefineNumber[-5.4];
 xmax = DefineNumber[ 9.4];
 ymin = DefineNumber[-5.4];
 ymax = DefineNumber[ 5.4];
 
-xpmlmin = DefineNumber[-50.0];
-xpmlmax = DefineNumber[ 50.0]; 
-ypmlmin = DefineNumber[-50.0];
-ypmlmax = DefineNumber[ 50.0];
 
-//+xpmlmin = DefineNumber[-7.0];
-//+xpmlmax = DefineNumber[ 11.0]; 
-//+ypmlmin = DefineNumber[-7.0];
-//+ypmlmax = DefineNumber[ 7.0];
+xpmlmin = DefineNumber[-7.0];
+xpmlmax = DefineNumber[ 11.0]; 
+ypmlmin = DefineNumber[-7.0];
+ypmlmax = DefineNumber[ 7.0];
+
+xdmin = DefineNumber[-400.0];
+xdmax = DefineNumber[ 400.0]; 
+ydmin = DefineNumber[-400.0];
+ydmax = DefineNumber[ 400.0];
+
 
 xcmin = DefineNumber[-0.5];
 xcmax = DefineNumber[ 0.5];
@@ -51,6 +53,12 @@ Point(18) = {xcmax, ycmin, 0, r_1};
 Point(19) = {xcmax, ycmax, 0, r_1};
 Point(20) = {xcmin, ycmax, 0, r_1};
 
+Point(21) = {xdmin, ydmin, 0, r_2};
+Point(22) = {xdmax, ydmin, 0, r_2};
+Point(23) = {xdmax, ydmax, 0, r_2};
+Point(24) = {xdmin, ydmax, 0, r_2};
+
+
 Line(1) = {17, 18};
 Line(2) = {18, 19};
 Line(3) = {19, 20};
@@ -80,38 +88,37 @@ Line(26) = {8, 16};
 Line(27) = {16, 4};
 Line(28) = {16, 10};
 
-
-
-Line Loop(29) = {5, 6, 7, 8};
-Line Loop(30) = {1, 2, 3, 4};
-Plane Surface(31) = {29, 30};
-Line Loop(32) = {9, 10, 11, 12};
-Plane Surface(33) = {32};
-Line Loop(34) = {10, 5, 14, -13};
-Plane Surface(35) = {34};
-Line Loop(36) = {15, 16, 17, 14};
+Line(29) = {21, 24};
+Line(30) = {24, 23};
+Line(31) = {23, 22};
+Line(32) = {22, 21};
+Line Loop(33) = {7, 8, 5, 6};
+Line Loop(34) = {3, 4, 1, 2};
+Plane Surface(35) = {33, 34};
+Line Loop(36) = {5, 14, -13, 10};
 Plane Surface(37) = {36};
-Line Loop(38) = {18, 19, -6, -17};
+Line Loop(38) = {12, 9, 10, 11};
 Plane Surface(39) = {38};
-Line Loop(40) = {20, 21, 22, -19};
+Line Loop(40) = {28, -11, -8, -27};
 Plane Surface(41) = {40};
-Line Loop(42) = {22, 7, -24, -23};
+Line Loop(42) = {26, 27, -24, 25};
 Plane Surface(43) = {42};
-Line Loop(44) = {25, 26, 27, -24};
+Line Loop(44) = {23, 24, -7, -22};
 Plane Surface(45) = {44};
-Line Loop(46) = {28, -11, -8, -27};
+Line Loop(46) = {21, 22, -19, 20};
 Plane Surface(47) = {46};
+Line Loop(48) = {18, 19, -6, -17};
+Plane Surface(49) = {48};
+Line Loop(50) = {15, 16, 17, 14};
+Plane Surface(51) = {50};
+Line Loop(52) = {25, 26, 28, 12, 9, 13, 15, 16, 18, 20, 21, 23};
+Line Loop(53) = {32, 29, 30, 31};
+Plane Surface(54) = {52, 53};
 
+Physical Surface("Interior",9) = {54, 39, 37, 51, 49, 47, 45, 41, 43, 35};
 
+Physical Line("Inflow",2) = {29, 30, 32};
+Physical Line("Outflow",3) = {31};
 Physical Line("Wall",1) = {1, 2, 3, 4};
-Physical Line("Inflow",2) = {12, 28, 26, 25, 23, 21, 15, 13, 9};
-Physical Line("Outflow",3) = {16, 18, 20};
-
-
-
-Physical Surface("Interior",9) = {31};
-Physical Surface("XPML",100) = {39,47};
-Physical Surface("YPML",200) = {35,43};
-Physical Surface("XYPML",300) = {33, 37, 41, 45};
 
 Coherence;
