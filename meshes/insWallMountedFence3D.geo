@@ -1,4 +1,4 @@
-rfence = DefineNumber[0.02];
+rfence = DefineNumber[0.025];
 rBox = DefineNumber[0.4];
 
 fx  = DefineNumber[0.1];
