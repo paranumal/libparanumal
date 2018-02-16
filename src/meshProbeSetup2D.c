@@ -84,7 +84,7 @@ void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY){
       if(qmin>mindist){
 
         // Increase number of probes        
-        mesh->probeIds[mesh->probeN] = n;
+        mesh->probeIds[mesh->probeN] = n+1;
         // hold element ids
         mesh->probeElementIds[mesh->probeN] = e; 
         // hold local r,s coordinates

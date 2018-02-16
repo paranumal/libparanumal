@@ -10,9 +10,9 @@ HDRDIR  = ../../include
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linkingcc	
-cc 	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc 	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 
 # compiler flags to be used (set to compile with debugging on)
