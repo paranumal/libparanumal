@@ -87,6 +87,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   iint TotalRows = globalRowStarts[size];
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
+  
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
 
   //record if there is null space

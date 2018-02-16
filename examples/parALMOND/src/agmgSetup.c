@@ -38,6 +38,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
 
+  if(rank==0) printf("Setting up AMG...");fflush(stdout);
   SmoothType smoothType;
   if (strstr(options,"CHEBYSHEV")) {
     smoothType = CHEBYSHEV;
@@ -76,7 +77,6 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     //setupSmoother(parAlmond, levels[lev], smoothType);
     done = true;
   }
-  if(rank==0) printf("Setting up AMG...");fflush(stdout);
   while(!done){
     // create coarse MG level
     levels[lev+1] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
