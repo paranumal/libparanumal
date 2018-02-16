@@ -10,7 +10,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   // dfloat xsigma  = Sigma[mesh->Ntscale]; dfloat  ysigma  = Sigma[mesh->Ntscale];
 
 
-  dfloat xsigma    = 80., ysigma  = 80.;
+  dfloat xsigma    = 200., ysigma  = 200.;
   
   dfloat xsmin    = -2.0, xsmax = 2.0; // map x to this range to control erf profile 
   dfloat ysmin    = -2.0, ysmax = 2.0; // map y to this range to control erf profile 
@@ -32,7 +32,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   // dfloat c1 =  0.0;
   // dfloat c0 =  0.0;
 
-  printf(" Sigma Scale: %d\n",mesh->Ntscale);
+  //printf(" Sigma Scale: %d\n",mesh->Ntscale);
   //count the pml elements
   mesh->pmlNelements=0;
 

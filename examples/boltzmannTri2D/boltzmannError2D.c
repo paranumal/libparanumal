@@ -4,7 +4,7 @@
 void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
 
-
+#if 0
  if(strstr(options,"PROBE")){
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -46,7 +46,104 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
   }
 
 
+#else 
+  if(strstr(options,"PROBE")){
+    
 
+    // Move this routine to probe setup
+
+
+
+    iint rank, size;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    iint root = 0; // root rank
+    
+    iint probeNfields = 3; // rho, u, v
+    
+    dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
+    dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
+    iint   *recvcount   = (iint   *) malloc(size*sizeof(int));
+    iint   *recvdisp    = (iint   *) malloc(size*sizeof(int));
+    iint   *probeIds    = (iint   *) malloc(mesh->probeNTotal*sizeof(iint)); 
+    
+    // Collect number of probes on the root  
+    MPI_Gather(&(mesh->probeN), 1, MPI_IINT, recvcount, 1, MPI_IINT, root, MPI_COMM_WORLD);
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(iint i=1; i<size; ++i){
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          //printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+
+    // Collect probe ids
+    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_IINT, probeIds, recvcount, recvdisp, MPI_IINT, root, MPI_COMM_WORLD);
+
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(iint i=0; i<size; ++i){
+        recvcount[i] *=probeNfields;
+          if(i>0)
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+    
+  
+    // fill probe Data
+    if(mesh->probeN){
+      for(iint p=0; p<mesh->probeN; p++){
+        iint pid  = mesh->probeIds[p];
+        iint e    = mesh->probeElementIds[p];        
+        dfloat sr = 0.0; 
+        dfloat su = 0.0; 
+        dfloat sv = 0.0; 
+        for(iint n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          //
+          sr += mesh->probeI[p*mesh->Np+n]*rho;
+          su += mesh->probeI[p*mesh->Np+n]*um;
+          sv += mesh->probeI[p*mesh->Np+n]*vm;
+        }
+        probeData[p*probeNfields + 0] = sr;
+        probeData[p*probeNfields + 1] = su;
+        probeData[p*probeNfields + 2] = sv;
+      }
+    }
+
+
+
+    
+    MPI_Gatherv(probeData, mesh->probeN*probeNfields, MPI_DFLOAT, recvData, recvcount, recvdisp, MPI_DFLOAT, root, MPI_COMM_WORLD);
+
+    if(rank==root){     
+       char fname[BUFSIZ];
+      sprintf(fname, "ProbeData_%d_%.f_%05d.dat", mesh->N, mesh->Re, mesh->Nelements);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+
+      fprintf(fp, "%4e ", time); 
+      for(iint p=0; p<mesh->probeNTotal; p++){
+        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p], recvData[p*probeNfields+0], 
+                                                        recvData[p*probeNfields+1],
+                                                        recvData[p*probeNfields+2]);
+      }
+      fprintf(fp, "\n"); 
+      fclose(fp);
+    }
+  }
+
+
+
+#endif
 
 
 

@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 25000; 
+  mesh->errorStep = 2500; 
 
   dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
@@ -146,7 +146,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   else{    
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-    dt = 10e-6; // !!!!!!!!!!!!!!!!
+    dt = 100e-6; // !!!!!!!!!!!!!!!!
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
@@ -285,20 +285,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     // Fill probe coordinates
-     pX[0] = 9.00;  pX[1] = 3.00; pX[2] =  3.00; pX[3] = 3.00; 
-     pY[0] = 0.00;  pY[1] = 0.00; pY[2] = -1.00;  pY[3] = 1.00; 
-
-    // pX[0] = 0.90;  pX[1] = 0.90; pX[2] =  0.90; //pX[3] = 10.50; 
-    // pY[0] = 0.00;  pY[1] = 0.25; pY[2] = -0.25; //pY[3] =  0.00; 
-
-    // pX[0] =  2.00;  pX[1] = 2.00; pX[2] =  2.00; 
-    // pY[0] = -1.00;  pY[1] = 0.00; pY[2] =  1.00; 
-
-    // pX[3] =  4.00;  pX[4] = 4.00; pX[5] =  4.00; 
-    // pY[3] = -1.00;  pY[4] = 0.00; pY[5] =  1.00; 
-
-    // pX[6] =  8.00;  pX[7] = 8.00; pX[8] =  8.00; 
-    // pY[6] = -1.00;  pY[7] = 0.00; pY[8] =  1.00; 
+     pX[0] = 9.00;  pX[1] = 8.00;  pX[2] = 5.00; pX[3] = 5;
+     pY[0] = 0.00;  pY[1] = 0.00;  pY[2] = 0.00; pY[3] = 5*tan(M_PI/6.);
 
     meshProbeSetup2D(mesh, pX, pY);
 
@@ -716,8 +704,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
-  // kernelInfo.addDefine("p_pmlAlpha", (dfloat)10.f*mesh->sqrtRT);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.05f); // 0.05
 
 
 
