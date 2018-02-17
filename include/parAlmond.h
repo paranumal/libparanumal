@@ -231,7 +231,6 @@ typedef struct {
 
   KrylovType ktype;
 
-  mesh_t *mesh;
   const char* options;
 
   //Matrix Free args
@@ -251,6 +250,8 @@ typedef struct {
   dfloat nullSpacePenalty;
 
   occa::device device;
+  occa::stream defaultStream;
+  occa::stream dataStream;  
 
   occa::memory o_x;
   occa::memory o_Ax;

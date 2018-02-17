@@ -50,8 +50,9 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
-  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels.
   parAlmond->device = mesh->device;
+  parAlmond->defaultStream = mesh->defaultStream;
+  parAlmond->dataStream = mesh->dataStream;
   parAlmond->options = options;
 
   parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
@@ -99,8 +100,6 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
-
-  mesh_t *mesh = parAlmond->mesh;
 
   if (strstr(parAlmond->options, "VERBOSE"))
     parAlmondReport(parAlmond);

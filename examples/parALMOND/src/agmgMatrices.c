@@ -1,4 +1,4 @@
-#include "agmg.h"
+
 
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
             iint nnz, iint *Ai, iint *Aj, dfloat *Avals){
@@ -485,14 +485,21 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
 
   occaTimerTic(parAlmond->device,"dcoo axpy");
   if (A->NsendTotal) {
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->dataStream);
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
+    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
   }
 
-  if (A->NsendTotal + A->NrecvTotal)
+  if (A->NsendTotal + A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream);
+    parAlmond->device.finish();
     dcooHaloExchangeStart(A, sizeof(dfloat), A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   if (A->diagNNZ)
     parAlmond->agg_interpolateKernel(A->diagNNZ, A->o_diagRows, A->o_diagCols, A->o_diagCoefs, o_x, o_y);
@@ -501,9 +508,14 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
     dcooHaloExchangeFinish(A);
 
   //copy back to device
-  if(A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
+  if(A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream);
+    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
                   A->NlocalCols*sizeof(dfloat));
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parALmond->defaultStream);
+    parAlmond->device.finish();
+  }
 
   if (A->offdNNZ)
     parAlmond->agg_interpolateKernel(A->offdNNZ, A->o_offdRows, A->o_offdCols, A->o_offdCoefs, o_x, o_y);
@@ -517,17 +529,26 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
 
   occaTimerTic(parAlmond->device,"hyb axpy");
   if (A->NsendTotal) {
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->dataStream);
+
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
-  }
+    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
 
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   // y <-- alpha*E*x+beta*y
   axpy(parAlmond, A->E, alpha, o_x, beta, o_y);
+
+  if (A->NsendTotal+A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream); 
+    parAlmond->device.finish();
+    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
@@ -540,8 +561,14 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
     hybHaloExchangeFinish(A);
 
   //copy back to device
-  if (A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+  if (A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->defaultStream);
+    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+    parAlmond->device.finish();
+    
+    parAlmond->device.setStream(parAlmond->defaultStream);
+    parAlmond->device.finish();
+  }
 
   // y <-- alpha*C*x + y
   if (A->C->nnz)

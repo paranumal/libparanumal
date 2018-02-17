@@ -41,9 +41,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 
   //setup async halo stream
-  solver->defaultStream = mesh->device.getStream();
-  solver->dataStream = mesh->device.createStream();
-  mesh->device.setStream(solver->defaultStream);
+  solver->defaultStream = mesh->defaultStream;
+  solver->dataStream = mesh->dataStream;
 
   iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){

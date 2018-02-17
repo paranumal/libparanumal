@@ -332,6 +332,10 @@ typedef struct {
 
   // occa stuff
   occa::device device;
+
+  occa::stream defaultStream;
+  occa::stream dataStream;
+
   occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
