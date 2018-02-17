@@ -48,6 +48,14 @@ typedef struct {
 
   dfloat g[3];      // gravitational Acceleration
  
+  //halo data
+  dfloat *tSendBuffer;
+  dfloat *tRecvBuffer;
+  dfloat *vSendBuffer;
+  dfloat *vRecvBuffer;
+  dfloat *pSendBuffer;
+  dfloat *pRecvBuffer;
+
   // iint Nsubsteps;  
   // dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   // occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
@@ -118,24 +126,11 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char*options);
 
 // void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
-void insAdvectionStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-void insAdvectionSubCycleStep3D(ins_t *solver, iint tstep,
-                     dfloat * tsendBuffer, dfloat *trecvBuffer, 
-                     dfloat * sendBuffer, dfloat *recvBuffer,char * options);
-
-void insHelmholtzStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insPoissonStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-void insUpdateStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
+void insAdvectionStep3D(ins_t *solver, iint tstep, const char * options);
+void insAdvectionSubCycleStep3D(ins_t *solver, iint tstep, const char * options);
+void insHelmholtzStep3D(ins_t *solver, iint tstep, const char * options);
+void insPoissonStep3D(ins_t *solver, iint tstep, const char * options);
+void insUpdateStep3D(ins_t *solver, iint tstep, const char * options);
 
 void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 

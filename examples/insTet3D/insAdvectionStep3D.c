@@ -1,9 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
-                        dfloat * sendBuffer, dfloat * recvBuffer,
-                        char   * options){
+void insAdvectionStep3D(ins_t *ins, iint tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt; 
@@ -25,13 +23,13 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
                                 ins->o_tHaloBuffer);
 
     // copy extracted halo to HOST
-    ins->o_tHaloBuffer.copyTo(sendBuffer);
+    ins->o_tHaloBuffer.copyTo(ins->tSendBuffer);
 
     // start halo exchange
     meshHaloExchangeStart(mesh,
                           mesh->Np*(ins->NTfields)*sizeof(dfloat),
-                          sendBuffer,
-                          recvBuffer);
+                          ins->tSendBuffer,
+                          ins->tRecvBuffer);
   }
 
   // Compute Volume Contribution
@@ -81,7 +79,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep,  iint haloBytes,
 
     meshHaloExchangeFinish(mesh);
 
-    ins->o_tHaloBuffer.copyFrom(recvBuffer);
+    ins->o_tHaloBuffer.copyFrom(ins->tRecvBuffer);
 
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,

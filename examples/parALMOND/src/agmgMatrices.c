@@ -1,4 +1,4 @@
-
+#include "agmg.h"
 
 csr * newCSRfromCOO(iint N, iint* globalRowStarts,
             iint nnz, iint *Ai, iint *Aj, dfloat *Avals){
@@ -247,11 +247,13 @@ dcoo *newDCOO(parAlmond_t *parAlmond, csr *B){
   A->NrecvPairs = B->NrecvPairs;
   A->NsendMessages = B->NsendMessages;
   A->NrecvMessages = B->NrecvMessages;
-  A->sendBuffer = B->sendBuffer;
-  if (A->NrecvTotal)
-    A->recvBuffer = (dfloat*) malloc(A->NrecvTotal*sizeof(dfloat));
-  if (A->NsendTotal)
-    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
+  
+  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
+  if (A->NsendTotal) {
+    occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
+  }
 
   A->haloSendRequests = B->haloSendRequests;
   A->haloRecvRequests = B->haloRecvRequests;
@@ -429,12 +431,15 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->NrecvPairs = csrA->NrecvPairs;
   A->NsendMessages = csrA->NsendMessages;
   A->NrecvMessages = csrA->NrecvMessages;
-  A->sendBuffer = csrA->sendBuffer;
-  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
   A->haloSendRequests = csrA->haloSendRequests;
   A->haloRecvRequests = csrA->haloRecvRequests;
 
-  if (A->NsendTotal) A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
+  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
+  if (A->NsendTotal) {
+    occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
+  }
 
   return A;
 }
@@ -513,7 +518,7 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
     o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
                   A->NlocalCols*sizeof(dfloat));
     parAlmond->device.finish();
-    parAlmond->device.setStream(parALmond->defaultStream);
+    parAlmond->device.setStream(parAlmond->defaultStream);
     parAlmond->device.finish();
   }
 
@@ -565,7 +570,6 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
     parAlmond->device.setStream(parAlmond->defaultStream);
     o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
     parAlmond->device.finish();
-    
     parAlmond->device.setStream(parAlmond->defaultStream);
     parAlmond->device.finish();
   }

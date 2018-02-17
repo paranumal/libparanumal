@@ -1,10 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, 
-                                dfloat * tsendBuffer, dfloat * trecvBuffer, 
-                                dfloat * vsendBuffer, dfloat *  vrecvBuffer, 
-                                char   * options){
+void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh3D *mesh = ins->mesh;
@@ -29,13 +26,13 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                                 ins->o_tHaloBuffer);
 
     // copy extracted halo to HOST
-    ins->o_tHaloBuffer.copyTo(tsendBuffer);
+    ins->o_tHaloBuffer.copyTo(ins->tSendBuffer);
 
     // start halo exchange    
     meshHaloExchangeStart(mesh,
                           mesh->Np*(ins->NTfields)*sizeof(dfloat),
-                          tsendBuffer,
-                          trecvBuffer);
+                          ins->tSendBuffer,
+                          ins->tRecvBuffer);
   }
 
   // COMPLETE HALO EXCHANGE
@@ -43,7 +40,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
 
     meshHaloExchangeFinish(mesh);
 
-    ins->o_tHaloBuffer.copyFrom(trecvBuffer);
+    ins->o_tHaloBuffer.copyFrom(ins->tRecvBuffer);
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
@@ -138,6 +135,12 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                                  ins->o_We);
 
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.finish();
+
+            // switch to data stream
+            mesh->device.setStream(mesh->dataStream);
+
             ins->velocityHaloExtractKernel(mesh->Nelements,
                                      mesh->totalHaloPairs,
                                      mesh->o_haloElementList,
@@ -148,13 +151,15 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                                      ins->o_vHaloBuffer);
 
             // copy extracted halo to HOST 
-            ins->o_vHaloBuffer.copyTo(vsendBuffer);            
+            ins->o_vHaloBuffer.asyncCopyTo(ins->vSendBuffer);            
+            mesh->device.finish();
 
             // start halo exchange
             meshHaloExchangeStart(mesh,
                                 mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                                vsendBuffer,
-                                vrecvBuffer);
+                                ins->vSendBuffer,
+                                ins->vRecvBuffer);
+            mesh->device.setStream(mesh->defaultStream);
           }
           
           // Compute Volume Contribution
@@ -193,10 +198,10 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
           }
 
           if(mesh->totalHaloPairs>0){
-
             meshHaloExchangeFinish(mesh);
 
-            ins->o_vHaloBuffer.copyFrom(vrecvBuffer); 
+            mesh->device.setStream(mesh->dataStream);
+            ins->o_vHaloBuffer.asyncCopyFrom(ins->vRecvBuffer); 
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
@@ -206,6 +211,10 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep,
                                          o_Vd,
                                          o_Wd,
                                       ins->o_vHaloBuffer);
+            mesh->device.finish();
+            
+            mesh->device.setStream(mesh->defaultStream);
+            mesh->device.finish();
           }
 
           //Surface Kernel
