@@ -12,8 +12,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
-
-
   
   /*for (int e = 0; e < mesh->Nelements; ++e) {
     for (int f = 0; f < mesh->Nfaces; ++f) {
@@ -45,8 +43,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABlevels,
 		        l,
 			mesh->o_q,
-			mesh->o_qFilter,
-			mesh->o_timestamp);
+			mesh->o_qFilter);
    }
    for (iint l=0;l<mesh->MRABNlevels;l++) {   
     mesh->filterKernelV(mesh->MRABNelements[l],
@@ -64,8 +61,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_MRABlevels,
 		        l,
 			mesh->o_qFilter,
-			mesh->o_q,
-			mesh->o_timestamp);
+			mesh->o_q);
 			}
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
@@ -155,8 +151,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_q,
 			      mesh->o_fQM,
-			      mesh->o_rhsq,
-			      mesh->o_timestamp);
+			      mesh->o_rhsq);
 	  mesh->lev_updates[l] = Ntick;
 	}
       }
@@ -164,19 +159,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
       for (iint l = 0; l < lev; l++) {
 	
-	/*for (int e = 0; e < mesh->Nelements; ++e) {
-	  for (int i = 0; i < mesh->Np; ++i) {
-	  test_q[e*mesh->Nfields*mesh->Np + i] = mesh->x[e*mesh->Np + i];
-	  }
-	  }
-	mesh->o_q.copyFrom(test_q);*/
-
-	/*for (int ell = 0; ell < mesh->MRABNlevels; ++ell){
-	  printf("%d ",lev_updates[ell]);
-	}
-	printf("\n");*/
-
-	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
+       	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
 	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
 	
       	mesh->filterKernelH(mesh->MRABNelements[l],
@@ -194,8 +177,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABlevels,
 			    l,
 			    mesh->o_rhsq,
-			    mesh->o_qFilter,
-			    mesh->o_timestamp);
+			    mesh->o_qFilter);
       }
       for (iint l = 0; l < lev; l++) {
 	
@@ -214,11 +196,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABlevels,
 			    l,
 			    mesh->o_qFilter,
-			    mesh->o_rhsq,
-			    mesh->o_timestamp);
-	//exit(-1);
-	
-      }
+			    mesh->o_rhsq);	
+	}
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -247,7 +226,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
 	}
-      }
+	}
       
       occa::toc("updateKernel");
       

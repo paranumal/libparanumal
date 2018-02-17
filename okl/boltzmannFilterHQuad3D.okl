@@ -113,7 +113,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(faceC==faceL && faceC==faceR && faceC==faceU && faceC==faceD){
+	if(faceC == faceL && faceC == faceR && faceC == faceU && faceC == faceD){
 	  
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){

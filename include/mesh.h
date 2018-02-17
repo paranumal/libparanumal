@@ -306,9 +306,7 @@ typedef struct {
 
 
   iint *cubeFaceNumber;   //ST: Mesh boundary logic for cubed sphere
-  dfloat *dualProjMatrix; //    Fixed matrix applies the dual mapping
-  iint *timestamp;
-  
+  dfloat *dualProjMatrix; //    Fixed matrix applies the dual mapping 
 
   // occa stuff
   occa::device device;
@@ -411,7 +409,6 @@ typedef struct {
   occa::memory o_MRABlevels;
   occa::memory o_lev_updates;
   occa::memory o_shift;
-  occa::memory o_timestamp;
 
 
   iint * lev_updates;
