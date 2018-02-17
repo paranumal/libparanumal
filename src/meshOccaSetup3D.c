@@ -11,6 +11,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->device.setup(deviceConfig);
 
   occa::initTimer(mesh->device);
+  
+  //make seperate stream for halo exchange
+  mesh->defaultStream = mesh->device.getStream();
+  mesh->dataStream = mesh->device.createStream();
+  mesh->device.setStream(mesh->defaultStream);
 
   // find elements that have all neighbors on this process
   iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
