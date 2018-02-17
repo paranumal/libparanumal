@@ -17,14 +17,14 @@ int main(int argc, char **argv){
     //strdup("solver=PCG method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
     strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
   char *velParAlmondOptions = 
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=SATURATE");
 
   char *prSolverOptions =
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
 
   char *prParAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=SATURATE");
 
   if(argc!=3 && argc!=4 && argc!=5){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
