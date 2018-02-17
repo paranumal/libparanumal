@@ -28,7 +28,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat one = 1;
   
   //filter the initial state
-   for (iint l=0;l<mesh->MRABNlevels;l++) {
+  for (iint l=0;l<mesh->MRABNlevels;l++) {
     
     mesh->filterKernelH(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
@@ -66,7 +66,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_qFilter,
 			mesh->o_q,
 			mesh->o_timestamp);
-   }
+			}
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -244,6 +244,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_fQM,
 			     mesh->o_q);
 
+	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
 	}
       }
@@ -252,7 +253,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       
       if (lev<mesh->MRABNlevels) {
 	
-	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + (lev-1)*mesh->Nrhs;
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + lev*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  //trace update using same kernel
