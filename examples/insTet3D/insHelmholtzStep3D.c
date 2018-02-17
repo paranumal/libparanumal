@@ -1,9 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
-			dfloat * sendBuffer, dfloat * recvBuffer, 
-			char   * options){
+void insHelmholtzStep3D(ins_t *ins, iint tstep, const char* options){
   
   mesh3D *mesh = ins->mesh; 
   solver_t *solver = ins->vSolver; 

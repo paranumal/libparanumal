@@ -3,11 +3,11 @@
 csr *strong_graph(csr *A, dfloat threshold);
 bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i);
 iint *form_aggregates(agmgLevel *level, csr *C);
-void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse);
+void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse, const char *options);
 csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA);
 csr *transpose(agmgLevel* level, csr *A, iint *globalRowStarts, iint *globalColStarts);
 csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
-void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA);
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, const char *options);
 
 
 void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
@@ -85,7 +85,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     //printf("Setting up coarse level %d\n", lev+1);
 
     coarsenAgmgLevel(levels[lev], &(levels[lev+1]->A), &(levels[lev+1]->P),
-                                  &(levels[lev+1]->R), &nullCoarseA);
+                                  &(levels[lev+1]->R), &nullCoarseA, parAlmond->options);
 
     //set dimensions of the fine level (max among the A,R ops)
     levels[lev]->Ncols = mymax(levels[lev]->Ncols, levels[lev+1]->R->Ncols);
@@ -234,7 +234,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
 
 //create coarsened problem
-void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA){
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, const char* options){
 
   // establish the graph of strong connections
   level->threshold = 0.5;
@@ -243,7 +243,7 @@ void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat 
 
   iint *FineToCoarse = form_aggregates(level, C);
 
-  //find_aggregate_owners(level,FineToCoarse);
+  find_aggregate_owners(level,FineToCoarse,options);
 
   *P = construct_interpolator(level, FineToCoarse, nullCoarseA);
   *R = transpose(level, *P, level->globalRowStarts, level->globalAggStarts);
@@ -681,7 +681,7 @@ typedef struct {
   iint coarseId;
   iint newCoarseId;
 
-  iint orginRank;
+  iint originRank;
   iint ownerRank;
 
 } parallelAggregate_t;
@@ -703,13 +703,23 @@ int compareAgg(const void *a, const void *b){
   if (pa->coarseId < pb->coarseId) return -1;
   if (pa->coarseId > pb->coarseId) return +1;
 
-  if (pa->orginRank < pb->orginRank) return -1;
-  if (pa->orginRank > pb->orginRank) return +1;
+  if (pa->originRank < pb->originRank) return -1;
+  if (pa->originRank > pb->originRank) return +1;
 
   return 0;
 };
 
-void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
+int compareOrigin(const void *a, const void *b){
+  parallelAggregate_t *pa = (parallelAggregate_t *) a;
+  parallelAggregate_t *pb = (parallelAggregate_t *) b;
+
+  if (pa->originRank < pb->originRank) return -1;
+  if (pa->originRank > pb->originRank) return +1;
+
+  return 0;
+};
+
+void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse, const char* options) {
   // MPI info
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -718,15 +728,32 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   iint N = level->A->Nrows;
 
   //Need to establish 'ownership' of aggregates
+  
+  //Keep the current partitioning for STRONGNODES. 
+  // The rank that had the strong node for each aggregate owns the aggregate
+  if (strstr(options,"STRONGNODES")) return;
+
+  /* Setup description of the MPI_PARALLEL_AGGREGATE struct */
+  MPI_Datatype MPI_PARALLEL_AGGREGATE;
+  MPI_Datatype oldtypes[1] = {MPI_IINT};
+  int blockcounts[1] = {5};
+  MPI_Aint  entryoffsets[1] = {0};
+
+  /* Now define structured type and commit it */
+  MPI_Type_struct(1, blockcounts, entryoffsets, oldtypes, &MPI_PARALLEL_AGGREGATE);
+  MPI_Type_commit(&MPI_PARALLEL_AGGREGATE);
+
   //populate aggregate array
   iint gNumAggs = level->globalAggStarts[size]; //total number of aggregates
+  
   parallelAggregate_t *sendAggs;
   if (N) sendAggs = (parallelAggregate_t *) calloc(N,sizeof(parallelAggregate_t));
   for (iint i=0;i<N;i++) {
     sendAggs[i].fineId = i;
-    sendAggs[i].orginRank = rank;
+    sendAggs[i].originRank = rank;
 
     sendAggs[i].coarseId = FineToCoarse[i];
+
     //set a temporary owner. Evenly distibute aggregates amoungst ranks
     sendAggs[i].ownerRank = (FineToCoarse[i]*size)/gNumAggs;
   }
@@ -740,7 +767,7 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   iint *recvOffsets = (iint *) calloc(size+1,sizeof(iint));
 
   for(iint i=0;i<N;++i)
-    sendCounts[sendAggs[i].ownerRank] += sizeof(parallelAggregate_t);
+    sendCounts[sendAggs[i].ownerRank]++;
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
@@ -750,12 +777,12 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   for(iint r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(parallelAggregate_t);
+    recvNtotal += recvCounts[r];
   }
   parallelAggregate_t *recvAggs = (parallelAggregate_t *) calloc(recvNtotal,sizeof(parallelAggregate_t));
 
-  MPI_Alltoallv(sendAggs, sendCounts, sendOffsets, MPI_CHAR,
-                recvAggs, recvCounts, recvOffsets, MPI_CHAR,
+  MPI_Alltoallv(sendAggs, sendCounts, sendOffsets, MPI_PARALLEL_AGGREGATE,
+                recvAggs, recvCounts, recvOffsets, MPI_PARALLEL_AGGREGATE,
                 MPI_COMM_WORLD);
 
   //sort by coarse aggregate number, and then by original rank
@@ -773,40 +800,58 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
     aggStarts = (iint *) calloc(NumUniqueAggs+1,sizeof(iint));
   iint cnt = 1;
   for (iint i=1;i<recvNtotal;i++)
-    if(recvAggs[i].coarseId!=recvAggs[i-1].coarseId) aggStarts[cnt++]=i;
+    if(recvAggs[i].coarseId!=recvAggs[i-1].coarseId) aggStarts[cnt++] = i;
   aggStarts[NumUniqueAggs] = recvNtotal;
 
-  //use a random dfloat for each rank to break ties.
-  dfloat rand = (dfloat) drand48();
-  dfloat *gRands = (dfloat *) calloc(size,sizeof(dfloat));
-  MPI_Allgather(&rand, 1, MPI_DFLOAT, gRands, 1, MPI_DFLOAT, MPI_COMM_WORLD);
 
-  //determine the aggregates majority owner
-  dfloat *rankCounts = (dfloat *) calloc(size,sizeof(dfloat));
-  for (iint n=0;n<NumUniqueAggs;n++) {
-    //populate randomizer
-    for (iint r=0;r>size;r++)
-      rankCounts[r] = gRands[r];
+  if (strstr(options,"DISTRIBUTED")) { //rank that contributes most to the aggregate ownes it
+    //use a random dfloat for each rank to break ties.
+    dfloat rand = (dfloat) drand48();
+    dfloat *gRands = (dfloat *) calloc(size,sizeof(dfloat));
+    MPI_Allgather(&rand, 1, MPI_DFLOAT, gRands, 1, MPI_DFLOAT, MPI_COMM_WORLD);
 
-    //count the number of contributions to the aggregate from the separate ranks
-    for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
-      rankCounts[recvAggs[i].orginRank]++;
+    //determine the aggregates majority owner
+    dfloat *rankCounts = (dfloat *) calloc(size,sizeof(dfloat));
+    for (iint n=0;n<NumUniqueAggs;n++) {
+      //populate randomizer
+      for (iint r=0;r<size;r++)
+        rankCounts[r] = gRands[r];
 
-    //find which rank is contributing the most to this aggregate
-    iint ownerRank = 0;
-    dfloat maxEntries = rankCounts[0];
-    for (iint r=1;r<size;r++) {
-      if (rankCounts[r]>maxEntries) {
-        ownerRank = r;
-        maxEntries = rankCounts[r];
+      //count the number of contributions to the aggregate from the separate ranks
+      for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
+        rankCounts[recvAggs[i].originRank]++;
+
+      //find which rank is contributing the most to this aggregate
+      iint ownerRank = 0;
+      dfloat maxEntries = rankCounts[0];
+      for (iint r=1;r<size;r++) {
+        if (rankCounts[r]>maxEntries) {
+          ownerRank = r;
+          maxEntries = rankCounts[r];
+        }
       }
-    }
 
-    //set this aggregate's owner
-    for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
-      recvAggs[i].ownerRank = ownerRank;
+      //set this aggregate's owner
+      for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
+        recvAggs[i].ownerRank = ownerRank;
+    }
+    free(gRands); free(rankCounts);
+  } else { //default SATURATE: always choose the lowest rank to own the aggregate
+    for (iint n=0;n<NumUniqueAggs;n++) {
+      
+      iint minrank = size;
+
+      //count the number of contributions to the aggregate from the separate ranks
+      for (iint i=aggStarts[n];i<aggStarts[n+1];i++){
+
+        minrank = (recvAggs[i].originRank<minrank) ? recvAggs[i].originRank : minrank;
+      }
+
+      //set this aggregate's owner
+      for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
+        recvAggs[i].ownerRank = minrank;
+    }
   }
-  free(gRands); free(rankCounts);
   free(aggStarts);
 
   //sort by owning rank
@@ -818,7 +863,7 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   iint *newRecvOffsets = (iint *) calloc(size+1,sizeof(iint));
 
   for(iint i=0;i<recvNtotal;++i)
-    newSendCounts[recvAggs[i].ownerRank] += sizeof(parallelAggregate_t);
+    newSendCounts[recvAggs[i].ownerRank]++;
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(newSendCounts, 1, MPI_IINT, newRecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
@@ -828,12 +873,12 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   for(iint r=0;r<size;++r){
     newSendOffsets[r+1] = newSendOffsets[r] + newSendCounts[r];
     newRecvOffsets[r+1] = newRecvOffsets[r] + newRecvCounts[r];
-    newRecvNtotal += newRecvCounts[r]/sizeof(parallelAggregate_t);
+    newRecvNtotal += newRecvCounts[r];
   }
   parallelAggregate_t *newRecvAggs = (parallelAggregate_t *) calloc(newRecvNtotal,sizeof(parallelAggregate_t));
 
-  MPI_Alltoallv(   recvAggs, newSendCounts, newSendOffsets, MPI_CHAR,
-                newRecvAggs, newRecvCounts, newRecvOffsets, MPI_CHAR,
+  MPI_Alltoallv(   recvAggs, newSendCounts, newSendOffsets, MPI_PARALLEL_AGGREGATE,
+                newRecvAggs, newRecvCounts, newRecvOffsets, MPI_PARALLEL_AGGREGATE,
                 MPI_COMM_WORLD);
 
   //sort by coarse aggregate number, and then by original rank
@@ -848,7 +893,6 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   //determine a global numbering of the aggregates
   MPI_Allgather(&numAggs, 1, MPI_IINT, level->globalAggStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
 
-  level->globalAggStarts[size] =0;
   for (iint r=0;r<size;r++)
     level->globalAggStarts[r+1] += level->globalAggStarts[r];
 
@@ -861,13 +905,36 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
     newRecvAggs[i].newCoarseId = cnt;
   }
 
+  //sort by owning rank
+  qsort(newRecvAggs, newRecvNtotal, sizeof(parallelAggregate_t), compareOrigin);
+
+  for(iint r=0;r<size;r++) sendCounts[r] = 0;  
+  for(iint r=0;r<=size;r++) {
+    sendOffsets[r] = 0;
+    recvOffsets[r] = 0;
+  }
+
+  for(iint i=0;i<newRecvNtotal;++i)
+    sendCounts[newRecvAggs[i].originRank]++;
+
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+
+  // find send and recv offsets for gather
+  recvNtotal = 0;
+  for(iint r=0;r<size;++r){
+    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
+    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
+    recvNtotal += recvCounts[r];
+  }
+
   //send the aggregate data back
-  MPI_Alltoallv(newRecvAggs, newRecvCounts, newRecvOffsets, MPI_CHAR,
-                   recvAggs, newSendCounts, newSendOffsets, MPI_CHAR,
+  MPI_Alltoallv(newRecvAggs, sendCounts, sendOffsets, MPI_PARALLEL_AGGREGATE,
+                   sendAggs, recvCounts, recvOffsets, MPI_PARALLEL_AGGREGATE,
                 MPI_COMM_WORLD);
-  MPI_Alltoallv(recvAggs, recvCounts, recvOffsets, MPI_CHAR,
-                sendAggs, sendCounts, sendOffsets, MPI_CHAR,
-                MPI_COMM_WORLD);
+
+  //clean up
+  MPI_Type_free(&MPI_PARALLEL_AGGREGATE);
 
   free(recvAggs);
   free(sendCounts);  free(recvCounts);
@@ -1061,6 +1128,7 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   for(iint i=0; i<P->offdNNZ; i++)
     P->offdCoefs[i] /= (*nullCoarseA)[P->offdCols[i]];
 
+  MPI_Barrier(MPI_COMM_WORLD);
   if (P->NsendTotal) free(recvNnzSum);
 
   return P;

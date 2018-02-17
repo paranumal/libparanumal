@@ -10,21 +10,6 @@ void insRun3D(ins_t *ins, char *options){
   
   // Write Initial Data
   insReport3D(ins, 0, options);
-  
-  // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
-  iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
-  dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
-  dfloat *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
-
-  iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
-  dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
-  dfloat *vRecvBuffer = (dfloat*) malloc(vHaloBytes);
-
-  // No need to do like this, just for consistency
-  iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
-  dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
-
 
   occa::initTimer(mesh->device);
 
@@ -78,28 +63,28 @@ void insRun3D(ins_t *ins, char *options){
     tic_tot = MPI_Wtime(); 
     tic_adv = MPI_Wtime(); 
     if(strstr(options,"SUBCYCLING")) {
-      insAdvectionSubCycleStep3D(ins, tstep,tSendBuffer,tRecvBuffer,vSendBuffer,vRecvBuffer, options);
+      insAdvectionSubCycleStep3D(ins, tstep, options);
     } else {
-      insAdvectionStep3D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+      insAdvectionStep3D(ins, tstep, options);
     }
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
     toc_adv = MPI_Wtime(); 
 
     tic_vel = MPI_Wtime(); 
-    insHelmholtzStep3D(ins, tstep, tHaloBytes,tSendBuffer,tRecvBuffer, options);
+    insHelmholtzStep3D(ins, tstep, options);
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
     toc_vel = MPI_Wtime(); 
 
     tic_pre = MPI_Wtime(); 
-    insPoissonStep3D(  ins, tstep, vHaloBytes,vSendBuffer,vRecvBuffer, options);
+    insPoissonStep3D(  ins, tstep, options);
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
     toc_pre = MPI_Wtime(); 
 
     tic_upd = MPI_Wtime(); 
-    insUpdateStep3D(   ins, tstep, pHaloBytes,pSendBuffer,pRecvBuffer, options);
+    insUpdateStep3D(   ins, tstep, options);
     mesh->device.finish();
     MPI_Barrier(MPI_COMM_WORLD);
     toc_upd = MPI_Wtime(); 
@@ -164,13 +149,6 @@ void insRun3D(ins_t *ins, char *options){
   insErrorNorms3D(ins, ins->finalTime, options);
 #endif
 
-  //Deallocate Halo MPI storage
-  free(tSendBuffer);
-  free(tRecvBuffer);
-  free(vSendBuffer);
-  free(vRecvBuffer);
-  free(pSendBuffer);
-  free(pRecvBuffer);
 }
 
 
