@@ -19,7 +19,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    exclusive iint eC, eL, eR, faceC, faceL, faceR, shiftl;
+    exclusive iint eC, eL, eR, eU, eD, faceC, faceL, faceR, faceU, faceD, shiftl;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
@@ -32,16 +32,23 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	eC = elementIds[eo];
 	eL = EToE[eC*p_Nfaces+0];
 	eR = EToE[eC*p_Nfaces+2];
+
+	//unordered, used only for bounds checking
+	eU = EToE[eC*p_Nfaces+1];
+	eD = EToE[eC*p_Nfaces+3];
+
 	faceC = cubeFaceNumber[eC];
 	faceL = cubeFaceNumber[eL];
 	faceR = cubeFaceNumber[eR];
-	
+	faceU = cubeFaceNumber[eU];
+	faceD = cubeFaceNumber[eD];
+
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	   
 	    //edge of an mrab level, but not the edge of a face
-	    if(faceC == faceL && faceC == faceR) {
+	    if(faceC == faceL && faceC == faceR && faceC == faceU && faceC == faceD) {
 	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
 		
@@ -105,7 +112,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(faceC==faceL && faceC==faceR){
+	if(faceC==faceL && faceC==faceR && faceC==faceU && faceC==faceD){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;

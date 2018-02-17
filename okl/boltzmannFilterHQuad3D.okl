@@ -20,7 +20,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    exclusive iint eC, eL, eR, faceC, faceL, faceR, shiftl;
+    exclusive iint eC, eL, eR, eU, eD, faceC, faceL, faceR, faceU, faceD, shiftl;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
@@ -33,9 +33,16 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	eC = elementIds[eo];
 	eL = EToE[eC*p_Nfaces+3];
 	eR = EToE[eC*p_Nfaces+1];
+
+	//unordered, only used for bounds checking
+	eU = EToE[eC*p_Nfaces + 0];
+	eD = EToE[eC*p_Nfaces + 2];
+	
 	faceC = cubeFaceNumber[eC];
 	faceL = cubeFaceNumber[eL];
 	faceR = cubeFaceNumber[eR];
+	faceU = cubeFaceNumber[eU];
+	faceD = cubeFaceNumber[eD];
 	
 	occaUnroll(p_Nfields)
 	  
@@ -43,7 +50,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 
 	    //edge of an mrab level, but not the edge of a face
-	    if(faceC == faceL && faceC == faceR) {
+	    if(faceC == faceL && faceC == faceR && faceC == faceU && faceC == faceD) {
 
 	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
@@ -106,7 +113,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(faceC==faceL && faceC==faceR){
+	if(faceC==faceL && faceC==faceR && faceC==faceU && faceC==faceD){
 	  
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
@@ -145,61 +152,6 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    Fq[eC*p_Nfields*p_Np*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
 	  }
-      }
-    }
-  }
-}
-
-
-
-kernel void boltzmannFilterHQuad3Dold(const iint Nelements,
-				   const iint * restrict elementIds,
-				   const dfloat * restrict dualMatrix,
-				   const iint * restrict cubeFaceNumber,
-				   const iint * restrict EToE,
-				   const dfloat * restrict qIn,
-				   dfloat * restrict qOut) {
-
-  for (iint eo = 0; eo < Nelements;++eo;outer0) {
-      for (iint i=0; i<p_Nq; ++i; inner1) {
-	for (iint j=0; j<p_Nq; ++j; inner0) {
-	  
-	  dfloat localMatrix[3*p_Nq];
-	  iint eA[3];
-	  dfloat qLocal[p_Nq*3];
-	  
-	  eA[1] = elementIds[eo]; //center element
-	  
-	  eA[0] = EToE[eA[1]*p_Nfaces+3]; //left element
-	  eA[2] = EToE[eA[1]*p_Nfaces+1]; //right element
-	  
-	  //put filter matrix in L1 (one row only)
-	  for (iint k = 0; k < 3*p_Nq; ++k) {
-	    localMatrix[k] = dualMatrix[i*3*p_Nq + k];
-	  }
-	  
-	  const iint faceC = cubeFaceNumber[eA[1]];
-	  const iint faceL = cubeFaceNumber[eA[0]];
-	  const iint faceR = cubeFaceNumber[eA[2]];
-
-	  if((faceC == faceL) && (faceC == faceR)) { 
-	    for (iint fld=0; fld<p_Nfields; ++fld) {
-
-	  for (iint k0 = 0; k0 < 3; ++k0) {
-	      for (iint k1 = 0; k1 < p_Nq; ++k1) {
-		qLocal[k0*p_Nq + k1]
-		  = qIn[eA[k0]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + k1];
-	      }
-	    }
-
-	      dfloat q_new = 0;
-	      for (iint k=0;k<3*p_Nq;++k) {
-		q_new += qLocal[k]*localMatrix[k];
-	      }
-	      qOut[eA[1]*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = q_new;
-	    }
-	  }
-	}
       }
     }
   }
