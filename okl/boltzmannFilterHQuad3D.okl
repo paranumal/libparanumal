@@ -50,7 +50,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 
 	    //edge of an mrab level, but not the edge of a face
-	    if(faceC == faceL && faceC == faceR && faceC == faceU && faceC == faceD) {
+	    if(((faceC - faceL) * (faceC - faceL) + (faceC - faceR) * (faceC - faceR) + (faceC - faceU) * (faceC - faceU) + (faceC - faceD) * (faceC - faceD)) < 1) {
 
 	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
@@ -113,7 +113,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(faceC == faceL && faceC == faceR && faceC == faceU && faceC == faceD){
+	if (((faceC - faceL) * (faceC - faceL) + (faceC - faceR) * (faceC - faceR) + (faceC - faceU) * (faceC - faceU) + (faceC - faceD) * (faceC - faceD)) < 1) {
 	  
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
