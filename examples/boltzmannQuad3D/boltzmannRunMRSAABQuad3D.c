@@ -24,10 +24,26 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
   dfloat zero = 0;
   dfloat one = 1;
+
+  /*iint eC = 0;
+	iint eL = mesh->EToE[eC*mesh->Nfaces+3];
+	iint eR = mesh->EToE[eC*mesh->Nfaces+1];
+
+	//unordered, only used for bounds checking
+	iint eU = mesh->EToE[eC*mesh->Nfaces + 0];
+	iint eD = mesh->EToE[eC*mesh->Nfaces + 2];
+	
+	iint faceC = mesh->cubeFaceNumber[eC];
+	iint faceL = mesh->cubeFaceNumber[eL];
+	iint faceR = mesh->cubeFaceNumber[eR];
+	iint faceU = mesh->cubeFaceNumber[eU];
+	iint faceD = mesh->cubeFaceNumber[eD];
+
+	printf("values are: %d %d %d %d %d\n",faceC,faceL,faceR,faceU,faceD);*/
   
   //filter the initial state
   for (iint l=0;l<mesh->MRABNlevels;l++) {
-    
+    mesh->o_q.copyTo(test_q);
     mesh->filterKernelH(mesh->MRABNelements[l],
 			mesh->o_MRABelementIds[l],
 			one, //fake rhsq
@@ -63,6 +79,13 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_qFilter,
 			mesh->o_q);
 			}
+
+   for (int f = 0; f < mesh->Nfields; ++f) {
+     for(int n = 0; n < mesh->Np; ++n) {
+       dfloat test_me = (test_q[f*mesh->Np + n] > mesh->q[f*mesh->Np + n]) ? (test_q[f*mesh->Np + n] - mesh->q[f*mesh->Np + n]) : (mesh->q[f*mesh->Np + n] - test_q[f*mesh->Np + n]);
+       if (test_me > 1e-8) printf("bad val %d %d %lf %lf\n",f,n,test_q[f*mesh->Np + n],mesh->q[f*mesh->Np + n]);
+     }
+   }
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
