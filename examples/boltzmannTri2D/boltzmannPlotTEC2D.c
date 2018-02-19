@@ -30,11 +30,44 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
   fprintf(fp, "ZONE  N = %d  E = %d  F=FEPOINT , ET=TRIANGLE , STRANDID=1, SOLUTIONTIME = %.8f \n", TotalPoints,TotalCells,time);
 
   
+
+
+  dfloat *curlU   = (dfloat *) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *divU    = (dfloat *) calloc(mesh->Np, sizeof(dfloat));
   // Write data
   // compute plot node coordinates on the fly
   for(iint e=0;e<mesh->Nelements;++e){
+    // First compute the curl and div
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
+        dfloat rho = mesh->q[base + 0];
+        dfloat u = mesh->q[1 + base]*mesh->sqrtRT/rho;
+        dfloat v = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        dUdr += mesh->Dr[n*mesh->Np+m]*u;
+        dUds += mesh->Ds[n*mesh->Np+m]*u;
+        dVdr += mesh->Dr[n*mesh->Np+m]*v;
+        dVds += mesh->Ds[n*mesh->Np+m]*v;
+      }
+
+      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
+      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
+      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
+      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
+
+      dfloat dUdx = rx*dUdr + sx*dUds;
+      dfloat dUdy = ry*dUdr + sy*dUds;
+      dfloat dVdx = rx*dVdr + sx*dVds;
+      dfloat dVdy = ry*dVdr + sy*dVds;
+
+      curlU[n] = dVdx-dUdy;
+      divU[n]  = dUdx+dVdy;
+    }   
+
     for(iint n=0;n<mesh->plotNp;++n){
-      dfloat plotxn = 0, plotyn = 0, plotun=0, plotvn=0, plotpn=0, plotwzn=0;
+      dfloat plotxn = 0, plotyn = 0, plotun=0;
+      dfloat plotvn = 0, plotpn =0,  plotwn=0, plotdn=0;
 
       for(iint m=0;m<mesh->Np;++m){
 
@@ -47,19 +80,19 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
         dfloat um = mesh->q[1 + base]*mesh->sqrtRT/rho;
         dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
         //
-        dfloat wz = mesh->q[5 + base];
+        dfloat wz = curlU[m];
+        dfloat du = divU[m];
         //
-        
-        
         plotpn  += mesh->plotInterp[n*mesh->Np+m]*pm;
         plotun  += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn  += mesh->plotInterp[n*mesh->Np+m]*vm;
-        plotwzn += mesh->plotInterp[n*mesh->Np+m]*wz;
+        plotwn  += mesh->plotInterp[n*mesh->Np+m]*wz;
+        plotdn  += mesh->plotInterp[n*mesh->Np+m]*du;
      }
 
-      fprintf(fp,"%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\n",plotxn,plotyn,plotun,plotvn,plotpn,plotwzn);
+      fprintf(fp,"%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\n",plotxn,plotyn,plotun,plotvn,plotpn,plotwn, plotdn);
     }
-  }
+}
 
 
   // Write Connectivity
@@ -73,5 +106,9 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
   }
 
   fclose(fp);
+
+
+  free(curlU);
+  free(divU);
 
 }

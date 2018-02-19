@@ -4,7 +4,7 @@
 void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
 
-#if 0
+#if 1
  if(strstr(options,"PROBE")){
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -46,10 +46,15 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
   }
 
 
+
+
+
+
+
+
 #else 
   if(strstr(options,"PROBE")){
     
-
     // Move this routine to probe setup
 
 
@@ -65,8 +70,8 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
     
     dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
     dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
-    iint   *recvcount   = (iint   *) malloc(size*sizeof(int));
-    iint   *recvdisp    = (iint   *) malloc(size*sizeof(int));
+    iint   *recvcount   = (iint   *) malloc(size*sizeof(iint));
+    iint   *recvdisp    = (iint   *) malloc(size*sizeof(iint));
     iint   *probeIds    = (iint   *) malloc(mesh->probeNTotal*sizeof(iint)); 
     
     // Collect number of probes on the root  
@@ -82,6 +87,23 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
     // Collect probe ids
     MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_IINT, probeIds, recvcount, recvdisp, MPI_IINT, root, MPI_COMM_WORLD);
+
+    // if(rank==0){
+    //   for(iint id=0; id<mesh->probeNTotal; id++){
+    //     printf("id: %d  ProbeId: %d \n", id, probeIds[id]);
+    //   }
+    // }
+
+    // // Sort Probe Ids such that probes are ardered in ascending order
+
+    // iint *probeIndex = (iint *) malloc(2*mesh->probeNTotal*sizeof(iint));
+
+    // for(iint id=0; id<mesh->probeNTotal; id++){
+    // probeIndex
+
+
+
+    // }
 
     
     if(rank==root){
@@ -132,7 +154,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
       fprintf(fp, "%4e ", time); 
       for(iint p=0; p<mesh->probeNTotal; p++){
-        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p], recvData[p*probeNfields+0], 
+        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p],recvData[p*probeNfields+0], 
                                                         recvData[p*probeNfields+1],
                                                         recvData[p*probeNfields+2]);
       }

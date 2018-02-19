@@ -24,15 +24,20 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
   }
   
   
+  //
+  #if 1
+  boltzmannForces2D(mesh,t,options);
+  #endif
+
 
   // do error stuff on host
-    boltzmannError2D(mesh, t, options);
+  boltzmannError2D(mesh, t, options);
 
 
 
 
   if(strstr(options, "PML")){ 
-       
+
     if(strstr(options, "VTU")){ 
     
     #if 0
@@ -40,12 +45,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     sprintf(fname, "Allfields_Obl_mpml__t3_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
     boltzmannPlotVTUField2D(mesh, fname);
     #endif
-
-    // compute vorticity
-    // boltzmannComputeVorticity2D(mesh, mesh->q, 5, mesh->Nfields);
-    // output field files
-    //iint fld = 1;
-    
+      
     char fname[BUFSIZ];
     sprintf(fname, "foo_pml_%.0f_%04d_%04d.vtu", mesh->Re, rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);
