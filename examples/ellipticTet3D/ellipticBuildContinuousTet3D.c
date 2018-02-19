@@ -155,10 +155,12 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
       (*A)[cnt] = (*A)[n];
     }
   }
-  *nnz = cnt+1;
+  if (*nnz) cnt++;
+  *nnz = cnt;
 
   if(rank==0) printf("done.\n");
 
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);

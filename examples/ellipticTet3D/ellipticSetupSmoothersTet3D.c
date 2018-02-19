@@ -156,7 +156,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
     degree[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
-  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg);
+  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg);
   o_deg.copyTo(degree);
   mesh->device.finish();
   o_deg.free();

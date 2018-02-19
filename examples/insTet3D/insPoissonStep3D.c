@@ -164,7 +164,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
 
   // gather-scatter
   if(strstr(ins->pSolverOptions, "CONTINUOUS")){
-    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, ins->o_rhsP, dfloatString, "add");  
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
   }
 

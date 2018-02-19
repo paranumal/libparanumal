@@ -322,7 +322,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   iint *Ecols;
   dfloat *Ecoefs;
-  if(nnzPerRow){
+  if(nnzPerRow&&csrA->Nrows){
     Ecols  = (iint *) calloc(csrA->Nrows*nnzPerRow, sizeof(iint));
     Ecoefs = (dfloat *) calloc(csrA->Nrows*nnzPerRow, sizeof(dfloat));
   }
@@ -401,13 +401,13 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
 
   //copy null vector if present
-  if(csrA->null) 
+  if(csrA->null&&csrA->Nrows) 
     A->o_null = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->null);
 
-  if (csrA->diagInv)
+  if (csrA->diagInv&&csrA->Nrows)
     A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->diagInv);
 
-  if(A->E->nnzPerRow){
+  if(A->E->nnzPerRow&&csrA->Nrows){
     A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(iint), Ecols);
     A->E->o_coefs = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
     free(Ecols); free(Ecoefs);
@@ -567,7 +567,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
 
   //copy back to device
   if (A->NrecvTotal){
-    parAlmond->device.setStream(parAlmond->defaultStream);
+    parAlmond->device.setStream(parAlmond->dataStream);
     o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
     parAlmond->device.finish();
     parAlmond->device.setStream(parAlmond->defaultStream);

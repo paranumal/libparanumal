@@ -7,31 +7,34 @@
 // ok to use o_v = o_gsv
 void meshParallelGatherScatter(mesh_t *mesh,
                                ogs_t *ogs, 
-                               occa::memory &o_v,
-                               occa::memory &o_gsv){
+                               occa::memory &o_v){
 
-  // gather on DEVICE
-  mesh->gatherKernel(ogs->NtotalGather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, o_v, ogs->o_gatherTmp);
-
-  // extract gathered halo node data [i.e. shared nodes ]
-  if(ogs->Nhalo){
-    mesh->getKernel(ogs->Nhalo, ogs->o_gatherTmp, ogs->o_haloLocalIds, ogs->o_haloTmp); // subv = v[ids]
-    
-    // copy partially gathered halo data from DEVICE to HOST
-    ogs->o_haloTmp.copyTo(ogs->haloTmp);
-    
-    // gather across MPI processes then scatter back
-    gsParallelGatherScatter(ogs->haloGsh, ogs->haloTmp, dfloatString, "add"); // warning: hardwired dfloat type
-    
-    // copy totally gather halo data back from HOST to DEVICE
-    ogs->o_haloTmp.copyFrom(ogs->haloTmp);
-    
-    // insert totally gathered halo node data - need this kernel 
-    mesh->putKernel(ogs->Nhalo, ogs->o_haloTmp,ogs->o_haloLocalIds, ogs->o_gatherTmp); // v[ids] = subv
+  // gather halo nodes on device
+  if (ogs->NhaloGather) {
+    mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_v, ogs->o_haloGatherTmp);
+    ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
   }
 
-  // do scatter back to local nodes
-  mesh->scatterKernel(ogs->NtotalGather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, ogs->o_gatherTmp, o_gsv);
+  if(ogs->NnonHaloGather) {
+    mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_v);
+  }
+
+  if (ogs->NhaloGather) {
+    // MPI based gather scatter using libgs
+    gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
+
+    // copy totally gather halo data back from HOST to DEVICE
+    mesh->device.setStream(mesh->dataStream);
+    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+
+    // wait for async copy
+    mesh->device.finish();
+
+    // do scatter back to local nodes
+    mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_v);
+    mesh->device.finish();
+    mesh->device.setStream(mesh->defaultStream);
+  }
 }
 
 void meshParallelGather(mesh_t *mesh,
@@ -39,34 +42,33 @@ void meshParallelGather(mesh_t *mesh,
                         occa::memory &o_v,
                         occa::memory &o_gv){
 
-  // MPI info
-  iint rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  // gather halo nodes on device
+  if (ogs->NhaloGather) {
+    mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_v, ogs->o_haloGatherTmp);
+    ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
+  }
 
-  if(ogs->Nhalo){
-    // gather on DEVICE
-    mesh->gatherKernel(ogs->NtotalGather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, o_v, ogs->o_gatherTmp);
-    
-    mesh->getKernel(ogs->Nhalo, ogs->o_gatherTmp, ogs->o_haloLocalIds, ogs->o_haloTmp); 
+  if(ogs->NnonHaloGather) {
+    mesh->gatherKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_v, o_gv);
+  }
 
-    // copy partially gathered halo data from DEVICE to HOST
-    ogs->o_haloTmp.copyTo(ogs->haloTmp);
+  if (ogs->NhaloGather) {
+    // MPI based gather scatter using libgs
+    gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
+
+    mesh->device.setStream(mesh->dataStream);
     
-    // gather across MPI processes then scatter back
-    gsParallelGatherScatter(ogs->haloGsh, ogs->haloTmp, dfloatString, "add"); // warning: hardwired dfloat type adn op
+    // copy gathered halo data back from HOST to DEVICE
+    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
     
-    if (ogs->NownedHalo) {
-      // copy owned and gathered halo data back from HOST to DEVICE
-      ogs->o_haloTmp.copyFrom(ogs->haloTmp, ogs->NownedHalo*sizeof(dfloat));
-    
-      // insert totally gathered halo node data - need this kernel 
-      mesh->putKernel(ogs->NownedHalo, ogs->o_haloTmp, ogs->o_haloLocalIds, ogs->o_gatherTmp); 
-    }
-    o_gv.copyFrom(ogs->o_gatherTmp,ogs->Ngather*sizeof(dfloat)); //copy the gathered data
-  } else {
-    // gather on DEVICE
-    mesh->gatherKernel(ogs->Ngather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, o_v, o_gv);
+    // wait for async copy
+    mesh->device.finish();
+
+    // insert totally gathered halo node data - need this kernel 
+    mesh->putKernel(ogs->NhaloGather, ogs->o_haloGatherTmp, ogs->o_ownedHaloGatherIds, o_gv); 
+
+    mesh->device.finish();
+    mesh->device.setStream(mesh->defaultStream);
   }
 }
 
@@ -75,35 +77,33 @@ void meshParallelScatter(mesh_t *mesh,
                         occa::memory &o_v,
                         occa::memory &o_sv){
 
-  // MPI info
-  iint rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  // gather halo nodes on device
+  if (ogs->NhaloGather) {
+    mesh->getKernel(ogs->NhaloGather, o_v, ogs->o_ownedHaloGatherIds, ogs->o_haloGatherTmp);
+    ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
+  }
 
-  if(ogs->Nhalo){
-    if (ogs->NownedHalo)
-      mesh->getKernel(ogs->NownedHalo, o_v, ogs->o_haloLocalIds, ogs->o_haloTmp); 
+  if(ogs->NnonHaloGather) {
+    mesh->scatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_v, o_sv);
+  }
+
+  if (ogs->NhaloGather) {
+    // MPI based gather scatter using libgs
+    gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
+
+    // copy totally gather halo data back from HOST to DEVICE
+    mesh->device.setStream(mesh->dataStream);
     
-    //zero out excess halo buffer
-    for (iint n=ogs->NownedHalo;n<ogs->Nhalo;n++) ogs->haloTmp[n] = 0;
-
-    if (ogs->NownedHalo)  // copy owned halo data from DEVICE to HOST
-      ogs->o_haloTmp.copyTo(ogs->haloTmp, ogs->NownedHalo*sizeof(dfloat));
+    // copy owned and gathered halo data back from HOST to DEVICE
+    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
     
-    o_v.copyTo(ogs->o_gatherTmp,ogs->Ngather*sizeof(dfloat)); //copy the data
+    // wait for async copy
+    mesh->device.finish();
 
-    // scatter across MPI processes 
-    gsParallelGatherScatter(ogs->haloGsh, ogs->haloTmp, dfloatString, "add"); // warning: hardwired dfloat type adn op
-    
-    // copy scattered halo data from DEVICE to HOST
-    ogs->o_haloTmp.copyFrom(ogs->haloTmp);
+    // insert totally gathered halo node data - need this kernel 
+    mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_sv);
 
-    mesh->putKernel(ogs->Nhalo, ogs->o_haloTmp, ogs->o_haloLocalIds, ogs->o_gatherTmp);
-
-    // do scatter back to local nodes
-    mesh->scatterKernel(ogs->NtotalGather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, ogs->o_gatherTmp, o_sv);
-  } else {
-    // do scatter back to local nodes
-    mesh->scatterKernel(ogs->Ngather, ogs->o_gatherOffsets, ogs->o_gatherLocalIds, o_v, o_sv);  
+    mesh->device.finish();
+    mesh->device.setStream(mesh->defaultStream);
   }
 }
