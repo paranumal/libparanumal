@@ -7,8 +7,9 @@ kernel void put(const int N,
   for(iint n=0;n<N;++n;tile(256)){
     if(n<N){
       const iint id = ids[n];
-      v[id] = subv[n];
+      if (id > -1) {
+        v[id] = subv[n];
+      }
     }
   }
-
 }

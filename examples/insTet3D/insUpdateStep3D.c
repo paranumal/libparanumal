@@ -1,9 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insUpdateStep3D(ins_t *ins, iint tstep, iint haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer,
-				        char   * options){
+void insUpdateStep3D(ins_t *ins, iint tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt + ins->dt;
@@ -20,13 +18,13 @@ void insUpdateStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                     ins->o_pHaloBuffer);
 
       // copy extracted halo to HOST
-      ins->o_pHaloBuffer.copyTo(sendBuffer);
+      ins->o_pHaloBuffer.copyTo(ins->pSendBuffer);
 
       // start halo exchange
       meshHaloExchangeStart(mesh,
                            mesh->Np*sizeof(dfloat),
-                           sendBuffer,
-                           recvBuffer);
+                           ins->pSendBuffer,
+                           ins->pRecvBuffer);
     }
   }
 
@@ -46,7 +44,7 @@ void insUpdateStep3D(ins_t *ins, iint tstep, iint haloBytes,
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
-      ins->o_pHaloBuffer.copyFrom(recvBuffer);
+      ins->o_pHaloBuffer.copyFrom(ins->pRecvBuffer);
 
       ins->pressureHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
