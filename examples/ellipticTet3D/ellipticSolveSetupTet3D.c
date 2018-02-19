@@ -41,9 +41,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 
   //setup async halo stream
-  solver->defaultStream = mesh->device.getStream();
-  solver->dataStream = mesh->device.createStream();
-  mesh->device.setStream(solver->defaultStream);
+  solver->defaultStream = mesh->defaultStream;
+  solver->dataStream = mesh->dataStream;
 
   iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
@@ -280,15 +279,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   //on-host version of gather-scatter
   int verbose = strstr(options,"VERBOSE") ? 1:0;
   mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
-
-  // setup occa gather scatter
-  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
-                                             mesh->gatherLocalIds,
-                                             mesh->gatherBaseIds,
-                                             mesh->gatherBaseRanks,
-                                             mesh->gatherHaloFlags,
-                                             verbose);
-  solver->o_invDegree = mesh->ogs->o_invDegree;
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
   ellipticParallelGatherScatterSetup(solver, options);

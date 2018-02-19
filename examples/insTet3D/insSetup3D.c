@@ -204,6 +204,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   occa::kernelInfo kernelInfo;
   meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
 
+
   //add boundary data to kernel info
   kernelInfo.addInclude(boundaryHeaderFileName);
 
@@ -375,14 +376,30 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
     }
   }
 
-
-  if(mesh->totalHaloPairs){
-    ins->o_tHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat));
-    ins->o_vHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat));
-    ins->o_pHaloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Np *sizeof(dfloat));
-  }
-
   ins->mesh = mesh;
+  
+  if(mesh->totalHaloPairs){//halo setup
+    iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+    occa::memory o_tsendBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
+    occa::memory o_trecvBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
+    ins->o_tHaloBuffer = mesh->device.malloc(tHaloBytes);
+    ins->tSendBuffer = (dfloat*) o_tsendBuffer.getMappedPointer();
+    ins->tRecvBuffer = (dfloat*) o_trecvBuffer.getMappedPointer();
+
+    iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    occa::memory o_vsendBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
+    occa::memory o_vrecvBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
+    ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
+    ins->vSendBuffer = (dfloat*) o_vsendBuffer.getMappedPointer();
+    ins->vRecvBuffer = (dfloat*) o_vrecvBuffer.getMappedPointer();
+
+    iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
+    occa::memory o_psendBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
+    occa::memory o_precvBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
+    ins->pSendBuffer = (dfloat*) o_psendBuffer.getMappedPointer();
+    ins->pRecvBuffer = (dfloat*) o_precvBuffer.getMappedPointer();
+  }
 
   for (int r=0;r<size;r++) {
     if (r==rank) {

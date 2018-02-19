@@ -332,6 +332,10 @@ typedef struct {
 
   // occa stuff
   occa::device device;
+
+  occa::stream defaultStream;
+  occa::stream dataStream;
+
   occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
@@ -615,7 +619,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
                                       int  *gatherHaloFlags,
                                       int verbose);
 
-void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv);
+void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v);
 void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_sv);
 

@@ -247,11 +247,13 @@ dcoo *newDCOO(parAlmond_t *parAlmond, csr *B){
   A->NrecvPairs = B->NrecvPairs;
   A->NsendMessages = B->NsendMessages;
   A->NrecvMessages = B->NrecvMessages;
-  A->sendBuffer = B->sendBuffer;
-  if (A->NrecvTotal)
-    A->recvBuffer = (dfloat*) malloc(A->NrecvTotal*sizeof(dfloat));
-  if (A->NsendTotal)
-    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
+  
+  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
+  if (A->NsendTotal) {
+    occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
+  }
 
   A->haloSendRequests = B->haloSendRequests;
   A->haloRecvRequests = B->haloRecvRequests;
@@ -320,7 +322,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   iint *Ecols;
   dfloat *Ecoefs;
-  if(nnzPerRow){
+  if(nnzPerRow&&csrA->Nrows){
     Ecols  = (iint *) calloc(csrA->Nrows*nnzPerRow, sizeof(iint));
     Ecoefs = (dfloat *) calloc(csrA->Nrows*nnzPerRow, sizeof(dfloat));
   }
@@ -399,13 +401,13 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
 
   //copy null vector if present
-  if(csrA->null) 
+  if(csrA->null&&csrA->Nrows) 
     A->o_null = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->null);
 
-  if (csrA->diagInv)
+  if (csrA->diagInv&&csrA->Nrows)
     A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->diagInv);
 
-  if(A->E->nnzPerRow){
+  if(A->E->nnzPerRow&&csrA->Nrows){
     A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(iint), Ecols);
     A->E->o_coefs = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
     free(Ecols); free(Ecoefs);
@@ -429,12 +431,15 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->NrecvPairs = csrA->NrecvPairs;
   A->NsendMessages = csrA->NsendMessages;
   A->NrecvMessages = csrA->NrecvMessages;
-  A->sendBuffer = csrA->sendBuffer;
-  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
   A->haloSendRequests = csrA->haloSendRequests;
   A->haloRecvRequests = csrA->haloRecvRequests;
 
-  if (A->NsendTotal) A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat),A->sendBuffer);
+  if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
+  if (A->NsendTotal) {
+    occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
+  }
 
   return A;
 }
@@ -485,14 +490,21 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
 
   occaTimerTic(parAlmond->device,"dcoo axpy");
   if (A->NsendTotal) {
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->dataStream);
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
+    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
   }
 
-  if (A->NsendTotal + A->NrecvTotal)
+  if (A->NsendTotal + A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream);
+    parAlmond->device.finish();
     dcooHaloExchangeStart(A, sizeof(dfloat), A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   if (A->diagNNZ)
     parAlmond->agg_interpolateKernel(A->diagNNZ, A->o_diagRows, A->o_diagCols, A->o_diagCoefs, o_x, o_y);
@@ -501,9 +513,14 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
     dcooHaloExchangeFinish(A);
 
   //copy back to device
-  if(A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
+  if(A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream);
+    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
                   A->NlocalCols*sizeof(dfloat));
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->defaultStream);
+    parAlmond->device.finish();
+  }
 
   if (A->offdNNZ)
     parAlmond->agg_interpolateKernel(A->offdNNZ, A->o_offdRows, A->o_offdCols, A->o_offdCoefs, o_x, o_y);
@@ -517,17 +534,26 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
 
   occaTimerTic(parAlmond->device,"hyb axpy");
   if (A->NsendTotal) {
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->dataStream);
+
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.copyTo(A->sendBuffer);
-  }
+    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
 
-  if (A->NsendTotal+A->NrecvTotal)
-    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   // y <-- alpha*E*x+beta*y
   axpy(parAlmond, A->E, alpha, o_x, beta, o_y);
+
+  if (A->NsendTotal+A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream); 
+    parAlmond->device.finish();
+    hybHaloExchangeStart(A, sizeof(dfloat),A->sendBuffer, A->recvBuffer);
+    parAlmond->device.setStream(parAlmond->defaultStream);
+  }
 
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
@@ -540,8 +566,13 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
     hybHaloExchangeFinish(A);
 
   //copy back to device
-  if (A->NrecvTotal)
-    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+  if (A->NrecvTotal){
+    parAlmond->device.setStream(parAlmond->dataStream);
+    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+    parAlmond->device.finish();
+    parAlmond->device.setStream(parAlmond->defaultStream);
+    parAlmond->device.finish();
+  }
 
   // y <-- alpha*C*x + y
   if (A->C->nnz)

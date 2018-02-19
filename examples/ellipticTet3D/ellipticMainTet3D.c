@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -171,7 +171,7 @@ int main(int argc, char **argv){
 
   // gather-scatter
   if(strstr(options, "CONTINUOUS")){
-    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_r, o_r, dfloatString, "add");  
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_r, dfloatString, "add");  
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
   }
 

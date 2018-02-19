@@ -1,9 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer,
-				        char   * options){
+void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
@@ -26,13 +24,13 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                ins->o_vHaloBuffer);
 
     // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(sendBuffer);           
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
                          mesh->Np*(ins->NVfields)*sizeof(dfloat),
-                         sendBuffer,
-                         recvBuffer);
+                         ins->vSendBuffer,
+                         ins->vRecvBuffer);
   }
 
   // computes div u^(n+1) volume term
@@ -50,7 +48,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
 
-    ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
 
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
@@ -166,7 +164,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
 
   // gather-scatter
   if(strstr(ins->pSolverOptions, "CONTINUOUS")){
-    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, ins->o_rhsP, dfloatString, "add");  
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
   }
 
