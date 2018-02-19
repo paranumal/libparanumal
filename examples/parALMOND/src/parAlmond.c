@@ -88,7 +88,8 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   iint TotalRows = globalRowStarts[size];
   iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
-  
+  if(rank==0) printf("Setting up AMG...");fflush(stdout);
+
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
 
   //record if there is null space
@@ -100,6 +101,8 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
+  
+  if(rank==0) printf("done.\n");
 
   if (strstr(parAlmond->options, "VERBOSE"))
     parAlmondReport(parAlmond);

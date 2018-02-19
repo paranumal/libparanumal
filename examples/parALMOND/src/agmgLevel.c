@@ -295,7 +295,6 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
     //if no nullspace, use sparse A
     localNNZ = A->diagNNZ+A->offdNNZ;
     
-    printf("localNNZ = %d\n", localNNZ);
     if (localNNZ) {
       rows = (iint *) calloc(localNNZ,sizeof(iint));
       cols = (iint *) calloc(localNNZ,sizeof(iint));

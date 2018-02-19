@@ -38,7 +38,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   levels[lev]->Nrows = A->Nrows;
   levels[lev]->Ncols = A->Ncols;
 
-  if(rank==0) printf("Setting up AMG...");fflush(stdout);
+  
   SmoothType smoothType;
   if (strstr(options,"CHEBYSHEV")) {
     smoothType = CHEBYSHEV;
@@ -136,7 +136,6 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     globalSize = globalCoarseSize;
     lev++;
   } 
-  if(rank==0) printf("done.\n");
   
   //allocate vectors required
   occa::device device = parAlmond->device;

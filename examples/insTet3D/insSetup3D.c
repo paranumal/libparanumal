@@ -15,8 +15,18 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
+  long int hostId = gethostid();
+
+  long int* hostIds = (long int*) calloc(size,sizeof(long int));
+  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
+
+  int deviceID = 0;
+  for (int r=0;r<rank;r++) {
+    if (hostIds[r]==hostId) deviceID++;
+  }
+
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", deviceID);
   //sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
@@ -218,7 +228,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   int pBCType[5] = {0,2,2,1,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
   
   //Solver tolerances 
-  ins->presTOL = 1E-10;
+  ins->presTOL = 1E-8;
   ins->velTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
