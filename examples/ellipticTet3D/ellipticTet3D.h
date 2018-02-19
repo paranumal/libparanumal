@@ -98,7 +98,7 @@ typedef struct {
 
 void ellipticSetupTet3D(mesh3D *mesh, occa::kernelInfo &kernelInfo);
 
-void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
+void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v,
           const char *type, const char *op);
 
 void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);

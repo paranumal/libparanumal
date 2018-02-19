@@ -294,6 +294,8 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   if(!nullSpace) {
     //if no nullspace, use sparse A
     localNNZ = A->diagNNZ+A->offdNNZ;
+    
+    printf("localNNZ = %d\n", localNNZ);
     if (localNNZ) {
       rows = (iint *) calloc(localNNZ,sizeof(iint));
       cols = (iint *) calloc(localNNZ,sizeof(iint));
@@ -318,6 +320,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
     }
   } else {
     localNNZ = A->Nrows*coarseTotal; //A is dense due to nullspace augmentation
+
     if (localNNZ) {
       rows = (iint *) calloc(localNNZ,sizeof(iint));
       cols = (iint *) calloc(localNNZ,sizeof(iint));

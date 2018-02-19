@@ -1,30 +1,40 @@
 // OCCA+gslib gather scatter
 typedef struct {
   
-  iint         Ngather;          //  number of owned gather nodes
+  iint         Ngather;     //  total number of gather nodes
   iint         NtotalGather;     //  total number of gather nodes
+  iint         NnonHaloGather;       //  number of local gathered nodes 
+  iint         NhaloGather;          //  number of gathered nodes on halo
 
-  iint         *gatherOffsets;
-  iint         *gatherHaloFlags;
-  iint         *gatherBaseRanks;
-  iint         *gatherLocalIds;
-  iint         *gatherBaseIds;
+  iint         *nonHaloGatherOffsets;
+  iint         *nonHaloGatherHaloFlags;
+  iint         *nonHaloGatherBaseRanks;
+  iint         *nonHaloGatherLocalIds;
+  iint         *nonHaloGatherBaseIds;
 
-  dfloat * gatherTmp;
-  occa::memory o_gatherOffsets;  //  start of local bases
-  occa::memory o_gatherLocalIds; //  base connected nodes
-  occa::memory o_gatherTmp;      //  DEVICE gather buffer
+  iint         *haloGatherOffsets;
+  iint         *haloGatherHaloFlags;
+  iint         *haloGatherBaseRanks;
+  iint         *haloGatherLocalIds;
+  iint         *haloGatherBaseIds;
+
+  iint *ownedHaloGatherIds;
+
+  dfloat * haloGatherTmp;
+  occa::memory o_nonHaloGatherOffsets;  //  start of local bases
+  occa::memory o_nonHaloGatherLocalIds; //  base connected nodes
+  occa::memory o_nonHaloGatherTmp;      //  DEVICE gather buffer
+
+  occa::memory o_haloGatherOffsets;  //  start of local bases
+  occa::memory o_haloGatherLocalIds; //  base connected nodes
+  occa::memory o_haloGatherTmp;      //  DEVICE gather buffer
   
+  occa::memory o_ownedHaloGatherIds;
+
   void         *haloGsh;       // gslib gather 
   iint         Nhalo;            //  number of halo nodes
   iint         NownedHalo;       //  number of owned halo nodes
-  occa::memory o_haloLocalIds;   //  list of halo nodes to
-  occa::memory o_haloTmp;        //  temporary halo buffer
-  dfloat       *haloTmp;         //  temporary HOST halo buffer
-
-  iint *haloLocalIds;
-  iint *haloGlobalIds;
-
+  
   //degree vectors
   dfloat *invDegree, *gatherInvDegree;
   occa::memory o_invDegree;

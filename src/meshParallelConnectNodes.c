@@ -61,6 +61,9 @@ int parallelCompareBaseNodes(const void *a, const void *b){
   if(fa->baseRank < fb->baseRank) return -1;
   if(fa->baseRank > fb->baseRank) return +1;
 
+  if(fa->haloFlag < fb->haloFlag) return -1;
+  if(fa->haloFlag > fb->haloFlag) return +1;
+
   if(fa->baseId < fb->baseId) return -1;
   if(fa->baseId > fb->baseId) return +1;
 
@@ -187,8 +190,6 @@ void meshParallelConnectNodes(mesh_t *mesh){
 
   // sort based on base nodes (rank,element,node at base)
   qsort(sendNodes, localNodeCount, sizeof(parallelNode_t), parallelCompareOwners);
-
-  // now squeeze gaps out of a globalNumbering of local nodes
  
   // count how many nodes to send to each process
   iint *sendCounts = (iint *) calloc(size,sizeof(iint));
@@ -218,7 +219,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
                 recvNodes, recvCounts, recvOffsets, MPI_CHAR,
                 MPI_COMM_WORLD);
 
-  // sort by global index
+  // sort by global index shifting halo nodes to the end
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)

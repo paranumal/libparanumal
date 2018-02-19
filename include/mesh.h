@@ -619,7 +619,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
                                       int  *gatherHaloFlags,
                                       int verbose);
 
-void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv);
+void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v);
 void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_sv);
 

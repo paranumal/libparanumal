@@ -11,7 +11,7 @@
 #define AGMGBDIM 32 //block size
 #define SIMDWIDTH 32 //width of simd blocks
 #define MAX_LEVELS 100
-#define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
+#define GPU_CPU_SWITCH_SIZE 10000 //host-device switch threshold
 
 
 void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);

@@ -17,8 +17,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   occa::memory &o_tmp = solver->o_tmp;
 
   if(strstr(options, "CONTINUOUS")){
-    ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo;
+    ogs_t *ogs = solver->mesh->ogs;
 
     //pre-mask
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_q);
@@ -27,7 +26,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(halo->Ngather) {
+    if(ogs->NhaloGather) {
       solver->partialAxKernel(solver->NglobalGatherElements, 
                               solver->o_globalGatherElementList,
                               mesh->o_ggeo, 
@@ -37,8 +36,8 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                               mesh->o_MM, lambda, 
                               o_q, o_Aq);
       if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
-      halo->o_gatherTmp.copyTo(halo->gatherTmp);
+      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
+      ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
     }
     if(solver->NlocalGatherElements){
       solver->partialAxKernel(solver->NlocalGatherElements, 
@@ -62,22 +61,22 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     }
 
     // C0 halo gather-scatter (on data stream)
-    if(halo->Ngather) {
+    if(ogs->NhaloGather) {
       occa::streamTag tag;
 
       // MPI based gather scatter using libgs
-      gsParallelGatherScatter(halo->haloGsh, halo->gatherTmp, dfloatString, "add");
+      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
       mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
+      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
 
       // wait for async copy
       tag = mesh->device.tagStream();
       mesh->device.waitFor(tag);
 
       // do scatter back to local nodes
-      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
+      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_Aq);
 
       // make sure the scatter has finished on the data stream
       tag = mesh->device.tagStream();
@@ -92,7 +91,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
     // finalize gather using local and global contributions
     mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather) mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
+    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
 
     //post-mask
     if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
