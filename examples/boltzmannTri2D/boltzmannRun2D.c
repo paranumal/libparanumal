@@ -115,8 +115,8 @@ occa::initTimer(mesh->device);
     mesh->device.finish();
     occa::tic("Boltzmann Solver");
 
-for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-  // for(iint tstep=0;tstep<1000;++tstep){
+ for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  //for(iint tstep=0;tstep<10;++tstep){
 
      if(strstr(options, "REPORT")){
       if((tstep%mesh->errorStep)==0){
@@ -166,11 +166,11 @@ boltzmannReport2D(mesh, mesh->NtimeSteps,options);
 occa::printTimer();
 
 
-  if (haloBytes) {
-  //Deallocate Halo MPI storage
-  free(recvBuffer);
-  free(sendBuffer);
-  }
+  // if (haloBytes) {
+  // //Deallocate Halo MPI storage
+  // free(recvBuffer);
+  // free(sendBuffer);
+  // }
 }
 
 

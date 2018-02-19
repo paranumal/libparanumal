@@ -56,6 +56,7 @@ boltzmannMRABSetup2D.o \
 boltzmannMRABPmlSetup2D.o \
 boltzmannPmlSetup2D.o \
 boltzmannMRRun2D.o \
+boltzmannForces2D.o \
 
 # library objects
 LOBJS = \

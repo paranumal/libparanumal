@@ -23,6 +23,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options);
 // void boltzmannMRRun2D(mesh2D *mesh, char *options);
 
 void boltzmannError2D(mesh2D *mesh, dfloat time, char *opt);
+void boltzmannForces2D(mesh2D *mesh, dfloat time, char *opt);
 
 void boltzmannReport2D(mesh2D *mesh, iint tstep, char *opt);
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
