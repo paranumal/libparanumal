@@ -96,7 +96,7 @@ void insRun3D(ins_t *ins, char *options){
     }
 
     if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
-    if (rank==0) printf("\ntotaltime = %3.2E, advectiontime = %3.2E, velocitytime = %3.2E, pressuretime = %3.2E, updatetime = %3.2E \n", toc_tot- tic_tot, toc_adv- tic_adv, toc_vel- tic_vel, toc_pre- tic_pre, toc_upd- tic_upd );
+    //if (rank==0) printf("\ntotaltime = %3.2E, advectiontime = %3.2E, velocitytime = %3.2E, pressuretime = %3.2E, updatetime = %3.2E \n", toc_tot- tic_tot, toc_adv- tic_adv, toc_vel- tic_vel, toc_pre- tic_pre, toc_upd- tic_upd );
 
      if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
