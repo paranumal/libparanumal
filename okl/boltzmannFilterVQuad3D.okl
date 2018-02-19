@@ -19,7 +19,9 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    exclusive iint eC, eL, eR, eU, eD, faceC, faceL, faceR, faceU, faceD, shiftl;
+    shared iint eC;
+    shared iint mark_edge;
+    shared iint shiftl;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
@@ -30,25 +32,30 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	shiftl = shift[l];
 	
 	eC = elementIds[eo];
-	eL = EToE[eC*p_Nfaces+0];
-	eR = EToE[eC*p_Nfaces+2];
+	const iint eL = EToE[eC*p_Nfaces+0];
+	const iint eR = EToE[eC*p_Nfaces+2];
 
 	//unordered, used only for bounds checking
-	eU = EToE[eC*p_Nfaces+1];
-	eD = EToE[eC*p_Nfaces+3];
+	const iint eU = EToE[eC*p_Nfaces+1];
+	const iint eD = EToE[eC*p_Nfaces+3];
 
-	faceC = cubeFaceNumber[eC];
-	faceL = cubeFaceNumber[eL];
-	faceR = cubeFaceNumber[eR];
-	faceU = cubeFaceNumber[eU];
-	faceD = cubeFaceNumber[eD];
+	const iint faceC = cubeFaceNumber[eC];
+	const iint faceL = cubeFaceNumber[eL];
+	const iint faceR = cubeFaceNumber[eR];
+	const iint faceU = cubeFaceNumber[eU];
+	const iint faceD = cubeFaceNumber[eD];
 
+	mark_edge  = (faceC - faceL)*(faceC - faceL);
+	mark_edge += (faceC - faceR)*(faceC - faceR);
+	mark_edge += (faceC - faceU)*(faceC - faceU);
+	mark_edge += (faceC - faceD)*(faceC - faceD);
+	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	   
 	    //edge of an mrab level, but not the edge of a face
-	    if(((faceC - faceL)*(faceC - faceL) + (faceC - faceR)*(faceC - faceR) + (faceC - faceU)*(faceC - faceU) + (faceC - faceD)*(faceC - faceD)) < 1) {
+	    if(mark_edge < 1) {
 	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
 		
@@ -112,7 +119,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(((faceC - faceL)*(faceC - faceL) + (faceC - faceR)*(faceC - faceR) + (faceC - faceU)*(faceC - faceU) + (faceC - faceD)*(faceC - faceD)) < 1){
+	if(mark_edge < 1){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;
