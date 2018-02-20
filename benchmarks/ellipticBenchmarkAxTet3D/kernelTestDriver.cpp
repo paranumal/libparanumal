@@ -27,7 +27,7 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 
 int main(int argc, char **argv){
 
-  int NKernels = 3;
+  int NKernels = 2;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
 
   int pad;
 
-  int Niter = 1, it;
+  int Niter = 100, it;
   double gflops;
   if (option == 0){
     gflops =  p_Np*24+p_Np*p_Np*8+p_NfacesNfp*37 + p_Np*p_NfacesNfp * 8;}
@@ -124,7 +124,7 @@ int main(int argc, char **argv){
 
     char buf[200];
     for (int i =1; i<NKernels+1; i++){
-      printf("compiling 3D kernel %d ...\n", i);
+      printf("compiling kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxIpdgTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxIpdgTet3D.okl", buf, kernelInfo);
     }
@@ -172,7 +172,7 @@ int main(int argc, char **argv){
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =2;i<=NKernels; i++){
+    for (int i =1;i<=NKernels; i++){
       datafloat lambda = 1.;
       datafloat tau  = 0.5;    
       occa::streamTag startTag = device.tagStream();
@@ -200,7 +200,6 @@ int main(int argc, char **argv){
       double elapsed = device.timeBetween(startTag, stopTag);
 
       printf("\n\nKERNEL %d  ================================================== \n\n", i);
-      printf("OCCA elapseNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
       printf("gflops = %f time = %f \n", gflops, elapsed);
       results3D[i-1] = elapsed/Niter;
@@ -225,27 +224,6 @@ int main(int argc, char **argv){
     }
   }
   else{
-    /*
-     * : Your package was not received at the UPS facility as originally scheduled
-
-     const int Nelements,
-     const iint   * restrict elementList,
-     const dfloat * restrict ggeo,
-     const dfloat * restrict SrrT,
-     const dfloat * restrict SrsT,
-     const dfloat * restrict SrtT,
-     const dfloat * restrict SsrT,
-     const dfloat * restrict SssT,
-     const dfloat * restrict SstT,
-     const dfloat * restrict StrT,
-     const dfloat * restrict StsT,
-     const dfloat * restrict SttT,
-     const dfloat * restrict MM,
-     const dfloat lambda,
-     const dfloat  * restrict q,
-     dfloat  * restrict Aq
-
-     * */
     datafloat  *ggeo, *SrrT,  *SrsT,  *SrtT,  *SssT,  *SsrT, *SstT,  *StsT, *StrT,  *SttT,  *MM, *q, *Aq;
     int  *elementList;
     occa::memory o_elementList, o_ggeo, o_SrrT, o_SrsT, o_SrtT, o_SsrT,o_SssT,o_SstT, o_StrT, o_StsT, o_SttT, o_MM, o_q, o_Aq; 
@@ -290,7 +268,7 @@ int main(int argc, char **argv){
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =2;i<=NKernels; i++){
+    for (int i =1;i<=NKernels; i++){
       datafloat lambda = 1.;
       occa::streamTag startTag = device.tagStream();
 
@@ -316,7 +294,6 @@ int main(int argc, char **argv){
       occa::streamTag stopTag = device.tagStream();
       double elapsed = device.timeBetween(startTag, stopTag);
       printf("\n\nKERNEL %d  ================================================== \n\n", i);
-      printf("OCCA elapseNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
       printf("number of flops = %f time = %f \n", gflops, elapsed);
       results3D[i-1] = elapsed/Niter;
@@ -348,10 +325,10 @@ int main(int argc, char **argv){
 
   //printf("\n\nBWfromCopy%d = [", E);
   for (int k=1; k<=NKernels; k++){
-
+printf("==== this is kernel %d \n", k);
     int p_Nq = k+1;
     int p_gjNq = k+2;
-    int Niter = 1;
+    int Niter = 100;
     double gflops;
     int Nbytes;
     if (option == 0){
