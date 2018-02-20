@@ -99,6 +99,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
   if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
 
   // loop over all elements
+  #pragma omp parallel for
   for(iint eM=0;eM<mesh->Nelements;++eM){
 
     iint gbase = eM*mesh->Nggeo;
@@ -225,12 +226,15 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
           }
 
           if(fabs(AnmP)>tol){
-            // remote info
-            (*A)[nnz].row = globalIds[eM*mesh->Np+n];
-            (*A)[nnz].col = globalIds[eP*mesh->Np+m];
-            (*A)[nnz].val = AnmP;
-            (*A)[nnz].ownerRank = rankM;
-            ++nnz;
+            #pragma omp critical
+            {
+              // remote info
+              (*A)[nnz].row = globalIds[eM*mesh->Np+n];
+              (*A)[nnz].col = globalIds[eP*mesh->Np+m];
+              (*A)[nnz].val = AnmP;
+              (*A)[nnz].ownerRank = rankM;
+              ++nnz;
+            }
           }
         }
       }
@@ -241,11 +245,14 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCTyp
         dfloat Anm = BM[m+n*mesh->Np];
 
         if(fabs(Anm)>tol){
-          (*A)[nnz].row = globalIds[eM*mesh->Np+n];
-          (*A)[nnz].col = globalIds[eM*mesh->Np+m];
-          (*A)[nnz].val = Anm;
-          (*A)[nnz].ownerRank = rankM;
-          ++nnz;
+          #pragma omp critical
+          {
+            (*A)[nnz].row = globalIds[eM*mesh->Np+n];
+            (*A)[nnz].col = globalIds[eM*mesh->Np+m];
+            (*A)[nnz].val = Anm;
+            (*A)[nnz].ownerRank = rankM;
+            ++nnz;
+          }
         }
       }
     }

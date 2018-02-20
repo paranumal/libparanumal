@@ -271,6 +271,7 @@ csr * strong_graph(csr *A, dfloat threshold){
     diagA[i] = A->diagCoefs[A->diagRowStarts[i]];
   csrHaloExchange(A, sizeof(dfloat), diagA, A->sendBuffer, diagA+A->NlocalCols);
 
+  #pragma omp parallel for
   for(iint i=0; i<N; i++){
     dfloat sign = (diagA[i] >= 0) ? 1:-1;
     dfloat Aii = fabs(diagA[i]);
@@ -329,6 +330,7 @@ csr * strong_graph(csr *A, dfloat threshold){
   if (C->offdNNZ) C->offdCols = (iint *) calloc(C->offdNNZ, sizeof(iint));
 
   // fill in the columns for strong connections
+  #pragma omp parallel for
   for(iint i=0; i<N; i++){
     dfloat sign = (diagA[i] >= 0) ? 1:-1;
     dfloat Aii = fabs(diagA[i]);
@@ -481,6 +483,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   int done = 0;
   while(!done){
     // first neighbours
+    #pragma omp parallel for
     for(iint i=0; i<N; i++){
 
       iint smax = states[i];
@@ -518,6 +521,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
     csrHaloExchange(A, sizeof(iint), Ti, iintSendBuffer, Ti+A->NlocalCols);
 
     // second neighbours
+    #pragma omp parallel for
     for(iint i=0; i<N; i++){
       iint   smax = Ts[i];
       dfloat rmax = Tr[i];
@@ -581,6 +585,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   csrHaloExchange(A, sizeof(iint), FineToCoarse, iintSendBuffer, FineToCoarse+A->NlocalCols);
 
   // form the aggregates
+  #pragma omp parallel for
   for(iint i=0; i<N; i++){
     iint   smax = states[i];
     dfloat rmax = rands[i];
@@ -625,6 +630,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   csrHaloExchange(A, sizeof(iint), Tc, iintSendBuffer, Tc+A->NlocalCols);
 
   // second neighbours
+  #pragma omp parallel for
   for(iint i=0; i<N; i++){
     iint   smax = Ts[i];
     dfloat rmax = Tr[i];
