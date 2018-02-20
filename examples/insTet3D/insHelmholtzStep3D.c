@@ -69,6 +69,9 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep, const char* options){
   ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
+  //if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
+
+
   //printf("Solving for Ux \n");
   ins->NiterU = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
   

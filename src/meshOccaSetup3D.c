@@ -283,7 +283,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
-        #if 1
+        #if 0
         SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
         SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
         SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];

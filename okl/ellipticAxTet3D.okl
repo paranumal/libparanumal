@@ -75,7 +75,7 @@ kernel void ellipticAxTet3D(const int Nelements,
 }
 
 
-kernel void ellipticPartialAxTet3D(const int Nelements,
+kernel void ellipticPartialAxTet3D_v0(const int Nelements,
                                   const iint   * restrict elementList,
                                   const dfloat * restrict ggeo,
                                   const dfloat * restrict SrrT,
@@ -158,7 +158,7 @@ kernel void ellipticPartialAxTet3D(const int Nelements,
 // important to tune this at low order
 #define p_Ne 4
 #define p_Nb 4
-kernel void ellipticPartialAxTet3D_ref3(const int Nelements,
+kernel void ellipticPartialAxTet3D(const int Nelements,
                                   const int   * restrict elementList,
                                   const dfloat * restrict ggeo,
                                   const dfloat * restrict SrrT,
@@ -200,7 +200,7 @@ kernel void ellipticPartialAxTet3D_ref3(const int Nelements,
             
             int m=n;
             while(m<p_Nggeo){
-              s_ggeo[et][b][m] = element[et]*p_Nggeo+m;
+              s_ggeo[et][b][m] = ggeo[element[et]*p_Nggeo+m];
               m += p_Np;
             }
           }
