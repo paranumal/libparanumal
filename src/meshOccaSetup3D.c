@@ -283,6 +283,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     for (iint n=0;n<mesh->Np;n++) {
       for (iint m=0;m<mesh->Np;m++) {
+        #if 1
         SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
         SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
         SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
@@ -292,6 +293,14 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
         StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
         StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
         SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+        #else
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
+        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
+        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+        #endif
       }
     }
   }

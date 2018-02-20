@@ -428,6 +428,7 @@ void exactCoarseSolve(parAlmond_t *parAlmond, int N, dfloat *rhs, dfloat *x) {
   MPI_Allgatherv(rhs, N, MPI_DFLOAT, parAlmond->rhsCoarse, parAlmond->coarseCounts, parAlmond->coarseOffsets, MPI_DFLOAT, MPI_COMM_WORLD);
 
   //multiply by local part of the exact matrix inverse
+  #pragma omp parallel for
   for (int n=0;n<N;n++) {
     x[n] = 0.;
     for (int m=0;m<parAlmond->coarseTotal;m++) {
@@ -447,6 +448,7 @@ void device_exactCoarseSolve(parAlmond_t *parAlmond, int N, occa::memory o_rhs, 
   MPI_Allgatherv(rhs, N, MPI_DFLOAT, parAlmond->rhsCoarse, parAlmond->coarseCounts, parAlmond->coarseOffsets, MPI_DFLOAT, MPI_COMM_WORLD);
 
   //multiply by local part of the exact matrix inverse
+  #pragma omp parallel for
   for (int n=0;n<N;n++) {
     x[n] = 0.;
     for (int m=0;m<parAlmond->coarseTotal;m++) {
