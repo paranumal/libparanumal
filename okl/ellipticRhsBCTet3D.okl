@@ -83,11 +83,11 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
         dfloat qrr = 0.;
         dfloat qrs = 0.;
         dfloat qrt = 0.;
-        dfloat qsr = 0.;
+        //dfloat qsr = 0.;
         dfloat qss = 0.;
         dfloat qst = 0.;
-        dfloat qtr = 0.;
-        dfloat qts = 0.;
+        //dfloat qtr = 0.;
+        //dfloat qts = 0.;
         dfloat qtt = 0.;
         dfloat qM = 0.;
 
@@ -96,11 +96,11 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
             qrr += SrrT[n+k*p_Np]*s_q[k];
             qrs += SrsT[n+k*p_Np]*s_q[k];
             qrt += SrtT[n+k*p_Np]*s_q[k];
-            qsr += SsrT[n+k*p_Np]*s_q[k];
+            //qsr += SsrT[n+k*p_Np]*s_q[k];
             qss += SssT[n+k*p_Np]*s_q[k];
             qst += SstT[n+k*p_Np]*s_q[k];
-            qtr += StrT[n+k*p_Np]*s_q[k];
-            qts += StsT[n+k*p_Np]*s_q[k];
+            //qtr += StrT[n+k*p_Np]*s_q[k];
+            //qts += StsT[n+k*p_Np]*s_q[k];
             qtt += SttT[n+k*p_Np]*s_q[k];
             qM  += MM[n+k*p_Np]*s_q[k];
           }
@@ -112,9 +112,12 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
             Lndq += sMT[n+i*p_Np]*s_ndq[i];
           }
 
+        // rhs[id] -= Grr*qrr+Grs*qrs+Grt*qrt 
+        //           +Grs*qsr+Gss*qss+Gst*qst
+        //           +Grt*qtr+Gst*qts+Gtt*qtt
+        //           + J*lambda*qM - Lndq;
         rhs[id] -= Grr*qrr+Grs*qrs+Grt*qrt 
-                  +Grs*qsr+Gss*qss+Gst*qst
-                  +Grt*qtr+Gst*qts+Gtt*qtt
+                  +Gss*qss+Gst*qst+Gtt*qtt
                   + J*lambda*qM - Lndq;
       }
     }

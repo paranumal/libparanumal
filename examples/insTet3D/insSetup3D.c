@@ -169,7 +169,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 1.5; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -205,9 +205,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   // errorStep
   if(strstr(options,"SUBCYCLING"))
     //ins->errorStep =100*16/ins->Nsubsteps;
-    ins->errorStep = 5;
+    ins->errorStep = 50;
   else
-    ins->errorStep = 5;
+    ins->errorStep = 50;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
