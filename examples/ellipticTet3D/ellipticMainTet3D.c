@@ -221,7 +221,7 @@ int main(int argc, char **argv){
 
   char filename[BUFSIZ];
   sprintf(filename, "foo_%d.vtu", rank);
-  meshPlotVTU3D(mesh, filename, 0);
+  //meshPlotVTU3D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

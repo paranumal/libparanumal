@@ -75,6 +75,7 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   iint cnt =0;
+  #pragma omp parallel for
   for (iint e=0;e<mesh->Nelements;e++) {
 
     dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
@@ -104,12 +105,15 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          // pack non-zero
-          sendNonZeros[cnt].val = val;
-          sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
-          sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
-          sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
-          cnt++;
+          #pragma omp critical
+          {
+            // pack non-zero
+            sendNonZeros[cnt].val = val;
+            sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
+            sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
+            sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
+            cnt++;
+          }
         }
       }
     }

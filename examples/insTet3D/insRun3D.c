@@ -14,7 +14,7 @@ void insRun3D(ins_t *ins, char *options){
   occa::initTimer(mesh->device);
 
   //ins->NtimeSteps = 271000; 
-  ins->NtimeSteps =5;
+  ins->NtimeSteps =5000;
 
   double tic_tot = 0.f, toc_tot = 0.f; 
   double tic_adv = 0.f, toc_adv = 0.f;
@@ -47,8 +47,8 @@ void insRun3D(ins_t *ins, char *options){
       ins->ig0 = 1.0/ins->g0; 
     } else {
       //advection, third order in time, increment
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
+      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 2.0f;
+      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = -1.0f;
       ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
       ins->g0 =  11.f/6.f;
       ins->ExplicitOrder=3;
