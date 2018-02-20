@@ -26,13 +26,17 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 }
 
 int main(int argc, char **argv){
-  int NKernels = 2;
+
+  int NKernels = 3;
+
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
   int p_N = (argc>=3) ? atoi(argv[2]):5;
   int option = (argc>=4) ? atoi(argv[3]):1;  
+  int p_Ne = (argc>=5) ? atoi(argv[4]):1;
+  int p_Nb = (argc>=6) ? atoi(argv[5]):1;
   
-int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
+  int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
   int p_Nfp = ((p_N+1)*(p_N+2))/2;
   int p_Nfaces = 4;
   int p_NfacesNfp = p_Nfaces*p_Nfp;
@@ -55,7 +59,7 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
   gflops *= Niter;
 
   // build some dummy storage & parameters
-  double results2D[8];
+  double results3D[8];
   double roofline[8];
   occa::device device;
   occa::kernel Tet3Dkernel[8];
@@ -82,6 +86,8 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
   kernelInfo.addDefine("p_Nvgeo", 11);
   kernelInfo.addDefine("p_Nsgeo", 7);
   kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("p_Ne", p_Ne);
+  kernelInfo.addDefine("p_Nb", p_Nb);
 
 
   if (option == 0){
@@ -118,7 +124,7 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
 
     char buf[200];
     for (int i =1; i<NKernels+1; i++){
-      printf("compiling 2D kernel %d ...\n", i);
+      printf("compiling 3D kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxIpdgTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxIpdgTet3D.okl", buf, kernelInfo);
     }
@@ -166,7 +172,7 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =1;i<NKernels+1; i++){
+    for (int i =2;i<=NKernels; i++){
       datafloat lambda = 1.;
       datafloat tau  = 0.5;    
       occa::streamTag startTag = device.tagStream();
@@ -174,20 +180,20 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
       // launch kernel
       for(it=0;it<Niter;++it){  
         Tet3Dkernel[i-1](E, o_elementList,
-            o_vmapM,
-            o_vmapP,
-            lambda,
-            tau,
-            o_vgeo,
-            o_sgeo,
-            o_EToB,
-            o_DrT,
-            o_DsT,
-            o_DtT,
-            o_LIFTT,
-            o_MM,
-            o_gradq,
-            o_Aq);
+			 o_vmapM,
+			 o_vmapP,
+			 lambda,
+			 tau,
+			 o_vgeo,
+			 o_sgeo,
+			 o_EToB,
+			 o_DrT,
+			 o_DsT,
+			 o_DtT,
+			 o_LIFTT,
+			 o_MM,
+			 o_gradq,
+			 o_Aq);
       }
 
       occa::streamTag stopTag = device.tagStream();
@@ -197,7 +203,7 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
       printf("OCCA elapseNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
       printf("gflops = %f time = %f \n", gflops, elapsed);
-      results2D[i-1] = elapsed/Niter;
+      results3D[i-1] = elapsed/Niter;
       //E*gflops/(elapsed*1000*1000*1000);
       printf("OCCA: estimated gflops = %17.15f\n", E*gflops/(elapsed*1000*1000*1000));
       // compute l2 of data
@@ -277,34 +283,34 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
     o_elementList = device.malloc(E*sizeof(int), elementList);
     char buf[200];
     for (int i =1; i<NKernels+1; i++){
-      printf("compiling 2D kernel %d ...\n", i);
+      printf("compiling 3D kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
     }
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =1;i<NKernels+1; i++){
+    for (int i =2;i<=NKernels; i++){
       datafloat lambda = 1.;
       occa::streamTag startTag = device.tagStream();
 
       // launch kernel
       for(it=0;it<Niter;++it){
         Tet3Dkernel[i-1](E, o_elementList,
-            o_ggeo,
-            o_SrrT,
-            o_SrsT,
-            o_SrtT,
-            o_SsrT,
-            o_SssT,
-            o_SstT,
-            o_StrT,
-            o_StsT,
-            o_SttT,
-            o_MM,
-            lambda,
-            o_q,       
-            o_Aq);
+			 o_ggeo,
+			 o_SrrT,
+			 o_SrsT,
+			 o_SrtT,
+			 o_SsrT,
+			 o_SssT,
+			 o_SstT,
+			 o_StrT,
+			 o_StsT,
+			 o_SttT,
+			 o_MM,
+			 lambda,
+			 o_q,       
+			 o_Aq);
       }
 
       occa::streamTag stopTag = device.tagStream();
@@ -313,9 +319,9 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
       printf("OCCA elapseNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
       printf("number of flops = %f time = %f \n", gflops, elapsed);
-      results2D[i-1] = elapsed/Niter;
+      results3D[i-1] = elapsed/Niter;
       //E*gflops/(elapsed*1000*1000*1000);
-      printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results2D[i-1], E*gflops/(elapsed*1000*1000*1000));
+      printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i-1], E*gflops/(elapsed*1000*1000*1000));
       // compute l2 of data
       o_Aq.copyTo(Aq);
       datafloat normAq = 0;
@@ -349,12 +355,12 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
     double gflops;
     int Nbytes;
     if (option == 0){
-       gflops =
+      gflops =
         p_Np*24+p_Np*p_Np*8+p_NfacesNfp*37 + p_Np*p_NfacesNfp * 8;
 
       Nbytes = E*(p_Nfp*p_Nfaces*2*sizeof(int) +
-          10*sizeof(datafloat)+ 6*p_Nfaces*sizeof(datafloat)+
-          p_Nfaces*sizeof(int) +1*sizeof(int)+5*p_Np*sizeof(datafloat))+4*p_Np*p_Np*sizeof(datafloat)+p_Np*p_Nfp*p_Nfaces*sizeof(datafloat); 
+		  10*sizeof(datafloat)+ 6*p_Nfaces*sizeof(datafloat)+
+		  p_Nfaces*sizeof(int) +1*sizeof(int)+5*p_Np*sizeof(datafloat))+4*p_Np*p_Np*sizeof(datafloat)+p_Np*p_Nfp*p_Nfaces*sizeof(datafloat); 
 
       Nbytes /= 2;
 
@@ -397,7 +403,7 @@ int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
   printf("\n\nRATIO = [");
   for (int k=1; k<=NKernels; k++){
 
-    printf(" %16.17f ", results2D[k-1]/roofline[k-1]);
+    printf(" %16.17f ", results3D[k-1]/roofline[k-1]);
   }
 
   printf("]\n\n");
