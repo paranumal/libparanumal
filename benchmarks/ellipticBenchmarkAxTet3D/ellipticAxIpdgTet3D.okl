@@ -6,8 +6,8 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 #define dfloat double
 #define dfloat4 double4
-
-kernel void ellipticPartialAxIpdgTp_Ne3D_Ref1(const int Nelements,
+//ellipticPartialAxIpdgTet3D_Ref1
+kernel void ellipticPartialAxIpdgTet3D_Ref1(const int Nelements,
     const int * restrict elementList,
     const int * restrict vmapM,
     const int * restrict vmapP,
@@ -207,7 +207,7 @@ kernel void ellipticPartialAxIpdgTp_Ne3D_Ref1(const int Nelements,
 
 //kernel 2
 //multiple (up to three) elements per node
-kernel void ellipticPartialAxIpdgTp_Ne3D_Ref2(const int Nelements,
+kernel void ellipticPartialAxIpdgTet3D_Ref2(const int Nelements,
     const int * restrict elementList,
     const int * restrict vmapM,
     const int * restrict vmapP,
@@ -224,7 +224,8 @@ kernel void ellipticPartialAxIpdgTp_Ne3D_Ref2(const int Nelements,
     const dfloat4 * restrict gradq,
     dfloat  * restrict Aq){
 
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_Ne;outer0){
+
     shared  dfloat s_dqdx[p_Ne][p_Np];
     shared  dfloat s_dqdy[p_Ne][p_Np];
     shared  dfloat s_dqdz[p_Ne][p_Np];
@@ -238,11 +239,12 @@ kernel void ellipticPartialAxIpdgTp_Ne3D_Ref2(const int Nelements,
     shared  dfloat s_Lnzdq[p_Ne][p_Np];
     exclusive int element[p_Ne];
     exclusive int idM[p_Ne];
-    exclusive dfloat nx[et], ny[p_Ne], nz[p_Ne], sJ[p_Ne], invJ[p_Ne], hinv[p_Ne];
+    exclusive dfloat nx[p_Ne], ny[p_Ne], nz[p_Ne], sJ[p_Ne], invJ[p_Ne], hinv[p_Ne];
 
     //loop 1
     for(int n=0;n<p_Nmax;++n;inner0){
       occaUnroll(p_Ne)
+        occaUnroll(p_Ne) 
         for(int et=0;et<p_Ne;++et){
           const int e = eo + et;
           if(e<Nelements){
@@ -296,11 +298,11 @@ kernel void ellipticPartialAxIpdgTp_Ne3D_Ref2(const int Nelements,
 
               const dfloat dq = gradqP.w - gradqM.w;
               const dfloat half = 0.5f;
-              datafloat aux = half*invJ[et]*sJ[et]*dq;
+              dfloat aux = half*invJ[et]*sJ[et]*dq;
 
               s_nxdq[et][n] =  aux*nx[et];
               s_nydq[et][n] = aux*ny[et];
-              s_nzdq[et][n] = aux*nz;
+              s_nzdq[et][n] = aux*nz[et];
 
               s_lapflux[et][n] = half*sJ[et]*invJ[et]*(-nx[et]*(gradqP.x-gradqM.x)
                   -ny[et]*(gradqP.y-gradqM.y)
@@ -309,117 +311,163 @@ kernel void ellipticPartialAxIpdgTp_Ne3D_Ref2(const int Nelements,
             }
           }
         }
-      barrier(localMemFence);
-      //loop 2
-      // dqdx += LIFT*(sJ/J)*nx*dq
-      for(int n=0;n<p_Nmax;++n;inner0){
+    } 
 
-        if(n<p_Np){
-          for(int et=0;et<p_Ne;++et){
-            const int gid = element[et]*p_Nvgeo;
-            const dfloat drdx = vgeo[gid + p_RXID];
-            const dfloat drdy = vgeo[gid + p_RYID];
-            const dfloat drdz = vgeo[gid + p_RZID];
-            const dfloat dsdx = vgeo[gid + p_SXID];
-            const dfloat dsdy = vgeo[gid + p_SYID];
-            const dfloat dsdz = vgeo[gid + p_SZID];
-            const dfloat dtdx = vgeo[gid + p_TXID];
-            const dfloat dtdy = vgeo[gid + p_TYID];
-            const dfloat dtdz = vgeo[gid + p_TZID];
+    barrier(localMemFence);
+    //loop 2
+    // dqdx += LIFT*(sJ/J)*nx*dq
+    for(int n=0;n<p_Nmax;++n;inner0){
 
-            datafloat Lnxdq[p_Ne];
-            datafloat Lnydq[p_Ne];
-            datafloat Lnzdq[p_Ne];
-            for (int et=0; et<p_Ne; ++et){
-              Lnxdq[et]= 0;
-              Lnydq[et] = 0;
-              Lnzdq[et] = 0;
-            }
+      if(n<p_Np){
+        dfloat Lnxdq[p_Ne];
+        dfloat Lnydq[p_Ne];
+        dfloat Lnzdq[p_Ne];
+        occaUnroll(p_Ne) 
+          for (int et=0; et<p_Ne; ++et){
+            Lnxdq[et]= 0;
+            Lnydq[et] = 0;
+            Lnzdq[et] = 0;
+          }
 
-            occaUnroll(p_NfacesNfp)
-              for(int i=0;i<p_NfacesNfp;++i){
-                datafloat LIFTT_ni = LIFTT[n+i*p_Np];
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            dfloat LIFTT_ni = LIFTT[n+i*p_Np];
 
-                for (int et=0; et<p_Ne; ++et){
+            occaUnroll(p_Ne) 
+              for (int et=0; et<p_Ne; ++et){
 
-                  Lnxdq[et] += LIFTT_ni*s_nxdq[et][i];
-                  Lnydq[et] += LIFTT_ni*s_nydq[et][i];
-                  Lnzdq[et] += LIFTT_ni*s_nzdq[et][i];
-                }
+                Lnxdq[et] += LIFTT_ni*s_nxdq[et][i];
+                Lnydq[et] += LIFTT_ni*s_nydq[et][i];
+                Lnzdq[et] += LIFTT_ni*s_nzdq[et][i];
               }
+          }
+        occaUnroll(p_Ne) 
+          for (int et=0; et<p_Ne; ++et){
 
             dfloat dqdx = s_dqdx[et][n] + Lnxdq[et];
             dfloat dqdy = s_dqdy[et][n] + Lnydq[et];
             dfloat dqdz = s_dqdz[et][n] + Lnzdq[et];
+        const int gid = element[et]*p_Nvgeo;
+        const dfloat drdx = vgeo[gid + p_RXID];
+        const dfloat drdy = vgeo[gid + p_RYID];
+        const dfloat drdz = vgeo[gid + p_RZID];
+        const dfloat dsdx = vgeo[gid + p_SXID];
+        const dfloat dsdy = vgeo[gid + p_SYID];
+        const dfloat dsdz = vgeo[gid + p_SZID];
+        const dfloat dtdx = vgeo[gid + p_TXID];
+        const dfloat dtdy = vgeo[gid + p_TYID];
+        const dfloat dtdz = vgeo[gid + p_TZID];
 
             s_dqdx[et][n] = drdx*dqdx + drdy*dqdy + drdz*dqdz; // abuse of notation
             s_dqdy[et][n] = dsdx*dqdx + dsdy*dqdy + dsdz*dqdz;
             s_dqdz[et][n] = dtdx*dqdx + dtdy*dqdy + dtdz*dqdz;
 
-            s_Lnxdq[et][n] = Lnxdq;
-            s_Lnydq[et][n] = Lnydq;
-            s_Lnzdq[et][n] = Lnzdq;
-          }
-        }
-      }
-      barrier(localMemFence);
-      //loop 4
-      for(int n=0;n<p_Nmax;++n;inner0){
-            for(int et=0;et<p_Ne;++et){
+            s_Lnxdq[et][n] = Lnxdq[et];
+            s_Lnydq[et][n] = Lnydq[et];
+            s_Lnzdq[et][n] = Lnzdq[et];
+          } 
 
-        if(n<p_NfacesNfp){
-          int id = idM%p_Np;
-          s_lapfluxi[et][n] += sJ[et]*invJ[et]*(nx[et]*s_Lnxdq[et][id]+ny[et]*s_Lnydq[et][id]+nz[et]*s_Lnzdq[et][id]);
-        }
-
-        if(n<p_Np){
-          dfloat lapr = 0, laps = 0, lapt = 0;
-
-          occaUnroll(p_Np)
-            for(int i=0;i<p_Np;++i){
-              lapr += DrT[n+i*p_Np]*s_dqdx[i];
-              laps += DsT[n+i*p_Np]*s_dqdy[i];
-              lapt += DtT[n+i*p_Np]*s_dqdz[i];
-            }
-`
-          s_lapq[n] -= (lapr+laps+lapt);
-        }
-}
-      }
-
-      barrier(localMemFence);
-      //loop 5
-      for(int n=0;n<p_Nmax;++n;inner0){
-        if(n<p_Np){
-          dfloat lap = 0;
-
-          // lift remaining surface terms
-          occaUnroll(p_NfacesNfp)
-            for(int i=0;i<p_NfacesNfp;++i){
-              lap += LIFTT[n+i*p_Np]*s_lapflux[i];
-            }
-
-          s_lapq[n] += lap;
-        }
-      }
-
-      barrier(localMemFence);
-      //loop 6
-      for(int n=0;n<p_Nmax;++n;inner0){
-        if(n<p_Np){
-          const dfloat J = vgeo[element*p_Nvgeo + p_JID];
-
-          dfloat Mlapq = 0;
-
-          // multiply by mass matrix
-          occaUnroll(p_Np)
-            for(int i=0;i<p_Np;++i){
-              Mlapq += MM[n+i*p_Np]*s_lapq[i];
-            }
-
-          Aq[n+element*p_Np] = J*Mlapq;
-        }
       }
     }
-  }
+
+    barrier(localMemFence);
+    //loop 4
+    for(int n=0;n<p_Nmax;++n;inner0){
+
+      if(n<p_NfacesNfp){
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+            int id = idM[et]%p_Np;
+            s_lapflux[et][n] += sJ[et]*invJ[et]*(nx[et]*s_Lnxdq[et][id]+ny[et]*s_Lnydq[et][id]+nz[et]*s_Lnzdq[et][id]);
+          }
+      }
+
+      if(n<p_Np){
+        dfloat lapr[p_Ne], laps[p_Ne], lapt[p_Ne];
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+            lapr[et] =0.0f;
+            laps[et] =0.0f;
+            lapt[et] =0.0f;
+
+
+          }
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            dfloat DrT_ni = DrT[n+i*p_Np];
+            dfloat DsT_ni = DsT[n+i*p_Np];
+            dfloat DtT_ni = DtT[n+i*p_Np];
+
+            occaUnroll(p_Ne) 
+              for(int et=0;et<p_Ne;++et){
+                lapr[et] += DrT_ni*s_dqdx[et][i];
+                laps[et] += DsT_ni*s_dqdy[et][i];
+                lapt[et] += DtT_ni*s_dqdz[et][i];
+              }
+          }
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+
+            s_lapq[et][n] -= (lapr[et]+laps[et]+lapt[et]);
+          }
+      }
+    }
+
+    barrier(localMemFence);
+    //loop 5
+    for(int n=0;n<p_Nmax;++n;inner0){
+      if(n<p_Np){
+        dfloat lap[p_Ne];
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+            lap[et] =0.0f;
+          }
+
+        // lift remaining surface terms
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            dfloat LIFTT_ni =           LIFTT[n+i*p_Np];
+            occaUnroll(p_Ne) 
+              for(int et=0;et<p_Ne;++et){
+                lap[et] += LIFTT_ni*s_lapflux[et][i];
+              } 
+          }
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+
+            s_lapq[et][n] += lap[et];
+          } 
+      }
+    }
+    barrier(localMemFence);
+    //loop 6
+    for(int n=0;n<p_Nmax;++n;inner0){
+      dfloat J[p_Ne]; 
+      if(n<p_Np){
+        dfloat Mlapq[p_Ne];
+
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+            J[et] = vgeo[element[et]*p_Nvgeo + p_JID];
+            Mlapq[et] = 0.0f;
+          }
+
+        // multiply by mass matrix
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            dfloat MM_ni =  MM[n+i*p_Np]; 
+            for(int et=0;et<p_Ne;++et){
+
+              Mlapq[et] += MM_ni*s_lapq[et][i];
+            }
+          }
+        occaUnroll(p_Ne) 
+          for(int et=0;et<p_Ne;++et){
+
+            Aq[n+element[et]*p_Np] = J[et]*Mlapq[et];
+          }
+      }//if
+    }//loop 6
+  }//eloop
+}//kernel/
 
