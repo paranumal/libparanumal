@@ -39,15 +39,19 @@ void ellipticPreconditioner3D(solver_t *solver,
       ogs_t *ogs = solver->mesh->ogs;
 
       solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_r, solver->o_rtmp);
+      
       //pre-mask
-      if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
+      //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
 
       if(ogs->NhaloGather) {
         precon->partialblockJacobiKernel(solver->NglobalGatherElements, 
                                 solver->o_globalGatherElementList,
                                 invLambda, mesh->o_vgeo, precon->o_invMM, solver->o_rtmp, o_z);
+        mesh->device.finish();
+        mesh->device.setStream(solver->dataStream);
         mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_z, ogs->o_haloGatherTmp);
-        ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
+        ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+        mesh->device.setStream(solver->defaultStream);
       }
       if(solver->NlocalGatherElements){
         precon->partialblockJacobiKernel(solver->NlocalGatherElements, 
@@ -57,30 +61,27 @@ void ellipticPreconditioner3D(solver_t *solver,
 
       // C0 halo gather-scatter (on data stream)
       if(ogs->NhaloGather) {
-        occa::streamTag tag;
+        mesh->device.setStream(solver->dataStream);
+        mesh->device.finish();
 
         // MPI based gather scatter using libgs
         gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
         // copy totally gather halo data back from HOST to DEVICE
-        mesh->device.setStream(solver->dataStream);
         ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
-
-        // wait for async copy
-        tag = mesh->device.tagStream();
-        mesh->device.waitFor(tag);
 
         // do scatter back to local nodes
         mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_z);
-
-        // make sure the scatter has finished on the data stream
-        tag = mesh->device.tagStream();
-        mesh->device.waitFor(tag);
+        mesh->device.setStream(solver->defaultStream);
       }
 
       // finalize gather using local and global contributions
-      mesh->device.setStream(solver->defaultStream);
       if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_z);
+
+      mesh->device.finish();    
+      mesh->device.setStream(solver->dataStream);
+      mesh->device.finish();    
+      mesh->device.setStream(solver->defaultStream);
 
       solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_z, o_z);
 
