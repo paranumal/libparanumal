@@ -127,7 +127,6 @@ typedef struct {
   iint *vmapM;     // list of volume nodes that are face nodes
   iint *vmapP;     // list of volume nodes that are paired with face nodes
   iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
-  int *mapB;      // boundary flag of face nodes
   int *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
@@ -260,13 +259,6 @@ typedef struct {
   occa::memory o_SEMFEMInterp;
   occa::memory o_SEMFEMAnterp;
 
-  //C0-FEM mask data
-  iint Nmasked;
-  iint *maskIds;
-
-  occa::memory o_maskIds;
-  
-
   // Boltzmann specific stuff
   dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
 
@@ -354,8 +346,6 @@ typedef struct {
 
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
-
-  occa::memory o_mapB, o_mask;
 
   occa::memory o_rmapP;
 
