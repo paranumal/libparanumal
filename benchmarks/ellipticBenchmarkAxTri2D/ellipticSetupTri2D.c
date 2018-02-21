@@ -406,23 +406,23 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   for (int i=0; i<mesh->Np; ++i){
     for (int j=0; j<4; j++){
       //    rowDataTransposed[mesh->Np*j+i]  = rowData[8*i+j];
-      // rowDataTransposed[4*i+j] = (char) rowData[8*i+j];    
-      if (j==0){
+       rowDataTransposed[4*i+j] = (char) rowData[8*i+j];    
+  /*    if (j==0){
         rowDataTransposed[4*i+0] = (char) 1;
         rowDataTransposed[4*i+1] = (char) 4;
         rowDataTransposed[4*i+2] = (char) 1;
         rowDataTransposed[4*i+3] = (char) 0;  
-      }
+      }*/
       //      printf("putting %d in place %d \n", rowData[8*i+j],4*i+j );  
     }
     for (int j=0; j<4; j++){
-      //rowDataTransposed[mesh->Np*4 + 4*i+j] = (char) rowData[8*i+j+4];
-      if (j==0){
+      rowDataTransposed[mesh->Np*4 + 4*i+j] = (char) rowData[8*i+j+4];
+      /*if (j==0){
         rowDataTransposed[mesh->Np*4 + 4*i+0] = (char) 1;
         rowDataTransposed[mesh->Np*4 + 4*i+1] = (char) 0;
         rowDataTransposed[mesh->Np*4 + 4*i+2] = (char) 0;
         rowDataTransposed[mesh->Np*4 + 4*i+3] = (char) 0;  
-      }
+      }*/
 
       //    printf("putting %d in place %d \n", rowData[8*i+j],mesh->Np*4 + 4*i+j );
 

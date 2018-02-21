@@ -11,7 +11,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 3;
+  NKernels = 4;
   sprintf(kernelName, "ellipticAxNEWTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
