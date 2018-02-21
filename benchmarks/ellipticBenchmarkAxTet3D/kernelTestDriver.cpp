@@ -27,7 +27,7 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 
 int main(int argc, char **argv){
 
-  int NKernels = 2;
+  int NKernels = 3;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
 
   int pad;
 
-  int Niter = 100, it;
+  int Niter = 10, it;
   double gflops;
   if (option == 0){
     gflops =  p_Np*24+p_Np*p_Np*8+p_NfacesNfp*37 + p_Np*p_NfacesNfp * 8;}
@@ -202,6 +202,9 @@ int main(int argc, char **argv){
       printf("\n\nKERNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
       printf("gflops = %f time = %f \n", gflops, elapsed);
+
+printf("GFL %17.17f \n",E*gflops/(elapsed*1000*1000*1000) );      
+
       results3D[i-1] = elapsed/Niter;
       //E*gflops/(elapsed*1000*1000*1000);
       printf("OCCA: estimated gflops = %17.15f\n", E*gflops/(elapsed*1000*1000*1000));
@@ -299,7 +302,8 @@ int main(int argc, char **argv){
       results3D[i-1] = elapsed/Niter;
       //E*gflops/(elapsed*1000*1000*1000);
       printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i-1], E*gflops/(elapsed*1000*1000*1000));
-      // compute l2 of data
+printf("GFL %17.17f \n",E*gflops/(elapsed*1000*1000*1000) );      
+// compute l2 of data
       o_Aq.copyTo(Aq);
       datafloat normAq = 0;
 
@@ -328,7 +332,7 @@ int main(int argc, char **argv){
 printf("==== this is kernel %d \n", k);
     int p_Nq = k+1;
     int p_gjNq = k+2;
-    int Niter = 100;
+    int Niter = 10;
     double gflops;
     int Nbytes;
     if (option == 0){
@@ -368,8 +372,10 @@ printf("==== this is kernel %d \n", k);
     //    p_Nfaces*sizeof(int) +1*sizeof(int)+5*p_Np*sizeof(datafloat))+4*p_Np*p_Np*sizeof(datafloat)+p_Np*p_Nfp*p_Nfaces*sizeof(datafloat); 
     printf("pNp = %d p_Nfp = %d Nbytes = %d \n", p_Np, p_Nfp, Nbytes);    
     printf("copy BW = %f gflops = %f bytes = %d \n", copyBandwidth, gflops, Nbytes);
-    roofline[k-1] = copyElapsed/Niter; 
+//    roofline[k-1] = copyElapsed/Niter; 
+roofline[k-1] = (copyBandwidth*gflops*E)/(2*Nbytes);
 
+//((E*gflops*(double)Niter))/(1e9*copyElapsed);
     o_foo.free();
     o_bah.free();
 
@@ -377,10 +383,10 @@ printf("==== this is kernel %d \n", k);
 
   //printf("];\n\n");
 
-  printf("\n\nRATIO = [");
+  printf("\n\nROOFLINE = [");
   for (int k=1; k<=NKernels; k++){
 
-    printf(" %16.17f ", results3D[k-1]/roofline[k-1]);
+    printf(" %16.17f ", roofline[k-1]);
   }
 
   printf("]\n\n");
