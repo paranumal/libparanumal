@@ -16,7 +16,9 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
+void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
+
+  mesh3D *mesh = solver->mesh;
 
   iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -41,8 +43,8 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
 
   iint *globalNumbering = (iint *) calloc(Ntotal,sizeof(iint));
   memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(iint)); 
-  for (iint n=0;n<mesh->Nmasked;n++) 
-    globalNumbering[mesh->maskIds[n]] = -1;
+  for (iint n=0;n<solver->Nmasked;n++) 
+    globalNumbering[solver->maskIds[n]] = -1;
 
   // squeeze node numbering
   meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
@@ -69,7 +71,7 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (iint n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
+  for (iint n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
 
   //Build unassembed non-zeros
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);

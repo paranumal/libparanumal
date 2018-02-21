@@ -284,39 +284,39 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
   ellipticParallelGatherScatterSetup(solver, options);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   for (iint e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
+    for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<mesh->Nfp;n++) {
           int BCFlag = BCType[bc];
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = mymin(BCFlag,mesh->mapB[fid+e*mesh->Np]);
+          solver->mapB[fid+e*mesh->Np] = mymin(BCFlag,solver->mapB[fid+e*mesh->Np]);
         }
       }
     }
   }
-  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
+  gsParallelGatherScatter(mesh->hostGsh, solver->mapB, "int", "min"); 
 
   //use the bc flags to find masked ids
-  mesh->Nmasked = 0;
+  solver->Nmasked = 0;
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (mesh->mapB[n] == 1E9) {
-      mesh->mapB[n] = 0.;
-    } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
-      mesh->Nmasked++;
+    if (solver->mapB[n] == 1E9) {
+      solver->mapB[n] = 0.;
+    } else if (solver->mapB[n] == 1) { //Dirichlet boundary
+      solver->Nmasked++;
     }
   }
-  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
+  solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
   
-  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
-  mesh->Nmasked =0; //reset
+  solver->maskIds = (iint *) calloc(solver->Nmasked, sizeof(iint));
+  solver->Nmasked =0; //reset
   for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
+    if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
   }
-  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(iint), solver->maskIds);
 
 
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));
@@ -350,6 +350,11 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*
       solver->precon->blockJacobiKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
                    "ellipticBlockJacobiPreconTet3D",
+                   kernelInfo);
+
+      solver->precon->partialblockJacobiKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTet3D.okl",
+                   "ellipticPartialBlockJacobiPreconTet3D",
                    kernelInfo);
 
       solver->precon->approxPatchSolverKernel =

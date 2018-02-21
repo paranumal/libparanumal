@@ -276,7 +276,7 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
   if (strstr(options,"IPDG")) {
     ellipticBuildIpdgTet3D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
   } else if (strstr(options,"CONTINUOUS")) {
-    ellipticBuildContinuousTet3D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
+    ellipticBuildContinuousTet3D(solverL,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
   }
 
   iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));

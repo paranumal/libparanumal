@@ -23,11 +23,9 @@ kernel void ellipticBlockJacobiPreconTet3D(const int Nelements,
           // prefetch q
           const iint id = e*p_Np+n;
           s_q[es][n] = q[id];
-        }
 
-        iint t = n + p_Np*es;
-        if(t<p_NblockV && (t+eo)<Nelements){
-          s_scale[t] = invLambda/vgeo[(eo+t)*p_Nvgeo+p_JID];
+          if (n==0)
+            s_scale[es] = invLambda/vgeo[e*p_Nvgeo+p_JID];
         }
       }
     }
@@ -48,6 +46,64 @@ kernel void ellipticBlockJacobiPreconTet3D(const int Nelements,
             }
           
           const iint id = e*p_Np+n; 
+          Pq[id] = Bqn*s_scale[es];
+        }
+      }
+    }
+  }
+}
+
+
+// block Jacobi preconditioner with inverse of mass matrix
+// (assumes mass matrix dominant)
+kernel void ellipticPartialBlockJacobiPreconTet3D(const int Nelements,
+             const iint   * restrict elements,
+             const dfloat invLambda,
+             const dfloat * restrict vgeo,
+             const dfloat * restrict B,
+             const dfloat * restrict q,
+             dfloat * restrict Pq){  
+  
+  // block partition of elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_q[p_NblockV][p_Np];
+    shared dfloat s_scale[p_NblockV];
+    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const iint e = es + eo;
+
+        s_q[es][n] = 0;
+        if(e<Nelements){
+          const iint element = elements[e];
+          // prefetch q
+          const iint id = element*p_Np+n;
+          s_q[es][n] = q[id];
+ 
+          if (n==0)
+            s_scale[es] = invLambda/vgeo[element*p_Nvgeo+p_JID];
+        }
+      }
+    }
+    
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const iint e = es + eo;
+
+        if(e<Nelements){
+          const iint element = elements[e];
+          // compute 1D derivatives
+          dfloat Bqn = 0;
+          
+          occaUnroll(p_Np)
+            for(iint i=0;i<p_Np;++i){
+              Bqn += B[n+i*p_Np]*s_q[es][i];
+            }
+          
+          const iint id = element*p_Np+n; 
           Pq[id] = Bqn*s_scale[es];
         }
       }

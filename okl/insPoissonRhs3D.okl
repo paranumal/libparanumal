@@ -287,7 +287,7 @@ kernel void insPoissonRhsBC3D(const int Nelements,
         } 
 
         s_q[nid] = pP;
-        s_ndq[n] = sJ*(nx*dpdxP + ny*dpdyP + ny*dpdzP);
+        s_ndq[n] = sJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP);
       }
     }
 

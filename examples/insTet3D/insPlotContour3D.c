@@ -10,65 +10,153 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   dfloat levels[10] = {1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0};
   dfloat tol = 1E-3;
 
-  dfloat *Vort = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  //if (strstr(options,"ADPATIVECONTOUR"))
+    //meshPlotAdaptiveContour3D(mesh, fileName, Vort, Nlevels, levels, tol);
+  //else 
+    //meshPlotContour3D(mesh, fileName, Vort, Nlevels, levels);
 
-  // calculate vorticity magnitude
+  int *plotFlag = (int*) calloc(mesh->Nelements,sizeof(int));
+  int *plotSubFlag = (int*) calloc(mesh->Nelements*mesh->plotNelements,sizeof(int));
+  dfloat *plotvx = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
+  dfloat *plotvy = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
+  dfloat *plotvz = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
+
+  iint NcontourElements =0;
+  iint plotElements =0;
+
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
-      dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
-      dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
-      for(iint m=0;m<mesh->Np;++m){
-        iint id = m+e*mesh->Np;
-        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-
-        dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
-        dUds += mesh->Ds[n*mesh->Np+m]*ins->U[id];
-        dUdt += mesh->Dt[n*mesh->Np+m]*ins->U[id];
-
-        dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
-        dVds += mesh->Ds[n*mesh->Np+m]*ins->V[id];
-        dVdt += mesh->Dt[n*mesh->Np+m]*ins->V[id];
-
-        dWdr += mesh->Dr[n*mesh->Np+m]*ins->W[id];
-        dWds += mesh->Ds[n*mesh->Np+m]*ins->W[id];
-        dWdt += mesh->Dt[n*mesh->Np+m]*ins->W[id];
+    for(int n=0;n<mesh->plotNp;++n){
+      plotvx[n] = 0; plotvy[n] = 0; plotvz[n] = 0;
+      for(int m=0;m<mesh->Np;++m){
+        plotvx[n] += mesh->plotInterp[n*mesh->Np+m]*ins->Vx[m+e*mesh->Np];
+        plotvy[n] += mesh->plotInterp[n*mesh->Np+m]*ins->Vy[m+e*mesh->Np];
+        plotvz[n] += mesh->plotInterp[n*mesh->Np+m]*ins->Vz[m+e*mesh->Np];
       }
+    }
 
-      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
-      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
-      dfloat rz = mesh->vgeo[e*mesh->Nvgeo+RZID];    
-      
-      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
-      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
-      dfloat sz = mesh->vgeo[e*mesh->Nvgeo+SZID];    
-     
-      dfloat tx = mesh->vgeo[e*mesh->Nvgeo+TXID];
-      dfloat ty = mesh->vgeo[e*mesh->Nvgeo+TYID];
-      dfloat tz = mesh->vgeo[e*mesh->Nvgeo+TZID];    
+    for (int k=0;k<mesh->plotNelements;k++) {
+      int id0 = mesh->plotEToV[k*mesh->plotNverts+0];
+      int id1 = mesh->plotEToV[k*mesh->plotNverts+1];
+      int id2 = mesh->plotEToV[k*mesh->plotNverts+2];
+      int id3 = mesh->plotEToV[k*mesh->plotNverts+3];
 
-      dfloat dUdx = rx*dUdr + sx*dUds + tx*dUdt;
-      dfloat dUdy = ry*dUdr + sy*dUds + ty*dUdt;
-      dfloat dUdz = rz*dUdr + sz*dUds + tz*dUdt;
-    
-      dfloat dVdx = rx*dVdr + sx*dVds + tx*dVdt;
-      dfloat dVdy = ry*dVdr + sy*dVds + ty*dVdt;
-      dfloat dVdz = rz*dVdr + sz*dVds + tz*dVdt;
-      
-      dfloat dWdx = rx*dWdr + sx*dWds + tx*dWdt;
-      dfloat dWdy = ry*dWdr + sy*dWds + ty*dWdt;
-      dfloat dWdz = rz*dWdr + sz*dWds + tz*dWdt;
-      
-      // Compute vorticity Vector
-      dfloat Vx = dWdy-dVdz;
-      dfloat Vy = dUdz-dWdx;
-      dfloat Vz = dVdx-dUdy;
+      dfloat umin = sqrt(plotvx[id0]*plotvx[id0] + plotvy[id0]*plotvy[id0] + plotvz[id0]*plotvz[id0]);
+      dfloat umax = sqrt(plotvx[id0]*plotvx[id0] + plotvy[id0]*plotvy[id0] + plotvz[id0]*plotvz[id0]);  
+      umin = mymin(umin, sqrt(plotvx[id1]*plotvx[id1] + plotvy[id1]*plotvy[id1] + plotvz[id1]*plotvz[id1]));
+      umax = mymax(umax, sqrt(plotvx[id1]*plotvx[id1] + plotvy[id1]*plotvy[id1] + plotvz[id1]*plotvz[id1]));
+      umin = mymin(umin, sqrt(plotvx[id2]*plotvx[id2] + plotvy[id2]*plotvy[id2] + plotvz[id2]*plotvz[id2]));
+      umax = mymax(umax, sqrt(plotvx[id2]*plotvx[id2] + plotvy[id2]*plotvy[id2] + plotvz[id2]*plotvz[id2]));
+      umin = mymin(umin, sqrt(plotvx[id3]*plotvx[id3] + plotvy[id3]*plotvy[id3] + plotvz[id3]*plotvz[id3]));
+      umax = mymax(umax, sqrt(plotvx[id3]*plotvx[id3] + plotvy[id3]*plotvy[id3] + plotvz[id3]*plotvz[id3]));
 
-      Vort[e*mesh->Np+n] = sqrt(Vx*Vx+Vy*Vy+Vz*Vz);
+      for (int lev=0;lev<Nlevels;lev++){
+        if((umin<=levels[lev]) && (umax>=levels[lev])){
+          NcontourElements++;
+          if (plotFlag[e]==0) plotElements++;
+          plotFlag[e] = 1;
+          plotSubFlag[e*mesh->plotNelements+k] = 1;
+          break;
+        }  
+      }
     }
   }
-  if (strstr(options,"ADPATIVECONTOUR"))
-    meshPlotAdaptiveContour3D(mesh, fileName, Vort, Nlevels, levels, tol);
-  else 
-    meshPlotContour3D(mesh, fileName, Vort, Nlevels, levels);
+  free(plotvx); free(plotvy); free(plotvz);
+
+  FILE *fp = fopen(fileName, "w");
+
+  fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
+  fprintf(fp, "  <UnstructuredGrid>\n");
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
+          plotElements*mesh->plotNp, 
+          NcontourElements);
+  
+  // write out nodes
+  fprintf(fp, "      <Points>\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  
+  // compute plot node coordinates on the fly
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (plotFlag[e]==0) continue;
+    for(int n=0;n<mesh->plotNp;++n){
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
+        plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
+        plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
+      }
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
+    }
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Points>\n");
+  
+  fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (plotFlag[e]==0) continue;
+    for(int n=0;n<mesh->plotNp;++n){
+      dfloat plotvx = 0, plotvy = 0, plotvz = 0;
+      for(iint m=0;m<mesh->Np;++m){
+        plotvx += mesh->plotInterp[n*mesh->Np+m]*ins->Vx[m+e*mesh->Np];
+        plotvy += mesh->plotInterp[n*mesh->Np+m]*ins->Vy[m+e*mesh->Np];
+        plotvz += mesh->plotInterp[n*mesh->Np+m]*ins->Vz[m+e*mesh->Np];
+      }
+      fprintf(fp, "       "); fprintf(fp, "%g\n", sqrt(plotvx*plotvx+plotvy*plotvy+plotvz*plotvz));
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  fprintf(fp, "     </PointData>\n");
+  
+  fprintf(fp, "    <Cells>\n");
+  fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
+  
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (plotFlag[e]==0) continue;
+    
+    for(int k=0;k<mesh->plotNelements;++k){
+      if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;
+      fprintf(fp, "       ");
+      for(int m=0;m<mesh->plotNverts;++m){
+        fprintf(fp, "%d ", cnt*mesh->plotNp + mesh->plotEToV[k*mesh->plotNverts+m]);
+      }
+      fprintf(fp, "\n");
+    }
+    cnt++;
+  }
+  
+  fprintf(fp, "        </DataArray>\n");
+  
+  fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
+  cnt=0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (plotFlag[e]==0) continue;
+    for(int k=0;k<mesh->plotNelements;++k){
+      if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;
+      cnt += mesh->plotNverts;
+      fprintf(fp, "       ");
+      fprintf(fp, "%d\n", cnt);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  
+  fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    if (plotFlag[e]==0) continue;
+    for(int k=0;k<mesh->plotNelements;++k){
+      if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;
+      fprintf(fp, "10\n"); // TET code ?
+    }
+  }
+  fprintf(fp, "        </DataArray>\n");
+  fprintf(fp, "      </Cells>\n");
+  fprintf(fp, "    </Piece>\n");
+  fprintf(fp, "  </UnstructuredGrid>\n");
+  fprintf(fp, "</VTKFile>\n");
+  fclose(fp);
+
+  free(plotFlag);
+  free(plotSubFlag);
 }

@@ -78,6 +78,7 @@ typedef struct {
   // block Jacobi precon
   occa::memory o_invMM;
   occa::kernel blockJacobiKernel;
+  occa::kernel partialblockJacobiKernel;
 
   //dummy almond level to store the OAS smoothing op
   agmgLevel *OASLevel;
@@ -95,12 +96,6 @@ extern "C"
   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
-
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              ogs_t **ogs, iint *globalStarts, const char* options);
 
 //Multigrid function callbacks
 void AxTet3D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
