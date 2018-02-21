@@ -93,6 +93,7 @@ struct Quad
   Index vertex[4]; //the physical location of the quad
   bool on_edge[4]; //marks the edge
   int face; //which face of the cube the quad is on
+  int dist[4]; //distance to edge of cube
 };
 
 struct ColorPosition
@@ -119,12 +120,12 @@ namespace prism
 
   static const QuadList quads=
     {
-      {{2,7,5,0},{true,true,true,true},3},
-      {{7,6,4,5},{true,true,true,true},4},
-      {{6,3,1,4},{true,true,true,true},1},
-      {{3,2,0,1},{true,true,true,true},2},
-      {{4,1,0,5},{true,true,true,true},5},
-      {{7,2,3,6},{true,true,true,true},6}
+      {{2,7,5,0},{true,true,true,true},3,{0,0,0,0}},
+      {{7,6,4,5},{true,true,true,true},4,{0,0,0,0}},
+      {{6,3,1,4},{true,true,true,true},1,{0,0,0,0}},
+      {{3,2,0,1},{true,true,true,true},2,{0,0,0,0}},
+      {{4,1,0,5},{true,true,true,true},5,{0,0,0,0}},
+      {{7,2,3,6},{true,true,true,true},6,{0,0,0,0}}
     };
 }
 
@@ -191,10 +192,18 @@ QuadList subdivide_4(VertexList& vertices,
       mid[4] = vertex_for_edge(lookup, vertices, mark_verts, mid[0],mid[2]);
       mark_verts.back() = false;
 
-      result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face});
-      result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face});
-      result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face});
-      result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face});
+      if (each.dist[0] == 0 && each.dist[1] == 0 && each.dist[2] == 0 && each.dist[3] == 0) {
+	result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face,{0,0,1,0}});
+	result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face,{0,0,0,1}});
+	result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face,{1,0,0,0}});
+	result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face,{0,1,0,0}});
+      }
+      else {
+	result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face,{2*each.dist[0],each.dist[0] + each.dist[1],each.dist[0]+each.dist[2],each.dist[0]+each.dist[3]}});
+	result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face,{each.dist[0] + each.dist[1],2*each.dist[1],each.dist[1]+each.dist[2],each.dist[1]+each.dist[3]}});
+	result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face,{each.dist[2]+each.dist[0],each.dist[1]+each.dist[2],2*each.dist[2],each.dist[2]+each.dist[3]}});
+	result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face,{each.dist[3]+each.dist[0],each.dist[3]+each.dist[1],each.dist[2]+each.dist[3],2*each.dist[3]}});
+      }
     }
 
   return result;
@@ -293,16 +302,22 @@ int main(int argc, char **argv){
 			quads[i].on_edge[3]))
       {
 
-	if (mark_edge) 
+	if (mark_edge) {
+	  int min_dist = 1e9;
+	  for (int j = 0; j < 4; ++j) {
+	    min_dist = min(min_dist,quads[i].dist[j]);
+	  }
 	  cout
 	    << j << " "
-	    << " 3 3 2 6 "
+	    << " 3 4 2 6 "
 	    <<  quads[i].face << " "
+	    <<  min_dist << " "
 	    <<  vertex_offsets[quads[i].vertex[0]] << " "
 	    <<  vertex_offsets[quads[i].vertex[1]] << " "
 	    <<  vertex_offsets[quads[i].vertex[2]] << " "
 	    <<  vertex_offsets[quads[i].vertex[3]]
 	    <<  endl;
+	     }
 	else
 	  cout
 	    << j << " "

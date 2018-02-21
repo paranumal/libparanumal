@@ -97,6 +97,9 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 
   mesh->cubeFaceNumber
     = (iint *) calloc(NquadrilateralsLocal,sizeof(iint));
+
+  mesh->cubeDistance
+    = (iint *) calloc(NquadrilateralsLocal,sizeof(iint));
   
   mesh->EToV 
     = (iint*) calloc(NquadrilateralsLocal*mesh->Nverts, 
@@ -131,8 +134,8 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
 	
-	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d%d%d", 
-	       mesh->elementInfo+cnt,mesh->cubeFaceNumber+cnt,&v1, &v2, &v3, &v4);
+	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d%d%d%d", 
+	       mesh->elementInfo+cnt,mesh->cubeFaceNumber+cnt,mesh->cubeDistance+cnt,&v1, &v2, &v3, &v4);
 	
 	// check orientation using a*(bxc) > 0
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe3 = VX[v3-1];

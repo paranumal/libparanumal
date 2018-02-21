@@ -284,7 +284,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       printf("tstep = %d, t = %g\n", tstep, t);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      //boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
+      boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
 
 
       iint nancheck = 0;
