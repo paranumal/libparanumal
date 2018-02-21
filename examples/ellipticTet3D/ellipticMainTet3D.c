@@ -29,9 +29,9 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
+    strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be EXACT, KCYCLE, or VCYCLE
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 10000;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -165,14 +165,14 @@ int main(int argc, char **argv){
                         mesh->o_x,
                         mesh->o_y,
                         mesh->o_z,
-                        mesh->o_mapB,
+                        solver->o_mapB,
                         o_r);
   }
 
   // gather-scatter
   if(strstr(options, "CONTINUOUS")){
     ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_r, dfloatString, "add");  
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
   }
 
   // convergence tolerance
@@ -191,7 +191,7 @@ int main(int argc, char **argv){
                        mesh->o_x,
                        mesh->o_y,
                        mesh->o_z,
-                       mesh->o_mapB,
+                       solver->o_mapB,
                        o_x);
   }
 

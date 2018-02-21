@@ -48,6 +48,14 @@ typedef struct {
   dfloat *Ry, *R; //multigrid restriction matrix
 
   int *EToB;
+  //C0-FEM mask data
+  int *mapB;      // boundary flag of face nodes
+  iint Nmasked;
+  iint *maskIds;
+
+  occa::memory o_maskIds;
+  occa::memory o_mapB;
+
   dfloat *sendBuffer, *recvBuffer;
   dfloat *gradSendBuffer, *gradRecvBuffer;
 
@@ -112,6 +120,12 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory
 solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
 solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
+
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              iint *nnzA, iint *globalStarts, const char *options);
+
+void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, iint *nnz,
+                              ogs_t **ogs, iint *globalStarts, const char* options);
 
 void ellipticStartHaloExchange3D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 

@@ -64,6 +64,10 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   ins->Pz     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
+  ins->Vx     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->Vy     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->Vz     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->Div     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
   ins->Nsubsteps = Ns; 
   if(strstr(options,"SUBCYCLING")){
@@ -82,13 +86,13 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001 ;  // kinematic viscosity,
+  dfloat nu   = 0.01 ;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 50.0;
+  ins->finalTime = 48.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0*(mesh->N+1)*(mesh->N+3);
@@ -169,7 +173,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 1.0; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -245,24 +249,33 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolver        = pSolver;
   ins->pSolverOptions = pSolverOptions;
-  
 
-  //make a node-wise bc flag using the gsop (prioritize Neumann boundaries over Dirchlet for pressure)
-  mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  ins->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  ins->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   for (iint e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) ins->VmapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<mesh->Nfp;n++) {
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          mesh->mapB[fid+e*mesh->Np] = bc;
+          ins->VmapB[fid+e*mesh->Np] = mymin(bc,ins->VmapB[fid+e*mesh->Np]);
+          ins->PmapB[fid+e*mesh->Np] = mymax(bc,ins->PmapB[fid+e*mesh->Np]);
         }
       }
     }
   }
-  gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "max");   
-  mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
-  
+  gsParallelGatherScatter(mesh->hostGsh, ins->VmapB, "int", "min"); 
+  gsParallelGatherScatter(mesh->hostGsh, ins->PmapB, "int", "max"); 
+
+  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (ins->VmapB[n] == 1E9) {
+      ins->VmapB[n] = 0.;
+    }
+  }
+  ins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->VmapB);
+  ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
+
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
  
@@ -335,6 +348,10 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_WH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
 
+  ins->o_Vx = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vx);
+  ins->o_Vy = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vy);
+  ins->o_Vz = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vz);
+  ins->o_Div = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Div);
 
   if(strstr(options,"SUBCYCLING")){
     // Note that resU and resV can be replaced with already introduced buffer
@@ -473,6 +490,15 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
                    "insHelmholtzRhsIpdgBC3D",
                    kernelInfo);
 
+      ins->helmholtzRhsBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+                   "insHelmholtzRhsBC3D",
+                   kernelInfo);
+
+      ins->helmholtzAddBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
+                   "insHelmholtzAddBCKernel",
+                   kernelInfo);
 
       ins->totalHaloExtractKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
@@ -535,6 +561,16 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
       ins->pressureHaloScatterKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
                    "insPressureHaloScatter",
+                   kernelInfo);
+
+      ins->vorticityKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityTet3D.okl",
+                   "insVorticityTet3D",
+                   kernelInfo);
+
+      ins->divergenceKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTet3D.okl",
+                   "insDivergenceTet3D",
                    kernelInfo);
       // ===========================================================================//
     }
