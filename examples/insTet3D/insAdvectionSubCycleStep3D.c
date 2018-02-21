@@ -121,7 +121,8 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
           }
 
           //compute advective velocity fields at time t
-          ins->subCycleExtKernel(NtotalElements,
+          ins->subCycleExtKernel(mesh->NnotInternalElements,
+                                 mesh->o_notInternalElementIds
                                  ins->index,
                                  NtotalElements,
                                  c0,
@@ -152,17 +153,10 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
 
             // copy extracted halo to HOST 
             ins->o_vHaloBuffer.asyncCopyTo(ins->vSendBuffer);            
-            mesh->device.finish();
-
-            // start halo exchange
-            meshHaloExchangeStart(mesh,
-                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                                ins->vSendBuffer,
-                                ins->vRecvBuffer);
             mesh->device.setStream(mesh->defaultStream);
           }
-          
-          // Compute Volume Contribution
+
+                    // Compute Volume Contribution
           if(strstr(options, "CUBATURE")){
             ins->subCycleCubatureVolumeKernel(mesh->Nelements,
                                               mesh->o_vgeo,
@@ -197,10 +191,20 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
 
           }
 
+
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.setStream(mesh->dataStream);
+            mesh->device.finish();
+
+            // start halo exchange
+            meshHaloExchangeStart(mesh,
+                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                                ins->vSendBuffer,
+                                ins->vRecvBuffer);
+            
             meshHaloExchangeFinish(mesh);
 
-            mesh->device.setStream(mesh->dataStream);
             ins->o_vHaloBuffer.asyncCopyFrom(ins->vRecvBuffer); 
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
