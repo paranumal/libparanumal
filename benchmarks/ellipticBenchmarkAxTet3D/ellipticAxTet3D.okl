@@ -129,8 +129,9 @@ kernel void ellipticPartialAxTet3D_Ref2(const int Nelements,
 
             int m=n;
             while(m<p_Nggeo){
-              s_ggeo[et][m] = element[et]*p_Nggeo+m;
-              m += p_Np;
+//              s_ggeo[et][m] = element[et]*p_Nggeo+m;
+              s_ggeo[et][m] = ggeo[element[et]*p_Nggeo+m];  
+            m += p_Np;
             }
           }
         }
@@ -254,7 +255,8 @@ kernel void ellipticPartialAxTet3D_Ref3(const int Nelements,
 	      
 	      int m=n;
 	      while(m<p_Nggeo){
-		s_ggeo[et][b][m] = element[et]*p_Nggeo+m;
+//		s_ggeo[et][b][m] = element[et]*p_Nggeo+m;
+              s_ggeo[et][b][m] = ggeo[element[et]*p_Nggeo+m];  
 		m += p_Np;
 	      }
 	    }
