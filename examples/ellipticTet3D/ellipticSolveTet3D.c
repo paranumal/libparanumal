@@ -63,6 +63,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
 
+    // finalize gather using local and global contributions
+    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
+
     // C0 halo gather-scatter (on data stream)
     if(ogs->NhaloGather) {
       mesh->device.setStream(solver->dataStream);
@@ -84,9 +87,6 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       //dfloat one = 1.f;
       //solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
     }
-
-    // finalize gather using local and global contributions
-    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
 
     mesh->device.finish();    
     mesh->device.setStream(solver->dataStream);
