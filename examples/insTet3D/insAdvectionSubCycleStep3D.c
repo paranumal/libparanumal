@@ -121,8 +121,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
           }
 
           //compute advective velocity fields at time t
-          ins->subCycleExtKernel(mesh->NnotInternalElements,
-                                 mesh->o_notInternalElementIds
+          ins->subCycleExtKernel(NtotalElements,
                                  ins->index,
                                  NtotalElements,
                                  c0,

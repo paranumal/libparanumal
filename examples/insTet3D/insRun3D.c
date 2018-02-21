@@ -14,7 +14,7 @@ void insRun3D(ins_t *ins, char *options){
   occa::initTimer(mesh->device);
 
   //ins->NtimeSteps = 271000; 
-  ins->NtimeSteps =500;
+  ins->NtimeSteps =10;
 
   double tic_tot = 0.f, toc_tot = 0.f; 
   double tic_adv = 0.f, toc_adv = 0.f;
