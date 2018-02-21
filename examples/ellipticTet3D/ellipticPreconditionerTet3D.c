@@ -59,6 +59,9 @@ void ellipticPreconditioner3D(solver_t *solver,
                                 invLambda, mesh->o_vgeo, precon->o_invMM, solver->o_rtmp, o_z);
       }
 
+      // finalize gather using local and global contributions
+      if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_z);
+
       // C0 halo gather-scatter (on data stream)
       if(ogs->NhaloGather) {
         mesh->device.setStream(solver->dataStream);
@@ -74,9 +77,6 @@ void ellipticPreconditioner3D(solver_t *solver,
         mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_z);
         mesh->device.setStream(solver->defaultStream);
       }
-
-      // finalize gather using local and global contributions
-      if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_z);
 
       mesh->device.finish();    
       mesh->device.setStream(solver->dataStream);
