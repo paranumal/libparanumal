@@ -138,8 +138,13 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
-                            mesh->o_mapB,
+                            ins->o_PmapB,
                             ins->o_rhsP);
+
+    // gather-scatter
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
@@ -162,12 +167,6 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
   }
   #endif
 
-  // gather-scatter
-  if(strstr(ins->pSolverOptions, "CONTINUOUS")){
-    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
-  }
-
   ins->NiterP = ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
 
   if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
@@ -179,7 +178,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
                             mesh->o_y,
                             mesh->o_z,
                             mesh->o_vmapM,
-                            mesh->o_mapB,
+                            ins->o_PmapB,
                             ins->o_PI);
   }
 }

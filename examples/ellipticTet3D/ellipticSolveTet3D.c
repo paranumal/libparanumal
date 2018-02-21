@@ -20,7 +20,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     ogs_t *ogs = solver->mesh->ogs;
 
     //pre-mask
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_q);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_q);
 
     if(solver->allNeumann)
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
@@ -35,7 +35,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                               mesh->o_StrT, mesh->o_StsT, mesh->o_SttT, 
                               mesh->o_MM, lambda, 
                               o_q, o_Aq);
-      if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
+      if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
       mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
       ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
     }
@@ -48,7 +48,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
                               mesh->o_StrT, mesh->o_StsT, mesh->o_SttT, 
                               mesh->o_MM, lambda, 
                               o_q, o_Aq);
-      if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
+      if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
     }
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
@@ -94,7 +94,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
 
     //post-mask
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
     iint offset = 0;
@@ -294,10 +294,10 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
 
       gsParallelGatherScatter(mesh->hostGsh, t, dfloatString, "add");
       o_t.copyFrom(t);
-      //if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_t);
+      //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_t);
       //if(solver->nonHalo->Ngather) mesh->gatherScatterKernel(solver->nonHalo->Ngather, solver->nonHalo->o_gatherOffsets, solver->nonHalo->o_gatherLocalIds, o_t);
 
-      //if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_t);
+      //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_t);
       //ellipticPreconditioner2D(solver, lambda, o_t, o_Pt, options);
       //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, true);
       ellipticOperator3D(solver, lambda, o_t, o_Pt, options);

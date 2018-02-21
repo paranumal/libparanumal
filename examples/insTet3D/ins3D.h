@@ -46,8 +46,13 @@ typedef struct {
   dfloat *Px, *Py, *Pz;
   dfloat *PI;
 
+  dfloat *Vx, *Vy, *Vz, *Div; 
+
   dfloat g[3];      // gravitational Acceleration
  
+  int *VmapB, *PmapB;
+  occa::memory o_VmapB, o_PmapB;
+
   //halo data
   dfloat *tSendBuffer;
   dfloat *tRecvBuffer;
@@ -75,6 +80,8 @@ typedef struct {
   occa::memory o_UH, o_VH, o_WH;
   occa::memory o_PI, o_PIx, o_PIy, o_PIz;
 
+  occa::memory o_Vx, o_Vy, o_Vz, o_Div;
+
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
 
   occa::kernel scaledAddKernel;
@@ -100,6 +107,8 @@ typedef struct {
   //
   occa::kernel helmholtzRhsForcingKernel;
   occa::kernel helmholtzRhsIpdgBCKernel;
+  occa::kernel helmholtzRhsBCKernel;
+  occa::kernel helmholtzAddBCKernel;
 
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
@@ -108,6 +117,9 @@ typedef struct {
   occa::kernel poissonPenaltyKernel;
   
   occa::kernel updateUpdateKernel;
+
+  occa::kernel vorticityKernel;
+  occa::kernel divergenceKernel;
 
 }ins_t;
 

@@ -550,7 +550,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options){
   //gather-scatter 
   if (strstr(options,"CONTINUOUS")) {
     gsParallelGatherScatter(mesh->hostGsh, Vx, dfloatString, "add");   
-    for (iint i=0;i<mesh->Nmasked;i++) Vx[mesh->maskIds[i]] = 0.;
+    for (iint i=0;i<solver->Nmasked;i++) Vx[solver->maskIds[i]] = 0.;
   }
 
   o_Vx.copyFrom(Vx); //copy to device

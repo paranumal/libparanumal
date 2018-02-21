@@ -20,7 +20,7 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTet3D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTet3D(mesh,lambda,&A,&nnz,&(precon->ogs),globalStarts, options);
+      ellipticBuildContinuousTet3D(solver,lambda,&A,&nnz,&(precon->ogs),globalStarts, options);
     }
 
     iint *Rows = (iint *) calloc(nnz, sizeof(iint));
