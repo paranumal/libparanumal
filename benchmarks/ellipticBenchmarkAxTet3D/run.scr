@@ -9,7 +9,7 @@ do
 	    echo [N=$N,Ne=$Ne,Nb=$Nb];
 
 	    #	    nvprof --kernels ellipticPartialAxTet3D_Ref30 --metrics flop_dp_efficiency,dram_read_throughput,dram_write_throughput,shared_load_throughput,shared_store_throughput,achieved_occupancy ./kernelTest 50000 $N 1 $Ne $Nb   ;
-	    ./kernelTest 50000 $N 1 $Ne $Nb   ;
+	    ./kernelTest 12000 $N 0 $Ne $Nb   |& grep GFL;
 	done;
     done;
 done

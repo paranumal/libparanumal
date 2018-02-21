@@ -2,16 +2,15 @@
 !/**/
 !*.*
 
-!*/makefile
 
 *.o
 *.a
 .DS_STORE
 *.vtu
 *.dat
+*.txt
 
 **/*.o
 **/*.c~
-**/makefile~
 *.m~
 *.nvprof
