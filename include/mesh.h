@@ -308,6 +308,7 @@ typedef struct {
   iint *cubeFaceNumber;   //ST: Mesh boundary logic for cubed sphere
   dfloat *dualProjMatrix; //    Fixed matrix applies the dual mapping 
   iint *cubeDistance;     //    distance between element and edge of cube face
+  dfloat *localdt;        //    temp variable for testing
   
   // occa stuff
   occa::device device;

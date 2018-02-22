@@ -87,6 +87,18 @@ void boltzmannPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   }
   fprintf(fp, "       </DataArray>\n");
 
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"base_dt\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
+      dfloat plotpn = (mesh->dt*pow(2,mesh->MRABlevel[e]))/mesh->localdt[e];
+      //      plotpn = plotpn*mesh->rho; // Get Pressure
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
+  
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"cube_distances\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){

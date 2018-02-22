@@ -21,25 +21,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   }*/
   
   //kernel arguments
-  dfloat alpha = 1./mesh->N;
+  dfloat alpha = 0;//1./mesh->N;
   iint zero = 0;
   iint one = 1;
-
-  /*iint eC = 0;
-	iint eL = mesh->EToE[eC*mesh->Nfaces+3];
-	iint eR = mesh->EToE[eC*mesh->Nfaces+1];
-
-	//unordered, only used for bounds checking
-	iint eU = mesh->EToE[eC*mesh->Nfaces + 0];
-	iint eD = mesh->EToE[eC*mesh->Nfaces + 2];
-	
-	iint faceC = mesh->cubeFaceNumber[eC];
-	iint faceL = mesh->cubeFaceNumber[eL];
-	iint faceR = mesh->cubeFaceNumber[eR];
-	iint faceU = mesh->cubeFaceNumber[eU];
-	iint faceD = mesh->cubeFaceNumber[eD];
-
-	printf("values are: %d %d %d %d %d\n",faceC,faceL,faceR,faceU,faceD);*/
 
   //filter the initial state
   for (iint l=0;l<mesh->MRABNlevels;l++) {
@@ -77,14 +61,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 		        l,
 			mesh->o_qFilter,
 			mesh->o_q);
-   }
-   mesh->o_q.copyTo(test_q);
-   for (int f = 0; f < mesh->Nfields; ++f) {
-     for(int n = 0; n < mesh->Np; ++n) {
-       dfloat test_me = (test_q[f*mesh->Np + n] > mesh->q[f*mesh->Np + n]) ? (test_q[f*mesh->Np + n] - mesh->q[f*mesh->Np + n]) : (mesh->q[f*mesh->Np + n] - test_q[f*mesh->Np + n]);
-       if (test_me > 1e-12) printf("bad val %d %d %lf %lf\n",f,n,test_q[f*mesh->Np + n],mesh->q[f*mesh->Np + n]);
-     }
-   }
+			}
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -219,7 +196,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    l,
 			    mesh->o_qFilter,
 			    mesh->o_rhsq);	
-	}
+			    }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -282,18 +259,16 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
       printf("tstep = %d, t = %g\n", tstep, t);
+      fflush(stdout);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
+      //boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
 
-
-      iint nancheck = 0;
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
-	if(isnan(mesh->q[n])&&!nancheck){
+	if(isnan(mesh->q[n])){
 	  printf("found nan\n");
-	  nancheck = 1;
-	  //exit(-1);
+	  exit(-1);
 	}
       }
 
@@ -302,10 +277,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       char fname[BUFSIZ];
 
       boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
-      if (nancheck) {
-	sleep(10);
-	exit(-1);
-      }
     }        
     occa::printTimer();
   }
