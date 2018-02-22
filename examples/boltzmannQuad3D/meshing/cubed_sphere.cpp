@@ -199,10 +199,12 @@ QuadList subdivide_4(VertexList& vertices,
 	result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face,{0,1,0,0}});
       }
       else {
-	result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face,{2*each.dist[0],each.dist[0] + each.dist[1],each.dist[0]+each.dist[2],each.dist[0]+each.dist[3]}});
-	result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face,{each.dist[0] + each.dist[1],2*each.dist[1],each.dist[1]+each.dist[2],each.dist[1]+each.dist[3]}});
-	result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face,{each.dist[2]+each.dist[0],each.dist[1]+each.dist[2],2*each.dist[2],each.dist[2]+each.dist[3]}});
-	result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face,{each.dist[3]+each.dist[0],each.dist[3]+each.dist[1],each.dist[2]+each.dist[3],2*each.dist[3]}});
+	int max4 = max(each.dist[0]+each.dist[2],each.dist[1]+each.dist[3]);
+	
+	result.push_back({{each.vertex[0],mid[0],mid[4],mid[3]},{each.on_edge[0],false,false,each.on_edge[3]},each.face,{2*each.dist[0],each.dist[0] + each.dist[1],max4,each.dist[0]+each.dist[3]}});
+	result.push_back({{mid[0],each.vertex[1], mid[1],mid[4]},{each.on_edge[1],false,false,each.on_edge[0]},each.face,{each.dist[0] + each.dist[1],2*each.dist[1],each.dist[1]+each.dist[2],max4}});
+	result.push_back({{mid[4], mid[1],each.vertex[2], mid[2]},{each.on_edge[2],false,false,each.on_edge[1]},each.face,{max4,each.dist[1]+each.dist[2],2*each.dist[2],each.dist[2]+each.dist[3]}});
+	result.push_back({{ mid[3],mid[4], mid[2],each.vertex[3]},{each.on_edge[3],false,false,each.on_edge[2]},each.face,{each.dist[3]+each.dist[0],max4,each.dist[2]+each.dist[3],2*each.dist[3]}});
       }
     }
 

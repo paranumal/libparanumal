@@ -296,9 +296,10 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl = 0.3; // depends on the stability region size (was .4, then 2)
-
-  dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
+  dfloat cfl_small = 0.25; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_large = 4*cfl_small;
+  
+  mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
   mesh->tauInv = mesh->RT/nu; // TW
 
@@ -324,7 +325,12 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 	lmax = mymax(lmax, hest);
       }
     }
-    EtoDT[e]  = cfl*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+    if (mesh->cubeDistance[e] == 0) {
+      mesh->localdt[e]  = cfl_small*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+    }
+    else {
+      mesh->localdt[e]  = cfl_large*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+    }
 
     glmin = mymin(glmin, lmin);
     glmax = mymax(glmax, lmax);
@@ -337,7 +343,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
-  meshMRABSetupQuad3D(mesh,EtoDT,maxLevels);
+  meshMRABSetupQuad3D(mesh,mesh->localdt,maxLevels);
 
   dfloat dt = mesh->dt;
 
@@ -345,7 +351,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   mesh->lev_updates = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
 
-  printf("cfl = %g\n", cfl);
+  printf("cfl = %g %g\n", cfl_small,cfl_large);
   printf("dt = %g\n", dt);
   printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
   printf("global h in [%g,%g]\n", glmin, glmax);
@@ -363,7 +369,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
-  //  sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
 
@@ -478,7 +484,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-  mesh->filterKernelH =
+    mesh->filterKernelH =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHQuad3D",
 				       kernelInfo);
