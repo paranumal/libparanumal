@@ -107,9 +107,9 @@ clean:
 	rm *.o ellipticBenchmarkTri2D
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../3rdParty/BlasLapack; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkTri2D
-	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkTri2D
+	cd ../../3rdParty/gslib.github; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../examples/parALMOND; make clean; cd ../../benchmarks/ellipticBenchmarkAxTri2D
+	cd ../../src; rm *.o; cd ../benchmarks/ellipticBenchmarkAxTri2D
 	rm *.o ellipticBenchmarkTri2D
 
