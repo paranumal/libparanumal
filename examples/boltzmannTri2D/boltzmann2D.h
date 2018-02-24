@@ -3,7 +3,7 @@
 #include <math.h>
 #include <mpi.h>
 #include "mesh2D.h"
-
+#include <complex.h>  
 
 
 
@@ -23,13 +23,15 @@ void boltzmannRun2D(mesh2D *mesh, char *options);
 // void boltzmannMRRun2D(mesh2D *mesh, char *options);
 
 void boltzmannError2D(mesh2D *mesh, dfloat time, char *opt);
+void boltzmannForces2D(mesh2D *mesh, dfloat time, char *opt);
 
 void boltzmannReport2D(mesh2D *mesh, iint tstep, char *opt);
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
 void boltzmannCouetteError2D(mesh2D *mesh, dfloat time);
 
-
+void boltzmannPlotVTUField2D(mesh2D *mesh, char *fname);
 void boltzmannPlotVTU2D(mesh2D *mesh, char * FileName);
+void boltzmannPlotTEC2D(mesh2D *mesh, char * FileName, dfloat solutionTime);
 void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
 //dfloat boltzmannRampFunction2D(dfloat t);
@@ -69,5 +71,6 @@ void boltzmannMRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 // Execute one Boltzmann time step using MRSAAB
 void boltzmannMRSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+
 
 

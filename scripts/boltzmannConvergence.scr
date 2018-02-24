@@ -1,13 +1,45 @@
 cd ../examples/boltzmannTri2D;
 make -j; 
 
-for time in LSERK SAAB SARK LSIMEX
-do
-for mesh in ../../meshes/boltzmannCouette2D_h0.msh ../../meshes/boltzmannCouette2D_h1.msh ../../meshes/boltzmannCouette2D_h2.msh ../../meshes/boltzmannCouette2D_h3.msh
-do
-for N in `seq 1 6 `
-do
-./boltzmannMain2D $mesh $N $time; 
-done
-done
-done
+
+
+
+// Test Pml Width
+//./boltzmannMain2D ../../meshes/boltzmannVortex2D_w0.msh 3 LSERK;
+//./boltzmannMain2D ../../meshes/boltzmannVortex2D_w1.msh 3 LSERK;
+//./boltzmannMain2D ../../meshes/boltzmannVortex2D_w2.msh 3 LSERK;
+//./boltzmannMain2D ../../meshes/boltzmannVortex2D_w3.msh 3 LSERK;
+
+
+//./boltzmannMain2D ../../meshes/boltzmannVortex2DNonPml.msh 3 LSERK;
+
+
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D.msh 3 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortex2D.msh 5 LSERK;
+// ./boltzmannMain2D ../../meshes/boltzmannVortexL2D.msh 5 LSERK;
+
+
+
+//
+// # TIME="LSERK SAAB SARK LSIMEX"
+// # MESH="../../meshes/boltzmannCouette2D_h0.msh
+// 		../../meshes/boltzmannCouette2D_h1.msh
+// 		../../meshes/boltzmannCouette2D_h2.msh
+// 		../../meshes/boltzmannCouette2D_h3.msh"
+
+// # for time in $TIME;do
+// # for mesh in $MESH;do  
+// # for N in `seq 1 6 `;do
+// # ./boltzmannMain2D $mesh $N $time; 
+// # done; done; done;
+//
+//
+// #TIME="LSERK SAAB SARK LSIMEX"
+// #
+// #for time in $TIME;do
+// #for mesh in ../../meshes/boltzmannCouette2D_h0.msh; do
+// #for N in 3; do
+// #echo "Time:" $time; echo "mesh:" $mesh; echo "Order:" $N;
+// #./boltzmannMain2D $mesh $N $time; done; done; done; 
+//

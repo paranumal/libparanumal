@@ -11,7 +11,7 @@ mesh->shiftIndex =0;
     {
 
       // intermediate stage time
-      dfloat t = tstep*mesh->dt + mesh->dt*mesh->LSIMEX_C[k];
+      dfloat t = mesh->startTime+ tstep*mesh->dt + mesh->dt*mesh->LSIMEX_C[k];
     
       dfloat ramp, drampdt;
       boltzmannRampFunction2D(t, &ramp, &drampdt);

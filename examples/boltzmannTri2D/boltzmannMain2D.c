@@ -11,7 +11,8 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  
+ 
+ 
   // SET OPTIONS
   // mode        = TEST, SOLVER // do not use test mode, for developing purposes
   // relaxation  = CUBATURE, COLLOCATION, 
@@ -20,7 +21,8 @@ int main(int argc, char **argv){
   // bc          = UNSPLITPML, SPLITPML, NONE
   // pmlprofile  = CONSTANT, QUADRATIC
   
-  char *options =strdup("out = REPORT, MR_GROUPS, relaxation = CUBATURE, bc=NONE, pmlprofile=CONSTANT");
+  char options[BUFSIZ];
+  strcpy(options,"out = REPORT +  PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 
@@ -37,7 +39,7 @@ int main(int argc, char **argv){
       printf("Warning!!! meshfile is not speciefied, defaulting %s\n",meshfile);  
       mesh = meshSetupTri2D(meshfile, N);  
       
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str);
     }  
@@ -49,7 +51,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str); 
     }  
@@ -60,7 +62,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time= LSERK"); 
+      strcpy(time_str,", time= LSERK"); 
       printf("Warning!!! time discretization is not speciefied, defaulting %s\n",time_str); 
       strcat(options,time_str); 
     }  
@@ -71,7 +73,7 @@ int main(int argc, char **argv){
       // set up mesh stuff   
       mesh = meshSetupTri2D(argv[1], N); 
 
-      strcat(time_str,", time="); 
+      strcpy(time_str,", time="); 
       strcat(time_str,argv[3]); 
       strcat(options,time_str);
     }  
@@ -81,9 +83,10 @@ int main(int argc, char **argv){
        exit(-1);
     }  
     
-    for(iint i=0; i<1;++i){
+    for(iint i=0; i<1;i++){
 
       mesh->Ntscale=i;
+
       printf("Setup Boltzmann Solver: \n");
       boltzmannSetup2D(mesh,options); 
 
@@ -93,7 +96,6 @@ int main(int argc, char **argv){
     
   // close down MPI
   MPI_Finalize();
-
   exit(0);
   return 0;
 }

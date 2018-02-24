@@ -22,8 +22,8 @@ kernel void boltzmannSRABUpdate2D(const iint Nelements,
 
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
           for(iint fld=0; fld< p_Nfields; ++fld){
           q[id+fld] += (a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -62,17 +62,17 @@ kernel void boltzmannSRABPmlUpdate2D(const iint pmlNelements,
         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
          for(iint fld=0; fld< p_Nfields; ++fld){
 
           pmlqx[pid+fld] += (a1*pmlrhsqx[pmlrhsId1+fld] + a2*pmlrhsqx[pmlrhsId2+fld] + a3*pmlrhsqx[pmlrhsId3+fld]);
-          pmlqx[pid+fld] += (a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
+          pmlqy[pid+fld] += (a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
           
           q[id+fld]      += (a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
           
@@ -114,12 +114,10 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
       e  = elementIds[es];
       if(n<p_Np){
         const iint id = p_Nfields*(n + e*p_Np);
-
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
-
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         //
         q[id+0] = q[id+0] + ab1*rhsq[rhsId1+0] + ab2*rhsq[rhsId2+0] + ab3*rhsq[rhsId3+0];
         q[id+1] = q[id+1] + ab1*rhsq[rhsId1+1] + ab2*rhsq[rhsId2+1] + ab3*rhsq[rhsId3+1];
@@ -165,21 +163,21 @@ kernel void boltzmannSAABPmlUpdate2D(const iint pmlNelements,
         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
          for(iint fld=0; fld< p_Nfields; ++fld){
 
-          pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
-          pmlqx[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+          pmlqx[pid+fld] += (ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld]);
+          pmlqy[pid+fld] += (ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld]);
 
         
           if(fld<3)
-            q[id+fld]      = q[id+fld]+ab1*rhsq[rhsId1+fld]+ab2*rhsq[rhsId2+fld]+ab3*rhsq[rhsId3+fld];
+            q[id+fld]      += (ab1*rhsq[rhsId1+fld]+ab2*rhsq[rhsId2+fld]+ab3*rhsq[rhsId3+fld]);
           else
             q[id+fld]      = expdt*q[id+fld]+saab1*rhsq[rhsId1+fld] + saab2*rhsq[rhsId2+fld] + saab3*rhsq[rhsId3+fld];
 
@@ -212,15 +210,15 @@ kernel void boltzmannLSERKUpdate2D(const iint Nelements,
 
     for(iint n=0;n<p_Np;++n;inner0){
       const iint e = elementIds[es];
-
       const iint id = p_Nfields*(n + e*p_Np);
-
+                  
         for(iint fld=0; fld< p_Nfields; ++fld){
 
          const iint idn = id + fld;
-
          dfloat r_resq = resq[idn];
          dfloat r_rhsq = rhsq[idn]; 
+
+
          dfloat r_q    = q[idn];
          //
          r_resq = rka*r_resq + dt*r_rhsq;
@@ -260,9 +258,10 @@ kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+        const iint pmlId = pmlIds[es];
+        const iint id  = p_Nfields*(e*p_Np + n);
+        const iint pid = p_Nfields*(pmlId*p_Np + n);
+        //
 
       for (iint fld =0; fld<p_Nfields; ++fld){
 
@@ -297,7 +296,7 @@ kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
 
 
 
-
+// Check indexing for SARK KERNELS !!!!!!!!!!!!!
 kernel void boltzmannSARKStageUpdate2D(const iint Nelements,
             const iint * restrict elementIds,
             const dfloat dt, 
@@ -320,8 +319,7 @@ kernel void boltzmannSARKStageUpdate2D(const iint Nelements,
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
         const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        //const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
-
+      
         q[id+0] = qs[id+0] + dt*(rka*rhsq[rhsId1+0] + rkb*rhsq[rhsId2+0]);
         q[id+1] = qs[id+1] + dt*(rka*rhsq[rhsId1+1] + rkb*rhsq[rhsId2+1]);
         q[id+2] = qs[id+2] + dt*(rka*rhsq[rhsId1+2] + rkb*rhsq[rhsId2+2]);
@@ -410,11 +408,9 @@ kernel void boltzmannSARKPmlStageUpdate2D(const iint pmlNelements,
 
       const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
       const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-      // const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
-
+      
       const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
       const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-      // const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
       //
       for(iint fld=0; fld< p_Nfields; ++fld){
 
@@ -717,50 +713,6 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
 
 
 
-
-
-// kernel void boltzmannLSERKUpdate2D_0(const iint Nelements,
-// 				    const iint * restrict elementIds,
-// 				    const dfloat dt,	
-// 				    const dfloat rka,
-// 				    const dfloat rkb,
-// 				    const dfloat4 * restrict rhsq,
-// 				          dfloat4 * restrict resq,
-// 				          dfloat4 * restrict q){
-  
-//   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-
-//       const iint base = 2*(n + element*p_Np);
-
-//       dfloat4 resqa = resq[base+0];
-//       dfloat4 resqb = resq[base+1];
-
-//       dfloat4 rhsqa = rhsq[base+0];
-//       dfloat4 rhsqb = rhsq[base+1];
-
-//       dfloat4 qa = q[base+0];
-//       dfloat4 qb = q[base+1];
-
-//       resqa = rka*resqa + dt*rhsqa;
-//       resqb = rka*resqb + dt*rhsqb;
-
-//       qa += rkb*resqa;
-//       qb += rkb*resqb;
-      
-//       resq[base+0] = resqa;
-//       resq[base+1] = resqb;
-      
-//       q[base+0] = qa;
-//       q[base+1] = qb;
-//     }
-//   }
-// }
-
-
-
 // This kernel does not use float 4 format, 
 kernel void boltzmannMRABUpdate2D(const iint Nelements,
             const iint * restrict elementIds,
@@ -788,8 +740,8 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
 
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
           for(iint fld=0; fld< p_Nfields; ++fld){
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -862,8 +814,8 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
 
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         //
         s_q[p_Nfields*n+0] = q[id+0] + ab1*rhsq[rhsId1+0] + ab2*rhsq[rhsId2+0] + ab3*rhsq[rhsId3+0];
@@ -943,22 +895,22 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
          for(iint fld=0; fld< p_Nfields; ++fld){
 
           pmlqx[pid+fld] += dt*(a1*pmlrhsqx[pmlrhsId1+fld] + a2*pmlrhsqx[pmlrhsId2+fld] + a3*pmlrhsqx[pmlrhsId3+fld]);
-          pmlqx[pid+fld] += dt*(a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
+          pmlqy[pid+fld] += dt*(a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
           
           dfloat n_q      = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
           
           s_q[p_Nfields*n+fld] = n_q;
-          q[id+fld]       = n_q;
+          q[id+fld]            = n_q;
          }
       }
     }
@@ -1018,17 +970,37 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
          for(iint fld=0; fld< p_Nfields; ++fld){
 
           pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
-          pmlqx[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+          pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+
+          
+          // //
+          // if(fld==5){
+          // pmlqx[pid+fld] = expdt*pmlqx[pid+fld] + saab1*pmlrhsqx[pmlrhsId1+fld] + saab2*pmlrhsqx[pmlrhsId2+fld] + saab3*pmlrhsqx[pmlrhsId3+fld];
+          // }
+
+          // else{
+          // pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
+          // }
+
+          // if(fld==4){
+          // pmlqy[pid+fld] = expdt*pmlqy[pid+fld] + saab1*pmlrhsqy[pmlrhsId1+fld] + saab2*pmlrhsqy[pmlrhsId2+fld] + saab3*pmlrhsqy[pmlrhsId3+fld];
+          // }
+
+          // else{
+          // pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
+          // }
+
+
 
           dfloat n_q = 0.f; 
 
@@ -1091,8 +1063,8 @@ kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
 
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
           for(iint fld=0; fld< p_Nfields; ++fld){
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -1152,8 +1124,8 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
 
         // hard-coded for 3th order
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
           for(iint fld=0; fld< p_Nfields; ++fld){
             if(fld<3)
@@ -1214,8 +1186,8 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
         // const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         // const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
         // const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
         // const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
@@ -1282,8 +1254,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
         // const iint pid = p_Nfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         // const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
         // const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
         // const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;

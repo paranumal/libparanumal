@@ -31,7 +31,10 @@ faceNodes  = [faceNodes1;faceNodes2;faceNodes3;faceNodes4]';
 
 V = VandermondeQuad2D(N, r, s);
 [Dr,Ds] = DmatricesQuad2D(N, r, s, V);
+Dr = full(Dr);
+Ds = full(Ds);
 LIFT = LiftQuad2D(N, faceNodes, r, s);
+LIFT = full(LIFT);
 
 fname = sprintf('quadrilateralN%02d.dat', N);
 

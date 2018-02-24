@@ -6,91 +6,61 @@
 
 void boltzmannSetup2D(mesh2D *mesh, char * options){
 
- iint rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  // SET SOLVER PHYSICAL PARAMETERS
   
+  // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
+  
+  mesh->errorStep = 250; 
 
-
-
-  if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
-    mesh->Nrhs = 3;
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-
-    mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
-    mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
-  }
-
-  else if(strstr(options,"SAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
-    mesh->Nrhs = 3;
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-  else if (strstr(options,"LSERK")){ // LSERK, SARK etc.
-    mesh->Nrhs = 1; 
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->resq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-
-  else if (strstr(options,"LSIMEX")){ // LSERK, SARK etc.
-    mesh->Nrhs = 1; 
-    // compute samples of q at interpolation nodes
-    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  }
-
-
+  dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
   // Initialize
-  dfloat Ma      = 0.f,   Re     = 0.f;
-  dfloat rho     = 1.f,   u      = 0.f;
-  dfloat v       = 0.f,   nu     = 0.f;
-  dfloat Uref    = 1.f,   Lref   = 1.f; 
-  dfloat sigma11 = 0.f , sigma12 = 0.f, sigma22 = 0.f;  
+  dfloat Ma      = 0.f,   Re      = 0.f;
+  dfloat rho     = 1.f,   u       = 0.f;
+  dfloat v       = 0.f,   nu      = 0.f;
+  dfloat Uref    = 1.f,   Lref    = 1.f; 
+  dfloat sigma11 = 0.f ,  sigma12 = 0.f, sigma22 = 0.f;  
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    Ma = 0.1;    //Set Mach number
-    Re = 1000.;  // Set Reynolds number
+    mesh->Ma = 0.2;    // Set Mach number
+    mesh->Re = 150; //RE[mesh->Ntscale]; // Set Reynolds number was 100
     //
-    Uref = 1.;   // Set Uref
-    Lref = 1.;   // set Lref
+    Uref = 1.0;  // Set Uref was 0.5
+    Lref = 1.0;   // set Lref
     //
-    mesh->RT      = Uref*Uref/(Ma*Ma);
+    mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
     mesh->sqrtRT  = sqrt(mesh->RT);  
     //
-    nu            = Uref*Lref/Re; 
+    nu            = Uref*Lref/mesh->Re; 
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1., u = Uref; v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
-    mesh->finalTime = 100.;
+    mesh->startTime = 0.0; 
+    mesh->finalTime = 150.0;  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
-    Ma = 0.05;     //Set Mach number
-    Re = 1000.;   // Set Reynolds number
-    //
+    mesh->Ma = 0.2;     //Set Mach number
+    mesh->Re = 200.;   // Set Reynolds number
+    
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
     //
-    mesh->RT  = Uref*Uref/(Ma*Ma);
+    mesh->RT  = Uref*Uref/(mesh->Ma*mesh->Ma);
     mesh->sqrtRT = sqrt(mesh->RT);  
     //
-    nu = Uref*Lref/Re; 
+    nu = Uref*Lref/mesh->Re; 
     mesh->tauInv = mesh->RT/nu;
     
-    #if 1
+    #if 0
     // Create Periodic Boundaries
     printf("Creating periodic connections if exist \n");
     dfloat xper = 1.0;   dfloat yper = 0.0;
@@ -98,24 +68,21 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     #endif
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1., u = 0., v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
+    rho = 1.0, u = Uref, v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
     //
-    mesh->finalTime = 10.0;
+    mesh->startTime = 0.0; 
+    mesh->finalTime = 100.;
   }
 
   // set penalty parameter
   mesh->Lambda2 = 0.5/(mesh->sqrtRT);
 
 
-
-
-
-
-
+  dfloat time = mesh->startTime + 0.0; 
   // Define Initial Mean Velocity
   dfloat ramp, drampdt;
-  boltzmannRampFunction2D(0, &ramp, &drampdt);
-
+  boltzmannRampFunction2D(time, &ramp, &drampdt);
+  
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/mesh->sqrtRT;
   dfloat q3bar = rho*v/mesh->sqrtRT;
@@ -123,27 +90,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat t = 0;
-      dfloat x = mesh->x[n + mesh->Np*e];
-      dfloat y = mesh->y[n + mesh->Np*e];
 
-      mesh->q[cnt+0] = q1bar; // uniform density, zero flow
-      mesh->q[cnt+1] = ramp*q2bar;
-      mesh->q[cnt+2] = ramp*q3bar;
-      mesh->q[cnt+3] = ramp*ramp*q4bar;
-      mesh->q[cnt+4] = ramp*ramp*q5bar;
-      mesh->q[cnt+5] = ramp*ramp*q6bar;  
-      cnt += mesh->Nfields;
-    }
-  }
 
-  //
 
-  // Set stable time step size for each element
-  dfloat cfl          = 0.33; 
+  // SET STABLE TIME STEP SIZE
+  dfloat cfl          = 0.2; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -163,7 +114,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
-      dfloat htest = 0.5/(sJ*invJ);
+      dfloat htest = 2.0/(sJ*invJ);
       hmin = mymin(hmin, htest); 
     }
 
@@ -171,7 +122,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
     dfloat dtex   = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
     dfloat dtim   = 1.f/(mesh->tauInv);
-
     dfloat dtest = 1e9;
     
     if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB"))
@@ -194,71 +144,177 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     iint maxLevels = 100;
     meshMRABSetup2D(mesh,EtoDT,maxLevels);
   }
-  else{
-    
-    if(mesh->Ntscale){
-      printf("Time step size scaling with 2^ %d", mesh->Ntscale);
-      dt = pow(2,mesh->Ntscale)*1e-6;
-    }
-
-
-
+  else{    
+    //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
+    dt = 100e-6; // !!!!!!!!!!!!!!!!
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-    mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-    mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+    mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
+    mesh->dt         = (mesh->finalTime-mesh->startTime)/mesh->NtimeSteps;
 
-     //offset index
+    //offset index
     mesh->shiftIndex = 0;
-    
+
     // Set element ids for nonPml region, will be modified if PML exists
     mesh->nonPmlNelements = mesh->Nelements; 
     mesh->pmlNelements    = 0; 
-      
+
     mesh->nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
-     for(iint e=0;e<mesh->Nelements;++e)
-       mesh->nonPmlElementIds[e] = e; 
+    for(iint e=0;e<mesh->Nelements;++e)
+     mesh->nonPmlElementIds[e] = e; 
   }
    
 
+
+
+
+
+
+ // INITIALIZE FIELD VARIABLES 
+ if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
+    mesh->Nrhs = 3;
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+
+    mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+    mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
+  }
+
+  else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
+    mesh->Nrhs = 3;
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+  else if (strstr(options,"LSERK")){ // LSERK, SARK etc.
+    mesh->Nrhs = 1; 
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->resq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+
+  else if (strstr(options,"LSIMEX")){ // LSERK, SARK etc.
+    mesh->Nrhs = 1; 
+    // compute samples of q at interpolation nodes
+    mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  }
+
+
+ // INITIALIZE PROBLEM 
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat t = 0;
+      dfloat x = mesh->x[n + mesh->Np*e];
+      dfloat y = mesh->y[n + mesh->Np*e];
+#if 0
+      // Couette Flow 
+      dfloat uex = y ; 
+      dfloat sex = 0.0; 
+      for(iint k=1; k<=10; k++){
+        dfloat lamda = k*M_PI;
+        // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
+        dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2. * sqrt(1. - 4.*pow(1./ mesh->tauInv, 2)* mesh->RT*lamda*lamda);
+        uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
+        sex  += 2.*pow(-1,k)*coef/(lamda*lamda)*exp(coef*time)*cos(lamda*y); 
+      }
+
+      mesh->q[cnt+0] = rho; // uniform density, zero flow
+      mesh->q[cnt+1] = rho*uex/mesh->sqrtRT;
+      mesh->q[cnt+2] = 0.0;
+      mesh->q[cnt+3] = sex/mesh->RT;
+      mesh->q[cnt+4] = 0.0;
+      mesh->q[cnt+5] = 0.0;  
+#endif
+
+
+#if 0
+      // Vortex Problem
+      dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
+      dfloat Umax  = 0.5*u; 
+      dfloat b     = 0.2;
+
+      dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
+
+      dfloat rhor  = rho*exp(-Umax*Umax/(2. * mesh->RT) *exp(1.0-r*r/(b*b)));
+
+      dfloat theta = atan2(y,x);
+
+      mesh->q[cnt+0] = rhor; 
+      mesh->q[cnt+1] = rhor*(-Ur*sin(theta) +u)/mesh->sqrtRT;
+      mesh->q[cnt+2] = rhor*( Ur*cos(theta) +v)/mesh->sqrtRT;
+      mesh->q[cnt+3] = q4bar;
+      mesh->q[cnt+4] = q5bar;
+      mesh->q[cnt+5] = q6bar;  
+    
+#endif
+
+#if 1
+      // Uniform Flow
+      mesh->q[cnt+0] = q1bar; 
+      mesh->q[cnt+1] = ramp*q2bar;
+      mesh->q[cnt+2] = ramp*q3bar;
+      mesh->q[cnt+3] = ramp*ramp*q4bar;
+      mesh->q[cnt+4] = ramp*ramp*q5bar;
+      mesh->q[cnt+5] = ramp*ramp*q6bar;  
+#endif
+
+      cnt += mesh->Nfields;
+    }
+  }
+
   
-
-
-
-  mesh->errorStep = 100000;
+  // Write Problem Info 
   if(rank==0){
     printf("dt   = %g ",   mesh->dt);
     printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
     if(mesh->MRABNlevels)
-      printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt, mesh->MRABNlevels, pow(2, mesh->MRABNlevels-1)*(mesh->dt*(mesh->NtimeSteps+1)));   
+      printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt, mesh->MRABNlevels, mesh->startTime+pow(2, mesh->MRABNlevels-1)*(mesh->dt*(mesh->NtimeSteps+1)));   
     else
-     printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt,  mesh->dt*mesh->NtimeSteps);
+     printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", mesh->NtimeSteps, mesh->dt,  mesh->startTime + mesh->dt*mesh->NtimeSteps);
   }
  
+ 
+  // SET PROBE DATA
+  if(strstr(options, "PROBE")){
+    mesh->probeNTotal = 1; 
+    dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    // Fill probe coordinates
+     pX[0] = 8.00;  //pX[1] = 8.00;  pX[2] = 5.00; pX[3] = 5;
+     pY[0] = 0.00;  //pY[1] = 0.00;  pY[2] = 0.00; pY[3] = 5*tan(M_PI/6.);
+
+    meshProbeSetup2D(mesh, pX, pY);
+
+    free(pX); free(pY);
+
+  }
+  
 
 
-
-
-
-//SetupOcca
+  //OCCCA SETUP
   char deviceConfig[BUFSIZ];
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
+ 
 
   occa::kernelInfo kernelInfo;
   meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);     
-  
 
-    // Setup MRAB PML
+  // Setup MRAB PML
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
-
+     printf("Preparing Pml for multirate rate\n");
     boltzmannMRABPmlSetup2D(mesh, options);
-  // 
+
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABNelements[lev])
         mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
@@ -267,9 +323,9 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
         mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
         mesh->MRABhaloIds[lev]);
     }
-  }
-  
+  } 
   else{
+   printf("Preparing Pml for single rate\n");
    boltzmannPmlSetup2D(mesh, options); 
 
     if (mesh->nonPmlNelements)
@@ -278,18 +334,57 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   
 
-  
+
+#if 0
+mesh2D *meshsave = mesh;
+iint fld = 0; 
+  for(iint lev=0; lev<mesh->MRABNlevels; lev++){
+
+        for(iint m=0; m<mesh->MRABNelements[lev]; m++){
+          iint e = mesh->MRABelementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
+             mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
+          }
+        }
+
+
+        for(iint m=0; m<mesh->MRABpmlNelements[lev]; m++){
+          iint e = mesh->MRABpmlElementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
+             mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
+          }
+        }
+  }
+
+ char fname[BUFSIZ];
+ sprintf(fname, "ElementGroups.vtu");
+ meshPlotVTU2D(mesh, fname,fld);
+
+
+mesh = meshsave; 
+
+#endif
 
 
 if(strstr(options,"MRSAAB") || strstr(options,"MRAB") || 
    strstr(options,"SRAB")   || strstr(options,"SAAB") ){
 
 
-  iint Nlevels = 1;
+  iint Nlevels = 0;
 
-  if(strstr(options,"MRSAAB") || strstr(options,"MRAB") )
+  if(mesh->MRABNlevels==0)
+    Nlevels =1;
+  else
     Nlevels = mesh->MRABNlevels;
 
+  
+  const iint Nr = 32; 
+  dfloat complex R[Nr]; 
+
+  for(iint ind =1; ind <= Nr; ++ind){
+    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
+    R[ind-1] = cexp(I*M_PI* theta);
+  }
   
 
   mesh->MRSAAB_A = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
@@ -303,7 +398,8 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
   for(iint l = 0; l<Nlevels; ++l){
     // MRSAAB coefficients
-    dfloat cc = -mesh->tauInv;
+    dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
+    //dfloat alpha=0.0;
     dfloat h  = mesh->dt * pow(2,l); 
     //
     for (iint order=0; order<3; ++order){
@@ -311,26 +407,23 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
       const iint id = order*Nlevels*3 + l*3;
 
       if(order==0){
-        if(fabs(cc*h)>1e-2){  // Use exponentials
-           // Full dt coeeficients
-          mesh->MRSAAB_A[id + 0] = (exp(cc*h) - 1.)/cc;
-          mesh->MRSAAB_A[id + 1] = 0.f;
-          mesh->MRSAAB_A[id + 2] = 0.f;
-          // Half coefficients
-          mesh->MRSAAB_B[id + 0] = (exp((cc*h)/2.) - 1.)/cc;
-          mesh->MRSAAB_B[id + 1] = 0.f;
-          mesh->MRSAAB_B[id + 2] = 0.f;
+
+        double complex a1 = 0. + 0.* I; 
+        double complex b1 = 0. + 0.* I; 
+
+        for(iint i = 0; i<Nr; ++i ){
+          double complex lr = alpha  + R[i];
+          a1 +=  h*(cexp(lr) - 1.)/lr;
+          b1 +=  h*(cexp(lr/2.) - 1.)/lr;
         }
-        else{
-          // Full dt coeeficients
-          mesh->MRSAAB_A[id + 0] = (pow(cc,3)*pow(h,4))/24. + (pow(cc,2)*pow(h,3))/6. + (cc*pow(h,2))/2. + h; 
-          mesh->MRSAAB_A[id + 1] = 0.f;
-          mesh->MRSAAB_A[id + 2] = 0.f;
-          // Half coefficients
-          mesh->MRSAAB_B[id + 0] = (pow(cc,3)*pow(h,4))/384. + (pow(cc,2)*pow(h,3))/48. + (cc*pow(h,2))/8. + h/2.;
-          mesh->MRSAAB_B[id + 1] = 0.f;
-          mesh->MRSAAB_B[id + 2] = 0.f;
-          }
+        // Full dt coeeficients
+        mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+        mesh->MRSAAB_A[id + 1] = 0.f;
+        mesh->MRSAAB_A[id + 2] = 0.f;
+        // Half coefficients
+        mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+        mesh->MRSAAB_B[id + 1] = 0.f;
+        mesh->MRSAAB_B[id + 2] = 0.f;
 
         // MRAB coefficients
         mesh->MRAB_A[id + 0]   =  h ;
@@ -343,26 +436,28 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
       }
 
       else if(order==1){
-        if(fabs(cc*h)>1e-2){  // Use exponentials
-         // Full dt coeeficients
-          mesh->MRSAAB_A[id + 0] = (exp(cc*h) - 2.*cc*h + cc*h*exp(cc*h) - 1.)/(pow(cc,2)*h);
-          mesh->MRSAAB_A[id + 1] = (cc*h - exp(cc*h) + 1.)/(pow(cc,2)*h);
-          mesh->MRSAAB_A[id + 2] = 0.f;
-          // Half coefficients
-          mesh->MRSAAB_B[id + 0] = (exp((cc*h)/2.) - (3*cc*h)/2. + cc*h*exp((cc*h)/2.) - 1.)/(pow(cc,2)*h);
-          mesh->MRSAAB_B[id + 1] = ((cc*h)/2. - exp((cc*h)/2.) + 1.)/(pow(cc,2)*h);
-          mesh->MRSAAB_B[id + 2] = 0.f;
+
+        double complex a1 = 0. + 0.* I; 
+        double complex b1 = 0. + 0.* I; 
+        double complex a2 = 0. + 0.* I; 
+        double complex b2 = 0. + 0.* I; 
+        
+        for(iint i = 0; i<Nr; ++i ){
+        double complex lr = alpha  + R[i];
+          a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
+          a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
+          b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
+          b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
         }
-        else{
-         // Full dt coeeficients
-          mesh->MRSAAB_A[id + 0] = (pow(cc,3)*pow(h,4))/20. + (5.*pow(cc,2)*pow(h,3))/24. + (2.*h*pow(h,2))/3. + (3.*h)/2.; 
-          mesh->MRSAAB_A[id + 1] = - h/2. - (cc*pow(h,2))/6. - (pow(cc,2)*pow(h,3))/24. - (pow(cc,3)*pow(h,4))/120. ; 
-          mesh->MRSAAB_A[id + 2] = 0.f;
-          // Half coefficients
-          mesh->MRSAAB_B[id + 0] = (11.*pow(cc,3)*pow(h,4))/3840. + (3.*pow(cc,2)*pow(h,3))/128. + (7.*cc*pow(h,2))/48. + (5.*h)/8.;
-          mesh->MRSAAB_B[id + 1] = - h/8. - (cc*pow(h,2))/48. - (pow(cc,2)*pow(h,3))/384. - (pow(cc,3)*pow(h,4))/3840.;
-          mesh->MRSAAB_B[id + 2] = 0.f; 
-        }
+        // Full dt coeeficients
+        mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+        mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
+        mesh->MRSAAB_A[id + 2] = 0.f;
+        // Half coefficients
+        mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+        mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
+        mesh->MRSAAB_B[id + 2] = 0.f;
+
 
         // MRAB coefficients
         mesh->MRAB_A[id + 0]   =  3.*h/2. ;
@@ -375,27 +470,34 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
       }
 
       else{
-        if(fabs(cc*h)>1e-2){  // Use exponentials
-          // Full dt coeeficients
-          mesh->MRSAAB_A[id+0] = (exp(cc*h) - (5.*cc*h)/2. - 3.*pow(cc,2)*pow(h,2 )+ pow(cc,2)*pow(h,2)*exp(cc*h) + (3.*cc*h*exp(cc*h))/2. - 1.)/(pow(cc,3)*pow(h,2));
-          mesh->MRSAAB_A[id+1] = (4.*cc*h - 2.*exp(cc*h) + 3.*pow(cc,2)*pow(h,2 )- 2.*cc*h*exp(cc*h) + 2.)/(pow(cc,3)*pow(h,2));
-          mesh->MRSAAB_A[id+2] = -((3.*cc*h)/2. - exp(cc*h) + pow(cc,2)*pow(h,2 )- (cc*h*exp(cc*h))/2. + 1.)/(pow(cc,3)*pow(h,2));
-          // Half coefficients
-          mesh->MRSAAB_B[id+0] = (exp((cc*h)/2.) - 2.*cc*h - (15.*pow(cc,2)*pow(h,2))/8.f + pow(cc*h,2)*exp((cc*h)/2.) + (3.*cc*h*exp((cc*h)/2.))/2. - 1.)/(pow(cc,3)*pow(h,2.));
-          mesh->MRSAAB_B[id+1] = (3.*cc*h - 2.*exp((cc*h)/2.0) + (5.*pow(cc*h,2))/4. - 2.*cc*h*exp((cc*h)/2.) + 2.)/(pow(cc,3)*pow(h,2));
-          mesh->MRSAAB_B[id+2] = -(cc*h - exp((cc*h)/2.) + (3.*pow(cc*h,2))/8. - (cc*h*exp((cc*h)/2.))/2. + 1.)/(pow(cc,3)*pow(h,2));
+        double complex a1 = 0. + 0.* I; 
+        double complex b1 = 0. + 0.* I; 
+        double complex a2 = 0. + 0.* I; 
+        double complex b2 = 0. + 0.* I; 
+        double complex a3 = 0. + 0.* I; 
+        double complex b3 = 0. + 0.* I; 
+
+        for(iint i = 0; i<Nr; ++i ){
+          double complex lr = alpha  + R[i];
+          a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
+          a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
+          a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
+          b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8. + (cpow(lr,2) + 1.5*lr)*cexp(lr/2.) - 1.)/cpow(lr,3);
+          b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
+          b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
         }
-        else{
-          // Full dt coeeficients
-          mesh->MRSAAB_A[id+0] = (pow(cc,3)*pow(h,4))/18. + (19.*pow(cc,2)*pow(h,3))/80. + (19.*cc*pow(h,2))/24. + (23.*h)/12.;
-          mesh->MRSAAB_A[id+1] = - (4*h)/3. - (5.*cc*pow(h,2))/12 - (pow(cc,2)*pow(h,3))/10. - (7.*pow(cc,3)*pow(h,4))/360.;
-          mesh->MRSAAB_A[id+2] = (pow(cc,3)*pow(h,4))/180. + (7.*pow(cc,2)*pow(h,3))/240. + (cc*pow(h,2))/8. + (5.*h)/12.;
-          // Half coefficients
-          mesh->MRSAAB_B[id+0] = (139.*pow(cc,3)*pow(h,4))/46080. + (pow(cc,2)*pow(h,3))/40. + (61.*cc*pow(h,2))/384. + (17.*h)/24.; 
-          mesh->MRSAAB_B[id+1] = - (7.*h)/24. - (3.*cc*pow(h,2))/64. - (11.*pow(cc,2)*pow(h,3))/1920. - (13.*pow(cc,3)*pow(h,4))/23040. ; 
-          mesh->MRSAAB_B[id+2] = (7.*pow(cc,3)*pow(h,4))/46080. + (pow(cc,2)*pow(h,3))/640. + (5.*cc*pow(h,2))/384. + h/12.;
-        }
-      // MRAB coefficients
+
+
+        // Full dt coeeficients
+        mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+        mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+        mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+        // Half coefficients
+        mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+        mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+        mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+
+        // MRAB coefficients
         mesh->MRAB_A[id+0]   =  23.*h/12. ;
         mesh->MRAB_A[id+1]   = -16.*h/12. ;
         mesh->MRAB_A[id+2]   =  5. *h/12. ;
@@ -403,16 +505,25 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
         mesh->MRAB_B[id+0]   =  17.*h/24. ;
         mesh->MRAB_B[id+1]   = - 7.*h/24. ;
         mesh->MRAB_B[id+2]   =   2.*h/24. ;
+
+        
       }
+
+      // printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->MRSAAB_A[id+0],mesh->MRSAAB_A[id+1],mesh->MRSAAB_A[id+2],
+                                                           // mesh->MRSAAB_B[id+0], mesh->MRSAAB_B[id+1],mesh->MRSAAB_B[id+2]);  
 
     }
 
     // Exponential part
-    mesh->MRSAAB_C[l]    = exp(cc*h);
+    mesh->MRSAAB_C[l]    = exp(alpha);
+    //printf("Coefficient: %.5f \n", mesh->MRSAAB_C[l]);
     mesh->MRAB_C[l]      =   h ;
    }
 
-  // Set AB 
+
+
+  // 
+  printf("Setting Rhs for AB\n");
   mesh->o_rhsq.free();
   mesh->o_rhsq = mesh->device.malloc(3*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
 
@@ -429,22 +540,22 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     mesh->fQM);
     mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
     mesh->fQP);
-    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), 
-    mesh->mapP);
+    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), mesh->mapP);
   }
+
+
+
 }
 
 
-  if(strstr(options, "LSERK")){
+if(strstr(options, "LSERK")){
   // 
   printf("Relying the fact that  rhsq, resq  are set on meshOccaSetup function \n");
 
 
   }
 
-  if(strstr(options, "SARK")){
-
-
+if(strstr(options, "SARK")){
     //
     for(int i=0; i<5; i++){
       for(int j=0; j<5; j++){
@@ -454,9 +565,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
       mesh->RK_B[i]   = 0.0; mesh->RK_C[i]   = 0.0;
     }
 
-    dfloat coef = -mesh->tauInv, h   = mesh->dt; 
-
-
+   
     dfloat a21 = 1.f/2.f;   dfloat a31 = -1.f ;    dfloat a32 = 2.f;
     dfloat b1 = 1.f/6.f;    dfloat b2 = 2./3.;       dfloat b3 = 1./6.; 
     dfloat c1 = 0.f;       dfloat c2 = 1./2.;        dfloat c3 = 1.; 
@@ -466,47 +575,53 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     mesh->RK_B[0] = b1;     mesh->RK_B[1] = b2;      mesh->RK_B[2] = b3; 
     mesh->RK_C[0] = c1;     mesh->RK_C[1] = c2;      mesh->RK_C[2] = c3; 
 
+    dfloat alpha = -mesh->tauInv*mesh->dt, coef = -mesh->tauInv, h   = mesh->dt; 
 
-    printf("Coef*dt = %.8e", coef*dt);
+    printf("alpha = %.16e\t h= %.16e\t coef=%.16e \n", alpha,mesh->dt, -mesh->tauInv);
 
-    if(fabs(coef*h)>1e-2){
+     const iint Nr = 32;   dfloat complex R[Nr]; 
+
+    for(iint ind =1; ind <= Nr; ++ind){
+      const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
+      R[ind-1] = cexp(I*M_PI* theta);
+    }
+
+    double complex ca21 = 0. + 0.* I; 
+    double complex cb1  = 0. + 0.* I; 
+    double complex ca31 = 0. + 0.* I; 
+    double complex cb2  = 0. + 0.* I; 
+    double complex ca32 = 0. + 0.* I; 
+    double complex cb3  = 0. + 0.* I; 
+
+        for(iint i = 0; i<Nr; ++i ){
+        complex lr = alpha  + R[i];
+          ca21 +=  (cexp(lr/2.) - 1.)/lr; 
+          ca31 += -1.0*(cexp(lr)-1.0)/lr; 
+          ca32 +=  2.0*(cexp(lr)-1.0)/lr;
+          //
+          cb1  +=  (-4. -lr + cexp(lr)*(4. -3.*lr + cpow(lr,2.)))/ cpow(lr,3.);
+          cb2  +=  4.*(2. + lr + cexp(lr)*(-2. + lr)) / cpow(lr,3.) ;
+          cb3  +=  (-4. -3.*lr - cpow(lr,2.)+ cexp(lr)*(4. - lr))/ cpow(lr,3.) ;
+        }
 
       //  Exponential Coefficients
-      mesh->SARK_A[1][0] = (exp(coef*h/2.) - 1.)/(coef*h); // a21
-      mesh->SARK_A[2][0] = -1.0*(exp(coef*h)-1.0)/(coef*h); // a31
-      mesh->SARK_A[2][1] =  2.0*(exp(coef*h)-1.0)/(coef*h);// a32 
+      mesh->SARK_A[1][0] = creal(ca21)/ (double) Nr; 
+      mesh->SARK_A[2][0] = creal(ca31)/ (double) Nr; 
+      mesh->SARK_A[2][1] = creal(ca32)/ (double) Nr; 
 
       // If 1/tau*h is too small say <<1, need to write in terms of Taylor coefficients
-      mesh->SARK_B[0] =   (-4. -coef*h + exp(coef*h)*(4.-3.*coef*h+pow(h*coef,2.)))/ (pow(coef*h,3)) ;
-      mesh->SARK_B[1] =  4.*(2. + coef*h + exp(coef*h)*(-2. + coef*h)) / (pow(coef*h,3)) ;
-      mesh->SARK_B[2] =   (-4. -3.*coef*h - pow(coef*h,2)+ exp(coef*h)*(4. - coef*h))/ (pow(coef*h,3)) ;
+      mesh->SARK_B[0] = creal(cb1) / (double) Nr;
+      mesh->SARK_B[1] = creal(cb2) / (double) Nr;
+      mesh->SARK_B[2] = creal(cb3) / (double) Nr;
       //
       //
-      mesh->SARK_C[0] = exp(coef*h*c2); 
-      mesh->SARK_C[1] = exp(coef*h*c3); 
-      mesh->SARK_C[2] = exp(coef*h*1.0);
+      mesh->SARK_C[0] = exp(alpha*c2); 
+      mesh->SARK_C[1] = exp(alpha*c3); 
+      mesh->SARK_C[2] = exp(alpha*1.0);
 
-    }
-    else{
+      printf("%.14e\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n",mesh->SARK_A[1][0],mesh->SARK_A[2][0],mesh->SARK_A[2][1],
+                                                           mesh->SARK_B[0],  mesh->SARK_B[1],  mesh->SARK_B[2]);  
 
-      printf("Computing SARK coefficients  with 3th order Taylor series expansion\n");
-
-
-      //  Exponential Coefficients
-      mesh->SARK_A[1][0] = (pow(coef,4)*pow(h,4))/3840. + (pow(coef,3)*pow(h,3))/384. + (pow(coef,2)*pow(h,2))/48. + (coef*h)/8 + 1./2.;
-      mesh->SARK_A[2][0] =  -1.0 *  ((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-      mesh->SARK_A[2][1] =  2.0*((pow(coef,4)*pow(h,4))/120. + (pow(coef,3)*pow(h,3))/24. + (pow(coef,2)*pow(h,2))/6. + (coef*h)/2. + 1.);
-
-      mesh->SARK_B[0] =  (5.*pow(coef,4)*pow(h,4))/1008. + (pow(coef,3)*pow(h,3))/45. + (3.*pow(coef,2)*pow(h,2))/40. + (coef*h)/6. + 1./6. ; 
-      mesh->SARK_B[1] =  (pow(coef,4)*pow(h,4))/252. + (pow(coef,3)*pow(h,3))/45. + (pow(coef,2)*pow(h,2))/10. + (coef*h)/3. + 2./3. ;
-      mesh->SARK_B[2] =  1./6. - (pow(coef,3)*pow(h,3))/360. - (pow(coef,4)*pow(h,4))/1680. - (pow(coef,2)*pow(h,2))/120. ;
-
-      //
-      mesh->SARK_C[0] = exp(coef*h*c2); 
-      mesh->SARK_C[1] = exp(coef*h*c3); 
-      mesh->SARK_C[2] = exp(coef*h*1.0);
-    }
-         
 
     mesh->o_qS =
      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),
@@ -520,9 +635,8 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   
 
 
-   else if(strstr(options, "LSIMEX")){ 
-
-   int Nimex = 4;
+else if(strstr(options, "LSIMEX")){ 
+  int Nimex = 4;
   dfloat ImB[4]   ={0.0, 673488652607.0 /2334033219546.0, 493801219040.0/853653026979.0, 184814777513.0/1389668723319.0 };
   dfloat ImC[4]   = { 0.0, 3375509829940.0/4525919076317.0, 272778623835.0/1039454778728.0, 1.0};
   dfloat ImAd[4]  = {0.0, 3375509829940.0/4525919076317.0, 566138307881.0/912153721139.0, 184814777513.0/1389668723319.0};
@@ -552,7 +666,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     // 
     mesh->o_qS =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-    }   
+}   
 
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -562,22 +676,22 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
 
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = 128/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = 128/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockCub = 256/mesh->cubNp; // works for CUDA
+  int NblockCub = 128/mesh->cubNp; // works for CUDA
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", mesh->sqrtRT);
-  kernelInfo.addDefine("p_sqrt2", (float)sqrt(2.));
-  kernelInfo.addDefine("p_isq12", (float)sqrt(1./12.));
-  kernelInfo.addDefine("p_isq6", (float)sqrt(1./6.));
-  kernelInfo.addDefine("p_invsqrt2", (float)sqrt(1./2.));
+  kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
+  kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
+  kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
+  kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
 
@@ -589,8 +703,8 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   kernelInfo.addDefine("p_q4bar", q4bar);
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
-  kernelInfo.addDefine("p_alpha0", (float).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (float).2);
+  kernelInfo.addDefine("p_alpha0", (dfloat).01f);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
 
 
 
@@ -746,10 +860,24 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
          "boltzmannSRABPmlUpdate2D",
             kernelInfo);
+
+     //   printf("Compiling LSERK update kernel\n");
+     // mesh->RKupdateKernel =
+     // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannLSERKUpdate2D",
+     //        kernelInfo);
+
+     //  printf("Compiling LSERK PML update kernel\n");
+     //  mesh->RKpmlUpdateKernel =
+     //  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+     //     "boltzmannLSERKPmlUpdate2D",
+     //        kernelInfo);
+
+
      }
 
 
-     else if(strstr(options,"SAAB")){
+     else if(strstr(options,"SRSAAB")){
      printf("Compiling SAAB update kernel\n");
      mesh->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -808,6 +936,12 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     kernelInfo); 
     }
 
+
+
+
+
+
+
     // Surface Kernels
     if(strstr(options,"MRAB") || strstr(options,"MRSAAB")){  
     printf("Compiling surface kernel\n");
@@ -823,7 +957,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
        kernelInfo);
     }
 
-    else if (strstr(options,"SAAB") || strstr(options,"LSERK") || strstr(options,"SARK") ){ 
+    else { 
     printf("Compiling surface kernel\n");
     mesh->surfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
@@ -836,6 +970,11 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
        "boltzmannPmlSurface2D",
        kernelInfo);
     }
+
+
+
+
+
 
 
     // IMEX Kernels

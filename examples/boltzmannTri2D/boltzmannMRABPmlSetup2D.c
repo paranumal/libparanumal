@@ -3,8 +3,29 @@
 void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma = 80,  ysigma  = 80;
-  dfloat cxsigma = 80, cysigma = 80;
+  dfloat xsigma  = 20.0;
+  dfloat ysigma  = 20.0;
+  // dfloat xsigma  = 100.*mesh->sqrtRT;
+  // dfloat ysigma  = 100.*mesh->sqrtRT;
+  //dfloat cxsigma = 200, cysigma = 200;
+  dfloat q1    = 0.2, q2 = 1.0;    // Ramped profile coefficients 0<q1, 1>q2 , q1<exp<q2 or polynomial
+
+// fifth order polynomialcoefficients for q1=0.2 and q2=0.8;
+  dfloat c5 =  6.0 ;
+  dfloat c4 = -15.0;
+  dfloat c3 =  10.0;
+  dfloat c2 =  0.0 ;
+  dfloat c1 =  0.0 ;
+  dfloat c0 =  0.0 ;
+  // Try third order also
+  // dfloat c5 =  0.0; // dummy
+  // dfloat c4 =  0.0; // dummy
+  // dfloat c3 = -2.0;
+  // dfloat c2 =  3.0;
+  // dfloat c1 =  0.0;
+  // dfloat c0 =  0.0;
+
+
 
   //construct element and halo lists
   mesh->MRABpmlNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
@@ -14,6 +35,7 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
   mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
   mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
   mesh->MRABpmlHaloIds = (iint **) calloc(mesh->MRABNlevels, sizeof(iint*));
+
 
   //count the pml elements
   mesh->pmlNelements=0;
@@ -93,9 +115,27 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
       mesh->MRABhaloIds[lev]    = (iint*) realloc(mesh->MRABhaloIds[lev],mesh->MRABNhaloElements[lev]*sizeof(iint));
     }
 
-    //set up damping parameter
-    mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-    mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+
+
+    iint Nnodes = 0;
+    if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+      //
+      printf("Setting PML Coefficient for Cubature Integration\n");
+      //set up damping parameter
+      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
+      Nnodes = mesh->cubNp;    
+    }
+     else{
+      printf("Setting PML Coefficients for Nodal Collocation Integration\n");
+      //set up damping parameter
+      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      Nnodes = mesh->Np; 
+    }
+
+
+
 
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
@@ -128,10 +168,24 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
       }
     }
 
-    dfloat xmaxScale = pow(pmlxmax-xmax,2);
-    dfloat xminScale = pow(pmlxmin-xmin,2);
-    dfloat ymaxScale = pow(pmlymax-ymax,2);
-    dfloat yminScale = pow(pmlymin-ymin,2);
+    iint order = 2; 
+    //
+    if(strstr(options,"CONSTANT"))
+      order = 0; 
+    if(strstr(options,"LINEAR"))
+      order = 1; 
+    if(strstr(options,"QUADRATIC"))
+      order = 2;
+    if(strstr(options,"FORTHORDER"))
+      order = 4;
+    if(strstr(options, "ERFFUNCTION"))
+      order =1;
+
+
+    dfloat xmaxScale = pow(pmlxmax-xmax,order);
+    dfloat xminScale = pow(pmlxmin-xmin,order);
+    dfloat ymaxScale = pow(pmlymax-ymax,order);
+    dfloat yminScale = pow(pmlymin-ymin,order);
 
     //set up the damping factor
     for (iint lev =0;lev<mesh->MRABNlevels;lev++){
@@ -150,58 +204,181 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
         dfloat ye2 = mesh->EY[id+1];
         dfloat ye3 = mesh->EY[id+2];
 
-        for(iint n=0;n<mesh->Np;++n){ /* for each node */
-          dfloat x = mesh->x[n + e*mesh->Np];
-          dfloat y = mesh->y[n + e*mesh->Np];
-
-         if(strstr(options,"QUADRATIC")){
-
-          if (type==100) { //X Pml
-            if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,2)/xmaxScale;
-            if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,2)/xminScale;
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,2)/ymaxScale;
-            if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,2)/yminScale;
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmax,2)/xmaxScale;
-            if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = xsigma*pow(x-xmin,2)/xminScale;
-            if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymax,2)/ymaxScale;
-            if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = ysigma*pow(y-ymin,2)/yminScale;
+         for(iint n=0;n<Nnodes;++n){ /* for each node */
+           dfloat x = 0, y = 0; 
+          if(Nnodes==mesh->cubNp){
+            dfloat rn = mesh->cubr[n];
+            dfloat sn = mesh->cubs[n]; 
+            x = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+            y = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
+          }
+          else{
+            x = mesh->x[n + e*mesh->Np];
+            y = mesh->y[n + e*mesh->Np];
           }
 
-        }
 
-        if(strstr(options,"CONSTANT")){
+
+
+        if(!strstr(options,"SMOOTHPOLYNOMIAL")){
+          if (type==100) { //X Pml
+            if(x>xmax)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+            if(x<xmin)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+          } else if (type==200) { //Y Pml
+            if(y>ymax)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+            if(y<ymin)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+          } else if (type==300) { //XY Pml
+            if(x>xmax)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+            if(x<xmin)
+              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+            if(y>ymax)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+            if(y<ymin)
+              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+          }
+#if 0
 
            if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
             if(x<xmin)
-              mesh->pmlSigmaX[mesh->Np*pmlId + n] = cxsigma;
+              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
             if(y>ymax)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
             if(y<ymin)
-              mesh->pmlSigmaY[mesh->Np*pmlId + n] = cysigma;
+              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
           }
+
+#endif
+
+
+
+
         }
+
+
+         else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+
+
+
+          dfloat tsigma = 0.5*xsigma;
+
+          dfloat qx=0,      qy = 0;
+          dfloat taux = 0,  tauy = 0;
+          dfloat polyx = 0, polyy = 0;
+
+          if (type==100) { //X Pml
+            if(x>xmax)
+              qx   = (x-xmax)/(pmlxmax-xmax);
+            if(x<xmin)
+              qx    = (x-xmin)/(pmlxmin-xmin);
+          } else if (type==200) { //Y Pml
+            if(y>ymax)
+              qy    = (y-ymax)/(pmlymax-ymax);
+            if(y<ymin)
+              qy    = (y-ymin)/(pmlymin-ymin);
+          } else if (type==300) { //XY Pml
+            if(x>xmax)
+             qx   = (x-xmax)/(pmlxmax-xmax);
+            if(x<xmin)
+             qx    = (x-xmin)/(pmlxmin-xmin);
+            if(y>ymax)
+             qy    = (y-ymax)/(pmlymax-ymax);
+            if(y<ymin)
+             qy    = (y-ymin)/(pmlymin-ymin);
+          }
+          // Third Order
+          taux  =  (qx-q1)/(q2-q1);
+          tauy  =  (qy-q1)/(q2-q1);
+          // Fifth Order
+          polyx = pow(taux,2); //c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
+          polyy = pow(tauy,2); //c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
+
+          polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
+          polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
+           
+          if (type==100) { //X Pml
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
+          } else if (type==200) { //Y Pml
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
+          } else if (type==300) { //XY Pml
+            if(x>xmax || x<xmin)
+             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
+            if(y>ymax || y<ymin)
+             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
+          }
+
+          //printf("%.5e \n", qx);
+        }
+
+
+
+        // else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+
+        //   dfloat qx=0,      qy = 0;
+        //   dfloat taux = 0,  tauy = 0;
+        //   dfloat polyx = 0, polyy = 0;
+
+        //   if (type==100) { //X Pml
+        //     if(x>xmax)
+        //       qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //       qx    = (x-xmin)/(pmlxmin-xmin);
+        //   } else if (type==200) { //Y Pml
+        //     if(y>ymax)
+        //       qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //       qy    = (y-ymin)/(pmlymin-ymin);
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax)
+        //      qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //      qx    = (x-xmin)/(pmlxmin-xmin);
+        //     if(y>ymax)
+        //      qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //      qy    = (y-ymin)/(pmlymin-ymin);
+        //   }
+        //   // Third Order
+        //   taux  =  (qx-q1)/(q2-q1);
+        //   tauy  =  (qy-q1)/(q2-q1);
+        //   // Fifth Order
+        //   polyx = pow(taux,2); //c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
+        //   polyy = pow(tauy,2); //c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
+
+        //   polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
+        //   polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
+           
+        //   if (type==100) { //X Pml
+        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //   } else if (type==200) { //Y Pml
+        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax || x<xmin)
+        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //     if(y>ymax || y<ymin)
+        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   }
+        // }
+
+
         }
       }
     }
@@ -209,25 +386,23 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
-    mesh->pmlNfields = 6;
+    mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-      mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-
-      mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
-      mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields, sizeof(dfloat));
+    mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
 
-      // set up PML on DEVICE    
-      mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqx);
-      mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqx);
+    // set up PML on DEVICE    
+    mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
+    mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqx);
 
-      mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlqy);
-      mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlrhsqy);
+    mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
+    mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqy);
 
 
-    mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*mesh->Np*sizeof(dfloat),mesh->pmlSigmaX);
-    mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*mesh->Np*sizeof(dfloat),mesh->pmlSigmaY);
+     mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
+     mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
 
 
 
@@ -251,5 +426,39 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
     }
 
     free(pmlIds);
-  }
+  
+
+
+
+
+// dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
+// mesh->o_cubProjectT.copyTo(cubProjectT);
+// for (iint lev =0;lev<mesh->MRABNlevels;lev++){
+//   for (iint m=0;m<mesh->MRABpmlNelements[lev];m++) {
+//     iint e = mesh->MRABpmlElementIds[lev][m];
+//     iint pmlId = mesh->MRABpmlIds[lev][m];
+
+//     for(iint n=0;n<mesh->Np;n++){
+//        dfloat q1 = 0; dfloat q2 = 0; 
+//         for(iint l=0; l<mesh->cubNp;++l){
+//           dfloat prj = cubProjectT[l*mesh->Np+n];
+//            q1  += prj*mesh->pmlSigmaX[mesh->cubNp*pmlId + l];
+//            q2  += prj*mesh->pmlSigmaY[mesh->cubNp*pmlId + l];
+//         }
+//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
+//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
+//   }
+// }
+// }
+
+
+
+
+//  char fname[BUFSIZ];
+//  sprintf(fname, "pmlProfile11.vtu");
+// boltzmannPlotVTU2D(mesh, fname);
+
+
+
+}
 }
