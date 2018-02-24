@@ -88,8 +88,12 @@ typedef struct {
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
-  dfloat *x, *y, *z;    // coordinates of physical nodes
   iint maxNnzPerRow;
+  dfloat *x, *y, *z;    // coordinates of physical nodes
+	
+  dfloat sphereRadius;  // for Quad3D 
+  
+
   // indices of vertex nodes
   iint *vertexNodes;
 
@@ -208,6 +212,7 @@ typedef struct {
 
   // time stepping info
   dfloat dt; // time step
+  dfloat startTime ; // Start Time
   dfloat finalTime; // final time to run acoustics to
   iint   NtimeSteps;// number of time steps
   iint   errorStep; // number of steps between error calculations
@@ -230,7 +235,7 @@ typedef struct {
   iint *nonPmlElementIds, *pmlElementIds, *pmlIds;  
   iint shiftIndex;
 
-  dfloat dtfactor ;  //Delete later for script run
+  dfloat dtfactor; //Delete later for script run 
   dfloat maxErrorBoltzmann;
 
   //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
@@ -260,7 +265,7 @@ typedef struct {
   occa::memory o_SEMFEMAnterp;
 
   // Boltzmann specific stuff
-  dfloat RT, sqrtRT, tauInv; // need to remove this to ceedling
+  dfloat RT, sqrtRT, tauInv, Ma, Re; // need to remove this to ceedling
 
   // pml stuff
   iint    pmlNfields;
@@ -268,7 +273,8 @@ typedef struct {
   iint   *pmlElementList; // deprecated
 
   iint Ntscale; // Will be removed, for time accuracy test
-
+  
+  dfloat *pmlBetaX, *pmlBetaY; // deprecated
   dfloat *pmlSigma;
   dfloat *pmlSigmaX;
   dfloat *pmlSigmaY;
@@ -314,9 +320,12 @@ typedef struct {
   dfloat *rhspmlq; // right hand side data array
   dfloat *respmlq; // residual data array (for LSERK time-stepping)
 
-
-
-
+  // Probe Data
+  iint probeN, probeNTotal; 
+  dfloat *probeR, *probeS, *probeT;
+  // dfloat *probeX, *probeY, *probeZ;  
+  iint *probeElementIds, *probeIds;  
+  dfloat *probeI; 
 
 
 
@@ -403,6 +412,7 @@ typedef struct {
   occa::memory o_pmlElementList;
 
   occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
+  occa::memory o_pmlBetaX, o_pmlBetaY; // deprecated
   occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
   occa::memory o_pmlqx,o_pmlqy, o_pmlqz; 
   occa::memory o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
@@ -478,6 +488,12 @@ typedef struct {
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
+  
+
+  // Just for test will be deleted after temporal testsAK
+  occa::kernel RKupdateKernel;
+  occa::kernel RKpmlUpdateKernel;
+
 
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
@@ -637,6 +653,22 @@ extern "C"
       void* rhs);
 
   void xxtFree(void* A) ;
+}
+
+extern "C"
+{
+ void dgesv_ ( int     *N, int     *NRHS, double  *A,
+                int     *LDA,
+                int     *IPIV, 
+                double  *B,
+                int     *LDB,
+                int     *INFO );
+
+void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
+
+void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
+void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
+
 }
 
 #endif

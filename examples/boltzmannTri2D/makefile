@@ -10,9 +10,9 @@ HDRDIR  = ../../include
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linkingcc	
-cc 	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc 	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 
 # compiler flags to be used (set to compile with debugging on)
@@ -22,7 +22,7 @@ CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."
 LDFLAGS	= $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -50,10 +50,13 @@ boltzmannSARKStep2D.o \
 boltzmannRampFunction2D.o \
 boltzmannReport2D.o \
 boltzmannPlotVTU2D.o \
+boltzmannPlotVTUField2D.o \
+boltzmannPlotTEC2D.o \
 boltzmannMRABSetup2D.o \
 boltzmannMRABPmlSetup2D.o \
 boltzmannPmlSetup2D.o \
 boltzmannMRRun2D.o \
+boltzmannForces2D.o \
 
 # library objects
 LOBJS = \
@@ -84,7 +87,8 @@ LOBJS = \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/meshProbeSetup2D.o \
 
 boltzmannMain2D:$(AOBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS) 

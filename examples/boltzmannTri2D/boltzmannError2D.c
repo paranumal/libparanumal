@@ -1,7 +1,173 @@
 #include "boltzmann2D.h"
 
 // currently maximum
-void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
+void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
+
+
+#if 1
+ if(strstr(options,"PROBE")){
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+      // printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
+
+      if(mesh->probeN){
+
+      char fname[BUFSIZ];
+      sprintf(fname, "ProbeData_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+      
+      fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
+
+      for(iint p=0; p<mesh->probeN; p++){
+         iint pid  = mesh->probeIds[p];
+         iint e    = mesh->probeElementIds[p];        
+         dfloat srho = 0.0; 
+         dfloat su = 0.0; 
+         dfloat sv = 0.0; 
+         for(iint n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          // srho        += mesh->probeI[p*mesh->Np+n]*rho*mesh->RT;
+          srho        += mesh->probeI[p*mesh->Np+n]*rho;
+          su          += mesh->probeI[p*mesh->Np+n]*um;
+          sv          += mesh->probeI[p*mesh->Np+n]*vm;
+         }
+
+        fprintf(fp, "%02d %04d %.8e %.8e %.8e ",pid, e, srho, su, sv); 
+      }
+    fprintf(fp, "\n"); 
+    fclose(fp);
+    }
+
+  }
+
+
+
+
+
+
+
+
+#else 
+  if(strstr(options,"PROBE")){
+    
+    // Move this routine to probe setup
+
+
+
+    iint rank, size;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    iint root = 0; // root rank
+    
+    iint probeNfields = 3; // rho, u, v
+    
+    dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
+    dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
+    iint   *recvcount   = (iint   *) malloc(size*sizeof(iint));
+    iint   *recvdisp    = (iint   *) malloc(size*sizeof(iint));
+    iint   *probeIds    = (iint   *) malloc(mesh->probeNTotal*sizeof(iint)); 
+    
+    // Collect number of probes on the root  
+    MPI_Gather(&(mesh->probeN), 1, MPI_IINT, recvcount, 1, MPI_IINT, root, MPI_COMM_WORLD);
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(iint i=1; i<size; ++i){
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          //printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+
+    // Collect probe ids
+    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_IINT, probeIds, recvcount, recvdisp, MPI_IINT, root, MPI_COMM_WORLD);
+
+    // if(rank==0){
+    //   for(iint id=0; id<mesh->probeNTotal; id++){
+    //     printf("id: %d  ProbeId: %d \n", id, probeIds[id]);
+    //   }
+    // }
+
+    // // Sort Probe Ids such that probes are ardered in ascending order
+
+    // iint *probeIndex = (iint *) malloc(2*mesh->probeNTotal*sizeof(iint));
+
+    // for(iint id=0; id<mesh->probeNTotal; id++){
+    // probeIndex
+
+
+
+    // }
+
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(iint i=0; i<size; ++i){
+        recvcount[i] *=probeNfields;
+          if(i>0)
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+    
+  
+    // fill probe Data
+    if(mesh->probeN){
+      for(iint p=0; p<mesh->probeN; p++){
+        iint pid  = mesh->probeIds[p];
+        iint e    = mesh->probeElementIds[p];        
+        dfloat sr = 0.0; 
+        dfloat su = 0.0; 
+        dfloat sv = 0.0; 
+        for(iint n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          //
+          sr += mesh->probeI[p*mesh->Np+n]*rho;
+          su += mesh->probeI[p*mesh->Np+n]*um;
+          sv += mesh->probeI[p*mesh->Np+n]*vm;
+        }
+        probeData[p*probeNfields + 0] = sr;
+        probeData[p*probeNfields + 1] = su;
+        probeData[p*probeNfields + 2] = sv;
+      }
+    }
+
+
+
+    
+    MPI_Gatherv(probeData, mesh->probeN*probeNfields, MPI_DFLOAT, recvData, recvcount, recvdisp, MPI_DFLOAT, root, MPI_COMM_WORLD);
+
+    if(rank==root){     
+       char fname[BUFSIZ];
+      sprintf(fname, "ProbeData_%d_%.f_%05d.dat", mesh->N, mesh->Re, mesh->Nelements);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+
+      fprintf(fp, "%4e ", time); 
+      for(iint p=0; p<mesh->probeNTotal; p++){
+        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p],recvData[p*probeNfields+0], 
+                                                        recvData[p*probeNfields+1],
+                                                        recvData[p*probeNfields+2]);
+      }
+      fprintf(fp, "\n"); 
+      fclose(fp);
+    }
+  }
+
+
+
+#endif
+
+
 
 
  if(strstr(options, "PML")){
@@ -35,7 +201,6 @@ void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
 
     if(isnan(globalMinQ1) || isnan(globalMaxQ1))
       exit(EXIT_FAILURE);
-  
 
 }
 else{
@@ -43,8 +208,9 @@ else{
     // Coutte Flow exact solution for U velocity
 
     dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
-    iint fid = 1; //U velocity
+    iint fid = 1; 
 
+    dfloat Uref        =  mesh->Ma*mesh->sqrtRT;
     dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
 
     for(iint e=0;e<mesh->Nelements;++e){
@@ -54,14 +220,18 @@ else{
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
-        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
-  
+       dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
+ 
         dfloat uex = y ; 
-        for(iint k=1; k<=100; k++)
+        for(iint k=1; k<=10; k++)
         {
 
          dfloat lamda = k*M_PI;
-         uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y);
+         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
+         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2* sqrt(1.- 4.*pow(1./ mesh->tauInv, 2)* mesh->RT* lamda*lamda);
+         uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
+         
+         // uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y); // !!!!!
         }
 
         maxerr = mymax(maxerr, fabs(u-uex));
@@ -92,11 +262,11 @@ else{
       
       #if 1
 
-    // iint fld = 2;
-    // iint tstep = time/mesh->dt;
-    // char errname[BUFSIZ];
-    // sprintf(errname, "err_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
-    // meshPlotVTU2D(mesh, errname,fld);
+    iint fld = 2;
+    iint tstep = (time-mesh->startTime)/mesh->dt;
+    char errname[BUFSIZ];
+    sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+    meshPlotVTU2D(mesh, errname,fld);
       
     iint tmethod = 0; 
     if(strstr(options,"LSERK"))
@@ -114,7 +284,7 @@ else{
       sprintf(fname, "boltzmannTemporalError.dat");
       FILE *fp; 
       fp = fopen(fname, "a");
-      fprintf(fp, "%2d %2d %.5e %.5e %.5e %.5e\n", mesh->N, tmethod, mesh->dt,  globalMinQ1, globalMaxQ1, globalMaxErr); 
+      fprintf(fp, "%2d %2d %.8e %.8e %.8e %.8e %.8e\n", mesh->N, tmethod, mesh->dt, time,  globalMinQ1, globalMaxQ1, globalMaxErr); 
       fclose(fp); 
 
       mesh->maxErrorBoltzmann = globalMaxErr; 

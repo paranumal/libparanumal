@@ -11,10 +11,9 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
   for(iint rk=0;rk<mesh->Nrk;++rk){
 
     // intermediate stage time
-    dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
+    dfloat t = mesh->startTime + tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
     
    if(mesh->totalHaloPairs>0){
-    // extract halo on DEVICE
     #if ASYNC 
       mesh->device.setStream(dataStream);
     #endif
@@ -49,7 +48,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     if(mesh->pmlNelements){	
     	mesh->device.finish();
        occa::tic("PML_volumeKernel");
-
+     
     mesh->pmlVolumeKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
@@ -68,6 +67,55 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_rhsq,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
+    
+
+
+    // // Just testing advection trick
+    // if(strstr(options, "CUBATURE")){ 
+    //  mesh->pmlVolumeKernel(mesh->pmlNelements,
+    //                       mesh->o_pmlElementIds,
+    //                       mesh->o_pmlIds,
+    //                       ramp, 
+    //                       drampdt,
+    //                       mesh->Nrhs,
+    //                       mesh->shiftIndex,
+    //                       mesh->o_vgeo,
+    //                       mesh->o_pmlBetaX,
+    //                       mesh->o_pmlBetaY,
+    //                       mesh->o_DrT,
+    //                       mesh->o_DsT,
+    //                       mesh->o_q,
+    //                       mesh->o_pmlqx,
+    //                       mesh->o_pmlqy,
+    //                       mesh->o_rhsq,
+    //                       mesh->o_pmlrhsqx,
+    //                       mesh->o_pmlrhsqy);
+    // }
+
+    // else{
+    //    mesh->pmlVolumeKernel(mesh->pmlNelements,
+    //                       mesh->o_pmlElementIds,
+    //                       mesh->o_pmlIds,
+    //                       ramp, 
+    //                       drampdt,
+    //                       mesh->Nrhs,
+    //                       mesh->shiftIndex,
+    //                       mesh->o_vgeo,
+    //                       mesh->o_pmlSigmaX,
+    //                       mesh->o_pmlSigmaY,
+    //                       mesh->o_pmlBetaX,
+    //                       mesh->o_pmlBetaY,
+    //                       mesh->o_DrT,
+    //                       mesh->o_DsT,
+    //                       mesh->o_q,
+    //                       mesh->o_pmlqx,
+    //                       mesh->o_pmlqy,
+    //                       mesh->o_rhsq,
+    //                       mesh->o_pmlrhsqx,
+    //                       mesh->o_pmlrhsqy);
+
+    // }
+
       //
        mesh->device.finish();
       occa::toc("PML_volumeKernel");	
@@ -114,14 +162,34 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 			mesh->device.finish();
            occa::tic("PML_relaxationKernel");
 
-		   mesh->relaxationKernel(mesh->nonPmlNelements,
-                            mesh->o_nonPmlElementIds,
-                            mesh->Nrhs,
-                            mesh->shiftIndex,
-                            mesh->o_cubInterpT,
-                            mesh->o_cubProjectT,
-                            mesh->o_q,
-                            mesh->o_rhsq);  
+		  mesh->pmlRelaxationKernel(mesh->pmlNelements,
+                                mesh->o_pmlElementIds,
+                                mesh->o_pmlIds,
+                                mesh->Nrhs,
+                                mesh->shiftIndex,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mesh->o_pmlSigmaX,
+                                mesh->o_pmlSigmaY,
+                                mesh->o_q,
+                                mesh->o_pmlqx,
+                                mesh->o_pmlqy,
+                                mesh->o_rhsq,
+                                mesh->o_pmlrhsqx,
+                                mesh->o_pmlrhsqy);
+
+        // mesh->pmlRelaxationKernel(mesh->pmlNelements,
+        //                         mesh->o_pmlElementIds,
+        //                         mesh->o_pmlIds,
+        //                         mesh->Nrhs,
+        //                         mesh->shiftIndex,
+        //                         mesh->o_cubInterpT,
+        //                         mesh->o_cubProjectT,
+        //                         mesh->o_q,
+        //                         mesh->o_rhsq);
+
+
+
 
 		   mesh->device.finish();
            occa::toc("PML_relaxationKernel");
@@ -153,6 +221,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 
 
   if(mesh->totalHaloPairs>0){
+    
     #if ASYNC 
       mesh->device.setStream(dataStream);
     #endif
@@ -210,6 +279,28 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
 
+
+       // mesh->pmlSurfaceKernel(mesh->pmlNelements,
+       //                    mesh->o_pmlElementIds,
+       //                    mesh->o_pmlIds,
+       //                    t,
+       //                    ramp,
+       //                    mesh->Nrhs,
+       //                    mesh->shiftIndex,
+       //                    mesh->o_sgeo,
+       //                    mesh->o_LIFTT,
+       //                    mesh->o_vmapM,
+       //                    mesh->o_vmapP,
+       //                    mesh->o_EToB,
+       //                    mesh->o_pmlBetaX,
+       //                    mesh->o_pmlBetaY,
+       //                    mesh->o_x,
+       //                    mesh->o_y,
+       //                    mesh->o_q,
+       //                    mesh->o_rhsq,
+       //                    mesh->o_pmlrhsqx,
+       //                    mesh->o_pmlrhsqy);
+
     mesh->device.finish();
     occa::toc("PML_surfaceKernel"); 
     }
@@ -245,9 +336,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     dfloat tupdate = tstep*mesh->dt + mesh->dt*mesh->rkc[rk+1];
     dfloat rampUpdate, drampdtUpdate;
     boltzmannRampFunction2D(tupdate, &rampUpdate, &drampdtUpdate);
-    //rampUpdate = 1.0f; drampdtUpdate = 0.0f;
-
-
+   
     //UPDATE
     mesh->device.finish();
     occa::tic("updateKernel");
@@ -295,11 +384,14 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mesh->device.finish();
     occa::toc("updateKernel");      
     
-  }
+}
 
 
 
-
+// #if 1
+// //rotate index
+//   mesh->shiftIndex = (mesh->shiftIndex+1)%3;
+// #endif
 
 
 }

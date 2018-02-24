@@ -14,7 +14,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     mrab_order = 1; // second order
 
   // intermediate stage time
-  dfloat t = (tstep+1)*mesh->dt;
+  dfloat t = mesh->startTime + (tstep+1)*mesh->dt;
 
   // COMPUTE RAMP FUNCTION 
   dfloat ramp, drampdt;
@@ -89,7 +89,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                             mesh->o_q,
                             mesh->o_rhsq);  
 
-    if (mesh->pmlNelements)
+    if (mesh->pmlNelements)  
       mesh->pmlRelaxationKernel(mesh->pmlNelements,
                                 mesh->o_pmlElementIds,
                                 mesh->o_pmlIds,
@@ -97,8 +97,24 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                                 mesh->shiftIndex,
                                 mesh->o_cubInterpT,
                                 mesh->o_cubProjectT,
+                                mesh->o_pmlSigmaX,
+                                mesh->o_pmlSigmaY,
                                 mesh->o_q,
-                                mesh->o_rhsq);
+                                mesh->o_pmlqx,
+                                mesh->o_pmlqy,
+                                mesh->o_rhsq,
+                                mesh->o_pmlrhsqx,
+                                mesh->o_pmlrhsqy);
+
+      // mesh->pmlRelaxationKernel(mesh->pmlNelements,
+      //                           mesh->o_pmlElementIds,
+      //                           mesh->o_pmlIds,
+      //                           mesh->Nrhs,
+      //                           mesh->shiftIndex,
+      //                           mesh->o_cubInterpT,
+      //                           mesh->o_cubProjectT,
+      //                           mesh->o_q,
+      //                           mesh->o_rhsq);
   }
 
 
@@ -168,9 +184,6 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_rhsq,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
-
-
-
 
   const iint id = mrab_order*3;
 
