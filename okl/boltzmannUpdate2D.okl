@@ -724,7 +724,6 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
             const iint   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
-                  dfloat * restrict fQP,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -773,7 +772,6 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
 
          for (iint fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -798,7 +796,6 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
             const iint   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
-                  dfloat * restrict fQP,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -852,7 +849,6 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
 
          for (iint fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -880,8 +876,7 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict q,
                      dfloat * restrict pmlqx,
                      dfloat * restrict pmlqy,
-                     dfloat * restrict fQM,
-                     dfloat * restrict fQP){
+                     dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
@@ -927,7 +922,6 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
 
          for (iint fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -955,8 +949,7 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict q,
                      dfloat * restrict pmlqx,
                      dfloat * restrict pmlqy,
-                     dfloat * restrict fQM,
-                     dfloat * restrict fQP){
+                     dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
@@ -982,26 +975,6 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
           pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
           pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
 
-          
-          // //
-          // if(fld==5){
-          // pmlqx[pid+fld] = expdt*pmlqx[pid+fld] + saab1*pmlrhsqx[pmlrhsId1+fld] + saab2*pmlrhsqx[pmlrhsId2+fld] + saab3*pmlrhsqx[pmlrhsId3+fld];
-          // }
-
-          // else{
-          // pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
-          // }
-
-          // if(fld==4){
-          // pmlqy[pid+fld] = expdt*pmlqy[pid+fld] + saab1*pmlrhsqy[pmlrhsId1+fld] + saab2*pmlrhsqy[pmlrhsId2+fld] + saab3*pmlrhsqy[pmlrhsId3+fld];
-          // }
-
-          // else{
-          // pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
-          // }
-
-
-
           dfloat n_q = 0.f; 
 
           if(fld<3)
@@ -1010,7 +983,7 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
             n_q      = expdt*q[id+fld]+saab1*rhsq[rhsId1+fld] + saab2*rhsq[rhsId2+fld] + saab3*rhsq[rhsId3+fld];
           //          
           s_q[p_Nfields*n+fld] = n_q;
-          q[id+fld]       = n_q;
+          q[id+fld]            = n_q;
          }
       }
     }
@@ -1027,7 +1000,6 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
 
          for (iint fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -1047,7 +1019,6 @@ kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
             const iint   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
-                  dfloat * restrict fQP,
             const dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -1082,9 +1053,8 @@ kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
         const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
         const iint qid  = p_Nfields*iid; 
 
-         for (int fld = 0; fld < p_Nfields; ++fld){
+         for (iint fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -1108,7 +1078,6 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
             const iint   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
-                  dfloat * restrict fQP,
             const dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -1148,7 +1117,6 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
 
          for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -1172,8 +1140,7 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
                const dfloat * restrict q,
                const dfloat * restrict pmlqx,
                const dfloat * restrict pmlqy,
-                     dfloat * restrict fQM,
-                     dfloat * restrict fQP){
+                     dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
@@ -1188,9 +1155,6 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
         const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
         const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
-        // const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        // const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        // const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
         //
          for(iint fld=0; fld< p_Nfields; ++fld){      
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -1209,7 +1173,6 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
 
          for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 
@@ -1240,8 +1203,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
                       const dfloat * restrict q,
                       const dfloat * restrict pmlqx,
                       const dfloat * restrict pmlqy,
-                            dfloat * restrict fQM,
-                            dfloat * restrict fQP){
+                            dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
@@ -1256,10 +1218,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
         const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
         const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
         const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
-        // const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        // const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-        // const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
-        //
+        
           for(iint fld=0; fld< p_Nfields; ++fld){
             if(fld<3)
               s_q[p_Nfields*n+fld] = q[id+fld]+ab1*rhsq[rhsId1+fld]+ab2*rhsq[rhsId2+fld]+ab3*rhsq[rhsId3+fld];
@@ -1280,7 +1239,6 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
          for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
-          fQP[qid+fld] = s_q[qidM+fld];
         }   
       }
 

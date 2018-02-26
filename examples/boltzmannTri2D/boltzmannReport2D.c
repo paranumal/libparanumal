@@ -53,7 +53,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
 
 
   if(strstr(options, "TEC")){ 
-    boltzmannComputeVorticity2D(mesh, mesh->q,5, mesh->Nfields);
+    //boltzmannComputeVorticity2D(mesh, mesh->q,5, mesh->Nfields);
     char fname[BUFSIZ];
     sprintf(fname, "foo_v2_%04d.dat",rank);
     // boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);

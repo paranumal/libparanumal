@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 250; 
+  mesh->errorStep = 1000; 
 
   dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
@@ -27,8 +27,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.2;    // Set Mach number
-    mesh->Re = 150; //RE[mesh->Ntscale]; // Set Reynolds number was 100
+    mesh->Ma = 0.05;    // Set Mach number
+    mesh->Re = 1000; //RE[mesh->Ntscale]; // Set Reynolds number was 100
     //
     Uref = 1.0;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
@@ -44,7 +44,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 150.0;  
+    mesh->finalTime = 30.0; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -90,11 +90,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
-
-
-
   // SET STABLE TIME STEP SIZE
-  dfloat cfl          = 0.2; 
+  dfloat cfl          = 0.300; 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -121,7 +118,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     ghmin = mymin(ghmin, hmin);
 
     dfloat dtex   = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
-    dfloat dtim   = 1.f/(mesh->tauInv);
+    dfloat dtim   = cfl*1.f/(mesh->tauInv);
     dfloat dtest = 1e9;
     
     if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB"))
@@ -146,7 +143,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   else{    
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-    dt = 100e-6; // !!!!!!!!!!!!!!!!
+    // dt = 100e-6; // !!!!!!!!!!!!!!!!
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     mesh->NtimeSteps = (mesh->finalTime-mesh->startTime)/mesh->dt;
@@ -165,11 +162,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   }
    
 
-
-
-
-
-
  // INITIALIZE FIELD VARIABLES 
  if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
     mesh->Nrhs = 3;
@@ -178,7 +170,6 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->rhsq = (dfloat*) calloc(mesh->Nrhs*mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
     mesh->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
-    mesh->fQP  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields, sizeof(dfloat));
   }
 
   else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
@@ -357,8 +348,9 @@ iint fld = 0;
   }
 
  char fname[BUFSIZ];
- sprintf(fname, "ElementGroups.vtu");
- meshPlotVTU2D(mesh, fname,fld);
+ sprintf(fname, "ElementGroupsMRSAAB.dat");
+ // meshPlotVTU2D(mesh, fname,fld);
+ boltzmannPlotFieldTEC2D(mesh, fname,0, fld);
 
 
 mesh = meshsave; 
@@ -538,8 +530,6 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
     mesh->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
     mesh->fQM);
-    mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
-    mesh->fQP);
     mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), mesh->mapP);
   }
 
@@ -704,7 +694,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f); // 0.05
 
 
 

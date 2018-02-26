@@ -48,7 +48,6 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
                         mesh->o_vmapM,
                         mesh->o_rhsq,
                         mesh->o_fQM,
-                        mesh->o_fQP,
                         mesh->o_q);
 
     if (mesh->MRABpmlNelements[l])
@@ -65,8 +64,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
                             mesh->o_q,
                             mesh->o_pmlqx,
                             mesh->o_pmlqy,
-                            mesh->o_fQM,
-                            mesh->o_fQP);
+                            mesh->o_fQM);
     }
 
     else if(strstr(options,"MRSAAB")){
@@ -81,7 +79,6 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
                         mesh->o_vmapM,
                         mesh->o_rhsq,
                         mesh->o_fQM,
-                        mesh->o_fQP,
                         mesh->o_q);
 
     if (mesh->MRABpmlNelements[l])
@@ -99,8 +96,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
                             mesh->o_q,
                             mesh->o_pmlqx,
                             mesh->o_pmlqy,
-                            mesh->o_fQM,
-                            mesh->o_fQP);
+                            mesh->o_fQM);
     }
 
    

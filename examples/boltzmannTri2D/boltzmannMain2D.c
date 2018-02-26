@@ -22,7 +22,7 @@ int main(int argc, char **argv){
   // pmlprofile  = CONSTANT, QUADRATIC
   
   char options[BUFSIZ];
-  strcpy(options,"out = REPORT +  PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
+  strcpy(options,"out = REPORT +VTU+ PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 
@@ -81,11 +81,15 @@ int main(int argc, char **argv){
     if(argc>4){
        printf("usage: ./main meshes/sample.msh N time_disc\n");
        exit(-1);
-    }  
+    }
+
+    iint SCALE[4]; 
+
+    SCALE[0] = 1; SCALE[1] = 2;  SCALE[2] = 10;   SCALE[3] = 20;   
     
     for(iint i=0; i<1;i++){
 
-      mesh->Ntscale=i;
+      mesh->Ntscale=SCALE[i];
 
       printf("Setup Boltzmann Solver: \n");
       boltzmannSetup2D(mesh,options); 
