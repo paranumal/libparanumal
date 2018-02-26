@@ -54,6 +54,7 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
     ins->Py     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   } else{
+<<<<<<< HEAD
 
     int NexpOrder = 3;
     // compute samples of q at interpolation nodes
@@ -73,6 +74,27 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
     ins->rhsP  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
   }
 
+=======
+
+  int NexpOrder = 3;
+  // compute samples of q at interpolation nodes
+  ins->U      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->V      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->P      = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->NU     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->NV     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  // Hold history of n*curl(curl(u)) on face nodes
+  ins->WN     = (dfloat*) calloc(NexpOrder*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
+  //rhs storage
+  ins->Pt    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
+  ins->Ut    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Vt    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsU  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->rhsP  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));  
+  }
+
+>>>>>>> 27590eded40c6e8dfff6ec3a32aca97536f2b8e9
   ins->Nsubsteps = factor;
 
   if(strstr(options,"SUBCYCLING")){
@@ -301,6 +323,14 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
 
   int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
+<<<<<<< HEAD
+  int cubNblockV = 256/maxNodesVolumeCub; 
+  //
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+  int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
+  //
+=======
   int cubNblockV = mymax(1,256/maxNodesVolumeCub); 
   //
   int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
@@ -311,6 +341,7 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   if (rank==0) printf("p_cubNblockV=%d\n", cubNblockV);
   if (rank==0) printf("p_cubNblockS=%d\n", cubNblockS);
 
+>>>>>>> 27590eded40c6e8dfff6ec3a32aca97536f2b8e9
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
