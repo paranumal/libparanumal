@@ -26,7 +26,7 @@ void insRun3D(ins_t *ins, char *options){
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
-  ins->NtimeSteps = 1000; // !!!!!!!!!!!!!
+  //ins->NtimeSteps = 1000; // !!!!!!!!!!!!!
   for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
@@ -94,11 +94,11 @@ void insRun3D(ins_t *ins, char *options){
     if(strstr(options, "REPORT")){
       if(((tstep+1)%(ins->errorStep))==0){
         insReport3D(ins, tstep+1,options);
-        insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
+        //insErrorNorms3D(ins, (tstep+1)*ins->dt, options);
       }
     }
     
-#if 1 // For time accuracy test fed history with exact solution
+#if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
       iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt   = (tstep+1)*ins->dt;
@@ -133,18 +133,18 @@ void insRun3D(ins_t *ins, char *options){
     }
 #endif
 
-   if(tstep>0){
-    char fname[BUFSIZ];
-    // sprintf(fname, "insErrors.txt");
-    //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
-    sprintf(fname, "BeltramiPrSolveAMG.txt");
-    FILE *fp;
-    fp = fopen(fname, "a");
+   // if(tstep>0){
+   //  char fname[BUFSIZ];
+   //  // sprintf(fname, "insErrors.txt");
+   //  //sprintf(fname, "beltrami_Ns%d.dat",ins->Nsubsteps);
+   //  sprintf(fname, "BeltramiPrSolveAMG.txt");
+   //  FILE *fp;
+   //  fp = fopen(fname, "a");
 
-    fprintf(fp," %d %.5e %d %d %d %d %.5e %.5e\n", 
-                 mesh->N, ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, double(ins->pSolver->precon->preconBytes), ins->prtime);
-    fclose(fp); 
-    } 
+   //  fprintf(fp," %d %.5e %d %d %d %d %.5e %.5e\n", 
+   //               mesh->N, ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, double(ins->pSolver->precon->preconBytes), ins->prtime);
+   //  fclose(fp); 
+   //  } 
 
 
   }

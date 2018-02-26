@@ -47,6 +47,8 @@ int main(int argc, char **argv){
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N); 
 
+  #if 1
+
   // capture header file
   char *boundaryHeaderFileName;
   if(argc==3)
@@ -61,25 +63,25 @@ int main(int argc, char **argv){
   
   char *options; 
   if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
   else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
-      
-    // printf("Setup INS Solver: \n");
-    // ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
-    //                         prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
-
-    // //
-    // printf("Running INS solver\n");
-    // insRun2D(ins,options);
-
+    #if 1
+     printf("Setup INS Solver: \n");
+    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
+                            prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
+    printf("Running INS solver\n");
+    insRun2D(ins,options);
+    #else
     printf("OCCA Run Timer: \n");
     insRunTimer2D(mesh,options,boundaryHeaderFileName);
+    #endif
     
   // close down MPI
   MPI_Finalize();
 
   exit(0);
   return 0;
+  #endif
 }

@@ -19,6 +19,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
 
  
   if(strstr(options, "VTU")){ 
+    printf("Writing output file\n");
     // output field files
     char fname[BUFSIZ];
     // sprintf(fname, "/u0/outputs/ins3D/");

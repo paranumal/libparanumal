@@ -47,6 +47,8 @@ kernel void ellipticGradientTri2D_v0(const int Nelements,
   }
 }
 
+/*
+
 #define drdx s_vgeo[es][p_RXID]
 #define drdy s_vgeo[es][p_RYID]
 #define dsdx s_vgeo[es][p_SXID]
@@ -185,7 +187,13 @@ kernel void ellipticGradientTri2D(const int Nelements,
   }
 }
 
-kernel void ellipticPartialGradientTri2D(const int Nelements,
+#define drdx s_vgeo[es][p_RXID]
+#define drdy s_vgeo[es][p_RYID]
+#define dsdx s_vgeo[es][p_SXID]
+#define dsdy s_vgeo[es][p_SYID]
+
+
+kernel void ellipticPartialGradientTri2D_v0(const int Nelements,
                                   const iint offset,
                                   const dfloat * restrict vgeo,
                                   const dfloat * restrict const DrT,
@@ -255,3 +263,142 @@ kernel void ellipticPartialGradientTri2D(const int Nelements,
     }
   }
 }
+
+
+
+ // // Optimized sizes for kernel 4-5
+#if p_N==1
+ #define p_NbV 10
+ #define p_Nmt 1
+ #endif
+
+#if p_N==2
+ #define p_NbV 4
+ #define p_Nmt 2
+#endif
+
+#if p_N==3
+ #define p_NbV 6
+ #define p_Nmt 1
+#endif
+
+ #if p_N==4
+  #define p_NbV 2
+  #define p_Nmt 2
+#endif
+
+ #if p_N==5
+ #define p_NbV 2
+ #define p_Nmt 5
+ #endif
+
+#if p_N==6
+ #define p_NbV 3
+ #define p_Nmt 7
+ #endif
+
+#if p_N==7
+  #define p_NbV 2
+  #define p_Nmt 7
+ #endif
+
+#if p_N==8
+ #define p_NbV 5
+ #define p_Nmt 7
+#endif
+
+#if p_N==9
+  #define p_NbV 5
+  #define p_Nmt 7
+ #endif
+
+#if p_N==10
+ #define p_NbV 4
+ #define p_Nmt 6
+#endif
+
+
+// map multiple nodes to thread
+kernel void ellipticPartialGradientTri2D(iint Nelements,
+         const iint offset,
+         const dfloat * restrict vgeo,
+         const dfloat * restrict DrT, 
+         const dfloat * restrict DsT,
+         const dfloat * restrict q,
+              dfloat4 * restrict gradq){
+  
+  for(iint eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
+
+    shared dfloat s_q[p_Nmt][p_NbV][p_Np];
+
+    for(iint es=0; es<p_NbV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        occaUnroll(p_Nmt)
+        for(iint em=0;em<p_Nmt;++em){    
+          const iint e = eo+es*p_Nmt + em+offset; 
+            if(e<Nelements){
+              const iint id = n + e*p_Np;
+              s_q[em][es][n] = q[id];
+            }
+          }  
+        }
+      }
+
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NbV; ++es; inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        dfloat qr[p_Nmt], qs[p_Nmt];
+
+        // hold geometric factors on register
+        dfloat drdx2[p_Nmt], dsdx2[p_Nmt];
+        dfloat drdy2[p_Nmt], dsdy2[p_Nmt];
+        
+        occaUnroll(p_Nmt)
+        for(iint em=0;em<p_Nmt;++em){ 
+          const iint e = eo+es*p_Nmt + em+offset; 
+          qr[em] = 0.f;
+          qs[em] = 0.f;
+          //
+          drdx2[em] = vgeo[p_Nvgeo*e+p_RXID];
+          drdy2[em] = vgeo[p_Nvgeo*e+p_RYID];
+          dsdx2[em] = vgeo[p_Nvgeo*e+p_SXID];
+          dsdy2[em] = vgeo[p_Nvgeo*e+p_SYID];
+        }
+
+        occaUnroll(p_Np)
+        for(iint i=0;i<p_Np;++i){
+          dfloat drt = DrT[n + i*p_Np];
+          dfloat dst = DsT[n + i*p_Np];
+
+          occaUnroll(p_Nmt)
+          for(iint em=0;em<p_Nmt;++em){ 
+
+          qr[em] += drt*s_q[em][es][i];
+          qs[em] += dst*s_q[em][es][i];
+         }
+        }
+
+
+        dfloat4 gradqn;
+
+        occaUnroll(p_Nmt)
+        for(iint em=0;em<p_Nmt;++em){ 
+         const iint e  = eo+es*p_Nmt + em+offset; 
+         if(e<Nelements){ 
+           const iint id = e*p_Np+n; 
+           gradqn.x = drdx2[em]*qr[em] + dsdx2[em]*qs[em];
+           gradqn.y = drdy2[em]*qr[em] + dsdy2[em]*qs[em];
+           gradqn.w = s_q[em][es][n];
+
+           gradq[id] = gradqn;
+          }
+        }
+      }
+    }
+
+
+
+  }
+}
+*/

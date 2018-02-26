@@ -216,7 +216,6 @@ typedef struct {
   KrylovType ktype;
 
   mesh_t *mesh;
-  hgs_t *hgs;
   const char* options;
 
   //Matrix Free args
@@ -271,8 +270,7 @@ void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        iint* Aj,
                        dfloat* Avals,
                        bool nullSpace,
-                       dfloat nullSpacePenalty,
-                       hgs_t *hgs);
+                       dfloat nullSpacePenalty);
 
 void parAlmondPrecon(parAlmond_t* parAlmond, occa::memory o_x, occa::memory o_rhs);
 
