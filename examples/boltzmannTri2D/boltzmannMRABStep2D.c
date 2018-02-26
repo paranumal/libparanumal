@@ -42,10 +42,6 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     dfloat ramp, drampdt;
     boltzmannRampFunction2D(t, &ramp, &drampdt);
 
-
-
-
-
     iint lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
@@ -62,7 +58,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
         mesh->haloExtractKernel(mesh->totalHaloPairs,
                     Nentries,
                     mesh->o_haloElementList,
-                    mesh->o_fQP,
+                    mesh->o_fQM,
                     mesh->o_haloBuffer);
 
         // copy extracted halo to HOST
@@ -173,7 +169,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
         // copy halo data to DEVICE
         size_t offset = mesh->Nfaces*mesh->Nfp*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        mesh->o_fQP.asyncCopyFrom(recvBuffer, haloBytes, offset);
+        mesh->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, offset);
         mesh->device.finish();        
 
         #if ASYNC 
@@ -200,7 +196,6 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                               mesh->o_y,
                               mesh->o_q,
                               mesh->o_fQM,
-                              mesh->o_fQP,
                               mesh->o_rhsq);
 
         if (mesh->MRABpmlNelements[l])
@@ -220,7 +215,6 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                               mesh->o_y,
                               mesh->o_q,
                               mesh->o_fQM,
-                              mesh->o_fQP,
                               mesh->o_rhsq,
                               mesh->o_pmlrhsqx,
                               mesh->o_pmlrhsqy);
@@ -242,7 +236,6 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                               mesh->o_vmapM,
                               mesh->o_rhsq,
                               mesh->o_fQM,
-                              mesh->o_fQP,
                               mesh->o_q);
 
           if (mesh->MRABpmlNelements[l])
@@ -259,8 +252,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                   mesh->o_q,
                                   mesh->o_pmlqx,
                                   mesh->o_pmlqy,
-                                  mesh->o_fQM,
-                                  mesh->o_fQP);
+                                  mesh->o_fQM);
 
           //rotate index
           mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
@@ -278,7 +270,6 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                     mesh->o_vmapM,
                                     mesh->o_rhsq,
                                     mesh->o_fQM,
-                                    mesh->o_fQP,
                                     mesh->o_q);
 
           if (mesh->MRABpmlNhaloElements[lev])
@@ -295,8 +286,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                                       mesh->o_q,
                                       mesh->o_pmlqx,
                                       mesh->o_pmlqy,
-                                      mesh->o_fQM,
-                                      mesh->o_fQP);
+                                      mesh->o_fQM);
         }
 
 }

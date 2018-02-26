@@ -9,10 +9,10 @@ xmax = DefineNumber[ 9.4];
 ymin = DefineNumber[-5.4];
 ymax = DefineNumber[ 5.4];
 
-xpmlmin = DefineNumber[xmin - 3*2.6];
-xpmlmax = DefineNumber[xmax + 3*2.6]; 
-ypmlmin = DefineNumber[ymin - 3*2.6];
-ypmlmax = DefineNumber[ymax + 3*2.6];
+xpmlmin = DefineNumber[xmin - 3*1.6];
+xpmlmax = DefineNumber[xmax + 3*1.6]; 
+ypmlmin = DefineNumber[ymin - 3*1.6];
+ypmlmax = DefineNumber[ymax + 3*1.6];
 
 
 xcmin = DefineNumber[-0.5];

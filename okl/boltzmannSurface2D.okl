@@ -61,6 +61,17 @@ void boundaryConditions2D(const iint bc,
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
 
+   else if (bc==4)   // NBN: testing inflow
+  { 
+
+    *q1B = 2.f*p_q1bar - q1M; 
+    *q2B = 2.f*ramp*p_q2bar - q2M; 
+    *q3B = 2.f*ramp*p_q3bar - q3M; 
+    *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+    *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+    *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+  }
+
 
  
  #else
@@ -786,7 +797,6 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
                      const dfloat * restrict y,
                      const dfloat * restrict q,
                      const dfloat * restrict fQM,
-                     const dfloat * restrict fQP,
                            dfloat * restrict rhsq){
   
   // for all elements
@@ -819,12 +829,12 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
             const iint idP = mapP[id]*p_Nfields;
    
             // Read trace values
-            dfloat q1M = fQM[idM + 0], q1P = fQP[idP + 0];
-            dfloat q2M = fQM[idM + 1], q2P = fQP[idP + 1];
-            dfloat q3M = fQM[idM + 2], q3P = fQP[idP + 2];
-            dfloat q4M = fQM[idM + 3], q4P = fQP[idP + 3];
-            dfloat q5M = fQM[idM + 4], q5P = fQP[idP + 4];
-            dfloat q6M = fQM[idM + 5], q6P = fQP[idP + 5];
+            dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
+            dfloat q2M = fQM[idM + 1], q2P = fQM[idP + 1];
+            dfloat q3M = fQM[idM + 2], q3P = fQM[idP + 2];
+            dfloat q4M = fQM[idM + 3], q4P = fQM[idP + 3];
+            dfloat q5M = fQM[idM + 4], q5P = fQM[idP + 4];
+            dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
         
             // apply boundary condition
             iint bc = EToB[face+p_Nfaces*e];
@@ -928,7 +938,6 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
                         const dfloat * restrict y,              
                         const dfloat * restrict q,
                         const dfloat * restrict fQM,
-                        const dfloat * restrict fQP,
                               dfloat * restrict rhsq,
                               dfloat * restrict pmlrhsqx,
                               dfloat * restrict pmlrhsqy){
@@ -976,12 +985,12 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
             const iint idP = mapP[id]*p_Nfields;
     
             // Read trace values
-            dfloat q1M = fQM[idM + 0], q1P = fQP[idP + 0];
-            dfloat q2M = fQM[idM + 1], q2P = fQP[idP + 1];
-            dfloat q3M = fQM[idM + 2], q3P = fQP[idP + 2];
-            dfloat q4M = fQM[idM + 3], q4P = fQP[idP + 3];
-            dfloat q5M = fQM[idM + 4], q5P = fQP[idP + 4];
-            dfloat q6M = fQM[idM + 5], q6P = fQP[idP + 5];
+            dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
+            dfloat q2M = fQM[idM + 1], q2P = fQM[idP + 1];
+            dfloat q3M = fQM[idM + 2], q3P = fQM[idP + 2];
+            dfloat q4M = fQM[idM + 3], q4P = fQM[idP + 3];
+            dfloat q5M = fQM[idM + 4], q5P = fQM[idP + 4];
+            dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
         
             // apply boundary condition
             iint bc = EToB[face+p_Nfaces*e];

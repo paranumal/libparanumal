@@ -22,7 +22,7 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
   fprintf(fp,"#POSTPROCESS Elements  =%d\n",mesh->plotNelements);
   fprintf(fp,"#SPEED of SOUND        =%f\n",mesh->sqrtRT);
 
-  fprintf(fp,"VARIABLES=x,y,u,v,p,w\n");
+  fprintf(fp,"VARIABLES=x,y,u,v,p,w,div\n");
 
   iint TotalPoints = mesh->Nelements*mesh->plotNp;
   iint TotalCells  = mesh->Nelements*mesh->plotNelements;
@@ -90,7 +90,7 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
         plotdn  += mesh->plotInterp[n*mesh->Np+m]*du;
      }
 
-      fprintf(fp,"%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\n",plotxn,plotyn,plotun,plotvn,plotpn,plotwn, plotdn);
+      fprintf(fp,"%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\t%.10e\n",plotxn,plotyn,plotun,plotvn,plotpn,plotwn,plotdn);
     }
 }
 

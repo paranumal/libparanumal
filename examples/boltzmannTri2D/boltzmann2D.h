@@ -32,6 +32,7 @@ void boltzmannCouetteError2D(mesh2D *mesh, dfloat time);
 void boltzmannPlotVTUField2D(mesh2D *mesh, char *fname);
 void boltzmannPlotVTU2D(mesh2D *mesh, char * FileName);
 void boltzmannPlotTEC2D(mesh2D *mesh, char * FileName, dfloat solutionTime);
+void boltzmannPlotFieldTEC2D(mesh2D *mesh, char * FileName, dfloat solutionTime, iint fld);
 void boltzmannComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
 //dfloat boltzmannRampFunction2D(dfloat t);
