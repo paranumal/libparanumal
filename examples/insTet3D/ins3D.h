@@ -16,20 +16,20 @@ typedef struct {
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu;
-  iint NVfields, NTfields, Nfields;
-  iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
-  iint ExplicitOrder; 
+  int NVfields, NTfields, Nfields;
+  int NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
+  int ExplicitOrder; 
 
   dfloat dt;          // time step
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat finalTime;   // final time to run acoustics to
-  iint   NtimeSteps;  // number of time steps 
-  iint   Nstages;     // Number of history states to store
-  iint   index;       // Index of current state
-  iint   errorStep; 
-  iint   Nsubsteps;  
+  int   NtimeSteps;  // number of time steps 
+  int   Nstages;     // Number of history states to store
+  int   index;       // Index of current state
+  int   errorStep; 
+  int   Nsubsteps;  
   //solver tolerances
-  iint NiterU, NiterV, NiterW, NiterP;
+  int NiterU, NiterV, NiterW, NiterP;
 
   dfloat presTOL, velTOL;
 
@@ -61,7 +61,7 @@ typedef struct {
   dfloat *pSendBuffer;
   dfloat *pRecvBuffer;
 
-  // iint Nsubsteps;  
+  // int Nsubsteps;  
   // dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   // occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
@@ -124,13 +124,13 @@ typedef struct {
 }ins_t;
 
 
-ins_t *insSetup3D(mesh3D *mesh, iint Ns, char *options, 
+ins_t *insSetup3D(mesh3D *mesh, int Ns, char *options, 
                   char *velSolverOptions, char *velParAlmondOptions, 
                   char *prSolverOptions,  char *prParAlmondOptions,
                   char *bdryHeaderFileName);
 
 void insRun3D(ins_t *solver, char *options);
-void insReport3D(ins_t *solver, iint tstep, char *options);
+void insReport3D(ins_t *solver, int tstep, char *options);
 void insError3D(ins_t *solver, dfloat time, char *options);
 void insPlotVTU3D(ins_t *solver, char *fileNameBase);
 void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
@@ -138,15 +138,15 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char*options);
 
 // void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
-void insAdvectionStep3D(ins_t *solver, iint tstep, const char * options);
-void insAdvectionSubCycleStep3D(ins_t *solver, iint tstep, const char * options);
-void insHelmholtzStep3D(ins_t *solver, iint tstep, const char * options);
-void insPoissonStep3D(ins_t *solver, iint tstep, const char * options);
-void insUpdateStep3D(ins_t *solver, iint tstep, const char * options);
+void insAdvectionStep3D(ins_t *solver, int tstep, const char * options);
+void insAdvectionSubCycleStep3D(ins_t *solver, int tstep, const char * options);
+void insHelmholtzStep3D(ins_t *solver, int tstep, const char * options);
+void insPoissonStep3D(ins_t *solver, int tstep, const char * options);
+void insUpdateStep3D(ins_t *solver, int tstep, const char * options);
 
 void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 
-// void insAdvectionSubCycleStep2D(ins_t *solver, iint tstep,
+// void insAdvectionSubCycleStep2D(ins_t *solver, int tstep,
 //                      dfloat * tsendBuffer, dfloat *trecvBuffer, 
 //                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
 

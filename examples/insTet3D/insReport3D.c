@@ -1,6 +1,6 @@
 #include "ins3D.h"
 
-void insReport3D(ins_t *ins, iint tstep, char *options){
+void insReport3D(ins_t *ins, int tstep, char *options){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -9,7 +9,7 @@ void insReport3D(ins_t *ins, iint tstep, char *options){
 
   dfloat t = (tstep)*ins->dt;
   
-  iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  int offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   ins->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
                        mesh->o_DrT,

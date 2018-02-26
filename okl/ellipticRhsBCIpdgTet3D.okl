@@ -1,6 +1,6 @@
 kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
-            const iint * restrict vmapM,
-            const iint * restrict vmapP,
+            const int * restrict vmapM,
+            const int * restrict vmapP,
             const dfloat tau,
             const dfloat t,
             const dfloat * restrict x,
@@ -8,7 +8,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
             const dfloat * restrict z,
             const dfloat * restrict vgeo,
             const dfloat * restrict sgeo,
-            const iint   * restrict EToB,
+            const int   * restrict EToB,
             const dfloat * restrict DrT,
             const dfloat * restrict DsT,
             const dfloat * restrict DtT,
@@ -29,21 +29,21 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
     shared  dfloat s_Lnydq[p_Np];
     shared  dfloat s_Lnzdq[p_Np];
 
-    exclusive iint idM;
+    exclusive int idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
+        const int id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
 
         // find face that owns this node
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
 
         dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;
 
         // load surface geofactors for this face
-        iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        int sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
         ny = sgeo[sid+p_NYID];
         nz = sgeo[sid+p_NZID];
@@ -91,7 +91,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
         dfloat Lnzdq = 0;
 
         occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
             Lnzdq += LIFTT[n+i*p_Np]*s_nzdq[i];
@@ -115,7 +115,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        iint id = idM%p_Np;
+        int id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]+nz*s_Lnzdq[id]);
       }
 
@@ -164,7 +164,7 @@ kernel void ellipticRhsBCIpdgTet3D(const int Nelements,
             Mlapq += MM[n+i*p_Np]*s_lapq[i];
           }
 
-        const iint id = e*p_Np+n;
+        const int id = e*p_Np+n;
         rhs[id] -=  J*Mlapq;
       }
     }

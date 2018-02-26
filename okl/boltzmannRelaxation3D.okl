@@ -1,13 +1,13 @@
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannRelaxationCub3D(const iint Nelements,
-					     const iint * restrict elementIds,
+kernel void boltzmannRelaxationCub3D(const int Nelements,
+					     const int * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
 					     const dfloat4 * restrict q,
 					           dfloat4 * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_q[p_NblockV][10][p_Np];
@@ -20,18 +20,18 @@ kernel void boltzmannRelaxationCub3D(const iint Nelements,
     shared dfloat s_cubN9[p_NblockV][p_cubNp];
     shared dfloat s_cubN10[p_NblockV][p_cubNp];
 
-    exclusive iint element;
+    exclusive int element;
 
     // prefetch q to shared
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  element = elementIds[e];
 
 	  if(n<p_Np){
-	    const iint id = 3*(element*p_Np+n);
+	    const int id = 3*(element*p_Np+n);
 	    dfloat4 qan = q[id+0], qbn = q[id+1], qcn =  q[id+2] ;    
 	    s_q[es][0][n] = qan.x;
 	    s_q[es][1][n] = qan.y;
@@ -55,16 +55,16 @@ kernel void boltzmannRelaxationCub3D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_cubNp){
 	    dfloat cubq1 = 0.f, cubq2 = 0.f, cubq3 = 0.f, cubq4 = 0.f, cubq5  = 0.f;
 	    dfloat cubq6 = 0.f, cubq7 = 0.f, cubq8 = 0.f, cubq9 = 0.f, cubq10 = 0.f;
 	    
-	    for(iint m=0;m<p_Np;++m){
+	    for(int m=0;m<p_Np;++m){
 	      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 	      cubq1  += Icn*s_q[es][0][m];
 	      cubq2  += Icn*s_q[es][1][m];
@@ -97,17 +97,17 @@ kernel void boltzmannRelaxationCub3D(const iint Nelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
-	    const iint id = 3*(element*p_Np+n);
+	    const int id = 3*(element*p_Np+n);
 	    
 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
 	    dfloat N5 = 0.f, N6 = 0.f, N7 = 0.f, N8 = 0.f, N9 = 0.f, N10 = 0.f;
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
 	      N5  += Pnc*s_cubN5[es][i];
 	      N6  += Pnc*s_cubN6[es][i];
@@ -139,14 +139,14 @@ kernel void boltzmannRelaxationCub3D(const iint Nelements,
 
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannSARelaxationCub3D(const iint Nelements,
-					     const iint * restrict elementIds,
+kernel void boltzmannSARelaxationCub3D(const int Nelements,
+					     const int * restrict elementIds,
 					     const dfloat * restrict cubInterpT,
 					     const dfloat * restrict cubProjectT,
 					     const dfloat4 * restrict q,
 					           dfloat4 * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_q[p_NblockV][4][p_Np];
@@ -159,18 +159,18 @@ kernel void boltzmannSARelaxationCub3D(const iint Nelements,
     shared dfloat s_cubN9[p_NblockV][p_cubNp];
     shared dfloat s_cubN10[p_NblockV][p_cubNp];
 
-    exclusive iint element;
+    exclusive int element;
 
     // prefetch q to shared
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  element = elementIds[e];
 
 	  if(n<p_Np){
-	    const iint id = 3*(element*p_Np+n);
+	    const int id = 3*(element*p_Np+n);
 	    dfloat4 qan = q[id+0] ;    
 	    s_q[es][0][n] = qan.x;
 	    s_q[es][1][n] = qan.y;
@@ -186,15 +186,15 @@ kernel void boltzmannSARelaxationCub3D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_cubNp){
 	    dfloat cubq1 = 0.f, cubq2 = 0.f, cubq3 = 0.f, cubq4 = 0.f;
 	    
-	    for(iint m=0;m<p_Np;++m){
+	    for(int m=0;m<p_Np;++m){
 	      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 	      cubq1  += Icn*s_q[es][0][m];
 	      cubq2  += Icn*s_q[es][1][m];
@@ -220,17 +220,17 @@ kernel void boltzmannSARelaxationCub3D(const iint Nelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
-	    const iint id = 3*(element*p_Np+n);
+	    const int id = 3*(element*p_Np+n);
 	    
 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
 	    dfloat N5 = 0.f, N6 = 0.f, N7 = 0.f, N8 = 0.f, N9 = 0.f, N10 = 0.f;
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
 	      N5  += Pnc*s_cubN5[es][i];
 	      N6  += Pnc*s_cubN6[es][i];

@@ -1,15 +1,15 @@
 #include "ellipticTri2D.h"
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType,
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -44,7 +44,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   solver->dataStream = mesh->device.createStream();
   mesh->device.setStream(solver->defaultStream);
 
-  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
@@ -69,8 +69,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Nelements*mesh->Np;
-    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
+    int Nlocal = mesh->Nelements*mesh->Np;
+    int Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements
@@ -108,12 +108,12 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
   solver->allNeumannPenalty = 1;
-  iint totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[e*mesh->Nfaces+f];
       if (bc>0) {
@@ -128,8 +128,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Nfp*mesh->Nfaces;m++) {
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Nfp*mesh->Nfaces;m++) {
       dfloat MSnm = 0;
       for (int i=0;i<mesh->Np;i++){
         MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[m+i*mesh->Nfp*mesh->Nfaces];
@@ -460,7 +460,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -477,7 +477,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
 
   //use the bc flags to find masked ids
   mesh->Nmasked = 0;
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1E9) {
       mesh->mapB[n] = 0.;
     } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
@@ -486,23 +486,23 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint 
   }
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
   
-  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->maskIds = (int *) calloc(mesh->Nmasked, sizeof(int));
   mesh->Nmasked =0; //reset
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
   }
-  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(int), mesh->maskIds);
 
 
   if (strstr(options,"SPARSE")) {
     // make the gs sign change array for flipped trace modes
     //TODO this is a hack that likely will need updating for MPI and/or 3D
     mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+    for (int n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
 
-    for (iint e=0;e<mesh->Nelements;e++) {
+    for (int e=0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
-        iint id = n+e*mesh->Nfp*mesh->Nfaces;
+        int id = n+e*mesh->Nfp*mesh->Nfaces;
         if (mesh->mmapS[id]==-1) { //sign flipped
           if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
             mesh->mapSgn[mesh->vmapM[id]]= -1;

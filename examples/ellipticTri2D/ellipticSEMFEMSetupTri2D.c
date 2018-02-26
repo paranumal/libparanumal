@@ -5,16 +5,16 @@ typedef struct{
   dfloat VX;
   dfloat VY;
 
-  iint localId;
-  iint globalId;
+  int localId;
+  int globalId;
 
 }FEMverts_t;
 
 typedef struct {
 
-  iint localId;
-  iint globalId;
-  iint ownerRank;
+  int localId;
+  int globalId;
+  int ownerRank;
 
 }parallelNode_t;
 
@@ -55,7 +55,7 @@ int parallelCompareFEMvertsLocalId(const void *a, const void *b){
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
-                              dfloat tau, dfloat lambda, iint *BCType,
+                              dfloat tau, dfloat lambda, int *BCType,
                               const char *options, const char *parAlmondOptions) {
 
   if (!strstr(options, "CONTINUOUS")) {
@@ -98,8 +98,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   }
 
   //remake vertexNodes array
-  pmesh->vertexNodes = (int*) calloc(pmesh->Nverts, sizeof(iint));
-  for(iint n=0;n<pmesh->Np;++n){
+  pmesh->vertexNodes = (int*) calloc(pmesh->Nverts, sizeof(int));
+  for(int n=0;n<pmesh->Np;++n){
     if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
       pmesh->vertexNodes[0] = n;
     if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
@@ -129,32 +129,32 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   /* allocate space for node coordinates */
   femMesh->Nelements = mesh->NelFEM*mesh->Nelements;
-  femMesh->EToV = (iint*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(iint));
+  femMesh->EToV = (int*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(int));
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
 
-  iint *localIds = (iint *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(iint));
+  int *localIds = (int *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(int));
 
-  iint NFEMverts = mesh->Nelements*mesh->NpFEM;
-  for(iint e=0;e<mesh->Nelements;++e){
+  int NFEMverts = mesh->Nelements*mesh->NpFEM;
+  for(int e=0;e<mesh->Nelements;++e){
     for (int n=0;n<mesh->NelFEM;n++) {
       //local ids in the subelement fem grid
-      iint id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
-      iint id2 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+1];
-      iint id3 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+2];
+      int id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
+      int id2 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+1];
+      int id3 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+2];
 
       // check orientation
       dfloat xe1 = pmesh->x[id1], xe2 = pmesh->x[id2], xe3 = pmesh->x[id3];
       dfloat ye1 = pmesh->y[id1], ye2 = pmesh->y[id2], ye3 = pmesh->y[id3];
       dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
       if(J<0){
-        iint id3tmp = id3;
+        int id3tmp = id3;
         id3 = id2;
         id2 = id3tmp;
       }
 
       /* read vertex triplet for triangle */
-      iint femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
+      int femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
       femMesh->EToV[femId+0] = pmesh->globalIds[id1];
       femMesh->EToV[femId+1] = pmesh->globalIds[id2];
       femMesh->EToV[femId+2] = pmesh->globalIds[id3];
@@ -204,7 +204,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   pmesh->mapB = (int *) calloc(pmesh->Nelements*pmesh->Np,sizeof(int));
-  for (iint e=0;e<pmesh->Nelements;e++) {
+  for (int e=0;e<pmesh->Nelements;e++) {
     for (int n=0;n<pmesh->Np;n++) pmesh->mapB[n+e*pmesh->Np] = 1E9;
     for (int f=0;f<pmesh->Nfaces;f++) {
       int bc = pmesh->EToB[f+e*pmesh->Nfaces];
@@ -220,18 +220,18 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   gsParallelGatherScatter(pmesh->hostGsh, pmesh->mapB, "int", "min"); 
 
   //use the bc flags to find masked ids
-  for (iint n=0;n<pmesh->Nelements*pmesh->Np;n++) {
+  for (int n=0;n<pmesh->Nelements*pmesh->Np;n++) {
     if (pmesh->mapB[n] == 1) { //Dirichlet boundary
       pmesh->globalIds[n] = -1;
     }
   }
 
   // squeeze node numbering
-  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+  int *globalStarts = (int*) calloc(size+1, sizeof(int));
   meshParallelConsecutiveGlobalNumbering(pmesh, pmesh->Np*pmesh->Nelements, pmesh->globalIds, pmesh->globalOwners, globalStarts);
 
-  for (iint n=0;n<pmesh->Np*pmesh->Nelements;n++) {
-    iint id = pmesh->gatherLocalIds[n];
+  for (int n=0;n<pmesh->Np*pmesh->Nelements;n++) {
+    int id = pmesh->gatherLocalIds[n];
     pmesh->gatherBaseIds[n] = pmesh->globalIds[id];
   }
 
@@ -253,10 +253,10 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Ssr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Sss = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-  for (iint n=0;n<femMesh->Np;n++) {
-    for (iint m=0;m<femMesh->Np;m++) {
-      for (iint k=0;k<femMesh->Np;k++) {
-        for (iint l=0;l<femMesh->Np;l++) {
+  for (int n=0;n<femMesh->Np;n++) {
+    for (int m=0;m<femMesh->Np;m++) {
+      for (int k=0;k<femMesh->Np;k++) {
+        for (int l=0;l<femMesh->Np;l++) {
           femMesh->Srr[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
           femMesh->Srs[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
           femMesh->Ssr[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
@@ -269,22 +269,22 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
+  int nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   //Build unassembed non-zeros
-  iint cnt =0;
-  for (iint e=0;e<femMesh->Nelements;e++) {
-    for (iint n=0;n<femMesh->Np;n++) {
-      iint idn = localIds[e*femMesh->Np + n];
+  int cnt =0;
+  for (int e=0;e<femMesh->Nelements;e++) {
+    for (int n=0;n<femMesh->Np;n++) {
+      int idn = localIds[e*femMesh->Np + n];
       if (pmesh->globalIds[idn]<0) continue; //skip masked nodes
-      for (iint m=0;m<femMesh->Np;m++) {
-        iint idm = localIds[e*femMesh->Np + m];
+      for (int m=0;m<femMesh->Np;m++) {
+        int idm = localIds[e*femMesh->Np + m];
         if (pmesh->globalIds[idm]<0) continue; //skip masked nodes
 
         dfloat val = 0.;
@@ -314,18 +314,18 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  iint nnz = 0;
-  for(iint r=0;r<size;++r){
+  int nnz = 0;
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     nnz += ArecvCounts[r]/sizeof(nonZero_t);
@@ -343,7 +343,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<nnz;++n){
+  for(int n=1;n<nnz;++n){
     if(A[n].row == A[cnt].row && A[n].col == A[cnt].col){
       A[cnt].val += A[n].val;
     } else{
@@ -355,11 +355,11 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   if(rank==0) printf("done.\n");
 
-  iint *Rows = (iint *) calloc(nnz, sizeof(iint));
-  iint *Cols = (iint *) calloc(nnz, sizeof(iint));
+  int *Rows = (int *) calloc(nnz, sizeof(int));
+  int *Cols = (int *) calloc(nnz, sizeof(int));
   dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-  for (iint n=0;n<nnz;n++) {
+  for (int n=0;n<nnz;n++) {
     Rows[n] = A[n].row;
     Cols[n] = A[n].col;
     Vals[n] = A[n].val;
@@ -384,8 +384,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   // build interp and anterp
   dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh->NpFEM*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->NpFEM;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->NpFEM;++n){
+    for(int m=0;m<mesh->Np;++m){
       SEMFEMAnterp[n+m*mesh->NpFEM] = mesh->SEMFEMInterp[n*mesh->Np+m];
     }
   }

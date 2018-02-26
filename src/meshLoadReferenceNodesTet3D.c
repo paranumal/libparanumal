@@ -106,8 +106,8 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   // find node indices of vertex nodes
   dfloat NODETOL = 1e-6;
-  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
-  for(iint n=0;n<mesh->Np;++n){
+  mesh->vertexNodes = (int*) calloc(mesh->Nverts, sizeof(int));
+  for(int n=0;n<mesh->Np;++n){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
       mesh->vertexNodes[0] = n;
     if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)

@@ -3,11 +3,11 @@
 #include "mesh2D.h"
 
 typedef struct {
-  iint localId;
-  iint baseId;
-  iint baseRank;
-  iint recvIndex;
-  iint index;
+  int localId;
+  int baseId;
+  int baseRank;
+  int recvIndex;
+  int index;
 }gatherNode_t;
 
 // compare 
@@ -45,15 +45,15 @@ void meshParallelGatherSetupQuad2D(mesh2D *mesh){
   gatherNode_t *gatherNodes =
     (gatherNode_t*) calloc(mesh->Np*mesh->Nelements, sizeof(gatherNode_t));
 
-  iint *gatherSendCounts = (iint*) calloc(size, sizeof(iint));
+  int *gatherSendCounts = (int*) calloc(size, sizeof(int));
   
   // extract nodes that have base on other rank
-  iint cnt = 0;
-  iint gatherLocalCount = 0;
-  iint gatherSendCount = 0;
+  int cnt = 0;
+  int gatherLocalCount = 0;
+  int gatherSendCount = 0;
   
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    iint r = mesh->baseRanks[n];
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
+    int r = mesh->baseRanks[n];
     gatherNodes[n].localId  = n;
     gatherNodes[n].baseId   = mesh->baseIds[n];
     gatherNodes[n].baseRank = r;
@@ -70,11 +70,11 @@ void meshParallelGatherSetupQuad2D(mesh2D *mesh){
 	sizeof(gatherNode_t), compareGatherNodes);
   
   // extract: ordered list of local node indices for gather
-  iint *gatherBaseIds  = (iint*) calloc(gatherSendCount, sizeof(iint));
-  iint *gatherSendIds  = (iint*) calloc(gatherSendCount, sizeof(iint));
+  int *gatherBaseIds  = (int*) calloc(gatherSendCount, sizeof(int));
+  int *gatherSendIds  = (int*) calloc(gatherSendCount, sizeof(int));
   
   cnt = 0;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
     if(gatherNodes[n].baseId!=rank){
       // ids of nodes to send
       gatherSendIds[cnt] = gatherNodes[n].localId;
@@ -85,58 +85,58 @@ void meshParallelGatherSetupQuad2D(mesh2D *mesh){
       ++cnt;
     }
   }
-  iint gatherNsend = cnt;
+  int gatherNsend = cnt;
   
   // all processes tell all processes how many nodes to receive
-  iint *gatherRecvCounts = (iint*) calloc(size,sizeof(iint));
-  MPI_Alltoall(gatherSendCounts, 1, MPI_IINT,
-	       gatherRecvCounts, 1, MPI_IINT,
+  int *gatherRecvCounts = (int*) calloc(size,sizeof(int));
+  MPI_Alltoall(gatherSendCounts, 1, MPI_INT,
+	       gatherRecvCounts, 1, MPI_INT,
 	       MPI_COMM_WORLD);
   
   // form arrays for all to all (variable length)
-  iint *gatherRecvDispls = (iint*) calloc(size,sizeof(iint));
-  iint *gatherSendDispls = (iint*) calloc(size,sizeof(iint));
-  for(iint r=1;r<size;++r){
+  int *gatherRecvDispls = (int*) calloc(size,sizeof(int));
+  int *gatherSendDispls = (int*) calloc(size,sizeof(int));
+  for(int r=1;r<size;++r){
     gatherRecvDispls[r] = gatherRecvDispls[r-1]+gatherRecvCounts[r-1];
     gatherSendDispls[r] = gatherSendDispls[r-1]+gatherSendCounts[r-1];
   }
 
-  iint gatherNrecv = 0;
-  for(iint r=0;r<size;++r)
+  int gatherNrecv = 0;
+  for(int r=0;r<size;++r)
     gatherNrecv += gatherRecvCounts[r];
   
-  iint *gatherRecvIds = (iint*) calloc(gatherNrecv, sizeof(iint));
-  MPI_Alltoallv(gatherBaseIds, gatherSendCounts, gatherSendDispls, MPI_IINT,
-		gatherRecvIds, gatherRecvCounts, gatherRecvDispls, MPI_IINT,
+  int *gatherRecvIds = (int*) calloc(gatherNrecv, sizeof(int));
+  MPI_Alltoallv(gatherBaseIds, gatherSendCounts, gatherSendDispls, MPI_INT,
+		gatherRecvIds, gatherRecvCounts, gatherRecvDispls, MPI_INT,
 		MPI_COMM_WORLD);
 
   // now sort incoming data
   gatherNode_t *incoming = (gatherNode_t*) calloc(gatherNrecv, sizeof(gatherNode_t));  
-  for(iint n=0;n<gatherNrecv;++n){
+  for(int n=0;n<gatherNrecv;++n){
     incoming[n].baseId = gatherRecvIds[n];
     incoming[n].index = n;
   }
   qsort(incoming, gatherNrecv, sizeof(gatherNode_t), compareBaseNodes);
 
   // count degree of each base for incoming data
-  iint *gatherRecvStarts    = (iint*) calloc(gatherNrecv+1, sizeof(iint));
-  iint *gatherRecvBaseIds   = (iint*) calloc(gatherNrecv,   sizeof(iint));
-  iint *gatherSourceDegrees = (iint*) calloc(gatherNrecv,   sizeof(iint));
-  iint *gatherRecvSourceIds = (iint*) calloc(gatherNrecv,   sizeof(iint));
+  int *gatherRecvStarts    = (int*) calloc(gatherNrecv+1, sizeof(int));
+  int *gatherRecvBaseIds   = (int*) calloc(gatherNrecv,   sizeof(int));
+  int *gatherSourceDegrees = (int*) calloc(gatherNrecv,   sizeof(int));
+  int *gatherRecvSourceIds = (int*) calloc(gatherNrecv,   sizeof(int));
 
   // extract index relative to incoming
   cnt = 1; // at least one incoming
   gatherRecvSourceIds[0] = incoming[0].index;
   gatherRecvStarts[0] = 0;
-  for(iint n=1;n<gatherNrecv;++n){
+  for(int n=1;n<gatherNrecv;++n){
     gatherRecvSourceIds[n] = incoming[n].index;
     if(incoming[n].baseId!=incoming[n-1].baseId)
       gatherRecvStarts[cnt++] = n;
   }
   gatherRecvStarts[cnt] = gatherNrecv;
-  iint gatherNbaseRecv = cnt;
+  int gatherNbaseRecv = cnt;
   
-  for(iint n=0;n<gatherNbaseRecv;++n)
+  for(int n=0;n<gatherNbaseRecv;++n)
     gatherRecvBaseIds[n] = incoming[gatherRecvStarts[n]].baseId;
 
   // find local numbering stuff here

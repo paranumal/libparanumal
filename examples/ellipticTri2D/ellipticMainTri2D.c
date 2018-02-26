@@ -3,7 +3,7 @@
 void applyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq) {
 
   dfloat *Aqn = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) {
       Aqn[n] = 0;
       for (int k=0;k<mesh->Np;k++) {
@@ -93,15 +93,15 @@ int main(int argc, char **argv){
 
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
   
-  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load forcing into r
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = n+e*mesh->Np;
+    for(int n=0;n<mesh->Np;++n){
+      int id = n+e*mesh->Np;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
@@ -223,9 +223,9 @@ int main(int argc, char **argv){
   if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->sparseV,mesh->q,mesh->q);
 
   dfloat maxError = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint   id = e*mesh->Np+n;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);

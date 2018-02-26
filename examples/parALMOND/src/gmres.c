@@ -1,52 +1,52 @@
 #include "agmg.h"
 
-void gmresUpdate(iint Nrows,
+void gmresUpdate(int Nrows,
                  dfloat *x,
                  dfloat **V,
                  dfloat *H,
                  dfloat *s,
-                 iint Niter,
-                 iint maxIt){
+                 int Niter,
+                 int maxIt){
 
   dfloat *y = (dfloat *) calloc(Niter, sizeof(dfloat));
 
-  for(iint k=Niter-1; k>=0; --k){
+  for(int k=Niter-1; k>=0; --k){
     y[k] = s[k];
 
-    for(iint m=k+1; m<maxIt; ++m)
+    for(int m=k+1; m<maxIt; ++m)
       y[k] -= H[k + m*(maxIt+1)]*y[m];
 
     y[k] /= H[k + k*(maxIt+1)];
   }
 
-  for(iint j=0; j<Niter; ++j){
-    for(iint n=0; n<Nrows; ++n)
+  for(int j=0; j<Niter; ++j){
+    for(int n=0; n<Nrows; ++n)
       x[n] += y[j]*V[j][n];
   }
 
   free(y);
 }
 
-void gmresUpdate(parAlmond_t *parAlmond, iint Nrows,
+void gmresUpdate(parAlmond_t *parAlmond, int Nrows,
                  occa::memory o_x,
                  occa::memory *o_V,
                  dfloat *H,
                  dfloat *s,
-                 iint Niter,
-                 iint maxIt){
+                 int Niter,
+                 int maxIt){
 
   dfloat *y = (dfloat *) calloc(Niter+1, sizeof(dfloat));
 
-  for(iint k=Niter-1; k>=0; --k){
+  for(int k=Niter-1; k>=0; --k){
     y[k] = s[k];
 
-    for(iint m=k+1; m<Niter; ++m)
+    for(int m=k+1; m<Niter; ++m)
       y[k] -= H[k + m*(maxIt+1)]*y[m];
 
     y[k] /= H[k + k*(maxIt+1)];
   }
 
-  for(iint j=0; j<Niter; ++j){
+  for(int j=0; j<Niter; ++j){
     vectorAdd(parAlmond, Nrows, y[j], o_V[j], 1.0, o_x);
   }
 
@@ -54,13 +54,13 @@ void gmresUpdate(parAlmond_t *parAlmond, iint Nrows,
 }
 
 void pgmres(parAlmond_t *parAlmond,
-           iint maxIt,
+           int maxIt,
            dfloat tol){
 
   csr *A = parAlmond->levels[0]->A;
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const int m = A->Nrows;
+  const int n = A->Ncols;
 
   parAlmond->ktype = GMRES;
 
@@ -80,7 +80,7 @@ void pgmres(parAlmond_t *parAlmond,
 
   //sanity check
   if (nb<=tol) {
-    for (iint i=0;i<m;i++)
+    for (int i=0;i<m;i++)
       parAlmond->levels[0]->x[i] = x[i];
 
     free(x); 
@@ -93,10 +93,10 @@ void pgmres(parAlmond_t *parAlmond,
   } else if(strstr(parAlmond->options,"VCYCLE")) {
     vcycle(parAlmond, 0);
   } else {
-    for (iint k=0;k<m;k++)
+    for (int k=0;k<m;k++)
       z[k] = r[k];  
   }
-  for (iint k=0;k<m;k++)
+  for (int k=0;k<m;k++)
     r[k] = z[k];
 
   dfloat nr = innerProd(m, r, r);
@@ -107,7 +107,7 @@ void pgmres(parAlmond_t *parAlmond,
 
   dfloat **V = (dfloat **) calloc(maxIt,sizeof(dfloat *));
 
-  for(iint i=0; i<maxIt; ++i){
+  for(int i=0; i<maxIt; ++i){
     V[i] = (dfloat *) calloc(m, sizeof(dfloat)); //TODO this is way too much memory if maxit is large
   }
 
@@ -120,29 +120,29 @@ void pgmres(parAlmond_t *parAlmond,
   dfloat *Av = (dfloat *) calloc(m, sizeof(dfloat));
   dfloat *w  = (dfloat *) calloc(m, sizeof(dfloat));
 
-  iint Niter;
+  int Niter;
 
-  for(iint i=0; i<maxIt; i++){
+  for(int i=0; i<maxIt; i++){
 
     Niter = i+1;
     // Av = A*V(:.i)
     axpy(A, 1.0, V[i], 0.0, Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
-    for (iint k=0;k<m;k++)
+    for (int k=0;k<m;k++)
       r[k] = Av[k];
     if(strstr(parAlmond->options,"KCYCLE")) {
       kcycle(parAlmond, 0);
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       vcycle(parAlmond, 0);
     } else {
-      for (iint k=0;k<m;k++)
+      for (int k=0;k<m;k++)
         z[k] = r[k];  
     }
-    for (iint k=0;k<m;k++)
+    for (int k=0;k<m;k++)
       w[k] = z[k];
 
-    for(iint k=0; k<=i; ++k){
+    for(int k=0; k<=i; ++k){
       dfloat hkiLocal = innerProd(m, w, V[k]);
       dfloat hki = 0.;
       MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
@@ -160,7 +160,7 @@ void pgmres(parAlmond_t *parAlmond,
 
     H[i+1 + i*(maxIt+1)] = sqrt(wdotw);
 
-    for(iint k=0; k<i; ++k){
+    for(int k=0; k<i; ++k){
       dfloat h1 = H[k +     i*(maxIt+1)];
       dfloat h2 = H[k + 1 + i*(maxIt+1)];
 
@@ -203,7 +203,7 @@ void pgmres(parAlmond_t *parAlmond,
   gmresUpdate(m, x, V, H, s, Niter, maxIt);
 
   //copy result back to parAlmond's x storage
-  for (iint i=0;i<m;i++)
+  for (int i=0;i<m;i++)
     parAlmond->levels[0]->x[i] = x[i];
 
   free(x); 
@@ -217,15 +217,15 @@ void pgmres(parAlmond_t *parAlmond,
 
 //TODO need to link this with MPI
 void device_pgmres(parAlmond_t *parAlmond,
-           iint maxIt,
+           int maxIt,
            dfloat tol){
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const int m = A->Nrows;
+  const int n = A->Ncols;
 
-  iint sz = m*sizeof(dfloat);
+  int sz = m*sizeof(dfloat);
 
   // use parAlmond's buffers
   occa::memory &o_r = parAlmond->levels[0]->o_rhs;
@@ -269,7 +269,7 @@ void device_pgmres(parAlmond_t *parAlmond,
   s[0] = nr;
 
   occa::memory *o_V = (occa::memory *) calloc(maxIt, sizeof(occa::memory));
-  for(iint i=0; i<maxIt; ++i){
+  for(int i=0; i<maxIt; ++i){
     o_V[i] = parAlmond->device.malloc(sz, dummy);
   }
   free(dummy);
@@ -280,9 +280,9 @@ void device_pgmres(parAlmond_t *parAlmond,
   dfloat *H = (dfloat *) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat *) calloc(4*maxIt, sizeof(dfloat));
 
-  iint Niter = 0;
+  int Niter = 0;
 
-  iint i;
+  int i;
   for(i=0; i<maxIt; i++){
 
     Niter = i+1;
@@ -299,7 +299,7 @@ void device_pgmres(parAlmond_t *parAlmond,
       o_z.copyFrom(o_r);
     }
 
-    for(iint k=0; k<=i; ++k){
+    for(int k=0; k<=i; ++k){
       dfloat hkiLocal = innerProd(parAlmond, m, o_z, o_V[k]);
       dfloat hki = 0.;
       MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
@@ -317,7 +317,7 @@ void device_pgmres(parAlmond_t *parAlmond,
     nw = sqrt(nw);
     H[i+1 + i*(maxIt+1)] = nw;
 
-    for(iint k=0; k<i; ++k){
+    for(int k=0; k<i; ++k){
       dfloat h1 = H[k +     i*(maxIt+1)];
       dfloat h2 = H[k + 1 + i*(maxIt+1)];
 
@@ -361,7 +361,7 @@ void device_pgmres(parAlmond_t *parAlmond,
   if(Niter == maxIt)
     printf("gmres did not converge in given number of iterations \n");
 
-  for(iint i=0; i<maxIt; ++i)
+  for(int i=0; i<maxIt; ++i)
     o_V[i].free();
   free((void*)o_V);
 

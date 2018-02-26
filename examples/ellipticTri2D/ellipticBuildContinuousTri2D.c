@@ -16,26 +16,26 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz, ogs_t **ogs, int *globalStarts, const char* options) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   /* Build a gather-scatter to assemble the global masked problem */
-  iint Ntotal = mesh->Np*mesh->Nelements;
+  int Ntotal = mesh->Np*mesh->Nelements;
 
-  iint *globalNumbering = (iint *) calloc(Ntotal,sizeof(iint));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(iint)); 
-  for (iint n=0;n<mesh->Nmasked;n++) 
+  int *globalNumbering = (int *) calloc(Ntotal,sizeof(int));
+  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(int)); 
+  for (int n=0;n<mesh->Nmasked;n++) 
     globalNumbering[mesh->maskIds[n]] = -1;
 
   // squeeze node numbering
   meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
 
-  iint *gatherMaskedBaseIds   = (iint *) calloc(Ntotal,sizeof(iint));
-  for (iint n=0;n<Ntotal;n++) {
-    iint id = mesh->gatherLocalIds[n];
+  int *gatherMaskedBaseIds   = (int *) calloc(Ntotal,sizeof(int));
+  for (int n=0;n<Ntotal;n++) {
+    int id = mesh->gatherLocalIds[n];
     gatherMaskedBaseIds[n] = globalNumbering[id];
   }
 
@@ -46,13 +46,13 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
                                         mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
+  int nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   dfloat *Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   dfloat *Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
@@ -70,14 +70,14 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
         }
       }
     }
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
         MM[m+n*mesh->Np] = mesh->sparseMM[m+n*mesh->Np];
       }
     }
   } else {
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
         Srr[m+n*mesh->Np] = mesh->Srr[m+n*mesh->Np];
         Srs[m+n*mesh->Np] = mesh->Srs[m+n*mesh->Np] + mesh->Ssr[m+n*mesh->Np];
         Sss[m+n*mesh->Np] = mesh->Sss[m+n*mesh->Np];
@@ -87,16 +87,16 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (iint n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
+  for (int n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
 
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
-  iint cnt =0;
-  for (iint e=0;e<mesh->Nelements;e++) {
-    for (iint n=0;n<mesh->Np;n++) {
+  int cnt =0;
+  for (int e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) {
       if (mask[e*mesh->Np + n]) continue; //skip masked nodes
-      for (iint m=0;m<mesh->Np;m++) {
+      for (int m=0;m<mesh->Np;m++) {
         if (mask[e*mesh->Np + m]) continue; //skip masked nodes
 
         dfloat val = 0.;
@@ -128,18 +128,18 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r]/sizeof(nonZero_t);
@@ -157,7 +157,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, ii
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<*nnz;++n){
+  for(int n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;

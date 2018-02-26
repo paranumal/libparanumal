@@ -1,14 +1,14 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
+void insUpdateStep2D(ins_t *ins, int tstep, int haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer,
 				        char   * options){
 
   mesh2D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+  int offset = (mesh->Nelements+mesh->totalHaloPairs);
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
@@ -55,7 +55,7 @@ void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
                                       ins->o_pHaloBuffer);
     }
     
-    const iint solverid =1 ;
+    const int solverid =1 ;
 
     occaTimerTic(mesh->device,"GradientSurface");
     // Compute Surface Contribution of gradient of pressure increment

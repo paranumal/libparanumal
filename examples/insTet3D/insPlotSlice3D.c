@@ -7,8 +7,8 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   
   //find number of sliced elements
   dfloat *coord;
-  iint NslicedElements = 0;
-  iint NslicedSubElements = 0;
+  int NslicedElements = 0;
+  int NslicedSubElements = 0;
   int *sliceFlag = (int *) calloc(mesh->Nelements,sizeof(int));
   int *sliceSubFlag = (int*) calloc(mesh->Nelements*mesh->plotNelements,sizeof(int));
 
@@ -19,7 +19,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     if (strstr(dim[i],"y")) coord = mesh->y;
     if (strstr(dim[i],"z")) coord = mesh->z;
 
-    for (iint e=0;e<mesh->Nelements;e++) {
+    for (int e=0;e<mesh->Nelements;e++) {
       for(int n=0;n<mesh->plotNp;++n){
         plotCoord[n] = 0;
         for(int m=0;m<mesh->Np;++m){
@@ -76,11 +76,11 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
         plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
@@ -96,13 +96,13 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
-      for(iint m=0;m<mesh->Np;++m){
-       const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
-             const iint id     = offset + m+e*mesh->Np;
+      for(int m=0;m<mesh->Np;++m){
+       const int offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
+             const int id     = offset + m+e*mesh->Np;
         dfloat pm = ins->P[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -114,13 +114,13 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
 
   // write out divergence
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Divergence\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
 
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotDiv = 0;
-      for(iint m=0;m<mesh->Np;++m){
-        iint id = m+e*mesh->Np;
+      for(int m=0;m<mesh->Np;++m){
+        int id = m+e*mesh->Np;
         plotDiv += mesh->plotInterp[n*mesh->Np+m]*ins->Div[id];
       }
       fprintf(fp, "       ");
@@ -131,14 +131,14 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
 
   // calculate plot vorticity
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
     
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotVxn = 0, plotVyn = 0, plotVzn = 0 ;
       dfloat plotDivUn = 0;
-      for(iint m=0;m<mesh->Np;++m){
-        iint id = m+e*mesh->Np;
+      for(int m=0;m<mesh->Np;++m){
+        int id = m+e*mesh->Np;
         plotVxn   += mesh->plotInterp[n*mesh->Np+m]*ins->Vx[id];
         plotVyn   += mesh->plotInterp[n*mesh->Np+m]*ins->Vy[id];
         plotVzn   += mesh->plotInterp[n*mesh->Np+m]*ins->Vz[id];
@@ -150,12 +150,12 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   fprintf(fp, "       </DataArray>\n");
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn=0;
-      for(iint m=0;m<mesh->Np;++m){
-        iint id = m+e*mesh->Np;
+      for(int m=0;m<mesh->Np;++m){
+        int id = m+e*mesh->Np;
         id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         dfloat um = ins->U[id];
         dfloat vm = ins->V[id];
@@ -176,10 +176,10 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
-  iint ccnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  int ccnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
@@ -193,9 +193,9 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   ccnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
       ccnt += mesh->plotNverts;
       fprintf(fp, "       ");
@@ -205,9 +205,9 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (sliceFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       if (sliceSubFlag[e*mesh->plotNelements+n]==0) continue;
       fprintf(fp, "10\n"); // TET code ?
     }
@@ -251,18 +251,18 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     dfloat *Vortzn = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
     dfloat *Divn = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
 
-    iint cnt = 0;
+    int cnt = 0;
     NslicedElements =0;
-    for (iint e=0;e<mesh->Nelements;e++) {
+    for (int e=0;e<mesh->Nelements;e++) {
       if (sliceFlag[e]==0) continue;
 
       //compute div and vort
-      for(iint n=0;n<mesh->Np;++n){
+      for(int n=0;n<mesh->Np;++n){
         dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
         dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
         dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
-        for(iint m=0;m<mesh->Np;++m){
-          iint id = m+e*mesh->Np;
+        for(int m=0;m<mesh->Np;++m){
+          int id = m+e*mesh->Np;
           id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
           dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
@@ -317,7 +317,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
         Vortxn[n] = 0.; Vortyn[n] = 0.; Vortzn[n] = 0.; Divn[n] = 0.;
 
         for(int m=0;m<mesh->Np;++m){
-          iint id = m+e*mesh->Np;
+          int id = m+e*mesh->Np;
           id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
           xn[n] += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
@@ -459,7 +459,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     // write out nodes
     fprintf(fp, "      <Points>\n");
     fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-    for(iint n=0;n<cnt;++n){
+    for(int n=0;n<cnt;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotx[n],ploty[n],plotz[n]);
     }
@@ -469,7 +469,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     // write out pressure
     fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-    for(iint n=0;n<cnt;++n){
+    for(int n=0;n<cnt;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotP[n]);
     }
@@ -477,14 +477,14 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
 
     // write out vorticity
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"VorticityDivergence\" NumberOfComponents=\"4\" Format=\"ascii\">\n");
-    for(iint n=0;n<cnt;++n){
+    for(int n=0;n<cnt;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g %g\n", plotVortx[n], plotVorty[n], plotVortz[n], plotDiv[n]);
     }
     fprintf(fp, "       </DataArray>\n");
 
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-    for(iint n=0;n<cnt;++n){
+    for(int n=0;n<cnt;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotU[n], plotV[n], plotW[n]);
     }
@@ -493,8 +493,8 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     
     fprintf(fp, "    <Cells>\n");
     fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
-    iint ccnt = 0;
-    for(iint n=0;n<NslicedElements;n++){
+    int ccnt = 0;
+    for(int n=0;n<NslicedElements;n++){
       fprintf(fp, "       ");
       if (elementType[n]==3) {
         for(int m=0;m<3;++m){
@@ -513,7 +513,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     
     fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
     ccnt = 0;
-    for(iint n=0;n<NslicedElements;n++){
+    for(int n=0;n<NslicedElements;n++){
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", ccnt);
       if (elementType[n]==3) ccnt += 3;
@@ -522,7 +522,7 @@ void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** 
     fprintf(fp, "       </DataArray>\n");
     
     fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-    for(iint n=0;n<NslicedElements;++n){
+    for(int n=0;n<NslicedElements;++n){
       if (elementType[n]==3) 
         fprintf(fp, "5\n"); 
       else 

@@ -1,7 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
+void insPoissonStep3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
@@ -11,7 +11,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
 
-  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  int offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -115,7 +115,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, const char* options){
   #endif
 
   #if 1// if time dependent BC or Pressure Solve not Increment
-  const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
+  const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
   if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
     ins->poissonRhsBCKernel(mesh->Nelements,
                             pressure_solve,

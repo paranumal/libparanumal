@@ -69,10 +69,10 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
 void buildCoarsenerTri2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options);
 
 void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
-                                dfloat tau, dfloat lambda, iint *BCType,
+                                dfloat tau, dfloat lambda, int *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -233,16 +233,16 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     for(int lev=0; lev<numLevels-1; lev++){
 
-      iint Nrows = levels[lev]->Nrows;
+      int Nrows = levels[lev]->Nrows;
 
-      iint minNrows=0, maxNrows=0, totalNrows=0;
+      int minNrows=0, maxNrows=0, totalNrows=0;
       dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       avgNrows = (dfloat) totalNrows/size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){
@@ -279,7 +279,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
   /* build degree 1 problem and pass to AMG */
   nonZero_t *coarseA;
-  iint nnzCoarseA;
+  int nnzCoarseA;
   ogs_t *coarseogs;
 
   solver_t* solverL = solversN[1];
@@ -288,7 +288,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
   if (strstr(options,"BERN")) basis = solverL->mesh->VB;
 
-  iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
+  int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
 
   if (strstr(options,"IPDG")) {
     ellipticBuildIpdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
@@ -298,11 +298,11 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
   }
 
-  iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
-  iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
+  int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
+  int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
   dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-  for (iint i=0;i<nnzCoarseA;i++) {
+  for (int i=0;i<nnzCoarseA;i++) {
     Rows[i] = coarseA[i].row;
     Cols[i] = coarseA[i].col;
     Vals[i] = coarseA[i].val;
@@ -398,17 +398,17 @@ void buildCoarsenerTri2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, 
 
     if (strstr(options,"BERN")) {
       dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-      for (iint j=0;j<NpFine;j++) {
-        for (iint i=0;i<NpCoarse;i++) {
-          for (iint k=0;k<NpCoarse;k++) {
-            for (iint l=0;l<NpFine;l++) {
+      for (int j=0;j<NpFine;j++) {
+        for (int i=0;i<NpCoarse;i++) {
+          for (int k=0;k<NpCoarse;k++) {
+            for (int l=0;l<NpFine;l++) {
               BBP[i+j*NpCoarse] += meshLevels[Nf]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
             }
           }
         }
       }
-      for (iint j=0;j<NpFine;j++) {
-        for (iint i=0;i<NpCoarse;i++) {
+      for (int j=0;j<NpFine;j++) {
+        for (int i=0;i<NpCoarse;i++) {
           P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
         }
       }

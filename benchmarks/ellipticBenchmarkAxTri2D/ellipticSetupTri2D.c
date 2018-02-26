@@ -1,6 +1,6 @@
 #include "ellipticBenchmarkTri2D.h"
 
-solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
+solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType,
     occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions,
     int Nblocks, int Nnodes){
 
@@ -19,10 +19,10 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -55,7 +55,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   solver->dataStream = mesh->device.createStream();
   mesh->device.setStream(solver->defaultStream);
 
-  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
@@ -80,8 +80,8 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Nelements*mesh->Np;
-    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
+    int Nlocal = mesh->Nelements*mesh->Np;
+    int Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements
@@ -100,12 +100,12 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
   solver->allNeumannPenalty = 1;
-  iint totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[e*mesh->Nfaces+f];
       if (bc>0) {
@@ -152,12 +152,12 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
   kernelInfo.addDefine("p_NblockG", Nblocks);
-  iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
-  iint *localGatherElementList = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  int *globalGatherElementList    = (int*) calloc(mesh->Nelements, sizeof(int));
+  int *localGatherElementList = (int*) calloc(mesh->Nelements, sizeof(int));
   int globalCount = 0;
   int localCount =0;
 
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     globalGatherElementList[globalCount++] = e;
     localGatherElementList[localCount++] = e;
   }
@@ -166,10 +166,10 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCTyp
   solver->NlocalGatherElements = mesh->Nelements;
 
   solver->o_globalGatherElementList =
-    mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
+    mesh->device.malloc(globalCount*sizeof(int), globalGatherElementList);
 
   solver->o_localGatherElementList =
-    mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
+    mesh->device.malloc(localCount*sizeof(int), localGatherElementList);
   mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   for (int n=0;n<mesh->Np*mesh->Np;n++)
     mesh->invSparseV[n] = mesh->sparseV[n];

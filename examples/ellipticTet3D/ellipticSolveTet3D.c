@@ -12,7 +12,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
   dfloat alpha = 0., alphaG =0.;
-  iint Nblock = solver->Nblock;
+  int Nblock = solver->Nblock;
   dfloat *tmp = solver->tmp;
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -56,7 +56,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
+      for(int n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -97,9 +97,9 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
-    iint offset = 0;
+    int offset = 0;
     dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
+    int Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
@@ -141,7 +141,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
+      for(int n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -192,7 +192,7 @@ dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dflo
 
   mesh_t *mesh = solver->mesh;
 
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   occaTimerTic(mesh->device,"scaledAddKernel");
@@ -209,8 +209,8 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Nblock = solver->Nblock;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -226,7 +226,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(iint n=0;n<Nblock;++n){
+  for(int n=0;n<Nblock;++n){
     wab += tmp[n];
   }
 
@@ -243,8 +243,8 @@ dfloat ellipticInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Nblock = solver->Nblock;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -255,7 +255,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat ab = 0;
-  for(iint n=0;n<Nblock;++n){
+  for(int n=0;n<Nblock;++n){
     ab += tmp[n];
   }
 
@@ -282,13 +282,13 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
 
   fprintf(fp, "A = [");
   agmgLevel **levels = solver->precon->parAlmond->levels;
-  for (iint n=0;n<mesh->Np*mesh->Nelements;n++) {
-    for (iint m=0;m<mesh->Np*mesh->Nelements;m++) t[m] =0;
+  for (int n=0;n<mesh->Np*mesh->Nelements;n++) {
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) t[m] =0;
     
     //o_Pt.copyFrom(t);
 
     //if (mesh->mask[n] == 0) {
-      //for (iint m=0;m<mesh->Np*mesh->Nelements;m++) Pt[m] =0;
+      //for (int m=0;m<mesh->Np*mesh->Nelements;m++) Pt[m] =0;
     //} else {
       t[n] = 1;
 
@@ -310,7 +310,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
       o_Pt.copyTo(Pt);
     //}
 
-    for (iint m=0;m<mesh->Np*mesh->Nelements;m++) 
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) 
       fprintf(fp, "%.10e,", Pt[m]);
 
     fprintf(fp, "\n");
@@ -320,7 +320,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
 */
 
   int Niter;
-  iint maxIter = 5000; 
+  int maxIter = 5000; 
 
   double start, end;
 
@@ -333,7 +333,7 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
   Niter = pcg(solver, options, lambda, o_r, o_x, tol, maxIter);
   occaTimerToc(mesh->device,"Linear Solve");
 
-  iint rank;
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(strstr(options,"VERBOSE")){
@@ -345,18 +345,18 @@ int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol,
 
     if(rank==0) printf("Solver converged in %d iters \n", Niter );
 
-    iint size;
+    int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    iint   localDofs = mesh->Np*mesh->Nelements;
-    iint   localElements = mesh->Nelements;
+    int   localDofs = mesh->Np*mesh->Nelements;
+    int   localElements = mesh->Nelements;
     double globalElapsed;
-    iint   globalDofs;
-    iint   globalElements;
+    int   globalDofs;
+    int   globalElements;
 
     MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
     if (rank==0){
       printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",

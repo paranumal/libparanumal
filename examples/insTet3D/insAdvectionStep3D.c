@@ -1,14 +1,14 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep3D(ins_t *ins, iint tstep, const char* options){
+void insAdvectionStep3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt; 
 
   // field offset at this step
-  iint  offset  = mesh->Nelements+mesh->totalHaloPairs;  
-  iint ioffset  = ins->index*offset;
+  int  offset  = mesh->Nelements+mesh->totalHaloPairs;  
+  int ioffset  = ins->index*offset;
   
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){
@@ -136,7 +136,7 @@ void insAdvectionStep3D(ins_t *ins, iint tstep, const char* options){
   t += ins->dt;
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
-    const iint solverid = 0; // Pressure Solve
+    const int solverid = 0; // Pressure Solve
     // Compute Surface Conribution
     ins->gradientSurfaceKernel(mesh->Nelements,
                                mesh->o_sgeo,

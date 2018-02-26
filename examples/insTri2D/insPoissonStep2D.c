@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
+void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer,
 				        char   * options){
 
@@ -12,8 +12,8 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1   = (ins->index+1)%3;
-  iint offset  = mesh->Nelements+mesh->totalHaloPairs;
-  iint ioffset = index1*offset;
+  int offset  = mesh->Nelements+mesh->totalHaloPairs;
+  int ioffset = index1*offset;
 
   /* note: the surface kernel isn't needed with continuous pressure. Just the inflow boundary 
            contributions to the surface 
@@ -123,7 +123,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   #if 1 // if time dependent BC
   //
-  const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
+  const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
   if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
     ins->poissonRhsBCKernel(mesh->Nelements,
                             pressure_solve,
@@ -179,12 +179,12 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
     occaTimerToc(mesh->device,"Pr Solve"); 
   
   } else {
-    iint izero = 0;
+    int izero = 0;
     dfloat zero = 0., one = 1.0;
 
     dfloat *blockReduction = ins->blockReduction;
-    iint Nblock = ins->Nblock;
-    iint Ntotal = mesh->Nelements*mesh->Np;
+    int Nblock = ins->Nblock;
+    int Ntotal = mesh->Nelements*mesh->Np;
     occa::memory &o_blockReduction = ins->o_blockReduction;
 
     if (ins->NpresHistory) { //if we have at least one pressure history use projection
@@ -199,7 +199,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
       for (int l=0;l<ins->NpresHistory;l++) {
         ins->presAlpha[l] = 0.;
         ins->presLocalAlpha[l] = 0.;
-        for(iint n=0;n<Nblock;++n){
+        for(int n=0;n<Nblock;++n){
           ins->presLocalAlpha[l] += blockReduction[n+l*Nblock];
         }  
       }
@@ -250,7 +250,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
       ins->presAlpha[0] = 0.;
       ins->presLocalAlpha[0] = 0.;
-      for(iint n=0;n<Nblock;++n){
+      for(int n=0;n<Nblock;++n){
         ins->presLocalAlpha[0] += blockReduction[n];
       }  
       MPI_Allreduce(ins->presLocalAlpha, ins->presAlpha, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -273,7 +273,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
         for (int l=0;l<ins->NpresHistory;l++) {
           ins->presAlpha[l] = 0.;
           ins->presLocalAlpha[l] = 0.;
-          for(iint n=0;n<Nblock;++n){
+          for(int n=0;n<Nblock;++n){
             ins->presLocalAlpha[l] -= blockReduction[n+l*Nblock];
           }  
         }
@@ -301,7 +301,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
       ins->presAlpha[0] = 0.;
       ins->presLocalAlpha[0] = 0.;
-      for(iint n=0;n<Nblock;++n){
+      for(int n=0;n<Nblock;++n){
         ins->presLocalAlpha[0] += blockReduction[n];
       }  
       MPI_Allreduce(ins->presLocalAlpha, ins->presAlpha, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);

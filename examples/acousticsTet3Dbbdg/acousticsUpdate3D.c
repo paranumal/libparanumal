@@ -6,31 +6,31 @@ void acousticsRickerPulse3D(dfloat x, dfloat y, dfloat z, dfloat t, dfloat f, df
 void acousticsMRABUpdate3D(mesh3D *mesh,
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat t, dfloat dt){
+                           dfloat a3, int lev, dfloat t, dfloat dt){
 
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(int et=0;et<mesh->MRABNelements[lev];et++){
+    int e = mesh->MRABelementIds[lev][et];
 
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = mesh->Nfields*(e*mesh->Np + n);
+    for(int n=0;n<mesh->Np;++n){
+      int id = mesh->Nfields*(e*mesh->Np + n);
 
-      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      for (iint fld=0;fld<mesh->Nfields;fld++)
+      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      for (int fld=0;fld<mesh->Nfields;fld++)
         mesh->q[id+fld] += dt*(a1*mesh->rhsq[rhsId1+fld] + a2*mesh->rhsq[rhsId2+fld] + a3*mesh->rhsq[rhsId3+fld]);
     }
 
     //write new traces to fQ
-    for (iint f =0;f<mesh->Nfaces;f++) {
+    for (int f =0;f<mesh->Nfaces;f++) {
       //check if this face is an interface of the source injection region
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
       if ((bc==-10)||(bc==-11)) {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
-          iint idM = mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
+          int idM = mesh->vmapM[id];
 
           //get the nodal values of the incident field along the trace
           dfloat x = mesh->x[idM];
@@ -54,22 +54,22 @@ void acousticsMRABUpdate3D(mesh3D *mesh,
         if (bc==-11) s=-1.f;
 
         //Transform incident field trace to BB modal space and add into positive trace
-        for (iint n=0; n<mesh->Nfp; n++){
+        for (int n=0; n<mesh->Nfp; n++){
           dfloat sourceu = 0.0;
           dfloat sourcev = 0.0;
           dfloat sourcew = 0.0;
           dfloat sourcep = 0.0;
-          for (iint m=0; m<mesh->Nfp; m++){
+          for (int m=0; m<mesh->Nfp; m++){
             sourceu += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+0];
             sourcev += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+1];
             sourcew += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+2];
             sourcep += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+3];
           }
           //adjust positive trace values with the incident field
-          iint id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+          int id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = mesh->Nfields*id;
+          int qid = mesh->Nfields*id;
           mesh->fQP[qid+0] = mesh->q[qidM+0] + s*sourceu;
           mesh->fQP[qid+1] = mesh->q[qidM+1] + s*sourcev;
           mesh->fQP[qid+2] = mesh->q[qidM+2] + s*sourcew;
@@ -81,13 +81,13 @@ void acousticsMRABUpdate3D(mesh3D *mesh,
         }
       } else {
 
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = mesh->Nfields*id;
+          int qid = mesh->Nfields*id;
           // save trace node values of q
-          for (iint fld=0; fld<mesh->Nfields;fld++) {
+          for (int fld=0; fld<mesh->Nfields;fld++) {
             mesh->fQM[qid+fld] = mesh->q[qidM+fld];
             mesh->fQP[qid+fld] = mesh->q[qidM+fld];
           }
@@ -104,37 +104,37 @@ void acousticsMRABUpdate3D(mesh3D *mesh,
 void acousticsMRABUpdateTrace3D(mesh3D *mesh,
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat t, dfloat dt){
+                           dfloat a3, int lev, dfloat t, dfloat dt){
 
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(int et=0;et<mesh->MRABNelements[lev];et++){
+    int e = mesh->MRABelementIds[lev][et];
 
     dfloat s_q[mesh->Np*mesh->Nfields];
 
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = mesh->Nfields*(e*mesh->Np + n);
+    for(int n=0;n<mesh->Np;++n){
+      int id = mesh->Nfields*(e*mesh->Np + n);
 
-      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
 
       // Increment solutions
-      for (iint fld=0; fld < mesh->Nfields; ++fld){
+      for (int fld=0; fld < mesh->Nfields; ++fld){
         s_q[n*mesh->Nfields+fld] = mesh->q[id+fld] + dt*(a1*mesh->rhsq[rhsId1+fld] + a2*mesh->rhsq[rhsId2+fld] + a3*mesh->rhsq[rhsId3+fld]);
       }
     }
 
     //write new traces to fQ
-    for (iint f =0;f<mesh->Nfaces;f++) {
+    for (int f =0;f<mesh->Nfaces;f++) {
       //check if this face is an interface of the source injection region
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
       if ((bc==-10)||(bc==-11)) {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
-          iint idM = mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
+          int idM = mesh->vmapM[id];
 
           //get the nodal values of the incident field along the trace
           dfloat x = mesh->x[idM];
@@ -158,22 +158,22 @@ void acousticsMRABUpdateTrace3D(mesh3D *mesh,
         if (bc==-11) s=-1.f;
 
         //Transform incident field trace to BB modal space and add into positive trace
-        for (iint n=0; n<mesh->Nfp; n++){
+        for (int n=0; n<mesh->Nfp; n++){
           dfloat sourceu = 0.0;
           dfloat sourcev = 0.0;
           dfloat sourcew = 0.0;
           dfloat sourcep = 0.0;
-          for (iint m=0; m<mesh->Nfp; m++){
+          for (int m=0; m<mesh->Nfp; m++){
             sourceu += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+0];
             sourcev += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+1];
             sourcew += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+2];
             sourcep += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+3];
           }
           //adjust positive trace values with the incident field
-          iint id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+          int id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = mesh->Nfields*id;
+          int qid = mesh->Nfields*id;
           mesh->fQP[qid+0] = mesh->q[qidM+0] + s*sourceu;
           mesh->fQP[qid+1] = mesh->q[qidM+1] + s*sourcev;
           mesh->fQP[qid+2] = mesh->q[qidM+2] + s*sourcew;
@@ -185,13 +185,13 @@ void acousticsMRABUpdateTrace3D(mesh3D *mesh,
         }
       } else {
 
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->Np);
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->Np);
 
-          iint qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
+          int qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
           // save trace node values of q
-          for (iint fld=0; fld<mesh->Nfields;fld++) {
+          for (int fld=0; fld<mesh->Nfields;fld++) {
             mesh->fQM[qid+fld] = s_q[qidM+fld];
             mesh->fQP[qid+fld] = s_q[qidM+fld];
           }
@@ -205,23 +205,23 @@ void acousticsMRABUpdateTrace3D(mesh3D *mesh,
 void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat t, dfloat dt){
+                           dfloat a3, int lev, dfloat t, dfloat dt){
 
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(int et=0;et<mesh->MRABNelements[lev];et++){
+    int e = mesh->MRABelementIds[lev][et];
 
     dfloat p[mesh->cubNp];
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<mesh->cubNp;++n){
+    for(int n=0;n<mesh->cubNp;++n){
       p[n] = 0.f;
-      iint id = mesh->Nfields*(e*mesh->Np);
-      iint rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
+      int id = mesh->Nfields*(e*mesh->Np);
+      int rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
 
-      for (iint i=0;i<mesh->Np;++i){
+      for (int i=0;i<mesh->Np;++i){
         p[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->rhsq[rhsId + 3*mesh->Nfields*i + 3];
       }
 
@@ -230,33 +230,33 @@ void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
     }
 
     // Increment solution, project result back down
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       // Extract velocity rhs
-      iint id = mesh->Nfields*(e*mesh->Np + n);
-      iint rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
+      int id = mesh->Nfields*(e*mesh->Np + n);
+      int rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
 
       // Project scaled rhs down
       dfloat rhsp = 0.f;
-      for (iint i=0;i<mesh->cubNp;++i){
+      for (int i=0;i<mesh->cubNp;++i){
         rhsp += mesh->cubProject[n*mesh->cubNp + i] * p[i];
       }
       mesh->rhsq[rhsId+3] = rhsp;
 
-      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      for (iint fld=0;fld<mesh->Nfields;fld++)
+      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      for (int fld=0;fld<mesh->Nfields;fld++)
         mesh->q[id+fld] += dt*(a1*mesh->rhsq[rhsId1+fld] + a2*mesh->rhsq[rhsId2+fld] + a3*mesh->rhsq[rhsId3+fld]);
     }
 
     //write new traces to fQ
-    for (iint f =0;f<mesh->Nfaces;f++) {
+    for (int f =0;f<mesh->Nfaces;f++) {
       //check if this face is an interface of the source injection region
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
       if ((bc==-10)||(bc==-11)) {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
-          iint idM = mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
+          int idM = mesh->vmapM[id];
 
           //get the nodal values of the incident field along the trace
           dfloat x = mesh->x[idM];
@@ -280,12 +280,12 @@ void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
         if (bc==-11) s=-1.f;
 
         //Transform incident field trace to BB modal space and add into positive trace
-        for (iint n=0; n<mesh->Nfp; n++){
+        for (int n=0; n<mesh->Nfp; n++){
           dfloat sourceu = 0.0;
           dfloat sourcev = 0.0;
           dfloat sourcew = 0.0;
           dfloat sourcep = 0.0;
-          for (iint m=0; m<mesh->Nfp; m++){
+          for (int m=0; m<mesh->Nfp; m++){
             sourceu += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+0];
             sourcev += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+1];
             sourcew += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+2];
@@ -293,10 +293,10 @@ void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
           }
 
           //adjust positive trace values with the incident field
-          iint id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+          int id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = mesh->Nfields*id;
+          int qid = mesh->Nfields*id;
           mesh->fQP[qid+0] = mesh->q[qidM+0] + s*sourceu;
           mesh->fQP[qid+1] = mesh->q[qidM+1] + s*sourcev;
           mesh->fQP[qid+2] = mesh->q[qidM+2] + s*sourcew;
@@ -307,13 +307,13 @@ void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
           mesh->fQM[qid+3] = mesh->q[qidM+3];
         }
       } else {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
+          int qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
           // save trace node values of q
-          for (iint fld=0; fld<mesh->Nfields;fld++) {
+          for (int fld=0; fld<mesh->Nfields;fld++) {
             mesh->fQM[qid+fld] = mesh->q[qidM+fld];
             mesh->fQP[qid+fld] = mesh->q[qidM+fld];
           }
@@ -330,25 +330,25 @@ void acousticsMRABUpdate3D_wadg(mesh3D *mesh,
 void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, iint lev, dfloat t, dfloat dt){
+                           dfloat a3, int lev, dfloat t, dfloat dt){
 
   dfloat *qtmp = (dfloat *) calloc(mesh->Nfields*mesh->Nfp,sizeof(dfloat));
 
 
-  for(iint et=0;et<mesh->MRABNelements[lev];et++){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(int et=0;et<mesh->MRABNelements[lev];et++){
+    int e = mesh->MRABelementIds[lev][et];
 
     dfloat p[mesh->cubNp];
     dfloat s_q[mesh->Np*mesh->Nfields];
     dfloat rhsqn[mesh->Nfields];
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<mesh->cubNp;++n){
+    for(int n=0;n<mesh->cubNp;++n){
       p[n] = 0.f;
-      iint id = mesh->Nfields*(e*mesh->Np);
-      iint rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
+      int id = mesh->Nfields*(e*mesh->Np);
+      int rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
 
-      for (iint i=0;i<mesh->Np;++i){
+      for (int i=0;i<mesh->Np;++i){
         p[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->rhsq[rhsId + 3*mesh->Nfields*i + 3];
       }
 
@@ -357,14 +357,14 @@ void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
     }
 
     // Increment solution, project result back down
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       // Extract velocity rhs
-      iint id = mesh->Nfields*(e*mesh->Np + n);
-      iint rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
+      int id = mesh->Nfields*(e*mesh->Np + n);
+      int rhsId = 3*id + mesh->MRABshiftIndex[lev]*mesh->Nfields;
 
       // Project scaled rhs down
       dfloat rhsp = 0.f;
-      for (iint i=0;i<mesh->cubNp;++i){
+      for (int i=0;i<mesh->cubNp;++i){
         rhsp += mesh->cubProject[n*mesh->cubNp + i] * p[i];
       }
       rhsqn[0] = mesh->rhsq[rhsId + 0];
@@ -372,21 +372,21 @@ void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
       rhsqn[2] = mesh->rhsq[rhsId + 2];
       rhsqn[3] = rhsp;
 
-      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      for (iint fld=0;fld<mesh->Nfields;fld++)
+      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      for (int fld=0;fld<mesh->Nfields;fld++)
         s_q[n*mesh->Nfields+fld] = mesh->q[id+fld] + dt*(a1*rhsqn[fld] + a2*mesh->rhsq[rhsId2+fld] + a3*mesh->rhsq[rhsId3+fld]);
     }
 
     //write new traces to fQ
-    for (iint f =0;f<mesh->Nfaces;f++) {
+    for (int f =0;f<mesh->Nfaces;f++) {
       //check if this face is an interface of the source injection region
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
       if ((bc==-10)||(bc==-11)) {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
-          iint idM = mesh->vmapM[id];
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id = n + f*mesh->Nfp + e*mesh->Nfaces*mesh->Nfp;
+          int idM = mesh->vmapM[id];
 
           //get the nodal values of the incident field along the trace
           dfloat x = mesh->x[idM];
@@ -410,12 +410,12 @@ void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
         if (bc==-11) s=-1.f;
 
         //Transform incident field trace to BB modal space and add into positive trace
-        for (iint n=0; n<mesh->Nfp; n++){
+        for (int n=0; n<mesh->Nfp; n++){
           dfloat sourceu = 0.0;
           dfloat sourcev = 0.0;
           dfloat sourcew = 0.0;
           dfloat sourcep = 0.0;
-          for (iint m=0; m<mesh->Nfp; m++){
+          for (int m=0; m<mesh->Nfp; m++){
             sourceu += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+0];
             sourcev += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+1];
             sourcew += mesh->invVB2D[n*mesh->Nfp+m]*qtmp[m*mesh->Nfields+2];
@@ -423,10 +423,10 @@ void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
           }
 
           //adjust positive trace values with the incident field
-          iint id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*mesh->vmapM[id];
+          int id  = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*mesh->vmapM[id];
 
-          iint qid = mesh->Nfields*id;
+          int qid = mesh->Nfields*id;
           mesh->fQP[qid+0] = mesh->q[qidM+0] + s*sourceu;
           mesh->fQP[qid+1] = mesh->q[qidM+1] + s*sourcev;
           mesh->fQP[qid+2] = mesh->q[qidM+2] + s*sourcew;
@@ -437,13 +437,13 @@ void acousticsMRABUpdateTrace3D_wadg(mesh3D *mesh,
           mesh->fQM[qid+3] = mesh->q[qidM+3];
         }
       } else {
-        for (iint n=0;n<mesh->Nfp;n++) {
-          iint id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-          iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->Np);
+        for (int n=0;n<mesh->Nfp;n++) {
+          int id  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+          int qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->Np);
 
-          iint qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
+          int qid = n*mesh->Nfields + f*mesh->Nfp*mesh->Nfields + e*mesh->Nfaces*mesh->Nfp*mesh->Nfields;
           // save trace node values of q
-          for (iint fld=0; fld<mesh->Nfields;fld++) {
+          for (int fld=0; fld<mesh->Nfields;fld++) {
             mesh->fQM[qid+fld] = s_q[qidM+fld];
             mesh->fQP[qid+fld] = s_q[qidM+fld];
           }

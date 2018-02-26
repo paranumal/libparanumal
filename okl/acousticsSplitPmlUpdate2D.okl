@@ -1,6 +1,6 @@
 
-kernel void acousticsSplitPmlUpdate2D(const iint Ntotal,
-					  const iint recombine,
+kernel void acousticsSplitPmlUpdate2D(const int Ntotal,
+					  const int recombine,
 					  const dfloat dt,	
 					  const dfloat rka,
 					  const dfloat rkb,
@@ -13,7 +13,7 @@ kernel void acousticsSplitPmlUpdate2D(const iint Ntotal,
 					  dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint n=0;n<Ntotal;++n;tile(256)){
+  for(int n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
       dfloat resqxn = resqx[n];
       dfloat qxn = qx[n];
@@ -28,10 +28,10 @@ kernel void acousticsSplitPmlUpdate2D(const iint Ntotal,
       qyn += rkb*resqyn;
       
       // need to map between qx, qy storage and q storage
-      iint node  = n%p_Np;
-      iint field = (n/p_Np)%p_Nfields;
-      iint element = n/(p_Np*p_Nfields);
-      iint id = field + node*p_Nfields + element*p_Np*p_Nfields;
+      int node  = n%p_Np;
+      int field = (n/p_Np)%p_Nfields;
+      int element = n/(p_Np*p_Nfields);
+      int id = field + node*p_Nfields + element*p_Np*p_Nfields;
       dfloat sumq = qxn+qyn;
       q[id] = sumq + (field==0)*p_q1bar + (field==1)*p_q2bar + (field==2)*p_q3bar;
 

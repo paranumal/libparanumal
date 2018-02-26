@@ -4,7 +4,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
     occa::memory &o_r, occa::memory &o_x, 
     const dfloat tol, const int MAXIT) {
 
-  iint rank;
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = solver->mesh;

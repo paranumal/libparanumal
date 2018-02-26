@@ -2,7 +2,7 @@
 // benefits: less flops but also coalesced 
 kernel void ellipticAxTri2Dcomb_v0(
     const int Nelements,
-    const iint   * restrict elementList,
+    const int   * restrict elementList,
     const dfloat * restrict ggeo,
     const char  * restrict rowData,
     const dfloat * restrict Srr,
@@ -13,11 +13,11 @@ kernel void ellipticAxTri2Dcomb_v0(
     const dfloat * restrict q,
     dfloat * restrict Aq){
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
-  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
     shared dfloat s_ggeo[p_NnodesV][p_NblockV][p_Nggeo];
     exclusicve int r_rowData[2]; 
-    for(iint es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
         r_rowData[0] = (int) rowData[2*n];
         r_rowData[1] = (int) rowData[2*n+1];
@@ -30,11 +30,11 @@ kernel void ellipticAxTri2Dcomb_v0(
         }
 
         occaUnroll(p_NnodesV)
-          for(iint et=0;et<p_NnodesV;++et){
-            const iint e = eo + es + et*p_NblockV;
+          for(int et=0;et<p_NnodesV;++et){
+            const int e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const iint id = n + e*p_Np;
+              const int id = n + e*p_Np;
               s_q[et][es][n] = q[id];
             }
           }
@@ -43,7 +43,7 @@ kernel void ellipticAxTri2Dcomb_v0(
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -52,7 +52,7 @@ kernel void ellipticAxTri2Dcomb_v0(
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(iint et=0;et<p_NnodesV;++et){
+          for(int et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -69,8 +69,8 @@ kernel void ellipticAxTri2Dcomb_v0(
               const dfloat Sss_nk = Sss[id];
 
               occaUnroll(p_NnodesV)
-                for(iint et=0;et<p_NnodesV;++et){
-                  const iint e = eo + es + et*p_NblockV;
+                for(int et=0;et<p_NnodesV;++et){
+                  const int e = eo + es + et*p_NblockV;
                   // fetch from shared (for reuse three times)
                   // 6 flops per 8 bytes
                   const dfloat r_qk = s_q[et][es][idk];
@@ -87,8 +87,8 @@ kernel void ellipticAxTri2Dcomb_v0(
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV)
-          for(iint et=0;et<p_NnodesV;++et){
-            const iint e = eo + es + et*p_NblockV;
+          for(int et=0;et<p_NnodesV;++et){
+            const int e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
 
@@ -96,7 +96,7 @@ kernel void ellipticAxTri2Dcomb_v0(
               dfloat res2 = s_ggeo[et][es][p_G01ID]*r_qrs[et];
               dfloat res3 = s_ggeo[et][es][p_G11ID]*r_qss[et];
 
-              const iint id = n + e*p_Np;
+              const int id = n + e*p_Np;
               Aq[id] = res1+res2+res3;
             }
           }

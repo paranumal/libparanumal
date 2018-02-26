@@ -8,9 +8,9 @@ void acousticsRunHex3D(mesh3D *mesh){
 		     sizeof(dfloat));
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -42,21 +42,21 @@ void acousticsRunHex3D(mesh3D *mesh){
 void acousticsOccaRunHex3D(mesh3D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
 
       // intermediate stage time
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	iint Nentries = mesh->Np*mesh->Nfields;
+	int Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -127,7 +127,7 @@ void acousticsOccaRunHex3D(mesh3D *mesh){
       acousticsErrorHex3D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      iint fld = 2;
+      int fld = 2;
       meshPlotVTU3D(mesh, "foo", fld);
     }
   }

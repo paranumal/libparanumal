@@ -7,10 +7,10 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   int *plotSubFlag = (int*) calloc(mesh->Nelements*mesh->plotNelements,sizeof(int));
   dfloat *plotu = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
 
-  iint NcontourElements =0;
-  iint plotElements =0;
+  int NcontourElements =0;
+  int plotElements =0;
 
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       plotu[n] = 0;
       for(int m=0;m<mesh->Np;++m){
@@ -59,11 +59,11 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
         plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
@@ -78,11 +78,11 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotu = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
         plotu += mesh->plotInterp[n*mesh->Np+m]*u[m+e*mesh->Np];
       }
       fprintf(fp, "       "); fprintf(fp, "%g\n", plotu);
@@ -94,8 +94,8 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     
     for(int k=0;k<mesh->plotNelements;++k){
@@ -113,7 +113,7 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   cnt=0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int k=0;k<mesh->plotNelements;++k){
       if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;
@@ -125,7 +125,7 @@ void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int k=0;k<mesh->plotNelements;++k){
       if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;

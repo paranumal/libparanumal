@@ -1,6 +1,6 @@
 #include "boltzmann3D.h"
 
-void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options){
+void boltzmannReport3D(mesh3D *mesh, int tstep, char *options){
 
   dfloat t = (tstep+1)*mesh->dt;
   

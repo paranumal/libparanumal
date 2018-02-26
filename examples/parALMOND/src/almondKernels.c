@@ -11,11 +11,11 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   defs.addDefine("bdim", AGMGBDIM);
   defs.addDefine("simd", SIMDWIDTH);
 
-  if(sizeof(iint)==4){
-    defs.addDefine("iint","int");
+  if(sizeof(dlong)==4){
+    defs.addDefine("dlong","int");
   }
-  if(sizeof(iint)==8){
-    defs.addDefine("iint","long long int");
+  if(sizeof(dlong)==8){
+    defs.addDefine("dlong","long long int");
   }
 
   if(sizeof(dfloat) == sizeof(double)){

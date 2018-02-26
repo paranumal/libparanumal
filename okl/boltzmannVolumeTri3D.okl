@@ -9,7 +9,7 @@
 #define TYID 7
 #define TZID 8
 
-kernel void boltzmannVolumeTri3D(const iint Nelements,
+kernel void boltzmannVolumeTri3D(const int Nelements,
 				 const dfloat * restrict vgeo,
 				 const dfloat * restrict DrT,
 				 const dfloat * restrict DsT,
@@ -19,14 +19,14 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 				 const dfloat * restrict q,
 				 dfloat * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
     shared dfloat s_q[p_Nfields][p_NblockV][p_Np];
     
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  const int base = n + p_Nfields*p_Np*e;
 	  for(int fld=0;fld<p_Nfields;++fld){
@@ -39,9 +39,9 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-	iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	int e = eo+es; // element in block
 	
 	if(e<Nelements){
 	  
@@ -67,7 +67,7 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	    }
 	  
 	  occaUnroll(p_Np)
-	    for(iint m=0;m<p_Np;++m){
+	    for(int m=0;m<p_Np;++m){
 	      const dfloat Drnm = DrT[n+m*p_Np]; // L1
 	      const dfloat Dsnm = DsT[n+m*p_Np];
 	      
@@ -153,7 +153,7 @@ kernel void boltzmannVolumeTri3D(const iint Nelements,
 	  rhsq3 -= yn*xdotrhsq;
 	  rhsq4 -= zn*xdotrhsq;
 	  
-	  const iint base = e*p_Np*p_Nfields+n;
+	  const int base = e*p_Np*p_Nfields+n;
 	  
 	  rhsq[base+0*p_Np] = rhsq1;
 	  rhsq[base+1*p_Np] = rhsq2;

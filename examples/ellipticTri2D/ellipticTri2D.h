@@ -31,7 +31,7 @@ typedef struct {
 
   char *type;
 
-  iint Nblock;
+  int Nblock;
 
   dfloat tau;
 
@@ -74,11 +74,11 @@ typedef struct {
   occa::memory o_Ry;
 
   // list of elements that are needed for global gather-scatter
-  iint NglobalGatherElements;
+  int NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  iint NlocalGatherElements;
+  int NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
@@ -110,7 +110,7 @@ void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char *
 void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
 					const char *type, const char *op);
 
-void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
@@ -118,7 +118,7 @@ void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
 
-solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
+solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
 solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
 
@@ -145,24 +145,24 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 
 
-void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
+                                   int *BCType, dfloat **invDiagA,
                                    const char *options);
 
-void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildLocalPatchesTri2D(solver_t *solver, mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildLocalPatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 //smoother setups
@@ -173,7 +173,7 @@ void ellipticSetupSmootherFacePatch (solver_t *solver, precon_t *precon, agmgLev
 void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
 
 
-void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 void ellipticSetupSmootherTri2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
@@ -182,7 +182,7 @@ void matrixInverse(int N, dfloat *A);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options);
 
 void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
-                              dfloat tau, dfloat lambda, iint *BCType,
+                              dfloat tau, dfloat lambda, int *BCType,
                               const char *options, const char *parAlmondOptions);
 
 #endif

@@ -1,13 +1,13 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannMRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannMRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                          dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
 
 
-for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     // intermediate stage time
     dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
@@ -46,7 +46,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
 
-    iint lev;
+    int lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
 
@@ -58,7 +58,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
           mesh->device.setStream(dataStream);
         #endif
         
-        iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+        int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
         mesh->haloExtractKernel(mesh->totalHaloPairs,
                     Nentries,
                     mesh->o_haloElementList,
@@ -75,7 +75,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
 
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
              mesh->volumeKernel(mesh->MRABNelements[l],
                             mesh->o_MRABelementIds[l],
@@ -114,7 +114,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     if(strstr(options, "CUBATURE")){ 
 
-        for (iint l=0;l<lev;l++) {
+        for (int l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
               mesh->relaxationKernel(mesh->MRABNelements[l],
                             mesh->o_MRABelementIds[l],
@@ -183,7 +183,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
       // SURFACE KERNELS for boltzmann Nodal DG
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->surfaceKernel(mesh->MRABNelements[l],
                               mesh->o_MRABelementIds[l],
@@ -232,7 +232,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
 
-     for (iint l=0; l<lev; l++) {
+     for (int l=0; l<lev; l++) {
           if (mesh->MRABNelements[l])
             mesh->updateKernel(mesh->MRABNelements[l],
                               mesh->o_MRABelementIds[l],

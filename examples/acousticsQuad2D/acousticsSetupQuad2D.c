@@ -15,9 +15,9 @@ void acousticsSetupQuad2D(mesh2D *mesh){
 				sizeof(dfloat));
 
   // fix this later (initial conditions)
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -34,10 +34,10 @@ void acousticsSetupQuad2D(mesh2D *mesh){
   
   // set time step
   dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(int e=0;e<mesh->Nelements;++e){  
 
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + n);
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + n);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -123,17 +123,17 @@ void acousticsSetupQuad2D(mesh2D *mesh){
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapP);
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
     
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =

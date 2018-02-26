@@ -21,8 +21,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   meshPhysicalNodesTri2D(mesh);
 
   // create halo extension for x,y arrays
-  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  iint localNodes     = mesh->Nelements*mesh->Np;
+  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  int localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -39,7 +39,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     //connect the face modes between each element 
     meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
     //use the mmaps constructed and overwrite vmap and FaceNodes
-    for (iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+    for (int n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
       mesh->vmapM[n] = mesh->mmapM[n];
       mesh->vmapP[n] = mesh->mmapP[n];
     }
@@ -59,26 +59,26 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   free(mesh->y);
   free(sendBuffer);
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
     }
   }
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
@@ -89,10 +89,10 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Np;m++) {
-      for (iint k=0;k<mesh->Np;k++) {
-        for (iint l=0;l<mesh->Np;l++) {
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {
+      for (int k=0;k<mesh->Np;k++) {
+        for (int l=0;l<mesh->Np;l++) {
           mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
           mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
           mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
@@ -105,8 +105,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (iint n=0;n<mesh->Np;n++) {
-    for (iint m=0;m<mesh->Np;m++) {  
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {  
       SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
       SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
       SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
@@ -115,21 +115,21 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   }
 
   // deriv operators: transpose from row major to column major
-  iint *D1ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
-  iint *D2ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
-  iint *D3ids = (iint*) calloc(mesh->Np*3,sizeof(iint));
+  int *D1ids = (int*) calloc(mesh->Np*3,sizeof(int));
+  int *D2ids = (int*) calloc(mesh->Np*3,sizeof(int));
+  int *D3ids = (int*) calloc(mesh->Np*3,sizeof(int));
   dfloat *Dvals = (dfloat*) calloc(mesh->Np*3,sizeof(dfloat));
 
   dfloat *VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
   dfloat *PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
 
   dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*3,sizeof(dfloat)); // tridiag
-  iint *ELids = (iint*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(iint));
+  int *ELids = (int*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(int));
   dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
 
 
-  for (iint i = 0; i < mesh->Np; ++i){
-    for (iint j = 0; j < 3; ++j){
+  for (int i = 0; i < mesh->Np; ++i){
+    for (int j = 0; j < 3; ++j){
       D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
       D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
       D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];
@@ -137,22 +137,22 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     }
   }
 
-  for (iint i = 0; i < mesh->cubNp; ++i){
-    for (iint j = 0; j < mesh->Np; ++j){
+  for (int i = 0; i < mesh->cubNp; ++i){
+    for (int j = 0; j < mesh->Np; ++j){
       VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
       PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
     }
   }
 
 
-  for (iint i = 0; i < mesh->Nfp; ++i){
-    for (iint j = 0; j < 3; ++j){
+  for (int i = 0; i < mesh->Nfp; ++i){
+    for (int j = 0; j < 3; ++j){
       L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
     }
   }
 
-  for (iint i = 0; i < mesh->Np; ++i){
-    for (iint j = 0; j < mesh->max_EL_nnz; ++j){
+  for (int i = 0; i < mesh->Np; ++i){
+    for (int j = 0; j < mesh->max_EL_nnz; ++j){
       ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
       ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
     }
@@ -200,16 +200,16 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
 
-  mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D1ids);
-  mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D2ids);
-  mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(iint),D3ids);
+  mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
+  mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
+  mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D3ids);
   mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
 
   mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
@@ -219,7 +219,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*3*sizeof(dfloat),L0vals);
   mesh->o_ELids =
-    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(iint),ELids);
+    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
   mesh->o_ELvals =
     mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
 
@@ -254,8 +254,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
-  iint totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
@@ -296,11 +296,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(int)==4){
+    kernelInfo.addDefine("int","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(int)==8){
+    kernelInfo.addDefine("int","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -621,7 +621,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)  
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -637,7 +637,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min"); 
 
   mesh->Nmasked = 0;
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1E9) {
       mesh->mapB[n] = 0.;
     } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
@@ -647,23 +647,23 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   }
   mesh->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mesh->mapB);
   
-  mesh->maskIds = (iint *) calloc(mesh->Nmasked, sizeof(iint));
+  mesh->maskIds = (int *) calloc(mesh->Nmasked, sizeof(int));
   mesh->Nmasked =0; //reset
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1) mesh->maskIds[mesh->Nmasked++] = n;
   }
-  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(iint), mesh->maskIds);
+  if (mesh->Nmasked) mesh->o_maskIds = mesh->device.malloc(mesh->Nmasked*sizeof(int), mesh->maskIds);
 
 
   if (strstr(options,"SPARSE")) {
     // make the gs sign change array for flipped trace modes
     //TODO this is a hack that likely will need updating for MPI
     mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+    for (int n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
 
-    for (iint e=0;e<mesh->Nelements;e++) {
+    for (int e=0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
-        iint id = n+e*mesh->Nfp*mesh->Nfaces;
+        int id = n+e*mesh->Nfp*mesh->Nfaces;
         if (mesh->mmapS[id]==-1) { //sign flipped
           if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
             mesh->mapSgn[mesh->vmapM[id]]= -1;
