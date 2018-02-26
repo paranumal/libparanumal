@@ -1,19 +1,19 @@
 // Computes volume contribution of div(UI)
-kernel void insPoissonRhsForcing3D(const iint Nelements,
+kernel void insPoissonRhsForcing3D(const int Nelements,
 				   const dfloat * restrict vgeo,
 				   const dfloat * restrict MM,
 				   const dfloat dt,
 				   const dfloat g0,
 				   dfloat * restrict rhs){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     shared dfloat s_rhs[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	int e = eo+es; // element in block
       	if(e<Nelements){
-      	  const iint id = e*p_Np+n;
+      	  const int id = e*p_Np+n;
       	  s_rhs[es][n] = rhs[id];
       	}
       }
@@ -22,20 +22,20 @@ kernel void insPoissonRhsForcing3D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
     // Multiply with Mass Matrix
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	int e = eo+es; // element in block
       	if(e<Nelements){
       	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
       	  dfloat rhsn = 0.f;
 
           occaUnroll(p_Np)
-    	    for(iint i=0;i<p_Np;++i){
+    	    for(int i=0;i<p_Np;++i){
     	      const dfloat M = MM[n+i*p_Np];
     	      rhsn += M*s_rhs[es][i];
     	    }
 
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
       	  rhs[id] = -J*g0*rhsn/dt;
       	}
       }
@@ -45,8 +45,8 @@ kernel void insPoissonRhsForcing3D(const iint Nelements,
 
 // Actually solves for Pr increamnet not presssure
 kernel void insPoissonRhsIpdgBC3D(const int Nelements,
-            const iint * restrict vmapM,
-            const iint * restrict vmapP,
+            const int * restrict vmapM,
+            const int * restrict vmapP,
             const dfloat tau,
             const dfloat time,
             const dfloat dt,
@@ -55,7 +55,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
             const dfloat * restrict z,
             const dfloat * restrict vgeo,
             const dfloat * restrict sgeo,
-            const iint   * restrict EToB,
+            const int   * restrict EToB,
             const dfloat * restrict DrT,
             const dfloat * restrict DsT,
             const dfloat * restrict DtT,
@@ -77,18 +77,18 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
     shared  dfloat s_Lnydp[p_Np];
     shared  dfloat s_Lnzdp[p_Np];
 
-    exclusive iint idM, bcsum;
+    exclusive int idM, bcsum;
     exclusive dfloat nx, ny,nz, sJ, invJ, hinv;
     
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
+        const int id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];          
      
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
         dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0;        
         // load surface geofactors for this face
-        iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        int sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
         ny = sgeo[sid+p_NYID];
         nz = sgeo[sid+p_NZID];
@@ -123,7 +123,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        const iint gid = e*p_Nvgeo;
+        const int gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat drdz = vgeo[gid + p_RZID];
@@ -141,7 +141,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
         dfloat Lnzdp = 0.f;
 
         occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
             Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
             Lnzdp += LIFTT[n+i*p_Np]*s_nzdp[i];
@@ -165,7 +165,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        iint id = idM%p_Np;
+        int id = idM%p_Np;
         s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]+nz*s_Lnzdp[id]);
       }
 
@@ -209,7 +209,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
           Mlapp += MM[n+i*p_Np]*s_lapp[i];
         }
 
-        const iint id = e*p_Np+n;
+        const int id = e*p_Np+n;
         rhsP[id] -=  J*Mlapp;
       }
     }
@@ -218,7 +218,7 @@ kernel void insPoissonRhsIpdgBC3D(const int Nelements,
 
 //RHS contributions for continuous solver
 kernel void insPoissonRhsBC3D(const int Nelements,
-                              const iint pressure_solve,
+                              const int pressure_solve,
                               const dfloat * restrict ggeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict SrrT,
@@ -231,7 +231,7 @@ kernel void insPoissonRhsBC3D(const int Nelements,
                               const dfloat * restrict StsT,
                               const dfloat * restrict SttT,
                               const dfloat * restrict MM,
-                              const iint   * restrict vmapM,
+                              const int   * restrict vmapM,
                               const dfloat * restrict sMT,
                               const dfloat time,
                               const dfloat dt,
@@ -241,7 +241,7 @@ kernel void insPoissonRhsBC3D(const int Nelements,
                               const int    * restrict mapB,
                               dfloat  * restrict rhsP){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
     shared dfloat s_q[p_Np];
     shared dfloat s_ndq[p_Nfp*p_Nfaces];
 
@@ -258,16 +258,16 @@ kernel void insPoissonRhsBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
-        const iint idM = vmapM[id];          
-        const iint nid = idM%p_Np; 
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        const int idM = vmapM[id];          
+        const int nid = idM%p_Np; 
 
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
 
         dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;
         
         // load surface geofactors for this face
-        const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        const int sid = p_Nsgeo*(e*p_Nfaces+face);
         const dfloat nx = sgeo[sid+p_NXID];
         const dfloat ny = sgeo[sid+p_NYID];
         const dfloat nz = sgeo[sid+p_NZID];
@@ -296,8 +296,8 @@ kernel void insPoissonRhsBC3D(const int Nelements,
     for(int n=0;n<p_maxNodes;++n;inner0){ 
       if(n<p_Np){
         //volume Dirichlet data
-        const iint id = n + e*p_Np;
-        const iint gid = e*p_Nggeo;
+        const int id = n + e*p_Np;
+        const int gid = e*p_Nggeo;
         const dfloat Grr = ggeo[gid + p_G00ID];
         const dfloat Grs = ggeo[gid + p_G01ID];
         const dfloat Grt = ggeo[gid + p_G02ID];
@@ -344,20 +344,20 @@ kernel void insPoissonRhsBC3D(const int Nelements,
   }
 }
 
-kernel void insPoissonAddBCKernel(const iint Nelements,
+kernel void insPoissonAddBCKernel(const int Nelements,
                               const int pressure_solve,
                               const dfloat time,
                               const dfloat dt,
                               const dfloat * restrict x,
                               const dfloat * restrict y,
                               const dfloat * restrict z,
-                              const iint   * restrict vmapM,
+                              const int   * restrict vmapM,
                               const int    * restrict mapB,
                               dfloat  * restrict p){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
-      const iint idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 
       dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;

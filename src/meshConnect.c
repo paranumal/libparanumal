@@ -7,15 +7,15 @@
 // the neighbor element/face indices (if any)
 typedef struct{
 
-  iint element;
-  iint face;
+  int element;
+  int face;
 
-  iint elementNeighbor; // neighbor element
-  iint faceNeighbor;    // neighbor face
+  int elementNeighbor; // neighbor element
+  int faceNeighbor;    // neighbor face
 
-  iint NfaceVertices;
+  int NfaceVertices;
   
-  iint v[4];
+  int v[4];
 
 }face_t;
 
@@ -27,7 +27,7 @@ int compareVertices(const void *a,
   face_t *fa = (face_t*) a;
   face_t *fb = (face_t*) b;
   
-  for(iint n=0;n<fa->NfaceVertices;++n){
+  for(int n=0;n<fa->NfaceVertices;++n){
     if(fa->v[n] < fb->v[n]) return -1;
     if(fa->v[n] > fb->v[n]) return +1;
   }
@@ -62,11 +62,11 @@ void meshConnect(mesh_t *mesh){
     (face_t*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(face_t));
   
   int cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       
-      for(iint n=0;n<mesh->NfaceVertices;++n){
-	iint vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
+      for(int n=0;n<mesh->NfaceVertices;++n){
+	int vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
 	faces[cnt].v[n] = mesh->EToV[vid];
       }
       
@@ -113,12 +113,12 @@ void meshConnect(mesh_t *mesh){
 	compareFaces);
 
   /* extract the element to element and element to face connectivity */
-  mesh->EToE = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
-  mesh->EToF = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  mesh->EToE = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+  mesh->EToF = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
 
   cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       mesh->EToE[cnt] = faces[cnt].elementNeighbor;
       mesh->EToF[cnt] = faces[cnt].faceNeighbor;
 
@@ -128,9 +128,9 @@ void meshConnect(mesh_t *mesh){
     }
   }
 
-  iint Nbcs = 0;
-  for(iint e=0;e<mesh->Nelements;++e)
-    for(iint f=0;f<mesh->Nfaces;++f)
+  int Nbcs = 0;
+  for(int e=0;e<mesh->Nelements;++e)
+    for(int f=0;f<mesh->Nfaces;++f)
       if(mesh->EToE[e*mesh->Nfaces+f]==-1)
 	++Nbcs;
 

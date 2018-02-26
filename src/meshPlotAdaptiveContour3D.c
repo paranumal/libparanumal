@@ -86,7 +86,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
     newx = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
     newy = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
     newz = (dfloat*) calloc(Np*newNelements, sizeof(dfloat));
-    iint cnt =0;
+    int cnt =0;
     for(int e=0;e<Nelements;++e){
       if (refineFlag[e]==0) continue;
       for(int m=0;m<8*Np;++m){
@@ -160,11 +160,11 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (refineFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*refx[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*refy[m+e*mesh->Np];
         plotzn += mesh->plotInterp[n*mesh->Np+m]*refz[m+e*mesh->Np];
@@ -179,11 +179,11 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (refineFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNp;++n){
+    for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
         dfloat pm = refu[m+e*mesh->Np];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -198,10 +198,10 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
     if (refineFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
         fprintf(fp, "%d ", cnt*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
@@ -215,9 +215,9 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   cnt=0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (refineFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -226,9 +226,9 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     if (refineFlag[e]==0) continue;
-    for(iint n=0;n<mesh->plotNelements;++n){
+    for(int n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "10\n"); // TET code ?
     }
   }
@@ -247,7 +247,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   dfloat *plotz = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
   dfloat *plotu = (dfloat*) calloc(4*Nrefine,sizeof(dfloat));
 
-  iint cnt =0;
+  int cnt =0;
   for(int e=0;e<Nelements;++e){
     if (refineFlag[e]==0) continue;
     for(int n=0;n<plotNp;++n){
@@ -285,7 +285,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(iint n=0;n<plotNelements*plotNp;++n){
+  for(int n=0;n<plotNelements*plotNp;++n){
     fprintf(fp, "       ");
     fprintf(fp, "%g %g %g\n", plotx[n],ploty[n],plotz[n]);
   }
@@ -296,8 +296,8 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<plotNelements;++e){
-    for(iint n=0;n<plotNp;++n){
+  for(int e=0;e<plotNelements;++e){
+    for(int n=0;n<plotNp;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotu[e*plotNp+n]);
     }
@@ -309,7 +309,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<plotNelements;++e){
+  for(int e=0;e<plotNelements;++e){
     fprintf(fp, "       ");
     for(int m=0;m<mesh->plotNverts;++m){
       fprintf(fp, "%d ", e*plotNp + m);
@@ -320,8 +320,8 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  iint cnt = 0;
-  for(iint e=0;e<plotNelements;++e){
+  int cnt = 0;
+  for(int e=0;e<plotNelements;++e){
     cnt += mesh->plotNverts;
     fprintf(fp, "       ");
     fprintf(fp, "%d\n", cnt);
@@ -329,7 +329,7 @@ void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<plotNelements;++e){
+  for(int e=0;e<plotNelements;++e){
     fprintf(fp, "10\n"); // TET code ?
   }
   fprintf(fp, "        </DataArray>\n");

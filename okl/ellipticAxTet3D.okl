@@ -15,20 +15,20 @@ kernel void ellipticAxTet3D(const int Nelements,
         const dfloat  * restrict q,
         dfloat  * restrict Aq){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
 
     shared dfloat s_q[p_Np];
 
     for(int n=0;n<p_Np;++n;inner0){
       //prefetch q
-      const iint id = n + e*p_Np;
+      const int id = n + e*p_Np;
       s_q[n] = q[id];
     }
 
     barrier(localMemFence);
 
     for(int n=0;n<p_Np;++n;inner0){
-      const iint gid = e*p_Nggeo;
+      const int gid = e*p_Nggeo;
 
       const dfloat Grr = ggeo[gid + p_G00ID];
       const dfloat Grs = ggeo[gid + p_G01ID];
@@ -64,7 +64,7 @@ kernel void ellipticAxTet3D(const int Nelements,
         }
 
 
-      const iint id = n + e*p_Np;
+      const int id = n + e*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
               +Grs*qsr+Gss*qss+Gst*qst 
@@ -76,7 +76,7 @@ kernel void ellipticAxTet3D(const int Nelements,
 
 
 kernel void ellipticPartialAxTet3D_v0(const int Nelements,
-                                  const iint   * restrict elementList,
+                                  const int   * restrict elementList,
                                   const dfloat * restrict ggeo,
                                   const dfloat * restrict SrrT,
                                   const dfloat * restrict SrsT,
@@ -92,22 +92,22 @@ kernel void ellipticPartialAxTet3D_v0(const int Nelements,
                                   const dfloat  * restrict q,
                                   dfloat  * restrict Aq){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
 
     shared dfloat s_q[p_Np];
 
     for(int n=0;n<p_Np;++n;inner0){
       //prefetch q
-      const iint element = elementList[e];
-      const iint id = n + element*p_Np;
+      const int element = elementList[e];
+      const int id = n + element*p_Np;
       s_q[n] = q[id];
     }
 
     barrier(localMemFence);
 
     for(int n=0;n<p_Np;++n;inner0){
-      const iint element = elementList[e];
-      const iint gid = element*p_Nggeo;
+      const int element = elementList[e];
+      const int gid = element*p_Nggeo;
 
       const dfloat Grr = ggeo[gid + p_G00ID];
       const dfloat Grs = ggeo[gid + p_G01ID];
@@ -143,7 +143,7 @@ kernel void ellipticPartialAxTet3D_v0(const int Nelements,
         }
 
 
-      const iint id = n + element*p_Np;
+      const int id = n + element*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
               +Grs*qsr+Gss*qss+Gst*qst 

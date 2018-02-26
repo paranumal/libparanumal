@@ -1,8 +1,8 @@
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  int row;
+  int col;
+  int ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -77,9 +77,9 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
 
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
+  int coarseNp;
+  int coarseTotal;
+  int *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -110,15 +110,15 @@ extern "C"
 }
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
+                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
+                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
 
 void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, 
-                                  iint *nnz, ogs_t **ogs, iint *globalStarts, 
+                                  int *nnz, ogs_t **ogs, int *globalStarts, 
                                   const char* options);
 
 //Multigrid function callbacks

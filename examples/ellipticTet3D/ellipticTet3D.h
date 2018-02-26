@@ -31,7 +31,7 @@ typedef struct {
 
   char *type;
 
-  iint Nblock;
+  int Nblock;
 
   dfloat tau;
 
@@ -50,8 +50,8 @@ typedef struct {
   int *EToB;
   //C0-FEM mask data
   int *mapB;      // boundary flag of face nodes
-  iint Nmasked;
-  iint *maskIds;
+  int Nmasked;
+  int *maskIds;
 
   occa::memory o_maskIds;
   occa::memory o_mapB;
@@ -77,11 +77,11 @@ typedef struct {
   occa::memory o_Ry;
 
   // list of elements that are needed for global gather-scatter
-  iint NglobalGatherElements;
+  int NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  iint NlocalGatherElements;
+  int NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
@@ -109,7 +109,7 @@ void ellipticSetupTet3D(mesh3D *mesh, occa::kernelInfo &kernelInfo);
 void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_v,
           const char *type, const char *op);
 
-void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 
 void diagnostic(int N, occa::memory &o_x, const char *message);
 
@@ -117,15 +117,15 @@ void ellipticPreconditioner3D(solver_t *solver, dfloat lambda, occa::memory &o_r
 
 int ellipticSolveTet3D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
 
-solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
+solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
 solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
 
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
 
-void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, iint *nnz,
-                              ogs_t **ogs, iint *globalStarts, const char* options);
+void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, int *nnz,
+                              ogs_t **ogs, int *globalStarts, const char* options);
 
 void ellipticStartHaloExchange3D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
@@ -146,24 +146,24 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
             const char *options);
 void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 
-void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
+                                   int *BCType, dfloat **invDiagA,
                                    const char *options);
 
-void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 
@@ -175,7 +175,7 @@ void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLev
 void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
 
 
-void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions);
+void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 void ellipticSetupSmootherTet3D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);

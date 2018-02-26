@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
+void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
   
   dfloat t = 0.f; 
 
@@ -69,7 +69,7 @@ void boltzmannReport2D(mesh2D *mesh, iint tstep, char *options){
     // compute vorticity
     //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
-    // iint fld = 1;
+    // int fld = 1;
     char fname[BUFSIZ];
     sprintf(fname, "foo2_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
     boltzmannPlotVTU2D(mesh, fname);

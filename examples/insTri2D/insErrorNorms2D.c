@@ -21,9 +21,9 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
 
     dfloat nu = ins->nu;
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
@@ -124,17 +124,17 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
 
  #else
 
- const iint offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+ const int offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
   //
   dfloat *dUdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dUdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dVdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dVdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   //
-   for(iint e=0;e<mesh->Nelements;++e){
+   for(int e=0;e<mesh->Nelements;++e){
     //  int flag = 0; 
-    // for(iint f=0;f<mesh->Nfaces;++f){
-    //   iint bc = mesh->EToB[e*mesh->Nfaces+f];
+    // for(int f=0;f<mesh->Nfaces;++f){
+    //   int bc = mesh->EToB[e*mesh->Nfaces+f];
     //   if(bc == 1){ flag = 1; }
     // }
 
@@ -144,11 +144,11 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
       dfloat drdy = mesh->vgeo[e*mesh->Nvgeo + RYID];
       dfloat dsdx = mesh->vgeo[e*mesh->Nvgeo + SXID];
       dfloat dsdy = mesh->vgeo[e*mesh->Nvgeo + SYID];
-      for(iint n=0;n<mesh->Np;++n){
+      for(int n=0;n<mesh->Np;++n){
         dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;     
-        for(iint i=0;i<mesh->Np;++i){
+        for(int i=0;i<mesh->Np;++i){
           // load data at node i of element e (note Nfields==4)
-          iint id = e*mesh->Np + i;
+          int id = e*mesh->Np + i;
           dfloat u = ins->U[id+offset];
           dfloat v = ins->V[id+offset];
              
@@ -203,28 +203,28 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   }
 //
 dfloat cd = 0.0, cl = 0.0; 
-iint sk=0;
-for(iint e=0;e<mesh->Nelements;++e){
-   iint flag = 0; 
-   iint bc = 0; 
-  for(iint f=0;f<mesh->Nfaces;++f){
+int sk=0;
+for(int e=0;e<mesh->Nelements;++e){
+   int flag = 0; 
+   int bc = 0; 
+  for(int f=0;f<mesh->Nfaces;++f){
     bc = mesh->EToB[e*mesh->Nfaces+f];
     if(bc == 1){ flag = 1; }
   }
 
   if(flag){
-    for(iint f=0;f<mesh->Nfaces;++f){
+    for(int f=0;f<mesh->Nfaces;++f){
       bc = mesh->EToB[e*mesh->Nfaces+f];
       if(bc==1){
-       for(iint n=0;n<mesh->Nfp; n++){
+       for(int n=0;n<mesh->Nfp; n++){
         // load surface geofactors for this face
-        iint sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
+        int sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
         dfloat nx = mesh->sgeo[sid+0];
         dfloat ny = mesh->sgeo[sid+1];
         dfloat sJ = mesh->sgeo[sid+2];
         
-        iint vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-        iint idM = mesh->vmapM[vid];
+        int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+        int idM = mesh->vmapM[vid];
         //
         dfloat dudx = dUdx[idM]; 
         dfloat dudy = dUdy[idM]; 

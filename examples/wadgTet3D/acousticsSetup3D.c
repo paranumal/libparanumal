@@ -12,10 +12,10 @@ void acousticsSetup3D(mesh3D *mesh){
 				sizeof(dfloat));
 
   // fix this later (initial conditions)
-  iint cnt = 0;
+  int cnt = 0;
   dfloat time = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
       dfloat z = mesh->z[n + mesh->Np*e];
@@ -33,9 +33,9 @@ void acousticsSetup3D(mesh3D *mesh){
 
   
   mesh->c2 = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));  
-  for(iint e=0;e<mesh->Nelements;++e){ 
+  for(int e=0;e<mesh->Nelements;++e){ 
     
-    iint id = e*mesh->Nverts;
+    int id = e*mesh->Nverts;
     
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -52,7 +52,7 @@ void acousticsSetup3D(mesh3D *mesh){
     dfloat ze3 = mesh->EZ[id+2];
     dfloat ze4 = mesh->EZ[id+3];
     
-    for(iint n=0;n<mesh->cubNp;++n){ /* for each node */
+    for(int n=0;n<mesh->cubNp;++n){ /* for each node */
       
       /* (r,s,t) coordinates of cubature nodes*/
       dfloat rn = mesh->cubr[n]; 
@@ -76,7 +76,7 @@ void acousticsSetup3D(mesh3D *mesh){
 #if storeMatrices
   invMc = (dfloat*) calloc(mesh->Np*mesh->Np*mesh->Nelements,sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for (int j = 0; j < mesh->Np; ++j){
       for (int i = 0; i < mesh->Np; ++i){
 	// store arbitrary values for testing
@@ -96,10 +96,10 @@ void acousticsSetup3D(mesh3D *mesh){
   
   // set time step
   dfloat hmin = 1e9;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(int e=0;e<mesh->Nelements;++e){  
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -158,8 +158,8 @@ void acousticsSetup3D(mesh3D *mesh){
   // build cubature matrix transposes
   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->cubNp;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->cubNp;++m){
       cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
       cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
     }
@@ -205,15 +205,15 @@ void acousticsSetup3D(mesh3D *mesh){
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapP);
 
   mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
 			mesh->EToB);
 
   mesh->o_x =
@@ -245,7 +245,7 @@ void acousticsSetup3D(mesh3D *mesh){
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
     
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -284,11 +284,11 @@ void acousticsSetup3D(mesh3D *mesh){
     kernelInfo.addDefine("dfloat4","double4");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(int)==4){
+    kernelInfo.addDefine("int","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(int)==8){
+    kernelInfo.addDefine("int","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

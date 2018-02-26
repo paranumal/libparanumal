@@ -27,11 +27,11 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->Nfaces = 4;
   
   // vertices on each face
-  iint faceVertices[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
+  int faceVertices[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
   mesh->NfaceVertices = 3;
   mesh->faceVertices =
-    (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
-  memcpy(mesh->faceVertices, faceVertices[0], 12*sizeof(iint));
+    (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
+  memcpy(mesh->faceVertices, faceVertices[0], 12*sizeof(int));
     
   if(fp==NULL){
     printf("meshReaderTet3D: could not load file %s\n", fileName);
@@ -73,7 +73,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   fgetpos(fp, &fpos);
   int Ntets = 0, NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
-    iint elementType;
+    int elementType;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==4) ++Ntets; // tet code is 4
@@ -94,7 +94,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->EToV 
-    = (iint*) calloc(NtetsLocal*mesh->Nverts, sizeof(iint));
+    = (int*) calloc(NtetsLocal*mesh->Nverts, sizeof(int));
   mesh->elementInfo
     = (int*) calloc(NtetsLocal,sizeof(int));
 
@@ -102,9 +102,9 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   int cnt=0, bcnt = 0;
   Ntets = 0;
 
-  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*4, sizeof(iint));
+  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*4, sizeof(int));
   for(n=0;n<mesh->Nelements;++n){
-    iint elementType, v1, v2, v3, v4;
+    int elementType, v1, v2, v3, v4;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==2){ // boundary face
@@ -120,7 +120,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
       if(start<=Ntets && Ntets<=end){
 	sscanf(buf,
 	       "%*d%*d%*d %d %*d"
-	       iintFormat iintFormat iintFormat iintFormat,
+	       "%d" "%d" "%d" "%d",
 	       mesh->elementInfo+cnt,&v1, &v2, &v3, &v4);
 	/* read vertex triplet for trianngle */
 	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
@@ -146,7 +146,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->EZ = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   for(int e=0;e<mesh->Nelements;++e){
     for(n=0;n<mesh->Nverts;++n){
-      iint vid = mesh->EToV[e*mesh->Nverts+n];
+      int vid = mesh->EToV[e*mesh->Nverts+n];
       mesh->EX[e*mesh->Nverts+n] = VX[vid];
       mesh->EY[e*mesh->Nverts+n] = VY[vid];
       mesh->EZ[e*mesh->Nverts+n] = VZ[vid];

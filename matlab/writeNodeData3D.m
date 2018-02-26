@@ -87,7 +87,7 @@ if N < 7
     sV = Vandermonde3D(N, ir(:), is(:),it(:));
     sInterp = sV/V;
     
-    iInterp = [sInterp(1:Nfi,faceNodes(:,1));...
+    interp = [sInterp(1:Nfi,faceNodes(:,1));...
         sInterp(Nfi+1:2*Nfi,faceNodes(:,2));...
         sInterp(2*Nfi+1:3*Nfi,faceNodes(:,3));...
         sInterp(3*Nfi+1:4*Nfi,faceNodes(:,4))];
@@ -95,7 +95,7 @@ if N < 7
     % integration node lift matrix
     iLIFT = V*V'*sInterp'*diag(iw(:));
     
-    writeFloatMatrix(fid, iInterp, 'Cubature Surface Interpolation Matrix');
+    writeFloatMatrix(fid, interp, 'Cubature Surface Interpolation Matrix');
     writeFloatMatrix(fid, iLIFT, 'Cubature Surface Lift Matrix');
     
 end

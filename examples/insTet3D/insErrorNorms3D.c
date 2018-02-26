@@ -19,10 +19,10 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
   dfloat l2u=0, l2v = 0, l2w =0, l2p = 0;
   dfloat liu=0, liv = 0, liw =0, lip = 0;
 
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     
     for(int n=0;n<mesh->Np;++n){
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];

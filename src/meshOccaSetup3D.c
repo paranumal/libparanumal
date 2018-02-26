@@ -18,13 +18,13 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->device.setStream(mesh->defaultStream);
 
   // find elements that have all neighbors on this process
-  iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
-  iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  int *internalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
+  int *notInternalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
 
-  iint Ninterior = 0, NnotInterior = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint flag = 0;
-    for(iint f=0;f<mesh->Nfaces;++f)
+  int Ninterior = 0, NnotInterior = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    int flag = 0;
+    for(int f=0;f<mesh->Nfaces;++f)
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1)
         flag = 1;
     if(!flag)
@@ -38,10 +38,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
   if(Ninterior)
-    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(int), internalElementIds);
 
   if(NnotInterior>0)
-    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(iint), notInternalElementIds);
+    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(int), notInternalElementIds);
 
 
   // OCCA allocate device memory (remember to go back for halo)
@@ -80,19 +80,19 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     // =============== BB operators [added by NC] ===============
 
     // deriv operators: transpose from row major to column major
-    iint *D0ids = (iint*) calloc(mesh->Np*4,sizeof(iint));
-    iint *D1ids = (iint*) calloc(mesh->Np*4,sizeof(iint));
-    iint *D2ids = (iint*) calloc(mesh->Np*4,sizeof(iint));
-    iint *D3ids = (iint*) calloc(mesh->Np*4,sizeof(iint));
+    int *D0ids = (int*) calloc(mesh->Np*4,sizeof(int));
+    int *D1ids = (int*) calloc(mesh->Np*4,sizeof(int));
+    int *D2ids = (int*) calloc(mesh->Np*4,sizeof(int));
+    int *D3ids = (int*) calloc(mesh->Np*4,sizeof(int));
     dfloat *Dvals = (dfloat*) calloc(mesh->Np*4,sizeof(dfloat));
 
-    iint *L0ids = (iint*) calloc(mesh->Nfp*7,sizeof(iint));
+    int *L0ids = (int*) calloc(mesh->Nfp*7,sizeof(int));
     dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*7,sizeof(dfloat)); // tridiag
-    iint *ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz,sizeof(iint));
+    int *ELids = (int*) calloc(mesh->Np*mesh->max_EL_nnz,sizeof(int));
     dfloat *ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
 
-    for (iint i = 0; i < mesh->Np; ++i){
-      for (iint j = 0; j < 4; ++j){
+    for (int i = 0; i < mesh->Np; ++i){
+      for (int j = 0; j < 4; ++j){
         D0ids[i+j*mesh->Np] = mesh->D0ids[j+i*4];
         D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*4];
         D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*4];
@@ -101,15 +101,15 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
 
-    for (iint i = 0; i < mesh->Nfp; ++i){
-      for (iint j = 0; j < 7; ++j){
+    for (int i = 0; i < mesh->Nfp; ++i){
+      for (int j = 0; j < 7; ++j){
         L0ids [i+j*mesh->Nfp] = mesh->L0ids [j+i*7];
         L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*7];
       }
     }
 
-    for (iint i = 0; i < mesh->Np; ++i){
-      for (iint j = 0; j < mesh->max_EL_nnz; ++j){
+    for (int i = 0; i < mesh->Np; ++i){
+      for (int j = 0; j < mesh->max_EL_nnz; ++j){
         ELids [i + j*mesh->Np] = mesh->ELids [j+i*mesh->max_EL_nnz];
         ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
       }
@@ -138,8 +138,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       dfloat *cubDtWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
       dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
       dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-      for(iint n=0;n<mesh->Np;++n){
-        for(iint m=0;m<mesh->cubNp;++m){
+      for(int n=0;n<mesh->Np;++n){
+        for(int m=0;m<mesh->cubNp;++m){
           cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
           cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
           cubDtWT[n+m*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
@@ -175,8 +175,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       // build surface integration matrix transposes
       dfloat *intLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
       dfloat *intInterpT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-      for(iint n=0;n<mesh->Np;++n){
-        for(iint m=0;m<mesh->Nfaces*mesh->intNfp;++m){
+      for(int n=0;n<mesh->Np;++n){
+        for(int m=0;m<mesh->Nfaces*mesh->intNfp;++m){
           intLIFTT[n+m*mesh->Np] = mesh->intLIFT[n*mesh->intNfp*mesh->Nfaces+m];
         }
       }
@@ -199,21 +199,21 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     // =============== Bernstein-Bezier allocations [added by NC] ============
 
     // create packed BB indexes
-    mesh->o_D0ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D0ids);
-    mesh->o_D1ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D1ids);
-    mesh->o_D2ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D2ids);
-    mesh->o_D3ids = mesh->device.malloc(mesh->Np*4*sizeof(iint),D3ids);
+    mesh->o_D0ids = mesh->device.malloc(mesh->Np*4*sizeof(int),D0ids);
+    mesh->o_D1ids = mesh->device.malloc(mesh->Np*4*sizeof(int),D1ids);
+    mesh->o_D2ids = mesh->device.malloc(mesh->Np*4*sizeof(int),D2ids);
+    mesh->o_D3ids = mesh->device.malloc(mesh->Np*4*sizeof(int),D3ids);
     mesh->o_Dvals = mesh->device.malloc(mesh->Np*4*sizeof(dfloat),Dvals);
 
     unsigned char *packedDids = (unsigned char*) malloc(mesh->Np*3*4*sizeof(unsigned char));
     
-    for(iint n=0;n<4*mesh->Np;++n){
+    for(int n=0;n<4*mesh->Np;++n){
       if(D1ids[n]<D0ids[n]) printf("bugger: D0id > D1id\n");
       if(D2ids[n]<D0ids[n]) printf("bugger: D0id > D2id\n");
       if(D3ids[n]<D0ids[n]) printf("bugger: D0id > D3id\n");
     }
 
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       
       packedDids[n*4+0] = D1ids[n+0*mesh->Np]-D0ids[n+0*mesh->Np];
       packedDids[n*4+1] = D1ids[n+1*mesh->Np]-D0ids[n+1*mesh->Np];
@@ -234,9 +234,9 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     
     mesh->o_packedDids = mesh->device.malloc(mesh->Np*3*4*sizeof(unsigned char),packedDids);
 
-    mesh->o_L0ids  = mesh->device.malloc(mesh->Nfp*7*sizeof(iint),L0ids);
+    mesh->o_L0ids  = mesh->device.malloc(mesh->Nfp*7*sizeof(int),L0ids);
     mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*7*sizeof(dfloat),L0vals);
-    mesh->o_ELids  = mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(iint),ELids);
+    mesh->o_ELids  = mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
     mesh->o_ELvals = mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
     // =============== end Bernstein-Bezier section [added by NC] ============
   }
@@ -255,10 +255,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
-        for (iint k=0;k<mesh->Np;k++) {
-          for (iint l=0;l<mesh->Np;l++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        for (int k=0;k<mesh->Np;k++) {
+          for (int l=0;l<mesh->Np;l++) {
             mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
             mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
@@ -281,8 +281,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
         #if 0
         SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
         SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
@@ -311,12 +311,12 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
   mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
 
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
-      for(iint n=0;n<mesh->intNfp;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->intNfp;++n){
         dfloat ix = 0, iy = 0, iz=0;
-        for(iint m=0;m<mesh->Nfp;++m){
-          iint vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
+        for(int m=0;m<mesh->Nfp;++m){
+          int vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
           dfloat xm = mesh->x[vid];
           dfloat ym = mesh->y[vid];
           dfloat zm = mesh->z[vid];
@@ -325,7 +325,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
           iy += Inm*ym;
           iz += Inm*zm;
         }
-        iint id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
+        int id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
         mesh->intx[id] = ix;
         mesh->inty[id] = iy;
         mesh->intz[id] = iz;
@@ -385,15 +385,15 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
                         mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
                         mesh->vmapP);
 
   mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
                         mesh->EToB);
 
   mesh->o_x =
@@ -423,7 +423,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -481,11 +481,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(dlong)==4){
+    kernelInfo.addDefine("dlong","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(dlong)==8){
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

@@ -9,7 +9,7 @@ void ellipticSetupQuad2D(mesh2D *mesh, occa::kernelInfo &kernelInfo){
  
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
-  iint rank;
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE

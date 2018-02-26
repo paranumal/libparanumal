@@ -101,9 +101,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
   // Initialize
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat u= 0.f, v= 0.f, w=0.f, p =0.f, t = 0.f;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -145,9 +145,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   }
 
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){ 
-     for(iint f=0;f<mesh->Nfaces;++f){
-       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+  for(int e=0;e<mesh->Nelements;++e){ 
+     for(int f=0;f<mesh->Nfaces;++f){
+       int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
        dfloat sJ   = mesh->sgeo[sid + SJID];
        dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -159,9 +159,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0.f;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat u = ins->U[id];
       dfloat v = ins->V[id];
       dfloat w = ins->W[id];
@@ -252,7 +252,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
 
   ins->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   ins->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) ins->VmapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -268,7 +268,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   gsParallelGatherScatter(mesh->hostGsh, ins->VmapB, "int", "min"); 
   gsParallelGatherScatter(mesh->hostGsh, ins->PmapB, "int", "max"); 
 
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (ins->VmapB[n] == 1E9) {
       ins->VmapB[n] = 0.;
     }
@@ -289,11 +289,11 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = mymax(1,256/maxNodesVolumeCub);
   //
-  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
   //
@@ -406,21 +406,21 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   ins->mesh = mesh;
   
   if(mesh->totalHaloPairs){//halo setup
-    iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+    int tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
     occa::memory o_tsendBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
     occa::memory o_trecvBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
     ins->o_tHaloBuffer = mesh->device.malloc(tHaloBytes);
     ins->tSendBuffer = (dfloat*) o_tsendBuffer.getMappedPointer();
     ins->tRecvBuffer = (dfloat*) o_trecvBuffer.getMappedPointer();
 
-    iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    int vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
     occa::memory o_vsendBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
     occa::memory o_vrecvBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
     ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
     ins->vSendBuffer = (dfloat*) o_vsendBuffer.getMappedPointer();
     ins->vRecvBuffer = (dfloat*) o_vrecvBuffer.getMappedPointer();
 
-    iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    int pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
     ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
     occa::memory o_psendBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
     occa::memory o_precvBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);

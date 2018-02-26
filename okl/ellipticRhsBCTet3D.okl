@@ -11,7 +11,7 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
                               const dfloat * restrict StsT,
                               const dfloat * restrict SttT,
                               const dfloat * restrict MM,
-                              const iint   * restrict vmapM,
+                              const int   * restrict vmapM,
                               const dfloat * restrict sMT,
                               const dfloat lambda,
                               const dfloat t,
@@ -21,7 +21,7 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
                               const int    * restrict mapB,
                               dfloat  * restrict rhs){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
     shared dfloat s_q[p_Np];
     shared dfloat s_ndq[p_Nfp*p_Nfaces];
 
@@ -38,16 +38,16 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
-        const iint idM = vmapM[id];          
-        const iint nid = idM%p_Np; 
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        const int idM = vmapM[id];          
+        const int nid = idM%p_Np; 
 
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
 
         dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
         
         // load surface geofactors for this face
-        const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        const int sid = p_Nsgeo*(e*p_Nfaces+face);
         const dfloat nx = sgeo[sid+p_NXID];
         const dfloat ny = sgeo[sid+p_NYID];
         const dfloat nz = sgeo[sid+p_NZID];
@@ -70,8 +70,8 @@ kernel void ellipticRhsBCTet3D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){ 
       if(n<p_Np){
         //volume Dirichlet data
-        const iint id = n + e*p_Np;
-        const iint gid = e*p_Nggeo;
+        const int id = n + e*p_Np;
+        const int gid = e*p_Nggeo;
         const dfloat Grr = ggeo[gid + p_G00ID];
         const dfloat Grs = ggeo[gid + p_G01ID];
         const dfloat Grt = ggeo[gid + p_G02ID];

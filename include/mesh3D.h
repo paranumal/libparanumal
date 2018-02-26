@@ -34,7 +34,7 @@ void meshParallelPrint3D(mesh3D *mesh);
 void meshVTU3D(mesh3D *mesh, char *fileName);
 
 // print out mesh field
-void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
+void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld);
 void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels);
 void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels, dfloat tol);
 
@@ -111,7 +111,7 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
-                                      iint numLevels, iint *levels);
+                                      int numLevels, int *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 

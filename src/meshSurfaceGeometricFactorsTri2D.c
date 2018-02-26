@@ -11,7 +11,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
 				mesh->Nsgeo*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(int e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     int id = e*mesh->Nverts;
@@ -63,18 +63,18 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
   }
 
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint baseM = e*mesh->Nfaces + f;
+  for(int e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(int f=0;f<mesh->Nfaces;++f){
+      int baseM = e*mesh->Nfaces + f;
 
       // awkward: (need to find eP,fP relative to bulk+halo)
-      iint idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
-      iint eP = (idP>=0) ? (idP/mesh->Np):e;
+      int idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
+      int eP = (idP>=0) ? (idP/mesh->Np):e;
 
-      iint fP = mesh->EToF[baseM];
+      int fP = mesh->EToF[baseM];
       fP = (fP==-1)?f:fP;
 
-      iint baseP = eP*mesh->Nfaces + fP;
+      int baseP = eP*mesh->Nfaces + fP;
       
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];

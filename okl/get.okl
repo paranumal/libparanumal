@@ -1,12 +1,12 @@
 
 kernel void get(const int N,
 		const dfloat * restrict v,
-		const iint   * restrict ids,
+		const int   * restrict ids,
 		dfloat * restrict subv){
 
-  for(iint n=0;n<N;++n;tile(256)){
+  for(int n=0;n<N;++n;tile(256)){
     if(n<N){
-      const iint id = ids[n];
+      const int id = ids[n];
       if (id >-1) {
         subv[n] = v[id];
       } else {

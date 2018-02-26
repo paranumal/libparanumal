@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
+void insAdvectionStep2D(ins_t *ins, int tstep,  int haloBytes,
                         dfloat * sendBuffer, dfloat * recvBuffer,
                         char   * options){
 
@@ -9,8 +9,8 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   dfloat t = (tstep+0)*ins->dt;  // to compute N(U^n) set t=tn 
   
   // field ioffset at this step
-  iint  offset  = mesh->Nelements+mesh->totalHaloPairs;  
-  iint ioffset  = ins->index*offset;
+  int  offset  = mesh->Nelements+mesh->totalHaloPairs;  
+  int ioffset  = ins->index*offset;
 
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
@@ -129,7 +129,7 @@ void insAdvectionStep2D(ins_t *ins, iint tstep,  iint haloBytes,
   
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
-    const iint solverid = 0; // Pressure Solve, use BCs for pressure
+    const int solverid = 0; // Pressure Solve, use BCs for pressure
 
     occaTimerTic(mesh->device,"GradientSurface");
     // Compute Surface Conribution

@@ -4,9 +4,9 @@
 #include "mesh2D.h"
 
 typedef struct {
-  iint v1, v2;
-  iint element, face, rank;
-  iint elementN, faceN, rankN; // N for neighbor
+  int v1, v2;
+  int element, face, rank;
+  int elementN, faceN, rankN; // N for neighbor
 
 }parallelFace_t;
 
@@ -76,29 +76,29 @@ void meshParallelConnect2D(mesh2D *mesh){
   meshConnect(mesh);
 
   // count # of broken links
-  iint Nbroken =0;
-  for(iint e=0;e<mesh->Nelements;++e)
-    for(iint f=0;f<mesh->Nfaces;++f)
+  int Nbroken =0;
+  for(int e=0;e<mesh->Nelements;++e)
+    for(int f=0;f<mesh->Nfaces;++f)
       if(mesh->EToE[e*mesh->Nfaces+f]==-1)
 	++Nbroken;
   
   Nbroken = 2*((Nbroken+1)/2);
   
-  iint maxNbroken;
-  MPI_Allreduce(&Nbroken,&maxNbroken, 1, MPI_IINT, 
+  int maxNbroken;
+  MPI_Allreduce(&Nbroken,&maxNbroken, 1, MPI_INT, 
 		MPI_MAX, MPI_COMM_WORLD);
   
   //
   parallelFace_t *brokenFaces = 
     (parallelFace_t*) calloc(maxNbroken, sizeof(parallelFace_t));
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e)
-    for(iint f=0;f<mesh->Nfaces;++f)
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e)
+    for(int f=0;f<mesh->Nfaces;++f)
       if(mesh->EToE[e*mesh->Nfaces+f]==-1){
 
-	iint v1 = mesh->EToV[e*mesh->Nverts + f];
-	iint v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
+	int v1 = mesh->EToV[e*mesh->Nverts + f];
+	int v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
 
 	brokenFaces[cnt].v1 = mymax(v1, v2);
 	brokenFaces[cnt].v2 = mymin(v1, v2);
@@ -137,16 +137,16 @@ void meshParallelConnect2D(mesh2D *mesh){
 	       parallelCompareFaces, dummyMatch);
 
   // extract connectivity info
-  mesh->EToP = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  mesh->EToP = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
   for(cnt=0;cnt<mesh->Nelements*mesh->Nfaces;++cnt)
     mesh->EToP[cnt] = -1;
 
   for(cnt=0;cnt<maxNbroken;++cnt){
-    iint e = brokenFaces[cnt].element;
-    iint f = brokenFaces[cnt].face;
-    iint eN = brokenFaces[cnt].elementN;
-    iint fN = brokenFaces[cnt].faceN;
-    iint rN = brokenFaces[cnt].rankN;
+    int e = brokenFaces[cnt].element;
+    int f = brokenFaces[cnt].face;
+    int eN = brokenFaces[cnt].elementN;
+    int fN = brokenFaces[cnt].faceN;
+    int rN = brokenFaces[cnt].rankN;
 
     if(e>=0 && f>=0 && eN>=0 && fN>=0){
       mesh->EToE[e*mesh->Nfaces+f] = eN;

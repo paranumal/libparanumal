@@ -22,7 +22,7 @@ void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char* 
     //connect the face modes between each element 
     meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
     //use the mmaps constructed and overwrite vmap and FaceNodes
-    for (iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+    for (int n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
       mesh->vmapM[n] = mesh->mmapM[n];
       mesh->vmapP[n] = mesh->mmapP[n];
     }

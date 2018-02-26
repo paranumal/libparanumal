@@ -5,7 +5,7 @@
 void acousticsVolume2D(mesh2D *mesh){
 
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
 
     // prefetch geometric factors (constant on triangle)
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
@@ -14,15 +14,15 @@ void acousticsVolume2D(mesh2D *mesh){
     dfloat dsdy = mesh->vgeo[e*mesh->Nvgeo + SYID];
 
     // for all nodes in this element
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       // compute 'r' and 's' derivatives of (u,v,p) at node n
       dfloat dudr = 0, duds = 0;
       dfloat dvdr = 0, dvds = 0;
       dfloat dpdr = 0, dpds = 0;
       
-      for(iint i=0;i<mesh->Np;++i){
+      for(int i=0;i<mesh->Np;++i){
 	// load data at node i of element e
-	iint id = mesh->Nfields*(e*mesh->Np + i);
+	int id = mesh->Nfields*(e*mesh->Np + i);
 	dfloat u = mesh->q[id+0];
 	dfloat v = mesh->q[id+1];
 	dfloat p = mesh->q[id+2];
@@ -46,7 +46,7 @@ void acousticsVolume2D(mesh2D *mesh){
       dfloat dpdy = drdy*dpdr + dsdy*dpds;
       
       // indices for writing the RHS terms
-      iint id = mesh->Nfields*(e*mesh->Np + n);
+      int id = mesh->Nfields*(e*mesh->Np + n);
 
       // store acoustics rhs contributions from collocation differentiation
       mesh->rhsq[id+0] = -dpdx;

@@ -8,18 +8,18 @@
 void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
 
   /* volume indices of the interior and exterior face modes for each element */
-  mesh->mmapM = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
-  mesh->mmapP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
-  mesh->mmapS = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  mesh->mmapM = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
+  mesh->mmapP = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
+  mesh->mmapS = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
 
   dfloat *VM = (dfloat *) calloc(mesh->Np,sizeof(dfloat));
   dfloat *VP = (dfloat *) calloc(mesh->Np,sizeof(dfloat));
 
   /* assume elements already connected */
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint eP = mesh->EToE[e*mesh->Nfaces+f];
-      iint fP = mesh->EToF[e*mesh->Nfaces+f];
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      int fP = mesh->EToF[e*mesh->Nfaces+f];
       if(eP<0 || fP<0){ // fake connections for unconnected faces
         eP = e;
         fP = f;
@@ -43,7 +43,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
 
           for (int i=0;i<mesh->Nfp;i++) {
             //get neighbouring node
-            iint id = i+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+            int id = i+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
             int k = mesh->vmapP[id]%mesh->Np;
 
             VP[i] = V[mP+k*mesh->Np]; //evaluate mode at WB nodes on face     
@@ -71,9 +71,9 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
         }
         if(mindist>1e-3) printf("arggh - bad match: e=%d,f=%d, mode=%d\n", e,f, m);
 
-        iint id  = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
-        iint idM = faceModes[f*mesh->Nfp+n] + e*mesh->Np;
-        iint idP = mMatch + eP*mesh->Np;
+        int id  = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+        int idM = faceModes[f*mesh->Nfp+n] + e*mesh->Np;
+        int idP = mMatch + eP*mesh->Np;
 
         mesh->mmapM[id] = idM;
         mesh->mmapP[id] = idP;

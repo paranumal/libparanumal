@@ -1,11 +1,11 @@
 
-occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
-                                      const iint * restrict vmapM,
+occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
+                                      const int * restrict vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
                                       const dfloat * restrict vgeo,
                                       const dfloat * restrict sgeo,
-                                      const iint   * restrict EToB,
+                                      const int   * restrict EToB,
                                       const dfloat * restrict DrT,
                                       const dfloat * restrict DsT,
                                       const dfloat * restrict LIFTT,
@@ -15,7 +15,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
                                             dfloat * restrict Sq,
                                       const dfloat TOL) {
 
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
     shared  dfloat s_x[p_Np];
     shared  dfloat s_r[p_Np];
     shared  dfloat s_p[p_Np];
@@ -35,7 +35,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
     shared  dfloat s_Lnydq[p_Np];
     shared  dfloat s_vgeo[p_Nvgeo];
     shared  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
-    exclusive iint idM, bc;
+    exclusive int idM, bc;
     
     //fetch q into rhs
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -112,21 +112,21 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
     // read in geo data to shared
     for(int n=0;n<p_Nmax;++n;inner0){
       int m = n;
-      const iint gid = e*p_Nvgeo;
+      const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
         s_vgeo[m] = vgeo[gid + m];
         m+=p_Nmax;
       }
 
       m = n;
-      const iint sid = p_Nsgeo*e*p_Nfaces;
+      const int sid = p_Nsgeo*e*p_Nfaces;
       while(m<p_Nsgeo*p_Nfaces){
         s_sgeo[0][m] = sgeo[sid + m];
         m+=p_Nmax;
       }
 
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
+        const int id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id]%p_Np; //local id
          // find face that owns this node
         const int face = n/p_Nfp;
@@ -149,7 +149,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
           
           // compute 1D derivatives
           dfloat qr = 0.f, qs = 0.f;
-          for(iint i=0;i<p_Np;++i){
+          for(int i=0;i<p_Np;++i){
             qr += DrT[n+i*p_Np]*s_p[i];
             qs += DsT[n+i*p_Np]*s_p[i];
           }
@@ -216,7 +216,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
           dfloat Lnydq = 0.f;
 
           occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
           }
@@ -433,13 +433,13 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const iint Nelements,
 
 //kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
 #define SIMDSIZE 32
-occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
-                                      const iint * restrict vmapM,
+occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
+                                      const int * restrict vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
                                       const dfloat * restrict vgeo,
                                       const dfloat * restrict sgeo,
-                                      const iint   * restrict EToB,
+                                      const int   * restrict EToB,
                                       const dfloat * restrict DrT,
                                       const dfloat * restrict DsT,
                                       const dfloat * restrict LIFTT,
@@ -449,7 +449,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
                                             dfloat * restrict Sq,
                                       const dfloat TOL) {
 
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
     volatile shared  dfloat s_x[p_Np];
     volatile shared  dfloat s_r[p_Np];
     volatile shared  dfloat s_p[p_Np];
@@ -469,7 +469,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
     volatile shared  dfloat s_Lnydq[p_Np];
     volatile shared  dfloat s_vgeo[p_Nvgeo];
     volatile shared  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
-    volatile shared    iint s_idM[p_NfacesNfp], s_bc[p_NfacesNfp];
+    volatile shared    int s_idM[p_NfacesNfp], s_bc[p_NfacesNfp];
     
     //fetch q into rhs
     for(int n=0;n<SIMDSIZE;++n;inner0){
@@ -512,14 +512,14 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
     // read in geo data to shared
     for(int n=0;n<SIMDSIZE;++n;inner0){
       int m = n;
-      const iint gid = e*p_Nvgeo;
+      const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
         s_vgeo[m] = vgeo[gid + m];
         m+=SIMDSIZE;
       }
 
       m = n;
-      const iint sid = p_Nsgeo*e*p_Nfaces;
+      const int sid = p_Nsgeo*e*p_Nfaces;
       while(m<p_Nsgeo*p_Nfaces){
         s_sgeo[0][m] = sgeo[sid + m];
         m+=SIMDSIZE;
@@ -527,7 +527,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
 
       m = n;
       while(m<p_NfacesNfp){
-        const iint id  = m + e*p_Nfaces*p_Nfp;
+        const int id  = m + e*p_Nfaces*p_Nfp;
         s_idM[m] = vmapM[id]%p_Np; //local id
          // find face that owns this node
         const int face = m/p_Nfp;
@@ -553,7 +553,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           // compute 1D derivatives
           dfloat qr = 0.f, qs = 0.f;
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat p_i = s_p[i];
               qr += DrT[m+i*p_Np]*p_i;
               qs += DsT[m+i*p_Np]*p_i;
@@ -582,7 +582,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           const dfloat invJ = s_sgeo[face][p_IJID];
           const dfloat hinv = s_sgeo[face][p_IHID];
           
-          const iint idm = s_idM[m];
+          const int idm = s_idM[m];
           const dfloat qM = s_p[idm];
           const dfloat qxM = s_dpdx[idm];
           const dfloat qyM = s_dpdy[idm];
@@ -622,7 +622,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           dfloat Lnydq = 0.f;
 
           occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[m+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[m+i*p_Np]*s_nydq[i];
           }
@@ -642,7 +642,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
         int m = n;
         while(m<p_NfacesNfp){
           const int face = m/p_Nfp;
-          const iint idm = s_idM[m];
+          const int idm = s_idM[m];
           const dfloat nx   = s_sgeo[face][p_NXID];
           const dfloat ny   = s_sgeo[face][p_NYID];
           const dfloat sJ   = s_sgeo[face][p_SJID];
@@ -789,13 +789,13 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
 //kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
 #define SIMDSIZE 32
 #define Nnodes 4
-occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
-                                      const iint * restrict vmapM,
+occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
+                                      const int * restrict vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
                                       const dfloat * restrict vgeo,
                                       const dfloat * restrict sgeo,
-                                      const iint   * restrict EToB,
+                                      const int   * restrict EToB,
                                       const dfloat * restrict DrT,
                                       const dfloat * restrict DsT,
                                       const dfloat * restrict LIFTT,
@@ -805,7 +805,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
                                             dfloat * restrict Sq,
                                       const dfloat TOL) {
 
-  for(iint es=0;es<Nelements;es+=Nnodes;outer0){
+  for(int es=0;es<Nelements;es+=Nnodes;outer0){
     volatile shared  dfloat s_x[Nnodes][p_Np];
     volatile shared  dfloat s_r[Nnodes][p_Np];
     volatile shared  dfloat s_p[Nnodes][p_Np];
@@ -826,7 +826,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
     volatile shared  dfloat s_Lnydq[Nnodes][p_Np];
     volatile shared  dfloat s_vgeo[Nnodes][p_Nvgeo];
     volatile shared  dfloat s_sgeo[Nnodes][p_Nfaces][p_Nsgeo];
-    volatile shared    iint s_idM[Nnodes][p_NfacesNfp], s_bc[Nnodes][p_NfacesNfp];
+    volatile shared    int s_idM[Nnodes][p_NfacesNfp], s_bc[Nnodes][p_NfacesNfp];
     
     //fetch q into rhs
     for(int n=0;n<SIMDSIZE;++n;inner0){
@@ -896,14 +896,14 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
     // read in geo data to shared
     for(int n=0;n<SIMDSIZE;++n;inner0){
       int m = n;
-      const iint gid = e*p_Nvgeo;
+      const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
         s_vgeo[m] = vgeo[gid + m];
         m+=SIMDSIZE;
       }
 
       m = n;
-      const iint sid = p_Nsgeo*e*p_Nfaces;
+      const int sid = p_Nsgeo*e*p_Nfaces;
       while(m<p_Nsgeo*p_Nfaces){
         s_sgeo[0][m] = sgeo[sid + m];
         m+=SIMDSIZE;
@@ -911,7 +911,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
 
       m = n;
       while(m<p_NfacesNfp){
-        const iint id  = m + e*p_Nfaces*p_Nfp;
+        const int id  = m + e*p_Nfaces*p_Nfp;
         s_idM[m] = vmapM[id]%p_Np; //local id
          // find face that owns this node
         const int face = m/p_Nfp;
@@ -937,7 +937,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           // compute 1D derivatives
           dfloat qr = 0.f, qs = 0.f;
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat p_i = s_p[i];
               qr += DrT[m+i*p_Np]*p_i;
               qs += DsT[m+i*p_Np]*p_i;
@@ -966,7 +966,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           const dfloat invJ = s_sgeo[face][p_IJID];
           const dfloat hinv = s_sgeo[face][p_IHID];
           
-          const iint idm = s_idM[m];
+          const int idm = s_idM[m];
           const dfloat qM = s_p[idm];
           const dfloat qxM = s_dpdx[idm];
           const dfloat qyM = s_dpdy[idm];
@@ -1006,7 +1006,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
           dfloat Lnydq = 0.f;
 
           occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[m+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[m+i*p_Np]*s_nydq[i];
           }
@@ -1026,7 +1026,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const iint Nelements,
         int m = n;
         while(m<p_NfacesNfp){
           const int face = m/p_Nfp;
-          const iint idm = s_idM[m];
+          const int idm = s_idM[m];
           const dfloat nx   = s_sgeo[face][p_NXID];
           const dfloat ny   = s_sgeo[face][p_NYID];
           const dfloat sJ   = s_sgeo[face][p_SJID];

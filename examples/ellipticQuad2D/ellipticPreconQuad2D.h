@@ -1,8 +1,8 @@
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  int row;
+  int col;
+  int ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -62,9 +62,9 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
 
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
+  int coarseNp;
+  int coarseTotal;
+  int *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -91,41 +91,41 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
+void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
 
-void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
+void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
+                              hgs_t **hgs, int *globalStarts, const char* options);
 
-void ellipticBuildPatchesIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
-                                   iint *BCType, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA, dfloat **localA,
+                                   int *BCType, nonZero_t **A, int *nnzA,
+                                   hgs_t **hgs, int *globalStarts,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA, dfloat **localA,
                                    const char *options);
 
 void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
+                                   int *BCType, dfloat **V1, nonZero_t **A, int *nnzA,
+                                   hgs_t **hgs, int *globalStarts, const char *options);
 
-void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **invDiagA,
+                                   int *BCType, dfloat **invDiagA,
                                    const char *options);
 
-void ellipticBuildFullPatchesIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFullPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npataches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 //Multigrid function callbacks

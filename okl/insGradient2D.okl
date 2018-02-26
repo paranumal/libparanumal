@@ -1,5 +1,5 @@
 // Compute Gradient in Strong Form
-kernel void insGradient2D(const iint Nelements,
+kernel void insGradient2D(const int Nelements,
                           const dfloat * restrict vgeo,
                           const dfloat * restrict DrT,
                           const dfloat * restrict DsT,
@@ -7,13 +7,13 @@ kernel void insGradient2D(const iint Nelements,
                                 dfloat * restrict Px,
                                 dfloat * restrict Py){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     // for all elements
     shared dfloat s_P[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        int e = eo+es; // element in block
         if(e<Nelements){
                 s_P[es][n]  = P[n + e*p_Np];
         }
@@ -23,10 +23,10 @@ kernel void insGradient2D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-        iint e = eo+es; // element in block
+        int e = eo+es; // element in block
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -36,7 +36,7 @@ kernel void insGradient2D(const iint Nelements,
 
           dfloat dpdr  = 0.f, dpds  = 0.f;
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
 
@@ -44,7 +44,7 @@ kernel void insGradient2D(const iint Nelements,
               dpds  += Dsni*s_P[es][i];
             }
 
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
           Px[id] = drdx*dpdr + dsdx*dpds;
           Py[id] = drdy*dpdr + dsdy*dpds;
         }
@@ -56,22 +56,22 @@ kernel void insGradient2D(const iint Nelements,
 
 
 // Compute Gradient in Strong Form
-kernel void insGradientVolume2D(const iint Nelements,
+kernel void insGradientVolume2D(const int Nelements,
         const dfloat * restrict vgeo,
         const dfloat * restrict DrT,
         const dfloat * restrict DsT,
-        const iint  offset,
+        const int  offset,
         const dfloat * restrict P,
         dfloat * restrict Px,
         dfloat * restrict Py){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     // for all elements
     shared dfloat s_P[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        int e = eo+es; // element in block
         if(e<Nelements){
                 s_P[es][n]  = P[n + (e+offset)*p_Np];
         }
@@ -81,10 +81,10 @@ kernel void insGradientVolume2D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-        iint e = eo+es; // element in block
+        int e = eo+es; // element in block
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -94,7 +94,7 @@ kernel void insGradientVolume2D(const iint Nelements,
 
           dfloat dpdr  = 0.f, dpds  = 0.f;
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
 
@@ -102,7 +102,7 @@ kernel void insGradientVolume2D(const iint Nelements,
               dpds  += Dsni*s_P[es][i];
             }
 
-          const iint id = (e+offset)*p_Np+n;
+          const int id = (e+offset)*p_Np+n;
           Px[id] = drdx*dpdr + dsdx*dpds;
           Py[id] = drdy*dpdr + dsdy*dpds;
         }
@@ -111,12 +111,12 @@ kernel void insGradientVolume2D(const iint Nelements,
   }
 }
 
-kernel void insGradientSurface2D(const iint Nelements,
+kernel void insGradientSurface2D(const int Nelements,
          const dfloat * restrict sgeo,
          const dfloat * restrict LIFTT,
-         const iint   * restrict vmapM,
-         const iint   * restrict vmapP,
-         const iint   * restrict EToB,
+         const int   * restrict vmapM,
+         const int   * restrict vmapP,
+         const int   * restrict EToB,
          const dfloat * restrict x,
          const dfloat * restrict y,
          const dfloat time,
@@ -125,7 +125,7 @@ kernel void insGradientSurface2D(const iint Nelements,
          const dfloat c1,
          const dfloat c2,
          const int index,
-         const iint offset,
+         const int offset,
          const int solverID,
          const dfloat * restrict POld,
          const dfloat * restrict P,
@@ -133,29 +133,29 @@ kernel void insGradientSurface2D(const iint Nelements,
          dfloat * restrict Py){
 
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     shared dfloat s_fluxPx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxPy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            iint face = n/p_Nfp;
+            int face = n/p_Nfp;
             // load surface geofactors for this face
-            iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            int sid    = p_Nsgeo*(e*p_Nfaces+face);
             dfloat nx   = sgeo[sid+p_NXID];
             dfloat ny   = sgeo[sid+p_NYID];
             dfloat sJ   = sgeo[sid+p_SJID];
             dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
-            iint id  = e*p_Nfp*p_Nfaces + n;
-            iint idM, idP;
+            int id  = e*p_Nfp*p_Nfaces + n;
+            int idM, idP;
             if(solverID == 1){ //no offset
               idM = vmapM[id];
               idP = vmapP[id];
@@ -167,7 +167,7 @@ kernel void insGradientSurface2D(const iint Nelements,
             dfloat  PM = P[idM], PP = P[idP];
 
             // apply boundary condition
-            iint bc = EToB[face+p_Nfaces*e];
+            int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               idM = vmapM[id];
               insGradientBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
@@ -197,12 +197,12 @@ kernel void insGradientSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            iint id;
+            int id;
             if (solverID==1) { //no offset
               id = e*p_Np + n;
             } else {

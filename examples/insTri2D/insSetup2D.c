@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, 
+ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -32,7 +32,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   ins->mesh = mesh;
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
+  int Ntotal = mesh->Np*mesh->Nelements;
   ins->Nblock = (Ntotal+blockSize-1)/blockSize;
 
   int Nstages = 4;
@@ -111,9 +111,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
   // Initialize
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -148,9 +148,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -163,9 +163,9 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat uxn = ins->U[id];
       dfloat uyn = ins->V[id];
@@ -261,7 +261,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   mesh->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) mesh->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -276,7 +276,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   gsParallelGatherScatter(mesh->hostGsh, mesh->mapB, "int", "min");   
 
   //use the bc flags to find masked ids
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mesh->mapB[n] == 1E9) {
       mesh->mapB[n] = 0.;
     } else if (mesh->mapB[n] == 1) { //Dirichlet boundary
@@ -299,11 +299,11 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = mymax(1,256/maxNodesVolumeCub); 
   //
-  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = mymax(1,256/maxNodesSurfaceCub); // works for CUDA
   //
@@ -330,7 +330,7 @@ ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-   // iint substep = 0; 
+   // int substep = 0; 
    // if(strstr(options,"SUBCYCLING")){ substep = 1;}
    // kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
 

@@ -5,8 +5,8 @@ void ellipticStartHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *se
   mesh3D *mesh = solver->mesh;
   
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
@@ -33,8 +33,8 @@ void ellipticInterimHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *
   mesh3D *mesh = solver->mesh;
 
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
@@ -62,8 +62,8 @@ void ellipticEndHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *recv
   mesh3D *mesh = solver->mesh;
   
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){

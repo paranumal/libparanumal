@@ -1,12 +1,12 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insUpdateStep3D(ins_t *ins, iint tstep, const char* options){
+void insUpdateStep3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  iint offset = (mesh->Nelements+mesh->totalHaloPairs);
+  int offset = (mesh->Nelements+mesh->totalHaloPairs);
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
@@ -53,7 +53,7 @@ void insUpdateStep3D(ins_t *ins, iint tstep, const char* options){
                                       ins->o_pHaloBuffer);
     }
   
-    const iint solverid = 1; 
+    const int solverid = 1; 
     // Compute Surface Contribution of gradient of pressure increment
     ins->gradientSurfaceKernel(mesh->Nelements,
                                 mesh->o_sgeo,

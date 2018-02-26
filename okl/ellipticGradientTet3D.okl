@@ -8,15 +8,15 @@ kernel void ellipticGradientTet3D(const int Nelements,
           dfloat4 * restrict gradq){  
   
   // block partition of elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     
     shared dfloat s_q[p_NblockV][p_Np];
 
-    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         if(e<Nelements){
           // prefetch q
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
           s_q[e-eo][n] = q[id];
         }
       }
@@ -24,10 +24,10 @@ kernel void ellipticGradientTet3D(const int Nelements,
           
     barrier(localMemFence);
 
-    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         if(e<Nelements){
-          const iint es = e-eo;
+          const int es = e-eo;
           const int gid = e*p_Nvgeo;
 
           const dfloat drdx = vgeo[gid + p_RXID];
@@ -44,7 +44,7 @@ kernel void ellipticGradientTet3D(const int Nelements,
           dfloat qr = 0, qs = 0, qt =0;
 
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i) {
+            for(int i=0;i<p_Np;++i) {
               qr += DrT[n + i*p_Np]*s_q[es][i];
               qs += DsT[n + i*p_Np]*s_q[es][i];
               qt += DtT[n + i*p_Np]*s_q[es][i];
@@ -56,7 +56,7 @@ kernel void ellipticGradientTet3D(const int Nelements,
           gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
           gradqn.w = s_q[es][n];
           
-          const iint id = e*p_Np+n; 
+          const int id = e*p_Np+n; 
           gradq[id] = gradqn;
         }
       }
@@ -65,7 +65,7 @@ kernel void ellipticGradientTet3D(const int Nelements,
 }
 
 kernel void ellipticPartialGradientTet3D(const int Nelements,
-          const iint offset,
+          const int offset,
           const dfloat * restrict vgeo,
           const dfloat * restrict const DrT,
           const dfloat * restrict const DsT,
@@ -74,15 +74,15 @@ kernel void ellipticPartialGradientTet3D(const int Nelements,
           dfloat4 * restrict gradq){  
   
   // block partition of elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     
     shared dfloat s_q[p_NblockV][p_Np];
 
-    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         if(e<Nelements){
           // prefetch q
-          const iint id = (e+offset)*p_Np+n;
+          const int id = (e+offset)*p_Np+n;
           s_q[e-eo][n] = q[id];
         }
       }
@@ -90,11 +90,11 @@ kernel void ellipticPartialGradientTet3D(const int Nelements,
           
     barrier(localMemFence);
 
-    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         if(e<Nelements){
-          const iint es = e-eo;
-          const iint gid = (e+offset)*p_Nvgeo;
+          const int es = e-eo;
+          const int gid = (e+offset)*p_Nvgeo;
 
           const dfloat drdx = vgeo[gid + p_RXID];
           const dfloat drdy = vgeo[gid + p_RYID];
@@ -110,7 +110,7 @@ kernel void ellipticPartialGradientTet3D(const int Nelements,
           dfloat qr = 0, qs = 0, qt =0;
 
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i) {
+            for(int i=0;i<p_Np;++i) {
               qr += DrT[n + i*p_Np]*s_q[es][i];
               qs += DsT[n + i*p_Np]*s_q[es][i];
               qt += DtT[n + i*p_Np]*s_q[es][i];
@@ -122,7 +122,7 @@ kernel void ellipticPartialGradientTet3D(const int Nelements,
           gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
           gradqn.w = s_q[es][n];
           
-          const iint id = (e+offset)*p_Np+n; 
+          const int id = (e+offset)*p_Np+n; 
           gradq[id] = gradqn;
         }
       }

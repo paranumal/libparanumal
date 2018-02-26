@@ -1,14 +1,14 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannLSERKStep2D(mesh2D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
    mesh->shiftIndex = 0; 	
 
   // LSERK4 stages
-  for(iint rk=0;rk<mesh->Nrk;++rk){
+  for(int rk=0;rk<mesh->Nrk;++rk){
 
     // intermediate stage time
     dfloat t = mesh->startTime + tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
@@ -18,7 +18,7 @@ void boltzmannLSERKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       mesh->device.setStream(dataStream);
     #endif
 
-    iint Nentries = mesh->Np*mesh->Nfields;
+    int Nentries = mesh->Np*mesh->Nfields;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,

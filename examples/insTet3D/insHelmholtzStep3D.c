@@ -1,14 +1,14 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep3D(ins_t *ins, iint tstep, const char* options){
+void insHelmholtzStep3D(ins_t *ins, int tstep, const char* options){
   
   mesh3D *mesh = ins->mesh; 
   solver_t *solver = ins->vSolver; 
   
   dfloat t = tstep*ins->dt + ins->dt;
   
-  iint offset = mesh->Nelements+mesh->totalHaloPairs;
+  int offset = mesh->Nelements+mesh->totalHaloPairs;
   int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
   
   
@@ -100,7 +100,7 @@ void insHelmholtzStep3D(ins_t *ins, iint tstep, const char* options){
   }
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  iint Ntotal = offset*mesh->Np;
+  int Ntotal = offset*mesh->Np;
   ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));

@@ -25,8 +25,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   meshPhysicalNodesTet3D(mesh);
 
   // create halo extension for x,y arrays
-  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  iint localNodes     = mesh->Nelements*mesh->Np;
+  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  int localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -50,10 +50,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   free(mesh->z);
   free(sendBuffer);
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 
@@ -61,8 +61,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DtT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
       DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
@@ -70,8 +70,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   }
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
@@ -87,10 +87,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
     mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
-        for (iint k=0;k<mesh->Np;k++) {
-          for (iint l=0;l<mesh->Np;l++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        for (int k=0;k<mesh->Np;k++) {
+          for (int l=0;l<mesh->Np;l++) {
             mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
             mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
@@ -137,17 +137,17 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
       mesh->MM);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
 
 
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
-  iint totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
@@ -190,11 +190,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(int)==4){
+    kernelInfo.addDefine("int","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(int)==8){
+    kernelInfo.addDefine("int","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -465,7 +465,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -482,7 +482,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
 
   //use the bc flags to find masked ids
   solver->Nmasked = 0;
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1E9) {
       solver->mapB[n] = 0.;
     } else if (solver->mapB[n] == 1) { //Dirichlet boundary
@@ -491,12 +491,12 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   }
   solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
   
-  solver->maskIds = (iint *) calloc(solver->Nmasked, sizeof(iint));
+  solver->maskIds = (int *) calloc(solver->Nmasked, sizeof(int));
   solver->Nmasked =0; //reset
-  for (iint n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
   }
-  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(iint), solver->maskIds);
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(int), solver->maskIds);
 
   free(DrT); free(DsT); free(DtT); free(LIFTT);
 

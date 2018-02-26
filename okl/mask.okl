@@ -3,7 +3,7 @@ kernel void mask(const int Nmasked,
                  const int    * restrict maskIds,
                        dfloat * restrict q){
 
-  for(iint n=0;n<Nmasked;++n;tile(256)){
+  for(int n=0;n<Nmasked;++n;tile(256)){
     if(n<Nmasked){
       q[maskIds[n]] = 0.;
     }

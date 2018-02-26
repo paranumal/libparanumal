@@ -1,6 +1,6 @@
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insSubCycleCubatureVolume3D(const iint Nelements,
+kernel void insSubCycleCubatureVolume3D(const int Nelements,
                                         const dfloat * restrict vgeo,
                                         const dfloat * restrict cubDrWT,
                                         const dfloat * restrict cubDsWT,
@@ -16,7 +16,7 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
                                                   dfloat * restrict rhsV,
                                                   dfloat * restrict rhsW){
 
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_cubNblockV][p_Np];
@@ -39,11 +39,11 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
     shared dfloat s_cF32[p_cubNblockV][p_cubNp];
     shared dfloat s_cF33[p_cubNblockV][p_cubNp];
     //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-        const iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+        const int e = eo+es; // element in block
         if(e<Nelements && n<p_Np){ 
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
           
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -76,16 +76,16 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-        iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+        int e = eo+es; // element in block
         if(e<Nelements && n<p_cubNp){
 
           dfloat  cU = 0.f,  cV = 0.f,  cW = 0.f;
           dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat cIni = cubInterpT[n+i*p_cubNp];
               cU  += cIni*s_U[es][i];
               cV  += cIni*s_V[es][i];
@@ -114,17 +114,17 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){           
-        const iint e = eo+es;
+    for(int es=0;es<p_cubNblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){           
+        const int e = eo+es;
 
         if(e<Nelements && n<p_Np){        
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
 
           dfloat fluxU = 0., fluxV = 0., fluxW = 0.;
 
           occaUnroll(p_cubNp)
-            for(iint i=0;i<p_cubNp;++i){
+            for(int i=0;i<p_cubNp;++i){
               const dfloat cDrWni = cubDrWT[n+i*p_Np];
               const dfloat cDsWni = cubDsWT[n+i*p_Np];
               const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -152,13 +152,13 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 }
 
 
-kernel void insSubCycleCubatureSurface3D(const iint Nelements,
+kernel void insSubCycleCubatureSurface3D(const int Nelements,
                                          const dfloat * restrict sgeo,
                                          const dfloat * restrict intInterpT, // interpolate to integration nodes
                                          const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                         const iint   * restrict vmapM,
-                                         const iint   * restrict vmapP,
-                                         const iint   * restrict EToB,
+                                         const int   * restrict vmapM,
+                                         const int   * restrict vmapP,
+                                         const int   * restrict EToB,
                                          const dfloat bScale,
                                          const dfloat time,
                                          const dfloat * restrict intx, // integration nodes
@@ -175,7 +175,7 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
                                          dfloat * restrict rhsW){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
@@ -197,16 +197,16 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
     shared dfloat s_iFluxW[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
+            const int id  = e*p_Nfp*p_Nfaces + n;
 
-            iint idM = vmapM[id];
-            iint idP = vmapP[id];
+            int idM = vmapM[id];
+            int idP = vmapP[id];
 
             if(idP<0) idP = idM;
             // load negative and positive trace node values of velocity
@@ -231,15 +231,15 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat nz   = sgeo[sid+p_NZID];
@@ -253,9 +253,9 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
 
                 iUM  += iInm*s_UM[es][fm];
                 iVM  += iInm*s_VM[es][fm];
@@ -273,7 +273,7 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
               }
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions3D(bc,time, intx[n+e*p_Nfaces*p_intNfp], \
                                                         inty[n+e*p_Nfaces*p_intNfp], \
@@ -315,12 +315,12 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -347,7 +347,7 @@ kernel void insSubCycleCubatureSurface3D(const iint Nelements,
 
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insSubCycleVolume3D(const iint Nelements,
+kernel void insSubCycleVolume3D(const int Nelements,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict DrT,
                                 const dfloat * restrict DsT,
@@ -362,7 +362,7 @@ kernel void insSubCycleVolume3D(const iint Nelements,
                                       dfloat * restrict rhsV,
                                       dfloat * restrict rhsW){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
     shared dfloat s_F11[p_NblockV][p_Np];
@@ -377,11 +377,11 @@ kernel void insSubCycleVolume3D(const iint Nelements,
     shared dfloat s_F32[p_NblockV][p_Np];
     shared dfloat s_F33[p_NblockV][p_Np];
     
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        const iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const int e = eo+es; // element in block
         if(e<Nelements){ 
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
 
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -426,15 +426,15 @@ kernel void insSubCycleVolume3D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){      
-        const iint e = eo+es; 
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){      
+        const int e = eo+es; 
         if(e<Nelements){    
-          const iint id = e*p_Np+n;
+          const int id = e*p_Np+n;
           dfloat fluxU = 0., fluxV = 0., fluxW = 0.;
          
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
               const dfloat Dtni = DtT[n+i*p_Np];
@@ -462,12 +462,12 @@ kernel void insSubCycleVolume3D(const iint Nelements,
 }
 
 //
-kernel void insSubCycleSurface3D(const iint Nelements,
+kernel void insSubCycleSurface3D(const int Nelements,
                                 const dfloat * restrict sgeo,
                                 const dfloat * restrict LIFTT,
-                                const iint   * restrict vmapM,
-                                const iint   * restrict vmapP,
-                                const iint   * restrict EToB,
+                                const int   * restrict vmapM,
+                                const int   * restrict vmapP,
+                                const int   * restrict EToB,
                                 const dfloat bScale,
                                 const dfloat time,
                                 const dfloat * restrict x,
@@ -484,22 +484,22 @@ kernel void insSubCycleSurface3D(const iint Nelements,
                                       dfloat * restrict rhsW){
 
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxV[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxW[p_NblockS][p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
             const int face = n/p_Nfp;
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat nz   = sgeo[sid+p_NZID];
@@ -507,9 +507,9 @@ kernel void insSubCycleSurface3D(const iint Nelements,
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id];
-                  iint idP = vmapP[id];
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id];
+                  int idP = vmapP[id];
 
             if(idP<0) idP = idM; 
             // load negative and positive trace node values of Ux, Uy, Pr
@@ -567,12 +567,12 @@ kernel void insSubCycleSurface3D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = e*p_Np + n;
+            const int id = e*p_Np + n;
            
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -597,7 +597,7 @@ kernel void insSubCycleSurface3D(const iint Nelements,
 }
 
 
-kernel void insSubCycleRKUpdate3D(const iint Nelements,
+kernel void insSubCycleRKUpdate3D(const int Nelements,
                                   const dfloat dt,  
                                   const dfloat rka,
                                   const dfloat rkb,
@@ -612,10 +612,10 @@ kernel void insSubCycleRKUpdate3D(const iint Nelements,
                                         dfloat * restrict W){
 
   // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
 
-      const iint id = n + e*p_Np;
+      const int id = n + e*p_Np;
 
       const dfloat rhsu = -rhsU[id];
       const dfloat rhsv = -rhsV[id];
@@ -648,9 +648,9 @@ kernel void insSubCycleRKUpdate3D(const iint Nelements,
 }
 
 
-kernel void insSubCycleExt3D(const iint Nelements,
-                             const iint index,
-                             const iint offset,
+kernel void insSubCycleExt3D(const int Nelements,
+                             const int index,
+                             const int offset,
                              const dfloat c0,
                              const dfloat c1,
                              const dfloat c2, 
@@ -662,16 +662,16 @@ kernel void insSubCycleExt3D(const iint Nelements,
                                    dfloat * restrict We){
 
   // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
 
-      const iint index0 = (index+0)%3;
-      const iint index1 = (index+2)%3; //back one step
-      const iint index2 = (index+1)%3; //back two steps
+      const int index0 = (index+0)%3;
+      const int index1 = (index+2)%3; //back one step
+      const int index2 = (index+1)%3; //back two steps
 
-      const iint id0   = n + p_Np*(e+index0*offset);
-      const iint id1   = n + p_Np*(e+index1*offset);
-      const iint id2   = n + p_Np*(e+index2*offset);
+      const int id0   = n + p_Np*(e+index0*offset);
+      const int id1   = n + p_Np*(e+index1*offset);
+      const int id2   = n + p_Np*(e+index2*offset);
 
       const dfloat Um0  = U[id0];
       const dfloat Um1  = U[id1];
@@ -685,7 +685,7 @@ kernel void insSubCycleExt3D(const iint Nelements,
       const dfloat Wm1  = W[id1];
       const dfloat Wm2  = W[id2];
       
-      const iint id = n+e*p_Np;
+      const int id = n+e*p_Np;
       Ue[id] = c0*Um0 + c1*Um1 + c2*Um2;
       Ve[id] = c0*Vm0 + c1*Vm1 + c2*Vm2;
       We[id] = c0*Wm0 + c1*Wm1 + c2*Wm2;

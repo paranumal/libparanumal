@@ -1,69 +1,69 @@
 
-kernel void innerProduct(const iint N,
+kernel void innerProduct(const int N,
 			 const dfloat * restrict w,
 			 const dfloat * restrict x,
 			 dfloat * restrict wx){
   
 
-  for(iint b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
     volatile shared dfloat s_wx[p_blockSize];
 
-    for(iint t=0;t<p_blockSize;++t;inner0){
-      const iint id = t + b*p_blockSize;
+    for(int t=0;t<p_blockSize;++t;inner0){
+      const int id = t + b*p_blockSize;
       s_wx[t] = (id<N) ? (w[id]*x[id]) : 0.f;
     }
 
     barrier(localMemFence);
 
 #if p_blockSize>512
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
     barrier(localMemFence);
 #endif
 
 #if p_blockSize>256
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
     barrier(localMemFence);
 #endif
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
   }
 }
 
-kernel void innerProductAtomic(const iint N,
-			       const iint Nblocks,
+kernel void innerProductAtomic(const int N,
+			       const int Nblocks,
 			       const dfloat * restrict w,
 			       const dfloat * restrict x,
 			       dfloat * restrict wx){
   
 
-  for(iint b=0;b<Nblocks;++b;outer0){
+  for(int b=0;b<Nblocks;++b;outer0){
     
     volatile shared dfloat s_wx[p_blockSize];
 
-    for(iint t=0;t<p_blockSize;++t;inner0){
-      iint id = t + b*p_blockSize;
+    for(int t=0;t<p_blockSize;++t;inner0){
+      int id = t + b*p_blockSize;
       dfloat tmp  = 0;
       while(id<N){
 	tmp += w[id]*x[id];
@@ -75,30 +75,30 @@ kernel void innerProductAtomic(const iint N,
     barrier(localMemFence);
 
 #if p_blockSize>512
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
     barrier(localMemFence);
 #endif
 
 #if p_blockSize>256
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
     barrier(localMemFence);
 #endif
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
 
-    for(iint t=0;t<p_blockSize;++t;inner0)
+    for(int t=0;t<p_blockSize;++t;inner0)
       if(t<  1){
 	dfloat res = s_wx[0]+s_wx[1];
 	atomicAdd(wx,res);

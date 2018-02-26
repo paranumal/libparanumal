@@ -16,42 +16,42 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, iint *nnz, ogs_t **ogs, iint *globalStarts, const char* options) {
+void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, int *nnz, ogs_t **ogs, int *globalStarts, const char* options) {
 
   mesh3D *mesh = solver->mesh;
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   /* Setup description of the MPI_NONZERO_T struct */
   MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype oldtypes[3] = {MPI_IINT, MPI_DFLOAT, MPI_INT};
+  MPI_Datatype oldtypes[3] = {MPI_INT, MPI_DFLOAT, MPI_INT};
   int blockcounts[3] = {2, 1, 1};
 
-  MPI_Aint dfloatext, iintext;
-  MPI_Type_extent(MPI_IINT, &iintext);
+  MPI_Aint dfloatext, intext;
+  MPI_Type_extent(MPI_INT, &intext);
   MPI_Type_extent(MPI_DFLOAT, &dfloatext);
-  MPI_Aint  nonzeroEntryoffsets[3] = {0, 2*iintext, 2*iintext+dfloatext};
+  MPI_Aint  nonzeroEntryoffsets[3] = {0, 2*intext, 2*intext+dfloatext};
 
   /* Now define structured type and commit it */
   MPI_Type_struct(3, blockcounts, nonzeroEntryoffsets, oldtypes, &MPI_NONZERO_T);
   MPI_Type_commit(&MPI_NONZERO_T);
 
   /* Build a gather-scatter to assemble the global masked problem */
-  iint Ntotal = mesh->Np*mesh->Nelements;
+  int Ntotal = mesh->Np*mesh->Nelements;
 
-  iint *globalNumbering = (iint *) calloc(Ntotal,sizeof(iint));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(iint)); 
-  for (iint n=0;n<solver->Nmasked;n++) 
+  int *globalNumbering = (int *) calloc(Ntotal,sizeof(int));
+  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(int)); 
+  for (int n=0;n<solver->Nmasked;n++) 
     globalNumbering[solver->maskIds[n]] = -1;
 
   // squeeze node numbering
   meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
 
-  iint *gatherMaskedBaseIds   = (iint *) calloc(Ntotal,sizeof(iint));
-  for (iint n=0;n<Ntotal;n++) {
-    iint id = mesh->gatherLocalIds[n];
+  int *gatherMaskedBaseIds   = (int *) calloc(Ntotal,sizeof(int));
+  for (int n=0;n<Ntotal;n++) {
+    int id = mesh->gatherLocalIds[n];
     gatherMaskedBaseIds[n] = globalNumbering[id];
   }
 
@@ -62,23 +62,23 @@ void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A
                                         mesh->gatherBaseRanks, mesh->gatherHaloFlags, verbose);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
+  int nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (iint n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
+  for (int n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
 
   //Build unassembed non-zeros
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
-  iint cnt =0;
+  int cnt =0;
   #pragma omp parallel for
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
 
     dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
     dfloat Grs = mesh->ggeo[e*mesh->Nggeo + G01ID];
@@ -88,9 +88,9 @@ void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A
     dfloat Gtt = mesh->ggeo[e*mesh->Nggeo + G22ID];
     dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
-    for (iint n=0;n<mesh->Np;n++) {
+    for (int n=0;n<mesh->Np;n++) {
       if (mask[e*mesh->Np + n]) continue; //skip masked nodes
-      for (iint m=0;m<mesh->Np;m++) {
+      for (int m=0;m<mesh->Np;m++) {
         if (mask[e*mesh->Np + m]) continue; //skip masked nodes
         dfloat val = 0.;
 
@@ -122,18 +122,18 @@ void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += 1;
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r];
@@ -151,7 +151,7 @@ void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<*nnz;++n){
+  for(int n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;

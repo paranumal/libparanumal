@@ -2,9 +2,9 @@
 #include "mesh2D.h"
 
 typedef struct {
-  iint localId;
-  iint baseId;
-  iint baseRank;
+  int localId;
+  int baseId;
+  int baseRank;
 }parallelGatherNode_t;
 
 void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
@@ -13,10 +13,10 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
   parallelGatherNode_t *parallelGatherNodes =
     (parallelGatherNode_t*) calloc(mesh->Np*mesh->Nelements, sizeof(parallelGatherNode_t));
   
-  iint *gatherSendCounts = (iint*) calloc(size, sizeof(iint));
+  int *gatherSendCounts = (int*) calloc(size, sizeof(int));
   
   int cnt = 0;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
     if(r!=rank){
 	parallelGatherNodes[lnode].localId       = n+e*mesh->Np;
 	parallelGatherNodes[lnode].baseLocalId = gid-cumulativeNlocalNodes[r];
@@ -34,9 +34,9 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
 	sizeof(parallelGatherNode_t), compareParallelGatherNodes);
 
   // extract: ordered list of local node indices for gather
-  iint *gatherBaseIds = (iint*) calloc(NgatherAllSend, sizeof(iint));
-  iint *gatherSendIds  = (iint*) calloc(NgatherAllSend, sizeof(iint));
-  for(iint n=0;n<NgatherAllSend;++n){
+  int *gatherBaseIds = (int*) calloc(NgatherAllSend, sizeof(int));
+  int *gatherSendIds  = (int*) calloc(NgatherAllSend, sizeof(int));
+  for(int n=0;n<NgatherAllSend;++n){
     // ids of nodes to send
     gatherSendIds[n] = parallelGatherNodes[n].localId;
     
@@ -45,26 +45,26 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
   }
   
   // all processes tell all processes how many nodes to receive
-  iint *gatherRecvCounts = (iint*) calloc(size,sizeof(iint));
-  MPI_Alltoall(gatherSendCounts, 1, MPI_IINT,
-	       gatherRecvCounts, 1, MPI_IINT,
+  int *gatherRecvCounts = (int*) calloc(size,sizeof(int));
+  MPI_Alltoall(gatherSendCounts, 1, MPI_INT,
+	       gatherRecvCounts, 1, MPI_INT,
 	       MPI_COMM_WORLD);
 
   // form arrays for all to all (variable length)
-  iint *gatherRecvDispls = (iint*) calloc(size,sizeof(iint));
-  iint *gatherSendDispls = (iint*) calloc(size,sizeof(iint));
-  for(iint r=1;r<size;++r){
+  int *gatherRecvDispls = (int*) calloc(size,sizeof(int));
+  int *gatherSendDispls = (int*) calloc(size,sizeof(int));
+  for(int r=1;r<size;++r){
     gatherRecvDispls[r] = gatherRecvDispls[r-1]+gatherRecvCounts[r-1];
     gatherSendDispls[r] = gatherSendDispls[r-1]+gatherSendCounts[r-1];
   }
 
-  iint NgatherAllRecv = 0;
-  for(iint r=0;r<size;++r)
+  int NgatherAllRecv = 0;
+  for(int r=0;r<size;++r)
     NgatherAllRecv += gatherRecvCounts[r];
   
-  iint *gatherRecvIds = (iint*) calloc(NgatherAllRecv, sizeof(iint));
-  MPI_Alltoallv(gatherBaseIds, gatherBaseCounts, gatherSendDispls, MPI_IINT,
-		gatherRecvIds,   gatherRecvCounts,   gatherRecvDispls, MPI_IINT, MPI_COMM_WORLD);
+  int *gatherRecvIds = (int*) calloc(NgatherAllRecv, sizeof(int));
+  MPI_Alltoallv(gatherBaseIds, gatherBaseCounts, gatherSendDispls, MPI_INT,
+		gatherRecvIds,   gatherRecvCounts,   gatherRecvDispls, MPI_INT, MPI_COMM_WORLD);
 
   mesh->gatherNsend = NgatherAllSend;
   mesh->gatherNrecv = NgatherAllRecv;
@@ -75,13 +75,13 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
   mesh->gatherSendDispls = gatherSendDispls;
   mesh->gatherRecvDispls = gatherRecvDispls;
 
-  iint cnt = 0, sendMessage = 0, recvMessage = 0;
-  for(iint r=0;r<size;++r){
+  int cnt = 0, sendMessage = 0, recvMessage = 0;
+  for(int r=0;r<size;++r){
     if(r!=rank){
       // send 
       if(mesh->gatherNsend[r]>0){
-	for(iint n=0;n<mesh->gatherNsend[r];++n){
-	  iint id = mesh->gatherSendIds[cnt];
+	for(int n=0;n<mesh->gatherNsend[r];++n){
+	  int id = mesh->gatherSendIds[cnt];
 	  memcpy(((char*)sendBuffer)+cnt*Nbytes, ((char*)sourceBuffer)+id*Nbytes, Nbytes);
 	  ++cnt;
 	}
@@ -110,10 +110,10 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
 
   // add incoming to sourceBuffer
   cnt = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     if(r!=rank){
-      for(iint n=0;n<mesh->gatherNrecv[r];++n){
-	iint id = mesh->gatherRecvIds[cnt];
+      for(int n=0;n<mesh->gatherNrecv[r];++n){
+	int id = mesh->gatherRecvIds[cnt];
 	sourceBuffer[id] += recvBuffer[cnt];
 	++cnt;
       }
@@ -121,13 +121,13 @@ void meshParallelGatherScatterSetupQuad2D(mesh2D *mesh){
   }
 
   // now send back
-  iint cnt = 0, sendMessage = 0, recvMessage = 0;
-  for(iint r=0;r<size;++r){
+  int cnt = 0, sendMessage = 0, recvMessage = 0;
+  for(int r=0;r<size;++r){
     if(r!=rank){
       // send 
       if(mesh->gatherNsend[r]>0){
-	for(iint n=0;n<mesh->gatherNsend[r];++n){
-	  iint id = mesh->gatherSendIds[cnt];
+	for(int n=0;n<mesh->gatherNsend[r];++n){
+	  int id = mesh->gatherSendIds[cnt];
 	  memcpy(((char*)sendBuffer)+cnt*Nbytes, ((char*)sourceBuffer)+id*Nbytes, Nbytes);
 	  ++cnt;
 	}

@@ -22,7 +22,7 @@ void insRun3D(ins_t *ins, char *options){
   double tic_vel = 0.f, toc_vel = 0.f;
   double tic_upd = 0.f, toc_upd = 0.f;
 
-  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1){
       //advection, first order in time, increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
@@ -107,11 +107,11 @@ void insRun3D(ins_t *ins, char *options){
     
 #if 0
     if(tstep<1){
-      iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+      int Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt   = (tstep+1)*ins->dt;
-     for(iint e=0;e<mesh->Nelements;++e){
-        for(iint n=0;n<mesh->Np;++n){
-          iint id = n + mesh->Np*e;
+     for(int e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          int id = n + mesh->Np*e;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
           dfloat z = mesh->z[id];

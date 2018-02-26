@@ -4,32 +4,32 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
-                        dfloat *MS, iint eM, dfloat *A);
+void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *MS, int eM, dfloat *A);
 
-void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, iint *BCType, dfloat rateTolerance,
-                                   iint *Npatches, iint **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
     basisNp = mesh->Np;
     basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
-    for(iint n=0;n<basisNp;++n){
+    for(int n=0;n<basisNp;++n){
       basis[n+n*basisNp] = 1;
     }
   }
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
-  for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Nfp;n++) {
-      iint fn = mesh->faceNodes[f*mesh->Nfp+n];
+  for (int f=0;f<mesh->Nfaces;f++) {
+    for (int n=0;n<mesh->Nfp;n++) {
+      int fn = mesh->faceNodes[f*mesh->Nfp+n];
 
-      for (iint m=0;m<mesh->Nfp;m++) {
+      for (int m=0;m<mesh->Nfp;m++) {
         dfloat MSnm = 0;
 
-        for (iint i=0;i<mesh->Np;i++){
+        for (int i=0;i<mesh->Np;i++){
           MSnm += mesh->MM[fn+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
         }
 
@@ -61,15 +61,15 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint bas
   refMesh->EX[2] = V3x;  refMesh->EY[2] = V3y; refMesh->EZ[2] = V3z;
   refMesh->EX[3] = V4x;  refMesh->EY[3] = V4y; refMesh->EZ[3] = V4z;
 
-  refMesh->EToV = (iint*) calloc(mesh->Nverts, sizeof(iint));
+  refMesh->EToV = (int*) calloc(mesh->Nverts, sizeof(int));
 
   refMesh->EToV[0] = 0;
   refMesh->EToV[1] = 1;
   refMesh->EToV[2] = 2;
   refMesh->EToV[3] = 3;
 
-  refMesh->EToB = (iint*) calloc(mesh->Nfaces,sizeof(iint));
-  for (iint n=0;n<mesh->Nfaces;n++) refMesh->EToB[n] = 0;
+  refMesh->EToB = (int*) calloc(mesh->Nfaces,sizeof(int));
+  for (int n=0;n<mesh->Nfaces;n++) refMesh->EToB[n] = 0;
 
   meshConnect(refMesh);
   meshLoadReferenceNodesTet3D(refMesh, mesh->N);
@@ -80,7 +80,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint bas
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  *patchesIndex = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -95,30 +95,30 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint bas
   dfloat maxCond =0.;
 
   // loop over all elements
-  for(iint eM=0;eM<mesh->Nelements;++eM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
     BuildLocalPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
-    iint eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    iint eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    iint eP2 = mesh->EToE[eM*mesh->Nfaces+2];
-    iint eP3 = mesh->EToE[eM*mesh->Nfaces+3];
+    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    int eP3 = mesh->EToE[eM*mesh->Nfaces+3];
 
-    iint fP0 = mesh->EToF[eM*mesh->Nfaces+0];
-    iint fP1 = mesh->EToF[eM*mesh->Nfaces+1];
-    iint fP2 = mesh->EToF[eM*mesh->Nfaces+2];
-    iint fP3 = mesh->EToF[eM*mesh->Nfaces+3];
+    int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
+    int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
+    int fP2 = mesh->EToF[eM*mesh->Nfaces+2];
+    int fP3 = mesh->EToF[eM*mesh->Nfaces+3];
 
     if(eP0>=0 && eP1>=0 && eP2>=0 && eP3>=0){ //check if this is an interior patch
 
       refPatchInvA = *patchesInvA;
 
       //hit the patch with the reference inverse
-      for(iint n=0;n<mesh->Np;++n){
-        for(iint m=0;m<mesh->Np;++m){
+      for(int n=0;n<mesh->Np;++n){
+        for(int m=0;m<mesh->Np;++m){
           invRefAA[n*mesh->Np+m] = 0.;
-          for (iint k=0;k<mesh->Np;k++) {
+          for (int k=0;k<mesh->Np;k++) {
             invRefAA[n*mesh->Np+m] += refPatchInvA[n*mesh->Np+k]*patchA[k*mesh->Np+m];
           }
         }
@@ -143,9 +143,9 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint bas
     matrixInverse(mesh->Np, patchA);
 
     //copy inverse into patchesInvA
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){
-        iint id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        int id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
         (*patchesInvA)[id] = patchA[n*mesh->Np+m];
       }
     }
@@ -164,10 +164,10 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, iint bas
 }
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
-                        dfloat *MS, iint eM, dfloat *A) {
+void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *MS, int eM, dfloat *A) {
 
-  iint vbase = eM*mesh->Nvgeo;
+  int vbase = eM*mesh->Nvgeo;
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -193,8 +193,8 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
 
 
   /* start with stiffness matrix  */
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Np;++m){
 
       A[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
       A[n*mesh->Np+m] += J*G00*mesh->Srr[n*mesh->Np+m];
@@ -211,16 +211,16 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
 
   //add the rank boost for the allNeumann Poisson problem
   if (solver->allNeumann) {
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){ 
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){ 
         A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
       }
     }
   }
 
-  for (iint fM=0;fM<mesh->Nfaces;fM++) {
+  for (int fM=0;fM<mesh->Nfaces;fM++) {
     // load surface geofactors for this face
-    iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat nz = mesh->sgeo[sid+NZID];
@@ -232,7 +232,7 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
     dfloat penalty = tau*hinv;
 
     int bcD = 0, bcN =0;
-    iint bcType = 0;
+    int bcType = 0;
 
     if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
@@ -249,10 +249,10 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
     dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
     // penalty term just involves face nodes
-    for(iint n=0;n<mesh->Nfp;++n){
-      for(iint m=0;m<mesh->Nfp;++m){
-        iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
-        iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+    for(int n=0;n<mesh->Nfp;++n){
+      for(int m=0;m<mesh->Nfp;++m){
+        int nM = mesh->faceNodes[fM*mesh->Nfp+n];
+        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
         // OP11 = OP11 + 0.5*( gtau*mmE )
         dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
@@ -261,12 +261,12 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
     }
 
     // now add differential surface terms
-    for(iint n=0;n<mesh->Nfp;++n){
-      for(iint m=0;m<mesh->Np;++m){
-        iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
+    for(int n=0;n<mesh->Nfp;++n){
+      for(int m=0;m<mesh->Np;++m){
+        int nM = mesh->faceNodes[fM*mesh->Nfp+n];
 
-        for(iint i=0;i<mesh->Nfp;++i){
-          iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+        for(int i=0;i<mesh->Nfp;++i){
+          int iM = mesh->faceNodes[fM*mesh->Nfp+i];
 
           dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
@@ -282,12 +282,12 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
       }
     }
 
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Nfp;++m){
-        iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Nfp;++m){
+        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
-        for(iint i=0;i<mesh->Nfp;++i){
-          iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+        for(int i=0;i<mesh->Nfp;++i){
+          int iM = mesh->faceNodes[fM*mesh->Nfp+i];
 
           dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
 

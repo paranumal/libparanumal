@@ -6,9 +6,9 @@ kernel void ellipticAddBCTet3D(const int Nelements,
                               const int    * restrict mapB,
                               dfloat  * restrict q){
   
-  for(iint e=0;e<Nelements;e++;outer0){
+  for(int e=0;e<Nelements;e++;outer0){
     for(int n=0;n<p_Np;++n;inner0){
-      const iint id = n+e*p_Np;
+      const int id = n+e*p_Np;
       const int bc = mapB[n+e*p_Np];
 
       dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;

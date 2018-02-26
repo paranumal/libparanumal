@@ -1,17 +1,17 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
+void insAdvectionSubCycleStep3D(ins_t *ins, int tstep, const char *options){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh3D *mesh = ins->mesh;
 
-  const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
-  const iint Ntotal         =  NtotalElements*mesh->Np;  
+  const int NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+  const int Ntotal         =  NtotalElements*mesh->Np;  
 
-  const iint voffset = 0; 
+  const int voffset = 0; 
   // field offset at this step
-  iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  int offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
@@ -69,7 +69,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
     dfloat c0 = 0.f, c1 = 0.f, c2 = 0.f;
     
     dfloat zero = 0.0, one = 1.0;
-    iint izero = 0;
+    int izero = 0;
 
     dfloat b, bScale=0;
 
@@ -84,7 +84,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
 
       // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
       const int sindex = (ins->index + 3 - torder)%3; 
-      iint offset = sindex*Ntotal;
+      int offset = sindex*Ntotal;
       if (torder==ins->ExplicitOrder-1) { //first substep
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_U, zero, izero, o_Ud);
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_V, zero, izero, o_Vd);
@@ -98,9 +98,9 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
       // SubProblem  starts from here from t^(n-torder)
       const dfloat tsub = tstep*ins->dt - torder*ins->dt;
       // Advance SubProblem to t^(n-torder+1) 
-      for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
+      for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
         const dfloat tstage = tsub + ststep*ins->sdt;     
-        for(iint rk=0;rk<mesh->Nrk;++rk){// LSERK4 stages
+        for(int rk=0;rk<mesh->Nrk;++rk){// LSERK4 stages
           // Extrapolate velocity to subProblem stage time
           dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
 
@@ -300,7 +300,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, iint tstep, const char *options){
                             ins->o_Pz);
  
   if (strstr(ins->pSolverOptions,"IPDG")) {
-    const iint solverid = 0; // Pressure Solve
+    const int solverid = 0; // Pressure Solve
     // Compute Surface Conribution
     ins->gradientSurfaceKernel(mesh->Nelements,
                                mesh->o_sgeo,

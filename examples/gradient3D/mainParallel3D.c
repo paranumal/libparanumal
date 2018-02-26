@@ -41,9 +41,9 @@ int main(int argc, char **argv){
   dfloat *dqdz = (dfloat*) calloc(mesh->Nelements*mesh->Np,
 				  sizeof(dfloat));
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       q[cnt] = mesh->z[cnt];
       ++cnt;
     }
@@ -63,8 +63,8 @@ int main(int argc, char **argv){
   // estimate pointwise error at interpolation nodes
   dfloat maxError = 0;
   cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       maxError = mymax(maxError, fabs(dqdz[cnt]-1));
       ++cnt;
     }

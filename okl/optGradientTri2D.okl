@@ -1,16 +1,16 @@
 
 // A very bad gradient kernel, 
 kernel void ellipticPartialGradientTri2D_v0(int Nelements,
-         iint offset,
+         int offset,
          dfloat *vgeo,
          dfloat *DrT, 
          dfloat *DsT,
          dfloat *q,
          dfloat4 *gradq){
   
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      iint element = e+offset; 
+  for(int e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      int element = e+offset; 
       //
       dfloat drdx = vgeo[p_Nvgeo*element+p_RXID];
       dfloat drdy = vgeo[p_Nvgeo*element+p_RYID];
@@ -20,7 +20,7 @@ kernel void ellipticPartialGradientTri2D_v0(int Nelements,
       //
       dfloat qr = 0.f, qs = 0.f;
 
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
         qr += DrT[n + i*p_Np]*q[i+element*p_Np];
         qs += DsT[n + i*p_Np]*q[i+element*p_Np];
       }
@@ -30,7 +30,7 @@ kernel void ellipticPartialGradientTri2D_v0(int Nelements,
       gradqn.y = drdy*qr + dsdy*qs;
       gradqn.w = q[n+element*p_Np];
       
-      iint id = element*p_Np+n; 
+      int id = element*p_Np+n; 
       gradq[id] = gradqn;
     }
   }
@@ -39,25 +39,25 @@ kernel void ellipticPartialGradientTri2D_v0(int Nelements,
 
 
 kernel void ellipticPartialGradientTri2D_v1(int Nelements,
-         iint offset,
+         int offset,
          dfloat *vgeo,
          dfloat *DrT, 
          dfloat *DsT,
          dfloat *q,
          dfloat4 *gradq){
   
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_q[p_Np];
 
-     for(iint n=0;n<p_Np;++n;inner0){
-      iint id = n + (e+offset)*p_Np;
+     for(int n=0;n<p_Np;++n;inner0){
+      int id = n + (e+offset)*p_Np;
       s_q[n] = q[id];
     }
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;inner0){
 
       dfloat drdx = vgeo[p_Nvgeo*e+p_RXID];
       dfloat drdy = vgeo[p_Nvgeo*e+p_RYID];
@@ -66,7 +66,7 @@ kernel void ellipticPartialGradientTri2D_v1(int Nelements,
 
       dfloat qr = 0.f, qs = 0.f;
 
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
         qr += DrT[n + i*p_Np]*s_q[i];
         qs += DsT[n + i*p_Np]*s_q[i];
       }
@@ -76,7 +76,7 @@ kernel void ellipticPartialGradientTri2D_v1(int Nelements,
       gradqn.y = drdy*qr + dsdy*qs;
       gradqn.w = s_q[n];
       
-      iint id = (e+offset)*p_Np+n; 
+      int id = (e+offset)*p_Np+n; 
       gradq[id] = gradqn;
     }
   }
@@ -85,25 +85,25 @@ kernel void ellipticPartialGradientTri2D_v1(int Nelements,
 
 
 kernel void ellipticPartialGradientTri2D_v2(int Nelements,
-         const iint offset,
+         const int offset,
          const dfloat * restrict vgeo,
          const dfloat * restrict DrT, 
          const dfloat * restrict DsT,
          const dfloat * restrict q,
               dfloat4 * restrict gradq){
   
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_q[p_Np];
 
-     for(iint n=0;n<p_Np;++n;inner0){
-      const iint id = n + (e+offset)*p_Np;
+     for(int n=0;n<p_Np;++n;inner0){
+      const int id = n + (e+offset)*p_Np;
       s_q[n] = q[id];
     }
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;inner0){
 
       const dfloat drdx = vgeo[p_Nvgeo*e+p_RXID];
       const dfloat drdy = vgeo[p_Nvgeo*e+p_RYID];
@@ -112,7 +112,7 @@ kernel void ellipticPartialGradientTri2D_v2(int Nelements,
 
       dfloat qr = 0.f, qs = 0.f;
       occaUnroll(p_Np)
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
         qr += DrT[n + i*p_Np]*s_q[i];
         qs += DsT[n + i*p_Np]*s_q[i];
       }
@@ -122,7 +122,7 @@ kernel void ellipticPartialGradientTri2D_v2(int Nelements,
       gradqn.y = drdy*qr + dsdy*qs;
       gradqn.w = s_q[n];
       
-      const iint id = (e+offset)*p_Np+n; 
+      const int id = (e+offset)*p_Np+n; 
       gradq[id] = gradqn;
     }
   }
@@ -173,22 +173,22 @@ kernel void ellipticPartialGradientTri2D_v2(int Nelements,
 
 // Add multiple element
 kernel void ellipticPartialGradientTri2D_v3(int Nelements,
-         const iint offset,
+         const int offset,
          const dfloat * restrict vgeo,
          const dfloat * restrict DrT, 
          const dfloat * restrict DsT,
          const dfloat * restrict q,
               dfloat4 * restrict gradq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_Nblock;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_Nblock;outer0){
 
     shared dfloat s_q[p_Nblock][p_Np];
 
-    for(iint es=0; es<p_Nblock; ++es; inner1){
-      const iint e = es+eo+offset; 
+    for(int es=0; es<p_Nblock; ++es; inner1){
+      const int e = es+eo+offset; 
       if(e<Nelements){
-        for(iint n=0;n<p_Np; ++n; inner0){
-          const iint id = n + e*p_Np;
+        for(int n=0;n<p_Np; ++n; inner0){
+          const int id = n + e*p_Np;
           s_q[es][n] = q[id];
         }
      }
@@ -196,10 +196,10 @@ kernel void ellipticPartialGradientTri2D_v3(int Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_Nblock; ++es; inner1){
-      const iint e = es + eo+ offset; 
+    for(int es=0;es<p_Nblock; ++es; inner1){
+      const int e = es + eo+ offset; 
       if(e<Nelements){
-        for(iint n=0;n<p_Np;++n;inner0){
+        for(int n=0;n<p_Np;++n;inner0){
 
           const dfloat drdx = vgeo[p_Nvgeo*e+p_RXID];
           const dfloat drdy = vgeo[p_Nvgeo*e+p_RYID];
@@ -209,7 +209,7 @@ kernel void ellipticPartialGradientTri2D_v3(int Nelements,
           dfloat qr = 0.f, qs = 0.f;
 
           occaUnroll(p_Np)
-          for(iint i=0;i<p_Np;++i){
+          for(int i=0;i<p_Np;++i){
             qr += DrT[n + i*p_Np]*s_q[es][i];
             qs += DsT[n + i*p_Np]*s_q[es][i];
           }
@@ -219,7 +219,7 @@ kernel void ellipticPartialGradientTri2D_v3(int Nelements,
           gradqn.y = drdy*qr + dsdy*qs;
           gradqn.w = s_q[es][n];
 
-          const iint id = e*p_Np+n; 
+          const int id = e*p_Np+n; 
           gradq[id] = gradqn;
         }
       }
@@ -283,24 +283,24 @@ kernel void ellipticPartialGradientTri2D_v3(int Nelements,
 
 // map multiple nodes to thread
 kernel void ellipticPartialGradientTri2D_v4(int Nelements,
-         const iint offset,
+         const int offset,
          const dfloat * restrict vgeo,
          const dfloat * restrict DrT, 
          const dfloat * restrict DsT,
          const dfloat * restrict q,
               dfloat4 * restrict gradq){
   
-  for(iint eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
+  for(int eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
 
     shared dfloat s_q[p_Nmt][p_NbV][p_Np];
 
-    for(iint es=0; es<p_NbV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0; es<p_NbV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){    
-          const iint e = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){    
+          const int e = eo+es*p_Nmt + em+offset; 
             if(e<Nelements){
-              const iint id = n + e*p_Np;
+              const int id = n + e*p_Np;
               s_q[em][es][n] = q[id];
             }
           }  
@@ -309,8 +309,8 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NbV; ++es; inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NbV; ++es; inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         dfloat qr[p_Nmt], qs[p_Nmt];
 
         // hold geometric factors on register
@@ -318,8 +318,8 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
         dfloat drdy[p_Nmt], dsdy[p_Nmt];
         
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){ 
-          const iint e = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){ 
+          const int e = eo+es*p_Nmt + em+offset; 
           qr[em] = 0.f;
           qs[em] = 0.f;
           //
@@ -330,12 +330,12 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
         }
 
         occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
+        for(int i=0;i<p_Np;++i){
           dfloat drt = DrT[n + i*p_Np];
           dfloat dst = DsT[n + i*p_Np];
 
           occaUnroll(p_Nmt)
-          for(iint em=0;em<p_Nmt;++em){ 
+          for(int em=0;em<p_Nmt;++em){ 
 
           qr[em] += drt*s_q[em][es][i];
           qs[em] += dst*s_q[em][es][i];
@@ -346,10 +346,10 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
         dfloat4 gradqn;
 
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){ 
-         const iint e  = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){ 
+         const int e  = eo+es*p_Nmt + em+offset; 
          if(e<Nelements){ 
-           const iint id = e*p_Np+n; 
+           const int id = e*p_Np+n; 
            gradqn.x = drdx[em]*qr[em] + dsdx[em]*qs[em];
            gradqn.y = drdy[em]*qr[em] + dsdy[em]*qs[em];
            gradqn.w = s_q[em][es][n];
@@ -420,30 +420,30 @@ kernel void ellipticPartialGradientTri2D_v4(int Nelements,
 // same with v4 but use shared memory for geometric factors instead of 
 // register memory
 kernel void ellipticPartialGradientTri2D_v5(int Nelements,
-         const iint offset,
+         const int offset,
          const dfloat * restrict vgeo,
          const dfloat * restrict DrT, 
          const dfloat * restrict DsT,
          const dfloat * restrict q,
               dfloat4 * restrict gradq){
   
-  for(iint eo=0;eo<Nelements;eo+=(p_NbV2*p_Nmt2);outer0){
+  for(int eo=0;eo<Nelements;eo+=(p_NbV2*p_Nmt2);outer0){
 
     shared dfloat s_q[p_Nmt2][p_NbV2][p_Np];
     shared dfloat s_vgeo[p_Nmt2][p_NbV2][p_Nvgeo];
 
-    for(iint es=0; es<p_NbV2;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0; es<p_NbV2;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         occaUnroll(p_Nmt2)
-        for(iint em=0;em<p_Nmt2;++em){    
-          const iint e = eo+es*p_Nmt2 + em+offset; 
+        for(int em=0;em<p_Nmt2;++em){    
+          const int e = eo+es*p_Nmt2 + em+offset; 
             if(e<Nelements){
-              const iint id = n + e*p_Np;
+              const int id = n + e*p_Np;
               s_q[em][es][n] = q[id];
             }
           } 
 
-        iint m = n;
+        int m = n;
         while(m<p_Nvgeo*p_Nmt2*p_NbV2){
           s_vgeo[0][0][m] = vgeo[eo*p_Nvgeo + m];
           m+=p_Np*p_NbV2;
@@ -453,23 +453,23 @@ kernel void ellipticPartialGradientTri2D_v5(int Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NbV2; ++es; inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NbV2; ++es; inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         dfloat qr[p_Nmt2], qs[p_Nmt2];  
         occaUnroll(p_Nmt2)
-        for(iint em=0;em<p_Nmt2;++em){ 
-          const iint e = eo+es*p_Nmt2 + em+offset; 
+        for(int em=0;em<p_Nmt2;++em){ 
+          const int e = eo+es*p_Nmt2 + em+offset; 
           qr[em] = 0.f;
           qs[em] = 0.f;
         }
 
         occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
+        for(int i=0;i<p_Np;++i){
           dfloat drt = DrT[n + i*p_Np];
           dfloat dst = DsT[n + i*p_Np];
 
           occaUnroll(p_Nmt2)
-          for(iint em=0;em<p_Nmt2;++em){ 
+          for(int em=0;em<p_Nmt2;++em){ 
             qr[em] += drt*s_q[em][es][i];
             qs[em] += dst*s_q[em][es][i];
          }
@@ -478,10 +478,10 @@ kernel void ellipticPartialGradientTri2D_v5(int Nelements,
         dfloat4 gradqn;
 
         occaUnroll(p_Nmt2)
-        for(iint em=0;em<p_Nmt2;++em){ 
-         const iint e  = eo+es*p_Nmt2 + em+offset; 
+        for(int em=0;em<p_Nmt2;++em){ 
+         const int e  = eo+es*p_Nmt2 + em+offset; 
          if(e<Nelements){ 
-           const iint id = e*p_Np+n; 
+           const int id = e*p_Np+n; 
            gradqn.x = s_vgeo[em][es][p_RXID]*qr[em] + s_vgeo[em][es][p_SXID]*qs[em];
            gradqn.y = s_vgeo[em][es][p_RYID]*qr[em] + s_vgeo[em][es][p_SYID]*qs[em];
            gradqn.w = s_q[em][es][n];
@@ -504,24 +504,24 @@ kernel void ellipticPartialGradientTri2D_v5(int Nelements,
 
 // use dfloat2 for Dr 
 kernel void ellipticPartialGradientTri2D_v6(int Nelements,
-         const iint offset,
+         const int offset,
          const dfloat * restrict vgeo,
          const dfloat2 * restrict DrsT,  // Assume Dr, Ds are packed into Drs
          const dfloat * restrict DsT,
          const dfloat * restrict q,
               dfloat4 * restrict gradq){
   
-  for(iint eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
+  for(int eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
 
     shared dfloat s_q[p_Nmt][p_NbV][p_Np];
 
-    for(iint es=0; es<p_NbV;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0; es<p_NbV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){    
-          const iint e = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){    
+          const int e = eo+es*p_Nmt + em+offset; 
             if(e<Nelements){
-              const iint id = n + e*p_Np;
+              const int id = n + e*p_Np;
               s_q[em][es][n] = q[id];
             }
           }  
@@ -530,8 +530,8 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NbV; ++es; inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NbV; ++es; inner1){
+      for(int n=0;n<p_Np;++n;inner0){
         dfloat qr[p_Nmt], qs[p_Nmt];
 
         // hold geometric factors on register
@@ -539,8 +539,8 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
         dfloat drdy[p_Nmt], dsdy[p_Nmt];
         
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){ 
-          const iint e = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){ 
+          const int e = eo+es*p_Nmt + em+offset; 
           qr[em] = 0.f;
           qs[em] = 0.f;
           //
@@ -551,10 +551,10 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
         }
 
         occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
+        for(int i=0;i<p_Np;++i){
           const dfloat2 drst = DrsT[n+i*p_Np];
           occaUnroll(p_Nmt)
-          for(iint em=0;em<p_Nmt;++em){ 
+          for(int em=0;em<p_Nmt;++em){ 
           qr[em] += drst.x*s_q[em][es][i];
           qs[em] += drst.y*s_q[em][es][i];
          }
@@ -564,10 +564,10 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
         dfloat4 gradqn;
 
         occaUnroll(p_Nmt)
-        for(iint em=0;em<p_Nmt;++em){ 
-         const iint e  = eo+es*p_Nmt + em+offset; 
+        for(int em=0;em<p_Nmt;++em){ 
+         const int e  = eo+es*p_Nmt + em+offset; 
          if(e<Nelements){ 
-           const iint id = e*p_Np+n; 
+           const int id = e*p_Np+n; 
            gradqn.x = drdx[em]*qr[em] + dsdx[em]*qs[em];
            gradqn.y = drdy[em]*qr[em] + dsdy[em]*qs[em];
            gradqn.w = s_q[em][es][n];
@@ -587,7 +587,7 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
 
 
 // kernel void ellipticPartialGradientTri2D(const int Nelements,
-//                                   const iint offset,
+//                                   const int offset,
 //                                   const dfloat * restrict vgeo,
 //                                   const dfloat * restrict const DrT,
 //                                   const dfloat * restrict const DsT,
@@ -595,23 +595,23 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
 //                                   dfloat4 * restrict gradq){  
   
 //   // block partition of elements
-//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     
 //     shared dfloat s_q[p_NblockV][p_Np];
 //     shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
 //     shared dfloat s_DrT[p_Np][p_Np];
 //     shared dfloat s_DsT[p_Np][p_Np];
 
-//     for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-//       for(iint n=0;n<p_Np;++n;inner0){
+//     for(int e=eo;e<eo+p_NblockV;++e;inner1){
+//       for(int n=0;n<p_Np;++n;inner0){
 //         if(e<Nelements){
 //           // prefetch q
-//           const iint id = (e+offset)*p_Np+n;
+//           const int id = (e+offset)*p_Np+n;
 //           s_q[e-eo][n] = q[id];
 //         }
         
 //         // coalesce volume geofac reads to shared
-//         iint t = n + p_Np*(e-eo);
+//         int t = n + p_Np*(e-eo);
 //         while(t<p_Nvgeo*p_NblockV){
 //           if(eo*p_Nvgeo+t<Nelements*p_Nvgeo)
 //             s_vgeo[0][t] = vgeo[(eo+offset)*p_Nvgeo+t];
@@ -629,19 +629,19 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
     
 //     barrier(localMemFence);
 
-//     for(iint e=eo;e<eo+p_NblockV;++e;inner1){
-//       for(iint n=0;n<p_Np;++n;inner0){
+//     for(int e=eo;e<eo+p_NblockV;++e;inner1){
+//       for(int n=0;n<p_Np;++n;inner0){
 //         if(e<Nelements){
-//           const iint es = e-eo;
+//           const int es = e-eo;
 
 //           // compute 1D derivatives
 //           dfloat qr = 0, qs = 0;
 
 //           occaUnroll(p_Np)
-//             for(iint i=0;i<p_Np;++i)
+//             for(int i=0;i<p_Np;++i)
 //               qr += s_DrT[i][n]*s_q[es][i];
 //           occaUnroll(p_Np)
-//             for(iint i=0;i<p_Np;++i)
+//             for(int i=0;i<p_Np;++i)
 //               qs += s_DsT[i][n]*s_q[es][i];
           
 //           dfloat4 gradqn;
@@ -649,7 +649,7 @@ kernel void ellipticPartialGradientTri2D_v6(int Nelements,
 //           gradqn.y = drdy*qr + dsdy*qs;
 //           gradqn.w = s_q[es][n];
           
-//           const iint id = (e+offset)*p_Np+n; 
+//           const int id = (e+offset)*p_Np+n; 
 //           gradq[id] = gradqn;
 //         }
 //       }
