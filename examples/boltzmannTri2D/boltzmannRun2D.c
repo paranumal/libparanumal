@@ -102,58 +102,110 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
    
   }
 
-
 printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, mesh->NtimeSteps, mesh->dt);
+
+
+
+
+double tic_tot = 0.f, elp_tot = 0.f; 
+double tic_sol = 0.f, elp_sol = 0.f; 
+double tic_out = 0.f, elp_out = 0.f;
+
+
+
 occa::initTimer(mesh->device);
+occaTimerTic(mesh->device,"BOLTZMANN");
 
-
-  // VOLUME KERNELS
-    mesh->device.finish();
-    occa::tic("Boltzmann Solver");
-
+tic_tot = MPI_Wtime();
  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-  //for(iint tstep=0;tstep<10;++tstep){
+      
 
-     if(strstr(options, "REPORT")){
-      if((tstep%mesh->errorStep)==0){
-        boltzmannReport2D(mesh, tstep, options);
+      tic_out = MPI_Wtime();
+
+      if(strstr(options, "REPORT")){
+        if((tstep%mesh->errorStep)==0){
+          boltzmannReport2D(mesh, tstep, options);
+        }
       }
-     }
+
+      elp_out += (MPI_Wtime() - tic_out);
+
+      
+      tic_sol = MPI_Wtime();
+
       if(strstr(options, "MRAB")){
+       occaTimerTic(mesh->device, "MRAB"); 
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+       occaTimerToc(mesh->device, "MRAB"); 
       }
 
       if(strstr(options, "MRSAAB")){
-      boltzmannMRSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerTic(mesh->device, "MRSAAB"); 
+        boltzmannMRSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
       if(strstr(options, "SRAB")){
-
-      boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerTic(mesh->device, "SRAB"); 
+        boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "SRAB"); 
       }
 
       if(strstr(options, "SRSAAB")){
+        occaTimerTic(mesh->device, "SRSAAB"); 
         boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "SRSAAB"); 
       }
 
-       if(strstr(options, "LSERK")){ 
-      boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+      if(strstr(options, "LSERK")){
+        occaTimerTic(mesh->device, "LSERK");  
+        boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "LSERK");  
       }
 
        if(strstr(options, "SARK")){
-      boltzmannSARKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerTic(mesh->device, "SARK");  
+        boltzmannSARKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "SARK");  
       }
 
-       if(strstr(options, "LSIMEX")){
-      boltzmannLSIMEXStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
-      }    
+      if(strstr(options, "LSIMEX")){
+        occaTimerTic(mesh->device, "LSIMEX");  
+        boltzmannLSIMEXStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        occaTimerToc(mesh->device, "LSIMEX");  
+      } 
 
+      elp_sol += (MPI_Wtime() - tic_sol);
+
+  }
+
+  elp_tot += (MPI_Wtime() - tic_tot);    
+  occaTimerToc(mesh->device, "BOLTZMANN");
+
+  // compute maximum over all processes
+  double gelp_tot  = 0.f, gelp_sol = 0.f, gelp_out = 0.f;
+
+  MPI_Allreduce(&elp_tot, &gelp_tot, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&elp_out, &gelp_out, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&elp_sol, &gelp_sol, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+
+  int rank, size; 
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  if(rank==0){
+    printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
+    printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size,gelp_tot, gelp_sol, gelp_out); 
+
+    char fname[BUFSIZ]; sprintf(fname, "boltzmannScaling2D.dat");
+    FILE *fp; fp = fopen(fname, "a");
+    fprintf(fp, "%2d %2d %.5e %.5e %.5e\n", mesh->N,size,gelp_tot, gelp_sol, gelp_out); 
+    fclose(fp);
   }
 
 
 
-mesh->device.finish();
-occa::toc("Boltzmann Solver");
  
 printf("writing Final data\n");  
 // For Final Time
