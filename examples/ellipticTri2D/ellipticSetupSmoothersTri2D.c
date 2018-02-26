@@ -155,7 +155,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
     degree[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
-  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg, o_deg);
+  meshParallelGatherScatter(mesh, precon->ogsDg, o_deg);
   o_deg.copyTo(degree);
   mesh->device.finish();
   o_deg.free();
@@ -578,7 +578,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level,const char* options){
     gsParallelGatherScatter(mesh->hostGsh, Vx, dfloatString, "add"); 
     if (strstr(options,"SPARSE")) for (int n=0;n<mesh->Nelements*mesh->Np;n++) Vx[n] *= mesh->mapSgn[n];
   
-    for (int i=0;i<mesh->Nmasked;i++) Vx[mesh->maskIds[i]] = 0.;
+    for (int i=0;i<solver->Nmasked;i++) Vx[solver->maskIds[i]] = 0.;
   }
 
   o_Vx.copyFrom(Vx); //copy to device

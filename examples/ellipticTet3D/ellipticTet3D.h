@@ -23,12 +23,6 @@ typedef struct {
 
   ogs_t *ogsDg;
 
-  // C0 halo gather-scatter info
-  ogs_t *halo;
-
-  // C0 nonhalo gather-scatter info
-  ogs_t *nonHalo;
-
   char *type;
 
   int Nblock;

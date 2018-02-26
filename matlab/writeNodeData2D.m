@@ -129,7 +129,7 @@ VB1D = bern_basis_1D(N,r1D);
 [L0vals,ELids,ELvals] = bern_basis_lift2D(N,V,VB,r,s);
 
 invVB = inv(VB);
-
+keyboard
 %write out the BB operators
 writeFloatMatrix(fid, VB, 'Bernstein-Bezier Vandermonde Matrix');
 writeFloatMatrix(fid, invVB, 'Bernstein-Bezier Inverse Vandermonde Matrix');

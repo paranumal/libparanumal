@@ -545,9 +545,9 @@ void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
 
   /* start with stiffness matrix  */
   for(int n=0;n<mesh->Np;++n){
-    if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
+    if (solver->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
       for(int m=0;m<mesh->Np;++m){
-        if (mesh->mapB[m+eM*mesh->Np]!=1) {//dont fill rows for masked nodes
+        if (solver->mapB[m+eM*mesh->Np]!=1) {//dont fill rows for masked nodes
           A[n*mesh->Np+m] = J*lambda*MM[m+n*mesh->Np];
           A[n*mesh->Np+m] += Grr*Srr[m+n*mesh->Np];
           A[n*mesh->Np+m] += Grs*Srs[m+n*mesh->Np];
@@ -564,9 +564,9 @@ void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
   //add the rank boost for the allNeumann Poisson problem
   if (solver->allNeumann) {
     for(int n=0;n<mesh->Np;++n){
-      if (mesh->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
+      if (solver->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
         for(int m=0;m<mesh->Np;++m){
-          if (mesh->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
+          if (solver->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
           A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
         }
       } 

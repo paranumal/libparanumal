@@ -52,7 +52,7 @@ typedef struct {
   int dim;
   int Nverts, Nfaces, NfaceVertices;
 
-  dlong Nnodes;
+  hlong Nnodes;
   dfloat *EX; // coordinates of vertices for each element
   dfloat *EY;
   dfloat *EZ;
@@ -67,8 +67,8 @@ typedef struct {
   int *elementInfo; //type of element
 
   // boundary faces
-  dlong NboundaryFaces; // number of boundary faces
-  int *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
+  hlong NboundaryFaces; // number of boundary faces
+  hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
 
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange

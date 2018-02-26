@@ -16,7 +16,9 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz, ogs_t **ogs, int *globalStarts, const char* options) {
+void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A, int *nnz, ogs_t **ogs, int *globalStarts, const char* options) {
+
+  mesh2D *mesh = solver->mesh;
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -27,8 +29,8 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, in
 
   int *globalNumbering = (int *) calloc(Ntotal,sizeof(int));
   memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(int)); 
-  for (int n=0;n<mesh->Nmasked;n++) 
-    globalNumbering[mesh->maskIds[n]] = -1;
+  for (int n=0;n<solver->Nmasked;n++) 
+    globalNumbering[solver->maskIds[n]] = -1;
 
   // squeeze node numbering
   meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
@@ -87,7 +89,7 @@ void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, in
   }
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (int n=0;n<mesh->Nmasked;n++) mask[mesh->maskIds[n]] = 1;
+  for (int n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
 
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 

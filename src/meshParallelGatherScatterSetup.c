@@ -109,7 +109,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(ogs->NhaloGather*sizeof(dfloat), NULL);
     ogs->haloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc(ogs->NhaloGather*sizeof(dfloat), sizeof(char));
     
-    ogs->o_haloGatherTmp      = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat),           ogs->haloGatherTmp);
+    ogs->o_haloGatherTmp      = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat),  ogs->haloGatherTmp);
     ogs->o_haloGatherOffsets  = mesh->device.malloc((ogs->NhaloGather+1)*sizeof(int), ogs->haloGatherOffsets);
     ogs->o_haloGatherLocalIds = mesh->device.malloc(Nhalo*sizeof(int),                ogs->haloGatherLocalIds);
 
