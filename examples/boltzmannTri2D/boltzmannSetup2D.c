@@ -44,7 +44,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 30.0; // Was 200  
+    mesh->finalTime = 0.001; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
