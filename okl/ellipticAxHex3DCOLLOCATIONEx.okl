@@ -197,7 +197,10 @@ kernel void ellipticAxHex3D_Ref2D1(const iint Nelements,
 				for (iint k=0; k<p_Nq; k++){
 				
 					//		s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
+<<<<<<< HEAD
 					
+=======
+>>>>>>> master
 					Aq[base + k*p_Nq*p_Nq] = 0.f;
 				}
 				
@@ -303,7 +306,22 @@ kernel void ellipticAxHex3D_Ref2D1(const iint Nelements,
 		}
 		//	}//for k ()
 		
+<<<<<<< HEAD
 		
+=======
+		/*		barrier(localMemFence);
+		
+				// write result out (local node storage)
+				for(iint j=0; j<p_Nq; ++j; inner1) {
+					for(iint i=0; i<p_Nq; ++i; inner0) {
+		
+						for (iint k=0; k<p_Nq; k++){
+							int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+							Aq[base] = s_Aq[k][j][i];
+						}
+					}
+				}*/
+>>>>>>> master
 	}
 	
 } //e1c
@@ -341,10 +359,17 @@ kernel void ellipticAxHex3D_Ref2D2(const iint Nelements,
 				for (iint k=0; k<p_Nq; k++){
 				
 					//		s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
+<<<<<<< HEAD
 					//			Aq[base + k*p_Nq*p_Nq] = 0.f;
 				}
 				
 				//	s_D[j][i] = D[j*p_Nq+i];
+=======
+					Aq[base + k*p_Nq*p_Nq] = 0.f;
+				}
+				
+				s_D[j][i] = D[j*p_Nq+i];
+>>>>>>> master
 				
 			}
 		}
@@ -451,11 +476,30 @@ kernel void ellipticAxHex3D_Ref2D2(const iint Nelements,
 		}
 		//	}//for k ()
 		
+<<<<<<< HEAD
+=======
+		/*		barrier(localMemFence);
+		
+				// write result out (local node storage)
+				for(iint j=0; j<p_Nq; ++j; inner1) {
+					for(iint i=0; i<p_Nq; ++i; inner0) {
+		
+						for (iint k=0; k<p_Nq; k++){
+							int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+							Aq[base] = s_Aq[k][j][i];
+						}
+					}
+				}*/
+>>>>>>> master
 	}
 	
 } //e1c
 
+<<<<<<< HEAD
 /*
+=======
+
+>>>>>>> master
 //Ref1 + unrolling + k as external loop
 kernel void ellipticAxHex3D_Ref2D3(const iint Nelements,
                                    const iint * restrict elementList,
@@ -600,7 +644,22 @@ kernel void ellipticAxHex3D_Ref2D3(const iint Nelements,
 		}
 		//	}//for k ()
 		
+<<<<<<< HEAD
 		
+=======
+		/*		barrier(localMemFence);
+		
+				// write result out (local node storage)
+				for(iint j=0; j<p_Nq; ++j; inner1) {
+					for(iint i=0; i<p_Nq; ++i; inner0) {
+		
+						for (iint k=0; k<p_Nq; k++){
+							int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+							Aq[base] = s_Aq[k][j][i];
+						}
+					}
+				}*/
+>>>>>>> master
 	}
 	
 } //e1c
@@ -749,7 +808,22 @@ kernel void ellipticAxHex3D_Ref2D4(const iint Nelements,
 		}
 		//	}//for k ()
 		
+<<<<<<< HEAD
 		
+=======
+		/*		barrier(localMemFence);
+		
+				// write result out (local node storage)
+				for(iint j=0; j<p_Nq; ++j; inner1) {
+					for(iint i=0; i<p_Nq; ++i; inner0) {
+		
+						for (iint k=0; k<p_Nq; k++){
+							int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+							Aq[base] = s_Aq[k][j][i];
+						}
+					}
+				}*/
+>>>>>>> master
 	}
 	
 } //e1c
@@ -841,7 +915,15 @@ kernel void ellipticAxHex3D_Ref2D5(const iint Nelements,
 					//		(k,j,i) -> i + j*p_Nq + k*p_Nq*p_Nq+emap*p_Np
 					dfloat qr = 0.f, qs = 0.f;
 					for(iint n=0; n<p_Nq; ++n) {
+<<<<<<< HEAD
 					
+=======
+						/*
+							qr += s_D[i][n]*s_tmpq[k][j][n];
+													qs += s_D[j][n]*s_tmpq[k][n][i];
+													qt += s_D[k][n]*s_tmpq[n][j][i];
+						*/
+>>>>>>> master
 						qr += s_D[i][n]*s_q[k][j][n];
 						qs += s_D[j][n]*s_q[k][n][i];
 					}
@@ -898,7 +980,22 @@ kernel void ellipticAxHex3D_Ref2D5(const iint Nelements,
 		}
 		//	}//for k ()
 		
+<<<<<<< HEAD
 		
+=======
+		/*		barrier(localMemFence);
+		
+				// write result out (local node storage)
+				for(iint j=0; j<p_Nq; ++j; inner1) {
+					for(iint i=0; i<p_Nq; ++i; inner0) {
+		
+						for (iint k=0; k<p_Nq; k++){
+							int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+							Aq[base] = s_Aq[k][j][i];
+						}
+					}
+				}*/
+>>>>>>> master
 	}
 	
 } //e1c
@@ -1302,7 +1399,11 @@ kernel void ellipticAxHex3D_Ref2D8(const iint Nelements,
 } //e1c
 
 
+<<<<<<< HEAD
 //very optimized version from tcew/CEEDBP3
+=======
+/*very optimized version from tcew/CEEDBP3*/
+>>>>>>> master
 
 kernel void ellipticAxHex3D_Ref2D10(const iint Nelements,
                                     const iint * restrict elementList,
@@ -1332,11 +1433,19 @@ kernel void ellipticAxHex3D_Ref2D10(const iint Nelements,
 		for(int j=0;j<p_Nq;++j;inner1){
 			for(int i=0;i<p_Nq;++i;inner0){
 				emap=elementList[e];
+<<<<<<< HEAD
 				//load D into local memory 
 				// s_D[i][j] = d \phi_i at node j
 				s_D[j][i] = D[p_Nq*j+i]; // D is column major
 				
 				// load pencil of u into register 
+=======
+				/* load D into local memory */
+				// s_D[i][j] = d \phi_i at node j
+				s_D[j][i] = D[p_Nq*j+i]; // D is column major
+				
+				/* load pencil of u into register */
+>>>>>>> master
 				const iint base = i + j*p_Nq + emap*p_Np;
 				for(int k = 0; k < p_Nq; k++) {
 					//	unsigned int id = e*BSIZE+k*p_Nq*p_Nq+j*p_Nq+i;
@@ -1444,9 +1553,15 @@ kernel void ellipticAxHex3D_Ref2D10(const iint Nelements,
 		}
 	}
 }
+<<<<<<< HEAD
 */
 
 //this is shmem REd version
+=======
+
+
+/*this is shmem REd version*/
+>>>>>>> master
 
 kernel void ellipticAxHex3D_Ref2D11(const iint Nelements,
                                     const iint * restrict elementList,
@@ -1476,11 +1591,19 @@ kernel void ellipticAxHex3D_Ref2D11(const iint Nelements,
 		for(int j=0;j<p_Nq;++j;inner1){
 			for(int i=0;i<p_Nq;++i;inner0){
 				emap=elementList[e];
+<<<<<<< HEAD
 				// load D into local memory
 				// s_D[i][j] = d \phi_i at node j
 				s_D[j][i] = D[p_Nq*j+i]; // D is column major
 				
 				// load pencil of u into register
+=======
+				/* load D into local memory */
+				// s_D[i][j] = d \phi_i at node j
+				s_D[j][i] = D[p_Nq*j+i]; // D is column major
+				
+				/* load pencil of u into register */
+>>>>>>> master
 				const iint base = i + j*p_Nq + emap*p_Np;
 				for(int k = 0; k < p_Nq; k++) {
 					//	unsigned int id = e*BSIZE+k*p_Nq*p_Nq+j*p_Nq+i;
@@ -1531,11 +1654,19 @@ kernel void ellipticAxHex3D_Ref2D11(const iint Nelements,
 					
 					r_ut = 0;
 					
+<<<<<<< HEAD
 					occaUnroll(p_halfD)
 					for(int m = 0; m < p_halfD; m++) {
 						dfloat shD = s_D[k][m];
 						r_ut += shD*r_u[m];
 						r_ut += -shD*r_u[p_Nq-m-1];
+=======
+					occaUnroll(p_Nq)
+					for(int m = 0; m < p_Nq; m++) {
+						dfloat shD = s_D[k][m];
+						r_ut += shD*r_u[m];
+						//		r_ut += -shD*r_u[p_Nq-m-1];
+>>>>>>> master
 					}
 				}
 			}
@@ -1623,6 +1754,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
+<<<<<<< HEAD
                                 
 	for(iint e=0; e<Nelements; ++e; outer0) {
 	
@@ -1661,11 +1793,52 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 		  
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
 		  
+=======
+
+	for(iint e=0; e<Nelements; ++e; outer0) {
+
+		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		shared dfloat s_D[p_Nq][p_Nq];
+
+		exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
+		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+
+		// prefetch q(:,:,:,e) to shared
+		cubeThreads {
+		  const iint base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
+
+		  s_q[k][j][i] = q[base];
+
+		  if(k==0) // fetch D to shared
+		  s_D[j][i] = D[j*p_Nq+i];
+		}
+
+		barrier(localMemFence);
+
+		cubeThreads {
+
+		  const iint base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+		  // assumes w*J built into G entries
+		  r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+		  r_G00 = ggeo[base+p_G00ID*p_Np];
+		  r_G01 = ggeo[base+p_G01ID*p_Np];
+		  r_G02 = ggeo[base+p_G02ID*p_Np];
+
+		  r_G11 = ggeo[base+p_G11ID*p_Np];
+		  r_G12 = ggeo[base+p_G12ID*p_Np];
+		  r_G22 = ggeo[base+p_G22ID*p_Np];
+
+		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
+
+>>>>>>> master
 		  for(iint n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
 			  qt += s_D[k][n]*s_q[n][j][i];
 		  }
+<<<<<<< HEAD
 		  
 		  r_qr = qr; r_qs = qs; r_qt = qt;
 		  
@@ -1681,10 +1854,28 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 		
 		barrier(localMemFence);
 		
+=======
+
+		  r_qr = qr; r_qs = qs; r_qt = qt;
+
+		  r_Aq = r_GwJ*lambda*s_q[k][j][i];
+		}
+
+		// r term ----->
+		barrier(localMemFence);
+
+		cubeThreads {
+		  s_q[k][j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_qt;
+		}
+
+		barrier(localMemFence);
+
+>>>>>>> master
 		cubeThreads {
 		  dfloat tmp = 0.f;
 		  for(iint n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][i]*s_q[k][j][n];
+<<<<<<< HEAD
 		  
 		  r_Aq += tmp;
 		}
@@ -1698,10 +1889,26 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 		
 		barrier(localMemFence);
 		
+=======
+
+		  r_Aq += tmp;
+		}
+
+		// s term ---->
+		barrier(localMemFence);
+
+		cubeThreads {
+		  s_q[k][j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_qt;
+		}
+
+		barrier(localMemFence);
+
+>>>>>>> master
 		cubeThreads {
 		  dfloat tmp = 0.f;
 		  for(iint n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][j]*s_q[k][n][i];
+<<<<<<< HEAD
 		  
 		  r_Aq += tmp;
 		}
@@ -1715,13 +1922,34 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 		
 		barrier(localMemFence);
 		
+=======
+
+		  r_Aq += tmp;
+		}
+
+		// t term ---->
+		barrier(localMemFence);
+
+		cubeThreads {
+		  s_q[k][j][i] = r_G02*r_qr + r_G12*r_qs + r_G22*r_qt;
+		}
+
+		barrier(localMemFence);
+
+>>>>>>> master
 		cubeThreads {
 		  dfloat tmp = 0.f;
 		  for(iint n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][k]*s_q[n][j][i];
+<<<<<<< HEAD
 		  
 		  r_Aq += tmp;
 		  
+=======
+
+		  r_Aq += tmp;
+
+>>>>>>> master
 		  iint base =  elementList[e]*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 		  Aq[base] = r_Aq;
 		}

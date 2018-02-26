@@ -19,8 +19,8 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
-		 	
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."'
+
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
@@ -48,23 +48,30 @@ $(ALMONDDIR)/parALMOND.h \
 
 # list of objects to be compiled
 AOBJS    = \
+PCG.o \
+PGMRES.o \
+PBiCGStab.o \
 ellipticSetupTri2D.o \
 ellipticPreconditionerSetupTri2D.o\
 ellipticCoarsePreconditionerSetupTri2D.o\
 ellipticPreconditionerTri2D.o\
+loadElementStiffnessMatricesTri2D.o\
+buildElementStiffnessMatricesTri2D.o\
 ellipticSolveTri2D.o\
 ellipticSolveSetupTri2D.o\
 ellipticHaloExchange2D.o\
 ellipticParallelGatherScatterTri2D.o \
 ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTri2D.o \
+ellipticBuildBRdgTri2D.o \
 ellipticBuildContinuousTri2D.o \
-ellipticBuildFullPatchesIpdgTri2D.o \
-ellipticBuildFacePatchesIpdgTri2D.o \
-ellipticBuildJacobiIpdgTri2D.o \
-ellipticBuildLocalPatchesIpdgTri2D.o \
+ellipticBuildFullPatchesTri2D.o \
+ellipticBuildFacePatchesTri2D.o \
+ellipticBuildJacobiTri2D.o \
+ellipticBuildLocalPatchesTri2D.o \
 ellipticBuildMultigridLevelTri2D.o \
 ellipticMultiGridSetupTri2D.o \
+ellipticSEMFEMSetupTri2D.o\
 ellipticSetupSmoothersTri2D.o \
 ellipticSmoothersTri2D.o
 

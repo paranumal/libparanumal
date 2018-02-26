@@ -34,7 +34,7 @@ void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
   precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
 }
 
-dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
+dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* options) {
 
   //TODO We can build the coarsen matrix either from the interRaise or interpLower matrices. Need to check which is better
 
@@ -66,6 +66,25 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc) {
         }
       }
     }
+  }
+
+  if (strstr(options,"BERN")) {
+    dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+    for (iint j=0;j<NpFine;j++) {
+      for (iint i=0;i<NpCoarse;i++) {
+        for (iint k=0;k<NpCoarse;k++) {
+          for (iint l=0;l<NpFine;l++) {
+            BBP[i+j*NpCoarse] += meshLevels[N]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
+          }
+        }
+      }
+    }
+    for (iint j=0;j<NpFine;j++) {
+      for (iint i=0;i<NpCoarse;i++) {
+        P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
+      }
+    }
+    free(BBP);
   }
 
   //the coarsen matrix is P^T
@@ -175,14 +194,32 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       nonZero_t *coarseA;
       iint nnzCoarseA;
       hgs_t *coarsehgs;
-      dfloat *V1;
+
+      int basisNp = solverL->mesh->Np;
+      dfloat *basis = NULL;
+
+      if (strstr(options,"BERN")) basis = solverL->mesh->VB;
 
       iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
-      ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
-                                             &V1, &coarseA, &nnzCoarseA,
-                                             &coarsehgs, coarseGlobalStarts, options);
+      if (strstr(options,"IPDG")) {
+        ellipticBuildIpdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      } else if (strstr(options,"BRDG")) {
+        ellipticBuildBRdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+      } else if (strstr(options,"CONTINUOUS")) {
+        ellipticBuildContinuousTri2D(solverL->mesh,lambda,&coarseA,&nnzCoarseA,&coarsehgs,coarseGlobalStarts, options);
+      }
 
+      // Build coarse grid element basis functions
+      dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
+      for(iint n=0;n<mesh->Np;++n){
+        dfloat rn = mesh->r[n];
+        dfloat sn = mesh->s[n];
+
+        V1[0*mesh->Np+n] = -0.5*(rn+sn);
+        V1[1*mesh->Np+n] = +0.5*(1.+rn);
+        V1[2*mesh->Np+n] = +0.5*(1.+sn);
+      }
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
       iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
@@ -203,10 +240,10 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
                          Cols,
                          Vals,
                          solver->allNeumann,
-                         solver->allNeumannPenalty,
-                         coarsehgs);
+                         solver->allNeumannPenalty);
 
       free(coarseA); free(Rows); free(Cols); free(Vals);
+
     } else {
       //build the level manually
       precon->parAlmond->numLevels++;
@@ -226,7 +263,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     levels[n]->Nrows = mesh->Nelements*solverL->mesh->Np;
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
-    
+
     if (strstr(options,"CHEBYSHEV")) {
       levels[n]->device_smooth = smoothChebyshevTri2D;
 
@@ -255,18 +292,16 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
 
     //set up the fine problem smoothing
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      }
+    if(strstr(options, "OVERLAPPINGPATCH")){
+      ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+    } else if(strstr(options, "FULLPATCH")){
+      ellipticSetupSmootherFullPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "FACEPATCH")){
+      ellipticSetupSmootherFacePatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "LOCALPATCH")){
+      ellipticSetupSmootherLocalPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else { //default to damped jacobi
+      ellipticSetupSmootherDampedJacobi(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
     }
 
     //reallocate vectors at N=1 since we're using the matrix free ops
@@ -302,7 +337,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     int N = levelDegree[n-1];
     int Nc = levelDegree[n];
 
-    R[n] = buildCoarsenerTri2D(meshLevels, N, Nc);
+    R[n] = buildCoarsenerTri2D(meshLevels, N, Nc, options);
     o_R[n] = mesh->device.malloc(meshLevels[N]->Np*meshLevels[Nc]->Np*sizeof(dfloat), R[n]);
 
     levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));

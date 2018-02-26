@@ -67,8 +67,8 @@ __global__ void experimentalVolumeKernel(const int Nelements,
       for(int s=0;s<p_NSIMD;++s){
 	
 	const int m = s + b*p_NSIMD;
-	const dfloat um = __shfl_sync(mask, r_u[b], s, p_NSIMD);
-	const dfloat vm = __shfl_sync(mask, r_v[b], s, p_NSIMD);
+	const dfloat um = __shfl( r_u[b], s, p_NSIMD);
+	const dfloat vm = __shfl(r_v[b], s, p_NSIMD);
 	
 	if(i<p_cubNp){
 	  const dfloat cIim  =  cI[i+m*p_Np]; // weak -- needs L1
@@ -108,8 +108,8 @@ __global__ void experimentalVolumeKernel(const int Nelements,
 	const int m = s + c*p_NSIMD; 
 	const int i = t + b*p_NSIMD;
 	       
-	const dfloat Num = __shfl_sync(mask, cubNu, s, p_NSIMD);
-	const dfloat Nvm = __shfl_sync(mask, cubNv, s, p_NSIMD);
+	const dfloat Num = __shfl( cubNu, s, p_NSIMD);
+	const dfloat Nvm = __shfl( cubNv, s, p_NSIMD);
 
 	if(i<p_Np && m<p_cubNp){
 	  const dfloat cPRim = cProj[i+m*p_Np]; // weak - needs L1

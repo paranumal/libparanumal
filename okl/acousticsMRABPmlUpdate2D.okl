@@ -26,7 +26,7 @@ kernel void acousticsMRABPmlUpdate2D(const iint pmlNelements,
       if (n < p_Np){
         const iint pmlId = pmlIds[et];
 
-        const iint id = p_Nfields*(e*p_Np + n);
+        const iint id  = p_Nfields*(e*p_Np + n);
         const iint pid = p_pmlNfields*(pmlId*p_Np + n);
 
         const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;

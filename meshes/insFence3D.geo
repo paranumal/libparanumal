@@ -1,5 +1,5 @@
-r1 = DefineNumber[0.050];
-r2 = DefineNumber[0.2];
+r1 = DefineNumber[0.0750];
+r2 = DefineNumber[0.4];
 r3 = DefineNumber[0.5];
 //+
 Point(1) = {0.0, 0.0, 0.0, r1};
@@ -9,8 +9,8 @@ Point(4) = {0.1, 0.0, 0.0, r1};
 //+
 Point(5) = {-4.5, 0.0, 0, r2};
 Point(6) = {-4.5, 4.5, 0, r3};
-Point(7) = {4.5,  0.0, 0, r2};
-Point(8) = {4.5,  4.5, 0, r3};
+Point(7) = {9.0,  0.0, 0, r2};
+Point(8) = {9.0,  4.5, 0, r3};
 //+
 Line(1) = {4, 3};
 Line(2) = {3, 2};

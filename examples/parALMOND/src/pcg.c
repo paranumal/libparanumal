@@ -40,7 +40,11 @@ void pcg(parAlmond_t *parAlmond,
   }
 
   // Precondition, z = M^{-1}*r
-  kcycle(parAlmond,0);
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    vcycle(parAlmond, 0);
+  }
   for (iint i=0;i<m;i++)
     p[i] = z[i];
 
@@ -82,7 +86,11 @@ void pcg(parAlmond_t *parAlmond,
     }
 
     // Precondition, z = M^{-1}*r
-    kcycle(parAlmond,0);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      vcycle(parAlmond, 0);
+    }
 
     dfloat rdotz1Local = innerProd(m, r, z);
     rdotz1 = 0;
@@ -157,7 +165,11 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
   }
 
   // Precondition, z = M^{-1}*r
-  device_kcycle(parAlmond,0);
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    device_kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    device_vcycle(parAlmond, 0);
+  }
   o_p.copyFrom(o_z);
 
   dfloat rdotz0Local = innerProd(parAlmond, m, o_r, o_z);
@@ -198,7 +210,11 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
     }
 
     // Precondition, z = M^{-1}*r
-    device_kcycle(parAlmond,0);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      device_kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      device_vcycle(parAlmond, 0);
+    }
 
     dfloat rdotz1Local = innerProd(parAlmond, m, o_r, o_z);
     rdotz1 = 0;
