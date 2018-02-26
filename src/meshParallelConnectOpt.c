@@ -4,10 +4,11 @@
 #include "mesh.h"
 
 typedef struct {
+  hlong v[4]; // vertices on face
+  dlong element, elementN; 
   int NfaceVertices;
-  int v[4]; // vertices on face
-  int element, face, rank;    // face info
-  int elementN, faceN, rankN; // N for neighbor face info
+  int face, rank;    // face info
+  int faceN, rankN; // N for neighbor face info
 
 }parallelFace_t;
 
@@ -45,7 +46,6 @@ int parallelCompareFaces(const void *a,
   if(fa->face > fb->face) return +1;
 
   return 0;
-
 }
   
 // mesh is the local partition

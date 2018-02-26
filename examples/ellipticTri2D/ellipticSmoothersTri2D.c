@@ -100,7 +100,7 @@ void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
                                  precon->o_oasBackDgT,
                                  o_r,
                                  o_zP);
-  ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+  ellipticParallelGatherScatterTri2D(mesh, precon->ogsDg, o_zP, solver->type, "add");
   solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
   occaTimerToc(mesh->device,"OverlappingPatchKernel");
 

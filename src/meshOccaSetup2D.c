@@ -12,6 +12,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   occa::initTimer(mesh->device);
 
+  //make seperate stream for halo exchange
+  mesh->defaultStream = mesh->device.getStream();
+  mesh->dataStream = mesh->device.createStream();
+  mesh->device.setStream(mesh->defaultStream);
+
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));

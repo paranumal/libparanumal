@@ -7,15 +7,15 @@
 // the neighbor element/face indices (if any)
 typedef struct{
 
-  int element;
+  dlong element;
   int face;
 
-  int elementNeighbor; // neighbor element
+  dlong elementNeighbor; // neighbor element
   int faceNeighbor;    // neighbor face
 
   int NfaceVertices;
   
-  int v[4];
+  hlong v[4];
 
 }face_t;
 

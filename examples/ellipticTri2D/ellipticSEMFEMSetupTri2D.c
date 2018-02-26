@@ -203,25 +203,25 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   pmesh->hostGsh = gsParallelGatherScatterSetup(pmesh->Nelements*pmesh->Np, pmesh->globalIds,verbose);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  pmesh->mapB = (int *) calloc(pmesh->Nelements*pmesh->Np,sizeof(int));
+  int *mapB = (int *) calloc(pmesh->Nelements*pmesh->Np,sizeof(int));
   for (int e=0;e<pmesh->Nelements;e++) {
-    for (int n=0;n<pmesh->Np;n++) pmesh->mapB[n+e*pmesh->Np] = 1E9;
+    for (int n=0;n<pmesh->Np;n++) mapB[n+e*pmesh->Np] = 1E9;
     for (int f=0;f<pmesh->Nfaces;f++) {
       int bc = pmesh->EToB[f+e*pmesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<pmesh->Nfp;n++) {
           int BCFlag = BCType[bc];
           int fid = pmesh->faceNodes[n+f*pmesh->Nfp];
-          pmesh->mapB[fid+e*pmesh->Np] = BCFlag;
+          mapB[fid+e*pmesh->Np] = mymin(BCFlag,mapB[fid+e*pmesh->Np]);
         }
       }
     }
   }
-  gsParallelGatherScatter(pmesh->hostGsh, pmesh->mapB, "int", "min"); 
+  gsParallelGatherScatter(pmesh->hostGsh, mapB, "int", "min");
 
   //use the bc flags to find masked ids
   for (int n=0;n<pmesh->Nelements*pmesh->Np;n++) {
-    if (pmesh->mapB[n] == 1) { //Dirichlet boundary
+    if (mapB[n] == 1) { //Dirichlet boundary
       pmesh->globalIds[n] = -1;
     }
   }

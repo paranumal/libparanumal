@@ -185,7 +185,7 @@ int main(int argc, char **argv){
                         zero,
                         mesh->o_x,
                         mesh->o_y,
-                        mesh->o_mapB,
+                        solver->o_mapB,
                         o_r);
   }
 
@@ -193,10 +193,10 @@ int main(int argc, char **argv){
   if(strstr(options, "CONTINUOUS")){
     //sign correction for gs
     if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
-    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_r, o_r, dfloatString, "add");  
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_r, dfloatString, "add");  
     if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);       
     //mask
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_r);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
   }
 
 
@@ -212,7 +212,7 @@ int main(int argc, char **argv){
                        zero,
                        mesh->o_x,
                        mesh->o_y,
-                       mesh->o_mapB,
+                       solver->o_mapB,
                        o_x);
   }
 

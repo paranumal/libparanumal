@@ -4,10 +4,11 @@
 // assume gather and scatter are the same sets
 void ellipticParallelGatherScatterSetup(solver_t* solver, const char *options){  
 
-  mesh3D *mesh = solver->mesh;
+  mesh2D *mesh = solver->mesh;
 
   // setup occa gather scatter
-  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
                                              mesh->gatherLocalIds,
                                              mesh->gatherBaseIds,
                                              mesh->gatherBaseRanks,

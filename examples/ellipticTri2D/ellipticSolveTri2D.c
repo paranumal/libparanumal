@@ -17,17 +17,13 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   occa::memory &o_tmp = solver->o_tmp;
 
   if(strstr(options, "CONTINUOUS")){
-    ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo;
-
-    //pre-mask
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_q);
+    ogs_t *ogs = solver->mesh->ogs;
 
     if(solver->allNeumann)
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(halo->Ngather) {
+    if(ogs->NhaloGather) {
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
@@ -37,12 +33,13 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      //if (mesh->NglobalMasked) mesh->maskKernel(mesh->NglobalMasked, mesh->o_globalMaskIds, o_Aq);
-      if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
-      halo->o_gatherTmp.copyTo(halo->gatherTmp);
+      mesh->device.finish();
+      mesh->device.setStream(solver->dataStream);
+      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
+      ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+      mesh->device.setStream(solver->defaultStream);
     }
-    if(nonHalo->Ngather){
+    if(solver->NlocalGatherElements){
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
@@ -52,8 +49,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      //if (mesh->NlocalMasked) mesh->maskKernel(mesh->NlocalMasked, mesh->o_localMaskIds, o_Aq);
-      if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
     }
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
@@ -65,27 +60,25 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
 
+    // finalize gather using local and global contributions
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+
     // C0 halo gather-scatter (on data stream)
-    if(halo->Ngather) {
-      occa::streamTag tag;
+    if(ogs->NhaloGather) {
+      mesh->device.setStream(solver->dataStream);
+      mesh->device.finish();
 
       // MPI based gather scatter using libgs
-      gsParallelGatherScatter(halo->haloGsh, halo->gatherTmp, dfloatString, "add");
+      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
-      mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
-
-      // wait for async copy
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-
+      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    
       // do scatter back to local nodes
-      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
-
-      // make sure the scatter has finished on the data stream
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
+      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_Aq);
+      mesh->device.setStream(solver->defaultStream);
     }
 
     if(solver->allNeumann) {
@@ -94,20 +87,13 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       //solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
     }
 
-    // finalize gather using local and global contributions
+    mesh->device.finish();    
+    mesh->device.setStream(solver->dataStream);
+    mesh->device.finish();    
     mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather) {
-      if (strstr(options,"SPARSE")) { //TODO need to make the sign slip correction for the halo too
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
-        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-        solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
-      } else {
-        mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
-      }
-    }
 
     //post-mask
-    //if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, o_Aq);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
     int offset = 0;

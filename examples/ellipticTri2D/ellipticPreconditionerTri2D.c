@@ -2,7 +2,6 @@
 
 void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
 void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
 dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 
@@ -70,7 +69,7 @@ void ellipticPreconditioner2D(solver_t *solver,
     precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
     solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
 
-    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_z, o_z, dfloatString, "add");
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_z, dfloatString, "add");
 
   } else if(strstr(options, "LOCALPATCH")){
 

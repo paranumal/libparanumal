@@ -23,12 +23,6 @@ typedef struct {
 
   ogs_t *ogsDg;
 
-  // C0 halo gather-scatter info
-  ogs_t *halo;
-
-  // C0 nonhalo gather-scatter info
-  ogs_t *nonHalo;
-
   char *type;
 
   int Nblock;
@@ -48,6 +42,15 @@ typedef struct {
   dfloat *Ry, *R; //multigrid restriction matrix
 
   int *EToB;
+
+  //C0-FEM mask data
+  int *mapB;      // boundary flag of face nodes
+  int Nmasked;
+  int *maskIds;
+
+  occa::memory o_maskIds;
+  occa::memory o_mapB;
+
   dfloat *sendBuffer, *recvBuffer;
   dfloat *gradSendBuffer, *gradRecvBuffer;
 
@@ -107,8 +110,7 @@ typedef struct {
 
 void ellipticSetupTri2D(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char *options);
 
-void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
-					const char *type, const char *op);
+void ellipticParallelGatherScatterTri2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
 
 void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 
@@ -144,6 +146,18 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
             const char *options);
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 
+
+void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
+
+void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
+                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
+
+void ellipticBuildContinuousTri2D(solver_t* solver, dfloat lambda, nonZero_t **A, 
+                                  int *nnz, ogs_t **ogs, int *globalStarts, 
+                                  const char* options);
 
 void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,

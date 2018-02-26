@@ -451,15 +451,6 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   int verbose = strstr(options,"VERBOSE") ? 1:0;
   mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
 
-  // setup occa gather scatter
-  mesh->ogs = meshParallelGatherScatterSetup(mesh,Ntotal,
-                                             mesh->gatherLocalIds,
-                                             mesh->gatherBaseIds,
-                                             mesh->gatherBaseRanks,
-                                             mesh->gatherHaloFlags,
-                                             verbose);
-  solver->o_invDegree = mesh->ogs->o_invDegree;
-
   // set up separate gather scatter infrastructure for halo and non halo nodes
   ellipticParallelGatherScatterSetup(solver,options);
 

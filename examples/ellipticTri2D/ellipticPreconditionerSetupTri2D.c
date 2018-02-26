@@ -27,7 +27,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     } else if (strstr(options,"BRDG")) {
       ellipticBuildBRdgTri2D(mesh, basisNp, basis, tau, lambda, BCType, &A, &nnz, globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTri2D(mesh,lambda,&A,&nnz, &(precon->ogs), globalStarts, options);
+      ellipticBuildContinuousTri2D(solver,lambda,&A,&nnz, &(precon->ogs), globalStarts, options);
     }
 
     int *Rows = (int *) calloc(nnz, sizeof(int));

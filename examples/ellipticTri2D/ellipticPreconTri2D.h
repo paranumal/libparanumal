@@ -109,18 +109,6 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
-
-void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
-
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, 
-                                  int *nnz, ogs_t **ogs, int *globalStarts, 
-                                  const char* options);
-
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
