@@ -1,24 +1,24 @@
 // OCCA+gslib gather scatter
 typedef struct {
   
-  int         Ngather;     //  total number of gather nodes
-  int         NtotalGather;     //  total number of gather nodes
-  int         NnonHaloGather;       //  number of local gathered nodes 
-  int         NhaloGather;          //  number of gathered nodes on halo
+  dlong         Ngather;     //  total number of gather nodes
+  dlong         NtotalGather;     //  total number of gather nodes
+  dlong         NnonHaloGather;       //  number of local gathered nodes 
+  dlong         NhaloGather;          //  number of gathered nodes on halo
 
-  int         *nonHaloGatherOffsets;
+  dlong       *nonHaloGatherOffsets;
   int         *nonHaloGatherHaloFlags;
   int         *nonHaloGatherBaseRanks;
-  int         *nonHaloGatherLocalIds;
-  int         *nonHaloGatherBaseIds;
+  dlong       *nonHaloGatherLocalIds;
+  hlong       *nonHaloGatherBaseIds;
 
-  int         *haloGatherOffsets;
+  dlong       *haloGatherOffsets;
   int         *haloGatherHaloFlags;
   int         *haloGatherBaseRanks;
-  int         *haloGatherLocalIds;
-  int         *haloGatherBaseIds;
+  dlong       *haloGatherLocalIds;
+  hlong       *haloGatherBaseIds;
 
-  int *ownedHaloGatherIds;
+  dlong    *ownedHaloGatherIds;
 
   dfloat * haloGatherTmp;
   occa::memory o_nonHaloGatherOffsets;  //  start of local bases
@@ -32,8 +32,8 @@ typedef struct {
   occa::memory o_ownedHaloGatherIds;
 
   void         *haloGsh;       // gslib gather 
-  int         Nhalo;            //  number of halo nodes
-  int         NownedHalo;       //  number of owned halo nodes
+  dlong         Nhalo;            //  number of halo nodes
+  dlong         NownedHalo;       //  number of owned halo nodes
   
   //degree vectors
   dfloat *invDegree, *gatherInvDegree;

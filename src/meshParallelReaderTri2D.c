@@ -70,7 +70,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   /* read number of elements in mesh */
   hlong Nelements;
   status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &Nelements);
+  sscanf(buf, hlongFormat, &Nelements);
 
   /* find # of triangles */
   fpos_t fpos;

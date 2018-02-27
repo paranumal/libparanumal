@@ -5,7 +5,7 @@ int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                             dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                            int *nnzA, int *globalStarts, const char *options){
+                            long long int *nnzA, hlong *globalStarts, const char *options){
 
   int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -14,7 +14,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   int Np = mesh->Np;
   int Nfp = mesh->Nfp;
   int Nfaces = mesh->Nfaces;
-  int Nelements = mesh->Nelements;
+  dlong Nelements = mesh->Nelements;
 
   if(!basis) { // default to degree N Lagrange basis
     basisNp = Np;
@@ -25,27 +25,27 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   }
 
   // number of degrees of freedom on this rank
-  int Nnum = Np*Nelements;
+  hlong Nnum = Np*Nelements;
 
   // create a global numbering system
-  int *globalIds = (int *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(int));
+  hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&(Nelements), 1, MPI_INT, globalStarts+1, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
   for(int r=0;r<size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*Np;
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
   /* so find number of elements on each rank */
-  int *rankNelements = (int*) calloc(size, sizeof(int));
-  int *rankStarts = (int*) calloc(size+1, sizeof(int));
-  MPI_Allgather(&(Nelements), 1, MPI_INT,
-    rankNelements, 1, MPI_INT, MPI_COMM_WORLD);
+  dlong *rankNelements = (dlong*) calloc(size, sizeof(dlong));
+  hlong *rankStarts = (hlong*) calloc(size+1, sizeof(hlong));
+  MPI_Allgather(&Nelements, 1, MPI_DLONG,
+    rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
   //find offsets
   for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (int e =0;e<Nelements;e++) {
+  for (dlong e =0;e<Nelements;e++) {
     for (int n=0;n<Np;n++) {
       globalIds[e*Np +n] = n + (e + rankStarts[rankM])*Np;
     }
@@ -53,12 +53,12 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    int *idSendBuffer = (int *) calloc(Np*mesh->totalHaloPairs,sizeof(int));
-    meshHaloExchange(mesh, Np*sizeof(int), globalIds, idSendBuffer, globalIds + Nelements*Np);
+    hlong *idSendBuffer = (hlong *) calloc(Np*mesh->totalHaloPairs,sizeof(hlong));
+    meshHaloExchange(mesh, Np*sizeof(hlong), globalIds, idSendBuffer, globalIds + Nelements*Np);
     free(idSendBuffer);
   }
 
-  int nnzLocalBound = basisNp*basisNp*(1+Nfaces)*Nelements;
+  long long int nnzLocalBound = basisNp*basisNp*(1+Nfaces)*Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
@@ -82,7 +82,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
 
   // reset non-zero counter
-  int nnz = 0;
+  long long int nnz = 0;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -92,9 +92,9 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
 
   // loop over all elements
-  for(int eM=0;eM<Nelements;++eM){
+  for(dlong eM=0;eM<Nelements;++eM){
 
-    int vbase = eM*mesh->Nvgeo;
+    dlong vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
@@ -122,17 +122,17 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       for (int n=0;n<Np*Np;n++) SP[n] =0;
 
       // load surface geofactors for this face
-      int sid = mesh->Nsgeo*(eM*Nfaces+fM);
+      dlong sid = mesh->Nsgeo*(eM*Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
       dfloat hinv = mesh->sgeo[sid+IHID];
       dfloat penalty = tau*hinv;
 
-      int eP = mesh->EToE[eM*Nfaces+fM];
+      dlong eP = mesh->EToE[eM*Nfaces+fM];
       if (eP < 0) eP = eM;
 
-      int vbaseP = eP*mesh->Nvgeo;
+      dlong vbaseP = eP*mesh->Nvgeo;
       dfloat drdxP = mesh->vgeo[vbaseP+RXID];
       dfloat drdyP = mesh->vgeo[vbaseP+RYID];
       dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
@@ -162,10 +162,10 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       // penalty term just involves face nodes
       for(int n=0;n<Nfp;++n){
         for(int m=0;m<Nfp;++m){
-          int idM = eM*Nfp*Nfaces+fM*Nfp+m;
+          dlong idM = eM*Nfp*Nfaces+fM*Nfp+m;
           int nM = mesh->faceNodes[fM*Nfp+n];
           int mM = mesh->faceNodes[fM*Nfp+m];
-          int mP  = mesh->vmapP[idM]%Np;
+          int mP  = (int) (mesh->vmapP[idM]%Np);
 
           dfloat MSfnm = sJ*MSf[n*Nfp+m];
 
@@ -181,7 +181,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
           for(int i=0;i<Nfp;++i){
             int iM = mesh->faceNodes[fM*Nfp+i];
-            int iP = mesh->vmapP[i + fM*Nfp+eM*Nfp*Nfaces]%Np;
+            int iP = (int) (mesh->vmapP[i + fM*Nfp+eM*Nfp*Nfaces]%Np);
 
             dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
 
@@ -204,7 +204,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       for(int n=0;n<Np;++n){
         for(int m=0;m<Nfp;++m){
           int mM = mesh->faceNodes[fM*Nfp+m];
-          int mP = mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np;
+          int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
 
           for(int i=0;i<Nfp;++i){
             int iM = mesh->faceNodes[fM*Nfp+i];

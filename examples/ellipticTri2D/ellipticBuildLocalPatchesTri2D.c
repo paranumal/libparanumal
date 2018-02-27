@@ -5,20 +5,20 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the ipdg patch A matrix for element eM
 void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 //returns the BRdg patch A matrix for element eM
 void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 //returns the C0FEM patch A matrix for element eM
 void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
-                                  int eM, dfloat *Srr, dfloat *Srs, 
+                                  dlong eM, dfloat *Srr, dfloat *Srs, 
                                   dfloat *Sss, dfloat *MM, dfloat *A);
 
 void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -49,14 +49,14 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *invRefAA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   (*Npatches) = 1;
-  int refPatches = 0;
+  dlong refPatches = 0;
 
 
   //build a mini mesh struct for the reference patch
@@ -76,7 +76,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
   refMesh->EX[1] = V2x;  refMesh->EY[1] = V2y;
   refMesh->EX[2] = V3x;  refMesh->EY[2] = V3y;
 
-  refMesh->EToV = (int*) calloc(mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(mesh->Nverts, sizeof(hlong));
 
   refMesh->EToV[0] = 0;
   refMesh->EToV[1] = 1;
@@ -111,7 +111,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
   matrixInverse(mesh->Np, refPatchInvA);
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
     if (strstr(options,"IPDG")) {
@@ -128,9 +128,9 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
     }
     printf("\n");
 #endif
-    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
 
     int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
     int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
@@ -169,7 +169,7 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
     //copy inverse into patchesInvA
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Np;++m){
-        int id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
+        dlong id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
         (*patchesInvA)[id] = patchA[n*mesh->Np+m];
       }
     }
@@ -188,9 +188,9 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
 
 //returns the ipdg patch A matrix for element eM
 void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A) {
+                        dfloat *MS, dlong eM, dfloat *A) {
 
-  int vbase = eM*mesh->Nvgeo;
+  dlong vbase = eM*mesh->Nvgeo;
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat dsdx = mesh->vgeo[vbase+SXID];
@@ -226,7 +226,7 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
   for (int fM=0;fM<mesh->Nfaces;fM++) {
     // load surface geofactors for this face
-    int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat sJ = mesh->sgeo[sid+SJID];
@@ -323,7 +323,7 @@ void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
 //returns the ipdg patch A matrix for element eM
 void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A) {
+                        dfloat *MS, dlong eM, dfloat *A) {
 
   int Np = mesh->Np;
   int Nfp = mesh->Nfp;
@@ -333,7 +333,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
   dfloat  *Gx = (dfloat *) calloc(Np*Np*(Nfaces+1),sizeof(dfloat));
   dfloat  *Gy = (dfloat *) calloc(Np*Np*(Nfaces+1),sizeof(dfloat));
 
-  int vbase = eM*mesh->Nvgeo;
+  dlong vbase = eM*mesh->Nvgeo;
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat dsdx = mesh->vgeo[vbase+SXID];
@@ -349,20 +349,20 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
   for (int fM=0;fM<Nfaces;fM++) {
     // load surface geofactors for this face
-    int sid = mesh->Nsgeo*(eM*Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat sJ = mesh->sgeo[sid+SJID];
     dfloat invJ = mesh->sgeo[sid+IJID];
 
-    int eP = mesh->EToE[eM*Nfaces+fM];
+    dlong eP = mesh->EToE[eM*Nfaces+fM];
     int fP = mesh->EToF[eM*Nfaces+fM];
     dfloat sw = 1.f; //guard against unconnected elements (happens in reference patch)
     if (eP < 0) {eP = eM; sw = 0;}
     if (fP < 0) fP = fM;
 
     // load surface geofactors for neighbor's face
-    int sidP = mesh->Nsgeo*(eP*Nfaces+fP);
+    dlong sidP = mesh->Nsgeo*(eP*Nfaces+fP);
     dfloat nxP = mesh->sgeo[sidP+NXID];
     dfloat nyP = mesh->sgeo[sidP+NYID];
     dfloat sJP = mesh->sgeo[sidP+SJID];
@@ -388,8 +388,8 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
       for(int m=0;m<Nfp;++m){
         int mM = mesh->faceNodes[fM*Nfp+m];
 
-        int idM = eP*Nfp*Nfaces+fP*Nfp+m;
-        int mP = mesh->vmapP[idM]%Np;
+        dlong idM = eP*Nfp*Nfaces+fP*Nfp+m;
+        int mP = (int) (mesh->vmapP[idM]%Np);
 
         dfloat LIFTfnmM = sJ*invJ*mesh->LIFT[m + fM*Nfp + n*Nfp*Nfaces];
         dfloat LIFTfnmP = sJP*invJP*mesh->LIFT[m + fP*Nfp + n*Nfp*Nfaces];
@@ -424,7 +424,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
   for (int fM=0;fM<Nfaces;fM++) {
     // load surface geofactors for this face
-    int sid = mesh->Nsgeo*(eM*Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat sJ = mesh->sgeo[sid+SJID];
@@ -466,7 +466,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
         for(int i=0;i<Nfp;++i){
           int iM = mesh->faceNodes[fM*Nfp+i];
-          int iP = mesh->vmapP[i+fM*Nfp+eM*Nfp*Nfaces]%Np;
+          int iP = (int) (mesh->vmapP[i+fM*Nfp+eM*Nfp*Nfaces]%Np);
 
           dfloat MSfni = sJ*MSf[n*Nfp+i]; // surface Jacobian built in
 
@@ -488,7 +488,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
     for(int n=0;n<Np;++n){
       for(int m=0;m<Nfp;++m){
         int mM = mesh->faceNodes[fM*Nfp+m];
-        int mP = mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np;
+        int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
 
         for(int i=0;i<Nfp;++i){
           int iM = mesh->faceNodes[fM*Nfp+i];
@@ -534,10 +534,10 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
 
 //returns the continuous C0 patch A matrix for element eM
 void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
-                                  int eM, dfloat *Srr, dfloat *Srs, 
+                                  dlong eM, dfloat *Srr, dfloat *Srs, 
                                   dfloat *Sss, dfloat *MM, dfloat *A) {
 
-  int gbase = eM*mesh->Nggeo;
+  dlong gbase = eM*mesh->Nggeo;
   dfloat Grr = mesh->ggeo[gbase + G00ID];
   dfloat Grs = mesh->ggeo[gbase + G01ID];
   dfloat Gss = mesh->ggeo[gbase + G11ID];

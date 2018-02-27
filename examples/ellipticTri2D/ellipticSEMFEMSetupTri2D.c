@@ -5,15 +5,15 @@ typedef struct{
   dfloat VX;
   dfloat VY;
 
-  int localId;
-  int globalId;
+  dlong localId;
+  hlong globalId;
 
 }FEMverts_t;
 
 typedef struct {
 
-  int localId;
-  int globalId;
+  dlong localId;
+  hlong globalId;
   int ownerRank;
 
 }parallelNode_t;
@@ -129,32 +129,32 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   /* allocate space for node coordinates */
   femMesh->Nelements = mesh->NelFEM*mesh->Nelements;
-  femMesh->EToV = (int*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(int));
+  femMesh->EToV = (hlong*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(hlong));
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
 
-  int *localIds = (int *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(int));
+  dlong *localIds = (dlong *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(dlong));
 
-  int NFEMverts = mesh->Nelements*mesh->NpFEM;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong NFEMverts = mesh->Nelements*mesh->NpFEM;
+  for(dlong e=0;e<mesh->Nelements;++e){
     for (int n=0;n<mesh->NelFEM;n++) {
       //local ids in the subelement fem grid
-      int id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
-      int id2 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+1];
-      int id3 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+2];
+      dlong id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
+      dlong id2 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+1];
+      dlong id3 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+2];
 
       // check orientation
       dfloat xe1 = pmesh->x[id1], xe2 = pmesh->x[id2], xe3 = pmesh->x[id3];
       dfloat ye1 = pmesh->y[id1], ye2 = pmesh->y[id2], ye3 = pmesh->y[id3];
       dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
       if(J<0){
-        int id3tmp = id3;
+        dlong id3tmp = id3;
         id3 = id2;
         id2 = id3tmp;
       }
 
       /* read vertex triplet for triangle */
-      int femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
+      dlong femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
       femMesh->EToV[femId+0] = pmesh->globalIds[id1];
       femMesh->EToV[femId+1] = pmesh->globalIds[id2];
       femMesh->EToV[femId+2] = pmesh->globalIds[id3];
@@ -204,7 +204,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   int *mapB = (int *) calloc(pmesh->Nelements*pmesh->Np,sizeof(int));
-  for (int e=0;e<pmesh->Nelements;e++) {
+  for (dlong e=0;e<pmesh->Nelements;e++) {
     for (int n=0;n<pmesh->Np;n++) mapB[n+e*pmesh->Np] = 1E9;
     for (int f=0;f<pmesh->Nfaces;f++) {
       int bc = pmesh->EToB[f+e*pmesh->Nfaces];
@@ -220,18 +220,18 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   gsParallelGatherScatter(pmesh->hostGsh, mapB, "int", "min");
 
   //use the bc flags to find masked ids
-  for (int n=0;n<pmesh->Nelements*pmesh->Np;n++) {
+  for (dlong n=0;n<pmesh->Nelements*pmesh->Np;n++) {
     if (mapB[n] == 1) { //Dirichlet boundary
       pmesh->globalIds[n] = -1;
     }
   }
 
   // squeeze node numbering
-  int *globalStarts = (int*) calloc(size+1, sizeof(int));
+  hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
   meshParallelConsecutiveGlobalNumbering(pmesh, pmesh->Np*pmesh->Nelements, pmesh->globalIds, pmesh->globalOwners, globalStarts);
 
-  for (int n=0;n<pmesh->Np*pmesh->Nelements;n++) {
-    int id = pmesh->gatherLocalIds[n];
+  for (dlong n=0;n<pmesh->Np*pmesh->Nelements;n++) {
+    dlong id = pmesh->gatherLocalIds[n];
     pmesh->gatherBaseIds[n] = pmesh->globalIds[id];
   }
 
@@ -269,7 +269,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  int nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
+  long long int nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   int *AsendCounts  = (int*) calloc(size, sizeof(int));
@@ -278,13 +278,13 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   //Build unassembed non-zeros
-  int cnt =0;
-  for (int e=0;e<femMesh->Nelements;e++) {
+  long long int cnt =0;
+  for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int n=0;n<femMesh->Np;n++) {
-      int idn = localIds[e*femMesh->Np + n];
+      dlong idn = localIds[e*femMesh->Np + n];
       if (pmesh->globalIds[idn]<0) continue; //skip masked nodes
       for (int m=0;m<femMesh->Np;m++) {
-        int idm = localIds[e*femMesh->Np + m];
+        dlong idm = localIds[e*femMesh->Np + m];
         if (pmesh->globalIds[idm]<0) continue; //skip masked nodes
 
         dfloat val = 0.;
@@ -313,9 +313,25 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
     }
   }
 
+  // Make the MPI_NONZERO_T data type
+  MPI_Datatype MPI_NONZERO_T;
+  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
+  int blength[4] = {1, 1, 1, 1};
+  MPI_Aint addr[4], displ[4];
+  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
+  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
+  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
+  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
+  displ[0] = 0;
+  displ[1] = addr[1] - addr[0];
+  displ[2] = addr[2] - addr[0];
+  displ[3] = addr[3] - addr[0];
+  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
+  MPI_Type_commit (&MPI_NONZERO_T);
+
   // count how many non-zeros to send to each process
-  for(int n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
+  for(long long int n=0;n<cnt;++n)
+    AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -324,26 +340,26 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  int nnz = 0;
+  long long int nnz = 0;
   for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    nnz += ArecvCounts[r]/sizeof(nonZero_t);
+    nnz += ArecvCounts[r];
   }
 
   nonZero_t *A = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_CHAR,
-    A, ArecvCounts, ArecvOffsets, MPI_CHAR,
-    MPI_COMM_WORLD);
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
+                           A, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                           MPI_COMM_WORLD);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(int n=1;n<nnz;++n){
+  for(long long int n=1;n<nnz;++n){
     if(A[n].row == A[cnt].row && A[n].col == A[cnt].col){
       A[cnt].val += A[n].val;
     } else{
@@ -355,11 +371,14 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   if(rank==0) printf("done.\n");
 
-  int *Rows = (int *) calloc(nnz, sizeof(int));
-  int *Cols = (int *) calloc(nnz, sizeof(int));
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Type_free(&MPI_NONZERO_T);
+
+  hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
+  hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
   dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-  for (int n=0;n<nnz;n++) {
+  for (long long int n=0;n<nnz;n++) {
     Rows[n] = A[n].row;
     Cols[n] = A[n].col;
     Vals[n] = A[n].val;
@@ -374,7 +393,6 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
                      Vals,
                      solver->allNeumann,
                      solver->allNeumannPenalty);
-
   free(A); free(Rows); free(Cols); free(Vals);
 
   //tell parAlmond not to gather this level (its done manually)

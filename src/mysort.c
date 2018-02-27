@@ -3,8 +3,8 @@
 
 int isHigher(const void *a, const void *b){
 
-  int *pta = (int*) a;
-  int *ptb = (int*) b;
+  hlong *pta = (hlong*) a;
+  hlong *ptb = (hlong*) b;
 
   if(*pta < *ptb) return -1;
   if(*pta > *ptb) return +1;
@@ -14,8 +14,8 @@ int isHigher(const void *a, const void *b){
 
 int isLower(const void *a, const void *b){
 
-  int *pta = (int*) a;
-  int *ptb = (int*) b;
+  hlong *pta = (hlong*) a;
+  hlong *ptb = (hlong*) b;
 
   if(*pta > *ptb) return -1;
   if(*pta < *ptb) return +1;
@@ -23,13 +23,13 @@ int isLower(const void *a, const void *b){
   return 0;
 }
 
-void mysort(int *data, int N, const char *order){
+void mysort(hlong *data, int N, const char *order){
 
   if(strstr(order, "ascend")){
-    qsort(data, N, sizeof(int), isHigher);
+    qsort(data, N, sizeof(hlong), isHigher);
   }
   else{
-    qsort(data, N, sizeof(int), isLower);
+    qsort(data, N, sizeof(hlong), isLower);
   }
 
 }

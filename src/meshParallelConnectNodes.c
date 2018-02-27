@@ -6,19 +6,19 @@
 
 typedef struct{
 
-  int element; // local element id
+  dlong element; // local element id
   int node;    // local node id
   int rank;    // rank of original node
-  int id;      // original id
+  hlong id;      // original id
   int haloFlag;
 
   // info on base node (lowest rank node)
-  int baseElement; 
+  dlong baseElement; 
   int baseNode;
   int baseRank;
-  int baseId;
+  hlong baseId;
 
-  int newGlobalId;
+  hlong newGlobalId;
 
 }parallelNode_t;
 
@@ -77,14 +77,14 @@ void meshParallelConnectNodes(mesh_t *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  int localNodeCount = mesh->Np*mesh->Nelements;
-  int *allLocalNodeCounts = (int*) calloc(size, sizeof(int));
+  dlong localNodeCount = mesh->Np*mesh->Nelements;
+  dlong *allLocalNodeCounts = (dlong*) calloc(size, sizeof(dlong));
 
-  MPI_Allgather(&localNodeCount, 1, MPI_INT,
-                allLocalNodeCounts, 1, MPI_INT,
+  MPI_Allgather(&localNodeCount,    1, MPI_DLONG,
+                allLocalNodeCounts, 1, MPI_DLONG,
                 MPI_COMM_WORLD);
   
-  int gatherNodeStart = 0;
+  hlong gatherNodeStart = 0;
   for(int r=0;r<rank;++r)
     gatherNodeStart += allLocalNodeCounts[r];
   
@@ -96,9 +96,9 @@ void meshParallelConnectNodes(mesh_t *mesh){
                              sizeof(parallelNode_t));
 
   // use local numbering
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      int id = e*mesh->Np+n;
+      dlong id = e*mesh->Np+n;
       sendNodes[id].element = e;
       sendNodes[id].node = n;
       sendNodes[id].rank = rank;
@@ -113,8 +113,8 @@ void meshParallelConnectNodes(mesh_t *mesh){
 
     // use vertex ids for vertex nodes to reduce iterations
     for(int v=0;v<mesh->Nverts;++v){
-      int id = e*mesh->Np + mesh->vertexNodes[v];
-      int gid = mesh->EToV[e*mesh->Nverts+v] + 1;
+      dlong id = e*mesh->Np + mesh->vertexNodes[v];
+      hlong gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       sendNodes[id].id = gid; 
       sendNodes[id].baseId = gid; 
     }
@@ -123,14 +123,14 @@ void meshParallelConnectNodes(mesh_t *mesh){
     for(int f=0;f<mesh->Nfaces;++f){
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
         for(int n=0;n<mesh->Nfp;++n){
-          int id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+          dlong id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
           sendNodes[id].haloFlag = 1;
         }
       }
     }
   }
 
-  int localChange = 0, gatherChange = 1;
+  dlong localChange = 0, gatherChange = 1;
 
   parallelNode_t *sendBuffer =
     (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
@@ -146,13 +146,13 @@ void meshParallelConnectNodes(mesh_t *mesh){
                      sendNodes, sendBuffer, sendNodes+localNodeCount);
 
     // compare trace nodes
-    for(int e=0;e<mesh->Nelements;++e){
+    for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-        int id  = e*mesh->Nfp*mesh->Nfaces + n;
-        int idM = mesh->vmapM[id];
-        int idP = mesh->vmapP[id];
-        int gidM = sendNodes[idM].baseId;
-        int gidP = sendNodes[idP].baseId;
+        dlong id  = e*mesh->Nfp*mesh->Nfaces + n;
+        dlong idM = mesh->vmapM[id];
+        dlong idP = mesh->vmapP[id];
+        hlong gidM = sendNodes[idM].baseId;
+        hlong gidP = sendNodes[idP].baseId;
 
         int baseRankM = sendNodes[idM].baseRank;
         int baseRankP = sendNodes[idP].baseRank;
@@ -185,47 +185,76 @@ void meshParallelConnectNodes(mesh_t *mesh){
     }
 
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, MPI_COMM_WORLD);
   }
 
   // sort based on base nodes (rank,element,node at base)
   qsort(sendNodes, localNodeCount, sizeof(parallelNode_t), parallelCompareOwners);
- 
+
+  // Make the MPI_PARALLELNODE_T data type
+  MPI_Datatype MPI_PARALLELNODE_T;
+  MPI_Datatype dtype[10] = {MPI_DLONG, MPI_INT, MPI_INT, MPI_HLONG, MPI_INT,
+                            MPI_DLONG, MPI_INT, MPI_INT, MPI_HLONG, MPI_HLONG};
+  int blength[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  MPI_Aint addr[10], displ[10];
+  MPI_Get_address ( &(sendNodes[0]            ), addr+0);
+  MPI_Get_address ( &(sendNodes[0].node       ), addr+1);
+  MPI_Get_address ( &(sendNodes[0].rank       ), addr+2);
+  MPI_Get_address ( &(sendNodes[0].id         ), addr+3);
+  MPI_Get_address ( &(sendNodes[0].haloFlag   ), addr+4);
+  MPI_Get_address ( &(sendNodes[0].baseElement), addr+5);
+  MPI_Get_address ( &(sendNodes[0].baseNode   ), addr+6);
+  MPI_Get_address ( &(sendNodes[0].baseRank   ), addr+7);
+  MPI_Get_address ( &(sendNodes[0].baseId     ), addr+8);
+  MPI_Get_address ( &(sendNodes[0].newGlobalId), addr+9);
+  displ[0] = 0;
+  displ[1] = addr[1] - addr[0];
+  displ[2] = addr[2] - addr[0];
+  displ[3] = addr[3] - addr[0];
+  displ[4] = addr[4] - addr[0];
+  displ[5] = addr[5] - addr[0];
+  displ[6] = addr[6] - addr[0];
+  displ[7] = addr[7] - addr[0];
+  displ[8] = addr[8] - addr[0];
+  displ[9] = addr[9] - addr[0];
+  MPI_Type_create_struct (10, blength, displ, dtype, &MPI_PARALLELNODE_T);
+  MPI_Type_commit (&MPI_PARALLELNODE_T);
+
   // count how many nodes to send to each process
   int *sendCounts = (int *) calloc(size,sizeof(int));
   int *recvCounts = (int *) calloc(size,sizeof(int));
   int *sendOffsets = (int *) calloc(size+1,sizeof(int));
   int *recvOffsets = (int *) calloc(size+1,sizeof(int));
 
-  for(int n=0;n<localNodeCount;++n) 
-    sendCounts[sendNodes[n].baseRank] += sizeof(parallelNode_t);
+  for(dlong n=0;n<localNodeCount;++n) 
+    sendCounts[sendNodes[n].baseRank]++;
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
   
   // find send and recv offsets for gather
-  int recvNtotal = 0;
+  dlong recvNtotal = 0;
   for(int r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
-    recvNtotal += recvCounts[r]/sizeof(parallelNode_t);
+    recvNtotal += recvCounts[r];
   }
 
   parallelNode_t *recvNodes;
   if (recvNtotal) recvNodes = (parallelNode_t*) calloc(recvNtotal, sizeof(parallelNode_t));
   
   // load up node data to send 
-  MPI_Alltoallv(sendNodes, sendCounts, sendOffsets, MPI_CHAR,
-                recvNodes, recvCounts, recvOffsets, MPI_CHAR,
+  MPI_Alltoallv(sendNodes, sendCounts, sendOffsets, MPI_PARALLELNODE_T,
+                recvNodes, recvCounts, recvOffsets, MPI_PARALLELNODE_T,
                 MPI_COMM_WORLD);
 
   // sort by global index shifting halo nodes to the end
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
   // renumber unique nodes starting from 0 (need to be careful about zeros)
-  int Ngather = 0;
+  dlong Ngather = 0;
   if (recvNtotal) recvNodes[0].newGlobalId = Ngather;
-  for(int n=1;n<recvNtotal;++n){
+  for(dlong n=1;n<recvNtotal;++n){
     if(recvNodes[n].baseId!=recvNodes[n-1].baseId){ // new node
       ++Ngather;
     }
@@ -234,52 +263,54 @@ void meshParallelConnectNodes(mesh_t *mesh){
   if (recvNtotal) ++Ngather; // increment to actual number of unique nodes on this rank
 
   // collect unique node counts from all processes
-  int *allGather   = (int*) calloc(size, sizeof(int));
-  MPI_Allgather(&Ngather, 1, MPI_INT, allGather, 1, MPI_INT, MPI_COMM_WORLD);
+  dlong *allGather   = (dlong*) calloc(size, sizeof(dlong));
+  MPI_Allgather(&Ngather, 1, MPI_DLONG, allGather, 1, MPI_DLONG, MPI_COMM_WORLD);
 
   // cumulative sum of unique node counts => starting node index for each process
-  mesh->gatherGlobalStarts = (int*) calloc(size+1, sizeof(int));
+  mesh->gatherGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
   for(int r=0;r<size;++r)
     mesh->gatherGlobalStarts[r+1] = mesh->gatherGlobalStarts[r] + allGather[r];
 
   // shift numbering
-  for(int n=0;n<recvNtotal;++n)
+  for(dlong n=0;n<recvNtotal;++n)
     recvNodes[n].newGlobalId += mesh->gatherGlobalStarts[rank];
   
   // sort by rank, local index
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareSourceRank);
 
   // reverse all to all to reclaim nodes
-  MPI_Alltoallv(recvNodes, recvCounts, recvOffsets, MPI_CHAR,
-                sendNodes, sendCounts, sendOffsets, MPI_CHAR,
+  MPI_Alltoallv(recvNodes, recvCounts, recvOffsets, MPI_PARALLELNODE_T,
+                sendNodes, sendCounts, sendOffsets, MPI_PARALLELNODE_T,
                 MPI_COMM_WORLD);
 
   // sort by rank, local index
   qsort(sendNodes, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
   // extract base index of each node (i.e. gather numbering)
-  mesh->gatherLocalIds  = (int*) calloc(localNodeCount, sizeof(int));
-  mesh->gatherBaseIds   = (int*) calloc(localNodeCount, sizeof(int));
+  mesh->gatherLocalIds  = (dlong*) calloc(localNodeCount, sizeof(dlong));
+  mesh->gatherBaseIds   = (hlong*) calloc(localNodeCount, sizeof(hlong));
   mesh->gatherBaseRanks = (int*) calloc(localNodeCount, sizeof(int));
   mesh->gatherHaloFlags = (int*) calloc(localNodeCount, sizeof(int));
 
-  for(int id=0;id<localNodeCount;++id){
+  for(dlong id=0;id<localNodeCount;++id){
     mesh->gatherLocalIds[id]  = sendNodes[id].element*mesh->Np+sendNodes[id].node;
     mesh->gatherBaseIds[id]   = sendNodes[id].newGlobalId+1;
     mesh->gatherBaseRanks[id] = sendNodes[id].baseRank;
     mesh->gatherHaloFlags[id] = sendNodes[id].haloFlag;
   }
   
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Type_free(&MPI_PARALLELNODE_T);
   free(sendBuffer);
   free(sendNodes);
 
   //make a locally-ordered version
-  mesh->globalIds      = (int*) calloc(localNodeCount, sizeof(int));
+  mesh->globalIds      = (hlong*) calloc(localNodeCount, sizeof(hlong));
   mesh->globalOwners   = (int*) calloc(localNodeCount, sizeof(int));
   mesh->globalHaloFlags= (int*) calloc(localNodeCount, sizeof(int));
 
-  for(int id=0;id<localNodeCount;++id){
-    int localId = mesh->gatherLocalIds[id];
+  for(dlong id=0;id<localNodeCount;++id){
+    dlong localId = mesh->gatherLocalIds[id];
     mesh->globalIds[localId]      = mesh->gatherBaseIds[id];    
     mesh->globalOwners[localId]   = mesh->gatherBaseRanks[id];
     mesh->globalHaloFlags[localId]= mesh->gatherHaloFlags[id];

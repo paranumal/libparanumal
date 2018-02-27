@@ -11,11 +11,11 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    int nnz;
+    long long int nnz;
     nonZero_t *A;
 
-    int Nnum = mesh->Np*mesh->Nelements;
-    int *globalStarts = (int*) calloc(size+1, sizeof(int));
+    dlong Nnum = mesh->Np*mesh->Nelements;
+    hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
     int basisNp = mesh->Np;
     dfloat *basis = NULL;
@@ -30,11 +30,11 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       ellipticBuildContinuousTri2D(solver,lambda,&A,&nnz, &(precon->ogs), globalStarts, options);
     }
 
-    int *Rows = (int *) calloc(nnz, sizeof(int));
-    int *Cols = (int *) calloc(nnz, sizeof(int));
+    hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
+    hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
     
-    for (int n=0;n<nnz;n++) {
+    for (long long int n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
@@ -49,7 +49,6 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Vals,
                        solver->allNeumann,
                        solver->allNeumannPenalty);
-
     free(A); free(Rows); free(Cols); free(Vals);
 
     if (strstr(options,"CONTINUOUS")) {//tell parAlmond to gather this level
@@ -198,24 +197,24 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     nonZero_t *coarseA;
-    int nnzCoarseA;
+    long long int nnzCoarseA;
     dfloat *V1;
 
-    int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
+    hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
     //TODO need to fix this to use the normal builder for OAS to work again
     //ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
     //                                       &V1, &coarseA, &nnzCoarseA,
     //                                       &(precon->hgs), coarseGlobalStarts, options);
 
-    int Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+    dlong Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
-    int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
-    int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
+    hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
+    hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-    for (int n=0;n<nnzCoarseA;n++) {
+    for (long long int n=0;n<nnzCoarseA;n++) {
       Rows[n] = coarseA[n].row;
       Cols[n] = coarseA[n].col;
       Vals[n] = coarseA[n].val;
@@ -230,7 +229,6 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
                        Vals,
                        solver->allNeumann,
                        solver->allNeumannPenalty);
-
     free(coarseA); free(Rows); free(Cols); free(Vals);
 
     precon->o_r1 = mesh->device.malloc(Nnum*sizeof(dfloat));
@@ -250,7 +248,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   } else if(strstr(options,"LOCALPATCH")) {
 
     dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
-    for (int e=0;e<mesh->Nelements;e++) {
+    for (dlong e=0;e<mesh->Nelements;e++) {
       invDegree[e] = 1.0;
     }
     precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
