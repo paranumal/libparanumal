@@ -25,7 +25,7 @@ typedef struct {
 
   char *type;
 
-  int Nblock;
+  dlong Nblock;
 
   dfloat tau;
 
@@ -45,8 +45,8 @@ typedef struct {
 
   //C0-FEM mask data
   int *mapB;      // boundary flag of face nodes
-  int Nmasked;
-  int *maskIds;
+  dlong Nmasked;
+  dlong *maskIds;
 
   occa::memory o_maskIds;
   occa::memory o_mapB;
@@ -77,11 +77,11 @@ typedef struct {
   occa::memory o_Ry;
 
   // list of elements that are needed for global gather-scatter
-  int NglobalGatherElements;
+  dlong NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  int NlocalGatherElements;
+  dlong NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
@@ -149,14 +149,14 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                               dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
+                              long long int *nnzA, hlong *globalStarts, const char *options);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                               dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
+                              long long int *nnzA, hlong *globalStarts, const char *options);
 
 void ellipticBuildContinuousTri2D(solver_t* solver, dfloat lambda, nonZero_t **A, 
-                                  int *nnz, ogs_t **ogs, int *globalStarts, 
+                                  long long int *nnz, ogs_t **ogs, hlong *globalStarts, 
                                   const char* options);
 
 void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
@@ -166,17 +166,17 @@ void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloa
 
 void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 void ellipticBuildLocalPatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 //smoother setups
@@ -200,7 +200,3 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
                               const char *options, const char *parAlmondOptions);
 
 #endif
-
-//KS: load sparse stiffness ops
-void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N);
-void buildElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N);

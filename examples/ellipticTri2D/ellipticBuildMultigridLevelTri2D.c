@@ -21,8 +21,8 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   meshPhysicalNodesTri2D(mesh);
 
   // create halo extension for x,y arrays
-  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  int localNodes     = mesh->Nelements*mesh->Np;
+  dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  dlong localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -39,7 +39,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     //connect the face modes between each element 
     meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
     //use the mmaps constructed and overwrite vmap and FaceNodes
-    for (int n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+    for (dlong n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
       mesh->vmapM[n] = mesh->mmapM[n];
       mesh->vmapP[n] = mesh->mmapP[n];
     }
@@ -59,10 +59,10 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   free(mesh->y);
   free(sendBuffer);
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+  dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
+  dlong Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 
@@ -254,8 +254,9 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
-  int totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
@@ -296,11 +297,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(dlong)==4){
+    kernelInfo.addDefine("dlong","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(dlong)==8){
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -612,7 +613,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -629,7 +630,7 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   //use the bc flags to find masked ids
   solver->Nmasked = 0;
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1E9) {
       solver->mapB[n] = 0.;
     } else if (solver->mapB[n] == 1) { //Dirichlet boundary
@@ -638,23 +639,23 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
   }
   solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
   
-  solver->maskIds = (int *) calloc(solver->Nmasked, sizeof(int));
+  solver->maskIds = (dlong *) calloc(solver->Nmasked, sizeof(dlong));
   solver->Nmasked =0; //reset
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
   }
-  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(int), solver->maskIds);
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(dlong), solver->maskIds);
 
 
   if (strstr(options,"SPARSE")) {
     // make the gs sign change array for flipped trace modes
     //TODO this is a hack that likely will need updating for MPI
     mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-    for (int n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+    for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
 
-    for (int e=0;e<mesh->Nelements;e++) {
+    for (dlong e=0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
-        int id = n+e*mesh->Nfp*mesh->Nfaces;
+        dlong id = n+e*mesh->Nfp*mesh->Nfaces;
         if (mesh->mmapS[id]==-1) { //sign flipped
           if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
             mesh->mapSgn[mesh->vmapM[id]]= -1;

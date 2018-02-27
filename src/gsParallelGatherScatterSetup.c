@@ -7,10 +7,10 @@
 
 #include "gslib.h"
 
-void *gsParallelGatherScatterSetup(int NuniqueBases,
-				   int *gatherGlobalNodes,
-           int verbose){
-  
+void *gsParallelGatherScatterSetup(long long int NuniqueBases,
+                        				   long long int *gatherGlobalNodes,
+                                   int verbose){
+                          
   /* gslib stuff */
   comm_ext world;
   struct comm com;
@@ -23,7 +23,7 @@ void *gsParallelGatherScatterSetup(int NuniqueBases,
   /* for the moment borrow gslib array */
   slong *id = tmalloc(slong, NuniqueBases);
   
-  int n;
+  long long int n;
   for(n=0;n<NuniqueBases;++n){ /* at some point need to choose int */
     id[n] = gatherGlobalNodes[n];
   }

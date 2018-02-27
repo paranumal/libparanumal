@@ -4,15 +4,15 @@
 
 typedef struct {
   
-  int element, face;
-  int elementN, faceN, rankN;
+  dlong element, elementN;
+  int face, faceN, rankN;
 
 }facePair_t;
 
 /* comparison function that orders halo element/face
    based on their indexes */
 int compareHaloFaces(const void *a, 
-		     const void *b){
+                     const void *b){
   
   facePair_t *fa = (facePair_t*) a;
   facePair_t *fb = (facePair_t*) b;
@@ -45,12 +45,12 @@ void meshHaloSetup(mesh_t *mesh){
   // count number of halo element nodes to swap
   mesh->totalHaloPairs = 0;
   mesh->NhaloPairs = (int*) calloc(size, sizeof(int));
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
       int r = mesh->EToP[e*mesh->Nfaces+f]; // rank of neighbor
       if(r!=-1){
-	mesh->totalHaloPairs += 1;
-	mesh->NhaloPairs[r] += 1;
+        mesh->totalHaloPairs += 1;
+        mesh->NhaloPairs[r] += 1;
       }
     }
   }
@@ -65,18 +65,18 @@ void meshHaloSetup(mesh_t *mesh){
   facePair_t *haloElements = 
     (facePair_t*) calloc(mesh->totalHaloPairs, sizeof(facePair_t));
 
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
-      int ef = e*mesh->Nfaces+f;
+      dlong ef = e*mesh->Nfaces+f;
       if(mesh->EToP[ef]!=-1){
-	haloElements[cnt].element  = e;
-	haloElements[cnt].face     = f;
-	haloElements[cnt].elementN = mesh->EToE[ef];
-	haloElements[cnt].faceN    = mesh->EToF[ef];
-	haloElements[cnt].rankN    = mesh->EToP[ef];
+        haloElements[cnt].element  = e;
+        haloElements[cnt].face     = f;
+        haloElements[cnt].elementN = mesh->EToE[ef];
+        haloElements[cnt].faceN    = mesh->EToF[ef];
+        haloElements[cnt].rankN    = mesh->EToP[ef];
 
-	++cnt;
+        ++cnt;
       }
     }
   }
@@ -85,9 +85,9 @@ void meshHaloSetup(mesh_t *mesh){
   qsort(haloElements, mesh->totalHaloPairs, sizeof(facePair_t), compareHaloFaces);
 
   // record the outgoing order for elements
-  mesh->haloElementList = (int*) calloc(mesh->totalHaloPairs, sizeof(int));
-  for(int i=0;i<mesh->totalHaloPairs;++i){
-    int e = haloElements[i].element;
+  mesh->haloElementList = (dlong*) calloc(mesh->totalHaloPairs, sizeof(dlong));
+  for(dlong i=0;i<mesh->totalHaloPairs;++i){
+    dlong e = haloElements[i].element;
     mesh->haloElementList[i] = e;
   }
 
@@ -95,18 +95,18 @@ void meshHaloSetup(mesh_t *mesh){
   // (ghost elements appended to end of local element list)
   cnt = mesh->Nelements;
   for(int r=0;r<size;++r){
-    for(int e=0;e<mesh->Nelements;++e){
+    for(dlong e=0;e<mesh->Nelements;++e){
       for(int f=0;f<mesh->Nfaces;++f){
-	int ef = e*mesh->Nfaces+f;
-	if(mesh->EToP[ef]==r)
-	  mesh->EToE[ef] = cnt++;
+        dlong ef = e*mesh->Nfaces+f;
+        if(mesh->EToP[ef]==r)
+          mesh->EToE[ef] = cnt++;
       }
     }
   }
 
   // create halo extension for x,y arrays
-  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  int localNodes     = mesh->Nelements*mesh->Np;
+  dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  dlong localNodes     = mesh->Nelements*mesh->Np;
 
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));

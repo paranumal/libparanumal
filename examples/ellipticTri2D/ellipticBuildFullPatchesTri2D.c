@@ -5,11 +5,11 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -79,7 +79,7 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
   refMesh->EX[3*mesh->Nverts+1] = V3x;  refMesh->EY[3*mesh->Nverts+1] = V3y;
   refMesh->EX[3*mesh->Nverts+2] = V6x;  refMesh->EY[3*mesh->Nverts+2] = V6y;
 
-  refMesh->EToV = (int*) calloc(NpatchElements*mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(NpatchElements*mesh->Nverts, sizeof(hlong));
 
   refMesh->EToV[0*mesh->Nverts+0] = 0;
   refMesh->EToV[0*mesh->Nverts+1] = 1;
@@ -108,12 +108,12 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
   meshSurfaceGeometricFactorsTri2D(refMesh);
 
   int Nperm = pow(mesh->Nfaces,mesh->Nfaces);//all possible configureation of neighbours
-  (*Npatches) = Nperm;
-  int refPatches = 0;
+  (*Npatches) = (dlong) Nperm;
+  dlong refPatches = 0;
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(Nperm*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(patchNp*patchNp, sizeof(dfloat));
@@ -156,14 +156,14 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
 
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
     BuildFullPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
-    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
 
     int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
     int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
@@ -223,7 +223,7 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
 
 
 void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A) {
+                        dfloat *MS, dlong eM, dfloat *A) {
 
   int NpatchElements = mesh->Nfaces+1;
   int patchNp = NpatchElements*mesh->Np;
@@ -242,11 +242,11 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
 
   //start with diagonals
   for(int N=0;N<NpatchElements;++N){
-    int e = (N==0) ? eM : mesh->EToE[mesh->Nfaces*eM+N-1];
+    dlong e = (N==0) ? eM : mesh->EToE[mesh->Nfaces*eM+N-1];
 
     if (e<0) continue; //skip this block if this is a boundary face
 
-    int vbase = e*mesh->Nvgeo;
+    dlong vbase = e*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
@@ -282,7 +282,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
 
     for (int fM=0;fM<mesh->Nfaces;fM++) {
       // load surface geofactors for this face
-      int sid = mesh->Nsgeo*(e*mesh->Nfaces+fM);
+      dlong sid = mesh->Nsgeo*(e*mesh->Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
@@ -370,23 +370,23 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
   //now the off-diagonals
   for (int fM=0;fM<mesh->Nfaces;fM++) {
 
-    int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+    dlong eP = mesh->EToE[eM*mesh->Nfaces+fM];
     if (eP < 0) continue; //skip this block if this is a boundary face
 
-    int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat sJ = mesh->sgeo[sid+SJID];
     dfloat hinv = mesh->sgeo[sid+IHID];
 
-    int vbase = eM*mesh->Nvgeo;
+    dlong vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
     dfloat J = mesh->vgeo[vbase+JID];
 
-    int vbaseP = eP*mesh->Nvgeo;
+    dlong vbaseP = eP*mesh->Nvgeo;
     dfloat drdxP = mesh->vgeo[vbaseP+RXID];
     dfloat drdyP = mesh->vgeo[vbaseP+RYID];
     dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
@@ -406,8 +406,8 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
         dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 
         // neighbor penalty term
-        int idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
-        int mP = mesh->vmapP[idM]%mesh->Np;
+        dlong idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
+        int mP = (int) (mesh->vmapP[idM]%mesh->Np);
 
         int id = nM*patchNp + (fM+1)*mesh->Np + mP;
 
@@ -423,7 +423,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
 
         for(int i=0;i<mesh->Nfp;++i){
           int iM = mesh->faceNodes[fM*mesh->Nfp+i];
-          int iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+          int iP = (int) (mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
           dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
@@ -442,7 +442,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfp;++m){
         int mM = mesh->faceNodes[fM*mesh->Nfp+m];
-        int mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+        int mP = (int) (mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
         for(int i=0;i<mesh->Nfp;++i){
           int iM = mesh->faceNodes[fM*mesh->Nfp+i];

@@ -1,7 +1,7 @@
 typedef struct{
 
-  int row;
-  int col;
+  hlong row;
+  hlong col;
   int ownerRank;
   dfloat val;
 
@@ -78,8 +78,8 @@ typedef struct {
   occa::memory o_coarseInvDegree;
 
   int coarseNp;
-  int coarseTotal;
-  int *coarseOffsets;
+  hlong coarseTotal;
+  hlong *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;

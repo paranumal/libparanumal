@@ -3,21 +3,21 @@
 
 typedef struct csr_t {
 
-  int Nrows;
-  int Ncols;
+  dlong Nrows;
+  dlong Ncols;
 
-  int NlocalCols;
+  dlong NlocalCols;
 
   //local
-  int diagNNZ;
-  int   *diagRowStarts;
-  int   *diagCols;
+  dlong diagNNZ;
+  dlong   *diagRowStarts;
+  dlong   *diagCols;
   dfloat *diagCoefs;
 
   //non-local
-  int offdNNZ;
-  int   *offdRowStarts;
-  int   *offdCols;
+  dlong offdNNZ;
+  dlong   *offdRowStarts;
+  dlong   *offdCols;
   dfloat *offdCoefs;
 
   dfloat *diagInv;
@@ -27,14 +27,14 @@ typedef struct csr_t {
   //storage for smoothing
   dfloat *scratch;
 
-  int   *colMap;
+  hlong   *colMap;
 
   // MPI halo exchange info
-  int  NHalo;
+  dlong  NHalo;
   int  NrecvTotal;  // number of elements to be sent in halo exchange
   int  NsendTotal;
-  int  totalHaloPairs;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
+  dlong  totalHaloPairs;
+  dlong *haloElementList; // sorted list of elements to be sent in halo exchange
   int *NsendPairs;      // number of elements worth of data to send
   int *NrecvPairs;      // number of elements worth of data to recv
   int  NsendMessages;   // number of messages to send
@@ -49,11 +49,11 @@ typedef struct csr_t {
 
 typedef struct ell_t {
 
-  int Nrows;
-  int Ncols;
+  dlong Nrows;
+  dlong Ncols;
   int nnzPerRow;
-  int strideLength;
-  int actualNNZ;
+  dlong strideLength;
+  dlong actualNNZ;
 
   occa::memory o_cols;
   occa::memory o_coefs;
@@ -62,9 +62,9 @@ typedef struct ell_t {
 
 typedef struct coo_t {
 
-  int Nrows;
-  int Ncols;
-  int nnz;
+  dlong Nrows;
+  dlong Ncols;
+  dlong nnz;
 
   // device memory
   occa::memory o_offsets;
@@ -75,10 +75,10 @@ typedef struct coo_t {
 
 typedef struct hyb_t {
 
-  int Nrows;
-  int Ncols;
+  dlong Nrows;
+  dlong Ncols;
 
-  int NlocalCols;
+  dlong NlocalCols;
 
   coo *C;
   ell *E;
@@ -88,11 +88,11 @@ typedef struct hyb_t {
   occa::memory o_null;
 
   // MPI halo exchange info
-  int  NHalo;
-  int *colMap;
+  dlong  NHalo;
+  hlong *colMap;
   int  NrecvTotal;  // number of elements to be sent in halo exchange
   int  NsendTotal;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
+  dlong *haloElementList; // sorted list of elements to be sent in halo exchange
   occa::memory o_haloElementList;
   int *NsendPairs;      // number of elements worth of data to send
   int *NrecvPairs;      // number of elements worth of data to recv
@@ -110,29 +110,29 @@ typedef struct hyb_t {
 
 typedef struct dcsr_t {
 
-  int Nrows;
-  int Ncols;
+  dlong Nrows;
+  dlong Ncols;
 
-  int NlocalCols;
+  dlong NlocalCols;
 
   //local
-  int diagNNZ;
+  dlong diagNNZ;
   occa::memory o_diagRows;
   occa::memory o_diagCols;
   occa::memory o_diagCoefs;
 
   //non-local
-  int offdNNZ;
+  dlong offdNNZ;
   occa::memory o_offdRows;
   occa::memory o_offdCols;
   occa::memory o_offdCoefs;
 
   // MPI halo exchange info
-  int  NHalo;
+  dlong  NHalo;
   int  NrecvTotal;  // number of elements to be sent in halo exchange
   int  NsendTotal;
-  int  totalHaloPairs;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
+  dlong  totalHaloPairs;
+  dlong *haloElementList; // sorted list of elements to be sent in halo exchange
   int *NsendPairs;      // number of elements worth of data to send
   int *NrecvPairs;      // number of elements worth of data to recv
   int  NsendMessages;   // number of messages to send
@@ -152,11 +152,11 @@ typedef enum {PCG=0,GMRES=1}KrylovType;
 typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
 
 typedef struct agmgLevel_t {
-  int Nrows;
-  int Ncols;
+  dlong Nrows;
+  dlong Ncols;
 
-  int *globalRowStarts; //global partitioning of fine level
-  int *globalAggStarts; //global partitioning of coarse level
+  hlong *globalRowStarts; //global partitioning of fine level
+  hlong *globalAggStarts; //global partitioning of coarse level
 
   bool gatherLevel;
   bool weightedInnerProds;
@@ -220,7 +220,7 @@ typedef struct agmgLevel_t {
   int ChebyshevIterations;
 
   dfloat threshold;
-  int numAggregates;
+  dlong numAggregates;
   SmoothType stype;
 
 } agmgLevel;
@@ -237,12 +237,12 @@ typedef struct {
   void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options);
   void **MatFreeArgs;
 
-  //Coarse xxt solver
+  //Coarse solver
   void *ExactSolve;
-  int coarseTotal;
-  int coarseOffset;
-  int *coarseOffsets;
-  int *coarseCounts;
+  hlong coarseTotal;
+  hlong coarseOffset;
+  hlong *coarseOffsets;
+  hlong *coarseCounts;
   dfloat *invCoarseA;
   dfloat *xCoarse, *rhsCoarse;
 
@@ -284,10 +284,10 @@ typedef struct {
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
-                       int* rowStarts,
-                       int  nnz,
-                       int* Ai,
-                       int* Aj,
+                       hlong* rowStarts,
+                       long long int  nnz,
+                       hlong* Ai,
+                       hlong* Aj,
                        dfloat* Avals,
                        bool nullSpace,
                        dfloat nullSpacePenalty);

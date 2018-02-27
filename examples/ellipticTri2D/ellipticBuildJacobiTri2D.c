@@ -2,12 +2,12 @@
 #include "ellipticTri2D.h"
 
 void BuildLocalIpdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 void BuildLocalContinuousPatchAx(solver_t* solver, mesh2D* mesh, dfloat lambda,
-                                  int eM, dfloat *Srr, dfloat *Srs, 
+                                  dlong eM, dfloat *Srr, dfloat *Srs, 
                                   dfloat *Sss, dfloat *MM, dfloat *A);
 
 
@@ -81,7 +81,7 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
 
   }
 
-  int diagNnum = basisNp*mesh->Nelements;
+  dlong diagNnum = basisNp*mesh->Nelements;
 
   dfloat *diagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
@@ -91,7 +91,7 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
   if(rank==0) printf("Building diagonal...");fflush(stdout);
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
     if (strstr(options,"IPDG")) {
       BuildLocalIpdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
@@ -110,7 +110,7 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
     gsParallelGatherScatter(mesh->hostGsh, diagA, dfloatString, "add"); 
     
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     (*invDiagA)[n] = 1/diagA[n];
   }
 

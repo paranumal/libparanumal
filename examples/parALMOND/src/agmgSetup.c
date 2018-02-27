@@ -62,13 +62,13 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, int *globalRowStar
   levels[lev]->device_smooth = device_agmgSmooth;
 
   //copy global partiton
-  levels[lev]->globalRowStarts = (int *) calloc(size+1,sizeof(int));
+  levels[lev]->globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
   for (int r=0;r<size+1;r++)
       levels[lev]->globalRowStarts[r] = globalRowStarts[r];
 
-  int localSize = levels[lev]->A->Nrows;
-  int globalSize = 0;
-  MPI_Allreduce(&localSize, &globalSize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  hlong localSize = (hlong) levels[lev]->A->Nrows;
+  hlong globalSize = 0;
+  MPI_Allreduce(&localSize, &globalSize, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
 
   //if the system if already small, dont create MG levels
   bool done = false;
@@ -123,9 +123,9 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, int *globalRowStar
     levels[lev+1]->device_prolongate = device_agmgProlongate;
     levels[lev+1]->device_smooth = device_agmgSmooth;
 
-    const int localCoarseDim = levels[lev+1]->A->Nrows;
-    int globalCoarseSize;
-    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    const hlong localCoarseDim = (hlong) levels[lev+1]->A->Nrows;
+    hlong globalCoarseSize;
+    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
       setupExactSolve(parAlmond, levels[lev+1],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
@@ -140,8 +140,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, int *globalRowStar
   //allocate vectors required
   occa::device device = parAlmond->device;
   for (int n=0;n<parAlmond->numLevels;n++) {
-    int N = levels[n]->Nrows;
-    int M = levels[n]->Ncols;
+    dlong N = levels[n]->Nrows;
+    dlong M = levels[n]->Ncols;
 
     if ((n>0)&&(n<parAlmond->numLevels)) { //kcycle vectors
       if (M) levels[n]->ckp1 = (dfloat *) calloc(M,sizeof(dfloat));
@@ -178,7 +178,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
   for(int lev=0; lev<parAlmond->numLevels; lev++){
 
-    int Nrows = parAlmond->levels[lev]->Nrows;
+    dlong Nrows = parAlmond->levels[lev]->Nrows;
 
     int active = (Nrows>0) ? 1:0;
     int totalActive=0;

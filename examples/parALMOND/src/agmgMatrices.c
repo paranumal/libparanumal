@@ -1,7 +1,7 @@
 #include "agmg.h"
 
-csr * newCSRfromCOO(int N, int* globalRowStarts,
-            int nnz, int *Ai, int *Aj, dfloat *Avals){
+csr * newCSRfromCOO(dlong N, hlong* globalRowStarts,
+                    long long int nnz, hlong *Ai, hlong *Aj, dfloat *Avals){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -14,43 +14,43 @@ csr * newCSRfromCOO(int N, int* globalRowStarts,
 
   A->NlocalCols = N;
 
-  int globalOffset = globalRowStarts[rank];
+  hlong globalOffset = globalRowStarts[rank];
 
   //first, count number of local, and non-local non-zeros
-  int diagNNZ=0;
-  int offdNNZ=0;
-  for (int n=0;n<nnz;n++) {
+  dlong diagNNZ=0;
+  dlong offdNNZ=0;
+  for (long long int n=0;n<nnz;n++) {
     if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1)) offdNNZ++;
     else diagNNZ++;
   }
 
-  int   *diagAi, *diagAj;
-  int   *offdAi, *offdAj;
+  dlong   *diagAi, *diagAj;
+  dlong   *offdAi, *offdAj;
   dfloat *diagAvals, *offdAvals;
 
   if (diagNNZ) {
-    diagAi        = (int *)   calloc(diagNNZ, sizeof(int));
-    diagAj        = (int *)   calloc(diagNNZ, sizeof(int));
+    diagAi        = (dlong *)   calloc(diagNNZ, sizeof(dlong));
+    diagAj        = (dlong *)   calloc(diagNNZ, sizeof(dlong));
     diagAvals     = (dfloat *) calloc(diagNNZ, sizeof(dfloat));
   }
   if (offdNNZ) {
-    offdAi        = (int *)   calloc(offdNNZ, sizeof(int));
-    offdAj        = (int *)   calloc(offdNNZ, sizeof(int));
+    offdAi        = (dlong *)   calloc(offdNNZ, sizeof(dlong));
+    offdAj        = (hlong *)   calloc(offdNNZ, sizeof(hlong));
     offdAvals     = (dfloat *) calloc(offdNNZ, sizeof(dfloat));
   }
 
   //split into local and non-local COO matrices
   diagNNZ =0;
   offdNNZ =0;
-  for (int n=0;n<nnz;n++) {
+  for (dlong n=0;n<nnz;n++) {
     if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1)) {
-      offdAi[offdNNZ] = Ai[n] - globalOffset; //local index
-      offdAj[offdNNZ] = Aj[n];                //global index
+      offdAi[offdNNZ] = (dlong) Ai[n] - globalOffset; //local index
+      offdAj[offdNNZ] = Aj[n];                        //global index
       offdAvals[offdNNZ] = Avals[n];
       offdNNZ++;
     } else {
-      diagAi[diagNNZ] = Ai[n] - globalOffset; //local index
-      diagAj[diagNNZ] = Aj[n] - globalOffset; //local index
+      diagAi[diagNNZ] = (dlong) Ai[n] - globalOffset; //local index
+      diagAj[diagNNZ] = (dlong) Aj[n] - globalOffset; //local index
       diagAvals[diagNNZ] = Avals[n];
       diagNNZ++;
     }
@@ -60,39 +60,41 @@ csr * newCSRfromCOO(int N, int* globalRowStarts,
   A->offdNNZ   = offdNNZ;
 
   if (N) {
-    A->diagRowStarts = (int *)   calloc(N+1,sizeof(int));
-    A->offdRowStarts = (int *)   calloc(N+1,sizeof(int));
+    A->diagRowStarts = (dlong *)   calloc(N+1,sizeof(dlong));
+    A->offdRowStarts = (dlong *)   calloc(N+1,sizeof(dlong));
   }
   if (diagNNZ) {
-    A->diagCols  = (int *)   calloc(diagNNZ, sizeof(int));
+    A->diagCols  = (dlong *)   calloc(diagNNZ, sizeof(dlong));
     A->diagCoefs = (dfloat *) calloc(diagNNZ, sizeof(dfloat));
   }
+  hlong* offdCols;
   if (offdNNZ) {
-    A->offdCols  = (int *)   calloc(offdNNZ,sizeof(int));
+    offdCols     = (hlong *)   calloc(offdNNZ,sizeof(hlong));
+    A->offdCols  = (dlong *)   calloc(offdNNZ,sizeof(dlong));
     A->offdCoefs = (dfloat *) calloc(offdNNZ, sizeof(dfloat));
   }
 
   // Convert to csr storage, assumes orginal matrix was presorted by rows
-  for(int n=0;n<diagNNZ;++n) {
-    int row = diagAi[n];
+  for(dlong n=0;n<diagNNZ;++n) {
+    dlong row = diagAi[n];
     A->diagRowStarts[row+1]++;
   }
-  for(int n=0;n<offdNNZ;++n) {
-    int row = offdAi[n];
+  for(dlong n=0;n<offdNNZ;++n) {
+    dlong row = offdAi[n];
     A->offdRowStarts[row+1]++;
   }
   //cumulative sum
-  for (int i=0;i<A->Nrows;i++) {
+  for (dlong i=0;i<A->Nrows;i++) {
     A->diagRowStarts[i+1] += A->diagRowStarts[i];
     A->offdRowStarts[i+1] += A->offdRowStarts[i];
   }
 
   //copy input data into struct
   if (diagNNZ) {
-    for (int i=0; i<N; i++) {
-      int start = A->diagRowStarts[i];
+    for (dlong i=0; i<N; i++) {
+      dlong start = A->diagRowStarts[i];
       int cnt = 1;
-      for (int j=A->diagRowStarts[i]; j<A->diagRowStarts[i+1]; j++) {
+      for (dlong j=A->diagRowStarts[i]; j<A->diagRowStarts[i+1]; j++) {
         if (diagAj[j] == i) { //move diagonal to first entry
           A->diagCols[start]  = diagAj[j];
           A->diagCoefs[start] = diagAvals[j];
@@ -106,47 +108,47 @@ csr * newCSRfromCOO(int N, int* globalRowStarts,
   }
 
   //record global indexing of columns
-  A->colMap = (int *)   calloc(A->Ncols, sizeof(int));
-  for (int i=0;i<A->Ncols;i++)
+  A->colMap = (hlong *)   calloc(A->Ncols, sizeof(hlong));
+  for (dlong i=0;i<A->Ncols;i++)
     A->colMap[i] = i + globalOffset;
 
   if (offdNNZ) {
-    for (int i=0; i<N; i++) {
-      int start = A->offdRowStarts[i];
+    for (dlong i=0; i<N; i++) {
+      dlong start = A->offdRowStarts[i];
       int cnt = 0;
-      for (int j=A->offdRowStarts[i]; j<A->offdRowStarts[i+1]; j++) {
-        A->offdCols[start+cnt]  = offdAj[j];
+      for (dlong j=A->offdRowStarts[i]; j<A->offdRowStarts[i+1]; j++) {
+        offdCols[start+cnt]  = offdAj[j];
         A->offdCoefs[start+cnt] = offdAvals[j];
         cnt++;
       }
     }
 
     //we now need to reorder the x vector for the halo, and shift the column indices
-    int *col = (int *) calloc(A->offdNNZ,sizeof(int));
-    for (int n=0;n<offdNNZ;n++)
-      col[n] = A->offdCols[n]; //copy non-local column global ids
+    hlong *col = (hlong *) calloc(A->offdNNZ,sizeof(hlong));
+    for (dlong n=0;n<offdNNZ;n++)
+      col[n] = offdCols[n]; //copy non-local column global ids
 
     //sort by global index
     std::sort(col,col+offdNNZ);
 
     //count unique non-local column ids
     A->NHalo = 0;
-    for (int n=1;n<offdNNZ;n++)
+    for (dlong n=1;n<offdNNZ;n++)
       if (col[n]!=col[n-1])  col[++A->NHalo] = col[n];
     A->NHalo++; //number of unique columns
 
     A->Ncols += A->NHalo;
 
     //save global column ids in colMap
-    A->colMap    = (int *) realloc(A->colMap, A->Ncols*sizeof(int));
-    for (int n=0; n<A->NHalo; n++)
+    A->colMap    = (hlong *) realloc(A->colMap, A->Ncols*sizeof(hlong));
+    for (dlong n=0; n<A->NHalo; n++)
       A->colMap[n+A->NlocalCols] = col[n];
     free(col);
 
     //shift the column indices to local indexing
-    for (int n=0;n<offdNNZ;n++) {
-      int gcol = A->offdCols[n];
-      for (int m=A->NlocalCols;m<A->Ncols;m++) {
+    for (dlong n=0;n<offdNNZ;n++) {
+      hlong gcol = offdCols[n];
+      for (dlong m=A->NlocalCols;m<A->Ncols;m++) {
         if (gcol == A->colMap[m])
           A->offdCols[n] = m;
       }
@@ -162,6 +164,7 @@ csr * newCSRfromCOO(int N, int* globalRowStarts,
     free(offdAi);
     free(offdAj);
     free(offdAvals);
+    free(offdCols);
   }
 
   csrHaloSetup(A,globalRowStarts);
@@ -209,32 +212,32 @@ dcoo *newDCOO(parAlmond_t *parAlmond, csr *B){
   A->diagNNZ = B->diagNNZ;
   A->offdNNZ = B->offdNNZ;
 
-  int *diagRows;
-  int *offdRows;
+  dlong *diagRows;
+  dlong *offdRows;
   if (B->diagNNZ)
-    diagRows = (int *) calloc(B->diagNNZ,sizeof(int));
+    diagRows = (dlong *) calloc(B->diagNNZ,sizeof(dlong));
   if (B->offdNNZ)
-    offdRows = (int *) calloc(B->offdNNZ,sizeof(int));
+    offdRows = (dlong *) calloc(B->offdNNZ,sizeof(dlong));
 
-  int diagCnt =0;
-  int offdCnt =0;
-  for (int i=0;i<B->Nrows;i++) {
-    for (int j=B->diagRowStarts[i];j<B->diagRowStarts[i+1];j++)
+  dlong diagCnt =0;
+  dlong offdCnt =0;
+  for (dlong i=0;i<B->Nrows;i++) {
+    for (dlong j=B->diagRowStarts[i];j<B->diagRowStarts[i+1];j++)
       diagRows[diagCnt++] = i;
 
-    for (int j=B->offdRowStarts[i];j<B->offdRowStarts[i+1];j++)
+    for (dlong j=B->offdRowStarts[i];j<B->offdRowStarts[i+1];j++)
       offdRows[offdCnt++] = i;
   }
 
   //copy to device
   if(B->diagNNZ){
-    A->o_diagRows  = parAlmond->device.malloc(A->diagNNZ*sizeof(int),   diagRows);
-    A->o_diagCols  = parAlmond->device.malloc(A->diagNNZ*sizeof(int),   B->diagCols);
+    A->o_diagRows  = parAlmond->device.malloc(A->diagNNZ*sizeof(dlong),   diagRows);
+    A->o_diagCols  = parAlmond->device.malloc(A->diagNNZ*sizeof(dlong),   B->diagCols);
     A->o_diagCoefs = parAlmond->device.malloc(A->diagNNZ*sizeof(dfloat), B->diagCoefs);
   }
   if(B->offdNNZ){
-    A->o_offdRows  = parAlmond->device.malloc(A->offdNNZ*sizeof(int), offdRows);
-    A->o_offdCols  = parAlmond->device.malloc(A->offdNNZ*sizeof(int),   B->offdCols);
+    A->o_offdRows  = parAlmond->device.malloc(A->offdNNZ*sizeof(dlong), offdRows);
+    A->o_offdCols  = parAlmond->device.malloc(A->offdNNZ*sizeof(dlong),   B->offdCols);
     A->o_offdCoefs = parAlmond->device.malloc(A->offdNNZ*sizeof(dfloat), B->offdCoefs);
   }
 
@@ -242,7 +245,7 @@ dcoo *newDCOO(parAlmond_t *parAlmond, csr *B){
   A->NsendTotal = B->NsendTotal;
   A->haloElementList = B->haloElementList;
   if (A->NsendTotal)
-    A->o_haloElementList = parAlmond->device.malloc(A->NsendTotal*sizeof(int),A->haloElementList);
+    A->o_haloElementList = parAlmond->device.malloc(A->NsendTotal*sizeof(dlong),A->haloElementList);
   A->NsendPairs = B->NsendPairs;
   A->NrecvPairs = B->NrecvPairs;
   A->NsendMessages = B->NsendMessages;
@@ -276,9 +279,12 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     rowCounters = (int*) calloc(csrA->Nrows, sizeof(int));
 
   int maxNnzPerRow = 0;
-  int minNnzPerRow = csrA->Ncols;
-  for(int i=0; i<csrA->Nrows; i++) {
-    int rowNnz = csrA->diagRowStarts[i+1] - csrA->diagRowStarts[i];
+  int minNnzPerRow = 0;
+  if (csrA->Nrows)
+    minNnzPerRow = (int) csrA->diagRowStarts[1] - csrA->diagRowStarts[0];
+
+  for(dlong i=0; i<csrA->Nrows; i++) {
+    int rowNnz = (int) csrA->diagRowStarts[i+1] - csrA->diagRowStarts[i];
     rowCounters[i] = rowNnz;
 
     maxNnzPerRow = (rowNnz > maxNnzPerRow) ? rowNnz : maxNnzPerRow;
@@ -295,14 +301,14 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   if (numBins)
     bins = (int *) calloc(numBins, sizeof(int));
 
-  for(int i=0; i<csrA->Nrows; i++){
+  for(dlong i=0; i<csrA->Nrows; i++){
     bins[rowCounters[i]-minNnzPerRow]++;
   }
 
   dfloat threshold = 2.0/3.0;
-  int totalNNZ = csrA->diagNNZ+csrA->offdNNZ;
+  dlong totalNNZ = csrA->diagNNZ+csrA->offdNNZ;
   int nnzPerRow = 0;
-  int nnz = 0;
+  dlong nnz = 0;
 
   //increase the nnz per row in E until it holds threshold*totalnnz nonzeros
   for(int i=0; i<numBins; i++){
@@ -320,22 +326,22 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->E->nnzPerRow = nnzPerRow;
   A->E->strideLength = csrA->Nrows;
 
-  int *Ecols;
+  dlong *Ecols;
   dfloat *Ecoefs;
   if(nnzPerRow&&csrA->Nrows){
-    Ecols  = (int *) calloc(csrA->Nrows*nnzPerRow, sizeof(int));
+    Ecols  = (dlong *) calloc(csrA->Nrows*nnzPerRow, sizeof(dlong));
     Ecoefs = (dfloat *) calloc(csrA->Nrows*nnzPerRow, sizeof(dfloat));
   }
 
-  int nnzC = 0;
+  dlong nnzC = 0;
 
   // count the number of nonzeros to be stored in coo format
-  for(int i=0; i<csrA->Nrows; i++) {
+  for(dlong i=0; i<csrA->Nrows; i++) {
     //excess from row in diag
     if(rowCounters[i] > nnzPerRow) nnzC += (rowCounters[i] - nnzPerRow);
 
     //all of offd
-    int offdRowNnz = csrA->offdRowStarts[i+1]-csrA->offdRowStarts[i];
+    int offdRowNnz = (int) csrA->offdRowStarts[i+1]-csrA->offdRowStarts[i];
 
     nnzC += offdRowNnz;
   }
@@ -348,21 +354,21 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->C->Ncols = csrA->Ncols;
   A->C->nnz   = nnzC;
 
-  int *Coffsets;
-  int *Ccols;
+  dlong *Coffsets;
+  dlong *Ccols;
   dfloat *Ccoefs;
 
-  Coffsets = (int *) calloc(csrA->Nrows+1, sizeof(int));
+  Coffsets = (dlong *) calloc(csrA->Nrows+1, sizeof(dlong));
   if (nnzC) {
-    Ccols    = (int *) calloc(nnzC, sizeof(int));
+    Ccols    = (dlong *) calloc(nnzC, sizeof(dlong));
     Ccoefs   = (dfloat *) calloc(nnzC, sizeof(dfloat));
   }
 
   nnzC = 0;
-  for(int i=0; i<csrA->Nrows; i++){
-    int Jstart = csrA->diagRowStarts[i];
-    int Jend   = csrA->diagRowStarts[i+1];
-    int rowNnz = Jend - Jstart;
+  for(dlong i=0; i<csrA->Nrows; i++){
+    dlong Jstart = csrA->diagRowStarts[i];
+    dlong Jend   = csrA->diagRowStarts[i+1];
+    int rowNnz = (int)  Jend - Jstart;
 
     // store only min of nnzPerRow and rowNnz
     int maxNnz = (nnzPerRow >= rowNnz) ? rowNnz : nnzPerRow;
@@ -383,7 +389,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     }
 
     //add the offd non-zeros
-    for (int j=csrA->offdRowStarts[i];j<csrA->offdRowStarts[i+1];j++) {
+    for (dlong j=csrA->offdRowStarts[i];j<csrA->offdRowStarts[i+1];j++) {
       Coffsets[i+1]++;
       Ccols[nnzC]   = csrA->offdCols[j];
       Ccoefs[nnzC]  = csrA->offdCoefs[j];
@@ -392,7 +398,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   }
 
   //use counts to create offsets
-  for (int i=0;i<csrA->Nrows;i++)
+  for (dlong i=0;i<csrA->Nrows;i++)
     Coffsets[i+1] += Coffsets[i];
 
   // copy the data to device memory
@@ -408,14 +414,14 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
     A->o_diagInv = parAlmond->device.malloc(csrA->Nrows*sizeof(dfloat), csrA->diagInv);
 
   if(A->E->nnzPerRow&&csrA->Nrows){
-    A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(int), Ecols);
+    A->E->o_cols  = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dlong), Ecols);
     A->E->o_coefs = parAlmond->device.malloc(csrA->Nrows*nnzPerRow*sizeof(dfloat), Ecoefs);
     free(Ecols); free(Ecoefs);
   }
 
   if(A->C->nnz){
-    A->C->o_offsets = parAlmond->device.malloc((csrA->Nrows+1)*sizeof(int), Coffsets);
-    A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(int), Ccols);
+    A->C->o_offsets = parAlmond->device.malloc((csrA->Nrows+1)*sizeof(dlong), Coffsets);
+    A->C->o_cols    = parAlmond->device.malloc(A->C->nnz*sizeof(dlong), Ccols);
     A->C->o_coefs   = parAlmond->device.malloc(A->C->nnz*sizeof(dfloat), Ccoefs);
 
     free(Ccols); free(Ccoefs);
@@ -426,7 +432,7 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
   A->NrecvTotal = csrA->NrecvTotal;
   A->NsendTotal = csrA->NsendTotal;
   A->haloElementList = csrA->haloElementList;
-  if (A->NsendTotal) A->o_haloElementList = parAlmond->device.malloc(A->NsendTotal*sizeof(int),A->haloElementList);
+  if (A->NsendTotal) A->o_haloElementList = parAlmond->device.malloc(A->NsendTotal*sizeof(dlong),A->haloElementList);
   A->NsendPairs = csrA->NsendPairs;
   A->NrecvPairs = csrA->NrecvPairs;
   A->NsendMessages = csrA->NsendMessages;
@@ -454,9 +460,9 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, bool nullSpac
 
   // y[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   #pragma omp parallel for
-  for(int i=0; i<A->Nrows; i++){ //local
+  for(dlong i=0; i<A->Nrows; i++){ //local
     dfloat result = 0.0;
-    for(int jj=A->diagRowStarts[i]; jj<A->diagRowStarts[i+1]; jj++)
+    for(dlong jj=A->diagRowStarts[i]; jj<A->diagRowStarts[i+1]; jj++)
       result += (A->diagCoefs[jj]*x[A->diagCols[jj]]);
 
     y[i] = alpha*result + beta*y[i];
@@ -473,9 +479,9 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, bool nullSpac
     csrHaloExchangeFinish(A);
 
   #pragma omp parallel for
-  for(int i=0; i<A->Nrows; i++){ //nonlocal
+  for(dlong i=0; i<A->Nrows; i++){ //nonlocal
     dfloat result = 0.0;
-    for(int jj=A->offdRowStarts[i]; jj<A->offdRowStarts[i+1]; jj++)
+    for(dlong jj=A->offdRowStarts[i]; jj<A->offdRowStarts[i+1]; jj++)
       result += (A->offdCoefs[jj]*x[A->offdCols[jj]]);
 
     y[i] += alpha*result;
@@ -610,7 +616,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, d
   // x = x + inv(D)*(b-A*x)
   if(x_is_zero){
     #pragma omp parallel for
-    for(int i=0; i<A->Nrows; i++){
+    for(dlong i=0; i<A->Nrows; i++){
       x[i] = A->diagInv[i]*r[i];
     }
     return;
@@ -618,7 +624,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, d
 
   dfloat *res = level->smootherResidual;
   #pragma omp parallel for
-  for(int i=0; i<A->Nrows; i++){
+  for(dlong i=0; i<A->Nrows; i++){
     res[i] = r[i];
   }
 
@@ -626,7 +632,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, d
 
   // update x
   #pragma omp parallel for
-  for (int i=0;i<A->Nrows;i++)
+  for (dlong i=0;i<A->Nrows;i++)
     x[i] = x[i] + A->diagInv[i]*res[i];
 
 }
@@ -639,7 +645,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat
 
   if(x_is_zero){
   #pragma omp parallel for
-    for(int i=0; i<A->Nrows; i++){
+    for(dlong i=0; i<A->Nrows; i++){
       x[i] = alpha*A->diagInv[i]*r[i];
     }
     return;
@@ -647,7 +653,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat
 
   dfloat *res = level->smootherResidual;
   #pragma omp parallel for
-  for(int i=0; i<A->Nrows; i++){
+  for(dlong i=0; i<A->Nrows; i++){
     res[i] = r[i];
   }
 
@@ -655,7 +661,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat
 
   // copy the buffer vector to x
   #pragma omp parallel for
-  for (int i=0;i<A->Nrows;i++)
+  for (dlong i=0;i<A->Nrows;i++)
     x[i] = x[i] + alpha*A->diagInv[i]*res[i];
 }
 
@@ -679,7 +685,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r
 
   if(x_is_zero){ //skip the Ax if x is zero
     #pragma omp parallel for
-    for(int i=0; i<A->Nrows; i++){
+    for(dlong i=0; i<A->Nrows; i++){
       res[i] = A->diagInv[i]*r[i];
       x[i] = 0.;
       d[i] = invTheta*res[i];
@@ -689,7 +695,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r
     level->Ax(level->AxArgs,x,res);
 
     #pragma omp parallel for
-    for(int i=0; i<A->Nrows; i++){
+    for(dlong i=0; i<A->Nrows; i++){
       res[i] = A->diagInv[i]*(r[i]-res[i]);
       d[i]   = invTheta*res[i];
     }
@@ -702,7 +708,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r
     //r_k+1 = r_k - D^{-1}Ad_k
     level->Ax(level->AxArgs,d,Ad);
     #pragma omp parallel for
-    for(int i=0; i<A->Nrows; i++) {
+    for(dlong i=0; i<A->Nrows; i++) {
       res[i] = res[i] - A->diagInv[i]*Ad[i];
     }
 
@@ -822,7 +828,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
 
 // set up halo infomation for inter-processor MPI
 // exchange of trace nodes
-void csrHaloSetup(csr *A, int *globalColStarts){
+void csrHaloSetup(csr *A, hlong *globalColStarts){
 
   // MPI info
   int rank, size;
@@ -837,8 +843,8 @@ void csrHaloSetup(csr *A, int *globalColStarts){
   A->NrecvTotal = 0;
   A->NsendPairs = (int*) calloc(size, sizeof(int));
   A->NrecvPairs = (int*) calloc(size, sizeof(int));
-  for(int n=A->NlocalCols;n<A->Ncols;++n){ //for just the halo
-    int id = A->colMap[n]; // global index
+  for(dlong n=A->NlocalCols;n<A->Ncols;++n){ //for just the halo
+    hlong id = A->colMap[n]; // global index
     for (int r=0;r<size;r++) { //find owner's rank
       if (globalColStarts[r]-1<id && id < globalColStarts[r+1]) {
         A->NrecvTotal++;
@@ -853,8 +859,11 @@ void csrHaloSetup(csr *A, int *globalColStarts){
   for (int r=0;r<size;r++)
     A->NsendTotal += A->NsendPairs[r];
 
-  if (A->NsendTotal)
-    A->haloElementList = (int *) calloc(A->NsendTotal,sizeof(int));
+  hlong *ghaloElementList;
+  if (A->NsendTotal) {
+    ghaloElementList   = (hlong *) calloc(A->NsendTotal,sizeof(hlong));
+    A->haloElementList = (dlong *) calloc(A->NsendTotal,sizeof(dlong));
+  }
 
   // count number of MPI messages in halo exchange
   A->NsendMessages = 0;
@@ -868,18 +877,18 @@ void csrHaloSetup(csr *A, int *globalColStarts){
 
   //exchange the needed ids
   int tag = 999;
-  int recvOffset = A->NlocalCols;
+  dlong recvOffset = A->NlocalCols;
   int sendOffset = 0;
   int sendMessage = 0, recvMessage = 0;
   for(int r=0;r<size;++r){
      if(A->NsendPairs[r]) {
-      MPI_Irecv(A->haloElementList+sendOffset, A->NsendPairs[r], MPI_INT, r, tag,
+      MPI_Irecv(ghaloElementList+sendOffset, A->NsendPairs[r], MPI_HLONG, r, tag,
           MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
       sendOffset += A->NsendPairs[r];
       ++sendMessage;
     }
     if(A->NrecvPairs[r]){
-      MPI_Isend(A->colMap+recvOffset, A->NrecvPairs[r], MPI_INT, r, tag,
+      MPI_Isend(A->colMap+recvOffset, A->NrecvPairs[r], MPI_HLONG, r, tag,
           MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
       recvOffset += A->NrecvPairs[r];
       ++recvMessage;
@@ -898,7 +907,7 @@ void csrHaloSetup(csr *A, int *globalColStarts){
 
   //shift to local ids
   for (int n=0;n<A->NsendTotal;n++)
-    A->haloElementList[n] -= globalColStarts[rank];
+    A->haloElementList[n] = (dlong) ghaloElementList[n] - globalColStarts[rank];
 
   if (A->NsendTotal)
     A->sendBuffer = (dfloat *) calloc(A->NsendTotal,sizeof(dfloat));
@@ -920,7 +929,7 @@ void csrHaloExchange(csr *A,
   // copy data from outgoing elements into temporary send buffer
   for(int i=0;i<A->NsendTotal;++i){
     // outgoing element
-    int id = A->haloElementList[i];
+    dlong id = A->haloElementList[i];
 
     memcpy(((char*)sendBuffer)+i*Nbytes, ((char*)sourceBuffer)+id*Nbytes, Nbytes);
   }
@@ -975,7 +984,7 @@ void csrHaloExchangeStart(csr *A,
   // copy data from outgoing elements into temporary send buffer
   for(int i=0;i<A->NsendTotal;++i){
     // outgoing element
-    int id = A->haloElementList[i];
+    dlong id = A->haloElementList[i];
 
     memcpy(((char*)sendBuffer)+i*Nbytes, ((char*)sourceBuffer)+id*Nbytes, Nbytes);
   }

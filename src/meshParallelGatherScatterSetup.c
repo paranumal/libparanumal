@@ -7,11 +7,11 @@
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
 ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
-                                      int Nlocal,
-                                      int *gatherLocalIds,
-                                      int *gatherBaseIds,
-                                      int *gatherBaseRanks,
-                                      int  *gatherHaloFlags,
+                                      dlong Nlocal,
+                                      dlong *gatherLocalIds,
+                                      hlong *gatherBaseIds,
+                                      int   *gatherBaseRanks,
+                                      int   *gatherHaloFlags,
                                       int verbose) { 
 
   int rank;
@@ -20,15 +20,15 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
 
   // 0. squeeze out negative globalIds
-  int *baseIds   = (int*) calloc(Nlocal,sizeof(int));
-  int *localIds  = (int*) calloc(Nlocal,sizeof(int));
-  int *baseRanks = (int*) calloc(Nlocal,sizeof(int));
-  int  *haloFlags = (int*) calloc(Nlocal,sizeof(int));
+  hlong *baseIds   = (hlong*) calloc(Nlocal,sizeof(hlong));
+  dlong *localIds  = (dlong*) calloc(Nlocal,sizeof(dlong));
+  int   *baseRanks = (int*)   calloc(Nlocal,sizeof(int));
+  int   *haloFlags = (int*)   calloc(Nlocal,sizeof(int));
 
-  int Ntotal = 0;
-  int Nhalo = 0;
-  int NnonHalo = 0;
-  for (int n=0;n<Nlocal;n++) {
+  dlong Ntotal = 0;
+  dlong Nhalo = 0;
+  dlong NnonHalo = 0;
+  for (dlong n=0;n<Nlocal;n++) {
     if(gatherBaseIds[n]<0) continue;
     localIds[Ntotal]  = gatherLocalIds[n]; 
     baseIds[Ntotal]   = gatherBaseIds[n];   
@@ -45,7 +45,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   ogs->NhaloGather = 0;
   ogs->NnonHaloGather = 0;
   ogs->NownedHalo = 0;
-  for(int n=0;n<Ntotal;++n){
+  for(dlong n=0;n<Ntotal;++n){
     int test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
     ogs->NtotalGather += test;
     if (haloFlags[n]==1) ogs->NhaloGather += test;
@@ -53,24 +53,24 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     if ((haloFlags[n]==1)&&(baseRanks[n]==rank)) ogs->NownedHalo +=test;
   }
 
-  ogs->haloGatherBaseIds  = (int*) calloc(ogs->NhaloGather, sizeof(int)); // offset into sorted list of nodes
-  ogs->haloGatherOffsets  = (int*) calloc(ogs->NhaloGather+1, sizeof(int)); // offset into sorted list of nodes
-  ogs->haloGatherLocalIds = (int*) calloc(Nhalo, sizeof(int));
+  ogs->haloGatherBaseIds  = (hlong*) calloc(ogs->NhaloGather, sizeof(hlong)); // offset into sorted list of nodes
+  ogs->haloGatherOffsets  = (dlong*) calloc(ogs->NhaloGather+1, sizeof(dlong)); // offset into sorted list of nodes
+  ogs->haloGatherLocalIds = (dlong*) calloc(Nhalo, sizeof(dlong));
 
-  ogs->ownedHaloGatherIds = (int*) calloc(ogs->NhaloGather, sizeof(int));  
+  ogs->ownedHaloGatherIds = (dlong*) calloc(ogs->NhaloGather, sizeof(dlong));  
 
-  ogs->nonHaloGatherBaseIds  = (int*) calloc(ogs->NnonHaloGather, sizeof(int)); // offset into sorted list of nodes
-  ogs->nonHaloGatherOffsets  = (int*) calloc(ogs->NnonHaloGather+1, sizeof(int)); // offset into sorted list of nodes
-  ogs->nonHaloGatherLocalIds = (int*) calloc(NnonHalo, sizeof(int));
+  ogs->nonHaloGatherBaseIds  = (hlong*) calloc(ogs->NnonHaloGather, sizeof(hlong)); // offset into sorted list of nodes
+  ogs->nonHaloGatherOffsets  = (dlong*) calloc(ogs->NnonHaloGather+1, sizeof(dlong)); // offset into sorted list of nodes
+  ogs->nonHaloGatherLocalIds = (dlong*) calloc(NnonHalo, sizeof(dlong));
 
-  int haloOffset = ogs->NnonHaloGather;
+  dlong haloOffset = ogs->NnonHaloGather;
 
   // only finds bases
   ogs->NhaloGather = 0;
   ogs->NnonHaloGather = 0;
   Nhalo = 0;
   NnonHalo = 0;
-  for(int n=0;n<Ntotal;++n){
+  for(dlong n=0;n<Ntotal;++n){
     int test = (n==0) ? 1: (baseIds[n] != baseIds[n-1]);
     
     // increment unique base counter and record index into shuffled list of nodes
@@ -110,10 +110,10 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     ogs->haloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc(ogs->NhaloGather*sizeof(dfloat), sizeof(char));
     
     ogs->o_haloGatherTmp      = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat),  ogs->haloGatherTmp);
-    ogs->o_haloGatherOffsets  = mesh->device.malloc((ogs->NhaloGather+1)*sizeof(int), ogs->haloGatherOffsets);
-    ogs->o_haloGatherLocalIds = mesh->device.malloc(Nhalo*sizeof(int),                ogs->haloGatherLocalIds);
+    ogs->o_haloGatherOffsets  = mesh->device.malloc((ogs->NhaloGather+1)*sizeof(dlong), ogs->haloGatherOffsets);
+    ogs->o_haloGatherLocalIds = mesh->device.malloc(Nhalo*sizeof(dlong),                ogs->haloGatherLocalIds);
 
-    ogs->o_ownedHaloGatherIds = mesh->device.malloc(ogs->NhaloGather*sizeof(int), ogs->ownedHaloGatherIds);
+    ogs->o_ownedHaloGatherIds = mesh->device.malloc(ogs->NhaloGather*sizeof(dlong), ogs->ownedHaloGatherIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
     ogs->haloGsh = gsParallelGatherScatterSetup(ogs->NhaloGather, ogs->haloGatherBaseIds,verbose);
@@ -121,8 +121,8 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
 
   // if there are non-halo nodes to gather
   if(ogs->NnonHaloGather){
-    ogs->o_nonHaloGatherOffsets  = mesh->device.malloc((ogs->NnonHaloGather+1)*sizeof(int), ogs->nonHaloGatherOffsets);
-    ogs->o_nonHaloGatherLocalIds = mesh->device.malloc(NnonHalo*sizeof(int),                ogs->nonHaloGatherLocalIds);
+    ogs->o_nonHaloGatherOffsets  = mesh->device.malloc((ogs->NnonHaloGather+1)*sizeof(dlong), ogs->nonHaloGatherOffsets);
+    ogs->o_nonHaloGatherLocalIds = mesh->device.malloc(NnonHalo*sizeof(dlong),                ogs->nonHaloGatherLocalIds);
   }
 
   //number of owned gathered nodes
@@ -131,7 +131,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   // build degree vectors
   ogs->invDegree = (dfloat*) calloc(Nlocal, sizeof(dfloat));
   ogs->gatherInvDegree = (dfloat*) calloc(ogs->Ngather, sizeof(dfloat));
-  for(int n=0;n<Nlocal;++n) ogs->invDegree[n] = 1;
+  for(dlong n=0;n<Nlocal;++n) ogs->invDegree[n] = 1;
 
   ogs->o_invDegree = mesh->device.malloc(Nlocal*sizeof(dfloat), ogs->invDegree);
   ogs->o_gatherInvDegree = mesh->device.malloc(ogs->Ngather*sizeof(dfloat), ogs->gatherInvDegree);
@@ -144,10 +144,10 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
 
   ogs->o_invDegree.copyTo(ogs->invDegree);  
   
-  for(int n=0;n<Nlocal;++n) 
+  for(dlong n=0;n<Nlocal;++n) 
     ogs->invDegree[n] = 1./ogs->invDegree[n];
   
-  for(int n=0;n<ogs->Ngather;++n)
+  for(dlong n=0;n<ogs->Ngather;++n)
     ogs->gatherInvDegree[n] = 1./ogs->gatherInvDegree[n];
 
   ogs->o_gatherInvDegree.copyFrom(ogs->gatherInvDegree);

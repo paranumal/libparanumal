@@ -17,9 +17,9 @@ void ellipticParallelGatherScatterSetup(solver_t* solver, const char *options){
   solver->o_invDegree = mesh->ogs->o_invDegree;
 
   // count elements that contribute to global C0 gather-scatter
-  int globalCount = 0;
-  int localCount = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong globalCount = 0;
+  dlong localCount = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
     int isHalo = 0;
     for(int n=0;n<mesh->Np;++n){
       if(mesh->globalHaloFlags[e*mesh->Np+n]>0){
@@ -31,13 +31,13 @@ void ellipticParallelGatherScatterSetup(solver_t* solver, const char *options){
     localCount += 1-isHalo;
   }
 
-  int *globalGatherElementList    = (int*) calloc(globalCount, sizeof(int));
-  int *localGatherElementList = (int*) calloc(localCount, sizeof(int));
+  dlong *globalGatherElementList = (dlong*) calloc(globalCount, sizeof(dlong));
+  dlong *localGatherElementList  = (dlong*) calloc(localCount, sizeof(dlong));
 
   globalCount = 0;
   localCount = 0;
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     int isHalo = 0;
     for(int n=0;n<mesh->Np;++n){
       if(mesh->globalHaloFlags[e*mesh->Np+n]>0){
@@ -58,9 +58,9 @@ void ellipticParallelGatherScatterSetup(solver_t* solver, const char *options){
 
   if(globalCount)
     solver->o_globalGatherElementList =
-      mesh->device.malloc(globalCount*sizeof(int), globalGatherElementList);
+      mesh->device.malloc(globalCount*sizeof(dlong), globalGatherElementList);
 
   if(localCount)
     solver->o_localGatherElementList =
-      mesh->device.malloc(localCount*sizeof(int), localGatherElementList);
+      mesh->device.malloc(localCount*sizeof(dlong), localGatherElementList);
 }

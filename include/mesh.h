@@ -20,7 +20,7 @@
 #endif
 
 //host index data type
-#if 1
+#if 0
 #define hlong int
 #define MPI_HLONG MPI_INT
 #define hlongFormat "%d"
@@ -73,7 +73,7 @@ typedef struct {
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
   dlong *haloElementList; // sorted list of elements to be sent in halo exchange
-  dlong *NhaloPairs;      // number of elements worth of data to send/recv
+  int *NhaloPairs;      // number of elements worth of data to send/recv
   int  NhaloMessages;     // number of messages to send
 
   void *haloSendRequests;
@@ -582,7 +582,7 @@ typedef struct {
 }mesh_t;
 
 // serial sort
-void mysort(int *data, int N, const char *order);
+void mysort(hlong *data, int N, const char *order);
 
 // sort entries in an array in parallel
 void parallelSort(int N, void *vv, size_t sz,
@@ -632,15 +632,15 @@ void meshConnectBoundary(mesh_t *mesh);
 
 // squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
 void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
-                                            int Nnum,
-                                            int *globalNumbering, 
+                                            dlong Nnum,
+                                            hlong *globalNumbering, 
                                             int *globalOwners, 
-                                            int *globalStarts);
+                                            hlong *globalStarts);
 
 ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
-                                      int Nlocal,
-                                      int *gatherLocalIds,
-                                      int *gatherBaseIds,
+                                      dlong Nlocal,
+                                      dlong *gatherLocalIds,
+                                      hlong *gatherBaseIds,
                                       int *gatherBaseRanks,
                                       int  *gatherHaloFlags,
                                       int verbose);
@@ -654,7 +654,7 @@ void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(int Ngather, int *gatherIds, int verbose);
+  void *gsParallelGatherScatterSetup(dlong Ngather, hlong *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
 
