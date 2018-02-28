@@ -1,8 +1,5 @@
 #include "ellipticTet3D.h"
 
-void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-
 void AxTet3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
@@ -121,10 +118,6 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
 
-  //storage for restriction matrices
-  dfloat **R = (dfloat **) calloc(numLevels,sizeof(dfloat*));
-  occa::memory *o_R = (occa::memory *) calloc(numLevels,sizeof(occa::memory));
-
   //maually build multigrid levels
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
   agmgLevel **levels = precon->parAlmond->levels;
@@ -221,16 +214,19 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
 
     for(int lev=0; lev<numLevels-1; lev++){
 
-      int Nrows = levels[lev]->Nrows;
+      dlong Nrows = levels[lev]->Nrows;
+      hlong hNrows = (hlong) levels[lev]->Nrows;
 
-      int minNrows=0, maxNrows=0, totalNrows=0;
+      dlong minNrows=0, maxNrows=0;
+      hlong totalNrows=0;
       dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
       avgNrows = (dfloat) totalNrows/size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
 
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){
@@ -267,11 +263,11 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
 
   /* build degree 1 problem and pass to AMG */
   nonZero_t *coarseA;
-  int nnzCoarseA;
+  dlong nnzCoarseA;
   ogs_t *coarseogs;
 
   solver_t* solverL = solversN[1];
-  int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
+  hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
   if (strstr(options,"IPDG")) {
     ellipticBuildIpdgTet3D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
@@ -279,11 +275,11 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
     ellipticBuildContinuousTet3D(solverL,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
   }
 
-  int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
-  int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
+  hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
+  hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
   dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-  for (int i=0;i<nnzCoarseA;i++) {
+  for (dlong i=0;i<nnzCoarseA;i++) {
     Rows[i] = coarseA[i].row;
     Cols[i] = coarseA[i].col;
     Vals[i] = coarseA[i].val;

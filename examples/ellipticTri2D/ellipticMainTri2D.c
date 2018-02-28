@@ -101,7 +101,7 @@ int main(int argc, char **argv){
   for(dlong e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(int n=0;n<mesh->Np;++n){
-      int id = n+e*mesh->Np;
+      dlong id = n+e*mesh->Np;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);

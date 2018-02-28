@@ -53,7 +53,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(int n=0;n<Nblock;++n)
+      for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -174,7 +174,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(int n=0;n<Nblock;++n)
+      for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);

@@ -18,11 +18,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->device.setStream(mesh->defaultStream);
 
   // find elements that have all neighbors on this process
-  int *internalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-  int *notInternalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
+  dlong *internalElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
+  dlong *notInternalElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
-  int Ninterior = 0, NnotInterior = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong Ninterior = 0, NnotInterior = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
     int flag = 0;
     for(int f=0;f<mesh->Nfaces;++f)
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1)
@@ -38,10 +38,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
   if(Ninterior)
-    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(int), internalElementIds);
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(dlong), internalElementIds);
 
   if(NnotInterior>0)
-    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(int), notInternalElementIds);
+    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(dlong), notInternalElementIds);
 
 
   // OCCA allocate device memory (remember to go back for halo)
@@ -311,12 +311,12 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
   mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
       for(int n=0;n<mesh->intNfp;++n){
         dfloat ix = 0, iy = 0, iz=0;
         for(int m=0;m<mesh->Nfp;++m){
-          int vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
+          dlong vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
           dfloat xm = mesh->x[vid];
           dfloat ym = mesh->y[vid];
           dfloat zm = mesh->z[vid];
@@ -325,7 +325,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
           iy += Inm*ym;
           iz += Inm*zm;
         }
-        int id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
+        dlong id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
         mesh->intx[id] = ix;
         mesh->inty[id] = iy;
         mesh->intz[id] = iz;
@@ -385,11 +385,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
                         mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
                         mesh->vmapP);
 
   mesh->o_EToB =
@@ -423,7 +423,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(dlong), mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =

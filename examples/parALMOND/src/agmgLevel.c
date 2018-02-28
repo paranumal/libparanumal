@@ -9,14 +9,14 @@ void agmgAx(void **args, dfloat *x, dfloat *Ax){
 }
 
 void agmgCoarsen(void **args, dfloat *r, dfloat *Rr){
-  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  // parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   axpy(level->R, 1.0, r, 0.0, Rr,false,0.);
 }
 
 void agmgProlongate(void **args, dfloat *x, dfloat *Px){
-  parAlmond_t *parAlmond = (parAlmond_t *) args[0];
+  // parAlmond_t *parAlmond = (parAlmond_t *) args[0];
   agmgLevel *level = (agmgLevel *) args[1];
 
   axpy(level->P, 1.0, x, 1.0, Px,false,0.);

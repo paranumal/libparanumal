@@ -29,9 +29,9 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
-    strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=MASSMATRIX");
+    //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be EXACT, KCYCLE, or VCYCLE
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 10000;
+  dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -68,13 +68,13 @@ int main(int argc, char **argv){
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3);
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
-  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
     for(int n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
@@ -89,7 +89,7 @@ int main(int argc, char **argv){
       for(int m=0;m<mesh->Np;++m){
 	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
       }
-      int id = n+e*mesh->Np;
+      dlong id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
       x[id] = 0.;
@@ -199,9 +199,9 @@ int main(int argc, char **argv){
   o_x.copyTo(mesh->q);
 
   dfloat maxError = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      int   id = e*mesh->Np+n;
+      dlong   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];

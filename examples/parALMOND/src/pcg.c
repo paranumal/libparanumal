@@ -8,7 +8,7 @@ void pcg(parAlmond_t *parAlmond,
   csr *A = parAlmond->levels[0]->A;
 
   const dlong m = A->Nrows;
-  const dlong n = A->Ncols;
+  // const dlong n = A->Ncols;
 
   parAlmond->ktype = PCG;
 

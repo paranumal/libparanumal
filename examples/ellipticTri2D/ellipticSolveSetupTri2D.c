@@ -40,9 +40,8 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
   solver->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), solver->grad);
 
   //setup async halo stream
-  solver->defaultStream = mesh->device.getStream();
-  solver->dataStream = mesh->device.createStream();
-  mesh->device.setStream(solver->defaultStream);
+  solver->defaultStream = mesh->defaultStream;
+  solver->dataStream = mesh->dataStream;
 
   dlong Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
@@ -82,6 +81,7 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
 
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    free(vgeoSendBuffer);
   }
 
   //set up memory for linear solver
