@@ -99,7 +99,6 @@ for n=1:N+1
 fprintf(fid, '%17.15E \n', w1d(n));
 end
 
-
 %% compute equispaced nodes on equilateral triangle
 [plotR,plotS] = meshgrid(linspace(-1,1,N+4));
 plotR = plotR(:); plotS = plotS(:);
@@ -120,8 +119,9 @@ plotInterp = VandermondeQuad2D(N, plotR,plotS)/V;
 fprintf(fid, '%% number of plot nodes\n');
 fprintf(fid, '%d\n', plotNp);
 fprintf(fid, '%% plot node coordinates\n');
-for n=1:plotNp
-  fprintf(fid, '%17.15E %17.15E\n', plotR(n), plotS(n));
+for i=1:N+1
+  for j=1:N+2-i 
+  fprintf(fid, '%17.15E %17.15E\n', r1d(i), r1d(j));
 end
 
 %% output plot interpolation matrix
@@ -145,7 +145,7 @@ for n=1:plotNelements
   fprintf(fid, '%d %d %d\n' ,...
  	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3));
 end
-
+	  
 	  %% TW
 	  if(0)
 	  

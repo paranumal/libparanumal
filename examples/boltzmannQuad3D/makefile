@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' -O3 -g
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' -O3
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -O3
@@ -38,6 +38,7 @@ boltzmannPlotVTUQuad3D.o \
 boltzmannPlotVTUQuad3DV2.o \
 boltzmannOccaSetupQuad3D.o \
 boltzmannPlotLevels.o \
+boltzmannPlotNorms.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshLoadReferenceNodesQuad3D.o \
