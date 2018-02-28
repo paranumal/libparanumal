@@ -33,7 +33,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
     
-    for (long long int n=0;n<nnz;n++) {
+    for (dlong n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;

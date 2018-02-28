@@ -6,45 +6,7 @@
 #include <stdlib.h>
 #include <occa.hpp>
 
-//float data type
-#if 0
-#define dfloat float
-#define MPI_DFLOAT MPI_FLOAT
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define MPI_DFLOAT MPI_DOUBLE
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
-
-//host index data type
-#if 1
-#define hlong int
-#define MPI_HLONG MPI_INT
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define MPI_HLONG MPI_LONG_LONG_INT
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
-
-//device index data type
-#if 1
-#define dlong int
-#define MPI_DLONG MPI_INT
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define MPI_DLONG MPI_LONG_LONG_INT
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
-
+#include "types.h"
 #include "ogs_t.h"
 
 typedef struct {
@@ -655,7 +617,7 @@ void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(dlong Ngather, hlong *gatherIds, int verbose);
+  void *gsParallelGatherScatterSetup(long long Ngather, long long *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
 

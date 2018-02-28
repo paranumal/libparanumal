@@ -15,10 +15,10 @@ void meshGeometricFactorsTet3D(mesh3D *mesh){
   
 
   dfloat minJ = 1e9, maxJ = -1e9;
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     /* vertex coordinates */
     dfloat xe1 = mesh->EX[id+0], ye1 = mesh->EY[id+0], ze1 = mesh->EZ[id+0];

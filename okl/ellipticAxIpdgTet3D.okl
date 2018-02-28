@@ -5,9 +5,9 @@
 
 // nx,ny,nz,sJ,invJ - need WsJ
 
-kernel void ellipticAxIpdgTet3D(const int Nelements,
-        const int * restrict vmapM,
-        const int * restrict vmapP,
+kernel void ellipticAxIpdgTet3D(const dlong Nelements,
+        const dlong * restrict vmapM,
+        const dlong * restrict vmapP,
         const dfloat lambda,
         const dfloat tau,
         const dfloat * restrict vgeo,
@@ -21,7 +21,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         const dfloat4 * restrict gradq,
         dfloat  * restrict Aq){
 
-  for(int e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
     shared  dfloat s_dqdy[p_Np];
     shared  dfloat s_dqdz[p_Np];
@@ -33,7 +33,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
     shared  dfloat s_Lnzdq[p_Np];
-    exclusive int idM;
+    exclusive dlong idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -49,9 +49,9 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int id  = n + e*p_Nfaces*p_Nfp;
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const dlong idP = vmapP[id];
         // find face that owns this node
         const int face = n/p_Nfp;
 
@@ -59,7 +59,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        int sid = p_Nsgeo*(e*p_Nfaces+face);
+        dlong sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
         ny = sgeo[sid+p_NYID];
         nz = sgeo[sid+p_NZID];
@@ -93,7 +93,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-        const int gid = e*p_Nvgeo;
+        const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat drdz = vgeo[gid + p_RZID];
@@ -133,7 +133,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        int id = idM%p_Np;
+        int id = (int) (idM%p_Np);
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]+nz*s_Lnzdq[id]);
       }
 
@@ -188,10 +188,10 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
   }
 }
 
-kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
-                                      const int * restrict elementList,
-                                      const int * restrict vmapM,
-                                      const int * restrict vmapP,
+kernel void ellipticPartialAxIpdgTet3D(const dlong Nelements,
+                                      const dlong * restrict elementList,
+                                      const dlong * restrict vmapM,
+                                      const dlong * restrict vmapP,
                                       const dfloat lambda,
                                       const dfloat tau,
                                       const dfloat * restrict vgeo,
@@ -205,7 +205,7 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
                                       const dfloat4 * restrict gradq,
                                       dfloat  * restrict Aq){
 
-  for(int e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dqdx[p_Np];
     shared  dfloat s_dqdy[p_Np];
     shared  dfloat s_dqdz[p_Np];
@@ -217,8 +217,8 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
     shared  dfloat s_Lnzdq[p_Np];
-    exclusive int element;
-    exclusive int idM;
+    exclusive dlong element;
+    exclusive dlong idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -234,9 +234,9 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int id  = n + element*p_Nfaces*p_Nfp;
+        const dlong id  = n + element*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const dlong idP = vmapP[id];
         // find face that owns this node
         const int face = n/p_Nfp;
 
@@ -244,7 +244,7 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        int sid = p_Nsgeo*(element*p_Nfaces+face);
+        dlong sid = p_Nsgeo*(element*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
         ny = sgeo[sid+p_NYID];
         nz = sgeo[sid+p_NZID];
@@ -278,7 +278,7 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-        const int gid = element*p_Nvgeo;
+        const dlong gid = element*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat drdz = vgeo[gid + p_RZID];
@@ -318,7 +318,7 @@ kernel void ellipticPartialAxIpdgTet3D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        int id = idM%p_Np;
+        int id = (int) (idM%p_Np);
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]+nz*s_Lnzdq[id]);
       }
 

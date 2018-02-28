@@ -25,7 +25,7 @@ typedef struct {
 
   char *type;
 
-  int Nblock;
+  dlong Nblock;
 
   dfloat tau;
 
@@ -44,8 +44,8 @@ typedef struct {
   int *EToB;
   //C0-FEM mask data
   int *mapB;      // boundary flag of face nodes
-  int Nmasked;
-  int *maskIds;
+  dlong Nmasked;
+  dlong *maskIds;
 
   occa::memory o_maskIds;
   occa::memory o_mapB;
@@ -71,11 +71,11 @@ typedef struct {
   occa::memory o_Ry;
 
   // list of elements that are needed for global gather-scatter
-  int NglobalGatherElements;
+  dlong NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  int NlocalGatherElements;
+  dlong NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
@@ -116,10 +116,10 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
 solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options);
 
 void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
+                              dlong *nnzA, hlong *globalStarts, const char *options);
 
-void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, int *nnz,
-                              ogs_t **ogs, int *globalStarts, const char* options);
+void ellipticBuildContinuousTet3D(solver_t *solver, dfloat lambda, nonZero_t **A, dlong *nnz,
+                              ogs_t **ogs, hlong *globalStarts, const char* options);
 
 void ellipticStartHaloExchange3D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
@@ -132,7 +132,7 @@ void ellipticParallelGatherScatterSetup(solver_t *solver, const char * options);
 //Linear solvers
 int pcg      (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
 
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(solver_t *solver,
             occa::memory &o_w,
             occa::memory &o_a,
@@ -147,17 +147,17 @@ void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, d
 
 void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
 

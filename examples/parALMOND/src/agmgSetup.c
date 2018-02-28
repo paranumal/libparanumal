@@ -985,7 +985,7 @@ csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **null
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   const dlong N = level->A->Nrows;
-  const dlong M = level->A->Ncols;
+  // const dlong M = level->A->Ncols;
 
   hlong *globalAggStarts = level->globalAggStarts;
 
@@ -1432,7 +1432,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   hlong *globalAggStarts = level->globalAggStarts;
-  hlong *globalRowStarts = level->globalRowStarts;
+  // hlong *globalRowStarts = level->globalRowStarts;
 
   hlong globalAggOffset = globalAggStarts[rank];
 

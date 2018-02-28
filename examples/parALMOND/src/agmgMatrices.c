@@ -641,7 +641,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, d
 
 void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r, dfloat *x, bool x_is_zero) {
 
-  dfloat alphaG = 0.;
+  // dfloat alphaG = 0.;
   dfloat alpha = level->smoother_params[0];
 
   if(x_is_zero){
@@ -682,7 +682,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r
   dfloat *Ad  = level->smootherResidual2;
   dfloat *d   = level->smootherUpdate;
 
-  dfloat alphaG = 0.;
+  // dfloat alphaG = 0.;
 
   if(x_is_zero){ //skip the Ax if x is zero
     #pragma omp parallel for
@@ -725,7 +725,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, csr *A, dfloat *r
 
 void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero) {
 
-  dfloat alphaG = 0.;
+  // dfloat alphaG = 0.;
 
   occaTimerTic(parAlmond->device,"hyb smoothJacobi");
   if(x_is_zero){
@@ -747,7 +747,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory
 
 void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero){
 
-  dfloat alphaG = 0.;
+  // dfloat alphaG = 0.;
   dfloat alpha = level->smoother_params[0];
 
   occaTimerTic(parAlmond->device,"hyb smoothDampedJacobi");
@@ -784,7 +784,7 @@ void smoothChebyshev(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::mem
   occa::memory o_Ad  = level->o_smootherResidual2;
   occa::memory o_d   = level->o_smootherUpdate;
 
-  dfloat alphaG = 0.;
+  // dfloat alphaG = 0.;
 
   occaTimerTic(parAlmond->device,"hyb smoothChebyshev");
 
