@@ -241,7 +241,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   int *Nsend = (int *) calloc(size, sizeof(int));
   int *Nrecv = (int *) calloc(size, sizeof(int));
-  int *Ncount = (int *) calloc(size, sizeof(int));
+  // int *Ncount = (int *) calloc(size, sizeof(int));
   int *sendOffsets = (int*) calloc(size, sizeof(int));
   int *recvOffsets = (int*) calloc(size, sizeof(int));
 

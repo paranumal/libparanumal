@@ -185,7 +185,7 @@ void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr) {
 
   solver_t *solver = (solver_t *) args[0];
-  char *options = (char *) args[1];
+  // char *options = (char *) args[1];
   mesh_t *mesh = solver->mesh;
 
   occa::memory o_invDiagA = solver->precon->o_invDiagA;

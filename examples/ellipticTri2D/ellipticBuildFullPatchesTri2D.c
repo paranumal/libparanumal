@@ -212,8 +212,8 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(refMesh);
 
@@ -384,7 +384,6 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
-    dfloat J = mesh->vgeo[vbase+JID];
 
     dlong vbaseP = eP*mesh->Nvgeo;
     dfloat drdxP = mesh->vgeo[vbaseP+RXID];
@@ -401,7 +400,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
     for(int n=0;n<mesh->Nfp;++n){
       for(int m=0;m<mesh->Nfp;++m){
         int nM = mesh->faceNodes[fM*mesh->Nfp+n];
-        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+        // int mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
         dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 
@@ -422,7 +421,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
         int nM = mesh->faceNodes[fM*mesh->Nfp+n];
 
         for(int i=0;i<mesh->Nfp;++i){
-          int iM = mesh->faceNodes[fM*mesh->Nfp+i];
+          // int iM = mesh->faceNodes[fM*mesh->Nfp+i];
           int iP = (int) (mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
           dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
@@ -441,7 +440,7 @@ void BuildFullPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau,
 
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfp;++m){
-        int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+        // int mM = mesh->faceNodes[fM*mesh->Nfp+m];
         int mP = (int) (mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
         for(int i=0;i<mesh->Nfp;++i){

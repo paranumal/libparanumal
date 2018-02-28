@@ -5,10 +5,10 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 void BuildFaceIpdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int face, dfloat *A);
+                        dfloat *MS, dlong face, dfloat *A);
 
 void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int face, dfloat *A);
+                        dfloat *MS, dlong face, dfloat *A);
 
 
 void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,
@@ -287,8 +287,8 @@ void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, 
     (*patchesIndex)[face] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(patchA); free(invRefAA);
   free(MS);
@@ -453,7 +453,6 @@ void BuildFaceIpdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat dsdx = mesh->vgeo[vbase+SXID];
   dfloat dsdy = mesh->vgeo[vbase+SYID];
-  dfloat J = mesh->vgeo[vbase+JID];
 
   dlong vbaseP = eP*mesh->Nvgeo;
   dfloat drdxP = mesh->vgeo[vbaseP+RXID];
@@ -470,7 +469,7 @@ void BuildFaceIpdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
   for(int n=0;n<mesh->Nfp;++n){
     for(int m=0;m<mesh->Nfp;++m){
       int nM = mesh->faceNodes[fM*mesh->Nfp+n];
-      int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+      // int mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
       dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
 
@@ -491,7 +490,7 @@ void BuildFaceIpdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
       int nM = mesh->faceNodes[fM*mesh->Nfp+n];
 
       for(int i=0;i<mesh->Nfp;++i){
-        int iM = mesh->faceNodes[fM*mesh->Nfp+i];
+        // int iM = mesh->faceNodes[fM*mesh->Nfp+i];
         int iP = (int) (mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
         dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
@@ -510,7 +509,7 @@ void BuildFaceIpdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
 
   for(int n=0;n<mesh->Np;++n){
     for(int m=0;m<mesh->Nfp;++m){
-      int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+      // int mM = mesh->faceNodes[fM*mesh->Nfp+m];
       int mP = (int) (mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
       for(int i=0;i<mesh->Nfp;++i){
@@ -585,7 +584,6 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
-    dfloat J = mesh->vgeo[vbase+JID];
 
     for(int n=0;n<Np;++n){
       for(int m=0;m<Np;++m){
@@ -688,7 +686,6 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
-      dfloat hinv = mesh->sgeo[sid+IHID];
 
       int bc = mesh->EToB[fM+Nfaces*e]; //raw boundary flag
       int bcD = 0, bcN =0;
@@ -784,7 +781,7 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
 
   //now the off-diagonal
   dlong eM = mesh->FPairsToE[2*face+0];
-  dlong eP = mesh->FPairsToE[2*face+1];
+  // dlong eP = mesh->FPairsToE[2*face+1];
   int fM = mesh->FPairsToF[2*face+0];
   int fP = mesh->FPairsToF[2*face+1];
 
@@ -792,29 +789,12 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
   dfloat nx = mesh->sgeo[sid+NXID];
   dfloat ny = mesh->sgeo[sid+NYID];
   dfloat sJ = mesh->sgeo[sid+SJID];
-  dfloat invJ = mesh->sgeo[sid+IJID];
-  dfloat hinv = mesh->sgeo[sid+IHID];
-
-  dlong sidP = mesh->Nsgeo*(eP*Nfaces+fP);
-  dfloat nxP = mesh->sgeo[sidP+NXID];
-  dfloat nyP = mesh->sgeo[sidP+NYID];
-  dfloat sJP = mesh->sgeo[sidP+SJID];
-  dfloat invJP = mesh->sgeo[sidP+IJID];
-  dfloat hinvP = mesh->sgeo[sidP+IHID];
 
   dlong vbase = eM*mesh->Nvgeo;
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat dsdx = mesh->vgeo[vbase+SXID];
   dfloat dsdy = mesh->vgeo[vbase+SYID];
-  dfloat J = mesh->vgeo[vbase+JID];
-
-  dlong vbaseP = eP*mesh->Nvgeo;
-  dfloat drdxP = mesh->vgeo[vbaseP+RXID];
-  dfloat drdyP = mesh->vgeo[vbaseP+RYID];
-  dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
-  dfloat dsdyP = mesh->vgeo[vbaseP+SYID];
-
 
   // mass matrix for this face
   dfloat *MSf = MS+fM*Nfp*Nfp;
@@ -823,7 +803,7 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
   for(int n=0;n<Nfp;++n){
     for(int m=0;m<Nfp;++m){
       int nM = mesh->faceNodes[fM*Nfp+n];
-      int mM = mesh->faceNodes[fM*Nfp+m];
+      // int mM = mesh->faceNodes[fM*Nfp+m];
 
       dfloat MSfnm = sJ*MSf[n*Nfp+m];
 
@@ -869,7 +849,7 @@ void BuildFaceBRdgPatchAx(solver_t *solver, mesh2D *mesh, dfloat *basis, dfloat 
 
   for(int n=0;n<Np;++n){
     for(int m=0;m<Nfp;++m){
-      int mM = mesh->faceNodes[fM*Nfp+m];
+      // int mM = mesh->faceNodes[fM*Nfp+m];
       int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
 
       for(int i=0;i<Nfp;++i){

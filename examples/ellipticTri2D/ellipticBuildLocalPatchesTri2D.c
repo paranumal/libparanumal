@@ -132,10 +132,6 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
     dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
     dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
 
-    int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
-    int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
-    int fP2 = mesh->EToF[eM*mesh->Nfaces+2];
-
     if(eP0>=0 && eP1>=0 && eP2>=0){ //check if this is an interior patch
 
       refPatchInvA = *patchesInvA;
@@ -177,8 +173,8 @@ void ellipticBuildLocalPatchesTri2D(solver_t* solver, mesh2D* mesh, int basisNp,
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(refMesh);
   free(patchA); free(invRefAA);
@@ -428,7 +424,6 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat sJ = mesh->sgeo[sid+SJID];
-    dfloat hinv = mesh->sgeo[sid+IHID];
 
     int bcD = 0, bcN =0;
     int bc = mesh->EToB[fM+Nfaces*eM]; //raw boundary flag
@@ -488,7 +483,7 @@ void BuildLocalBRdgPatchAx(solver_t* solver, mesh2D* mesh, int basisNp, dfloat *
     for(int n=0;n<Np;++n){
       for(int m=0;m<Nfp;++m){
         int mM = mesh->faceNodes[fM*Nfp+m];
-        int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
+        // int mP = (int) (mesh->vmapP[m + fM*Nfp+eM*Nfp*Nfaces]%Np);
 
         for(int i=0;i<Nfp;++i){
           int iM = mesh->faceNodes[fM*Nfp+i];

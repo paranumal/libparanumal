@@ -138,7 +138,7 @@ int pbicgstab(solver_t* solver, const char* options, dfloat lambda, occa::memory
 int pgmresm  (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
 
 
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(solver_t *solver,
             occa::memory &o_w,
             occa::memory &o_a,
@@ -149,14 +149,14 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                               dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              long long int *nnzA, hlong *globalStarts, const char *options);
+                              dlong *nnzA, hlong *globalStarts, const char *options);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                               dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              long long int *nnzA, hlong *globalStarts, const char *options);
+                              dlong *nnzA, hlong *globalStarts, const char *options);
 
 void ellipticBuildContinuousTri2D(solver_t* solver, dfloat lambda, nonZero_t **A, 
-                                  long long int *nnz, ogs_t **ogs, hlong *globalStarts, 
+                                  dlong *nnz, ogs_t **ogs, hlong *globalStarts, 
                                   const char* options);
 
 void ellipticBuildJacobiTri2D(solver_t *solver, mesh2D *mesh, int basisNp, dfloat *basis,

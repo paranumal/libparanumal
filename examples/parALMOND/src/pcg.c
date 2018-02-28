@@ -2,13 +2,13 @@
 
 
 void pcg(parAlmond_t *parAlmond,
-   int maxIt,
-   dfloat tol){
+         int maxIt,
+         dfloat tol){
 
   csr *A = parAlmond->levels[0]->A;
 
-  const int m = A->Nrows;
-  const int n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = PCG;
 
@@ -32,7 +32,7 @@ void pcg(parAlmond_t *parAlmond,
 
   //sanity check
   if (rdotr0<=(tol*tol)) {
-    for (int i=0;i<m;i++)
+    for (dlong i=0;i<m;i++)
       parAlmond->levels[0]->x[i] = x[i];
 
     free(x); free(p); free(Ap);
@@ -45,7 +45,7 @@ void pcg(parAlmond_t *parAlmond,
   } else if(strstr(parAlmond->options,"VCYCLE")) {
     vcycle(parAlmond, 0);
   }
-  for (int i=0;i<m;i++)
+  for (dlong i=0;i<m;i++)
     p[i] = z[i];
 
   dfloat rdotz0Local = innerProd(m, r, z);
@@ -123,7 +123,7 @@ void pcg(parAlmond_t *parAlmond,
   }
 
   //copy result back to parAlmond's x storage
-  for (int i=0;i<m;i++)
+  for (dlong i=0;i<m;i++)
     parAlmond->levels[0]->x[i] = x[i];
 
   free(x); free(p); free(Ap);
@@ -133,8 +133,8 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const int m = A->Nrows;
-  const int n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = PCG;
 

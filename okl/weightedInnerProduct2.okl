@@ -1,16 +1,16 @@
-kernel void weightedInnerProduct2(const int N,
+kernel void weightedInnerProduct2(const dlong N,
 				  const dfloat * restrict w,
 				  const dfloat * restrict x,
 				  const dfloat * restrict y,
 				  dfloat * restrict wxy){
   
 
-  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
     volatile shared dfloat s_wxy[p_blockSize];
 
     for(int t=0;t<p_blockSize;++t;inner0){
-      const int id = t + p_blockSize*b;
+      const dlong id = t + p_blockSize*b;
       s_wxy[t] = (id<N) ? w[id]*x[id]*y[id] : 0.f;
     }
 

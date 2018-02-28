@@ -1,6 +1,6 @@
 #include "agmg.h"
 
-void gmresUpdate(int Nrows,
+void gmresUpdate(dlong Nrows,
                  dfloat *x,
                  dfloat **V,
                  dfloat *H,
@@ -20,14 +20,14 @@ void gmresUpdate(int Nrows,
   }
 
   for(int j=0; j<Niter; ++j){
-    for(int n=0; n<Nrows; ++n)
+    for(dlong n=0; n<Nrows; ++n)
       x[n] += y[j]*V[j][n];
   }
 
   free(y);
 }
 
-void gmresUpdate(parAlmond_t *parAlmond, int Nrows,
+void gmresUpdate(parAlmond_t *parAlmond, dlong Nrows,
                  occa::memory o_x,
                  occa::memory *o_V,
                  dfloat *H,
@@ -59,8 +59,8 @@ void pgmres(parAlmond_t *parAlmond,
 
   csr *A = parAlmond->levels[0]->A;
 
-  const int m = A->Nrows;
-  const int n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = GMRES;
 
@@ -80,7 +80,7 @@ void pgmres(parAlmond_t *parAlmond,
 
   //sanity check
   if (nb<=tol) {
-    for (int i=0;i<m;i++)
+    for (dlong i=0;i<m;i++)
       parAlmond->levels[0]->x[i] = x[i];
 
     free(x); 
@@ -93,10 +93,10 @@ void pgmres(parAlmond_t *parAlmond,
   } else if(strstr(parAlmond->options,"VCYCLE")) {
     vcycle(parAlmond, 0);
   } else {
-    for (int k=0;k<m;k++)
+    for (dlong k=0;k<m;k++)
       z[k] = r[k];  
   }
-  for (int k=0;k<m;k++)
+  for (dlong k=0;k<m;k++)
     r[k] = z[k];
 
   dfloat nr = innerProd(m, r, r);
@@ -129,17 +129,17 @@ void pgmres(parAlmond_t *parAlmond,
     axpy(A, 1.0, V[i], 0.0, Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
-    for (int k=0;k<m;k++)
+    for (dlong k=0;k<m;k++)
       r[k] = Av[k];
     if(strstr(parAlmond->options,"KCYCLE")) {
       kcycle(parAlmond, 0);
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       vcycle(parAlmond, 0);
     } else {
-      for (int k=0;k<m;k++)
+      for (dlong k=0;k<m;k++)
         z[k] = r[k];  
     }
-    for (int k=0;k<m;k++)
+    for (dlong k=0;k<m;k++)
       w[k] = z[k];
 
     for(int k=0; k<=i; ++k){
@@ -203,7 +203,7 @@ void pgmres(parAlmond_t *parAlmond,
   gmresUpdate(m, x, V, H, s, Niter, maxIt);
 
   //copy result back to parAlmond's x storage
-  for (int i=0;i<m;i++)
+  for (dlong i=0;i<m;i++)
     parAlmond->levels[0]->x[i] = x[i];
 
   free(x); 
@@ -222,10 +222,8 @@ void device_pgmres(parAlmond_t *parAlmond,
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const int m = A->Nrows;
-  const int n = A->Ncols;
-
-  int sz = m*sizeof(dfloat);
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   // use parAlmond's buffers
   occa::memory &o_r = parAlmond->levels[0]->o_rhs;
@@ -238,9 +236,9 @@ void device_pgmres(parAlmond_t *parAlmond,
   nb = sqrt(nb);
 
   dfloat *dummy = (dfloat*) calloc(m, sizeof(dfloat));
-  occa::memory  o_x = parAlmond->device.malloc(sz, dummy);
-  occa::memory  o_Av= parAlmond->device.malloc(sz, dummy);
-  occa::memory  o_w = parAlmond->device.malloc(sz, dummy);
+  occa::memory  o_x = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  occa::memory  o_Av= parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  occa::memory  o_w = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
 
   //sanity check
   if (nb<=tol) {
@@ -270,7 +268,7 @@ void device_pgmres(parAlmond_t *parAlmond,
 
   occa::memory *o_V = (occa::memory *) calloc(maxIt, sizeof(occa::memory));
   for(int i=0; i<maxIt; ++i){
-    o_V[i] = parAlmond->device.malloc(sz, dummy);
+    o_V[i] = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
   }
   free(dummy);
 

@@ -1,17 +1,17 @@
 
 //partially sum the entries of a vector using a block-wise reductions
 
-kernel void sum(const int N,
+kernel void sum(const dlong N,
                 const dfloat * restrict x,
                 dfloat * restrict sx){
   
 
-  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
     volatile shared dfloat s_sx[p_blockSize];
 
     for(int t=0;t<p_blockSize;++t;inner0){
-      const int id = t + b*p_blockSize;
+      const dlong id = t + b*p_blockSize;
       s_sx[t] = (id<N) ? x[id] : 0.f;
     }
 

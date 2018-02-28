@@ -135,7 +135,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   dlong *localIds = (dlong *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(dlong));
 
-  dlong NFEMverts = mesh->Nelements*mesh->NpFEM;
+  // dlong NFEMverts = mesh->Nelements*mesh->NpFEM;
   for(dlong e=0;e<mesh->Nelements;++e){
     for (int n=0;n<mesh->NelFEM;n++) {
       //local ids in the subelement fem grid

@@ -69,8 +69,6 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    dlong Nlocal = mesh->Nelements*mesh->Np;
-    dlong Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements

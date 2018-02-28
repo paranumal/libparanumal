@@ -1,10 +1,5 @@
 #include "ellipticTri2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-
 
 void ellipticPreconditioner2D(solver_t *solver,
             dfloat lambda,
@@ -14,11 +9,7 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  ogs_t    *ogs = solver->ogs; // C0 Gather ScatterTri info
-
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-
+  
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
     occaTimerTic(mesh->device,"parALMOND");

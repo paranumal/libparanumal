@@ -16,7 +16,7 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A, long long int *nnz, ogs_t **ogs, hlong *globalStarts, const char* options) {
+void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts, const char* options) {
 
   mesh2D *mesh = solver->mesh;
 
@@ -48,7 +48,7 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
                                         mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  long long int nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
+  dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   int *AsendCounts  = (int*) calloc(size, sizeof(int));
@@ -94,7 +94,7 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
-  long long int cnt =0;
+  dlong cnt =0;
   for (int e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) {
       if (mask[e*mesh->Np + n]) continue; //skip masked nodes
@@ -146,7 +146,7 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
   MPI_Type_commit (&MPI_NONZERO_T);
 
   // count how many non-zeros to send to each process
-  for(long long int n=0;n<cnt;++n)
+  for(dlong n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
@@ -175,7 +175,7 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
 
   // compress duplicates
   cnt = 0;
-  for(long long int n=1;n<*nnz;++n){
+  for(dlong n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;

@@ -11,10 +11,9 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    long long int nnz;
+    dlong nnz;
     nonZero_t *A;
 
-    dlong Nnum = mesh->Np*mesh->Nelements;
     hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
     int basisNp = mesh->Np;
@@ -196,16 +195,17 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
+    //TODO need to fix this to use the normal builder for OAS to work again
+    /*
     nonZero_t *coarseA;
     long long int nnzCoarseA;
     dfloat *V1;
 
     hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
-    //TODO need to fix this to use the normal builder for OAS to work again
-    //ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
-    //                                       &V1, &coarseA, &nnzCoarseA,
-    //                                       &(precon->hgs), coarseGlobalStarts, options);
+    ellipticCoarsePreconditionerSetupTri2D(mesh, precon, tau, lambda, BCType,
+                                           &V1, &coarseA, &nnzCoarseA,
+                                           &(precon->hgs), coarseGlobalStarts, options);
 
     dlong Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
@@ -236,7 +236,7 @@ void ellipticPreconditionerSetupTri2D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
-
+    */
   } else if(strstr(options, "MULTIGRID")){
 
     ellipticMultiGridSetupTri2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);

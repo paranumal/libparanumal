@@ -5,7 +5,7 @@ int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                             dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                            long long int *nnzA, hlong *globalStarts, const char *options){
+                            dlong *nnzA, hlong *globalStarts, const char *options){
 
   int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -58,7 +58,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
     free(idSendBuffer);
   }
 
-  long long int nnzLocalBound = basisNp*basisNp*(1+Nfaces)*Nelements;
+  dlong nnzLocalBound = basisNp*basisNp*(1+Nfaces)*Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
@@ -82,7 +82,7 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
 
   // reset non-zero counter
-  long long int nnz = 0;
+  dlong nnz = 0;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -229,7 +229,6 @@ void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   
         for(int j=0;j<Np;++j){
           for(int i=0;i<Np;++i){
-            dfloat val = 0;
             for(int m=0;m<Np;++m){
               tmpSP[i*Np+j] += mesh->invMM[i*Np+m]*SP[m*Np+j];
             }

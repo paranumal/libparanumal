@@ -30,7 +30,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
 
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
-  dlong Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
+  // dlong Ntrace = mesh->Nfp*mesh->Nfaces*mesh->Nelements;
 
   // build gather-scatter
   int NpP = mesh->Np + mesh->Nfaces*mesh->Nfp;
@@ -89,9 +89,9 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
     for(int f=0;f<mesh->Nfaces;++f){
       // mark halo nodes
       int rP = mesh->EToP[e*mesh->Nfaces+f];
-      dlong eP = mesh->EToE[e*mesh->Nfaces+f];
-      int fP = mesh->EToF[e*mesh->Nfaces+f];
-      int bc = mesh->EToB[e*mesh->Nfaces+f];
+      // dlong eP = mesh->EToE[e*mesh->Nfaces+f];
+      // int fP = mesh->EToF[e*mesh->Nfaces+f];
+      // int bc = mesh->EToB[e*mesh->Nfaces+f];
 
       for(int n=0;n<mesh->Nfp;++n){
       dlong id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
@@ -191,7 +191,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
 
   // hack estimate for Jacobian scaling
 
-  dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
+  // dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   dfloat *diagInvOpDg = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   for(dlong e=0;e<mesh->Nelements;++e){
 
@@ -222,7 +222,7 @@ void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, a
       invhMax =  mymax(mesh->sgeo[base*mesh->Nsgeo + SJID],invhMax);
       invhMin =  mymin(mesh->sgeo[base*mesh->Nsgeo + SJID],invhMin);
     }
-    dfloat invh = invhMax/invhMin +invhMin/invhMax;
+    // dfloat invh = invhMax/invhMin +invhMin/invhMax;
 
     //TODO Average? Min/Max/Avg Eigenvalue? What works best for the scaling?
     //dfloat Jhinv2 = J*(eigG1+eigG2);

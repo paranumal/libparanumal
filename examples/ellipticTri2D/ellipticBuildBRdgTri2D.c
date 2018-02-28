@@ -5,7 +5,7 @@ int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
                             dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                            long long int *nnzA, hlong *globalStarts, const char *options){
+                            dlong *nnzA, hlong *globalStarts, const char *options){
 
   int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -75,21 +75,20 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
 
   /* Construct gradient as block matrix and load it to the halo */
   int GblockSize = Np*Np*(Nfaces+1);
-  long long int gradNNZ = GblockSize*(Nelements+mesh->totalHaloPairs);
+  dlong gradNNZ = GblockSize*(Nelements+mesh->totalHaloPairs);
   hlong *Gids = (hlong *) calloc((Nfaces+1)*(Nelements+mesh->totalHaloPairs),sizeof(hlong));
   dfloat  *Gx = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
   dfloat  *Gy = (dfloat *) calloc(gradNNZ,sizeof(dfloat));
 
   for (dlong eM=0;eM<Nelements;eM++) {
 
-    long long int blockId = eM*GblockSize;
+    dlong blockId = eM*GblockSize;
 
     dlong vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
     dfloat dsdy = mesh->vgeo[vbase+SYID];
-    dfloat J = mesh->vgeo[vbase+JID];
 
     Gids[eM*(Nfaces+1)] = globalIds[eM]; //record global element number
     for(int n=0;n<Np;++n){
@@ -159,13 +158,13 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   int *patchIds = (int*) calloc((Nfaces+1)*(Nfaces+1),sizeof(int));
 
   int AblockSize = Np*Np*(Nfaces*Nfaces+1);
-  long long int nnzLocalBound = AblockSize*Nelements;
+  dlong nnzLocalBound = AblockSize*Nelements;
   *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
 
   dfloat *Ae = (dfloat*) calloc(AblockSize,sizeof(dfloat));
 
   // reset non-zero counter
-  long long int nnz = 0;
+  dlong nnz = 0;
 
   // loop over all elements
   for(dlong eM=0;eM<Nelements;++eM){
@@ -228,7 +227,6 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
-      dfloat hinv = mesh->sgeo[sid+IHID];
 
       dlong eP = mesh->EToE[eM*Nfaces+fM];
       if (eP < 0) eP = eM;
@@ -370,7 +368,7 @@ void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
   }
 #endif
 
-  printf("nnz = %lld\n", *nnzA);
+  printf("nnz = "dlongFormat"\n", *nnzA);
 
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
 

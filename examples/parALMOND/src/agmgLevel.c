@@ -278,52 +278,59 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  hlong* coarseOffsets = level->globalRowStarts;
-  hlong coarseTotal = coarseOffsets[size];
-  hlong coarseOffset = coarseOffsets[rank];
+  //copy the global coarse partition as ints
+  int *coarseOffsets = (int* ) calloc(size+1,sizeof(int));
+  for (int r=0;r<size+1;r++) coarseOffsets[r] = (int) level->globalRowStarts[r];
+  
+  int  coarseTotal   = coarseOffsets[size];
+  int  coarseOffset  = coarseOffsets[rank];
 
   csr *A = level->A;
-  dlong N = level->Nrows;
+  int N = (int) level->Nrows;
 
-  hlong localNNZ;
-  hlong *rows;
-  hlong *cols;
+  int localNNZ;
+  int *rows;
+  int *cols;
   dfloat *vals;
 
   if((rank==0)&&strstr(parAlmond->options,"VERBOSE")) printf("Setting up coarse solver...");fflush(stdout);
 
   if(!nullSpace) {
     //if no nullspace, use sparse A
-    localNNZ = (hlong) (A->diagNNZ+A->offdNNZ);
+    localNNZ = (int) (A->diagNNZ+A->offdNNZ);
     
     if (localNNZ) {
-      rows = (hlong *) calloc(localNNZ,sizeof(hlong));
-      cols = (hlong *) calloc(localNNZ,sizeof(hlong));
+      rows = (int *) calloc(localNNZ,sizeof(int));
+      cols = (int *) calloc(localNNZ,sizeof(int));
       vals = (dfloat *) calloc(localNNZ,sizeof(dfloat));
     }
 
     //populate matrix
-    dlong cnt = 0;
-    for (dlong n=0;n<N;n++) {
-      for (dlong m=A->diagRowStarts[n];m<A->diagRowStarts[n+1];m++) {
+    int cnt = 0;
+    for (int n=0;n<N;n++) {
+      int start = (int) A->diagRowStarts[n];
+      int end   = (int) A->diagRowStarts[n+1];
+      for (int m=start;m<end;m++) {
         rows[cnt] = n + coarseOffset;
-        cols[cnt] = A->diagCols[m] + coarseOffset;
+        cols[cnt] = (int) (A->diagCols[m] + coarseOffset);
         vals[cnt] = A->diagCoefs[m];
         cnt++;
       }
+      start = (int) A->offdRowStarts[n];
+      end   = (int) A->offdRowStarts[n+1];
       for (dlong m=A->offdRowStarts[n];m<A->offdRowStarts[n+1];m++) {
         rows[cnt] = n + coarseOffset;
-        cols[cnt] = A->colMap[A->offdCols[m]];
+        cols[cnt] = (int) A->colMap[A->offdCols[m]];
         vals[cnt] = A->offdCoefs[m];
         cnt++;
       }
     }
   } else {
-    localNNZ = A->Nrows*coarseTotal; //A is dense due to nullspace augmentation
+    localNNZ = (int) (A->Nrows*coarseTotal); //A is dense due to nullspace augmentation
 
     if (localNNZ) {
-      rows = (hlong *) calloc(localNNZ,sizeof(hlong));
-      cols = (hlong *) calloc(localNNZ,sizeof(hlong));
+      rows = (int *) calloc(localNNZ,sizeof(int));
+      cols = (int *) calloc(localNNZ,sizeof(int));
       vals = (dfloat *) calloc(localNNZ,sizeof(dfloat));
     }
 
@@ -333,53 +340,57 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
     for (int r=0;r<size;r++) 
       nullCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
     
-    MPI_Allgatherv(A->null, A->Nrows, MPI_DFLOAT, nullTotal, nullCounts, coarseOffsets, MPI_DFLOAT, MPI_COMM_WORLD);
+    MPI_Allgatherv(A->null, N, MPI_DFLOAT, nullTotal, nullCounts, coarseOffsets, MPI_DFLOAT, MPI_COMM_WORLD);
 
     //populate matrix
-    for (dlong n=0;n<N;n++) {
-      for (hlong m=0;m<coarseTotal;m++) {    
+    for (int n=0;n<N;n++) {
+      for (int m=0;m<coarseTotal;m++) {    
         rows[n*coarseTotal+m] = n + coarseOffset;
         cols[n*coarseTotal+m] = m;
         vals[n*coarseTotal+m] = nullSpacePenalty*nullTotal[n+coarseOffset]*nullTotal[m];
       }
     }
 
-    for (dlong n=0;n<N;n++) {
-      for (dlong m=A->diagRowStarts[n];m<A->diagRowStarts[n+1];m++) {
-        hlong col = A->diagCols[m] + coarseOffset;
+    for (int n=0;n<N;n++) {
+      int start = (int) A->diagRowStarts[n];
+      int end   = (int) A->diagRowStarts[n+1];
+      for (int m=start;m<end;m++) {
+        int col = (int) (A->diagCols[m] + coarseOffset);
         vals[n*coarseTotal+col] += A->diagCoefs[m];
       }
-      for (dlong m=A->offdRowStarts[n];m<A->offdRowStarts[n+1];m++) {
-        hlong col = A->colMap[A->offdCols[m]];
+      start = (int) A->offdRowStarts[n];
+      end   = (int) A->offdRowStarts[n+1];
+      for (int m=start;m<end;m++) {
+        int col = (int) A->colMap[A->offdCols[m]];
         vals[n*coarseTotal+col] += A->offdCoefs[m];
       }
     }
   }
 
   //ge the nonzero counts from all ranks
-  hlong *NNZ = (hlong*) calloc(size,sizeof(hlong));  
-  hlong *NNZoffsets = (hlong*) calloc(size+1,sizeof(hlong));  
-  MPI_Allgather(&localNNZ, 1, MPI_HLONG, NNZ, 1, MPI_HLONG, MPI_COMM_WORLD);
+  int *NNZ = (int*) calloc(size,sizeof(int));  
+  int *NNZoffsets = (int*) calloc(size+1,sizeof(int));  
+  MPI_Allgather(&localNNZ, 1, MPI_INT, NNZ, 1, MPI_HLONG, MPI_COMM_WORLD);
 
-  hlong totalNNZ = 0;
+  int totalNNZ = 0;
   for (int r=0;r<size;r++) {
     totalNNZ += NNZ[r];
     NNZoffsets[r+1] = NNZoffsets[r] + NNZ[r];
   }
 
-  hlong *Arows = (hlong *) calloc(totalNNZ,sizeof(hlong));
-  hlong *Acols = (hlong *) calloc(totalNNZ,sizeof(hlong));
+  int *Arows = (int *) calloc(totalNNZ,sizeof(int));
+  int *Acols = (int *) calloc(totalNNZ,sizeof(int));
   dfloat *Avals = (dfloat *) calloc(totalNNZ,sizeof(dfloat));
 
-  MPI_Allgatherv(rows, localNNZ, MPI_HLONG, Arows, NNZ, NNZoffsets, MPI_HLONG, MPI_COMM_WORLD);
-  MPI_Allgatherv(cols, localNNZ, MPI_HLONG, Acols, NNZ, NNZoffsets, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgatherv(rows, localNNZ, MPI_INT, Arows, NNZ, NNZoffsets, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgatherv(cols, localNNZ, MPI_INT, Acols, NNZ, NNZoffsets, MPI_INT, MPI_COMM_WORLD);
   MPI_Allgatherv(vals, localNNZ, MPI_DFLOAT, Avals, NNZ, NNZoffsets, MPI_DFLOAT, MPI_COMM_WORLD);
 
   //assemble the full matrix
   dfloat *coarseA = (dfloat *) calloc(coarseTotal*coarseTotal,sizeof(dfloat));
   for (int i=0;i<totalNNZ;i++) {
-    hlong n = Arows[i];
-    hlong m = Acols[i];
+    int n = Arows[i];
+    int m = Acols[i];
     coarseA[n*coarseTotal+m] = Avals[i];
   }
 
@@ -387,8 +398,8 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
 
   //store only the local rows of the full inverse
   parAlmond->invCoarseA = (dfloat *) calloc(A->Nrows*coarseTotal,sizeof(dfloat));
-  for (dlong n=0;n<A->Nrows;n++) {
-    for (hlong m=0;m<coarseTotal;m++) {
+  for (int n=0;n<N;n++) {
+    for (int m=0;m<coarseTotal;m++) {
       parAlmond->invCoarseA[n*coarseTotal+m] = coarseA[(n+coarseOffset)*coarseTotal+m];
     } 
   }
@@ -396,7 +407,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   parAlmond->coarseTotal = coarseTotal;
   parAlmond->coarseOffset = coarseOffset;
   parAlmond->coarseOffsets = coarseOffsets;
-  parAlmond->coarseCounts = (hlong*) calloc(size,sizeof(hlong));
+  parAlmond->coarseCounts = (int*) calloc(size,sizeof(int));
     for (int r=0;r<size;r++) 
       parAlmond->coarseCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
 
@@ -423,22 +434,22 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
 }
 
 
-void exactCoarseSolve(parAlmond_t *parAlmond, dlong N, dfloat *rhs, dfloat *x) {
+void exactCoarseSolve(parAlmond_t *parAlmond, int N, dfloat *rhs, dfloat *x) {
 
   //gather the full vector
   MPI_Allgatherv(rhs, N, MPI_DFLOAT, parAlmond->rhsCoarse, parAlmond->coarseCounts, parAlmond->coarseOffsets, MPI_DFLOAT, MPI_COMM_WORLD);
 
   //multiply by local part of the exact matrix inverse
   #pragma omp parallel for
-  for (dlong n=0;n<N;n++) {
+  for (int n=0;n<N;n++) {
     x[n] = 0.;
-    for (dlong m=0;m<parAlmond->coarseTotal;m++) {
+    for (int m=0;m<parAlmond->coarseTotal;m++) {
       x[n] += parAlmond->invCoarseA[n*parAlmond->coarseTotal+m]*parAlmond->rhsCoarse[m];
     }
   }
 }
 
-void device_exactCoarseSolve(parAlmond_t *parAlmond, dlong N, occa::memory o_rhs, occa::memory o_x) {
+void device_exactCoarseSolve(parAlmond_t *parAlmond, int N, occa::memory o_rhs, occa::memory o_x) {
 
   dfloat *rhs = parAlmond->levels[parAlmond->numLevels-1]->rhs;
   dfloat *x = parAlmond->levels[parAlmond->numLevels-1]->x;
@@ -450,9 +461,9 @@ void device_exactCoarseSolve(parAlmond_t *parAlmond, dlong N, occa::memory o_rhs
 
   //multiply by local part of the exact matrix inverse
   #pragma omp parallel for
-  for (dlong n=0;n<N;n++) {
+  for (int n=0;n<N;n++) {
     x[n] = 0.;
-    for (dlong m=0;m<parAlmond->coarseTotal;m++) {
+    for (int m=0;m<parAlmond->coarseTotal;m++) {
       x[n] += parAlmond->invCoarseA[n*parAlmond->coarseTotal+m]*parAlmond->rhsCoarse[m];
     }
   }
