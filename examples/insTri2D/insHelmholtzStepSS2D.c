@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
+void insHelmholtzStepSS2D(ins_t *ins, int tstep,  int haloBytes,
 			dfloat * sendBuffer, dfloat * recvBuffer, 
 			char   * options){
   
@@ -10,8 +10,8 @@ void insHelmholtzStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   dfloat t = tstep*ins->dt + ins->dt;
   
-  iint Ntotal = mesh->Nelements+mesh->totalHaloPairs;
-  iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
+  int Ntotal = mesh->Nelements+mesh->totalHaloPairs;
+  int rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
   
   // if(strstr(options,"BROKEN")){
 

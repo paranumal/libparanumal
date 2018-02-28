@@ -14,13 +14,13 @@ ALMONDDIR = ../parALMOND
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
-		 	
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."'
+
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
@@ -36,7 +36,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 
 # types of files we are going to construct rules for
@@ -48,9 +47,11 @@ $(ALMONDDIR)/parALMOND.h \
 
 # list of objects to be compiled
 AOBJS    = \
+PCG.o \
+PGMRES.o \
+PBiCGStab.o \
 ellipticSetupTri2D.o \
 ellipticPreconditionerSetupTri2D.o\
-ellipticCoarsePreconditionerSetupTri2D.o\
 ellipticPreconditionerTri2D.o\
 ellipticSolveTri2D.o\
 ellipticSolveSetupTri2D.o\
@@ -58,13 +59,15 @@ ellipticHaloExchange2D.o\
 ellipticParallelGatherScatterTri2D.o \
 ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTri2D.o \
+ellipticBuildBRdgTri2D.o \
 ellipticBuildContinuousTri2D.o \
-ellipticBuildFullPatchesIpdgTri2D.o \
-ellipticBuildFacePatchesIpdgTri2D.o \
-ellipticBuildJacobiIpdgTri2D.o \
-ellipticBuildLocalPatchesIpdgTri2D.o \
+ellipticBuildFullPatchesTri2D.o \
+ellipticBuildFacePatchesTri2D.o \
+ellipticBuildJacobiTri2D.o \
+ellipticBuildLocalPatchesTri2D.o \
 ellipticBuildMultigridLevelTri2D.o \
 ellipticMultiGridSetupTri2D.o \
+ellipticSEMFEMSetupTri2D.o\
 ellipticSetupSmoothersTri2D.o \
 ellipticSmoothersTri2D.o
 
@@ -73,6 +76,7 @@ LOBJS = \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
+../../src/meshConnectFaceModes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloSetup.o \
@@ -81,6 +85,7 @@ LOBJS = \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshParallelConnectNodes.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshVTU2D.o \
@@ -89,12 +94,8 @@ LOBJS = \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\

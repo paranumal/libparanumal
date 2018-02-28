@@ -1,77 +1,103 @@
 #include "agmg.h"
 
-void gmresUpdate(iint Nrows,
+void gmresUpdate(dlong Nrows,
                  dfloat *x,
-            	   dfloat **V,
-            	   dfloat *H,
-            	   dfloat *s,
-            	   iint end,
-            	   iint maxIt){
+                 dfloat **V,
+                 dfloat *H,
+                 dfloat *s,
+                 int Niter,
+                 int maxIt){
 
-  dfloat *y = (dfloat *) calloc(end, sizeof(dfloat));
+  dfloat *y = (dfloat *) calloc(Niter, sizeof(dfloat));
 
-  for(iint k=end-1; k>=0; --k){
+  for(int k=Niter-1; k>=0; --k){
     y[k] = s[k];
 
-    for(iint m=k+1; m<maxIt; ++m)
+    for(int m=k+1; m<maxIt; ++m)
       y[k] -= H[k + m*(maxIt+1)]*y[m];
 
     y[k] /= H[k + k*(maxIt+1)];
   }
 
-  for(iint j=0; j<end; ++j){
-    for(iint n=0; n<Nrows; ++n)
+  for(int j=0; j<Niter; ++j){
+    for(dlong n=0; n<Nrows; ++n)
       x[n] += y[j]*V[j][n];
   }
+
+  free(y);
 }
 
-void gmresUpdate(parAlmond_t *parAlmond, iint Nrows,
-     occa::memory o_x,
-	   occa::memory *o_V,
-	   dfloat *H,
-	   dfloat *s,
-	   iint end,
-	   iint maxIt){
+void gmresUpdate(parAlmond_t *parAlmond, dlong Nrows,
+                 occa::memory o_x,
+                 occa::memory *o_V,
+                 dfloat *H,
+                 dfloat *s,
+                 int Niter,
+                 int maxIt){
 
-  dfloat *y = (dfloat *) calloc(end+1, sizeof(dfloat));
+  dfloat *y = (dfloat *) calloc(Niter+1, sizeof(dfloat));
 
-  for(iint k=end-1; k>=0; --k){
+  for(int k=Niter-1; k>=0; --k){
     y[k] = s[k];
 
-    for(iint m=k+1; m<end; ++m)
-  	  y[k] -= H[k + m*(maxIt+1)]*y[m];
+    for(int m=k+1; m<Niter; ++m)
+      y[k] -= H[k + m*(maxIt+1)]*y[m];
 
     y[k] /= H[k + k*(maxIt+1)];
   }
 
-  for(iint j=0; j<end; ++j){
+  for(int j=0; j<Niter; ++j){
     vectorAdd(parAlmond, Nrows, y[j], o_V[j], 1.0, o_x);
   }
+
+  free(y);
 }
 
-//TODO need to link this with MPI
-void gmres(parAlmond_t *parAlmond,
-     csr *A,
-     dfloat *b,
-     dfloat *x,
-     iint maxIt,
-     dfloat tol){
+void pgmres(parAlmond_t *parAlmond,
+           int maxIt,
+           dfloat tol){
 
-  iint m = A->Nrows;
-  iint n = A->Ncols;
+  csr *A = parAlmond->levels[0]->A;
+
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = GMRES;
 
+  // use parAlmond's buffers
+  dfloat *r = parAlmond->levels[0]->rhs;
+  dfloat *z = parAlmond->levels[0]->x;
+
   // initial residual
-  dfloat nb = innerProd(m, b, b);
+  dfloat nbLocal = innerProd(m, r, r);
+  dfloat nb = 0;
+  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
   nb = sqrt(nb);
 
-  dfloat *r = (dfloat *) calloc(m,sizeof(dfloat));
+  //    x = 0;
+  dfloat *x  = (dfloat *) calloc(m,sizeof(dfloat));
+  setVector(m, x, 0.0);
+
+  //sanity check
+  if (nb<=tol) {
+    for (dlong i=0;i<m;i++)
+      parAlmond->levels[0]->x[i] = x[i];
+
+    free(x); 
+    return;
+  }
 
   // M r = b - A*x0
-  //solve(parAlmond, b, r);
-  for (iint k=0;k<m;k++)
-    r[k] = b[k];
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    vcycle(parAlmond, 0);
+  } else {
+    for (dlong k=0;k<m;k++)
+      z[k] = r[k];  
+  }
+  for (dlong k=0;k<m;k++)
+    r[k] = z[k];
 
   dfloat nr = innerProd(m, r, r);
   nr = sqrt(nr);
@@ -81,7 +107,7 @@ void gmres(parAlmond_t *parAlmond,
 
   dfloat **V = (dfloat **) calloc(maxIt,sizeof(dfloat *));
 
-  for(iint i=0; i<maxIt; ++i){
+  for(int i=0; i<maxIt; ++i){
     V[i] = (dfloat *) calloc(m, sizeof(dfloat)); //TODO this is way too much memory if maxit is large
   }
 
@@ -91,27 +117,35 @@ void gmres(parAlmond_t *parAlmond,
   dfloat *H = (dfloat*) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat*) calloc(4*maxIt, sizeof(dfloat));
 
-  dfloat *resVec = (dfloat *) calloc(maxIt, sizeof(dfloat));
-
-  resVec[0] = nr;
   dfloat *Av = (dfloat *) calloc(m, sizeof(dfloat));
   dfloat *w  = (dfloat *) calloc(m, sizeof(dfloat));
 
-  iint end;
+  int Niter;
 
-  for(iint i=0; i<maxIt; i++){
+  for(int i=0; i<maxIt; i++){
 
-    end = i+1;
+    Niter = i+1;
     // Av = A*V(:.i)
     axpy(A, 1.0, V[i], 0.0, Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
-    //solve(parAlmond, Av, w);
-    for (iint k=0;k<m;k++)
-      w[k] = Av[k];
+    for (dlong k=0;k<m;k++)
+      r[k] = Av[k];
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      vcycle(parAlmond, 0);
+    } else {
+      for (dlong k=0;k<m;k++)
+        z[k] = r[k];  
+    }
+    for (dlong k=0;k<m;k++)
+      w[k] = z[k];
 
-    for(iint k=0; k<=i; ++k){
-      dfloat hki = innerProd(m, w, V[k]);
+    for(int k=0; k<=i; ++k){
+      dfloat hkiLocal = innerProd(m, w, V[k]);
+      dfloat hki = 0.;
+      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
       // w = w - hki*V[k]
       vectorAdd(m, -hki, V[k], 1.0, w);
@@ -120,9 +154,13 @@ void gmres(parAlmond_t *parAlmond,
       H[k + i*(maxIt+1)] = hki;
     }
 
-    H[i+1 + i*(maxIt+1)] = sqrt(innerProd(m, w, w));
+    dfloat wdotwLocal = innerProd(m, w, w);
+    dfloat wdotw = 0.;
+    MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
-    for(iint k=0; k<i; ++k){
+    H[i+1 + i*(maxIt+1)] = sqrt(wdotw);
+
+    for(int k=0; k<i; ++k){
       dfloat h1 = H[k +     i*(maxIt+1)];
       dfloat h2 = H[k + 1 + i*(maxIt+1)];
 
@@ -148,105 +186,136 @@ void gmres(parAlmond_t *parAlmond,
     s[i  ] =  ct*s1 + st*s2;
     s[i+1] = -st*s1 + ct*s2;
 
-    resVec[i+1] = fabs(s[i+1]);
-
     if(fabs(s[i+1]) < tol) break;
 
     if(i < maxIt-1){
-      dfloat nw = sqrt(innerProd(m, w, w));
+      dfloat wdotwLocal = innerProd(m, w, w);
+      dfloat wdotw = 0.;
+      MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+
+      dfloat nw = sqrt(wdotw);
 
       // V(:,i+1) = w/nw
       vectorAdd(m,1./nw, w, 0.0, V[i+1]);
     }
   }
 
-  gmresUpdate(m, x, V, H, s, end, maxIt);
+  gmresUpdate(m, x, V, H, s, Niter, maxIt);
 
-  if(end == maxIt)
+  //copy result back to parAlmond's x storage
+  for (dlong i=0;i<m;i++)
+    parAlmond->levels[0]->x[i] = x[i];
+
+  free(x); 
+  free(s); free(V);
+  free(H); free(J);
+  free(Av); free(w);
+
+  if(Niter == maxIt)
     printf("gmres did not converge in given number of iterations\n");
 }
 
 //TODO need to link this with MPI
-void gmres(parAlmond_t *parAlmond,
-     hyb *A,
-     occa::memory o_b,
-     occa::memory o_x,
-     iint maxIt,
-     dfloat tol){
+void device_pgmres(parAlmond_t *parAlmond,
+           int maxIt,
+           dfloat tol){
 
+  hyb* A = parAlmond->levels[0]->deviceA;
 
-  iint m = A->Nrows;
-  iint n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
-  iint sz = m*sizeof(dfloat);
-
-  parAlmond->ktype = GMRES;
+  // use parAlmond's buffers
+  occa::memory &o_r = parAlmond->levels[0]->o_rhs;
+  occa::memory &o_z = parAlmond->levels[0]->o_x;
 
   // initial residual
-  dfloat nb = innerProd(parAlmond, m, o_b, o_b);
+  dfloat nbLocal = innerProd(parAlmond, m, o_r, o_r);
+  dfloat nb = 0;
+  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
   nb = sqrt(nb);
 
   dfloat *dummy = (dfloat*) calloc(m, sizeof(dfloat));
+  occa::memory  o_x = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  occa::memory  o_Av= parAlmond->device.malloc(m*sizeof(dfloat), dummy);
+  occa::memory  o_w = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
 
-  occa::memory  o_r = parAlmond->device.malloc(sz, dummy);
-  occa::memory o_Av = parAlmond->device.malloc(sz, dummy);
-  occa::memory  o_w = parAlmond->device.malloc(sz, dummy);
+  //sanity check
+  if (nb<=tol) {
+    parAlmond->levels[0]->o_x.copyFrom(o_x);
+    printf("Almond PGMRES iter %d, res = %g\n", 0, nb);
+    o_x.free(); o_Av.free(); o_w.free();
+    return;
+  }
 
   // M r = b - A*x0
-  //solve(parAlmond, o_b, o_r);
-  o_r.copyFrom(o_b);
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    device_kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    device_vcycle(parAlmond, 0);
+  } else {
+    o_z.copyFrom(o_r);
+  }
+  o_r.copyFrom(o_z);
 
-
-  dfloat nr = innerProd(parAlmond, m, o_r, o_r);
+  dfloat nrLocal = innerProd(parAlmond, m, o_r, o_r);
+  dfloat nr = 0;
+  MPI_Allreduce(&nrLocal,&nr,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
   nr = sqrt(nr);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
   s[0] = nr;
 
   occa::memory *o_V = (occa::memory *) calloc(maxIt, sizeof(occa::memory));
-
-  for(iint i=0; i<maxIt; ++i){
-    o_V[i] = parAlmond->device.malloc(sz, dummy);
+  for(int i=0; i<maxIt; ++i){
+    o_V[i] = parAlmond->device.malloc(m*sizeof(dfloat), dummy);
   }
+  free(dummy);
 
   // V(:,0) = r/nr
   vectorAdd(parAlmond, m, (1./nr), o_r, 0., o_V[0]);
 
   dfloat *H = (dfloat *) calloc((maxIt+1)*(maxIt+1), sizeof(dfloat));
   dfloat *J = (dfloat *) calloc(4*maxIt, sizeof(dfloat));
-  dfloat *resVec = (dfloat *) calloc(maxIt, sizeof(dfloat));
 
-  resVec[0] = nr;
+  int Niter = 0;
 
-  iint end = 0;
+  int i;
+  for(i=0; i<maxIt; i++){
 
-  for(iint i=0; i<maxIt; i++){
+    Niter = i+1;
 
-    end = i+1;
-
-    // Av = A*V(:.i)
-    axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_Av,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
+    // r = A*V(:.i)
+    axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_r,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
-    //solve(parAlmond, o_Av, o_w);
-    o_w.copyFrom(o_Av);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      device_kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      device_vcycle(parAlmond, 0);
+    } else {
+      o_z.copyFrom(o_r);
+    }
 
-    for(iint k=0; k<=i; ++k){
-      dfloat hki = innerProd(parAlmond, m, o_w, o_V[k]);
+    for(int k=0; k<=i; ++k){
+      dfloat hkiLocal = innerProd(parAlmond, m, o_z, o_V[k]);
+      dfloat hki = 0.;
+      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
       // w = w - hki*V[k]
-      vectorAdd(parAlmond, m, -hki, o_V[k], 1.0, o_w);
+      vectorAdd(parAlmond, m, -hki, o_V[k], 1.0, o_z);
 
       // H(k,i) = hki
       H[k + i*(maxIt+1)] = hki;
     }
 
-    dfloat nw = innerProd(parAlmond, m, o_w, o_w);
+    dfloat nwLocal = innerProd(parAlmond, m, o_z, o_z);
+    dfloat nw = 0.;
+    MPI_Allreduce(&nwLocal,&nw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     nw = sqrt(nw);
     H[i+1 + i*(maxIt+1)] = nw;
 
-
-    for(iint k=0; k<i; ++k){
+    for(int k=0; k<i; ++k){
       dfloat h1 = H[k +     i*(maxIt+1)];
       dfloat h2 = H[k + 1 + i*(maxIt+1)];
 
@@ -272,26 +341,32 @@ void gmres(parAlmond_t *parAlmond,
     s[i  ] =  ct*s1 + st*s2;
     s[i+1] = -st*s1 + ct*s2;
 
-    resVec[i+1] = fabs(s[i+1]);
-
     if(fabs(s[i+1]) < tol) break;
 
     if(i < maxIt-1){
       // V(:,i+1) = w/nw
-      vectorAdd(parAlmond, m, 1./nw, o_w, 0.0, o_V[i+1]);
+      vectorAdd(parAlmond, m, 1./nw, o_z, 0.0, o_V[i+1]);
     }
   }
 
-  gmresUpdate(parAlmond, m, o_x, o_V, H, s, end, maxIt);
+  gmresUpdate(parAlmond, m, o_x, o_V, H, s, Niter, maxIt);
 
-  if(end == maxIt)
+  //copy result back to parAlmond's x storage
+  parAlmond->levels[0]->o_x.copyFrom(o_x);
+
+  printf("Almond PGMRES iter %d, res = %g\n", Niter, fabs(s[i+1]));
+
+  if(Niter == maxIt)
     printf("gmres did not converge in given number of iterations \n");
 
-  for(iint i=0; i<maxIt; ++i)
+  for(int i=0; i<maxIt; ++i)
     o_V[i].free();
+  free((void*)o_V);
+
+  free(s); 
+  free(H); free(J);
 
   o_Av.free();
   o_w.free();
-  o_r.free();
+  o_x.free();
 }
-

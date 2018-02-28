@@ -91,12 +91,12 @@ typedef struct {
 
   unsigned long long int index;
 
-  iint element;
+  dlong element;
 
   int type;
 
   // 4 for maximum number of vertices per element in 2D
-  iint v[4];
+  hlong v[4];
 
   dfloat EX[4], EY[4];
 
@@ -121,12 +121,12 @@ void bogusMatch(void *a, void *b){ }
 // geometric partition of elements in 2D mesh using Morton ordering + parallelSort
 void meshGeometricPartition2D(mesh2D *mesh){
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint maxNelements;
-  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
+  dlong maxNelements;
+  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
   maxNelements = 2*((maxNelements+1)/2);
 
   // fix maxNelements
@@ -138,9 +138,9 @@ void meshGeometricPartition2D(mesh2D *mesh){
   dfloat mincy = 1e9, maxcy = -1e9;
 
   // compute element centers on this process
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
-    for(iint n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
     }
@@ -170,11 +170,11 @@ void meshGeometricPartition2D(mesh2D *mesh){
   unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));
 
   // compute Morton index for each element
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
 
     // element center coordinates
     dfloat cx = 0, cy = 0;
-    for(iint n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
     }
@@ -183,7 +183,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
     // encapsulate element, vertices, Morton index, vertex coordinates
     elements[e].element = e;
-    for(iint n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       elements[e].v[n] = mesh->EToV[e*mesh->Nverts+n];
       elements[e].EX[n] = mesh->EX[e*mesh->Nverts+n];
       elements[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
@@ -199,7 +199,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   }
 
   // pad element array with dummy elements
-  for(iint e=mesh->Nelements;e<maxNelements;++e){
+  for(dlong e=mesh->Nelements;e<maxNelements;++e){
     elements[e].element = -1;
     elements[e].index = hilbert2D(Nboxes+1, Nboxes+1);
     //    elements[e].index = mortonIndex2D(Nboxes+1, Nboxes+1);
@@ -212,45 +212,67 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
 
   // compress and renumber elements
-  iint sk  = 0;
-  for(iint e=0;e<maxNelements;++e){
+  dlong sk  = 0;
+  for(dlong e=0;e<maxNelements;++e){
     if(elements[e].element != -1){
       elements[sk] = elements[e];
       ++sk;
     }
   }
 
-  iint localNelements = sk;
+  dlong localNelements = sk;
 
   /// redistribute elements to improve balancing
-  iint *globalNelements = (iint *) calloc(size,sizeof(iint));
-  iint *starts = (iint *) calloc(size+1,sizeof(iint));
+  // TODO: We need a safer version of this for very large meshes. 
+  // if dlong is a long long int Nsend and/or sendOffsets may overflow int
+  dlong *globalNelements = (dlong *) calloc(size,sizeof(dlong));
+  hlong *starts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  MPI_Allgather(&localNelements, 1, MPI_IINT, globalNelements, 1,  MPI_IINT, MPI_COMM_WORLD);
+  MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, MPI_COMM_WORLD);
 
-  for(iint r=0;r<size;++r)
+  for(int r=0;r<size;++r)
     starts[r+1] = starts[r]+globalNelements[r];
 
-  iint allNelements = starts[size];
+  hlong allNelements = starts[size];
 
   // decide how many to keep on each process
-  int chunk = allNelements/size;
-  int remainder = allNelements - chunk*size;
+  hlong chunk = allNelements/size;
+  int remainder = (int) (allNelements - chunk*size);
 
-  iint *Nsend = (iint *) calloc(size, sizeof(iint));
-  iint *Nrecv = (iint *) calloc(size, sizeof(iint));
-  iint *Ncount = (iint *) calloc(size, sizeof(iint));
-  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
-  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
+  int *Nsend = (int *) calloc(size, sizeof(int));
+  int *Nrecv = (int *) calloc(size, sizeof(int));
+  // int *Ncount = (int *) calloc(size, sizeof(int));
+  int *sendOffsets = (int*) calloc(size, sizeof(int));
+  int *recvOffsets = (int*) calloc(size, sizeof(int));
 
+  // Make the MPI_ELEMENT_T data type
+  MPI_Datatype MPI_ELEMENT_T;
+  MPI_Datatype dtype[6] = {MPI_LONG_LONG_INT, MPI_DLONG, MPI_INT,
+                            MPI_HLONG, MPI_DFLOAT, MPI_DFLOAT};
+  int blength[6] = {1, 1, 1, 4, 4, 4};
+  MPI_Aint addr[6], displ[6];
+  MPI_Get_address ( &(elements[0]        ), addr+0);
+  MPI_Get_address ( &(elements[0].element), addr+1);
+  MPI_Get_address ( &(elements[0].type   ), addr+2);
+  MPI_Get_address ( &(elements[0].v[0]   ), addr+3);
+  MPI_Get_address ( &(elements[0].EX[0]  ), addr+4);
+  MPI_Get_address ( &(elements[0].EY[0]  ), addr+5);
+  displ[0] = 0;
+  displ[1] = addr[1] - addr[0];
+  displ[2] = addr[2] - addr[0];
+  displ[3] = addr[3] - addr[0];
+  displ[4] = addr[4] - addr[0];
+  displ[5] = addr[5] - addr[0];
+  MPI_Type_create_struct (6, blength, displ, dtype, &MPI_ELEMENT_T);
+  MPI_Type_commit (&MPI_ELEMENT_T);
 
-  for(iint e=0;e<localNelements;++e){
+  for(dlong e=0;e<localNelements;++e){
 
     // global element index
     elements[e].element = starts[rank]+e;
 
     // 0, chunk+1, 2*(chunk+1) ..., remainder*(chunk+1), remainder*(chunk+1) + chunk
-    iint r;
+    int r;
     if(elements[e].element<remainder*(chunk+1))
       r = elements[e].element/(chunk+1);
     else
@@ -260,28 +282,28 @@ void meshGeometricPartition2D(mesh2D *mesh){
   }
 
   // find send offsets
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   // exchange byte counts
-  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, MPI_COMM_WORLD);
 
   // count incoming clusters
-  iint newNelements = 0;
-  for(iint r=0;r<size;++r){
+  int newNelements = 0;
+  for(int r=0;r<size;++r)
     newNelements += Nrecv[r];
-    Nrecv[r] *= sizeof(element_t);
-    Nsend[r] *= sizeof(element_t);
-    sendOffsets[r] *= sizeof(element_t);
-  }
-  for(iint r=1;r<size;++r)
+  
+  for(int r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   element_t *tmpElements = (element_t *) calloc(newNelements, sizeof(element_t));
 
   // exchange parallel clusters
-  MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_CHAR,
-                tmpElements, Nrecv, recvOffsets, MPI_CHAR, MPI_COMM_WORLD);
+  MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_ELEMENT_T,
+                tmpElements, Nrecv, recvOffsets, MPI_ELEMENT_T, MPI_COMM_WORLD);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Type_free(&MPI_ELEMENT_T);
 
   // replace elements with inbound elements
   if (elements) free(elements);
@@ -293,14 +315,13 @@ void meshGeometricPartition2D(mesh2D *mesh){
   free(mesh->EY);
   free(mesh->elementInfo);
 
-  mesh->Nelements = newNelements;
-  mesh->EToV = (iint*) calloc(newNelements*mesh->Nverts, sizeof(iint));
+  mesh->EToV = (hlong*) calloc(newNelements*mesh->Nverts, sizeof(hlong));
   mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->elementInfo = (int*) calloc(newNelements, sizeof(int));
 
-  for(iint e=0;e<newNelements;++e){
-    for(iint n=0;n<mesh->Nverts;++n){
+  for(int e=0;e<newNelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = elements[e].v[n];
       mesh->EX[e*mesh->Nverts + n]   = elements[e].EX[n];
       mesh->EY[e*mesh->Nverts + n]   = elements[e].EY[n];

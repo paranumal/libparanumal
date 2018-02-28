@@ -1,42 +1,42 @@
 #define B 256
 
-kernel void weightedInnerProduct1(const iint N,
+kernel void weightedInnerProduct1(const dlong N,
 				  const dfloat * restrict w,
 				  const dfloat * restrict x,
 				  dfloat * restrict wx2){
   
 
-  for(iint b=0;b<(N+B-1)/B;++b;outer0){
+  for(dlong b=0;b<(N+B-1)/B;++b;outer0){
     
     volatile shared dfloat s_wx2[B];
 
-    for(iint t=0;t<B;++t;inner0){
-      const iint id = t + B*b;
+    for(int t=0;t<B;++t;inner0){
+      const dlong id = t + B*b;
       s_wx2[t] = (id<N) ? w[id]*x[id]*x[id] : 0.f;
     }
 
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t<128) s_wx2[t] += s_wx2[t+128];
+    for(int t=0;t<B;++t;inner0) if(t<128) s_wx2[t] += s_wx2[t+128];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t< 64) s_wx2[t] += s_wx2[t+ 64];
+    for(int t=0;t<B;++t;inner0) if(t< 64) s_wx2[t] += s_wx2[t+ 64];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t< 32) s_wx2[t] += s_wx2[t+ 32];
+    for(int t=0;t<B;++t;inner0) if(t< 32) s_wx2[t] += s_wx2[t+ 32];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t< 16) s_wx2[t] += s_wx2[t+ 16];
+    for(int t=0;t<B;++t;inner0) if(t< 16) s_wx2[t] += s_wx2[t+ 16];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t<  8) s_wx2[t] += s_wx2[t+  8];
+    for(int t=0;t<B;++t;inner0) if(t<  8) s_wx2[t] += s_wx2[t+  8];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t<  4) s_wx2[t] += s_wx2[t+  4];
+    for(int t=0;t<B;++t;inner0) if(t<  4) s_wx2[t] += s_wx2[t+  4];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t<  2) s_wx2[t] += s_wx2[t+  2];
+    for(int t=0;t<B;++t;inner0) if(t<  2) s_wx2[t] += s_wx2[t+  2];
     barrier(localMemFence);
-    for(iint t=0;t<B;++t;inner0) if(t<  1) wx2[b] = s_wx2[0] + s_wx2[1];
+    for(int t=0;t<B;++t;inner0) if(t<  1) wx2[b] = s_wx2[0] + s_wx2[1];
   }
 }
 
 #if 0
 // barrier avoiding (partial) reduction
-kernel void weightedInnerProduct1(const iint N,
+kernel void weightedInnerProduct1(const int N,
 				  const dfloat * restrict w,
 				  const dfloat * restrict x,
 				  dfloat * restrict wx2){
@@ -52,7 +52,7 @@ kernel void weightedInnerProduct1(const iint N,
 
     for(int g=0;g<G;++g;inner1){
       for(int s=0;s<S;++s;inner0){
-	const iint n = b*G*S + g*S + s;
+	const int n = b*G*S + g*S + s;
 
 	const dfloat wgs = (n<N) ? w[n]:0.f;
 	const dfloat xgs = (n<N) ? x[n]:0.f;

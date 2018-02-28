@@ -17,7 +17,7 @@ void upwind1D(const dfloat nx, const dfloat ny,
 }
 
 
-void boundaryConditions2D(const iint bc,
+void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y,
 			  const dfloat  nx, const dfloat  ny,
 			  const dfloat ramp,
@@ -47,13 +47,13 @@ void boundaryConditions2D(const iint bc,
 
 
 // batch process elements
-kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
-				       const iint * restrict elementIds,
+kernel void boltzmannSplitPmlSurface2D(const int Nelements,
+				       const int * restrict elementIds,
 				       const dfloat * restrict sgeo,
 				       const dfloat * restrict LIFTT,
-				       const iint   * restrict vmapM,
-				       const iint   * restrict vmapP,
-				       const iint   * restrict EToB,
+				       const int   * restrict vmapM,
+				       const int   * restrict vmapP,
+				       const int   * restrict EToB,
 				       const dfloat time,
 				       const dfloat * restrict x,
 				       const dfloat * restrict y,
@@ -63,7 +63,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 				       dfloat       * restrict rhspmlqy){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     
     // shared storage for flux terms
     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
@@ -80,30 +80,30 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive iint element;
+    exclusive int element;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 	  element = elementIds[e];
 
 	  if(n<p_NfacesNfp){
 	    // find face that owns this node
-	    const iint face = n/p_Nfp;
+	    const int face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    const iint sid = p_Nsgeo*(element*p_Nfaces+face);
+	    const int sid = p_Nsgeo*(element*p_Nfaces+face);
 	    const dfloat nx = sgeo[sid+0];
 	    const dfloat ny = sgeo[sid+1];
 	    const dfloat sJ = sgeo[sid+2];
 	    const dfloat invJ = sgeo[sid+3];
 
 	    // indices of negative and positive traces of face node
-	    const iint id  = element*p_Nfp*p_Nfaces + n;
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
+	    const int id  = element*p_Nfp*p_Nfaces + n;
+	    int idM = vmapM[id];
+	    int idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
     
@@ -115,7 +115,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	    dfloat q1P = qPa.x, q2P = qPa.y, q3P = qPa.z, q4P = qPa.w, q5P = qPb.x, q6P = qPb.y;
 
 	    // apply boundary condition
-	    iint bc = EToB[face+p_Nfaces*element];
+	    int bc = EToB[face+p_Nfaces*element];
 	    if(bc>0)
 	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
 				   q1M, q2M, q3M, q4M, q5M, q6M,
@@ -151,12 +151,12 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 
 #if 1
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-	const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+	const int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
-	    const iint id = p_Np*element + n;
+	    const int id = p_Np*element + n;
 	    
 	    // load rhs data from volume fluxes
 	    dfloat Lnxdq1 = 0.f, Lnxdq2 = 0.f, Lnxdq3 = 0.f, Lnxdq4 = 0.f, Lnxdq5 = 0.f, Lnxdq6 = 0.f;
@@ -181,7 +181,7 @@ kernel void boltzmannSplitPmlSurface2D(const iint Nelements,
 	      Lnydq6 += L*s_nydq6[es][m];
 	    }
 
-	    const iint base = element*p_Np*p_Nfields+n;
+	    const int base = element*p_Np*p_Nfields+n;
 	    rhspmlqx[base+0*p_Np] -= p_sqrtRT*(Lnxdq2);
 	    rhspmlqx[base+1*p_Np] -= p_sqrtRT*(Lnxdq1+p_sqrt2*Lnxdq5);
 	    rhspmlqx[base+2*p_Np] -= p_sqrtRT*(Lnxdq4);

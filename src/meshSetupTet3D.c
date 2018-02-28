@@ -8,11 +8,11 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
   
-  // print out connectivity statistics
-  //  meshPartitionStatistics3D(mesh);
-  
   // connect elements using parallel sort
   meshParallelConnect(mesh);
+
+  // print out connectivity statistics
+  meshPartitionStatistics(mesh);
 
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
@@ -63,11 +63,11 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   memcpy(mesh->rkc, rkc, Nrk*sizeof(dfloat));
 
 #if 0
-  for(iint eM=0;eM<mesh->Nelements;++eM){
-    for(iint fM=0;fM<mesh->Nfaces;++fM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
+    for(int fM=0;fM<mesh->Nfaces;++fM){
 
-      iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
-      iint fP = mesh->EToF[eM*mesh->Nfaces+fM];
+      int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      int fP = mesh->EToF[eM*mesh->Nfaces+fM];
 
       if(eP<mesh->Nelements){
 	if(eP<0){ eP = eM; fP = fM; }
@@ -75,8 +75,8 @@ mesh3D *meshSetupTet3D(char *filename, int N){
 	dfloat sc = 1;
 	if(eM==eP) sc = -1;
       
-	iint baseM = (eM*mesh->Nfaces + fM)*mesh->Nsgeo;
-	iint baseP = (eP*mesh->Nfaces + fP)*mesh->Nsgeo;
+	int baseM = (eM*mesh->Nfaces + fM)*mesh->Nsgeo;
+	int baseP = (eP*mesh->Nfaces + fP)*mesh->Nsgeo;
 
 	dfloat avenx = mesh->sgeo[baseM+NXID] + sc*mesh->sgeo[baseP+NXID];
 	dfloat aveny = mesh->sgeo[baseM+NYID] + sc*mesh->sgeo[baseP+NYID];
@@ -90,10 +90,10 @@ mesh3D *meshSetupTet3D(char *filename, int N){
 	if(fabs(dsJ)>1e-4)
 	  printf("sJ mismatch %g\n", dsJ);
 	
-	for(iint n=0;n<mesh->Nfp;++n){
-	  iint id = n + fM*mesh->Nfp + eM*mesh->Nfp*mesh->Nfaces;
-	  iint idM = mesh->vmapM[id];
-	  iint idP = mesh->vmapP[id];
+	for(int n=0;n<mesh->Nfp;++n){
+	  int id = n + fM*mesh->Nfp + eM*mesh->Nfp*mesh->Nfaces;
+	  int idM = mesh->vmapM[id];
+	  int idP = mesh->vmapP[id];
 
 	  dfloat d = norm(mesh->x[idM]-mesh->x[idP],mesh->y[idM]-mesh->y[idP],mesh->z[idM]-mesh->z[idP]);
 

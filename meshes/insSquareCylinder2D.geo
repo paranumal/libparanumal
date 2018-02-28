@@ -1,6 +1,6 @@
-coarse = DefineNumber[4];
-fine   = DefineNumber[0.4];
-fineC  = DefineNumber[0.1];
+coarse = DefineNumber[0.31];
+fine   = DefineNumber[0.31];
+fineC  = DefineNumber[0.31];
 
 xmax  = DefineNumber[25];
 xmin  = DefineNumber[-16];
@@ -13,9 +13,9 @@ ycmax  = DefineNumber[0.5];
 ycmin  = DefineNumber[-0.5];
 
 xbmax  = xmax;
-xbmin  = DefineNumber[-3];
-ybmax  = DefineNumber[3];
-ybmin  = DefineNumber[-3];
+xbmin  = DefineNumber[-4];
+ybmax  = DefineNumber[4];
+ybmin  = DefineNumber[-4];
 
 
 Point(1) = {xmin, ymin, 0, coarse};
@@ -58,4 +58,5 @@ Physical Line("Wall",1) = {12, 11, 13, 10};
 Physical Line("Inflow",2) = {4,1,5};
 Physical Line("Outflow",3) = {2, 9, 6};
 Physical Surface("Domain",9) = {15, 18};
+Coherence;
 Coherence;

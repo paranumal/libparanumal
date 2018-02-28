@@ -7,10 +7,10 @@ void meshPhysicalNodesTri2D(mesh2D *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
-    iint id = e*mesh->Nverts+0;
+    dlong id = e*mesh->Nverts+0;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -20,7 +20,7 @@ void meshPhysicalNodesTri2D(mesh2D *mesh){
     dfloat ye2 = mesh->EY[id+1];
     dfloat ye3 = mesh->EY[id+2];
     
-    for(iint n=0;n<mesh->Np;++n){ /* for each node */
+    for(int n=0;n<mesh->Np;++n){ /* for each node */
       
       /* (r,s) coordinates of interpolation nodes*/
       dfloat rn = mesh->r[n]; 

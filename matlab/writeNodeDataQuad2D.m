@@ -31,7 +31,10 @@ faceNodes  = [faceNodes1;faceNodes2;faceNodes3;faceNodes4]';
 
 V = VandermondeQuad2D(N, r, s);
 [Dr,Ds] = DmatricesQuad2D(N, r, s, V);
+Dr = full(Dr);
+Ds = full(Ds);
 LIFT = LiftQuad2D(N, faceNodes, r, s);
+LIFT = full(LIFT);
 
 fname = sprintf('quadrilateralN%02d.dat', N);
 
@@ -373,7 +376,7 @@ iw = [w,w,w,w];
 sV = VandermondeQuad2D(N, ir(:), is(:));
 	    sInterp = sV/V;
 	    
-	    iInterp = [sInterp(1:Nfi,faceNodes(:,1));
+	    interp = [sInterp(1:Nfi,faceNodes(:,1));
 	    sInterp(Nfi+1:2*Nfi,faceNodes(:,2));
 	    sInterp(2*Nfi+1:3*Nfi,faceNodes(:,3));
 	    sInterp(3*Nfi+1:4*Nfi,faceNodes(:,4))];
@@ -383,20 +386,20 @@ fprintf(fid, '%d\n', length(z));
 fprintf(fid, '%% surface integration interpolation matrix\n');
 for n=1:Nfi*Nfaces
   for m=1:Nfp
-    fprintf(fid, '%17.15E ', iInterp(n,m));
+    fprintf(fid, '%17.15E ', interp(n,m));
   end
   fprintf(fid, '\n');
 end
 
 bInterp = [];
-bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
-bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
-bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
-bInterp(3*Nfi+1:4*Nfi,3*Nfp+1:4*Nfp) = iInterp(3*Nfi+1:4*Nfi,:);
+bInterp(1:Nfi,1:Nfp) = interp(1:Nfi,:);
+bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = interp(Nfi+1:2*Nfi,:);
+bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = interp(2*Nfi+1:3*Nfi,:);
+bInterp(3*Nfi+1:4*Nfi,3*Nfp+1:4*Nfp) = interp(3*Nfi+1:4*Nfi,:);
 %% integration node lift matrix
 iLIFT = V*V'*sInterp'*diag(iw(:));
 size(iLIFT)
-size(iInterp)
+size(interp)
 altLiftError = max(max(abs(iLIFT*bInterp-LIFT)))
 
 fprintf(fid, '%% surface integration lift matrix\n');

@@ -1,5 +1,5 @@
 
-kernel void acousticsUpdateHex3D(const iint Ntotal,
+kernel void acousticsUpdateHex3D(const int Ntotal,
 				  const dfloat dt,	
 				  const dfloat rka,
 				  const dfloat rkb,
@@ -8,7 +8,7 @@ kernel void acousticsUpdateHex3D(const iint Ntotal,
 				  dfloat * restrict q){
 				  
   // Low storage Runge Kutta time step update
-  for(iint n=0;n<Ntotal;++n;tile(256)){
+  for(int n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
       dfloat resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];

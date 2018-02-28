@@ -1,5 +1,5 @@
 
-kernel void acousticsPmlUpdate2D(const iint Ntotal,
+kernel void acousticsPmlUpdate2D(const int Ntotal,
 				     const dfloat dt,	
 				     const dfloat rka,
 				     const dfloat rkb,
@@ -8,7 +8,7 @@ kernel void acousticsPmlUpdate2D(const iint Ntotal,
 				     dfloat * restrict pmlq){
     
   // Low storage Runge Kutta time step update
-  for(iint n=0;n<Ntotal;++n;tile(256)){
+  for(int n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
       dfloat pmlresqn = pmlresq[n];
       pmlresqn = rka*pmlresqn + dt*pmlrhsq[n];

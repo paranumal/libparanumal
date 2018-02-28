@@ -1,0 +1,87 @@
+rfence = DefineNumber[0.025];
+rBox = DefineNumber[0.4];
+
+fx  = DefineNumber[0.1];
+fy  = DefineNumber[0.5];
+fz  = DefineNumber[1];
+gap = DefineNumber[2];
+
+xmin = DefineNumber[-5*fz];
+xmax = DefineNumber[10*fz];
+ymax = DefineNumber[5*fz];
+zmin = DefineNumber[-fz/2-gap];
+zmax = DefineNumber[fz/2+gap];
+
+//fence
+Point(1) = {-fx/2, 0,  fz/2, rfence};
+Point(2) = { fx/2, 0,  fz/2, rfence};
+Point(3) = {-fx/2, fy, fz/2, rfence};
+Point(4) = { fx/2, fy, fz/2, rfence};
+Point(5) = {-fx/2, 0, -fz/2, rfence};
+Point(6) = { fx/2, 0, -fz/2, rfence};
+Point(7) = {-fx/2, fy,-fz/2, rfence};
+Point(8) = { fx/2, fy,-fz/2, rfence};
+
+//bounding box
+Point( 9) = {xmin, 0, zmin, rBox};
+Point(10) = {xmax, 0, zmin, rBox};
+Point(11) = {xmax, ymax, zmin, rBox};
+Point(12) = {xmin, ymax, zmin, rBox};
+Point(13) = {xmin, 0, zmax, rBox};
+Point(14) = {xmax, 0, zmax, rBox};
+Point(15) = {xmax, ymax, zmax, rBox};
+Point(16) = {xmin, ymax, zmax, rBox};
+
+Line(1) = {5, 6};
+Line(2) = {6, 8};
+Line(3) = {8, 7};
+Line(4) = {7, 5};
+Line(5) = {1, 2};
+Line(6) = {2, 4};
+Line(7) = {4, 3};
+Line(8) = {3, 1};
+Line(9) = {5, 1};
+Line(10) = {6, 2};
+Line(11) = {7, 3};
+Line(12) = {8, 4};
+Line(13) = {13, 14};
+Line(14) = {14, 15};
+Line(15) = {15, 16};
+Line(16) = {16, 13};
+Line(17) = {9, 10};
+Line(18) = {10, 11};
+Line(19) = {11, 12};
+Line(20) = {12, 9};
+Line(21) = {9, 13};
+Line(22) = {12, 16};
+Line(23) = {11, 15};
+Line(24) = {10, 14};
+Line Loop(25) = {8, 5, 6, 7};
+Plane Surface(26) = {25};
+Line Loop(27) = {11, -7, -12, 3};
+Plane Surface(28) = {27};
+Line Loop(29) = {4, 1, 2, 3};
+Plane Surface(30) = {29};
+Line Loop(31) = {11, 8, -9, -4};
+Plane Surface(32) = {31};
+Line Loop(33) = {12, -6, -10, 2};
+Plane Surface(34) = {33};
+Line Loop(35) = {13, -24, -17, 21};
+Line Loop(36) = {10, -5, -9, 1};
+Plane Surface(37) = {35, 36};
+Line Loop(38) = {13, 14, 15, 16};
+Plane Surface(39) = {38};
+Line Loop(40) = {20, 17, 18, 19};
+Plane Surface(41) = {40};
+Line Loop(42) = {22, 16, -21, -20};
+Plane Surface(43) = {42};
+Line Loop(44) = {14, -23, -18, 24};
+Plane Surface(45) = {44};
+Line Loop(46) = {19, 22, -15, -23};
+Plane Surface(47) = {46};
+Surface Loop(48) = {39, 37, 45, 47, 41, 43, 30, 32, 28, 26, 34};
+Volume(49) = {48};
+Physical Surface("Wall",1) = {32, 28, 30, 34, 26, 37};
+Physical Surface("Inflow",2) = {43, 39, 41, 47};
+Physical Surface("Outflow",3) = {45};
+Physical Volume("Domain",9) = {49};

@@ -16,16 +16,16 @@ ELLIPTICDIR = ../ellipticTri2D
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
 		
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ALMONDDIR) -lparALMOND -L$(ELLIPTICDIR) -lellipticTri2D
+			-L$(ELLIPTICDIR) -lellipticTri2D -L$(ALMONDDIR) -lparALMOND 
 
 # libraries to be linked in
 LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
@@ -35,7 +35,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 $(ELLIPTICDIR)/ellipticTri2D.h \
 $(ELLIPTICDIR)/ellipticPreconTri2D.h  
@@ -61,7 +60,6 @@ insAdvectionSubCycleStep2D.o \
 insHelmholtzStep2D.o \
 insPoissonStep2D.o \
 insUpdateStep2D.o \
-insBuildVectorIpdgTri2D.o \
 insAdvectionStepSS2D.o \
 insPoissonStepSS2D.o \
 insHelmholtzStepSS2D.o \
@@ -71,6 +69,7 @@ LOBJS = \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
+../../src/meshConnectFaceModes2D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshHaloExchange.o \
 ../../src/meshHaloSetup.o \
@@ -87,10 +86,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshLoadReferenceNodesTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup2D.o \

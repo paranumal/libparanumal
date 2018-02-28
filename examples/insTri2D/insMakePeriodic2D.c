@@ -4,15 +4,15 @@
 
 
 
-  dfloat findFaceMatch(mesh2D *mesh, iint k1, iint f1, iint k2, iint f2, dfloat xper, dfloat yper){
+  dfloat findFaceMatch(mesh2D *mesh, int k1, int f1, int k2, int f2, dfloat xper, dfloat yper){
         dfloat xc1 = 0.0, yc1 = 0.0, xc2=0.0 , yc2=0.0;
-        for(iint n=0;n<mesh->Nfp;++n)
+        for(int n=0;n<mesh->Nfp;++n)
         {
-          iint  id1 = mesh->faceNodes[f1*mesh->Nfp+n] + k1*mesh->Np;
+          int  id1 = mesh->faceNodes[f1*mesh->Nfp+n] + k1*mesh->Np;
           dfloat x1 = mesh->x[id1];
           dfloat y1 = mesh->y[id1];
 
-          iint  id2 = mesh->faceNodes[f2*mesh->Nfp+n] + k2*mesh->Np;
+          int  id2 = mesh->faceNodes[f2*mesh->Nfp+n] + k2*mesh->Np;
           dfloat x2 = mesh->x[id2];
           dfloat y2 = mesh->y[id2];
 
@@ -35,17 +35,17 @@
 
   }
 
-  iint findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat x1, dfloat y1, 
-         iint Np2, iint *nodeList, dfloat *x2, dfloat *y2, int *nP){
+  int findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat x1, dfloat y1, 
+         int Np2, int *nodeList, dfloat *x2, dfloat *y2, int *nP){
     
-    iint matchIndex = nodeList[0];
+    int matchIndex = nodeList[0];
     dfloat mindist2 = pow(fabs(x1-x2[0])-xper,2) + pow(fabs(y1-y2[0])-yper,2);
 
     *nP = 0;
     for(int n=1;n<Np2;++n){
       
       /* next node */
-      const iint i2 = nodeList[n];
+      const int i2 = nodeList[n];
 
       /* distance between target and next node */
       const dfloat dist2 = pow(fabs(x1-x2[i2])-xper,2) + pow(fabs(y1-y2[i2])-yper,2);
@@ -68,26 +68,26 @@
   void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper)
   {   
     /* assume elements already connected */
-    for(iint e=0;e<mesh->Nelements;++e)
+    for(int e=0;e<mesh->Nelements;++e)
     {
-      for(iint f=0;f<mesh->Nfaces;++f)
+      for(int f=0;f<mesh->Nfaces;++f)
       {
-        iint e1 = mesh->EToE[e*mesh->Nfaces+f];
-        iint f1 = mesh->EToF[e*mesh->Nfaces+f];
-        iint bc1 = mesh->EToB[e*mesh->Nfaces+f];
+        int e1 = mesh->EToE[e*mesh->Nfaces+f];
+        int f1 = mesh->EToF[e*mesh->Nfaces+f];
+        int bc1 = mesh->EToB[e*mesh->Nfaces+f];
         
         if( e1<0 && f1<0 && bc1<0)
         { 
           printf("Catch a possible periodic connection on element: %d and face: %d",e,f);
           bool connected = false;
          /* assume elements already connected */
-              for(iint k=0;k<mesh->Nelements;++k)
+              for(int k=0;k<mesh->Nelements;++k)
               {
-                  for(iint l=0;l<mesh->Nfaces;++l)
+                  for(int l=0;l<mesh->Nfaces;++l)
                   {
-                    iint e2  = mesh->EToE[k*mesh->Nfaces+l];
-                    iint f2  = mesh->EToF[k*mesh->Nfaces+l];
-                    iint bc2 = mesh->EToB[k*mesh->Nfaces+l];
+                    int e2  = mesh->EToE[k*mesh->Nfaces+l];
+                    int f2  = mesh->EToF[k*mesh->Nfaces+l];
+                    int bc2 = mesh->EToB[k*mesh->Nfaces+l];
                       if( e2<0 && f2<0 && bc2<0 && k!=e)
                       {   
                              //printf("With: %d and face: %d \n",k,l);
@@ -105,9 +105,9 @@
                              mesh->EToF[e*mesh->Nfaces+f] = l;
                              mesh->EToF[k*mesh->Nfaces+l] = f;
 
-                              for(iint n=0;n<mesh->Nfp;++n){
-                                  iint  id1M = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
-                                  iint  id2M = mesh->faceNodes[l*mesh->Nfp+n] + k*mesh->Np;
+                              for(int n=0;n<mesh->Nfp;++n){
+                                  int  id1M = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+                                  int  id2M = mesh->faceNodes[l*mesh->Nfp+n] + k*mesh->Np;
 
                                   dfloat x1M = mesh->x[id1M];
                                   dfloat y1M = mesh->y[id1M];
@@ -115,18 +115,18 @@
                                   dfloat x2M = mesh->x[id2M];
                                   dfloat y2M = mesh->y[id2M];
 
-                                  iint   id1 = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
-                                  iint   id2 = mesh->Nfaces*mesh->Nfp*k + l*mesh->Nfp + n;
+                                  int   id1 = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+                                  int   id2 = mesh->Nfaces*mesh->Nfp*k + l*mesh->Nfp + n;
                                   int n1P;
                                   int n2P;
    
-                                  iint e1P = k; 
-                                  iint f1P = l; 
+                                  int e1P = k; 
+                                  int f1P = l; 
                                   //
-                                  iint e2P = e; 
-                                  iint f2P = f; 
+                                  int e2P = e; 
+                                  int f2P = f; 
                                   
-                                  iint  id1P = findBestPeriodicMatch(xper,yper,x1M, y1M, 
+                                  int  id1P = findBestPeriodicMatch(xper,yper,x1M, y1M, 
                                          mesh->Nfp, 
                                          mesh->faceNodes+f1P*mesh->Nfp,
                                          mesh->x+e1P*mesh->Np,
@@ -134,7 +134,7 @@
 
 
                                 //No need to do this but just for double check, TODO: Change it later!!!!!
-                                  iint  id2P = findBestPeriodicMatch(xper,yper,x2M, y2M, 
+                                  int  id2P = findBestPeriodicMatch(xper,yper,x2M, y2M, 
                                          mesh->Nfp, 
                                          mesh->faceNodes+f2P*mesh->Nfp,
                                          mesh->x+e2P*mesh->Np,

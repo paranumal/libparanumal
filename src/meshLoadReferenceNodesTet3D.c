@@ -1,7 +1,9 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "mesh3D.h"
+
+void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+void readIntArray   (FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
 
 void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
@@ -10,37 +12,102 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
 
   FILE *fp = fopen(fname, "r");
 
-  char buf[BUFSIZ];
-  fgets(buf, BUFSIZ, fp); //read comment
-  fgets(buf, BUFSIZ, fp);
-  int Ncheck;
-  sscanf(buf, "%d", &Ncheck);
-  if(Ncheck != N) printf("bu55er - wrong data file\n");
+  if (!fp) {
+    printf("ERROR: Cannot open file: '%s'\n", fname);
+    exit(-1);
+  }
 
   mesh->N = N;
   mesh->Np = ((N+1)*(N+2)*(N+3))/6;
   mesh->Nfp = ((N+1)*(N+2))/2;
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp);
-  int Npcheck;
-  sscanf(buf, "%d", &Npcheck);
-  mesh->Np = Npcheck;
+  int Nrows, Ncols;
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->r = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  mesh->s = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  mesh->t = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    fgets(buf, BUFSIZ, fp);
-    sscanf(buf, dfloatFormat dfloatFormat dfloatFormat,
-	   mesh->r+n, mesh->s+n, mesh->t+n);
+  /* Nodal Data */
+  readDfloatArray(fp, "Nodal r-coordinates", &(mesh->r),&Nrows,&Ncols);
+  readDfloatArray(fp, "Nodal s-coordinates", &(mesh->s),&Nrows,&Ncols);
+  readDfloatArray(fp, "Nodal t-coordinates", &(mesh->t),&Nrows,&Ncols);
+  readDfloatArray(fp, "Nodal Dr differentiation matrix", &(mesh->Dr), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal Ds differentiation matrix", &(mesh->Ds), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal Dt differentiation matrix", &(mesh->Dt), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal Mass Matrix", &(mesh->MM), &Nrows, &Ncols);
+  readIntArray   (fp, "Nodal Face nodes", &(mesh->faceNodes), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal Lift Matrix", &(mesh->LIFT), &Nrows, &Ncols);
+  //readIntArray   (fp, "Nodal rotation permutations", &(mesh->rmapP), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal degree raise matrix", &(mesh->interpRaise), &Nrows, &Ncols);
+  readDfloatArray(fp, "Nodal degree lower matrix", &(mesh->interpLower), &Nrows, &Ncols);
+
+  /* Plotting data */ 
+  readDfloatArray(fp, "Plotting r-coordinates", &(mesh->plotR),&Nrows,&Ncols);
+  readDfloatArray(fp, "Plotting s-coordinates", &(mesh->plotS),&Nrows,&Ncols);
+  readDfloatArray(fp, "Plotting t-coordinates", &(mesh->plotT),&Nrows,&Ncols);
+  mesh->plotNp = Nrows;
+
+  readDfloatArray(fp, "Plotting Interpolation Matrix", &(mesh->plotInterp),&Nrows,&Ncols);
+  readIntArray   (fp, "Plotting triangulation", &(mesh->plotEToV), &Nrows, &Ncols);
+  mesh->plotNelements = Nrows;
+  mesh->plotNverts = Ncols;
+
+  readIntArray(fp,"Contour plot EToV", &(mesh->contourEToV), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VX", &(mesh->contourVX), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VY", &(mesh->contourVY), &Nrows, &Ncols);
+  readDfloatArray(fp,"Contour plot VZ", &(mesh->contourVZ), &Nrows, &Ncols);
+
+  readDfloatArray(fp, "Contour plot Interpolation",&(mesh->contourInterp), &Nrows, &Ncols);
+  readDfloatArray(fp, "Contour plot Linear Interpolation",&(mesh->contourInterp1), &Nrows, &Ncols);
+  readDfloatArray(fp, "Contour plot Filter",&(mesh->contourFilter), &Nrows, &Ncols);
+
+  /* Cubature data */ 
+  if (N<7) {
+    readDfloatArray(fp, "Cubature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature s-coordinates", &(mesh->cubs),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature t-coordinates", &(mesh->cubt),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature weights", &(mesh->cubw),&Nrows,&Ncols);
+    mesh->cubNp = Nrows;
+
+    readDfloatArray(fp, "Cubature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Dr Differentiation Matrix", &(mesh->cubDrW),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &(mesh->cubDsW),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Dt Differentiation Matrix", &(mesh->cubDtW),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &(mesh->intInterp),&Nrows,&Ncols);
+    mesh->intNfp = Nrows/mesh->Nfaces; //number of interpolation points per face
+
+    readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
   }
+
+
+  /* Bernstein-Bezier data */ 
+  readDfloatArray(fp, "Bernstein-Bezier Vandermonde Matrix", &(mesh->VB),&Nrows,&Ncols);
+  readDfloatArray(fp, "Bernstein-Bezier Inverse Vandermonde Matrix", &(mesh->invVB),&Nrows,&Ncols);
+  readIntArray   (fp, "Bernstein-Bezier sparse D0 differentiation ids", &(mesh->D0ids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D1 differentiation ids", &(mesh->D1ids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D2 differentiation ids", &(mesh->D2ids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D3 differentiation ids", &(mesh->D3ids), &Nrows, &Ncols);  //Ncols should be 4
+  readDfloatArray(fp, "Bernstein-Bezier sparse D differentiation values", &(mesh->Dvals), &Nrows, &Ncols);//Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier L0 Matrix ids", &(mesh->L0ids), &Nrows, &Ncols);  
+  readDfloatArray(fp, "Bernstein-Bezier L0 Matrix values", &(mesh->L0vals), &Nrows, &Ncols); //Ncols should be 7
+  readIntArray   (fp, "Bernstein-Bezier EL lift ids", &(mesh->ELids), &Nrows, &Ncols);  
+  readDfloatArray(fp, "Bernstein-Bezier EL lift values", &(mesh->ELvals), &Nrows, &Ncols); 
+  mesh->max_EL_nnz = Ncols;
+
+  readIntArray   (fp, "Bernstein-Bezier sparse 2D degree raise ids", &(mesh->BBRaiseids), &Nrows, &Ncols);     //Ncols should be 3
+  readDfloatArray(fp, "Bernstein-Bezier sparse 2D degree raise values", &(mesh->BBRaiseVals), &Nrows, &Ncols); //Ncols should be 3 
+  readDfloatArray(fp, "Bernstein-Bezier sparse 2D degree lower matrix", &(mesh->BBLower), &Nrows, &Ncols); 
+
+  /* IPDG patch data */ 
+  readDfloatArray(fp, "IPDG overlapping patch forward matrix", &(mesh->oasForwardDg), &Nrows, &Ncols);   
+  readDfloatArray(fp, "IPDG overlapping patch diagonal scaling", &(mesh->oasDiagOpDg), &Nrows, &Ncols);   
+  readDfloatArray(fp, "IPDG overlapping patch backward matrix", &(mesh->oasBackDg), &Nrows, &Ncols);   
+  mesh->NpP = Nrows; //overlapping patch size
+
+
+  fclose(fp);
 
   // find node indices of vertex nodes
   dfloat NODETOL = 1e-6;
-  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
-  for(iint n=0;n<mesh->Np;++n){
+  mesh->vertexNodes = (int*) calloc(mesh->Nverts, sizeof(int));
+  for(int n=0;n<mesh->Np;++n){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
       mesh->vertexNodes[0] = n;
     if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
@@ -50,413 +117,59 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
       mesh->vertexNodes[3] = n;
   }
+}
 
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Dr+n);
+
+void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols){
+
+  char buf[BUFSIZ];
+  rewind(fp); // rewind to beginning
+
+  int flag = 0;
+  int status;
+  char *stat;
+
+  //search for label in file
+  while(fgets(buf, BUFSIZ, fp)){
+    if (strstr(buf, label)) {flag =1; break;};
   }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Ds+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->Dt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->Dt+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->MM = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->MM+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
-  for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
-    fscanf(fp, iintFormat, mesh->faceNodes+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->LIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->LIFT+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  // read number of plot nodes
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->plotNp));
-
-  // read plot node coordinates (hard code triangles)
-  mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
-  mesh->plotS = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
-  mesh->plotT = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->plotNp;++n){
-    fgets(buf, BUFSIZ, fp);
-    sscanf(buf, dfloatFormat dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n, mesh->plotT+n);
+  if (flag==0) {
+    printf("ERROR: Unable to find label: '%s' in node file.\n", label);
+    exit(-1);
   }
 
-  // read plot interpolation matrix
-  mesh->plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->plotNp;++n){
-    for(int m=0;m<mesh->Np;++m){
-      fscanf(fp, dfloatFormat, mesh->plotInterp+n*mesh->Np+m);
-    }
-    fgets(buf,BUFSIZ,fp); // rest of line
+  //if found read in number of rows and columns
+  status = fscanf(fp, "%d %d",  Nrows, Ncols);
+  stat = fgets(buf, BUFSIZ, fp); //read to end of line
+
+  *A = (dfloat*) calloc((*Nrows)*(*Ncols), sizeof(dfloat)); //allocate space
+  for(int n=0;n<(*Nrows)*(*Ncols);++n) //read matrix data
+    status = fscanf(fp, dfloatFormat, (*A)+n);
+}
+
+void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols){
+
+  char buf[BUFSIZ];
+  rewind(fp); // rewind to beginning
+
+  int flag = 0;
+  int status;
+  char *stat;
+
+  //search for label in file
+  while(fgets(buf, BUFSIZ, fp)){
+    if (strstr(buf, label)) {flag =1; break;};
+  }
+  if (flag==0) {
+    printf("ERROR: Unable to find label: '%s' in node file.\n", label);
+    exit(-1);
   }
 
-  // read number of elements in plot node triangulation
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->plotNelements));
+  //if found read in number of rows and columns
+  status = fscanf(fp, "%d %d",  Nrows, Ncols);
+  stat = fgets(buf, BUFSIZ, fp); //read to end of line
 
-  // read number of vertices per plot element
-  fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->plotNverts));
-
-  // build and read in plot node triangulation
-  mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->plotNelements;++n){
-    for(int m=0;m<mesh->plotNverts;++m){
-      fscanf(fp, iintFormat, mesh->plotEToV+m + mesh->plotNverts*n);
-    }
-    fgets(buf,BUFSIZ,fp); // rest of line
-  }
-
-  if (N<7) { //cubature data is only available for N<=6
-    fgets(buf, BUFSIZ, fp); // read comment
-    //printf("%s", buf);
-    fgets(buf, BUFSIZ, fp); // read number of cubature points
-    //printf("%s", buf);
-    sscanf(buf, iintFormat, &(mesh->cubNp));
-    //printf("cubNp = %d\n",mesh->cubNp);
-
-    mesh->cubr = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-    mesh->cubs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-    mesh->cubt = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-    mesh->cubw = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->cubNp;++n){
-      fgets(buf, BUFSIZ, fp);
-      sscanf(buf, dfloatFormat dfloatFormat dfloatFormat dfloatFormat,
-              mesh->cubr+n, mesh->cubs+n, mesh->cubt+n, mesh->cubw+n);
-    }
-
-    mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->cubNp*mesh->Np;++n){
-      fscanf(fp, dfloatFormat, mesh->cubInterp+n);
-    }
-    fgets(buf, BUFSIZ, fp); // read comment
-
-    // read cubature weak 'r' differentiation matrix
-    mesh->cubDrW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->cubNp;++m){
-        fscanf(fp, dfloatFormat, mesh->cubDrW+n*mesh->cubNp+m);
-      }
-      fgets(buf,BUFSIZ,fp); // rest of line
-    }
-
-    // read cubature weak 's' differentiation matrix
-    mesh->cubDsW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->cubNp;++m){
-        fscanf(fp, dfloatFormat, mesh->cubDsW+n*mesh->cubNp+m);
-      }
-      fgets(buf,BUFSIZ,fp); // rest of line
-    }
-
-
-     // read cubature weak 's' differentiation matrix
-    mesh->cubDtW = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->cubNp;++m){
-        fscanf(fp, dfloatFormat, mesh->cubDtW+n*mesh->cubNp+m);
-      }
-      fgets(buf,BUFSIZ,fp); // rest of line
-    }
-
-    mesh->cubProject = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->cubNp*mesh->Np;++n){
-      fscanf(fp, dfloatFormat, mesh->cubProject+n);
-    }
-    fgets(buf, BUFSIZ, fp); // read comment
-
-
-
-    // read number of surface integration nodes
-    fgets(buf, BUFSIZ, fp); // read comment
-    fgets(buf, BUFSIZ, fp);
-    sscanf(buf, iintFormat, &(mesh->intNfp));
-
-    // read surface intergration node interpolation matrix
-    mesh->intInterp
-    = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-
-    for(int n=0;n<mesh->intNfp*mesh->Nfaces;++n){
-      for(int m=0;m<mesh->Nfp;++m){
-        fscanf(fp, dfloatFormat, mesh->intInterp+n*mesh->Nfp+m);
-      }
-      fgets(buf,BUFSIZ,fp); // rest of line
-    }
-
-    // read lift matrix from surface integration to volume nodes
-    mesh->intLIFT = (dfloat*) calloc(mesh->intNfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
-    fgets(buf, BUFSIZ, fp); // read comment
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->intNfp*mesh->Nfaces;++m){
-        fscanf(fp, dfloatFormat, mesh->intLIFT+n*mesh->intNfp*mesh->Nfaces+m);
-      }
-      fgets(buf,BUFSIZ,fp); // rest of line
-    }
-
-  }
-
-
-  //-------------Berstein Bezier DG stuff added by NC--------------------//
-  mesh->VB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->VB+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->invVB = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->invVB+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->D0ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*4;++n){
-    fscanf(fp, iintFormat, mesh->D0ids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->D1ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*4;++n){
-    fscanf(fp, iintFormat, mesh->D1ids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->D2ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*4;++n){
-    fscanf(fp, iintFormat, mesh->D2ids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->D3ids = (iint*) calloc(mesh->Np*4, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*4;++n){
-    fscanf(fp, iintFormat, mesh->D3ids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->Dvals = (dfloat*) calloc(mesh->Np*4, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*4;++n){
-    fscanf(fp, dfloatFormat, mesh->Dvals+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->L0ids = (iint*) calloc(mesh->Nfp*7, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Nfp*7;++n){
-    fscanf(fp, iintFormat, mesh->L0ids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->L0vals = (dfloat*) calloc(mesh->Nfp*7, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Nfp*7;++n){
-    fscanf(fp, dfloatFormat, mesh->L0vals+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->max_EL_nnz = mesh->Nfp+3;
-  mesh->ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(iint));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
-    fscanf(fp, iintFormat, mesh->ELids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  mesh->ELvals = (dfloat*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(dfloat));
-  fgets(buf, BUFSIZ, fp); // read comment
-  for(int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
-    fscanf(fp, dfloatFormat, mesh->ELvals+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  // BB degree raise matrix (sparse format)
-  fgets(buf, BUFSIZ, fp); // read comment
-  int Nfpp1 = (mesh->N+2)*(mesh->N+3)/2;
-  mesh->BBRaiseids = (iint*) calloc(Nfpp1*3, sizeof(iint));
-  for (int n=0;n<Nfpp1*3;++n){
-    fscanf(fp, iintFormat, mesh->BBRaiseids+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->BBRaiseVals = (dfloat*) calloc(Nfpp1*3, sizeof(dfloat));
-  for (int n=0;n<Nfpp1*3;++n){
-    fscanf(fp, dfloatFormat, mesh->BBRaiseVals+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  //BB degree lower matrix
-  fgets(buf, BUFSIZ, fp); // read comment
-  iint Nfpm1 =  (mesh->N)*(mesh->N+1)/2;
-  mesh->BBLower = (dfloat*) calloc(Nfpm1*mesh->Nfp, sizeof(dfloat));
-  for (int n=0;n<Nfpm1*mesh->Nfp;++n){
-    fscanf(fp, dfloatFormat, mesh->BBLower+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-
-#if 0
-  for(int n=0;n<mesh->cubNp;++n){
-    printf("rq,sq,tq = %f, %f, %f\n",mesh->cubr[n],mesh->cubs[n],mesh->cubt[n]);
-  }
-
-  printf("Vq: \n");
-  for(int n=0;n<mesh->cubNp;++n){
-    for(int m=0;m<mesh->Np;++m){
-      printf("%f ",mesh->cubInterp[n*mesh->Np+m]);
-    }
-    printf("\n");
-  }
-
-  printf("Pq: \n");
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->cubNp;++m){
-      printf("%f ",mesh->cubProject[n*mesh->cubNp+m]);
-    }
-    printf("\n");
-  }
-#endif
-
-
-#if 0
-  printf("Dr: \n");
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
-      printf("%g ", mesh->Dr[n*mesh->Np+m]);
-    }
-    printf("\n");
-  }
-
-  printf("Ds: \n");
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
-      printf("%g ", mesh->Ds[n*mesh->Np+m]);
-    }
-    printf("\n");
-  }
-
-  printf("Dt: \n");
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
-      printf("%g ", mesh->Dt[n*mesh->Np+m]);
-    }
-    printf("\n");
-  }
-
-  printf("LIFT: \n");
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
-      printf("%g ", mesh->LIFT[n*mesh->Nfaces*mesh->Nfp+m]);
-    }
-    printf("\n");
-  }
-
-  printf("faceNodes: \n");
-  for(int f=0;f<mesh->Nfaces;++f){
-    for(int n=0;n<mesh->Nfp;++n){
-      printf("%d ", mesh->faceNodes[n+f*mesh->Nfp]);
-    }
-    printf("\n");
-  }
-#endif
-
-  // IPDG OAS stuff
-  fgets(buf, BUFSIZ, fp);
-  //printf("%s", buf);
-  fgets(buf, BUFSIZ, fp);
-  int NpPcheck;
-  sscanf(buf, "%d", &NpPcheck);
-  mesh->NpP = NpPcheck;
-  //printf("NpP = %d\n", mesh->NpP);
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->oasForwardDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));
-  for(int n=0;n<mesh->NpP*mesh->NpP;++n){
-    fscanf(fp, dfloatFormat, mesh->oasForwardDg+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->oasDiagOpDg = (dfloat*) calloc(mesh->NpP, sizeof(dfloat));
-  for(int n=0;n<mesh->NpP;++n){
-    fscanf(fp, dfloatFormat, mesh->oasDiagOpDg+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp); // read comment
-  mesh->oasBackDg = (dfloat*) calloc(mesh->NpP*mesh->NpP, sizeof(dfloat));
-  for(int n=0;n<mesh->NpP*mesh->NpP;++n){
-    fscanf(fp, dfloatFormat, mesh->oasBackDg+n);
-  }
-  fgets(buf, BUFSIZ, fp);
-
-  fgets(buf, BUFSIZ, fp);
-  fgets(buf, BUFSIZ, fp);
-  int Npp1;
-  sscanf(buf, "%d %d", &Npp1, &NpPcheck);
-
-  //degree raising and lowering interpolation matrices
-  mesh->interpRaise = (dfloat*) calloc(Npp1*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<Npp1*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->interpRaise+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-  fgets(buf, BUFSIZ, fp);
-  fgets(buf, BUFSIZ, fp);
-  int Npm1;
-  sscanf(buf, "%d %d", &Npm1, &NpPcheck);
-
-  mesh->interpLower = (dfloat*) calloc(Npm1*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<Npm1*mesh->Np;++n){
-    fscanf(fp, dfloatFormat, mesh->interpLower+n);
-  }
-  fgets(buf, BUFSIZ, fp); // read comment
-
-
-  fclose(fp);
+  *A = (int*) calloc((*Nrows)*(*Ncols), sizeof(int)); //allocate space
+  for(int n=0;n<(*Nrows)*(*Ncols);++n) //read matrix data
+    status = fscanf(fp, "%d", (*A)+n);
 }

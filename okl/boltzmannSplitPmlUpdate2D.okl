@@ -1,6 +1,6 @@
 
-kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
-				      const iint * restrict elementIds, 
+kernel void boltzmannSplitPmlUpdate2D(const int Nelements,
+				      const int * restrict elementIds, 
 				      const dfloat dt,	
 				      const dfloat rka,
 				      const dfloat rkb,
@@ -17,12 +17,12 @@ kernel void boltzmannSplitPmlUpdate2D(const iint Nelements,
 				      dfloat4 * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
 
-      const iint element = elementIds[e];
+      const int element = elementIds[e];
 
-      const iint base = n + element*p_Nfields*p_Np;
+      const int base = n + element*p_Nfields*p_Np;
 
       dfloat resqx1 = resqx[base+0*p_Np];
       dfloat resqx2 = resqx[base+1*p_Np];

@@ -7,39 +7,38 @@ void meshPartitionStatistics(mesh_t *mesh){
 
   /* get MPI rank and size */
   int rank, size;
-  
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   
   /* now gather statistics on connectivity between processes */
-  iint *comms = (iint*) calloc(size, sizeof(iint));
-  iint Ncomms = 0;
+  int *comms = (int*) calloc(size, sizeof(int));
+  int Ncomms = 0;
 
   /* count elements with neighbors on each other rank ranks */
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
-	++comms[mesh->EToP[e*mesh->Nfaces+f]];
-	++Ncomms;
+        ++comms[mesh->EToP[e*mesh->Nfaces+f]];
+        ++Ncomms;
       }
     }
   }
 
-  iint Nmessages = 0;
-  for(iint r=0;r<size;++r)
+  int Nmessages = 0;
+  for(int r=0;r<size;++r)
     if(comms[r]>0)
       ++Nmessages;
 
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     MPI_Barrier(MPI_COMM_WORLD);
     if(r==rank){
       fflush(stdout);
       printf("r: %02d [", rank);
-      for(iint s=0;s<size;++s){
-	printf(" %04d", comms[s]);
+      for(int s=0;s<size;++s){
+        printf(" %04d", comms[s]);
       }
-      printf("] (Nmessages=%d, Ncomms=%d)\n", Nmessages, Ncomms);
+      printf("] (Nelements=" dlongFormat ", Nmessages=%d, Ncomms=%d)\n", mesh->Nelements,Nmessages, Ncomms);
       fflush(stdout);
     }
   }

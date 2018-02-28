@@ -1,9 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer,
-				        char   * options){
+void insPoissonStep3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
@@ -13,7 +11,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
 
-  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  int offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -26,13 +24,13 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                ins->o_vHaloBuffer);
 
     // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(sendBuffer);           
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
                          mesh->Np*(ins->NVfields)*sizeof(dfloat),
-                         sendBuffer,
-                         recvBuffer);
+                         ins->vSendBuffer,
+                         ins->vRecvBuffer);
   }
 
   // computes div u^(n+1) volume term
@@ -50,7 +48,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
 
-    ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
 
     ins->velocityHaloScatterKernel(mesh->Nelements,
                                   mesh->totalHaloPairs,
@@ -117,7 +115,38 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   #endif
 
   #if 1// if time dependent BC or Pressure Solve not Increment
-  ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+  const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
+  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+    ins->poissonRhsBCKernel(mesh->Nelements,
+                            pressure_solve,
+                            mesh->o_ggeo,
+                            mesh->o_sgeo,
+                            mesh->o_SrrT,
+                            mesh->o_SrsT,
+                            mesh->o_SrtT,
+                            mesh->o_SsrT,
+                            mesh->o_SssT,
+                            mesh->o_SstT,
+                            mesh->o_StrT,
+                            mesh->o_StsT,
+                            mesh->o_SttT,
+                            mesh->o_MM,
+                            mesh->o_vmapM,
+                            mesh->o_sMT,
+                            t,
+                            ins->dt,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            ins->o_PmapB,
+                            ins->o_rhsP);
+
+    // gather-scatter
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+
+  } else if (strstr(ins->pSolverOptions,"IPDG")) {
+    ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 ins->tau,
@@ -135,17 +164,21 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
                                 mesh->o_LIFTT,
                                 mesh->o_MM,
                                 ins->o_rhsP);
+  }
   #endif
 
-  //occaTimerTic(mesh->device,"Pr Solve");
-  //occaTimerTic(mesh->device,"KernelTime");
-  mesh->device.finish();  
-  double tic = MPI_Wtime();  
-  ins->NiterP= ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
-  mesh->device.finish(); 
-  double toc = MPI_Wtime();
+  ins->NiterP = ellipticSolveTet3D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
 
-  ins->prtime = toc-tic; 
-  //occaTimerToc(mesh->device,"Pr Solve"); 
-
+  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+    ins->poissonAddBCKernel(mesh->Nelements,
+                            pressure_solve,
+                            t,
+                            ins->dt,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            mesh->o_vmapM,
+                            ins->o_PmapB,
+                            ins->o_PI);
+  }
 }
