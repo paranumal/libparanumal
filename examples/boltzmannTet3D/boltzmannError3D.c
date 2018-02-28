@@ -3,11 +3,11 @@
 // currently maximum
 void boltzmannError3D(mesh3D *mesh, dfloat time,char *options){
   dfloat maxQ1 = 0, minQ1 = 1e9;
-  iint fid = 0; //  
-  for(iint e=0;e<mesh->Nelements;++e){
+  int fid = 0; //  
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat q1=0;
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];

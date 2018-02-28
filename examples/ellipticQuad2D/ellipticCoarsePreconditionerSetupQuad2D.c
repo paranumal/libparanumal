@@ -16,30 +16,30 @@ int parallelCompareRowColumn(const void *a, const void *b){
 
 }
 
-void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A, 
-                                iint *nnzA, iint *globalStarts, const char *options);
+void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A, 
+                                int *nnzA, int *globalStarts, const char *options);
 
-void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
+void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
+                              hgs_t **hgs, int *globalStarts, const char* options);
 
 
 void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options){
+                                   int *BCType, dfloat **V1, nonZero_t **A, int *nnzA,
+                                   hgs_t **hgs, int *globalStarts, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 
-  iint Nnum = mesh->Nverts*(mesh->Nelements);
+  int Nnum = mesh->Nverts*(mesh->Nelements);
  
  
   // 2. Build coarse grid element basis functions
   dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint n = i+j*mesh->Nq;
+  for(int j=0;j<mesh->Nq;++j){
+    for(int i=0;i<mesh->Nq;++i){
+      int n = i+j*mesh->Nq;
 
       dfloat rn = mesh->gllz[i];
       dfloat sn = mesh->gllz[j];
@@ -53,8 +53,8 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
 
   //build coarse grid A
   if (strstr(options,"IPDG")) {
-    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-    for(iint r=0;r<size;++r)
+    MPI_Allgather(&(mesh->Nelements), 1, MPI_INT, globalStarts+1, 1, MPI_INT, MPI_COMM_WORLD);
+    for(int r=0;r<size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Nverts;
 
     ellipticBuildCoarseIpdgQuad2D(mesh,tau,lambda,BCType,&A,&nnz,globalStarts,options);
@@ -64,20 +64,20 @@ void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfl
   }
 }
 
-void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options) {
-  iint rank, size;
+void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
+                              hgs_t **hgs, int *globalStarts, const char* options) {
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Nverts*mesh->Nelements;
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+  int Nnum = mesh->Nverts*mesh->Nelements;
+  int *globalNumbering = (int*) calloc(Nnum, sizeof(int));
+  int *globalOwners = (int*) calloc(Nnum, sizeof(int));
 
   // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
+  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(int));
 
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
@@ -87,23 +87,23 @@ void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t 
 
   // ------------------------------------------------------------------------------------
   // Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = mesh->Nverts*mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
-  iint   *rowsA = (iint*) calloc(nnzLocal, sizeof(iint));
-  iint   *colsA = (iint*) calloc(nnzLocal, sizeof(iint));
+  int nnzLocal = mesh->Nverts*mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+  int   *rowsA = (int*) calloc(nnzLocal, sizeof(int));
+  int   *colsA = (int*) calloc(nnzLocal, sizeof(int));
   dfloat *valsA = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vr1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint n = i+j*mesh->Nq;
+  for(int j=0;j<mesh->Nq;++j){
+    for(int i=0;i<mesh->Nq;++i){
+      int n = i+j*mesh->Nq;
 
       dfloat rn = mesh->gllz[i];
       dfloat sn = mesh->gllz[j];
@@ -124,18 +124,18 @@ void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t 
     }
   }
 
-  iint cnt = 0;
+  int cnt = 0;
   printf("Building coarse matrix system\n");
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Nverts;++n){
-      for(iint m=0;m<mesh->Nverts;++m){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
+      for(int m=0;m<mesh->Nverts;++m){
       	dfloat Snm = 0;
 
       	// use GLL nodes for integration
       	// (since Jacobian is high order tensor-product polynomial)
-      	for(iint j=0;j<mesh->Nq;++j){
-      	  for(iint i=0;i<mesh->Nq;++i){
-      	    iint id = i+j*mesh->Nq;
+      	for(int j=0;j<mesh->Nq;++j){
+      	  for(int i=0;i<mesh->Nq;++i){
+      	    int id = i+j*mesh->Nq;
 
       	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
       	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
@@ -180,18 +180,18 @@ void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t 
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r]/sizeof(nonZero_t);
@@ -209,7 +209,7 @@ void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t 
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<*nnz;++n){
+  for(int n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;
@@ -233,30 +233,30 @@ void ellipticBuildCoarseContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t 
   free(ArecvOffsets);
 }
 
-void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType,
-                      nonZero_t **A, iint *nnzA, iint *globalStarts, const char *options){
+void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType,
+                      nonZero_t **A, int *nnzA, int *globalStarts, const char *options){
 
-  iint size, rankM;
+  int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  iint Nnum = mesh->Nverts*mesh->Nelements;
+  int Nnum = mesh->Nverts*mesh->Nelements;
 
   // create a global numbering system
-  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(iint));
+  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(int));
 
   // every degree of freedom has its own global id
   /* so find number of elements on each rank */
-  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-    rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  int *rankNelements = (int*) calloc(size, sizeof(int));
+  int *rankStarts = (int*) calloc(size+1, sizeof(int));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_INT,
+    rankNelements, 1, MPI_INT, MPI_COMM_WORLD);
   //find offsets
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (iint e =0;e<mesh->Nelements;e++) {
+  for (int e =0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Nverts;n++) {
       globalIds[e*mesh->Nverts +n] = n + (e + rankStarts[rankM])*mesh->Nverts;
     }
@@ -264,16 +264,16 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    iint *idSendBuffer = (iint *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, mesh->Nverts*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
+    int *idSendBuffer = (int *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(int));
+    meshHaloExchange(mesh, mesh->Nverts*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
     free(idSendBuffer);
   }
 
   // Build coarse basis restriction
   dfloat *V  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  for(iint j=0;j<mesh->Nq;++j){
-    for(iint i=0;i<mesh->Nq;++i){
-      iint n = i+j*mesh->Nq;
+  for(int j=0;j<mesh->Nq;++j){
+    for(int i=0;i<mesh->Nq;++i){
+      int n = i+j*mesh->Nq;
 
       dfloat rn = mesh->gllz[i];
       dfloat sn = mesh->gllz[j];
@@ -284,7 +284,7 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
     }
   }
 
-  iint nnzLocalBound = mesh->Nverts*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  int nnzLocalBound = mesh->Nverts*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -299,14 +299,14 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
   dfloat *Br = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *Bs = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
-  iint mode = 0;
-  for(iint nj=0;nj<mesh->N+1;++nj){
-    for(iint ni=0;ni<mesh->N+1;++ni){
+  int mode = 0;
+  for(int nj=0;nj<mesh->N+1;++nj){
+    for(int ni=0;ni<mesh->N+1;++ni){
 
-      iint node = 0;
+      int node = 0;
 
-      for(iint j=0;j<mesh->N+1;++j){
-        for(iint i=0;i<mesh->N+1;++i){
+      for(int j=0;j<mesh->N+1;++j){
+        for(int i=0;i<mesh->N+1;++i){
 
           if(nj==j && ni==i)
             B[mode*mesh->Np+node] = 1;
@@ -327,21 +327,21 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
   int nnz = 0;
 
   // loop over all elements
-  for(iint eM=0;eM<mesh->Nelements;++eM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
 
     //zero out BP
-    for (iint fM=0;fM<mesh->Nfaces;fM++)
-      for (iint n=0;n<mesh->Np;n++)
-        for (iint m=0;m<mesh->Np;m++)
+    for (int fM=0;fM<mesh->Nfaces;fM++)
+      for (int n=0;n<mesh->Np;n++)
+        for (int m=0;m<mesh->Np;m++)
           BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np] = 0;
 
     /* build Dx,Dy (forget the TP for the moment) */
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
 
         // (grad phi_n, grad phi_m)_{D^e}
-        for(iint i=0;i<mesh->Np;++i){
-          iint base = eM*mesh->Np*mesh->Nvgeo + i;
+        for(int i=0;i<mesh->Np;++i){
+          int base = eM*mesh->Np*mesh->Nvgeo + i;
           dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
           dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
           dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
@@ -359,31 +359,31 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
         }
 
         // loop over all faces in this element
-        for(iint fM=0;fM<mesh->Nfaces;++fM){
+        for(int fM=0;fM<mesh->Nfaces;++fM){
           // accumulate flux terms for negative and positive traces
           dfloat AnmP = 0;
-          for(iint i=0;i<mesh->Nfp;++i){
-            iint vidM = mesh->faceNodes[i+fM*mesh->Nfp];
+          for(int i=0;i<mesh->Nfp;++i){
+            int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
             // grab vol geofacs at surface nodes
-            iint baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+            int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
             dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
             dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
             dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
             dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
 
             // double check vol geometric factors are in halo storage of vgeo
-            iint idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-            iint vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-            iint localEP = mesh->vmapP[idM]/mesh->Np;
-            iint baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
+            int idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+            int vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+            int localEP = mesh->vmapP[idM]/mesh->Np;
+            int baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
             dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
             dfloat drdyP = mesh->vgeo[baseP+mesh->Np*RYID];
             dfloat dsdxP = mesh->vgeo[baseP+mesh->Np*SXID];
             dfloat dsdyP = mesh->vgeo[baseP+mesh->Np*SYID];
 
             // grab surface geometric factors
-            iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+            int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
             dfloat nx = mesh->sgeo[base+NXID];
             dfloat ny = mesh->sgeo[base+NYID];
             dfloat wsJ = mesh->sgeo[base+WSJID];
@@ -415,11 +415,11 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
             BM[m+n*mesh->Np] += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
             BM[m+n*mesh->Np] += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
 
-            iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+            int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
             if (eP < 0) {
               int qSgn, gradqSgn;
               int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-              iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+              int bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
               if(bcType==1){ // Dirichlet
                 qSgn     = -1;
                 gradqSgn =  1;
@@ -447,14 +447,14 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
 
     //transform to coarse operator Ac = VAV^T
     for (int fM=0;fM<mesh->Nfaces;fM++) {
-      iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      int eP = mesh->EToE[eM*mesh->Nfaces+fM];
       if (eP < 0) eP = eM;
 
       for (int j=0;j<mesh->Nverts;j++) {
         for (int i=0;i<mesh->Nverts;i++) {
           dfloat AnmP = 0;
-          for (iint m=0;m<mesh->Np;m++) {
-            for (iint n=0;n<mesh->Np;n++) {
+          for (int m=0;m<mesh->Np;m++) {
+            for (int n=0;n<mesh->Np;n++) {
               AnmP += V[n+i*mesh->Np]*BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np]*V[m+j*mesh->Np];
             }
           }
@@ -472,8 +472,8 @@ void ellipticBuildCoarseIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint
     for (int j=0;j<mesh->Nverts;j++) {
       for (int i=0;i<mesh->Nverts;i++) {
         dfloat Anm = 0;
-        for (iint m=0;m<mesh->Np;m++) {
-          for (iint n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          for (int n=0;n<mesh->Np;n++) {
             Anm += V[n+i*mesh->Np]*BM[m+n*mesh->Np]*V[m+j*mesh->Np];
           }
         }

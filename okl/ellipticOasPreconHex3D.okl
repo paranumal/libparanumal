@@ -1,8 +1,8 @@
      
 #define cubeThreadsP \
-  for(iint k=0;k<p_NqP;++k;inner2) \
-    for(iint j=0;j<p_NqP;++j;inner1) \
-      for(iint i=0;i<p_NqP;++i;inner0) 
+  for(int k=0;k<p_NqP;++k;inner2) \
+    for(int j=0;j<p_NqP;++j;inner1) \
+      for(int i=0;i<p_NqP;++i;inner0) 
 
 #if 0
 // q  \in  Nq x Nq x Nq x Nelements
@@ -34,16 +34,16 @@
 #endif
 
 
-kernel void ellipticOasPreconHex3D(const iint Nelements,
-				   const iint   * restrict vmapPP,
-				   const iint   * restrict faceNodesP,
+kernel void ellipticOasPreconHex3D(const int Nelements,
+				   const int   * restrict vmapPP,
+				   const int   * restrict faceNodesP,
 				   const dfloat * restrict forward,
 				   const dfloat * restrict diagInvOp,
 				   const dfloat * restrict back,
 				   const dfloat * restrict q,
 				   dfloat * restrict Pq){
   
-  for(iint e=0; e<Nelements; ++e; outer0){
+  for(int e=0; e<Nelements; ++e; outer0){
     
     shared dfloat s_q1[p_NqP][p_NqP][p_NqP];
     shared dfloat s_q2[p_NqP][p_NqP][p_NqP];
@@ -54,7 +54,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
     
     cubeThreadsP{
 
-      iint n=i+p_NqP*j+p_NqP*p_NqP*k;
+      int n=i+p_NqP*j+p_NqP*p_NqP*k;
 
       s_q1[0][0][n] = 0; // zero shared memory
     }
@@ -63,18 +63,18 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
     
     cubeThreadsP{
 
-      iint n=i+p_NqP*j+p_NqP*p_NqP*k;
+      int n=i+p_NqP*j+p_NqP*p_NqP*k;
 #if 0
       if(n<p_Np){
 	// coalesce reads from p_Nq x p_Nq x p_Nq storage
-	iint ip = n%p_Nq;
-	iint jp = (n/p_Nq)%p_Nq;
-	iint kp = (n/(p_Nq*p_Nq));
+	int ip = n%p_Nq;
+	int jp = (n/p_Nq)%p_Nq;
+	int kp = (n/(p_Nq*p_Nq));
 	s_q1[kp+1][jp+1][ip+1] = q[n+e*p_Np];
       }
 #else
       if((k<(p_NqP-2)) && (j<(p_NqP-2)) && (i<(p_NqP-2))){
-	iint m = k*p_Nq*p_Nq + j*p_Nq + i;
+	int m = k*p_Nq*p_Nq + j*p_Nq + i;
 	s_q1[k+1][j+1][i+1] = q[m+e*p_Np];
       }
 #endif
@@ -88,7 +88,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       // p_NqP = (N+3)^3
       // p_Nfp*p_Nfaces = (N+1)*(N+1)*4 < (N+3)^3
       if(n<p_Nfp*p_Nfaces){
-	const iint id = vmapPP[n+e*p_Nfaces*p_Nfp];
+	const int id = vmapPP[n+e*p_Nfaces*p_Nfp];
 	s_q1[0][0][faceNodesP[n]] = q[id];
       }
     }
@@ -100,7 +100,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[i][n]*s_q1[k][j][n];
 
       s_q2[k][j][i] = tmp;
@@ -113,7 +113,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[j][n]*s_q2[k][n][i];
       
       s_q3[k][j][i]  = tmp;
@@ -126,7 +126,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[k][n]*s_q3[n][j][i];
 
       // diagonal inverse
@@ -140,7 +140,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[k][n]*s_q1[n][j][i];
       
       s_q2[k][j][i] = tmp; 
@@ -153,7 +153,7 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[j][n]*s_q2[k][n][i];
       
       s_q3[k][j][i] = tmp;
@@ -166,10 +166,10 @@ kernel void ellipticOasPreconHex3D(const iint Nelements,
       dfloat tmp = 0.f;
 
       occaUnroll(p_NqP)
-	for(iint n=0;n<p_NqP;++n)
+	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[i][n]*s_q3[k][j][n];
       
-      const iint id=i+p_NqP*j+p_NqP*p_NqP*k + p_NpP*e;
+      const int id=i+p_NqP*j+p_NqP*p_NqP*k + p_NpP*e;
       Pq[id] = tmp;
     }
   }

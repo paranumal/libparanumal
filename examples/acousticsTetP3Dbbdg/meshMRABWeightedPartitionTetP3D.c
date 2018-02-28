@@ -5,31 +5,31 @@
 #include "mesh3D.h"
 
 typedef struct {
-  iint id;
-  iint level;
+  int id;
+  int level;
   dfloat weight;
-  iint N;
+  int N;
 
   // 8 for maximum number of vertices per element in 3D
-  iint v[8];
+  int v[8];
   dfloat EX[8], EY[8], EZ[8];
 
-  iint cRank;
-  iint cId;
+  int cRank;
+  int cId;
   int type;
 } cElement_t;
 
 typedef struct {
-  iint Nelements;
-  iint offSet;
+  int Nelements;
+  int offSet;
 } cluster_t;
 
-void meshBuildMRABClustersP3D(mesh3D *mesh, iint lev, dfloat *weights, iint *levels,
-            iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **newElements);
+void meshBuildMRABClustersP3D(mesh3D *mesh, int lev, dfloat *weights, int *levels,
+            int *Nclusters, cluster_t **clusters, int *Nelements, cElement_t **newElements);
 
 // geometric partition of clusters of elements in 3D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_t *clusters, 
-                              iint *Nelements, cElement_t **elements);
+dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, int Nclusters, cluster_t *clusters, 
+                              int *Nelements, cElement_t **elements);
 
 
 /* ---------------------------------------------------------
@@ -52,17 +52,17 @@ The algorithm performs the following steps
 
 ------------------------------------------------------------ */
 void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
-                                      iint numLevels, iint *levels) {
+                                      int numLevels, int *levels) {
 
   const dfloat TOL = 0.8; //tolerance on what partitions are ruled 'acceptable'
                           // min_{ranks} totalWeight > TOL*max_{ranks} totalWeight => accepted
 
-  iint rank, size;
+  int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint Nelements, Nclusters;
+  int Nelements, Nclusters;
 
   cElement_t *elements, *acceptedPartition;
   cluster_t *clusters;
@@ -74,10 +74,10 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
   meshClusteredGeometricPartitionP3D(mesh, Nclusters, clusters, &Nelements, &elements);
 
   //initialize the accepted partition
-  iint acceptedNelements = Nelements;
+  int acceptedNelements = Nelements;
   acceptedPartition = elements;
 
-  for (iint lev = 0; lev<1; lev++) {
+  for (int lev = 0; lev<1; lev++) {
     if (rank==0) printf("Clustering level %d...", lev);
     meshBuildMRABClustersP3D(mesh, lev, weights, levels, &Nclusters, &clusters, &Nelements, &elements);
     if (rank==0) printf("done.\n");
@@ -98,16 +98,16 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
   //save this partition, and perform the mesh setup again.  
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (iint*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(iint));
+  mesh->EToV = (int*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(int));
   mesh->EX = (dfloat*) realloc(mesh->EX,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
-  mesh->N  =   (iint*) realloc(mesh->N, mesh->Nelements*sizeof(iint));
+  mesh->N  =   (int*) realloc(mesh->N, mesh->Nelements*sizeof(int));
   mesh->elementInfo  =   (int*) realloc(mesh->elementInfo, mesh->Nelements*sizeof(int));
-  mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(iint));
+  mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(int));
 
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Nverts;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = acceptedPartition[e].v[n];
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];
       mesh->EY  [e*mesh->Nverts + n] = acceptedPartition[e].EY[n];
@@ -144,11 +144,11 @@ void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
 
 
   if (mesh->totalHaloPairs) {
-    mesh->N = (iint *) realloc(mesh->N,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
-    mesh->MRABlevel = (iint *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint));
-    iint *MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
-    meshHaloExchange(mesh, sizeof(iint), mesh->N, MRABsendBuffer, mesh->N+mesh->Nelements);
+    mesh->N = (int *) realloc(mesh->N,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(int));
+    mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(int));
+    int *MRABsendBuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
+    meshHaloExchange(mesh, sizeof(int), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    meshHaloExchange(mesh, sizeof(int), mesh->N, MRABsendBuffer, mesh->N+mesh->Nelements);
     free(MRABsendBuffer);
   }
   

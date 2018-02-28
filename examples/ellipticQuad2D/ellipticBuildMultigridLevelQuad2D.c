@@ -47,11 +47,11 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
       mesh->ggeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
 
   // info for kernel construction
@@ -92,11 +92,11 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(int)==4){
+    kernelInfo.addDefine("int","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(int)==8){
+    kernelInfo.addDefine("int","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -124,10 +124,10 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   kernelInfo.addDefine("p_JWID", JWID);
 
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 

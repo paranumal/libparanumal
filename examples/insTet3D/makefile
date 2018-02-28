@@ -16,16 +16,16 @@ ELLIPTICDIR = ../ellipticTet3D
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I$(GSDIR) -I$(ELLIPTICDIR) -D DHOLMES='"${CURDIR}/../.."'  
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ALMONDDIR) -lparALMOND -L$(ELLIPTICDIR) -lellipticTet3D
+			-L$(ELLIPTICDIR) -lellipticTet3D -L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
 LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
@@ -36,7 +36,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh3D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 $(ELLIPTICDIR)/ellipticTet3D.h \
 $(ELLIPTICDIR)/ellipticPreconTet3D.h  
@@ -55,7 +54,10 @@ insRun3D.o \
 insError3D.o \
 insReport3D.o \
 insPlotVTU3D.o \
+insPlotSlice3D.o \
+insPlotContour3D.o \
 insAdvectionStep3D.o \
+insAdvectionSubCycleStep3D.o \
 insHelmholtzStep3D.o \
 insPoissonStep3D.o \
 insUpdateStep3D.o \
@@ -75,6 +77,8 @@ LOBJS = \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshPlotVTU3D.o \
+../../src/meshPlotContour3D.o \
+../../src/meshPlotAdaptiveContour3D.o \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \
 ../../src/meshSetupTet3D.o \
@@ -82,16 +86,14 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshLoadReferenceNodesTet3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
-../../src/hash.o
+../../src/hash.o \
+../../src/timer.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

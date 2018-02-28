@@ -1,7 +1,9 @@
 #include "ellipticTri2D.h"
 
+void matrixInverse(int N, dfloat *A);
+
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
+solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf, int* BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -12,20 +14,15 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
 
   solver->mesh = mesh;
 
-  int N = levelDegree[n];
-  int NFine = levelDegree[n-1];
-  int NpFine = (NFine+1)*(NFine+2)/2;
-  int NpCoarse = (N+1)*(N+2)/2;
-
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesTri2D(mesh, N);
+  meshLoadReferenceNodesTri2D(mesh, Nc);
 
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesTri2D(mesh);
 
   // create halo extension for x,y arrays
-  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  iint localNodes     = mesh->Nelements*mesh->Np;
+  dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  dlong localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -38,47 +35,134 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
+  if (strstr(options,"SPARSE")) {
+    //connect the face modes between each element 
+    meshConnectFaceModes2D(mesh,mesh->FaceModes,mesh->sparseV);
+    //use the mmaps constructed and overwrite vmap and FaceNodes
+    for (dlong n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;n++) {
+      mesh->vmapM[n] = mesh->mmapM[n];
+      mesh->vmapP[n] = mesh->mmapP[n];
+    }
+    for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) { //overwrite facenodes
+      mesh->faceNodes[n] = mesh->FaceModes[n];
+    }
+    for (int n=0;n<mesh->Nverts;n++) { //overwrite vertex nodes (assumes their first in the list)
+      mesh->vertexNodes[n] = n;
+    }
+  }
 
   // global nodes
-  //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
+  meshParallelConnectNodes(mesh);
 
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
   free(sendBuffer);
 
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+
+  solver->Nblock = Nblock;
+
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
     }
   }
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
 
   //build element stiffness matrices
-  if (mesh->Nverts == 3) {
-    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
-        for (iint k=0;k<mesh->Np;k++) {
-          for (iint l=0;l<mesh->Np;l++) {
-            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-          }
+  dfloat *SrrT, *SrsT, *SsrT, *SssT;
+  mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {
+      for (int k=0;k<mesh->Np;k++) {
+        for (int l=0;l<mesh->Np;l++) {
+          mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+        }
+      } 
+    }
+  }
+  SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {  
+      SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+      SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+      SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+      SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+    }
+  }
+
+  // deriv operators: transpose from row major to column major
+  int *D1ids = (int*) calloc(mesh->Np*3,sizeof(int));
+  int *D2ids = (int*) calloc(mesh->Np*3,sizeof(int));
+  int *D3ids = (int*) calloc(mesh->Np*3,sizeof(int));
+  dfloat *Dvals = (dfloat*) calloc(mesh->Np*3,sizeof(dfloat));
+
+  dfloat *VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+  dfloat *PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+
+  dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*3,sizeof(dfloat)); // tridiag
+  int *ELids = (int*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(int));
+  dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
+
+
+  for (int i = 0; i < mesh->Np; ++i){
+    for (int j = 0; j < 3; ++j){
+      D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
+      D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
+      D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];
+      Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];
+    }
+  }
+
+  for (int i = 0; i < mesh->cubNp; ++i){
+    for (int j = 0; j < mesh->Np; ++j){
+      VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
+      PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
+    }
+  }
+
+
+  for (int i = 0; i < mesh->Nfp; ++i){
+    for (int j = 0; j < 3; ++j){
+      L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
+    }
+  }
+
+  for (int i = 0; i < mesh->Np; ++i){
+    for (int j = 0; j < mesh->max_EL_nnz; ++j){
+      ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
+      ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
+    }
+  }
+
+  //BB mass matrix
+  mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n = 0; n < mesh->Np; ++n){
+    for (int m = 0; m < mesh->Np; ++m){
+      for (int i = 0; i < mesh->Np; ++i){
+        for (int j = 0; j < mesh->Np; ++j){
+          mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
         }
       }
     }
@@ -108,13 +192,70 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
       mesh->MM);
 
+  mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
+  mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
+  mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
+  mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
+
+  mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
+  mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
+  mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D3ids);
+  mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
+
+  mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
+
+  mesh->o_VBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),VBq);
+  mesh->o_PBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),PBq);
+
+  mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*3*sizeof(dfloat),L0vals);
+  mesh->o_ELids =
+    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
+  mesh->o_ELvals =
+    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
+
+  /* sparse basis setup */
+  //build inverse vandermonde matrix
+  mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np*mesh->Np;n++)
+    mesh->invSparseV[n] = mesh->sparseV[n];
+  matrixInverse(mesh->Np,mesh->invSparseV);
+
+  int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
+
+  char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
+  for (int m=0;m<paddedRowSize/4;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int k=0;k<4;k++) {
+        if (k+4*m < mesh->SparseNnzPerRow) {
+          IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
+        } else {
+          IndTchar[k+4*n+m*4*mesh->Np] = 0;
+        }
+      }
+    }
+  }
+  
+  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
+  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
+  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
+  
+  mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*paddedRowSize*sizeof(char), IndTchar);
+  free(IndTchar);
+
+  
+  //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
   occa::kernelInfo kernelInfo;
@@ -154,11 +295,11 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(dlong)==4){
+    kernelInfo.addDefine("dlong","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(dlong)==8){
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -185,14 +326,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
-
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
-
-  solver->Nblock = Nblock;
-
   //add standard boundary functions
   char *boundaryHeaderFileName;
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
@@ -205,24 +338,70 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
   // add custom defines
   kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+  kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int NblockV = 256/mesh->Np; // get close to 256 threads
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+
+  int NblockV = 256/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 512/(4*mesh->Np); // get close to 256 threads
+  int one = 1; //set to one for now. TODO: try optimizing over these
+  kernelInfo.addDefine("p_NnodesV", one);
+
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+
+  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
   if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
   else NblockG = 256/mesh->Np;
   kernelInfo.addDefine("p_NblockG", NblockG);
+
+  mesh->haloExtractKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+               "meshHaloExtract2D",
+               kernelInfo);
+
+  mesh->gatherKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+               "gather",
+               kernelInfo);
+
+  mesh->scatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+               "scatter",
+               kernelInfo);
+
+  mesh->gatherScatterKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+               "gatherScatter",
+               kernelInfo);
+
+  mesh->getKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+               "get",
+               kernelInfo);
+
+  mesh->putKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+               "put",
+               kernelInfo);
+
+  mesh->sumKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+               "sum",
+               kernelInfo);
+
+  mesh->addScalarKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+               "addScalar",
+               kernelInfo);
 
   solver->scaledAddKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
@@ -234,57 +413,126 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
            "dotMultiply",
            kernelInfo);
 
-  solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
-               kernelInfo);
+  if (strstr(options,"SPARSE")) {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticAxTri2D_v0",
+                 kernelInfo);
 
-  solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
-               kernelInfo);
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
+                 "ellipticPartialAxTri2D_v0",
+                 kernelInfo);
+  } else {
+    solver->AxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticAxTri2D",
+                 kernelInfo);
 
-  solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D",
+    solver->partialAxKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+                 "ellipticPartialAxTri2D",
+                 kernelInfo);
+  }
+
+  if (strstr(options,"BERN")) {
+
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+               "ellipticGradientBBTri2D",
            kernelInfo);
 
-  solver->partialGradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticPartialGradientTri2D",
-                kernelInfo);
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
+                 "ellipticPartialGradientBBTri2D",
+                  kernelInfo);
 
-  solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticAxIpdgTri2D",
-               kernelInfo);
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticAxIpdgBBTri2D",
+                 kernelInfo);
 
-  solver->partialIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-               "ellipticPartialAxIpdgTri2D",
-               kernelInfo);
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
+                 "ellipticPartialAxIpdgBBTri2D",
+                 kernelInfo);
+
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
+                 "ellipticBBBRDivergenceSurface2D",
+                 kernelInfo);
+
+  } else if (strstr(options,"NODAL")) {
+
+    solver->gradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+               "ellipticGradientTri2D_v0",
+           kernelInfo);
+
+    solver->partialGradientKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
+                 "ellipticPartialGradientTri2D_v0",
+                  kernelInfo);
+
+    solver->ipdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticAxIpdgTri2D",
+                 kernelInfo);
+
+    solver->partialIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
+                 "ellipticPartialAxIpdgTri2D",
+                 kernelInfo);
+
+    solver->BRGradientVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientVolume2D",
+                 kernelInfo);
+
+    solver->BRGradientSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRGradientSurface2D",
+                 kernelInfo);
+
+    solver->BRDivergenceVolumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceVolume2D",
+                 kernelInfo);
+
+    solver->BRDivergenceSurfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
+                 "ellipticBRDivergenceSurface2D",
+                 kernelInfo);
+  }
 
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
+#if 0
   solver->precon->overlappingPatchKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
                "ellipticOasPreconTri2D",
                kernelInfo);
+#endif
 
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
                "ellipticFooTri2D",
-               kernelInfo);
-
-  solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
-               kernelInfo);
-
-  solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
                kernelInfo);
 
   solver->precon->blockJacobiKernel =
@@ -332,7 +580,96 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int* levelDegre
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
 
+  solver->precon->CGLocalPatchKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCGLocalPatchTri2D.okl",
+               "ellipticCGLocalPatchTri2D",
+               kernelInfo);
+
+
+  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+  int NpFine   = (Nf+1)*(Nf+2)/2;
+  int NpCoarse = (Nc+1)*(Nc+2)/2;
+  kernelInfo.addDefine("p_NpFine", NpFine);
+  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+
+  solver->precon->coarsenKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+             "ellipticPreconCoarsen",
+             kernelInfo);
+
+  solver->precon->prolongateKernel =
+    solver->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+             "ellipticPreconProlongate",
+             kernelInfo);
+
+  //on host gather-scatter
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(solver,options);
+
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          solver->mapB[fid+e*mesh->Np] = mymin(BCFlag,solver->mapB[fid+e*mesh->Np]);
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(mesh->hostGsh, solver->mapB, "int", "min"); 
+
+  //use the bc flags to find masked ids
+  solver->Nmasked = 0;
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (solver->mapB[n] == 1E9) {
+      solver->mapB[n] = 0.;
+    } else if (solver->mapB[n] == 1) { //Dirichlet boundary
+      solver->Nmasked++;
+    }
+  }
+  solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
+  
+  solver->maskIds = (dlong *) calloc(solver->Nmasked, sizeof(dlong));
+  solver->Nmasked =0; //reset
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
+  }
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(dlong), solver->maskIds);
+
+
+  if (strstr(options,"SPARSE")) {
+    // make the gs sign change array for flipped trace modes
+    //TODO this is a hack that likely will need updating for MPI
+    mesh->mapSgn = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+    for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) mesh->mapSgn[n] = 1;
+
+    for (dlong e=0;e<mesh->Nelements;e++) {
+      for (int n=0;n<mesh->Nfaces*mesh->Nfp;n++) {
+        dlong id = n+e*mesh->Nfp*mesh->Nfaces;
+        if (mesh->mmapS[id]==-1) { //sign flipped
+          if (mesh->vmapP[id] <= mesh->vmapM[id]){ //flip only the higher index in the array
+            mesh->mapSgn[mesh->vmapM[id]]= -1;
+          } 
+        } 
+      }
+    }
+    mesh->o_mapSgn = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), mesh->mapSgn);
+  }
+
   free(DrT); free(DsT); free(LIFTT);
+  free(SrrT); free(SrsT); free(SsrT); free(SssT);
+  free(D1ids); free(D2ids); free(D3ids); free(Dvals);
+
+  free(VBq); free(PBq);
+  free(L0vals); free(ELids ); free(ELvals);
 
   return solver;
 }

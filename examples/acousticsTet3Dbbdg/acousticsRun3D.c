@@ -3,26 +3,26 @@
 void acousticsRun3Dbbdg(mesh3D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   int Nframe =0;
 
   //populate the trace buffer fQ
-  for (iint l=0;l<mesh->MRABNlevels;l++) {
+  for (int l=0;l<mesh->MRABNlevels;l++) {
     acousticsMRABpmlUpdate3D(mesh, 0., 0., 0., l, 0.);
     acousticsMRABUpdate3D(mesh, 0., 0., 0., l, 0., 0.);
   }
 
 
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-    for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+    for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
       // intermediate stage time
       dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
 
-      iint lev;
+      int lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
 
@@ -39,7 +39,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         acousticsPmlVolume3Dbbdg(mesh,l);
         acousticsVolume3Dbbdg(mesh,l);
       }
@@ -53,7 +53,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       }
 
       // compute surface contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         acousticsPmlSurface3Dbbdg(mesh,l,t);
         acousticsSurface3Dbbdg(mesh,l,t);
       }
@@ -87,7 +87,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
 
       #if WADG
-        for (iint l=0; l<lev; l++) {
+        for (int l=0; l<lev; l++) {
           acousticsMRABpmlUpdate3D_wadg(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
           acousticsMRABUpdate3D_wadg(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
@@ -96,7 +96,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
           acousticsMRABUpdateTrace3D_wadg(mesh, b1, b2, b3, lev, t, mesh->dt*pow(2,lev-1));
         }
       #else
-        for (iint l=0; l<lev; l++) {
+        for (int l=0; l<lev; l++) {
           acousticsMRABpmlUpdate3D(mesh, a1, a2, a3, l, mesh->dt*pow(2,l));
           acousticsMRABUpdate3D(mesh, a1, a2, a3, l, t, mesh->dt*pow(2,l));
         }
@@ -112,10 +112,10 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
 
       //Transform to nodal basis
       dfloat qtmp[mesh->Nfields*mesh->Np];
-      for (iint e =0;e<mesh->Nelements;e++){
-        iint id = e*mesh->Np*mesh->Nfields;
+      for (int e =0;e<mesh->Nelements;e++){
+        int id = e*mesh->Np*mesh->Nfields;
 
-        for (iint n=0; n<mesh->Np; n++){
+        for (int n=0; n<mesh->Np; n++){
           qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
           qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
           qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
@@ -125,8 +125,8 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
           mesh->q[id+n*mesh->Nfields+2] = 0.0;
           mesh->q[id+n*mesh->Nfields+3] = 0.0;
         }
-        for (iint n=0;n<mesh->Np;n++){
-          for (iint m=0; m<mesh->Np; m++){
+        for (int n=0;n<mesh->Np;n++){
+          for (int m=0; m<mesh->Np; m++){
             mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
             mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
             mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
@@ -139,7 +139,7 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       acousticsError3D(mesh, (mesh->dt)*(tstep+1)*pow(2,mesh->MRABNlevels-1));
 
       // output field files
-      iint fld = 3;
+      int fld = 3;
       char fileName[BUFSIZ];
 
       int rank;
@@ -149,10 +149,10 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
       meshPlotVTU3D(mesh, fileName, fld);
 
       //Transform to back to modal basis
-      for (iint e =0;e<mesh->Nelements;e++){
-        iint id = e*mesh->Np*mesh->Nfields;
+      for (int e =0;e<mesh->Nelements;e++){
+        int id = e*mesh->Np*mesh->Nfields;
 
-        for (iint n=0; n<mesh->Np; n++){
+        for (int n=0; n<mesh->Np; n++){
           qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
           qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
           qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
@@ -162,8 +162,8 @@ void acousticsRun3Dbbdg(mesh3D *mesh){
           mesh->q[id+n*mesh->Nfields+2] = 0.0;
           mesh->q[id+n*mesh->Nfields+3] = 0.0;
         }
-        for (iint n=0;n<mesh->Np;n++){
-          for (iint m=0; m<mesh->Np; m++){
+        for (int n=0;n<mesh->Np;n++){
+          for (int m=0; m<mesh->Np; m++){
             mesh->q[id+n*mesh->Nfields + 0] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
             mesh->q[id+n*mesh->Nfields + 1] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
             mesh->q[id+n*mesh->Nfields + 2] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
@@ -188,7 +188,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
-  iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
   if (haloBytes) {
     occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
     occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
@@ -200,7 +200,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
 
   //populate the trace buffer fQ
   dfloat zero = 0.0;
-  for (iint l=0; l<mesh->MRABNlevels; l++) {
+  for (int l=0; l<mesh->MRABNlevels; l++) {
     #if WADG
     if (mesh->MRABNelements[l])
       mesh->updateKernel(mesh->MRABNelements[l],
@@ -274,13 +274,13 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
     #endif
   }
 
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-    for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+    for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
       // intermediate stage time
       dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
 
-      iint lev;
+      int lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
 
@@ -290,7 +290,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
           mesh->device.setStream(dataStream);
         #endif
 
-        iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+        int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
         mesh->haloExtractKernel(mesh->totalHaloPairs,
                     Nentries,
                     mesh->o_haloElementList,
@@ -306,7 +306,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       }
 
       // compute volume contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->volumeKernel(mesh->MRABNelements[l],
                             mesh->o_MRABelementIds[l],
@@ -369,7 +369,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       }
 
       // compute surface contribution to DG acoustics RHS
-      for (iint l=0;l<lev;l++) {
+      for (int l=0;l<lev;l++) {
         if (mesh->MRABNelements[l])
           mesh->surfaceKernel(mesh->MRABNelements[l],
                               mesh->o_MRABelementIds[l],
@@ -444,7 +444,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
 
       #if WADG
-        for (iint l=0; l<lev; l++) {
+        for (int l=0; l<lev; l++) {
           if (mesh->MRABNelements[l])
             mesh->updateKernel(mesh->MRABNelements[l],
                               mesh->o_MRABelementIds[l],
@@ -525,7 +525,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
                                       mesh->MRABshiftIndex[lev]);
         }
       #else
-        for (iint l=0; l<lev; l++) {
+        for (int l=0; l<lev; l++) {
           if (mesh->MRABNelements[l])
             mesh->updateKernel(mesh->MRABNelements[l],
                               mesh->o_MRABelementIds[l],
@@ -606,10 +606,10 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
 
       //Transform to nodal basis
       dfloat qtmp[mesh->Nfields*mesh->Np];
-      for (iint e =0;e<mesh->Nelements;e++){
-        iint id = e*mesh->Np*mesh->Nfields;
+      for (int e =0;e<mesh->Nelements;e++){
+        int id = e*mesh->Np*mesh->Nfields;
 
-        for (iint n=0; n<mesh->Np; n++){
+        for (int n=0; n<mesh->Np; n++){
           qtmp[n*mesh->Nfields + 0] = mesh->q[id+n*mesh->Nfields+0];
           qtmp[n*mesh->Nfields + 1] = mesh->q[id+n*mesh->Nfields+1];
           qtmp[n*mesh->Nfields + 2] = mesh->q[id+n*mesh->Nfields+2];
@@ -619,8 +619,8 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
           mesh->q[id+n*mesh->Nfields+2] = 0.0;
           mesh->q[id+n*mesh->Nfields+3] = 0.0;
         }
-        for (iint n=0;n<mesh->Np;n++){
-          for (iint m=0; m<mesh->Np; m++){
+        for (int n=0;n<mesh->Np;n++){
+          for (int m=0; m<mesh->Np; m++){
             mesh->q[id+n*mesh->Nfields + 0] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
             mesh->q[id+n*mesh->Nfields + 1] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
             mesh->q[id+n*mesh->Nfields + 2] += mesh->VB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
@@ -636,7 +636,7 @@ void acousticsOccaRun3Dbbdg(mesh3D *mesh){
       acousticsError3D(mesh, (mesh->dt)*(tstep+1)*pow(2,mesh->MRABNlevels-1));
 
       // output field files
-      iint fld = 3;
+      int fld = 3;
       char fileName[BUFSIZ];
 
       int rank;
@@ -654,11 +654,11 @@ void acousticsRickerPulse3D(dfloat x, dfloat y, dfloat z, dfloat t, dfloat f, df
 
 void addSourceField(mesh3D *mesh, dfloat *q, dfloat t) {
 
-  for (iint m=0;m<mesh->sourceNelements;m++) {
-    iint e = mesh->sourceElements[m];
+  for (int m=0;m<mesh->sourceNelements;m++) {
+    int e = mesh->sourceElements[m];
 
-    for (iint n=0;n<mesh->Np;n++) {
-      iint id = n + e*mesh->Np;
+    for (int n=0;n<mesh->Np;n++) {
+      int id = n + e*mesh->Np;
 
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -675,7 +675,7 @@ void addSourceField(mesh3D *mesh, dfloat *q, dfloat t) {
       dfloat u, v, w, p;
       acousticsRickerPulse3D(x-x0, y-y0, z-z0, t+t0, freq,c, &u, &v, &w, &p);
 
-      iint qid = mesh->Nfields*id;
+      int qid = mesh->Nfields*id;
       q[qid+0] += u;
       q[qid+1] += v;
       q[qid+2] += w;

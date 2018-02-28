@@ -1,5 +1,5 @@
 
-void boundaryConditions2D(const iint bc,
+void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y,
 			  const dfloat  nx, const dfloat  ny,
 			  const dfloat ramp,
@@ -27,12 +27,12 @@ void boundaryConditions2D(const iint bc,
 }
 
 
-kernel void boltzmannSplitPmlErrorIndicator2D(const iint Nelements,		 
+kernel void boltzmannSplitPmlErrorIndicator2D(const int Nelements,		 
 					      const dfloat * restrict sgeo,	 
 					      const dfloat * restrict w, // 3Nfp surface node weighs	 
-					      const iint   * restrict vmapM,	 
-					      const iint   * restrict vmapP,	 
-					      const iint   * restrict EToB,	 
+					      const int   * restrict vmapM,	 
+					      const int   * restrict vmapP,	 
+					      const int   * restrict EToB,	 
 					      const dfloat time,		 
 					      const dfloat * restrict x,	 
 					      const dfloat * restrict y,	 
@@ -41,28 +41,28 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const iint Nelements,
 					      dfloat * restrict qindicator){
 
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     shared dfloat s_dq2[p_NblockS][p_NfpNfaces];
 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 
 	  // find face that owns this node
-	  const iint face = n/p_Nfp;
+	  const int face = n/p_Nfp;
 	  
 	  // load surface geofactors for this face
-	  const iint sid = p_Nsgeo*(element*p_Nfaces+face);
+	  const int sid = p_Nsgeo*(element*p_Nfaces+face);
 	  const dfloat nx = sgeo[sid+0];
 	  const dfloat ny = sgeo[sid+1];
 	  const dfloat sJ = sgeo[sid+2];
 	  const dfloat invJ = sgeo[sid+3];
 	  
 	  // indices of negative and positive traces of face node
-	  const iint id  = element*p_Nfp*p_Nfaces + n;
-	  iint idM = vmapM[id];
-	  iint idP = vmapP[id];
+	  const int id  = element*p_Nfp*p_Nfaces + n;
+	  int idM = vmapM[id];
+	  int idP = vmapP[id];
 	  
 	  if(idP<0) idP = idM;
 	  
@@ -74,7 +74,7 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const iint Nelements,
 	  dfloat q1P = qPa.x, q2P = qPa.y, q3P = qPa.z, q4P = qPa.w, q5P = qPb.x, q6P = qPb.y;
 	  
 	  // apply boundary condition
-	  iint bc = EToB[face+p_Nfaces*element];
+	  int bc = EToB[face+p_Nfaces*element];
 	  if(bc>0)
 	    boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
 				 q1M, q2M, q3M, q4M, q5M, q6M,
@@ -100,12 +100,12 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const iint Nelements,
 
     barrier(localMemFence);
 
-    iint alive = (p_NfpNfaces+1)/2;
+    int alive = (p_NfpNfaces+1)/2;
     while(n<alive){
       
-      for(iint es=0;es<p_NblockS;++es;inner1){
-	for(iint n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	  iint e = eo + es;
+      for(int es=0;es<p_NblockS;++es;inner1){
+	for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	  int e = eo + es;
 	  if(e<Nelements){
 	    if(n+alive<p_NfpNfaces)
 	      s_dq2[es][n] += s_dq2[es][n+alive];
@@ -117,9 +117,9 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 	  if(n==0)
 	    qindicator[e] = s_dq2[es][0];

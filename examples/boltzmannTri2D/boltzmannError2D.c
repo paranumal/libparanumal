@@ -1,17 +1,183 @@
 #include "boltzmann2D.h"
 
 // currently maximum
-void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
+void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
+
+
+#if 1
+ if(strstr(options,"PROBE")){
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+      // printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
+
+      if(mesh->probeN){
+
+      char fname[BUFSIZ];
+      sprintf(fname, "ProbeData_%d_%.f_%05d_%04d.dat", mesh->N, mesh->Re, mesh->Nelements, rank);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+      
+      fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
+
+      for(int p=0; p<mesh->probeN; p++){
+         int pid  = mesh->probeIds[p];
+         int e    = mesh->probeElementIds[p];        
+         dfloat srho = 0.0; 
+         dfloat su = 0.0; 
+         dfloat sv = 0.0; 
+         for(int n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          // srho        += mesh->probeI[p*mesh->Np+n]*rho*mesh->RT;
+          srho        += mesh->probeI[p*mesh->Np+n]*rho;
+          su          += mesh->probeI[p*mesh->Np+n]*um;
+          sv          += mesh->probeI[p*mesh->Np+n]*vm;
+         }
+
+        fprintf(fp, "%02d %04d %.8e %.8e %.8e ",pid, e, srho, su, sv); 
+      }
+    fprintf(fp, "\n"); 
+    fclose(fp);
+    }
+
+  }
+
+
+
+
+
+
+
+
+#else 
+  if(strstr(options,"PROBE")){
+    
+    // Move this routine to probe setup
+
+
+
+    int rank, size;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    int root = 0; // root rank
+    
+    int probeNfields = 3; // rho, u, v
+    
+    dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
+    dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
+    int   *recvcount   = (int   *) malloc(size*sizeof(int));
+    int   *recvdisp    = (int   *) malloc(size*sizeof(int));
+    int   *probeIds    = (int   *) malloc(mesh->probeNTotal*sizeof(int)); 
+    
+    // Collect number of probes on the root  
+    MPI_Gather(&(mesh->probeN), 1, MPI_INT, recvcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(int i=1; i<size; ++i){
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          //printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+
+    // Collect probe ids
+    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_INT, probeIds, recvcount, recvdisp, MPI_INT, root, MPI_COMM_WORLD);
+
+    // if(rank==0){
+    //   for(int id=0; id<mesh->probeNTotal; id++){
+    //     printf("id: %d  ProbeId: %d \n", id, probeIds[id]);
+    //   }
+    // }
+
+    // // Sort Probe Ids such that probes are ardered in ascending order
+
+    // int *probeIndex = (int *) malloc(2*mesh->probeNTotal*sizeof(int));
+
+    // for(int id=0; id<mesh->probeNTotal; id++){
+    // probeIndex
+
+
+
+    // }
+
+    
+    if(rank==root){
+    recvdisp[0]= 0;  
+      for(int i=0; i<size; ++i){
+        recvcount[i] *=probeNfields;
+          if(i>0)
+            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
+          printf("%d %d \n", recvcount[i], recvdisp[i]);
+      }
+    }
+    
+  
+    // fill probe Data
+    if(mesh->probeN){
+      for(int p=0; p<mesh->probeN; p++){
+        int pid  = mesh->probeIds[p];
+        int e    = mesh->probeElementIds[p];        
+        dfloat sr = 0.0; 
+        dfloat su = 0.0; 
+        dfloat sv = 0.0; 
+        for(int n=0; n<mesh->Np; n++){
+          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
+          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          //
+          sr += mesh->probeI[p*mesh->Np+n]*rho;
+          su += mesh->probeI[p*mesh->Np+n]*um;
+          sv += mesh->probeI[p*mesh->Np+n]*vm;
+        }
+        probeData[p*probeNfields + 0] = sr;
+        probeData[p*probeNfields + 1] = su;
+        probeData[p*probeNfields + 2] = sv;
+      }
+    }
+
+
+
+    
+    MPI_Gatherv(probeData, mesh->probeN*probeNfields, MPI_DFLOAT, recvData, recvcount, recvdisp, MPI_DFLOAT, root, MPI_COMM_WORLD);
+
+    if(rank==root){     
+       char fname[BUFSIZ];
+      sprintf(fname, "ProbeData_%d_%.f_%05d.dat", mesh->N, mesh->Re, mesh->Nelements);
+
+      FILE *fp; 
+      fp = fopen(fname, "a");      
+
+      fprintf(fp, "%4e ", time); 
+      for(int p=0; p<mesh->probeNTotal; p++){
+        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p],recvData[p*probeNfields+0], 
+                                                        recvData[p*probeNfields+1],
+                                                        recvData[p*probeNfields+2]);
+      }
+      fprintf(fp, "\n"); 
+      fclose(fp);
+    }
+  }
+
+
+
+#endif
+
+
 
 
  if(strstr(options, "PML")){
 
     dfloat maxQ1 = 0, minQ1 = 1e9;
-    iint fid = 0; //  
-    for(iint e=0;e<mesh->Nelements;++e){
+    int fid = 0; //  
+    for(int e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
         dfloat q1=0;
-        iint id = n+e*mesh->Np;
+        int id = n+e*mesh->Np;
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
@@ -35,31 +201,42 @@ void boltzmannError2D(mesh2D *mesh, dfloat time,char *options){
 
     if(isnan(globalMinQ1) || isnan(globalMaxQ1))
       exit(EXIT_FAILURE);
-  
 
 }
 else{
 
     // Coutte Flow exact solution for U velocity
 
-    dfloat maxerr = 0;
-    dfloat maxQ1 = 0, minQ1 = 1e9;
-    iint fid = 1; //U velocity
+    dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
+    int fid = 1; 
 
+    dfloat Uref        =  mesh->Ma*mesh->sqrtRT;
     dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
 
-    for(iint e=0;e<mesh->Nelements;++e){
-      for(iint n=0;n<mesh->Np;++n){
+    for(int e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
         dfloat q1=0;
-        iint id = n+e*mesh->Np;
+        int id = n+e*mesh->Np;
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
-        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields];
+       dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
+ 
+        dfloat uex = y ; 
+        for(int k=1; k<=10; k++)
+        {
 
-        
-        dfloat uex = 2. * y ; 
+         dfloat lamda = k*M_PI;
+         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
+         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2* sqrt(1.- 4.*pow(1./ mesh->tauInv, 2)* mesh->RT* lamda*lamda);
+         uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
+         
+         // uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y); // !!!!!
+        }
+
         maxerr = mymax(maxerr, fabs(u-uex));
+
+        mesh->q[id*mesh->Nfields+2] = fabs(u-uex);
 
         maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields]));
         minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields]));
@@ -69,26 +246,54 @@ else{
 
     // compute maximum over all processes
     dfloat globalMaxQ1, globalMinQ1, globalMaxErr;
-    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1,
-       MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&minQ1, &globalMinQ1, 1,
-      MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(&maxerr, &globalMaxErr, 1,
-       MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxerr, &globalMaxErr, 1,  MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
+    
+    
 
-
+   
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0){
-      printf("%g %g %g %g (time,min(density),max(density),max(error)\n",
-       time, globalMinQ1, globalMaxQ1, globalMaxErr);
+      printf("%g %g %g %g (time,min(density),max(density),max(error)\n", time, globalMinQ1, globalMaxQ1, globalMaxErr);
+
+      
+      #if 1
+
+    int fld = 2;
+    int tstep = (time-mesh->startTime)/mesh->dt;
+    char errname[BUFSIZ];
+    sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+    meshPlotVTU2D(mesh, errname,fld);
+      
+    int tmethod = 0; 
+    if(strstr(options,"LSERK"))
+      tmethod = 1;
+    if(strstr(options,"SRAB"))
+       tmethod = 2;
+    if(strstr(options,"SAAB"))
+       tmethod = 3;
+    if(strstr(options,"SARK"))
+       tmethod = 4;
+    if(strstr(options,"LSIMEX"))
+       tmethod = 5;
+
+      char fname[BUFSIZ]; 
+      sprintf(fname, "boltzmannTemporalError.dat");
+      FILE *fp; 
+      fp = fopen(fname, "a");
+      fprintf(fp, "%2d %2d %.8e %.8e %.8e %.8e %.8e\n", mesh->N, tmethod, mesh->dt, time,  globalMinQ1, globalMaxQ1, globalMaxErr); 
+      fclose(fp); 
+
       mesh->maxErrorBoltzmann = globalMaxErr; 
+      #endif
     }
 
 
-    if(isnan(globalMaxErr))
-      exit(EXIT_FAILURE);
+    // if(isnan(globalMaxErr))
+    //   exit(EXIT_FAILURE);
 }
 
   

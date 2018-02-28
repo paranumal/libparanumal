@@ -16,45 +16,57 @@ typedef struct {
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu;
-  iint NVfields, NTfields, Nfields;
-  iint NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
-  iint ExplicitOrder; 
+  int NVfields, NTfields, Nfields;
+  int NtotalDofs, NDofs; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
+  int ExplicitOrder; 
 
   dfloat dt;          // time step
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat finalTime;   // final time to run acoustics to
-  iint   NtimeSteps;  // number of time steps 
-  iint   Nstages;     // Number of history states to store
-  iint   index;       // Index of current state
-  iint   errorStep; 
-  iint   Nsubsteps;  
+  int   NtimeSteps;  // number of time steps 
+  int   Nstages;     // Number of history states to store
+  int   index;       // Index of current state
+  int   errorStep; 
+  int   Nsubsteps;  
   //solver tolerances
-  iint NiterU, NiterV, NiterW, NiterP;
+  int NiterU, NiterV, NiterW, NiterP;
 
-  dfloat presTOL, velTOL, prtime ; // delete prtime
-
-  dfloat inu, idt;
+  dfloat presTOL, velTOL;
 
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
+  dfloat idt, ig0, inu; // hold some inverses
+
   dfloat *rhsU, *rhsV, *rhsW, *rhsP;
   dfloat *U, *V, *W, *P; 
   
   dfloat *Ud, *Vd, *Wd, *Ue, *Ve, *We, *resU, *resV, *resW, sdt;
   occa::memory o_Ud, o_Vd, o_Wd, o_Ue, o_Ve, o_We,  o_resU, o_resV, o_resW;
-  //dfloat dtfactor;
 
   dfloat *NU, *NV, *NW;
   dfloat *Px, *Py, *Pz;
   dfloat *PI;
 
+  dfloat *Vx, *Vy, *Vz, *Div; 
+
   dfloat g[3];      // gravitational Acceleration
  
-  // iint Nsubsteps;  
+  int *VmapB, *PmapB;
+  occa::memory o_VmapB, o_PmapB;
+
+  //halo data
+  dfloat *tSendBuffer;
+  dfloat *tRecvBuffer;
+  dfloat *vSendBuffer;
+  dfloat *vRecvBuffer;
+  dfloat *pSendBuffer;
+  dfloat *pRecvBuffer;
+
+  // int Nsubsteps;  
   // dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   // occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
-  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
-  occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
+  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel;
+  occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
@@ -68,7 +80,11 @@ typedef struct {
   occa::memory o_UH, o_VH, o_WH;
   occa::memory o_PI, o_PIx, o_PIy, o_PIz;
 
+  occa::memory o_Vx, o_Vy, o_Vz, o_Div;
+
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
+
+  occa::kernel scaledAddKernel;
 
   occa::kernel totalHaloExtractKernel;
   occa::kernel totalHaloScatterKernel;
@@ -91,44 +107,46 @@ typedef struct {
   //
   occa::kernel helmholtzRhsForcingKernel;
   occa::kernel helmholtzRhsIpdgBCKernel;
+  occa::kernel helmholtzRhsBCKernel;
+  occa::kernel helmholtzAddBCKernel;
 
   occa::kernel poissonRhsForcingKernel;
   occa::kernel poissonRhsIpdgBCKernel;
+  occa::kernel poissonRhsBCKernel;
+  occa::kernel poissonAddBCKernel;
   occa::kernel poissonPenaltyKernel;
   
   occa::kernel updateUpdateKernel;
 
+  occa::kernel vorticityKernel;
+  occa::kernel divergenceKernel;
+
 }ins_t;
 
 
-ins_t *insSetup3D(mesh3D *mesh, iint Ns, char *options, 
+ins_t *insSetup3D(mesh3D *mesh, int Ns, char *options, 
                   char *velSolverOptions, char *velParAlmondOptions, 
                   char *prSolverOptions,  char *prParAlmondOptions,
                   char *bdryHeaderFileName);
 
 void insRun3D(ins_t *solver, char *options);
-void insReport3D(ins_t *solver, iint tstep, char *options);
+void insReport3D(ins_t *solver, int tstep, char *options);
 void insError3D(ins_t *solver, dfloat time, char *options);
 void insPlotVTU3D(ins_t *solver, char *fileNameBase);
+void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
+void insPlotContour3D(ins_t *ins, char *fileName, const char*options);
+
 // void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
 
-void insAdvectionStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insHelmholtzStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insPoissonStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-void insUpdateStep3D(ins_t *solver, iint tstep, iint haloBytes,
-	                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
+void insAdvectionStep3D(ins_t *solver, int tstep, const char * options);
+void insAdvectionSubCycleStep3D(ins_t *solver, int tstep, const char * options);
+void insHelmholtzStep3D(ins_t *solver, int tstep, const char * options);
+void insPoissonStep3D(ins_t *solver, int tstep, const char * options);
+void insUpdateStep3D(ins_t *solver, int tstep, const char * options);
 
 void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
 
-// void insAdvectionSubCycleStep2D(ins_t *solver, iint tstep,
+// void insAdvectionSubCycleStep2D(ins_t *solver, int tstep,
 //                      dfloat * tsendBuffer, dfloat *trecvBuffer, 
 //                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
 

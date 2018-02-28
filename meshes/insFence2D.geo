@@ -1,7 +1,13 @@
-r1 = DefineNumber[0.0125];
-r2 = DefineNumber[0.1];
+//+r1 = DefineNumber[0.0125];
+//+r2 = DefineNumber[0.1];
+//+r3 = DefineNumber[0.2];
+//+r4 = DefineNumber[0.4];
+
+r1 = DefineNumber[0.02];
+r2 = DefineNumber[0.05];
 r3 = DefineNumber[0.2];
 r4 = DefineNumber[0.4];
+
 
 //+
 ffxmin = DefineNumber[-0.05];
@@ -11,7 +17,7 @@ ffymax = DefineNumber[0.5];
 
 //+
 fbfacx = DefineNumber[8.0];
-fbfacy = DefineNumber[2.0];
+fbfacy = DefineNumber[2.5];
 
 fbxmin = DefineNumber[fbfacx*ffxmin];
 fbxmax = DefineNumber[fbfacx*ffxmax];
@@ -89,3 +95,6 @@ Physical Line("Inflow",2) = {20, 18, 19, 15, 14};
 Physical Line("Wall",1) = {21, 4, 3, 2, 1, 8, 9};
 Physical Line("Outflow",3) = {12, 10};
 Physical Surface("Domain",9) = {33, 31, 23, 29, 27, 25};
+Extrude {0, 0, 2} {
+  Surface{31, 29, 27, 25, 23, 33};
+}

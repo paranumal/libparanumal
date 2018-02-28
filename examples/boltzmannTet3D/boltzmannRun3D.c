@@ -3,12 +3,12 @@
 void boltzmannRun3D(mesh3D *mesh, char *options){
 
   // Allocate MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   occa::initTimer(mesh->device);
-    for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+    for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       if(strstr(options, "LSERK")){
       boltzmannLserkStep3D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);

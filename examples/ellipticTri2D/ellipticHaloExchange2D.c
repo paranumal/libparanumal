@@ -1,13 +1,12 @@
 #include "ellipticTri2D.h"
 
-void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
+void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
 
   mesh2D *mesh = solver->mesh;
   
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
-  
+  dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
+ 
   // extract halo on DEVICE
   if(haloBytes){
 
@@ -18,7 +17,7 @@ void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *se
     mesh->device.setStream(solver->dataStream);
 
     // extract halo on data stream
-    mesh->haloExtractKernel(mesh->totalHaloPairs, mesh->Np, mesh->o_haloElementList,
+    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList,
           o_q, mesh->o_haloBuffer);
 
     // queue up async copy of halo on data stream
@@ -28,13 +27,12 @@ void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *se
   }
 }
 
-void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer){
+void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
 
   mesh2D *mesh = solver->mesh;
 
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
@@ -47,7 +45,7 @@ void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *
     
     // start halo exchange HOST<>HOST
     meshHaloExchangeStart(mesh,
-        mesh->Np*sizeof(dfloat),
+        Nentries*sizeof(dfloat),
         sendBuffer,
         recvBuffer);
     
@@ -57,13 +55,13 @@ void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *
 }
     
 
-void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *recvBuffer){
+void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer){
 
   mesh2D *mesh = solver->mesh;
   
   // count size of halo for this process
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
+  dlong haloOffset = mesh->Nelements*Nentries*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){

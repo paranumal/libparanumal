@@ -28,7 +28,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda,
     ellipticEndHaloExchange2D(mesh, o_q, recvBuffer);
 
     // need start/end elements then can split into two parts
-    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    int allNelements = mesh->Nelements+mesh->totalHaloPairs;
     solver->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     solver->ipdgKernel(mesh->Nelements,
@@ -56,7 +56,7 @@ void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat
 
   mesh_t *mesh = solver->mesh;
 
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   occaTimerTic(mesh->device,"scaledAddKernel");
@@ -72,8 +72,8 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Nblock = solver->Nblock;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -89,7 +89,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(iint n=0;n<Nblock;++n){
+  for(int n=0;n<Nblock;++n){
     wab += tmp[n];
   }
 
@@ -105,8 +105,8 @@ dfloat ellipticLocalInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  int Nblock = solver->Nblock;
+  int Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -117,7 +117,7 @@ dfloat ellipticLocalInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat ab = 0;
-  for(iint n=0;n<Nblock;++n)
+  for(int n=0;n<Nblock;++n)
     ab += tmp[n];
 
   return ab;
@@ -128,7 +128,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   mesh_t *mesh = solver->mesh;
 
-  iint rank;
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
@@ -164,7 +164,7 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
 
   dfloat rdotr0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_r, options);
   dfloat rdotz0 = 0;
-  iint Niter = 0;
+  int Niter = 0;
   //sanity check
   if (rdotr0<=(tol*tol)) {
     printf("iter=0 norm(r) = %g\n", sqrt(rdotr0));
@@ -278,18 +278,18 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa
   double toc = MPI_Wtime();
   double localElapsed = toc-tic;
 
-  iint size;
+  int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  iint   localElements = mesh->Nelements;
+  int   localDofs = mesh->Np*mesh->Nelements;
+  int   localElements = mesh->Nelements;
   double globalElapsed;
-  iint   globalDofs;
-  iint   globalElements;
+  int   globalDofs;
+  int   globalElements;
 
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
 
   if(rank==0){
     printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",

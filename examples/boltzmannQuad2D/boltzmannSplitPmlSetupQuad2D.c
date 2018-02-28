@@ -57,9 +57,9 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->RT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -87,7 +87,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
     
       cnt += mesh->Nfields;
 
-      iint id = mesh->Np*mesh->Nfields*e + n;
+      int id = mesh->Np*mesh->Nfields*e + n;
       mesh->pmlqx[id+0*mesh->Np] = 0.f*q1bar;
       mesh->pmlqx[id+1*mesh->Np] = 0.f*q2bar;
       mesh->pmlqx[id+2*mesh->Np] = 0.f*q3bar;
@@ -123,9 +123,9 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
   dfloat xsigma = 80, ysigma = 80;
   //    dfloat xsigma = 0, ysigma = 0;
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
-    for(iint n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
     }
@@ -140,7 +140,7 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
       mesh->sigmay[e] = ysigma;
 #endif
     
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
       dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
@@ -163,11 +163,11 @@ void boltzmannSplitPmlSetupQuad2D(mesh2D *mesh){
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(int e=0;e<mesh->Nelements;++e){  
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      for(iint n=0;n<mesh->Nfp;++n){
-	iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e + mesh->Nfp*f+n);
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->Nfp;++n){
+	int sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e + mesh->Nfp*f+n);
 	dfloat sJ   = mesh->sgeo[sid + SJID];
 	dfloat invJ = mesh->sgeo[sid + IJID];
 	

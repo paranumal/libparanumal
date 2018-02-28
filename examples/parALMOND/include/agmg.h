@@ -11,10 +11,10 @@
 #define AGMGBDIM 32 //block size
 #define SIMDWIDTH 32 //width of simd blocks
 #define MAX_LEVELS 100
-#define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
+#define GPU_CPU_SWITCH_SIZE 10000 //host-device switch threshold
 
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowStarts, const char* options);
 void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 
@@ -24,10 +24,10 @@ void device_kcycle(parAlmond_t *parAlmond, int k);
 void vcycle(parAlmond_t *parAlmond, int k);
 void device_vcycle(parAlmond_t *parAlmond, int k);
 
-void gmres(parAlmond_t *parAlmond, csr *A, dfloat *b, dfloat *x, iint maxIt, dfloat tol);
-void gmres(parAlmond_t *parAlmond, hyb *A, occa::memory o_b, occa::memory o_x, iint maxIt, dfloat tol);
+void pgmres(parAlmond_t *parAlmond, int maxIt, dfloat tol);
+void device_pgmres(parAlmond_t *parAlmond, int maxIt, dfloat tol);
 
-void pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
-void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
+void pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
+void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
 
 #endif

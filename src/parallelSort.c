@@ -2,17 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* use this for iint */
+/* use this for int */
 #include "mesh.h"
 
 void mergeLists(size_t sz,
-		iint N1, char *v1,
-		iint N2, char *v2,
+		int N1, char *v1,
+		int N2, char *v2,
 		char *v3,
 		int (*compare)(const void *, const void *),
 		void (*match)(void *, void *)){
     
-  iint n1 = 0, n2 = 0, n3 = 0;
+  int n1 = 0, n2 = 0, n3 = 0;
     
   // merge two lists from v1 and v2
   for(n3=0;n3<N1+N2;++n3){
@@ -50,7 +50,7 @@ void mergeLists(size_t sz,
 }
 
 // assumes N is even and the same on all ranks
-void parallelSort(iint N, void *vv, size_t sz,
+void parallelSort(int N, void *vv, size_t sz,
 		  int (*compare)(const void *, const void *),
 		  void (*match)(void *, void *)
 		  ){
@@ -66,7 +66,7 @@ void parallelSort(iint N, void *vv, size_t sz,
   qsort(v, N, sz, compare);
     
   /* now do progressive merges */
-  iint NA=N/2, NB = N/2, NC = N/2;
+  int NA=N/2, NB = N/2, NC = N/2;
     
   MPI_Request recvA, recvC;
   MPI_Request sendA, sendC;
@@ -82,7 +82,7 @@ void parallelSort(iint N, void *vv, size_t sz,
   void *tmp = (void*) calloc(N, sz);
 
   /* max and min elements out of place hop one process at each step */
-  for(iint step=0;step<size-1;++step){
+  for(int step=0;step<size-1;++step){
       
     /* send C, receive A */
     if(rank<size-1)

@@ -24,11 +24,11 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
-  iint index = 0, iterations = 1000,  Nbytes=0,  zero = 0;  
+  int index = 0, iterations = 1000,  Nbytes=0,  zero = 0;  
   dfloat lambda = 0.0; 
   dfloat time = 0.0; 
-  iint  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  iint  cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
+  int  Ntotal    = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  int  cubNtotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->cubNp;
 
   dfloat *Z     = (dfloat*) calloc(Ntotal,sizeof(dfloat));
   dfloat *cZ    = (dfloat*) calloc(cubNtotal,sizeof(dfloat));
@@ -60,7 +60,7 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
 
   free(Z); free(G); free(cZ);
 
-  [printf("Nelements: %d\n", mesh->Nelements);
+  printf("Nelements: %d\n", mesh->Nelements);
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
@@ -71,11 +71,11 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
   kernelInfo.addDefine("p_NblockS", NblockS);
   
 
-  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = 256/maxNodesVolumeCub; 
   //
-  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = 256/maxNodesSurfaceCub; // works for CUDA
   //
@@ -84,11 +84,11 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
   
   double flops;
  
-  iint Np      = mesh->Np;
-  iint Nc      = mesh->cubNp;
-  iint Nfp     = mesh->Nfp; 
-  iint Ntfp    = mesh->Nfaces*mesh->Nfp; 
-  iint intNtfp = mesh->Nfaces*mesh->intNfp;
+  int Np      = mesh->Np;
+  int Nc      = mesh->cubNp;
+  int Nfp     = mesh->Nfp; 
+  int Ntfp    = mesh->Nfaces*mesh->Nfp; 
+  int intNtfp = mesh->Nfaces*mesh->intNfp;
   double tic = 0.0, toc = 0.0, kernelElapsed=0.0;
   int NbytesShared = 0; 
 
@@ -101,7 +101,7 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
   occa::kernel *testKernels = new occa::kernel[NKernels];
   char kernelNames[NKernels][BUFSIZ];
 
-  for(iint i=0; i<NKernels; i++)
+  for(int i=0; i<NKernels; i++)
   {
     
     sprintf(kernelNames[i], "insSubCycleCubatureVolume3D_v%d", i);
@@ -231,13 +231,13 @@ void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
   TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
                             "/okl/insSubCycle2D.okl","insSubCycleCubatureSurface2D"
                             ,kernelInfo);
-  iint KernelId = 0; // Cubature Integration
+  int KernelId = 0; // Cubature Integration
 
 
   // TestKernel = mesh->device.buildKernelFromSource(DHOLMES 
   //                           "/okl/insAdvection2D.okl","insAdvectionSurface2D"
   //                           ,kernelInfo);
-  // iint KernelId = 1; // Cubature Integration
+  // int KernelId = 1; // Cubature Integration
 
   printf("Nblock: %d cubNblock: %d N: %d Nfp: %d cubNfp: %d\n", NblockS, cubNblockS, mesh->N, mesh->Nfp, mesh->intNfp);
   
@@ -462,7 +462,7 @@ if(KernelId==1){
 
 #if 0
   dfloat time = 0.0; 
-  iint iterations = 10;
+  int iterations = 10;
   // sync processes
   mesh->device.finish();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -544,7 +544,7 @@ if(KernelId==1){
   double localElapsed    = toc-tic;
   
   // Compute memory copy of the kernel
-  iint Nbytes;
+  int Nbytes;
   #if KERNEL_TEST==1
   Nbytes =(sizeof(dfloat)*(6*mesh->Np +4*mesh->Np)/2);
   #endif
@@ -588,22 +588,22 @@ if(KernelId==1){
   
   double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2)/(1024.*1024.*1024.*copyElapsed));
 
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  iint   localElements = mesh->Nelements;
+  int   localDofs = mesh->Np*mesh->Nelements;
+  int   localElements = mesh->Nelements;
   double globalElapsed;
-  iint   globalDofs;
-  iint   globalElements;
+  int   globalDofs;
+  int   globalElements;
   int    root = 0;
   
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_INT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_INT,   MPI_SUM, root, MPI_COMM_WORLD );
   
-  iint Np      = mesh->Np;
-  iint Nc      = mesh->cubNp;
-  iint Nfp     = mesh->Nfaces*mesh->Nfp; 
-  iint Ntfp    = mesh->Nfaces*mesh->Nfp; 
-  iint intNtfp = mesh->Nfaces*mesh->intNfp;
+  int Np      = mesh->Np;
+  int Nc      = mesh->cubNp;
+  int Nfp     = mesh->Nfaces*mesh->Nfp; 
+  int Ntfp    = mesh->Nfaces*mesh->Nfp; 
+  int intNtfp = mesh->Nfaces*mesh->intNfp;
   
   double flops;
   double bw;

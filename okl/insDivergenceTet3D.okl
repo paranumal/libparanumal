@@ -1,0 +1,82 @@
+kernel void insDivergenceTet3D(const int Nelements,
+          const dfloat * restrict vgeo,
+          const dfloat * restrict const DrT,
+          const dfloat * restrict const DsT,
+          const dfloat * restrict const DtT,
+          const int offset,
+          const dfloat * restrict U,
+          const dfloat * restrict V,
+          const dfloat * restrict W,
+                dfloat * restrict Div){  
+  
+  // block partition of elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_u[p_NblockV][p_Np];
+    shared dfloat s_v[p_NblockV][p_Np];
+    shared dfloat s_w[p_NblockV][p_Np];
+
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          const int id = (e+offset)*p_Np+n;
+          s_u[e-eo][n] = U[id];
+          s_v[e-eo][n] = V[id];
+          s_w[e-eo][n] = W[id];
+        }
+      }
+    }
+          
+    barrier(localMemFence);
+
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          const int es = e-eo;
+          const int gid = e*p_Nvgeo;
+
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat drdz = vgeo[gid + p_RZID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+          const dfloat dsdz = vgeo[gid + p_SZID];
+          const dfloat dtdx = vgeo[gid + p_TXID];
+          const dfloat dtdy = vgeo[gid + p_TYID];
+          const dfloat dtdz = vgeo[gid + p_TZID];    
+
+          // compute 1D derivatives
+          dfloat ur = 0, vr = 0, wr =0;
+          dfloat us = 0, vs = 0, ws =0;
+          dfloat ut = 0, vt = 0, wt =0;
+
+          occaUnroll(p_Np)
+            for(int i=0;i<p_Np;++i) {
+              const dfloat Drn = DrT[n + i*p_Np];
+              const dfloat Dsn = DsT[n + i*p_Np];
+              const dfloat Dtn = DtT[n + i*p_Np];
+
+              ur += Drn*s_u[es][i];
+              us += Dsn*s_u[es][i];
+              ut += Dtn*s_u[es][i];
+
+              vr += Drn*s_v[es][i];
+              vs += Dsn*s_v[es][i];
+              vt += Dtn*s_v[es][i];
+
+              wr += Drn*s_w[es][i];
+              ws += Dsn*s_w[es][i];
+              wt += Dtn*s_w[es][i];
+            }
+
+          const dfloat ux = drdx*ur + dsdx*us + dtdx*ut;
+          const dfloat vy = drdy*vr + dsdy*vs + dtdy*vt;
+          const dfloat wz = drdz*wr + dsdz*ws + dtdz*wt;
+          
+          const int id = e*p_Np+n; 
+          Div[id] = ux+vy+wz;
+        }
+      }
+    }
+  }
+}

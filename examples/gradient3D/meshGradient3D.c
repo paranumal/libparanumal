@@ -9,8 +9,8 @@ void meshGradient3D(mesh3D *mesh,
 		    dfloat *dqdz
 		    ){
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
     
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
     dfloat drdy = mesh->vgeo[e*mesh->Nvgeo + RYID];
@@ -22,10 +22,10 @@ void meshGradient3D(mesh3D *mesh,
     dfloat dtdy = mesh->vgeo[e*mesh->Nvgeo + TYID];
     dfloat dtdz = mesh->vgeo[e*mesh->Nvgeo + TZID];
     
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat dqdr = 0, dqds = 0, dqdt = 0;
       
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
 	
 	dqdr += mesh->Dr[n*mesh->Np + m]*q[m + e*mesh->Np];
 	dqds += mesh->Ds[n*mesh->Np + m]*q[m + e*mesh->Np];

@@ -1,11 +1,11 @@
 
-kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
-          const iint * restrict pmlElementIds,
-          const iint * restrict pmlIds,
+kernel void acousticsbbdgMRABPmlVolumeP2D(const int pmlNelements,
+          const int * restrict pmlElementIds,
+          const int * restrict pmlIds,
           const dfloat * restrict vgeo,
-          const iint * restrict D1ids,
-          const iint * restrict D2ids,
-          const iint * restrict D3ids,
+          const int * restrict D1ids,
+          const int * restrict D2ids,
+          const int * restrict D3ids,
           const dfloat * restrict Dvals,
           const dfloat * restrict pmlSigmaX,
           const dfloat * restrict pmlSigmaY,
@@ -15,9 +15,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
           const dfloat * restrict pmlq,
           dfloat * restrict rhsq,
           dfloat * restrict pmlrhsq,
-          const iint rhsShift){
+          const int rhsShift){
 
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockCub][p_cubNp];
     shared dfloat s_v[p_NblockCub][p_cubNp];
@@ -26,24 +26,24 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
     shared dfloat s_px[p_NblockCub][p_cubNp];
     shared dfloat s_py[p_NblockCub][p_cubNp];
 
-    exclusive iint e, pmlId;
+    exclusive int e, pmlId;
     exclusive dfloat r_u, r_v, r_px, r_py;
 
-    for(iint es=0;es<p_NblockCub;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockCub;++es;inner1){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;inner0){     // for all nodes in this element
 
-        iint et = eo+es; // element in block
+        int et = eo+es; // element in block
         if(et<pmlNelements){
           e = pmlElementIds[et];
           pmlId = pmlIds[et];
         }
         if((et<pmlNelements)&&(n<p_Np)){
-          const iint id = p_Nfields*(e*p_NpMax + n);
+          const int id = p_Nfields*(e*p_NpMax + n);
           s_u[es][n] = q[id+0];
           s_v[es][n] = q[id+1];
           s_p[es][n] = q[id+2];
 
-          const iint pid = p_pmlNfields*(pmlId*p_NpMax + n);
+          const int pid = p_pmlNfields*(pmlId*p_NpMax + n);
           s_px[es][n] = pmlq[pid+0];
           s_py[es][n] = pmlq[pid+1];
         }
@@ -53,10 +53,10 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockCub;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){
+    for(int es=0;es<p_NblockCub;++es;inner1){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;inner0){
 
-        iint et = eo+es; // element in block
+        int et = eo+es; // element in block
         if((et<pmlNelements)&&(n<p_Np)){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -65,19 +65,19 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
           // compute 'r' and 's' derivatives of (q_m) at node n
-          const iint D1i1 = D1ids[n];
-          const iint D2i1 = D2ids[n];
-          const iint D3i1 = D3ids[n];
+          const int D1i1 = D1ids[n];
+          const int D2i1 = D2ids[n];
+          const int D3i1 = D3ids[n];
           const dfloat Dval1 = Dvals[n];
 
-          const iint D1i2 = D1ids[n+p_Np];
-          const iint D2i2 = D2ids[n+p_Np];
-          const iint D3i2 = D3ids[n+p_Np];
+          const int D1i2 = D1ids[n+p_Np];
+          const int D2i2 = D2ids[n+p_Np];
+          const int D3i2 = D3ids[n+p_Np];
           const dfloat Dval2 = Dvals[n+p_Np];
 
-          const iint D1i3 = D1ids[n+2*p_Np];
-          const iint D2i3 = D2ids[n+2*p_Np];
-          const iint D3i3 = D3ids[n+2*p_Np];
+          const int D1i3 = D1ids[n+2*p_Np];
+          const int D2i3 = D2ids[n+2*p_Np];
+          const int D3i3 = D3ids[n+2*p_Np];
           const dfloat Dval3 = Dvals[n+2*p_Np];
 
           const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
@@ -107,9 +107,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
           dfloat dpdx = drdx*dpdr + dsdx*dpds;
           dfloat dpdy = drdy*dpdr + dsdy*dpds;
 
-          const iint id = p_Nfields*(e*p_NpMax + n);
-          const iint rhsId = 3*id + p_Nfields*rhsShift;
-          const iint pmlrhsId = 3*p_pmlNfields*(pmlId*p_NpMax + n) + p_pmlNfields*rhsShift;
+          const int id = p_Nfields*(e*p_NpMax + n);
+          const int rhsId = 3*id + p_Nfields*rhsShift;
+          const int pmlrhsId = 3*p_pmlNfields*(pmlId*p_NpMax + n) + p_pmlNfields*rhsShift;
 
           rhsq[rhsId+0] = -dpdx;
           rhsq[rhsId+1] = -dpdy;
@@ -123,9 +123,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
     barrier(localMemFence);
 
     //Interpolate to cubature nodes
-    for(iint es=0;es<p_NblockCub;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;inner0){
+        int et = eo+es; // element in block
         if(et<pmlNelements){
           // Prefetch sigmas
           const dfloat sigmax = pmlSigmaX[n + pmlId*p_cubNpMax];
@@ -151,9 +151,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
     barrier(localMemFence);
 
     //write back to shared
-    for(iint es=0;es<p_NblockCub;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;inner0){
+        int et = eo+es; // element in block
         if(et<pmlNelements){
           s_u[es][n] = r_u;
           s_v[es][n] = r_v;
@@ -165,9 +165,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // Project result back down
-    for(iint es=0;es<p_NblockCub;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_cubNp;++n;inner0){
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;inner0){
+        int et = eo+es; // element in block
         if((et<pmlNelements)&&(n<p_Np)){
           dfloat sigmaxu = 0.f;
           dfloat sigmayv = 0.f;
@@ -180,9 +180,9 @@ kernel void acousticsbbdgMRABPmlVolumeP2D(const iint pmlNelements,
             sigmaypy += cubProject[n + i*p_Np] * s_py[es][i];
           }
 
-          const iint id = p_Nfields*(e*p_NpMax + n);
-          const iint rhsId = 3*id + p_Nfields*rhsShift;
-          const iint pmlrhsId = 3*p_pmlNfields*(pmlId*p_NpMax + n) + p_pmlNfields*rhsShift;
+          const int id = p_Nfields*(e*p_NpMax + n);
+          const int rhsId = 3*id + p_Nfields*rhsShift;
+          const int pmlrhsId = 3*p_pmlNfields*(pmlId*p_NpMax + n) + p_pmlNfields*rhsShift;
 
           rhsq[rhsId+0] += sigmaxu;
           rhsq[rhsId+1] += sigmayv;

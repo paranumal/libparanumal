@@ -6,7 +6,7 @@ void occaTimerTic(occa::device device,std::string name) {
     device.finish();
     occa::tic(name);
   }
-};
+}
 
 void occaTimerToc(occa::device device,std::string name) {
   std::string profilerOn = occa::env::var("OCCA_PROFILE");
@@ -14,4 +14,4 @@ void occaTimerToc(occa::device device,std::string name) {
     device.finish();
     occa::toc(name);
   }
-};
+}

@@ -2,13 +2,13 @@
 
 
 void pcg(parAlmond_t *parAlmond,
-   iint maxIt,
-   dfloat tol){
+         int maxIt,
+         dfloat tol){
 
   csr *A = parAlmond->levels[0]->A;
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = PCG;
 
@@ -32,7 +32,7 @@ void pcg(parAlmond_t *parAlmond,
 
   //sanity check
   if (rdotr0<=(tol*tol)) {
-    for (iint i=0;i<m;i++)
+    for (dlong i=0;i<m;i++)
       parAlmond->levels[0]->x[i] = x[i];
 
     free(x); free(p); free(Ap);
@@ -40,8 +40,12 @@ void pcg(parAlmond_t *parAlmond,
   }
 
   // Precondition, z = M^{-1}*r
-  kcycle(parAlmond,0);
-  for (iint i=0;i<m;i++)
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    vcycle(parAlmond, 0);
+  }
+  for (dlong i=0;i<m;i++)
     p[i] = z[i];
 
   dfloat rdotz0Local = innerProd(m, r, z);
@@ -52,7 +56,7 @@ void pcg(parAlmond_t *parAlmond,
   dfloat rdotz1 = 0;
   dfloat alpha, beta, pAp;
 
-  iint Niter = 0;
+  int Niter = 0;
   while(rdotr0>(tol*tol)){
     //   Ap = A*p;
     axpy(A, 1.0, p, 0.0, Ap,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
@@ -82,7 +86,11 @@ void pcg(parAlmond_t *parAlmond,
     }
 
     // Precondition, z = M^{-1}*r
-    kcycle(parAlmond,0);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      vcycle(parAlmond, 0);
+    }
 
     dfloat rdotz1Local = innerProd(m, r, z);
     rdotz1 = 0;
@@ -115,18 +123,18 @@ void pcg(parAlmond_t *parAlmond,
   }
 
   //copy result back to parAlmond's x storage
-  for (iint i=0;i<m;i++)
+  for (dlong i=0;i<m;i++)
     parAlmond->levels[0]->x[i] = x[i];
 
   free(x); free(p); free(Ap);
 }
 
-void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
+void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
   hyb* A = parAlmond->levels[0]->deviceA;
 
-  const iint m = A->Nrows;
-  const iint n = A->Ncols;
+  const dlong m = A->Nrows;
+  const dlong n = A->Ncols;
 
   parAlmond->ktype = PCG;
 
@@ -157,7 +165,11 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
   }
 
   // Precondition, z = M^{-1}*r
-  device_kcycle(parAlmond,0);
+  if(strstr(parAlmond->options,"KCYCLE")) {
+    device_kcycle(parAlmond, 0);
+  } else if(strstr(parAlmond->options,"VCYCLE")) {
+    device_vcycle(parAlmond, 0);
+  }
   o_p.copyFrom(o_z);
 
   dfloat rdotz0Local = innerProd(parAlmond, m, o_r, o_z);
@@ -168,7 +180,7 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
   dfloat rdotz1 = 0;
   dfloat alpha, beta, pAp;
 
-  iint Niter = 0;
+  int Niter = 0;
   while(rdotr0>(tol*tol)){
     //   Ap = A*p;
     axpy(parAlmond, A, 1.0, o_p, 0.0, o_Ap,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
@@ -198,7 +210,11 @@ void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol){
     }
 
     // Precondition, z = M^{-1}*r
-    device_kcycle(parAlmond,0);
+    if(strstr(parAlmond->options,"KCYCLE")) {
+      device_kcycle(parAlmond, 0);
+    } else if(strstr(parAlmond->options,"VCYCLE")) {
+      device_vcycle(parAlmond, 0);
+    }
 
     dfloat rdotz1Local = innerProd(parAlmond, m, o_r, o_z);
     rdotz1 = 0;

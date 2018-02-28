@@ -10,7 +10,7 @@ void meshParallelScatter(mesh_t *mesh,
 			       occa::memory &o_sv){
 
   // MPI info
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -24,11 +24,11 @@ void meshParallelScatter(mesh_t *mesh,
     if (hgs->NrecvTotal)
       hgs->o_gatherTmp.copyTo(hgs->recvBuffer, hgs->NrecvTotal*sizeof(dfloat), hgs->haloOffset*sizeof(dfloat));
 
-    iint tag = 999;
+    int tag = 999;
 
     // initiate immediate send  and receives to each other process as needed
-    iint sendOffset = 0,sendMessage=0;
-    for(iint r=0;r<size;++r){
+    int sendOffset = 0,sendMessage=0;
+    for(int r=0;r<size;++r){
       if(r!=rank){
         if(hgs->Nsend[r]){
           MPI_Irecv(hgs->sendBuffer+sendOffset, hgs->Nsend[r], MPI_DFLOAT, r, tag,
@@ -38,8 +38,8 @@ void meshParallelScatter(mesh_t *mesh,
         }
       }
     }
-    iint recvOffset = 0,recvMessage=0;
-    for(iint r=0;r<size;++r){
+    int recvOffset = 0,recvMessage=0;
+    for(int r=0;r<size;++r){
       if(r!=rank){
         if(hgs->Nrecv[r]){
           MPI_Isend(hgs->recvBuffer+recvOffset, hgs->Nrecv[r], MPI_DFLOAT, r, tag,

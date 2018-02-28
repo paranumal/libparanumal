@@ -73,9 +73,10 @@ void smoothChebyshevTet3D(void **args, occa::memory &o_r, occa::memory &o_x, boo
     solver->scaledAddKernel(level->Nrows, mone, o_Ad, one, o_res);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
+    dfloat rhoDivDelta = 2.0*rho_np1/delta;
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    solver->scaledAddKernel(level->Nrows, 2.0*rho_np1/delta, o_res, rho_np1*rho_n, o_d);
+    solver->scaledAddKernel(level->Nrows, rhoDivDelta, o_res, rho_np1*rho_n, o_d);
 
     rho_n = rho_np1;
   }
@@ -99,7 +100,7 @@ void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr) {
                                  precon->o_oasBackDgT,
                                  o_r,
                                  o_zP);
-  ellipticParallelGatherScatterTet3D(mesh, precon->ogsDg, o_zP, o_zP, solver->type, "add");
+  ellipticParallelGatherScatterTet3D(mesh, precon->ogsDg, o_zP, solver->type, "add");
   solver->dotMultiplyKernel(mesh->NpP*mesh->Nelements,precon->o_invDegreeDGP,o_zP,o_zP);
   occaTimerToc(mesh->device,"OverlappingPatchKernel");
 

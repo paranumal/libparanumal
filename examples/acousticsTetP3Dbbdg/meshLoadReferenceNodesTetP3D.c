@@ -5,13 +5,13 @@
 
 void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
 
-  mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->Nfp = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->plotNp = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->plotNelements = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->cubNp = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->intNfp = (iint*) malloc((N+1)*sizeof(iint));
-  mesh->max_EL_nnz = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->Np  = (int*) malloc((N+1)*sizeof(int));
+  mesh->Nfp = (int*) malloc((N+1)*sizeof(int));
+  mesh->plotNp = (int*) malloc((N+1)*sizeof(int));
+  mesh->plotNelements = (int*) malloc((N+1)*sizeof(int));
+  mesh->cubNp = (int*) malloc((N+1)*sizeof(int));
+  mesh->intNfp = (int*) malloc((N+1)*sizeof(int));
+  mesh->max_EL_nnz = (int*) malloc((N+1)*sizeof(int));
 
   mesh->r  = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->s  = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
@@ -21,14 +21,14 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
   mesh->Dt = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->MM = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
-  mesh->faceNodes = (iint**) malloc((N+1)*(sizeof(iint*)));  
+  mesh->faceNodes = (int**) malloc((N+1)*(sizeof(int*)));  
   mesh->LIFT = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
   mesh->plotR      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->plotS      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->plotT      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->plotInterp = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->plotEToV   = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->plotEToV   = (int**)   malloc((N+1)*sizeof(int*));
 
   mesh->cubr      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubs      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
@@ -41,17 +41,17 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
 
   mesh->VB     = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->invVB  = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->D0ids  = (iint**)   malloc((N+1)*sizeof(iint*));
-  mesh->D1ids  = (iint**)   malloc((N+1)*sizeof(iint*));
-  mesh->D2ids  = (iint**)   malloc((N+1)*sizeof(iint*));
-  mesh->D3ids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->D0ids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->D1ids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->D2ids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->D3ids  = (int**)   malloc((N+1)*sizeof(int*));
   mesh->Dvals  = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->L0ids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->L0ids  = (int**)   malloc((N+1)*sizeof(int*));
   mesh->L0vals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->ELids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->ELids  = (int**)   malloc((N+1)*sizeof(int*));
   mesh->ELvals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->BBLower     = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->BBRaiseids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->BBRaiseids  = (int**)   malloc((N+1)*sizeof(int*));
   mesh->BBRaiseVals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
 
   for (int nn=1;nn<=N;nn++) {
@@ -117,9 +117,9 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
 
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->faceNodes[nn] = (iint*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(iint));
+    mesh->faceNodes[nn] = (int*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(int));
     for(int n=0;n<mesh->Nfaces*mesh->Nfp[nn];++n){
-      fscanf(fp, iintFormat, mesh->faceNodes[nn]+n);
+      fscanf(fp, "%d", mesh->faceNodes[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);
 
@@ -133,7 +133,7 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     // read number of plot nodes
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, iintFormat, mesh->plotNp+nn);
+    sscanf(buf, "%d", mesh->plotNp+nn);
 
     // read plot node coordinates (hard code triangles)
     mesh->plotR[nn] = (dfloat*) calloc(mesh->plotNp[nn], sizeof(dfloat));
@@ -158,26 +158,26 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     // read number of elements in plot node triangulation
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, iintFormat, mesh->plotNelements+nn);
+    sscanf(buf, "%d", mesh->plotNelements+nn);
 
     // read number of vertices per plot element
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, iintFormat, &(mesh->plotNverts));
+    sscanf(buf, "%d", &(mesh->plotNverts));
 
     // build and read in plot node triangulation
-    mesh->plotEToV[nn] = (iint*) calloc(mesh->plotNelements[nn]*mesh->plotNverts, sizeof(iint));
+    mesh->plotEToV[nn] = (int*) calloc(mesh->plotNelements[nn]*mesh->plotNverts, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->plotNelements[nn];++n){
       for(int m=0;m<mesh->plotNverts;++m){
-        fscanf(fp, iintFormat, mesh->plotEToV[nn]+m + mesh->plotNverts*n);
+        fscanf(fp, "%d", mesh->plotEToV[nn]+m + mesh->plotNverts*n);
       }
       fgets(buf,BUFSIZ,fp); // rest of line
     }
 
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read number of cubature points
-    sscanf(buf, iintFormat, mesh->cubNp+nn);
+    sscanf(buf, "%d", mesh->cubNp+nn);
     printf("cubNp[%d] = %d \n", nn, mesh->cubNp[nn]);
       
     mesh->cubr[nn] = (dfloat*) calloc(mesh->cubNp[nn], sizeof(dfloat));
@@ -248,31 +248,31 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     }
     fgets(buf, BUFSIZ, fp);   
 
-    mesh->D0ids[nn] = (iint*) calloc(mesh->Np[nn]*4, sizeof(iint));
+    mesh->D0ids[nn] = (int*) calloc(mesh->Np[nn]*4, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Np[nn]*4;++n){
-      fscanf(fp, iintFormat, mesh->D0ids[nn]+n);
+      fscanf(fp, "%d", mesh->D0ids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
-    mesh->D1ids[nn] = (iint*) calloc(mesh->Np[nn]*4, sizeof(iint));
+    mesh->D1ids[nn] = (int*) calloc(mesh->Np[nn]*4, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Np[nn]*4;++n){
-      fscanf(fp, iintFormat, mesh->D1ids[nn]+n);
+      fscanf(fp, "%d", mesh->D1ids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
-    mesh->D2ids[nn] = (iint*) calloc(mesh->Np[nn]*4, sizeof(iint));
+    mesh->D2ids[nn] = (int*) calloc(mesh->Np[nn]*4, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Np[nn]*4;++n){
-      fscanf(fp, iintFormat, mesh->D2ids[nn]+n);
+      fscanf(fp, "%d", mesh->D2ids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
-    mesh->D3ids[nn] = (iint*) calloc(mesh->Np[nn]*4, sizeof(iint));
+    mesh->D3ids[nn] = (int*) calloc(mesh->Np[nn]*4, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Np[nn]*4;++n){
-      fscanf(fp, iintFormat, mesh->D3ids[nn]+n);
+      fscanf(fp, "%d", mesh->D3ids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
@@ -283,10 +283,10 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     }
     fgets(buf, BUFSIZ, fp);   
 
-    mesh->L0ids[nn] = (iint*) calloc(mesh->Nfp[nn]*7, sizeof(iint));
+    mesh->L0ids[nn] = (int*) calloc(mesh->Nfp[nn]*7, sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Nfp[nn]*7;++n){
-      fscanf(fp, iintFormat, mesh->L0ids[nn]+n);
+      fscanf(fp, "%d", mesh->L0ids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
@@ -298,10 +298,10 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     fgets(buf, BUFSIZ, fp);   
 
     mesh->max_EL_nnz[nn] = mesh->Nfp[nn]+3;
-    mesh->ELids[nn] = (iint*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn], sizeof(iint));
+    mesh->ELids[nn] = (int*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn], sizeof(int));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->Np[nn]*mesh->max_EL_nnz[nn];++n){
-      fscanf(fp, iintFormat, mesh->ELids[nn]+n);
+      fscanf(fp, "%d", mesh->ELids[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);   
 
@@ -315,9 +315,9 @@ void meshLoadReferenceNodesTetP3D(mesh3D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
     int Nfpp1 = (nn+2)*(nn+3)/2;
-    mesh->BBRaiseids[nn] = (iint*) calloc(Nfpp1*3, sizeof(iint));
+    mesh->BBRaiseids[nn] = (int*) calloc(Nfpp1*3, sizeof(int));
     for (int n=0;n<Nfpp1*3;++n){
-      fscanf(fp, iintFormat, mesh->BBRaiseids[nn]+n);
+      fscanf(fp, "%d", mesh->BBRaiseids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment

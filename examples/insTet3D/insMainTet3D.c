@@ -10,17 +10,22 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  char *velSolverOptions = strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
-  char *velParAlmondOptions = strdup("solver= smoother= partition=");
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
+  char *velSolverOptions = 
+    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
+    strdup("solver=PCG method=CONTINUOUS preconditioner=MASSMATRIX");
+    //strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
+  char *velParAlmondOptions = 
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=DISTRIBUTED");
 
   char *prSolverOptions =
-    strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
-    //strdup("solver=PCG,FLEXIBLE,method=IPDG  preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE, method=IPDG preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
+    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
 
   char *prParAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=DISTRIBUTED");
 
   if(argc!=3 && argc!=4 && argc!=5){
     printf("usage 1: ./main meshes/cavityH005.msh N\n");
@@ -42,29 +47,30 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  int Ns = 0; // Default no-subcycling 
+  //int Ns = 0; // Default no-subcycling 
+  int Ns = 4;
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   
   
   char *options; 
- //if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-  // else
-  //     options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+ if(Ns==0)
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
+  else
+      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
-  // printf("Setup INS Solver: \n");
-  // ins_t *ins = insSetup3D(mesh, Ns, options,
-  //                         velSolverOptions,velParAlmondOptions,
-  //                         prSolverOptions, prParAlmondOptions,
-  //                         boundaryHeaderFileName);
+  if (rank==0) printf("Setup INS Solver: \n");
+  ins_t *ins = insSetup3D(mesh, Ns, options,
+                          velSolverOptions,velParAlmondOptions,
+                          prSolverOptions, prParAlmondOptions,
+                          boundaryHeaderFileName);
 
-  // printf("OCCA Run: \n");
-  // insRun3D(ins,options);
+  if (rank==0) printf("OCCA Run: \n");
+  insRun3D(ins,options);
 
 
-   printf("OCCA Run Timer: \n");
-   insRunTimer3D(mesh,options,boundaryHeaderFileName);
+   // printf("OCCA Run Timer: \n");
+   // insRunTimer3D(mesh,options,boundaryHeaderFileName);
 
   // close down MPI
   MPI_Finalize();

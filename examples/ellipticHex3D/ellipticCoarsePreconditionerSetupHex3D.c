@@ -2,9 +2,9 @@
 
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  int row;
+  int col;
+  int ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -34,15 +34,15 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
   
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Nverts*(mesh->Nelements);
+  int Nnum = mesh->Nverts*(mesh->Nelements);
   
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+  int *globalNumbering = (int*) calloc(Nnum, sizeof(int));
 
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+  int *globalOwners = (int*) calloc(Nnum, sizeof(int));
+  int *globalStarts = (int*) calloc(size+1, sizeof(int));
 
   // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(iint));
+  memcpy(globalNumbering, mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(int));
   
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
@@ -61,10 +61,10 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
   dfloat *Vs1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
   dfloat *Vt1 = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
 
-  for(iint k=0;k<mesh->Nq;k++) {
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
-        iint n = i+j*mesh->Nq + k*mesh->Nq*mesh->Nq;
+  for(int k=0;k<mesh->Nq;k++) {
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+        int n = i+j*mesh->Nq + k*mesh->Nq*mesh->Nq;
         
         dfloat rn = mesh->gllz[i];
         dfloat sn = mesh->gllz[j];
@@ -115,31 +115,31 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
 
   // ------------------------------------------------------------------------------------
   // 3. Build non-zeros of stiffness matrix (unassembled)
-  iint nnz = mesh->Nverts*mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
-  iint   *rowsA = (iint*) calloc(nnz, sizeof(iint));
-  iint   *colsA = (iint*) calloc(nnz, sizeof(iint));
+  int nnz = mesh->Nverts*mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+  int   *rowsA = (int*) calloc(nnz, sizeof(int));
+  int   *colsA = (int*) calloc(nnz, sizeof(int));
   dfloat *valsA = (dfloat*) calloc(nnz, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnz, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
   
-  iint cnt = 0;
+  int cnt = 0;
 
   printf("Building coarse matrix system\n");
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Nverts;++n){
-      for(iint m=0;m<mesh->Nverts;++m){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
+      for(int m=0;m<mesh->Nverts;++m){
       	dfloat Snm = 0;
        
       	// use GLL nodes for integration
       	// (since Jacobian is high order tensor-product polynomial)
-        for(iint k=0;k<mesh->Nq;++k){
-        	for(iint j=0;j<mesh->Nq;++j){
-        	  for(iint i=0;i<mesh->Nq;++i){
-        	    iint id = i+j*mesh->Nq +k*mesh->Nq*mesh->Nq;
+        for(int k=0;k<mesh->Nq;++k){
+        	for(int j=0;j<mesh->Nq;++j){
+        	  for(int i=0;i<mesh->Nq;++i){
+        	    int id = i+j*mesh->Nq +k*mesh->Nq*mesh->Nq;
               
         	    dfloat Vr1ni = Vr1[n*mesh->Np+id];
         	    dfloat Vs1ni = Vs1[n*mesh->Np+id];
@@ -195,18 +195,18 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
   
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  iint recvNtotal = 0;
-  for(iint r=0;r<size;++r){
+  int recvNtotal = 0;
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     recvNtotal += ArecvCounts[r]/sizeof(nonZero_t);
@@ -224,7 +224,7 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<recvNtotal;++n){
+  for(int n=1;n<recvNtotal;++n){
     if(recvNonZeros[n].row == recvNonZeros[cnt].row &&
        recvNonZeros[n].col == recvNonZeros[cnt].col){
       recvNonZeros[cnt].val += recvNonZeros[n].val;
@@ -236,30 +236,30 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
   }
   recvNtotal = cnt+1;
 
-  iint *recvRows = (iint *) calloc(recvNtotal,sizeof(iint));
-  iint *recvCols = (iint *) calloc(recvNtotal,sizeof(iint));
+  int *recvRows = (int *) calloc(recvNtotal,sizeof(int));
+  int *recvCols = (int *) calloc(recvNtotal,sizeof(int));
   dfloat *recvVals = (dfloat *) calloc(recvNtotal,sizeof(dfloat));
   
-  for (iint n=0;n<recvNtotal;n++) {
+  for (int n=0;n<recvNtotal;n++) {
     recvRows[n] = recvNonZeros[n].row;
     recvCols[n] = recvNonZeros[n].col;
     recvVals[n] = recvNonZeros[n].val;
   }
 
   //collect global assembled matrix
-  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
-  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
-  MPI_Allgather(&recvNtotal, 1, MPI_IINT, 
-                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
+  int *globalnnz       = (int *) calloc(size  ,sizeof(int));
+  int *globalnnzOffset = (int *) calloc(size+1,sizeof(int));
+  MPI_Allgather(&recvNtotal, 1, MPI_INT, 
+                globalnnz, 1, MPI_INT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
-  for (iint n=0;n<size;n++)
+  for (int n=0;n<size;n++)
     globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
 
-  iint globalnnzTotal = globalnnzOffset[size];
+  int globalnnzTotal = globalnnzOffset[size];
 
-  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
-  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
-  for (iint n=0;n<size;n++){
+  int *globalRecvCounts  = (int *) calloc(size,sizeof(int));
+  int *globalRecvOffsets = (int *) calloc(size,sizeof(int));
+  for (int n=0;n<size;n++){
     globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
     globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
   }
@@ -269,12 +269,12 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
   
 
-  iint *globalIndex = (iint *) calloc(globalnnzTotal, sizeof(iint));
-  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
-  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  int *globalIndex = (int *) calloc(globalnnzTotal, sizeof(int));
+  int *globalRows = (int *) calloc(globalnnzTotal, sizeof(int));
+  int *globalCols = (int *) calloc(globalnnzTotal, sizeof(int));
   dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
 
-  for (iint n=0;n<globalnnzTotal;n++) {
+  for (int n=0;n<globalnnzTotal;n++) {
     globalRows[n] = globalNonZero[n].row;
     globalCols[n] = globalNonZero[n].col;
     globalVals[n] = globalNonZero[n].val;
@@ -289,7 +289,7 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
 			   colsA,
 			   valsA,
 			   0,
-			   iintString,
+			   "int",
 			   dfloatString); // 0 if no null space
     
   }
@@ -309,7 +309,7 @@ void ellipticCoarsePreconditionerSetupHex3D(mesh_t *mesh, precon_t *precon, ogs_
     
   }
 
-  iint NnumWHalo = Nnum + mesh->Nverts*mesh->totalHaloPairs;
+  int NnumWHalo = Nnum + mesh->Nverts*mesh->totalHaloPairs;
   precon->o_r1 = mesh->device.malloc(NnumWHalo*sizeof(dfloat));
   precon->o_z1 = mesh->device.malloc(NnumWHalo*sizeof(dfloat));
   precon->r1 = (dfloat*) malloc(NnumWHalo*sizeof(dfloat));

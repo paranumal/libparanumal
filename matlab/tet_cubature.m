@@ -1131,6 +1131,8 @@ switch N
     otherwise
 %         error('Quadrature degree too high.')
         [r s t w] = tet_cubature_TP(ceil(N/2));
+%         For quadratic nonlinearities use 2*Q = N*+3 = (N-1)/2 +3
+%         [r s t w] = tet_cubature_TP(ceil(3*N/4 + 3/4));
         rstw = [r(:) s(:) t(:) w(:)];        
         maptorst = false;
 end

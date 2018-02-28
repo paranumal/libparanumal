@@ -1,9 +1,9 @@
 #include "ellipticHex3D.h"
 
-void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
+void ellipticComputeDegreeVector(mesh3D *mesh, int Ntotal, ogs_t *ogs, dfloat *deg){
 
   // build degree vector
-  for(iint n=0;n<Ntotal;++n)
+  for(int n=0;n<Ntotal;++n)
     deg[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
@@ -21,15 +21,15 @@ void ellipticComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *
 
 solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options) {
 
-	iint rank;
+	int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
-  iint Nblock = (Ntotal+blockSize-1)/blockSize;
-  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-  iint Nall   = Ntotal + Nhalo;
-  iint NallP  = NtotalP;
+  int Ntotal = mesh->Np*mesh->Nelements;
+  int NtotalP = mesh->NqP*mesh->NqP*mesh->NqP*mesh->Nelements;
+  int Nblock = (Ntotal+blockSize-1)/blockSize;
+  int Nhalo = mesh->Np*mesh->totalHaloPairs;
+  int Nall   = Ntotal + Nhalo;
+  int NallP  = NtotalP;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -186,7 +186,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   ellipticComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 
-  for(iint n=0;n<Ntotal;++n){ // need to weight inner products{
+  for(int n=0;n<Ntotal;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
     invDegree[n] = 1./degree[n];
   }
@@ -196,8 +196,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    iint Nlocal = mesh->Nelements*mesh->Np;
-    iint Nhalo = mesh->totalHaloPairs*mesh->Np;
+    int Nlocal = mesh->Nelements*mesh->Np;
+    int Nhalo = mesh->totalHaloPairs*mesh->Np;
 
     dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
     
@@ -217,8 +217,8 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
   // build weights for continuous SEM L2 project --->
   dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
       localMM[n+e*mesh->Np] = wJ;
     }

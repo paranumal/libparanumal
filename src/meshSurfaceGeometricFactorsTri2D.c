@@ -11,10 +11,10 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
 				mesh->Nsgeo*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(dlong e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0];
     dfloat xe2 = mesh->EX[id+1];
@@ -29,7 +29,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     if(J<0) printf("bugger: got negative geofac\n");
     
     /* face 1 */
-    int base = mesh->Nsgeo*mesh->Nfaces*e;
+    dlong base = mesh->Nsgeo*mesh->Nfaces*e;
     dfloat nx1 = ye2-ye1;
     dfloat ny1 = -(xe2-xe1);
     dfloat  d1 = norm(nx1,ny1);
@@ -63,18 +63,18 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
   }
 
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint baseM = e*mesh->Nfaces + f;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(int f=0;f<mesh->Nfaces;++f){
+      dlong baseM = e*mesh->Nfaces + f;
 
       // awkward: (need to find eP,fP relative to bulk+halo)
-      iint idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
-      iint eP = (idP>=0) ? (idP/mesh->Np):e;
+      dlong idP = mesh->vmapP[e*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+0];
+      dlong eP = (idP>=0) ? (idP/mesh->Np):e;
 
-      iint fP = mesh->EToF[baseM];
-      fP = (fP==-1)?f:fP;
+      int fP = mesh->EToF[baseM];
+      fP = (fP==-1) ? f:fP;
 
-      iint baseP = eP*mesh->Nfaces + fP;
+      dlong baseP = eP*mesh->Nfaces + fP;
       
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];

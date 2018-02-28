@@ -8,29 +8,29 @@ void meshEllipticLocalPreconQuad2D(mesh2D *mesh, dfloat *qL, dfloat lambda, dflo
   dfloat *tmpr = (dfloat*) calloc(mesh->Nq*mesh->Nq, sizeof(dfloat));
   dfloat *tmps = (dfloat*) calloc(mesh->Nq*mesh->Nq, sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
 
     // prefetch qLe
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
 	qLe[i+j*mesh->Nq] = qL[i+j*mesh->Nq+e*mesh->Np];
 	 D[i+j*mesh->Nq] = mesh->D[i+j*mesh->Nq];
       }
     }
 
     // local 'r' and 's' derivatives
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
 	
 	dfloat dqdrL = 0, dqdsL = 0;
 
-	for(iint n=0;n<mesh->Nq;++n){
+	for(int n=0;n<mesh->Nq;++n){
 	  dqdrL += D[i*mesh->Nq+n]*qLe[n+j*mesh->Nq];
 	  dqdsL += D[j*mesh->Nq+n]*qLe[i+n*mesh->Nq];
 	}
 
 	// load geometric factors
-	iint gid = mesh->Np*mesh->Nvgeo*e + (i+mesh->Nq*j);
+	int gid = mesh->Np*mesh->Nvgeo*e + (i+mesh->Nq*j);
 
 	dfloat drdx = mesh->vgeo[gid + mesh->Np*RXID];
 	dfloat drdy = mesh->vgeo[gid + mesh->Np*RYID];
@@ -47,14 +47,14 @@ void meshEllipticLocalPreconQuad2D(mesh2D *mesh, dfloat *qL, dfloat lambda, dflo
     }
 
     // local op
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
-	iint lid = i + mesh->Nq*j;
-	iint gid = mesh->Np*mesh->Nvgeo*e + lid + mesh->Np*JWID;
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+	int lid = i + mesh->Nq*j;
+	int gid = mesh->Np*mesh->Nvgeo*e + lid + mesh->Np*JWID;
 	dfloat Jw = mesh->vgeo[gid];
 	dfloat Aq = lambda*Jw*qLe[lid]; // lambda*M*q
 	
-	for(iint n=0;n<mesh->Nq;++n){
+	for(int n=0;n<mesh->Nq;++n){
 	  Aq += D[n*mesh->Nq+i]*tmpr[j*mesh->Nq+n];
 	  Aq += D[n*mesh->Nq+j]*tmps[n*mesh->Nq+i];
 	}

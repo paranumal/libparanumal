@@ -7,6 +7,8 @@
 #define mesh3D mesh_t
 
 // mesh readers
+mesh3D* meshParallelReaderTri3D(char *fileName);
+mesh3D* meshParallelReaderQuad3D(char *fileName);
 mesh3D* meshParallelReaderTet3D(char *fileName);
 mesh3D* meshParallelReaderHex3D(char *fileName);
 
@@ -32,15 +34,23 @@ void meshParallelPrint3D(mesh3D *mesh);
 void meshVTU3D(mesh3D *mesh, char *fileName);
 
 // print out mesh field
-void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
+void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld);
+void meshPlotContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels);
+void meshPlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, dfloat *levels, dfloat tol);
 
-// compute geometric factors for local to physical map 
+// compute geometric factors for local to physical map
+void meshGeometricFactorsTri3D(mesh3D *mesh);
+void meshGeometricFactorsQuad3D(mesh3D *mesh);
 void meshGeometricFactorsTet3D(mesh3D *mesh);
 void meshGeometricFactorsHex3D(mesh3D *mesh);
 
+void meshSurfaceGeometricFactorsTri3D(mesh3D *mesh);
+void meshSurfaceGeometricFactorsQuad3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
 
+void meshPhysicalNodesTri3D(mesh3D *mesh);
+void meshPhysicalNodesQuad3D(mesh3D *mesh);
 void meshPhysicalNodesTet3D(mesh3D *mesh);
 void meshPhysicalNodesHex3D(mesh3D *mesh);
 
@@ -67,11 +77,12 @@ void occaOptimizeGradientHex3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dq
 void meshConnectFaceNodes3D(mesh3D *mesh);
 
 //
+mesh3D *meshSetupTri3D(char *filename, int N, dfloat sphereRadius);
+mesh3D *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius);
 mesh3D *meshSetupTet3D(char *filename, int N);
 mesh3D *meshSetupHex3D(char *filename, int N);
 
 void meshParallelConnectNodesHex3D(mesh3D *mesh);
-
 
 // halo connectivity information
 void meshHaloSetup3D(mesh3D *mesh);
@@ -96,27 +107,11 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 
 
-// void meshParallelGatherScatter3D(mesh3D *mesh, occa::memory &o_v, occa::memory &o_gsv, const char *type);
-
-void meshParallelGatherScatter(mesh3D *mesh,
-			       ogs_t *ogs, 
-			       occa::memory &o_v,
-			       occa::memory &o_gsv,
-			       const char *type,
-			       const char *op);
-
-ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint Nbytes,     // number of bytes per node
-				      iint *localIds,  // local index of nodes
-				      iint *baseIds,   // gather index of their base nodes
-				      iint *haloFlags); // 1 for halo node, 0 for not
-
 void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
-                                      iint numLevels, iint *levels);
+                                      int numLevels, int *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 

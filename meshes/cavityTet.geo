@@ -1,4 +1,4 @@
-cl__1 = 0.0625;
+cl__1 = 0.5;
 Point(1) = {-1, -1, -1, cl__1};
 Point(2) = {1, -1, -1, cl__1};
 Point(3) = {1, 1, -1, cl__1};
@@ -33,5 +33,6 @@ Line Loop(32) = {18, -13, -17, 9};
 Plane Surface(32) = {32};
 Surface Loop(34) = {22, 28, 26, 24, 30, 32};
 Volume(34) = {34};
-Physical Surface("Inflow", 1) = {22, 24, 26, 28, 30, 32};
+Physical Surface("Inflow", 1) = {22, 26};
+Physical Surface("Outflow", 2) = {24, 28, 30, 32};
 Physical Volume("Domain", 9) = {34};
