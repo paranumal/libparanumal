@@ -7,7 +7,17 @@
 #include <cublas_v2.h>
 #include <curand.h>
 
+
+#if 0
 #define dfloat double
+#define dfloatString "double"
+#else
+#define dfloat float
+#define dfloatString "float"
+#endif
+
+
+
 #ifndef p_N
 #define p_N 2
 #endif
@@ -133,10 +143,11 @@ printf("E= %d p_N = %d p_Np = %d \n", E, p_N, p_Np);
   
   int Niter = 10, it;
 
-  int  gflops = p_Np*20*(1+p_Np);
+  unsigned long long int  gflopsOLD = p_Np*20*(1+p_Np);
 
-  gflops *= Niter;
-
+unsigned long long int gflops=(2*p_Np-1)*7*p_Np + 14*p_Np;
+// gflops *= Niter;
+//gflopsOLD *= Niter;
   dfloat  *d_Dcombined, *d_q, *d_Dq, *d_Aq, *d_ggeo;
 
   dfloat *h_Dcombined, *h_q, *h_Dq, *h_Aq, *h_ggeo;
@@ -310,17 +321,126 @@ dfloat lambda = 1.0;
   float elapsedCublas;
 
   cudaEventElapsedTime(&elapsedCublas, start, stop);
-  elapsedCublas /= (Niter*1000.);
+  elapsedCublas /= (1000.*Niter);
+printf("TIME %17.16f flops = %llu  GFLOPS: %17.17f \n",elapsedCublas,gflops, 
+(((dfloat)gflops*(dfloat)E)/elapsedCublas)/1000000000.0);
 
+cudaMemcpy(h_Aq, d_Aq, E*p_Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
+
+
+      dfloat normAq = 0;
+
+      for(int n=0;n<E*BSIZE;++n)
+        normAq += (h_Aq[n]*h_Aq[n]);
+      normAq = sqrt(normAq);
+
+      printf("CUDA-CUBLAS: error Aq = %17.15lf\n", normAq);
+#if 0
   //6) use the original occa kernel to check for correctness
-  //6.1) allocate the data for occa
-  //6.2) run the kernel
-  //6.3) copy the data back to CPU
-  //6.4) compute a norm of the difference
+occa::device device;
+ occa::kernel Tet3Dkernel;  
 
+occa::kernel Tet3Dkernel[8];
+  occa::kernel correctRes;
+  occa::kernelInfo kernelInfo;
+int p_Nb = 1;
+int p_Ne = 1;
+
+ kernelInfo.addDefine("dfloat", dfloatString);
+  kernelInfo.addDefine("p_N", p_N);
+  kernelInfo.addDefine("p_Np", p_Np);
+  kernelInfo.addDefine("p_Nfp", p_Nfp);
+  kernelInfo.addDefine("p_Nfaces", p_Nfaces);
+  kernelInfo.addDefine("p_NfacesNfp", p_Nfaces*p_Nfp);
+  kernelInfo.addDefine("BSIZE", (int)BSIZE);
+  kernelInfo.addDefine("p_Nvgeo", 11);
+  kernelInfo.addDefine("p_Nsgeo", 7);
+  kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("p_Ne", p_Ne);
+  kernelInfo.addDefine("p_Nb", p_Nb);
+
+    kernelInfo.addDefine("p_G00ID", 0);
+    kernelInfo.addDefine("p_G01ID", 1);
+    kernelInfo.addDefine("p_G02ID", 2);
+    kernelInfo.addDefine("p_G11ID", 3);
+    kernelInfo.addDefine("p_G12ID", 4);
+    kernelInfo.addDefine("p_G22ID", 5);
+    kernelInfo.addDefine("p_GWJID", 6);
+
+
+    int  *elementList;
+dfloat *Aq;
+    occa::memory o_elementList, o_ggeo, o_SrrT, o_SrsT, 
+o_SrtT, o_SsrT,o_SssT,o_SstT, o_StrT, o_StsT, o_SttT, o_MM, o_q, o_Aq; 
+
+  //6.1) allocate the data for occa 
+
+
+o_ggeo = device.malloc(E*7*sizeof(dfloat), h_ggeo);
+o_SrrT = device.malloc(p_Np*p_Np*sizeof(dfloat), SrrT);
+o_SrsT = device.malloc(p_Np*p_Np*sizeof(dfloat), SrsT); 
+o_SrtT = device.malloc(p_Np*p_Np*sizeof(dfloat), SrtT); 
+o_SssT = device.malloc(p_Np*p_Np*sizeof(dfloat), SssT); 
+o_SstT = device.malloc(p_Np*p_Np*sizeof(dfloat), SstT); 
+o_SttT = device.malloc(p_Np*p_Np*sizeof(dfloat), SttT); 
+o_MM = device.malloc(p_Np*p_Np*sizeof(dfloat), MM); 
+
+  o_q = device.malloc(p_Np*E*sizeof(dfloat), h_q);
+o_Aq =  device.malloc(p_Np*E*sizeof(dfloat), h_q);
+
+Aq = (dfloat *) calloc(E*p_Np,sizeof(dfloat))
+ elementList = (int *) calloc(E, sizeof(int));
+
+
+    for(int j=0;j<E;++j){
+      elementList[j] = j;
+    }
+    o_elementList = device.malloc(E*sizeof(int), elementList);
+    char buf[200];
+      sprintf(buf, "ellipticPartialAxTet3D_Ref3"); 
+      Tet3Dkernel = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
+    
+    occa::initTimer(device);
+
+
+
+//6.2) run the kernel
+
+ Tet3Dkernel(E, o_elementList,
+            o_ggeo,
+            o_SrrT,
+            o_SrsT,
+            o_SrtT,
+            o_SsrT,
+            o_SssT,
+            o_SstT,
+            o_StrT,
+            o_StsT,
+            o_SttT,
+            o_MM,
+            lambda,
+            o_q,       
+            o_Aq);
+
+
+  //6.3) copy the data back to CPU
+  o_Aq.copyTo(Aq);
+cudaMemcpy(*h_Aq, *d_Aq, E*p_Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
+
+
+      datafloat normAq = 0;
+
+      for(int n=0;n<E*BSIZE;++n)
+        normAq += (Aq[n]*Aq[n]-h_Aq[n]);
+      normAq = sqrt(normAq);
+
+      printf("OCCA: error Aq = %17.15lf\n", normAq);
+
+
+  //6.4) compute a norm of the difference
+#endif
   // Destroy the handle
   cublasDestroy(handle);
-
 
   exit(0);
   return 0;
