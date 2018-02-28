@@ -241,7 +241,7 @@ typedef struct {
   //SEMFEM data
   int NpFEM, NelFEM;
   int *FEMEToV;
-  dfloat *rFEM, *sFEM;
+  dfloat *rFEM, *sFEM, *tFEM;
   dfloat *SEMFEMInterp;
 
   occa::memory o_SEMFEMInterp;
@@ -617,7 +617,7 @@ void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(long long Ngather, long long *gatherIds, int verbose);
+  void *gsParallelGatherScatterSetup(dlong Ngather, hlong *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
 

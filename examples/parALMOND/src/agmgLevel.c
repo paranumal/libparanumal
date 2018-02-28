@@ -370,7 +370,7 @@ void setupExactSolve(parAlmond_t *parAlmond, agmgLevel *level, bool nullSpace, d
   //ge the nonzero counts from all ranks
   int *NNZ = (int*) calloc(size,sizeof(int));  
   int *NNZoffsets = (int*) calloc(size+1,sizeof(int));  
-  MPI_Allgather(&localNNZ, 1, MPI_INT, NNZ, 1, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&localNNZ, 1, MPI_INT, NNZ, 1, MPI_INT, MPI_COMM_WORLD);
 
   int totalNNZ = 0;
   for (int r=0;r<size;r++) {

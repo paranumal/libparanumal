@@ -102,6 +102,18 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   mesh->NpP = Nrows; //overlapping patch size
 
 
+  /* SEMFEM data */ 
+  readDfloatArray(fp, "SEMFEM r-coordinates", &(mesh->rFEM),&Nrows,&Ncols);
+  readDfloatArray(fp, "SEMFEM s-coordinates", &(mesh->sFEM),&Nrows,&Ncols);
+  readDfloatArray(fp, "SEMFEM t-coordinates", &(mesh->tFEM),&Nrows,&Ncols);
+  mesh->NpFEM = Nrows;
+
+  readIntArray   (fp, "SEMFEM reference mesh", &(mesh->FEMEToV), &Nrows, &Ncols);
+  mesh->NelFEM = Nrows;
+
+  readDfloatArray(fp, "SEMFEM interpolation matrix", &(mesh->SEMFEMInterp),&Nrows,&Ncols);
+
+
   fclose(fp);
 
   // find node indices of vertex nodes

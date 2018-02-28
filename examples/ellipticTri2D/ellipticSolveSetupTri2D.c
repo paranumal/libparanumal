@@ -535,6 +535,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
 				       "ellipticBlockJacobiPreconTri2D",
 				       kernelInfo);
 
+  solver->precon->partialblockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
+               "ellipticPartialBlockJacobiPreconTri2D",
+               kernelInfo);
+
   solver->precon->approxPatchSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticApproxPatchSolver2D",
@@ -576,13 +581,13 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
                kernelInfo);
 
   solver->precon->SEMFEMInterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterpTri2D.okl",
-               "ellipticSEMFEMInterpTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+               "ellipticSEMFEMInterp",
                kernelInfo);
 
   solver->precon->SEMFEMAnterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterpTri2D.okl",
-               "ellipticSEMFEMAnterpTri2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+               "ellipticSEMFEMAnterp",
                kernelInfo);
 
   solver->precon->CGLocalPatchKernel =

@@ -21,7 +21,7 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
-  // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
   // MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, or DAMPEDJACOBI, patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
@@ -29,7 +29,7 @@ int main(int argc, char **argv){
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
     //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=MASSMATRIX");
 

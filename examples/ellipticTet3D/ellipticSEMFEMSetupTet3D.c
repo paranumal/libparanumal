@@ -1,9 +1,10 @@
-#include "ellipticTri2D.h"
+#include "ellipticTet3D.h"
 
 typedef struct{
 
   dfloat VX;
   dfloat VY;
+  dfloat VZ;
 
   dlong localId;
   hlong globalId;
@@ -37,6 +38,9 @@ int parallelCompareFEMvertsLocation(const void *a, const void *b){
   if(fa->VY < fb->VY - NODETOL) return -1;
   if(fa->VY > fb->VY + NODETOL) return +1;
 
+  if(fa->VZ < fb->VZ - NODETOL) return -1;
+  if(fa->VZ > fb->VZ + NODETOL) return +1;
+
   return 0;
 }
 
@@ -54,7 +58,7 @@ int parallelCompareFEMvertsLocalId(const void *a, const void *b){
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
+void ellipticSEMFEMSetupTet3D(solver_t *solver, precon_t* precon,
                               dfloat tau, dfloat lambda, int *BCType,
                               const char *options, const char *parAlmondOptions) {
 
@@ -67,58 +71,63 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D* mesh = solver->mesh; //original mesh
+  mesh3D* mesh = solver->mesh; //original mesh
 
-  mesh2D* pmesh = (mesh2D*) calloc (1,sizeof(mesh2D)); //partially assembled fem mesh (result of projecting sem element to larger space)
+  mesh3D* pmesh = (mesh3D*) calloc (1,sizeof(mesh3D)); //partially assembled fem mesh (result of projecting sem element to larger space)
 
-  precon->femMesh = (mesh2D*) calloc (1,sizeof(mesh2D)); //full fem mesh
-  mesh2D *femMesh = precon->femMesh;
+  precon->femMesh = (mesh3D*) calloc (1,sizeof(mesh3D)); //full fem mesh
+  mesh3D *femMesh = precon->femMesh;
 
-  memcpy(pmesh  ,mesh,sizeof(mesh2D));
-  memcpy(femMesh,mesh,sizeof(mesh2D));
+  memcpy(pmesh  ,mesh,sizeof(mesh3D));
+  memcpy(femMesh,mesh,sizeof(mesh3D));
 
   //set semfem nodes as the grid points
   pmesh->Np = mesh->NpFEM;
   pmesh->r  = mesh->rFEM;
   pmesh->s  = mesh->sFEM;
+  pmesh->t  = mesh->tFEM;
 
   //count number of face nodes in the semfem element
   dfloat NODETOL = 1e-6;
   pmesh->Nfp=0;
   for (int n=0;n<pmesh->Np;n++)
-    if (fabs(pmesh->s[n]+1)<NODETOL) pmesh->Nfp++;
+    if (fabs(pmesh->t[n]+1)<NODETOL) pmesh->Nfp++;
 
   //remake the faceNodes array
   pmesh->faceNodes = (int *) calloc(pmesh->Nfaces*pmesh->Nfp,sizeof(int));
-  int f0=0, f1=0, f2=0;
+  int f0=0, f1=0, f2=0, f3=0;
   for (int n=0;n<pmesh->Np;n++) {
-    if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
-    if (fabs(pmesh->r[n]+pmesh->s[n])<NODETOL) pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
-    if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
+    if (fabs(pmesh->t[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
+    if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
+    if (fabs(pmesh->r[n]+pmesh->s[n]+
+                     pmesh->t[n]+1.0)<NODETOL) pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
+    if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[3*pmesh->Nfp+f3++] = n;
   }
 
   //remake vertexNodes array
   pmesh->vertexNodes = (int*) calloc(pmesh->Nverts, sizeof(int));
   for(int n=0;n<pmesh->Np;++n){
-    if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
+    if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
       pmesh->vertexNodes[0] = n;
-    if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
+    if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
       pmesh->vertexNodes[1] = n;
-    if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)<NODETOL)
+    if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
       pmesh->vertexNodes[2] = n;
+    if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]-1)*(pmesh->t[n]-1)<NODETOL)
+      pmesh->vertexNodes[3] = n;
   }
 
   // connect elements using parallel sort
   meshParallelConnect(pmesh);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(pmesh);
+  meshPhysicalNodesTet3D(pmesh);
 
   // free(sendBuffer);
   meshHaloSetup(pmesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(pmesh);
+  meshConnectFaceNodes3D(pmesh);
 
   // global nodes
   meshParallelConnectNodes(pmesh);
@@ -132,6 +141,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   femMesh->EToV = (hlong*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(hlong));
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
+  femMesh->EZ = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
 
   dlong *localIds = (dlong *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(dlong));
 
@@ -142,34 +152,55 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
       dlong id1 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+0];
       dlong id2 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+1];
       dlong id3 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+2];
+      dlong id4 = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+3];
 
+      #if 1
       // check orientation
-      dfloat xe1 = pmesh->x[id1], xe2 = pmesh->x[id2], xe3 = pmesh->x[id3];
-      dfloat ye1 = pmesh->y[id1], ye2 = pmesh->y[id2], ye3 = pmesh->y[id3];
-      dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
+      dfloat xe1 = pmesh->x[id1], xe2 = pmesh->x[id2], xe3 = pmesh->x[id3], xe4 = pmesh->x[id4];
+      dfloat ye1 = pmesh->y[id1], ye2 = pmesh->y[id2], ye3 = pmesh->y[id3], ye4 = pmesh->y[id4];
+      dfloat ze1 = pmesh->z[id1], ze2 = pmesh->z[id2], ze3 = pmesh->z[id3], ze4 = pmesh->z[id4];
+      
+      /* Jacobian matrix */
+      dfloat xr = 0.5*(xe2-xe1), xs = 0.5*(xe3-xe1), xt = 0.5*(xe4-xe1);
+      dfloat yr = 0.5*(ye2-ye1), ys = 0.5*(ye3-ye1), yt = 0.5*(ye4-ye1);
+      dfloat zr = 0.5*(ze2-ze1), zs = 0.5*(ze3-ze1), zt = 0.5*(ze4-ze1);
+
+      /* compute geometric factors for affine coordinate transform*/
+      dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
       if(J<0){
+        printf("Uh oh\n");
         dlong id3tmp = id3;
-        id3 = id2;
-        id2 = id3tmp;
+        id3 = id4;
+        id4 = id3tmp;
       }
+      #endif
 
       /* read vertex triplet for triangle */
       dlong femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
       femMesh->EToV[femId+0] = pmesh->globalIds[id1];
       femMesh->EToV[femId+1] = pmesh->globalIds[id2];
       femMesh->EToV[femId+2] = pmesh->globalIds[id3];
+      femMesh->EToV[femId+3] = pmesh->globalIds[id4];
 
       femMesh->EX[femId+0] = pmesh->x[id1];
       femMesh->EX[femId+1] = pmesh->x[id2];
       femMesh->EX[femId+2] = pmesh->x[id3];
+      femMesh->EX[femId+3] = pmesh->x[id4];
 
       femMesh->EY[femId+0] = pmesh->y[id1];
       femMesh->EY[femId+1] = pmesh->y[id2];
       femMesh->EY[femId+2] = pmesh->y[id3];
+      femMesh->EY[femId+3] = pmesh->y[id4];
+
+      femMesh->EZ[femId+0] = pmesh->z[id1];
+      femMesh->EZ[femId+1] = pmesh->z[id2];
+      femMesh->EZ[femId+2] = pmesh->z[id3];
+      femMesh->EZ[femId+3] = pmesh->z[id4];
 
       localIds[femId+0] = id1;
       localIds[femId+1] = id2;
       localIds[femId+2] = id3;
+      localIds[femId+3] = id4;
     }
   }
 
@@ -177,22 +208,22 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   meshParallelConnect(femMesh);
 
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesTri2D(femMesh, femN);
+  meshLoadReferenceNodesTet3D(femMesh, femN);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(femMesh);
+  meshPhysicalNodesTet3D(femMesh);
 
   // compute geometric factors
-  meshGeometricFactorsTri2D(femMesh);
+  meshGeometricFactorsTet3D(femMesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(femMesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(femMesh);
+  meshConnectFaceNodes3D(femMesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactorsTri2D(femMesh);
+  meshSurfaceGeometricFactorsTet3D(femMesh);
 
   // global nodes
   meshParallelConnectNodes(femMesh);
@@ -251,16 +282,26 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   //build stiffness matrices
   femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
+  femMesh->Srt = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Ssr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   femMesh->Sss = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
+  femMesh->Sst = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
+  femMesh->Str = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
+  femMesh->Sts = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
+  femMesh->Stt = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
   for (int n=0;n<femMesh->Np;n++) {
     for (int m=0;m<femMesh->Np;m++) {
       for (int k=0;k<femMesh->Np;k++) {
         for (int l=0;l<femMesh->Np;l++) {
           femMesh->Srr[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
           femMesh->Srs[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
+          femMesh->Srt[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
           femMesh->Ssr[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
           femMesh->Sss[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
+          femMesh->Sst[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
+          femMesh->Str[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
+          femMesh->Sts[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
+          femMesh->Stt[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
         }
       }
     }
@@ -269,7 +310,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  dlong nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
+  long long int nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   int *AsendCounts  = (int*) calloc(size, sizeof(int));
@@ -281,6 +322,15 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   dlong cnt =0;
   #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
+
+    dfloat Grr = femMesh->ggeo[e*femMesh->Nggeo + G00ID];
+    dfloat Grs = femMesh->ggeo[e*femMesh->Nggeo + G01ID];
+    dfloat Grt = femMesh->ggeo[e*femMesh->Nggeo + G02ID];
+    dfloat Gss = femMesh->ggeo[e*femMesh->Nggeo + G11ID];
+    dfloat Gst = femMesh->ggeo[e*femMesh->Nggeo + G12ID];
+    dfloat Gtt = femMesh->ggeo[e*femMesh->Nggeo + G22ID];
+    dfloat J   = femMesh->ggeo[e*femMesh->Nggeo + GWJID];
+
     for (int n=0;n<femMesh->Np;n++) {
       dlong idn = localIds[e*femMesh->Np + n];
       if (pmesh->globalIds[idn]<0) continue; //skip masked nodes
@@ -289,16 +339,15 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
         if (pmesh->globalIds[idm]<0) continue; //skip masked nodes
 
         dfloat val = 0.;
-
-        dfloat Grr = femMesh->ggeo[e*femMesh->Nggeo + G00ID];
-        dfloat Grs = femMesh->ggeo[e*femMesh->Nggeo + G01ID];
-        dfloat Gss = femMesh->ggeo[e*femMesh->Nggeo + G11ID];
-        dfloat J   = femMesh->ggeo[e*femMesh->Nggeo + GWJID];
-
         val += Grr*femMesh->Srr[m+n*femMesh->Np];
         val += Grs*femMesh->Srs[m+n*femMesh->Np];
+        val += Grt*femMesh->Srt[m+n*femMesh->Np];
         val += Grs*femMesh->Ssr[m+n*femMesh->Np];
         val += Gss*femMesh->Sss[m+n*femMesh->Np];
+        val += Gst*femMesh->Sst[m+n*femMesh->Np];
+        val += Grt*femMesh->Str[m+n*femMesh->Np];
+        val += Gst*femMesh->Sts[m+n*femMesh->Np];
+        val += Gtt*femMesh->Stt[m+n*femMesh->Np];
         val += J*lambda*femMesh->MM[m+n*femMesh->Np];
 
         dfloat nonZeroThreshold = 1e-7;
