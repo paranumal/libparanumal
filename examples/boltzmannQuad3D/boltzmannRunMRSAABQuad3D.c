@@ -22,15 +22,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   
   //kernel arguments
   dfloat alpha = 1./mesh->N;
-  iint zero = 0;
-  iint one = 1;
 
-      //filter the initial state
-  for (iint l=0;l<mesh->MRABNlevels;l++) {
-    mesh->filterKernelH(mesh->MRABNelements[l],
-			mesh->o_MRABelementIds[l],
-			one, //fake rhsq
-			mesh->o_shift, 
+  //filter the initial state
+  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -38,17 +32,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_x,
 			mesh->o_y,
 			mesh->o_z,
-			mesh->o_lev_updates,
-			mesh->o_MRABlevels,
-		        l,
 			mesh->o_q,
 			mesh->o_qFilter);
-			}
-  for (iint l=0;l<mesh->MRABNlevels;l++) {   
-    mesh->filterKernelV(mesh->MRABNelements[l],
-			mesh->o_MRABelementIds[l],
-			one,  //fake rhsq
-			mesh->o_shift, 
+  mesh->filterKernelq0V(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -56,13 +42,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_x,
 			mesh->o_y,
 			mesh->o_z,
-			mesh->o_lev_updates,
-			mesh->o_MRABlevels,
-		        l,
 			mesh->o_qFilter,
 			mesh->o_q);
-			}
- 
+  
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
        
@@ -75,7 +57,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       else
 	mrab_order = 2; // third order 
 
-      
       //synthesize actual stage time
       iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
 
@@ -102,7 +83,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      sendBuffer,
 			      recvBuffer);
       }
-
+      
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  // compute volume contribution to DG boltzmann RHS
@@ -156,7 +137,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
-      for (iint l = 0; l < lev; l++) {
+            for (iint l = 0; l < lev; l++) {
 	
        	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
 	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
@@ -251,10 +232,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_q);
       	}
       }
-    }
+     }
 
      // estimate maximum error
-    if((tstep%mesh->errorStep)==0){
+     if((tstep%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
@@ -262,7 +243,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       fflush(stdout);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      //boltzmannPlotLevels(mesh,"bar",tstep,mesh->q);
+      boltzmannPlotNorms(mesh,"norms",tstep,mesh->q);
 
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
