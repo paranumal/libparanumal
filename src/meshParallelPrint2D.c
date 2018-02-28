@@ -65,5 +65,6 @@ void meshParallelPrint2D(mesh2D *mesh){
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
-  
+  free(otherNelements);
+  free(elementStarts);
 }

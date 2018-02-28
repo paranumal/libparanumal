@@ -8,10 +8,10 @@ void meshPhysicalNodesTet3D(mesh3D *mesh){
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];

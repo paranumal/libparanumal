@@ -289,7 +289,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, MPI_COMM_WORLD);
 
   // count incoming clusters
-  int newNelements = 0;
+  dlong newNelements = 0;
   for(int r=0;r<size;++r)
     newNelements += Nrecv[r];
   
@@ -315,12 +315,13 @@ void meshGeometricPartition2D(mesh2D *mesh){
   free(mesh->EY);
   free(mesh->elementInfo);
 
+  mesh->Nelements = newNelements;
   mesh->EToV = (hlong*) calloc(newNelements*mesh->Nverts, sizeof(hlong));
   mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->elementInfo = (int*) calloc(newNelements, sizeof(int));
 
-  for(int e=0;e<newNelements;++e){
+  for(dlong e=0;e<newNelements;++e){
     for(int n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = elements[e].v[n];
       mesh->EX[e*mesh->Nverts + n]   = elements[e].EX[n];
@@ -328,4 +329,5 @@ void meshGeometricPartition2D(mesh2D *mesh){
     }
     mesh->elementInfo[e] = elements[e].type;
   }
+  if (elements) free(elements);
 }

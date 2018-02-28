@@ -5,7 +5,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
   agmgLevel **levels = parAlmond->levels;
 
   dlong m = levels[k]->Nrows;
-  dlong n = levels[k]->Ncols;
+  // dlong n = levels[k]->Ncols;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -23,7 +23,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
   occaTimerTic(parAlmond->device,name);
 
   dlong mCoarse = levels[k+1]->Nrows;
-  dlong nCoarse = levels[k+1]->Ncols;
+  // dlong nCoarse = levels[k+1]->Ncols;
 
   // zero out x
   //setVector(m, levels[k]->x, 0.0);
@@ -143,7 +143,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   agmgLevel **levels = parAlmond->levels;
 
   dlong m = levels[k]->Nrows;
-  dlong n = levels[k]->Ncols;
+  // dlong n = levels[k]->Ncols;
 
   if(m < GPU_CPU_SWITCH_SIZE){
     levels[k]->o_rhs.copyTo(levels[k]->rhs, m*sizeof(dfloat));
@@ -164,7 +164,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   }
 
   dlong mCoarse = levels[k+1]->Nrows;
-  dlong nCoarse = levels[k+1]->Ncols;
+  // dlong nCoarse = levels[k+1]->Ncols;
 
   char name[BUFSIZ];
   sprintf(name, "device kcycle level %d", k);
@@ -324,7 +324,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   sprintf(name, "host vcycle level %d", k);
   occaTimerTic(parAlmond->device,name);
 
-  const int mCoarse = levels[k+1]->Nrows;
+  // const int mCoarse = levels[k+1]->Nrows;
 
   // zero out x
   //setVector(m, levels[k]->x,  0.0);
@@ -363,7 +363,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   agmgLevel **levels = parAlmond->levels;
 
   const dlong m = levels[k]->Nrows;
-  const dlong mCoarse = levels[k+1]->Nrows;
+  // const dlong mCoarse = levels[k+1]->Nrows;
 
   // switch to cpu if the problem size is too small for gpu
   if(m < GPU_CPU_SWITCH_SIZE){

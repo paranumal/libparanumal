@@ -60,7 +60,7 @@ void pgmres(parAlmond_t *parAlmond,
   csr *A = parAlmond->levels[0]->A;
 
   const dlong m = A->Nrows;
-  const dlong n = A->Ncols;
+  // const dlong n = A->Ncols;
 
   parAlmond->ktype = GMRES;
 
@@ -120,7 +120,7 @@ void pgmres(parAlmond_t *parAlmond,
   dfloat *Av = (dfloat *) calloc(m, sizeof(dfloat));
   dfloat *w  = (dfloat *) calloc(m, sizeof(dfloat));
 
-  int Niter;
+  int Niter=0;
 
   for(int i=0; i<maxIt; i++){
 
@@ -223,7 +223,7 @@ void device_pgmres(parAlmond_t *parAlmond,
   hyb* A = parAlmond->levels[0]->deviceA;
 
   const dlong m = A->Nrows;
-  const dlong n = A->Ncols;
+  // const dlong n = A->Ncols;
 
   // use parAlmond's buffers
   occa::memory &o_r = parAlmond->levels[0]->o_rhs;
