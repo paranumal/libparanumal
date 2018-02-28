@@ -196,7 +196,7 @@ tic_tot = MPI_Wtime();
 
   if(rank==0){
     printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
-    printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size,gelp_tot, gelp_sol, gelp_out); 
+    printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size, gelp_tot, gelp_sol, gelp_out); 
 
     char fname[BUFSIZ]; sprintf(fname, "boltzmannScaling2D.dat");
     FILE *fp; fp = fopen(fname, "a");

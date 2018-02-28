@@ -23,7 +23,8 @@ kernel void boltzmannVolume2D(const iint Nelements,
       if(et<Nelements){
         e = elementIds[et];
         const iint id = p_Nfields*(e*p_Np + n);
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -49,7 +50,8 @@ kernel void boltzmannVolume2D(const iint Nelements,
         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
@@ -60,7 +62,7 @@ kernel void boltzmannVolume2D(const iint Nelements,
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-        //
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -68,6 +70,7 @@ kernel void boltzmannVolume2D(const iint Nelements,
         }
       
         // Compute derivatives in physical coordinates 
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -141,6 +144,8 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
         pmlId = pmlIds[et];
 
         const iint id = p_Nfields*(e*p_Np + n);
+
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -174,6 +179,7 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -185,6 +191,7 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
        // Read from global
         const iint pid = p_Nfields*(pmlId*p_Np + n);
 
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = pmlqx[pid+fld]; 
           r_pmlqy[fld] = pmlqy[pid+fld]; 
@@ -196,13 +203,14 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          //
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -242,6 +250,7 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
         const iint rhsId    = nrhs*id + p_Nfields*shift;
         const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
@@ -256,175 +265,6 @@ kernel void boltzmannPmlVolume2D(const iint pmlNelements,
   
 }
 }
-
-
-
-
-
-
-
-
-
-
-kernel void boltzmannPmlVolume2D_v0(const iint pmlNelements,
-              const iint * restrict pmlElementIds,
-              const iint * restrict pmlIds,
-              const dfloat ramp,
-              const dfloat drampdt,
-              const iint nrhs, 
-              const iint shift,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict pmlSigmaX,
-              const dfloat * restrict pmlSigmaY,
-              //const dfloat * restrict pmlBetaX,
-              //const dfloat * restrict pmlBetaY,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
-  
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive iint e, pmlId;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-      iint et = eo+es; // element in block
-      if(et<pmlNelements){
-        e     = pmlElementIds[et];
-        pmlId = pmlIds[et];
-
-        const iint id = p_Nfields*(e*p_Np + n);
-        for(iint fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld];
-        }
-      }
-     }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
-       iint et = eo+es; // element in block
-       if(et<pmlNelements){  
-
-        // prefetch geometric factors 
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        
-        // Prefetch sigma
-        const dfloat sigmaxe = pmlSigmaX[pmlId*p_Np+n];
-        const dfloat sigmaye = pmlSigmaY[pmlId*p_Np+n];
-       
-        //
-        const dfloat betax = 0.f; //pmlBetaX[e*p_Np+n];
-        const dfloat betay = 0.f; //pmlBetaY[e*p_Np+n];
-
-        // Pack register variables into arrays 
-        dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
-        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
-        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
-        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
-        dfloat r_N[p_Nfields];
-        
-        // Initialize
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
-          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
-          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
-          r_N[fld]     = 0.f; 
-        }
-    
-       
-       // Read from global
-        const iint pid = p_Nfields*(pmlId*p_Np + n);
-
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          r_pmlqx[fld] = pmlqx[pid+fld]; 
-          r_pmlqy[fld] = pmlqy[pid+fld]; 
-        }
-
-
-        // Compute Derivatives
-        occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-          //
-          for(iint fld=0; fld<p_Nfields; ++fld){
-            r_dqdr[fld] += Drni*s_q[es][fld][i];
-            r_dqds[fld] += Dsni*s_q[es][fld][i];
-          }
-        }
-
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-
-
-        // Compute volume flux for q, qx and qy
-        // A*dQ/dx
-        r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
-        r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
-        r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
-        r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
-        r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
-        r_Aqx[5] = -p_sqrtRT*(betax*r_dqdx[5]); // Null correction for advection operator
-        // B*dQ/dy
-        r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
-        r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
-        r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
-        r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
-        r_Bqy[4] = -p_sqrtRT*(betay*r_dqdy[4]);  // Null correction for advection operator
-        r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
-  
-       
-        // N(q) + mean flow forcing 
-        r_N[0] = 0.f;
-        r_N[1] = drampdt*p_q2bar;
-        r_N[2] = drampdt*p_q3bar;
-        r_N[3] = 2.f*ramp*drampdt*p_q4bar -p_tauInv*(s_q[es][3][n]-(s_q[es][1][n]*s_q[es][2][n]/s_q[es][0][n]));
-        r_N[4] = 2.f*ramp*drampdt*p_q5bar -p_tauInv*(s_q[es][4][n]-(p_invsqrt2*s_q[es][1][n]*s_q[es][1][n]/s_q[es][0][n]));
-        r_N[5] = 2.f*ramp*drampdt*p_q6bar -p_tauInv*(s_q[es][5][n]-(p_invsqrt2*s_q[es][2][n]*s_q[es][2][n]/s_q[es][0][n]));
-
-     
-     
-        const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-        const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha; 
-
-        // Update
-        const iint id       = p_Nfields*(e*p_Np + n);
-        const iint rhsId    = nrhs*id + p_Nfields*shift;
-        const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
-
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
-          pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
-          //
-          rhsq[rhsId +fld] = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
-         
-        }
-
-      }
-    }
-  }
-  
-}
-}
-
-
-
 
 
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
@@ -453,7 +293,7 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
       if(et<Nelements){
         e = elementIds[et];
         const iint id = p_Nfields*(e*p_Np + n);
-
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -479,7 +319,8 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
@@ -490,7 +331,7 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-        //
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -498,6 +339,7 @@ kernel void boltzmannVolumeCub2D(const iint Nelements,
         }
       
         // Compute derivatives in physical coordinates 
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -568,6 +410,7 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
         pmlId = pmlIds[et];
 
         const iint id = p_Nfields*(e*p_Np + n);
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -597,6 +440,7 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -609,13 +453,14 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          //
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -649,7 +494,8 @@ kernel void boltzmannPmlVolumeCub2D(const iint pmlNelements,
         const iint id       = p_Nfields*(e*p_Np + n);
         const iint rhsId    = nrhs*id + p_Nfields*shift;
         const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] =  r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] =  r_Bqy[fld];
@@ -694,7 +540,7 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
       if(et<Nelements){
         e = elementIds[et];
         const iint id = p_Nfields*(e*p_Np + n);
-
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -720,7 +566,8 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
@@ -730,8 +577,8 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
         occaUnroll(p_Np)
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-        //
+          const dfloat Dsni = DsT[n+i*p_Np];    
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -739,6 +586,7 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
         }
       
         // Compute derivatives in physical coordinates 
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -767,7 +615,8 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
          //Update 
         const iint id = p_Nfields*(e*p_Np + n);
         const iint rhsId = nrhs*id + p_Nfields*shift;
-       
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           rhsq[rhsId + fld] = r_rhsq[fld];
         }
@@ -776,153 +625,6 @@ kernel void boltzmannSAVolume2D(const iint Nelements,
   }
 }
 }
-
-
-
-
-
-
-// Advection null space correction: not in use
-kernel void boltzmannPmlVolumeCub2D_v0(const iint pmlNelements,
-              const iint * restrict pmlElementIds,
-              const iint * restrict pmlIds,
-              const dfloat ramp,
-              const dfloat drampdt,
-              const iint nrhs, 
-              const iint shift,
-              const dfloat * restrict vgeo,
-              //const dfloat * restrict pmlBetaX, 
-              //const dfloat * restrict pmlBetaY, 
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
-  
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive iint e, pmlId;
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-
-      iint et = eo+es; // element in block
-      if(et<pmlNelements){
-        e     = pmlElementIds[et];
-        pmlId = pmlIds[et];
-
-        const iint id = p_Nfields*(e*p_Np + n);
-        for(iint fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld];
-        }
-      }
-     }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
-       iint et = eo+es; // element in block
-       if(et<pmlNelements){  
-
-        // prefetch geometric factors 
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-        // Prefetch beta
-        const dfloat betax = 0.f; //pmlBetaX[e*p_Np+n];
-        const dfloat betay = 0.f; //pmlBetaY[e*p_Np+n];
-
-        // Pack register variables into arrays 
-        // dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
-        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
-        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
-        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
-        dfloat r_N[p_Nfields];
-        
-        // Initialize
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
-          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
-          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
-          r_N[fld]     = 0.f; 
-        }
-    
-        // Compute Derivatives
-        occaUnroll(p_Np)
-        for(iint i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-          //
-          for(iint fld=0; fld<p_Nfields; ++fld){
-            r_dqdr[fld] += Drni*s_q[es][fld][i];
-            r_dqds[fld] += Dsni*s_q[es][fld][i];
-          }
-        }
-
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-  
-        // Compute volume flux for q, qx and qy
-        // A*dQ/dx
-        r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
-        r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
-        r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
-        r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
-        r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
-        r_Aqx[5] = -p_sqrtRT*(betax*r_dqdx[5]); // Null correction for advection operator
-        // B*dQ/dy
-        r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
-        r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
-        r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
-        r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
-        r_Bqy[4] = -p_sqrtRT*(betay*r_dqdy[4]);  // Null correction for advection operator
-        r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
-
-        // mean flow forcing 
-        r_N[0] = 0.f;
-        r_N[1] = drampdt*p_q2bar;
-        r_N[2] = drampdt*p_q3bar;
-        r_N[3] = 2.f*ramp*drampdt*p_q4bar;
-        r_N[4] = 2.f*ramp*drampdt*p_q5bar;
-        r_N[5] = 2.f*ramp*drampdt*p_q6bar;
- 
-        // Update
-        const iint id       = p_Nfields*(e*p_Np + n);
-        const iint rhsId    = nrhs*id + p_Nfields*shift;
-        const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
-
-        for(iint fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlrhsId + fld] =  r_Aqx[fld];
-          pmlrhsqy[pmlrhsId + fld] =  r_Bqy[fld];
-          rhsq[rhsId +fld] =  r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
-         
-        }
-
-      }
-    }
-  }
-  
-}
-}
-
-
-
-
-
-
-
-
 
 
 
@@ -962,6 +664,7 @@ kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
         pmlId = pmlIds[et];
 
         const iint id = p_Nfields*(e*p_Np + n);
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -995,6 +698,7 @@ kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -1005,7 +709,7 @@ kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
        
        // Read from global
         const iint pid = p_Nfields*(pmlId*p_Np + n);
-
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = pmlqx[pid+fld]; 
           r_pmlqy[fld] = pmlqy[pid+fld]; 
@@ -1016,14 +720,15 @@ kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
         occaUnroll(p_Np)
         for(iint i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
-          //
+          const dfloat Dsni = DsT[n+i*p_Np];   
+          occaUnroll(p_Nfields)
           for(iint fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -1062,12 +767,12 @@ kernel void boltzmannSAPmlVolume2D(const iint pmlNelements,
         const iint id       = p_Nfields*(e*p_Np + n);
         const iint rhsId    = nrhs*id + p_Nfields*shift;
         const iint pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
-
+        
+        occaUnroll(p_Nfields)
         for(iint fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
-          //
-          rhsq[rhsId +fld] = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
+          rhsq[rhsId +fld]         = -msigmaxe*r_pmlqx[fld] - msigmaye*r_pmlqy[fld] + r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
          
         }
 

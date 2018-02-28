@@ -589,13 +589,13 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
             dfloat rhsv = rhsV[id];
 
             occaUnroll(p_intNfpNfaces)
-        for(int m=0;m<p_intNfpNfaces;++m){
-    // RefMassMatrix^{-1}*cInterp^t*cWeight
-    const dfloat L = intLIFTT[n+m*p_Np];
+            for(int m=0;m<p_intNfpNfaces;++m){
+              // RefMassMatrix^{-1}*cInterp^t*cWeight
+              const dfloat L = intLIFTT[n+m*p_Np];
 
-    rhsu += L*s_iFluxU[es][m];
-    rhsv += L*s_iFluxV[es][m];
-        }
+              rhsu += L*s_iFluxU[es][m];
+              rhsv += L*s_iFluxV[es][m];
+            }
 
             rhsU[id] = rhsu;  // 
             rhsV[id] = rhsv;  //  

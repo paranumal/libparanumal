@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 1000; 
+  mesh->errorStep = 10000; 
 
   dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
 
@@ -44,7 +44,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 0.001; // Was 200  
+    mesh->finalTime = 0.2; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -133,7 +133,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
   }
 
-   printf("dtex = %.5e dtim = %.5e \n", cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT), 1.f/(mesh->tauInv));
+   printf("dtex = %.5e dtim = %.5e \n", cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT), cfl*1.f/(mesh->tauInv));
 
  
   // Set multiRate/singleRate element groups/group  
