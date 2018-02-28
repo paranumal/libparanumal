@@ -89,24 +89,24 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
   }
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (int n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
+  for (dlong n=0;n<solver->Nmasked;n++) mask[solver->maskIds[n]] = 1;
 
   if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
   dlong cnt =0;
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
+    dfloat Grs = mesh->ggeo[e*mesh->Nggeo + G01ID];
+    dfloat Gss = mesh->ggeo[e*mesh->Nggeo + G11ID];
+    dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
+
     for (int n=0;n<mesh->Np;n++) {
       if (mask[e*mesh->Np + n]) continue; //skip masked nodes
       for (int m=0;m<mesh->Np;m++) {
         if (mask[e*mesh->Np + m]) continue; //skip masked nodes
 
         dfloat val = 0.;
-
-        dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
-        dfloat Grs = mesh->ggeo[e*mesh->Nggeo + G01ID];
-        dfloat Gss = mesh->ggeo[e*mesh->Nggeo + G11ID];
-        dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
         val += Grr*Srr[m+n*mesh->Np];
         val += Grs*Srs[m+n*mesh->Np];
@@ -185,7 +185,8 @@ void ellipticBuildContinuousTri2D(solver_t *solver, dfloat lambda, nonZero_t **A
       (*A)[cnt] = (*A)[n];
     }
   }
-  *nnz = cnt+1;
+  if (*nnz) cnt++;
+  *nnz = cnt;
 
   if(rank==0) printf("done.\n");
 

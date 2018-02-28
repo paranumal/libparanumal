@@ -55,7 +55,7 @@ void ellipticBuildFacePatchesTri2D(solver_t *solver, mesh2D *mesh, int basisNp, 
 
   //build a list of all face pairs
   mesh->NfacePairs=0;
-  for (int eM=0; eM<mesh->Nelements;eM++) {
+  for (dlong eM=0; eM<mesh->Nelements;eM++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       dlong eP = mesh->EToE[eM*mesh->Nfaces+f];
 

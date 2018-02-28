@@ -13,18 +13,18 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 
 
 void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
                         dfloat *MS, int *signature, dfloat *A);
 
-int getFullPatchIndex(refPatch_t *referencePatchList, int numRefPatches, int *signature);
+int getFullPatchIndex(refPatch_t *referencePatchList, dlong numRefPatches, int *signature);
 
 
 
 void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -65,12 +65,12 @@ void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basis
   int patchNp = mesh->Np*NpatchElements;
 
   (*Npatches) = 0;
-  int numRefPatches=0;
-  int refPatches = 0;
+  dlong numRefPatches=0;
+  dlong refPatches = 0;
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc((*Npatches)*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
   refPatch_t *referencePatchList = (refPatch_t *) calloc(numRefPatches,sizeof(refPatch_t));
 
@@ -80,26 +80,26 @@ void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basis
 
   dfloat *refPatchInvA;
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
     BuildFullPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
-    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
-    int eP3 = mesh->EToE[eM*mesh->Nfaces+3];
+    dlong eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eP3 = mesh->EToE[eM*mesh->Nfaces+3];
 
     if(eP0>=0 && eP1>=0 && eP2>=0 && eP3>=0){ //check if this is an interiour patch
 
       //get the vertices
-      int *vM = mesh->EToV + eM*mesh->Nverts;
-      int *vP0 = mesh->EToV + eP0*mesh->Nverts;
-      int *vP1 = mesh->EToV + eP1*mesh->Nverts;
-      int *vP2 = mesh->EToV + eP2*mesh->Nverts;
-      int *vP3 = mesh->EToV + eP3*mesh->Nverts;
+      hlong *vM = mesh->EToV + eM*mesh->Nverts;
+      hlong *vP0 = mesh->EToV + eP0*mesh->Nverts;
+      hlong *vP1 = mesh->EToV + eP1*mesh->Nverts;
+      hlong *vP2 = mesh->EToV + eP2*mesh->Nverts;
+      hlong *vP3 = mesh->EToV + eP3*mesh->Nverts;
 
-      int *vP[4] = {vP0,vP1,vP2,vP3};
+      hlong *vP[4] = {vP0,vP1,vP2,vP3};
 
       // intialize signature to -1
       int signature[4*4];
@@ -176,7 +176,7 @@ void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basis
     //copy inverse into patchesInvA
     for(int n=0;n<patchNp;++n){
       for(int m=0;m<patchNp;++m){
-        int id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
+        dlong id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
         (*patchesInvA)[id] = patchA[n*patchNp+m];
       }
     }
@@ -184,15 +184,15 @@ void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basis
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(patchA); free(invRefAA);
   free(MS);
 }
 
 void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A) {;
+                        dfloat *MS, dlong eM, dfloat *A) {;
 
   int NpatchElements = mesh->Nfaces+1;
   int patchNp = NpatchElements*mesh->Np;
@@ -212,11 +212,11 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
 
   //start with diagonals
   for(int N=0;N<NpatchElements;++N){
-    int e = (N==0) ? eM : mesh->EToE[mesh->Nfaces*eM+N-1];
+    dlong e = (N==0) ? eM : mesh->EToE[mesh->Nfaces*eM+N-1];
 
     if (e<0) continue; //skip this block if this is a boundary face
 
-    int vbase = e*mesh->Nvgeo;
+    dlong vbase = e*mesh->Nvgeo;
 
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
@@ -271,7 +271,7 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
 
     for (int fM=0;fM<mesh->Nfaces;fM++) {
       // load surface geofactors for this face
-      int sid = mesh->Nsgeo*(e*mesh->Nfaces+fM);
+      dlong sid = mesh->Nsgeo*(e*mesh->Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat nz = mesh->sgeo[sid+NZID];
@@ -364,17 +364,17 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
   //now the off-diagonals
   for (int fM=0;fM<mesh->Nfaces;fM++) {
 
-    int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+    dlong eP = mesh->EToE[eM*mesh->Nfaces+fM];
     if (eP < 0) continue; //skip this block if this is a boundary face
 
-    int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat nz = mesh->sgeo[sid+NZID];
     dfloat sJ = mesh->sgeo[sid+SJID];
     dfloat hinv = mesh->sgeo[sid+IHID];
 
-    int vbase = eM*mesh->Nvgeo;
+    dlong vbase = eM*mesh->Nvgeo;
 
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
@@ -388,7 +388,7 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
 
     dfloat J = mesh->vgeo[vbase+JID];
 
-    int vbaseP = eP*mesh->Nvgeo;
+    dlong vbaseP = eP*mesh->Nvgeo;
     dfloat drdxP = mesh->vgeo[vbaseP+RXID];
     dfloat drdyP = mesh->vgeo[vbaseP+RYID];
     dfloat drdzP = mesh->vgeo[vbaseP+RZID];
@@ -414,7 +414,7 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
 
         // neighbor penalty term
         int idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+m;
-        int mP = mesh->vmapP[idM]%mesh->Np;
+        int mP = (int) (mesh->vmapP[idM]%mesh->Np);
 
         int id = nM*patchNp + (fM+1)*mesh->Np + mP;
 
@@ -430,7 +430,7 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
 
         for(int i=0;i<mesh->Nfp;++i){
           int iM = mesh->faceNodes[fM*mesh->Nfp+i];
-          int iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+          int iP = (int) (mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
           dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 
@@ -451,7 +451,7 @@ void BuildFullPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau,
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfp;++m){
         int mM = mesh->faceNodes[fM*mesh->Nfp+m];
-        int mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+        int mP = (int) (mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np);
 
         for(int i=0;i<mesh->Nfp;++i){
           int iM = mesh->faceNodes[fM*mesh->Nfp+i];
@@ -496,7 +496,7 @@ void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dflo
   dfloat VY[8] = { 0, 0,sqrt(3.),  1/sqrt(3.),-7*sqrt(3.)/9, 8*sqrt(3.)/9, 8*sqrt(3.)/9, 1/sqrt(3.)};
   dfloat VZ[8] = { 0, 0,      0,2*sqrt(6.)/3, 4*sqrt(6.)/9, 4*sqrt(6.)/9, 4*sqrt(6.)/9,-2*sqrt(6.)/3};
 
-  int EToV[5*4] = {0,1,2,3,
+  hlong EToV[5*4] = {0,1,2,3,
                     0,2,1,7,
                     0,1,3,4,
                     1,2,3,5,
@@ -509,11 +509,11 @@ void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dflo
   refMesh->EY = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
   refMesh->EZ = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
 
-  refMesh->EToV = (int*) calloc(NpatchElements*mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(NpatchElements*mesh->Nverts, sizeof(hlong));
 
 
   for(int n=0;n<mesh->Nverts;++n){
-    int v = EToV[n];
+    hlong v = EToV[n];
     refMesh->EX[n] = VX[v];
     refMesh->EY[n] = VY[v];
     refMesh->EZ[n] = VZ[v];
@@ -524,13 +524,13 @@ void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dflo
     for (int n=0;n<mesh->Nverts;n++) {
       if (signature[f*mesh->Nverts + n]==-1) {
         //fill the missing vertex based ont he face number
-        int v = EToV[(f+1)*mesh->Nverts+mesh->Nverts-1];  
+        hlong v = EToV[(f+1)*mesh->Nverts+mesh->Nverts-1];  
         refMesh->EX[(f+1)*mesh->Nverts+n] = VX[v];
         refMesh->EY[(f+1)*mesh->Nverts+n] = VY[v];
         refMesh->EZ[(f+1)*mesh->Nverts+n] = VZ[v];
         refMesh->EToV[(f+1)*mesh->Nverts+n] = v; //extra vert      
       } else {
-        int v = signature[f*mesh->Nverts + n];  
+        hlong v = signature[f*mesh->Nverts + n];  
         refMesh->EX[(f+1)*mesh->Nverts+n] = VX[v];
         refMesh->EY[(f+1)*mesh->Nverts+n] = VY[v];
         refMesh->EZ[(f+1)*mesh->Nverts+n] = VZ[v];
@@ -551,7 +551,7 @@ void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dflo
 
   //build this reference patch
   BuildFullPatchAx(solver, refMesh, basis, tau, lambda, BCType, MS, 0, A);
-;
+
   free(refMesh->EX);
   free(refMesh->EY);
   free(refMesh->EZ);
@@ -561,10 +561,10 @@ void BuildReferenceFullPatch(solver_t *solver, mesh3D *mesh, dfloat *basis, dflo
   free(refMesh);
 }
 
-int getFullPatchIndex(refPatch_t *referencePatchList, int numRefPatches, int *signature) {
+int getFullPatchIndex(refPatch_t *referencePatchList, dlong numRefPatches, int *signature) {
 
   int index = -1;
-  for (int n=0;n<numRefPatches;n++) {
+  for (dlong n=0;n<numRefPatches;n++) {
     bool match = true;
     for (int m=0;m<4*4;m++) {
       match = match && (referencePatchList[n].signature[n] == signature[n]);

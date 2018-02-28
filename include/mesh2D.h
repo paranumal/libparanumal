@@ -43,12 +43,6 @@ void meshVTU2D(mesh2D *mesh, char *fileName);
 // print out solution at plot nodes 
 void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, int fld);
 
-// sort entries in an array in parallel
-void parallelSort(int N, void *vv, size_t sz,
-		  int (*compare)(const void *, const void *),
-		  void (*match)(void *, void *)
-		  );
-
 // compute geometric factors for local to physical map 
 void meshGeometricFactorsTri2D(mesh2D *mesh);
 void meshGeometricFactorsQuad2D(mesh2D *mesh);
@@ -112,15 +106,6 @@ mesh2D *meshSetupQuad2D(char *filename, int N);
 
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
-
-
-// compute solution to cavity problem
-void acousticsCavitySolution2D(dfloat x, dfloat y, dfloat time, 
-			       dfloat *u, dfloat *v, dfloat *p);
-
-// initial Gaussian pulse
-void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
-			      dfloat *u, dfloat *v, dfloat *p);
 
 void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
 

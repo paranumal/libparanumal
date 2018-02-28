@@ -4,33 +4,35 @@
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                            int *nnzA, int *globalStarts, const char *options){
+                            dlong *nnzA, hlong *globalStarts, const char *options){
 
   int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  int Nnum = mesh->Np*mesh->Nelements;
+  // number of degrees of freedom on this rank
+  hlong Nnum = mesh->Np*mesh->Nelements;
 
   // create a global numbering system
-  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(int));
+  hlong *globalIds = (hlong *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_INT, globalStarts+1, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
     for(int r=0;r<size;++r)
-      globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
+      globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
   /* so find number of elements on each rank */
-  int *rankNelements = (int*) calloc(size, sizeof(int));
-  int *rankStarts = (int*) calloc(size+1, sizeof(int));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_INT,
-    rankNelements, 1, MPI_INT, MPI_COMM_WORLD);
+  dlong *rankNelements = (dlong*) calloc(size, sizeof(dlong));
+  hlong *rankStarts = (hlong*) calloc(size+1, sizeof(hlong));
+  dlong Nelements = mesh->Nelements;
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_DLONG,
+                      rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
   //find offsets
   for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (int e =0;e<mesh->Nelements;e++) {
+  for (dlong e =0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) {
       globalIds[e*mesh->Np +n] = n + (e + rankStarts[rankM])*mesh->Np;
     }
@@ -38,12 +40,12 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    int *idSendBuffer = (int *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(int));
-    meshHaloExchange(mesh, mesh->Np*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
+    hlong *idSendBuffer = (hlong *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(hlong));
+    meshHaloExchange(mesh, mesh->Np*sizeof(hlong), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
     free(idSendBuffer);
   }
 
-  int nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  dlong nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
@@ -94,15 +96,15 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
 
   // reset non-zero counter
-  int nnz = 0;
+  dlong nnz = 0;
 
   if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
 
   // loop over all elements
   #pragma omp parallel for
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
-    int gbase = eM*mesh->Nggeo;
+    dlong gbase = eM*mesh->Nggeo;
     dfloat Grr = mesh->ggeo[gbase+G00ID];
     dfloat Grs = mesh->ggeo[gbase+G01ID];
     dfloat Grt = mesh->ggeo[gbase+G02ID];
@@ -127,7 +129,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
       }
     }
 
-    int vbase = eM*mesh->Nvgeo;
+    dlong vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -141,16 +143,16 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
     for (int m=0;m<mesh->Np;m++) {
       for (int fM=0;fM<mesh->Nfaces;fM++) {
         // load surface geofactors for this face
-        int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+        dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
         dfloat nx = mesh->sgeo[sid+NXID];
         dfloat ny = mesh->sgeo[sid+NYID];
         dfloat nz = mesh->sgeo[sid+NZID];
         dfloat sJ = mesh->sgeo[sid+SJID];
         dfloat hinv = mesh->sgeo[sid+IHID];
 
-        int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+        dlong eP = mesh->EToE[eM*mesh->Nfaces+fM];
         if (eP < 0) eP = eM;
-        int vbaseP = eP*mesh->Nvgeo;
+        dlong vbaseP = eP*mesh->Nvgeo;
         dfloat drdxP = mesh->vgeo[vbaseP+RXID];
         dfloat drdyP = mesh->vgeo[vbaseP+RYID];
         dfloat drdzP = mesh->vgeo[vbaseP+RZID];
@@ -166,7 +168,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
           // double check vol geometric factors are in halo storage of vgeo
           int idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
           int vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
-          int vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+          int vidP   = (int) (mesh->vmapP[idM]%mesh->Np); // only use this to identify location of positive trace vgeo
 
           qmM[i] =0;
           if (vidM == m) qmM[i] =1;

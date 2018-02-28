@@ -7,10 +7,10 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+  dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
+  dlong Nall   = Ntotal + Nhalo;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -44,7 +44,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
   solver->defaultStream = mesh->defaultStream;
   solver->dataStream = mesh->dataStream;
 
-  int Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  dlong Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
@@ -69,8 +69,6 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    int Nlocal = mesh->Nelements*mesh->Np;
-    int Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements
@@ -84,6 +82,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
 
     mesh->o_vgeo =
       mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    free(vgeoSendBuffer);
   }
 
   //build inverse of mass matrix
@@ -95,12 +94,13 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
   solver->allNeumannPenalty = 1;
-  int totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
-  
+
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[e*mesh->Nfaces+f];
       if (bc>0) {
@@ -285,7 +285,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -302,7 +302,7 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
 
   //use the bc flags to find masked ids
   solver->Nmasked = 0;
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1E9) {
       solver->mapB[n] = 0.;
     } else if (solver->mapB[n] == 1) { //Dirichlet boundary
@@ -311,12 +311,12 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
   }
   solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
   
-  solver->maskIds = (int *) calloc(solver->Nmasked, sizeof(int));
+  solver->maskIds = (dlong *) calloc(solver->Nmasked, sizeof(dlong));
   solver->Nmasked =0; //reset
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
   }
-  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(int), solver->maskIds);
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(dlong), solver->maskIds);
 
 
   solver->precon = (precon_t*) calloc(1, sizeof(precon_t));

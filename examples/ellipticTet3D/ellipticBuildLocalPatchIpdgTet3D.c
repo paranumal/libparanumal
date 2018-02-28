@@ -5,11 +5,11 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the patch A matrix for element eM
 void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
@@ -39,7 +39,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
   }
 
   (*Npatches) = 1;
-  int refPatches = 0;
+  dlong refPatches = 0;
 
   //build a mini mesh struct for the reference patch
   mesh3D *refMesh = (mesh3D*) calloc(1,sizeof(mesh3D));
@@ -61,7 +61,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
   refMesh->EX[2] = V3x;  refMesh->EY[2] = V3y; refMesh->EZ[2] = V3z;
   refMesh->EX[3] = V4x;  refMesh->EY[3] = V4y; refMesh->EZ[3] = V4z;
 
-  refMesh->EToV = (int*) calloc(mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(mesh->Nverts, sizeof(hlong));
 
   refMesh->EToV[0] = 0;
   refMesh->EToV[1] = 1;
@@ -80,7 +80,7 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -95,15 +95,15 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
   dfloat maxCond =0.;
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
     BuildLocalPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 
-    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
-    int eP3 = mesh->EToE[eM*mesh->Nfaces+3];
+    dlong eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eP3 = mesh->EToE[eM*mesh->Nfaces+3];
 
     int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
     int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
@@ -153,8 +153,8 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
   printf("Max condition number = %g, and slowest CG convergence rate = %g\n", maxCond, maxRate);
 
 
@@ -165,9 +165,9 @@ void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basi
 
 //returns the patch A matrix for element eM
 void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A) {
+                        dfloat *MS, dlong eM, dfloat *A) {
 
-  int vbase = eM*mesh->Nvgeo;
+  dlong vbase = eM*mesh->Nvgeo;
   dfloat drdx = mesh->vgeo[vbase+RXID];
   dfloat drdy = mesh->vgeo[vbase+RYID];
   dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -220,7 +220,7 @@ void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau
 
   for (int fM=0;fM<mesh->Nfaces;fM++) {
     // load surface geofactors for this face
-    int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+    dlong sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
     dfloat nx = mesh->sgeo[sid+NXID];
     dfloat ny = mesh->sgeo[sid+NYID];
     dfloat nz = mesh->sgeo[sid+NZID];

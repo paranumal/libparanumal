@@ -1,7 +1,7 @@
 #include "ellipticTet3D.h"
 
 void BuildLocalPatchAx(solver_t *solver, mesh3D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int eM, dfloat *A);
+                        dfloat *MS, dlong eM, dfloat *A);
 
 void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
@@ -34,7 +34,7 @@ void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, d
     }
   }
 
-  int diagNnum = basisNp*mesh->Nelements;
+  dlong diagNnum = basisNp*mesh->Nelements;
 
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
@@ -42,7 +42,7 @@ void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, d
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
     BuildLocalPatchAx(solver, mesh, basis, tau, lambda, BCType, MS, eM, patchA);
 

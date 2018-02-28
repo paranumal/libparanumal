@@ -25,8 +25,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   meshPhysicalNodesTet3D(mesh);
 
   // create halo extension for x,y arrays
-  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  int localNodes     = mesh->Nelements*mesh->Np;
+  dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  dlong localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -50,10 +50,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   free(mesh->z);
   free(sendBuffer);
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+  dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
+  dlong Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 
@@ -137,17 +137,18 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
       mesh->MM);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
       mesh->vmapP);
 
 
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
-  int totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
@@ -191,10 +192,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   }
 
   if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+    kernelInfo.addDefine("dlong","int");
   }
   if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -456,7 +457,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
@@ -473,7 +474,7 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
 
   //use the bc flags to find masked ids
   solver->Nmasked = 0;
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1E9) {
       solver->mapB[n] = 0.;
     } else if (solver->mapB[n] == 1) { //Dirichlet boundary
@@ -482,12 +483,12 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   }
   solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
   
-  solver->maskIds = (int *) calloc(solver->Nmasked, sizeof(int));
+  solver->maskIds = (dlong *) calloc(solver->Nmasked, sizeof(dlong));
   solver->Nmasked =0; //reset
-  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
   }
-  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(int), solver->maskIds);
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(dlong), solver->maskIds);
 
   free(DrT); free(DsT); free(DtT); free(LIFTT);
 

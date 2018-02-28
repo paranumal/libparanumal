@@ -1,11 +1,5 @@
 #include "ellipticTet3D.h"
 
-void ellipticStartHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange3D(mesh3D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-void ellipticParallelGatherScatterTet3D(mesh3D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-
 
 void ellipticPreconditioner3D(solver_t *solver,
             dfloat lambda,
@@ -15,10 +9,6 @@ void ellipticPreconditioner3D(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  ogs_t    *ogs = solver->ogs; // C0 Gather ScatterTri info
-
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
 
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
@@ -91,7 +81,7 @@ void ellipticPreconditioner3D(solver_t *solver,
 
   } else if(strstr(options, "JACOBI")){
 
-    int Ntotal = mesh->Np*mesh->Nelements;
+    dlong Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
     solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);

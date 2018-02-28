@@ -4,7 +4,7 @@
 #include "mesh3D.h"
 
 int findBestMatch(dfloat x1, dfloat y1, dfloat z1,
-		   int Np2, int *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP){
+                   int Np2, int *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP){
   
   int matchIndex;
   dfloat mindist2=1e9;
@@ -28,44 +28,44 @@ int findBestMatch(dfloat x1, dfloat y1, dfloat z1,
 
   return matchIndex;
 }
-		
+                
 
 // serial face-node to face-node connection
 void meshConnectFaceNodes3D(mesh3D *mesh){
   
   /* volume indices of the interior and exterior face nodes for each element */
-  mesh->vmapM = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
-  mesh->vmapP = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
-  mesh->mapP  = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
+  mesh->vmapM = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
+  mesh->vmapP = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
+  mesh->mapP  = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
   
   /* assume elements already connected */
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
-      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      dlong eP = mesh->EToE[e*mesh->Nfaces+f];
       int fP = mesh->EToF[e*mesh->Nfaces+f];
       if(eP<0 || fP<0){ // fake connections for unconnected faces
-	eP = e;
-	fP = f;
+        eP = e;
+        fP = f;
       }
       /* for each node on this face find the neighbor node */
       for(int n=0;n<mesh->Nfp;++n){
-	int  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
-	dfloat xM = mesh->x[idM];
-	dfloat yM = mesh->y[idM];
-	dfloat zM = mesh->z[idM];
-	int nP;
-	
-	int  idP = findBestMatch(xM, yM, zM,
-				  mesh->Nfp, 
-				  mesh->faceNodes+fP*mesh->Nfp,
-				  mesh->x+eP*mesh->Np,
-				  mesh->y+eP*mesh->Np,
-				  mesh->z+eP*mesh->Np, &nP);
+        dlong  idM = mesh->faceNodes[f*mesh->Nfp+n] + e*mesh->Np;
+        dfloat xM = mesh->x[idM];
+        dfloat yM = mesh->y[idM];
+        dfloat zM = mesh->z[idM];
+        int nP;
+        
+        int  idP = findBestMatch(xM, yM, zM,
+                                  mesh->Nfp, 
+                                  mesh->faceNodes+fP*mesh->Nfp,
+                                  mesh->x+eP*mesh->Np,
+                                  mesh->y+eP*mesh->Np,
+                                  mesh->z+eP*mesh->Np, &nP);
 
-	int   id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
-	mesh->vmapM[id] = idM;
-	mesh->vmapP[id] = idP + eP*mesh->Np;
-	mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
+        dlong id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
+        mesh->vmapM[id] = idM;
+        mesh->vmapP[id] = idP + eP*mesh->Np;
+        mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
       }
     }
   }

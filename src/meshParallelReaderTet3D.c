@@ -16,7 +16,6 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp = fopen(fileName, "r");
-  int n;
 
   char *status;
 
@@ -45,7 +44,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   /* read number of nodes in mesh */
   status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nnodes));
+  sscanf(buf, hlongFormat, &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
   dfloat *VX = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
@@ -53,10 +52,10 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   dfloat *VZ = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
 
   /* load nodes */
-  for(n=0;n<mesh->Nnodes;++n){
+  for(hlong n=0;n<mesh->Nnodes;++n){
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
-	   VX+n, VY+n, VZ+n);
+           VX+n, VY+n, VZ+n);
   }
   
   /* look for section with Element node data */
@@ -65,14 +64,15 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
+  hlong Nelements;
   status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nelements));
+  sscanf(buf, hlongFormat, &Nelements);
 
   /* find # of tets */
   fpos_t fpos;
   fgetpos(fp, &fpos);
-  int Ntets = 0, NboundaryFaces = 0;
-  for(n=0;n<mesh->Nelements;++n){
+  hlong Ntets = 0, NboundaryFaces = 0;
+  for(hlong n=0;n<Nelements;++n){
     int elementType;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
@@ -82,34 +82,35 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   // rewind to start of elements
   fsetpos(fp, &fpos);
 
-  int chunk = Ntets/size;
-  int remainder = Ntets - chunk*size;
+  hlong chunk = (hlong) Ntets/size;
+  int remainder = (int) (Ntets - chunk*size);
 
-  int NtetsLocal = chunk + (rank<remainder);
+  hlong NtetsLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  int start = rank*chunk + mymin(rank, remainder); 
-  int end = start + NtetsLocal-1;
+  hlong start = rank*chunk + mymin(rank, remainder); 
+  hlong end = start + NtetsLocal-1;
   
   /* allocate space for Element node index data */
 
   mesh->EToV 
-    = (int*) calloc(NtetsLocal*mesh->Nverts, sizeof(int));
+    = (hlong*) calloc(NtetsLocal*mesh->Nverts, sizeof(hlong));
   mesh->elementInfo
     = (int*) calloc(NtetsLocal,sizeof(int));
 
   /* scan through file looking for tetrahedra elements */
-  int cnt=0, bcnt = 0;
+  hlong cnt=0, bcnt = 0;
   Ntets = 0;
 
-  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*4, sizeof(int));
-  for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4;
+  mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*4, sizeof(hlong));
+  for(hlong n=0;n<Nelements;++n){
+    int elementType; 
+    hlong v1, v2, v3, v4;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==2){ // boundary face
-      sscanf(buf, "%*d%*d %*d%d%*d %d%d%d", 
-	     mesh->boundaryInfo+bcnt*4, &v1, &v2, &v3);
+      sscanf(buf, "%*d%*d %*d"hlongFormat"%*d" hlongFormat hlongFormat hlongFormat, 
+             mesh->boundaryInfo+bcnt*4, &v1, &v2, &v3);
       mesh->boundaryInfo[bcnt*4+1] = v1-1;
       mesh->boundaryInfo[bcnt*4+2] = v2-1;
       mesh->boundaryInfo[bcnt*4+3] = v3-1;
@@ -118,16 +119,16 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
     if(elementType==4){  // tet code is 4
       if(start<=Ntets && Ntets<=end){
-	sscanf(buf,
-	       "%*d%*d%*d %d %*d"
-	       "%d" "%d" "%d" "%d",
-	       mesh->elementInfo+cnt,&v1, &v2, &v3, &v4);
-	/* read vertex triplet for trianngle */
-	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
-	mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
-	mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
-	mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
-	++cnt;
+        sscanf(buf,
+               "%*d%*d%*d %d %*d"
+               hlongFormat hlongFormat hlongFormat hlongFormat,
+               mesh->elementInfo+cnt,&v1, &v2, &v3, &v4);
+        /* read vertex triplet for trianngle */
+        mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
+        mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
+        mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
+        mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
+        ++cnt;
       }
       ++Ntets;
     }
@@ -138,15 +139,15 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->NboundaryFaces = bcnt;
   
   /* record number of found tets */
-  mesh->Nelements = NtetsLocal;
+  mesh->Nelements = (dlong) NtetsLocal;
 
   /* collect vertices for each element */
   mesh->EX = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
-    for(n=0;n<mesh->Nverts;++n){
-      int vid = mesh->EToV[e*mesh->Nverts+n];
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
+      hlong vid = mesh->EToV[e*mesh->Nverts+n];
       mesh->EX[e*mesh->Nverts+n] = VX[vid];
       mesh->EY[e*mesh->Nverts+n] = VY[vid];
       mesh->EZ[e*mesh->Nverts+n] = VZ[vid];

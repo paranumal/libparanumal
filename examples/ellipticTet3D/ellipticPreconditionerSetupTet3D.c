@@ -11,11 +11,10 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    int nnz;
+    dlong nnz;
     nonZero_t *A;
 
-    int Nnum = mesh->Np*mesh->Nelements;
-    int *globalStarts = (int*) calloc(size+1, sizeof(int));
+    hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTet3D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
@@ -23,11 +22,11 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       ellipticBuildContinuousTet3D(solver,lambda,&A,&nnz,&(precon->ogs),globalStarts, options);
     }
 
-    int *Rows = (int *) calloc(nnz, sizeof(int));
-    int *Cols = (int *) calloc(nnz, sizeof(int));
+    hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
+    hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    for (int n=0;n<nnz;n++) {
+    for (dlong n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
