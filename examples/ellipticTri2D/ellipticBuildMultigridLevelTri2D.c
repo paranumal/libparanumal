@@ -61,8 +61,6 @@ solver_t *ellipticBuildMultigridLevelTri2D(solver_t *baseSolver, int Nc, int Nf,
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
   dlong Nblock = (Ntotal+blockSize-1)/blockSize;
-  dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
-  dlong Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 

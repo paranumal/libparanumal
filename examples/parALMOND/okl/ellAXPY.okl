@@ -1,15 +1,15 @@
-kernel void ellAXPY(const int   numRows,
+kernel void ellAXPY(const dlong   numRows,
         const int             nnzPerRow,
-        const int             strideLength,
+        const dlong             strideLength,
         const dfloat           alpha,
         const dfloat           beta,
-        const int   *restrict cols,
+        const dlong  *restrict cols,
         const dfloat *restrict coefs,
         const dfloat *restrict x,
               dfloat *restrict y){
 
   // y = alpha * A * x + beta * y
-  for(int i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;tile(256)){
 
     if(i < numRows){
       const dfloat betay = beta*y[i];
@@ -17,10 +17,10 @@ kernel void ellAXPY(const int   numRows,
       dfloat result = 0.;
       for(int c=0; c<nnzPerRow; c++){
         // location in the memory
-        const int address = c*strideLength+i;
+        const dlong address = c*strideLength+i;
 
         // access column index
-        const int col = cols[address];
+        const dlong col = cols[address];
 
         if (col >-1) {
           const dfloat coeffn = coefs[address];
@@ -34,27 +34,27 @@ kernel void ellAXPY(const int   numRows,
   }
 }
 
-kernel void ellZeqAXPY(const int   numRows,
+kernel void ellZeqAXPY(const dlong   numRows,
            const int   nnzPerRow,
-           const int   strideLength,
+           const dlong   strideLength,
            const dfloat   alpha,
            const dfloat   beta,
-           const int   *restrict cols,
+           const dlong  *restrict cols,
            const dfloat *restrict coefs,
            const dfloat *restrict x,
            const dfloat *restrict y,
                  dfloat *restrict z){
 
   // z = alpha * A * x + beta * y
-  for(int i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;tile(256)){
     if(i < numRows){
       dfloat result = 0.;
       for(int c=0; c<nnzPerRow; c++){
         // location in the memory
-        const int address = c*strideLength+i;
+        const dlong address = c*strideLength+i;
 
         // access column index
-        const int col = cols[address];
+        const dlong col = cols[address];
 
         // dont access coefs[address] if col is -ve
         if(col > -1) result += coefs[address]*x[col];
@@ -64,27 +64,27 @@ kernel void ellZeqAXPY(const int   numRows,
   }
 }
 
-kernel void ellJacobi(const int   numRows,
+kernel void ellJacobi(const dlong   numRows,
            const int   nnzPerRow,
-           const int   strideLength,
-           const int   *restrict cols,
+           const dlong   strideLength,
+           const dlong  *restrict cols,
            const dfloat *restrict coefs,
            const dfloat *restrict x,
            const dfloat *restrict r,
                  dfloat *restrict z){
 
   // z = r - (A-D)*x
-  for(int i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;tile(256)){
     if(i < numRows){
       dfloat result = r[i];
 
       // skip the first stride since it corresponds to diag
       for(int c=1; c<nnzPerRow; c++){
         // location in the memory
-        const int address = c*strideLength+i;
+        const dlong address = c*strideLength+i;
 
         // access column index
-        const int col = cols[address];
+        const dlong col = cols[address];
 
         // dont access coefs[address] or x[col] if col is -ve
         if(col > -1) result -= coefs[address]*x[col];

@@ -1,7 +1,7 @@
 
 //creators
-csr * newCSRfromCOO(int N, int* globalRowStarts,
-            int NNZ,   int *Ai, int *Aj, dfloat *Avals);
+csr * newCSRfromCOO(dlong N, hlong* globalRowStarts,
+            		dlong NNZ,   hlong *Ai, hlong *Aj, dfloat *Avals);
 void freeCSR(csr *A);
 dcoo *newDCOO(parAlmond_t *parAlmond, csr *B);
 hyb * newHYB(parAlmond_t *parAlmond, csr *csrA);
@@ -27,7 +27,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::
 void smoothChebyshev   (parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory o_r, occa::memory o_x, bool x_is_zero);
 
 //halo exchange
-void csrHaloSetup(csr *A, int *globalColStarts);
+void csrHaloSetup(csr *A, hlong *globalColStarts);
 void csrHaloExchange(csr *A, size_t Nbytes, void *sourceBuffer, void *sendBuffer, void *recvBuffer);
 void csrHaloExchangeStart(csr *A, size_t Nbytes, void *sourceBuffer, void *sendBuffer, void *recvBuffer);
 void csrHaloExchangeFinish(csr *A);

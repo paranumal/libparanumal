@@ -1,7 +1,7 @@
 #include "agmg.h"
 
 csr * newCSRfromCOO(dlong N, hlong* globalRowStarts,
-                    long long int nnz, hlong *Ai, hlong *Aj, dfloat *Avals){
+                    dlong nnz, hlong *Ai, hlong *Aj, dfloat *Avals){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -19,13 +19,14 @@ csr * newCSRfromCOO(dlong N, hlong* globalRowStarts,
   //first, count number of local, and non-local non-zeros
   dlong diagNNZ=0;
   dlong offdNNZ=0;
-  for (long long int n=0;n<nnz;n++) {
+  for (dlong n=0;n<nnz;n++) {
     if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1)) offdNNZ++;
     else diagNNZ++;
   }
 
   dlong   *diagAi, *diagAj;
-  dlong   *offdAi, *offdAj;
+  dlong   *offdAi;
+  hlong   *offdAj;
   dfloat *diagAvals, *offdAvals;
 
   if (diagNNZ) {

@@ -1,17 +1,17 @@
 #define B 256
 
-kernel void weightedInnerProduct1(const int N,
+kernel void weightedInnerProduct1(const dlong N,
 				  const dfloat * restrict w,
 				  const dfloat * restrict x,
 				  dfloat * restrict wx2){
   
 
-  for(int b=0;b<(N+B-1)/B;++b;outer0){
+  for(dlong b=0;b<(N+B-1)/B;++b;outer0){
     
     volatile shared dfloat s_wx2[B];
 
     for(int t=0;t<B;++t;inner0){
-      const int id = t + B*b;
+      const dlong id = t + B*b;
       s_wx2[t] = (id<N) ? w[id]*x[id]*x[id] : 0.f;
     }
 

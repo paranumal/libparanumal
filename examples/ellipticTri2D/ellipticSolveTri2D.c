@@ -251,7 +251,6 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
   } else if (strstr(options, "BRDG")){
 
-    dlong offset = 0;
     dfloat alpha = 0., alphaG =0.;
     dlong Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
@@ -378,7 +377,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   occaTimerToc(mesh->device,"AxKernel");
 }
 
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
+void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   mesh_t *mesh = solver->mesh;
 
@@ -504,10 +503,10 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   fclose(fp);
 */
 
-  int Niter;
+  int Niter = 0;
   int maxIter = 5000; 
 
-  double start, end;
+  double start = 0.0, end =0.0;
 
   if(strstr(options,"VERBOSE")){
     mesh->device.finish();

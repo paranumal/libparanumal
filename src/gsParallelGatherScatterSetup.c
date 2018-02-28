@@ -7,8 +7,8 @@
 
 #include "gslib.h"
 
-void *gsParallelGatherScatterSetup(long long int NuniqueBases,
-                        				   long long int *gatherGlobalNodes,
+void *gsParallelGatherScatterSetup(int NuniqueBases,
+                        				   int *gatherGlobalNodes,
                                    int verbose){
                           
   /* gslib stuff */

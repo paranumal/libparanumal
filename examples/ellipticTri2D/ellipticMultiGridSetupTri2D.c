@@ -1,8 +1,5 @@
 #include "ellipticTri2D.h"
 
-void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-
 void AxTri2D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
@@ -131,10 +128,6 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   //storage for lambda parameter
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
-
-  //storage for restriction matrices
-  dfloat **R = (dfloat **) calloc(numLevels,sizeof(dfloat*));
-  occa::memory *o_R = (occa::memory *) calloc(numLevels,sizeof(occa::memory));
 
   //initialize parAlmond
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
@@ -282,7 +275,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
   /* build degree 1 problem and pass to AMG */
   nonZero_t *coarseA;
-  long long int nnzCoarseA;
+  dlong nnzCoarseA;
   ogs_t *coarseogs;
 
   solver_t* solverL = solversN[1];

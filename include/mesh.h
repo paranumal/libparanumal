@@ -20,7 +20,7 @@
 #endif
 
 //host index data type
-#if 0
+#if 1
 #define hlong int
 #define MPI_HLONG MPI_INT
 #define hlongFormat "%d"
@@ -60,9 +60,9 @@ typedef struct {
   dlong Nelements;
   hlong *EToV; // element-to-vertex connectivity
   dlong *EToE; // element-to-element connectivity
-  dlong *EToF; // element-to-(local)face connectivity
-  dlong *EToP; // element-to-partition/process connectivity
-  dlong *EToB; // element-to-boundary condition type
+  int   *EToF; // element-to-(local)face connectivity
+  int   *EToP; // element-to-partition/process connectivity
+  int   *EToB; // element-to-boundary condition type
 
   int *elementInfo; //type of element
 
@@ -227,7 +227,8 @@ typedef struct {
   dfloat *sparseSssT;
   
 
-  dlong *mmapM, *mmapP, *mmapS;
+  dlong *mmapM, *mmapP; 
+  int   *mmapS;
   dfloat *mapSgn;
 
   // time stepping info

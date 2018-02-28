@@ -78,7 +78,7 @@ void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
   dlong cnt = 0;
   for(dlong n=0;n<Nnum;++n) {
     if (globalNumbering[n] < 0) continue; //skip negative ids
-    sendCounts[globalOwners[n]] += sizeof(parallelNode2_t);
+    sendCounts[globalOwners[n]]++;
     cnt++;
   }
 

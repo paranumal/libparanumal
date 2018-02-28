@@ -1,16 +1,16 @@
 
-kernel void innerProduct(const int N,
+kernel void innerProduct(const dlong N,
 			 const dfloat * restrict w,
 			 const dfloat * restrict x,
 			 dfloat * restrict wx){
   
 
-  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
     volatile shared dfloat s_wx[p_blockSize];
 
     for(int t=0;t<p_blockSize;++t;inner0){
-      const int id = t + b*p_blockSize;
+      const dlong id = t + b*p_blockSize;
       s_wx[t] = (id<N) ? (w[id]*x[id]) : 0.f;
     }
 
@@ -51,19 +51,19 @@ kernel void innerProduct(const int N,
   }
 }
 
-kernel void innerProductAtomic(const int N,
-			       const int Nblocks,
+kernel void innerProductAtomic(const dlong N,
+			       const dlong Nblocks,
 			       const dfloat * restrict w,
 			       const dfloat * restrict x,
 			       dfloat * restrict wx){
   
 
-  for(int b=0;b<Nblocks;++b;outer0){
+  for(dlong b=0;b<Nblocks;++b;outer0){
     
     volatile shared dfloat s_wx[p_blockSize];
 
     for(int t=0;t<p_blockSize;++t;inner0){
-      int id = t + b*p_blockSize;
+      dlong id = t + b*p_blockSize;
       dfloat tmp  = 0;
       while(id<N){
 	tmp += w[id]*x[id];

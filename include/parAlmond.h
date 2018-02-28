@@ -239,10 +239,10 @@ typedef struct {
 
   //Coarse solver
   void *ExactSolve;
-  hlong coarseTotal;
-  hlong coarseOffset;
-  hlong *coarseOffsets;
-  hlong *coarseCounts;
+  int coarseTotal;
+  int coarseOffset;
+  int *coarseOffsets;
+  int *coarseCounts;
   dfloat *invCoarseA;
   dfloat *xCoarse, *rhsCoarse;
 
@@ -285,7 +285,7 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        hlong* rowStarts,
-                       long long int  nnz,
+                       dlong nnz,
                        hlong* Ai,
                        hlong* Aj,
                        dfloat* Avals,

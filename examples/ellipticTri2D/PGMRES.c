@@ -80,7 +80,6 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
     }
     else{
       int Ntotal = mesh->Np*mesh->Nelements; 
-      int Nblock = (Ntotal+blockSize-1)/blockSize; 
       int Nhalo = mesh->Np*mesh->totalHaloPairs; 
       int Nall   = Ntotal + Nhalo; 
 
