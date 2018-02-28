@@ -142,6 +142,10 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
 
     ellipticMultiGridSetupTet3D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
+  } else if(strstr(options, "SEMFEM")) {
+
+    ellipticSEMFEMSetupTet3D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
+
   } else if(strstr(options,"JACOBI")) {
 
     dfloat *invDiagA;

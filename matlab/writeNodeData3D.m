@@ -304,6 +304,26 @@ NpM1 = length(rM1);
 writeFloatMatrix(fid, IP1, 'Nodal degree raise matrix');
 writeFloatMatrix(fid, IM1, 'Nodal degree lower matrix');
 
+%% SEMFEM
+[req,seq,teq] = EquiNodes3D(N);
+FEMEToV = delaunayFixVolume(req,seq,teq)-1;;
+rFEM = r;
+sFEM = s;
+tFEM = t;
+
+NpFEM = length(rFEM);
+NelFEM = size(FEMEToV,1);
+
+IQN = Vandermonde3D(N, rFEM, sFEM, tFEM)/V;
+invIQN = (transpose(IQN)*IQN)\(transpose(IQN));
+
+writeFloatMatrix(fid, rFEM, 'SEMFEM r-coordinates');
+writeFloatMatrix(fid, sFEM, 'SEMFEM s-coordinates');
+writeFloatMatrix(fid, tFEM, 'SEMFEM t-coordinates');
+
+writeIntMatrix(fid, FEMEToV, 'SEMFEM reference mesh');  
+writeFloatMatrix(fid, invIQN', 'SEMFEM interpolation matrix');
+
 
 % build interpolation matrix (coarse->fine)
 EToVi = [1 5 7 8; 5 2 6 9; 7 6 3 10; 8 9 10 4; 8 5 7 9; 7 5 6 9; 8 9 7 10; 9 6 7 10];

@@ -79,6 +79,21 @@ void ellipticPreconditioner3D(solver_t *solver,
       if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_z);
     }
 
+  } else if (strstr(options, "SEMFEM")) {
+
+    o_z.copyFrom(o_r);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+    precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
+    meshParallelGather(mesh, precon->FEMogs, precon->o_rFEM, precon->o_GrFEM);
+    occaTimerTic(mesh->device,"parALMOND");
+    parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
+    occaTimerToc(mesh->device,"parALMOND");
+    meshParallelScatter(mesh, precon->FEMogs, precon->o_GzFEM, precon->o_zFEM);
+    precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_z, dfloatString, "add");
+
   } else if(strstr(options, "JACOBI")){
 
     dlong Ntotal = mesh->Np*mesh->Nelements;

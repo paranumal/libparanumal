@@ -3,16 +3,16 @@
 
 
 // experimental overlapping patch solver
-kernel void ellipticPatchGather(const int Nelements,
-                                  const int   * restrict EToE,
-                                  const int   * restrict EToF,
-                                  const dfloat * restrict q,
-                                  dfloat * restrict Gq){
+kernel void ellipticPatchGather(const dlong Nelements,
+                                const dlong   * restrict EToE,
+                                const int   * restrict EToF,
+                                const dfloat * restrict q,
+                                dfloat * restrict Gq){
 
   // assume one patch per outer iteration (tune later)
-  for(int eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;outer0){
 
-    for(int e=eo;e<eo+p_NblockP;++e;inner1){
+    for(dlong e=eo;e<eo+p_NblockP;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         if(e<Nelements){
@@ -23,8 +23,8 @@ kernel void ellipticPatchGather(const int Nelements,
 
           for(int f=0;f<p_Nfaces;++f){
 
-            const int eP = EToE[e*p_Nfaces+f]; // load element e first
-            const int fP = EToF[e*p_Nfaces+f];
+            const dlong eP = EToE[e*p_Nfaces+f]; // load element e first
+            const int   fP = EToF[e*p_Nfaces+f];
 
             if(eP>=0){
               Gqn += q[eP*p_patchNp+(fP+1)*p_Np+n];
@@ -38,15 +38,15 @@ kernel void ellipticPatchGather(const int Nelements,
   }
 }
 
-kernel void ellipticFacePatchGather(const int Nelements,
-                                  const int   * restrict EToFPairs,
-                                  const dfloat * restrict q,
-                                  dfloat * restrict Gq){
+kernel void ellipticFacePatchGather(const dlong Nelements,
+                                    const dlong  * restrict EToFPairs,
+                                    const dfloat * restrict q,
+                                    dfloat * restrict Gq){
 
   // assume one patch per outer iteration (tune later)
-  for(int eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;outer0){
 
-    for(int e=eo;e<eo+p_NblockP;++e;inner1){
+    for(dlong e=eo;e<eo+p_NblockP;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         if(e<Nelements){
@@ -54,7 +54,7 @@ kernel void ellipticFacePatchGather(const int Nelements,
           dfloat Gqn = 0;
 
           for(int f=0;f<p_Nfaces;++f){
-            const int fP = EToFPairs[p_Nfaces*e+f];
+            const dlong fP = EToFPairs[p_Nfaces*e+f];
 
             if (fP >=0) {
               Gqn += q[fP*p_Np + n];

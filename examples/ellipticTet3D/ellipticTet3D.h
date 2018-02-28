@@ -177,4 +177,8 @@ void ellipticSetupSmootherTet3D(solver_t *solver, precon_t *precon,
 void matrixInverse(int N, dfloat *A);
 dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char * options);
 
+void ellipticSEMFEMSetupTet3D(solver_t *solver, precon_t* precon,
+                              dfloat tau, dfloat lambda, int *BCType,
+                              const char *options, const char *parAlmondOptions);
+
 #endif

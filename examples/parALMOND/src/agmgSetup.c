@@ -1054,7 +1054,7 @@ csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **null
     //we now need to reorder the x vector for the halo, and shift the column indices
     hlong *col = (hlong *) calloc(P->offdNNZ,sizeof(hlong));
     for (dlong i=0;i<P->offdNNZ;i++)
-      col[i] = P->offdCols[i]; //copy non-local column global ids
+      col[i] = offdCols[i]; //copy non-local column global ids
 
     //sort by global index
     std::sort(col,col+P->offdNNZ);
@@ -1670,7 +1670,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     //we now need to reorder the x vector for the halo, and shift the column indices
     hlong *col = (hlong *) calloc(RAP->offdNNZ,sizeof(hlong));
     for (dlong n=0;n<RAP->offdNNZ;n++)
-      col[n] = RAP->offdCols[n]; //copy non-local column global ids
+      col[n] = offdCols[n]; //copy non-local column global ids
 
     //sort by global index
     std::sort(col,col+RAP->offdNNZ);

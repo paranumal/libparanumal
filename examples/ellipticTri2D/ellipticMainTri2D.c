@@ -37,7 +37,7 @@ int main(int argc, char **argv){
   // method can be IPDG or CONTINUOUS
   //  can add NONSYM option
   // basis can be NODAL or BERN
-  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
   // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
   //                      patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
@@ -47,7 +47,7 @@ int main(int argc, char **argv){
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=LOCALPATCH,EXACT");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=SEMFEM");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=LOCALPATCH");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup

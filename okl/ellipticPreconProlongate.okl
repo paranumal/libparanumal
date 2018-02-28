@@ -1,9 +1,9 @@
-kernel void ellipticPreconProlongate_v0(const int Nelements,
-          const dfloat * restrict V1,
-          const dfloat * restrict q1,
-          dfloat * restrict qN){
+kernel void ellipticPreconProlongate_v0(const dlong Nelements,
+                                        const dfloat * restrict V1,
+                                        const dfloat * restrict q1,
+                                        dfloat * restrict qN){
 
-  for(int e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;outer0){
     for(int n=0;n<p_Np;++n;inner0){
       dfloat tmp = 0; // qN[e*p_Np+n] ;
 
@@ -16,19 +16,19 @@ kernel void ellipticPreconProlongate_v0(const int Nelements,
 }
 
 
-kernel void ellipticPreconProlongate(const int Nelements,
-             const dfloat * restrict R,
-             const dfloat * restrict qCoarse,
-             dfloat * restrict qFine){
+kernel void ellipticPreconProlongate(const dlong Nelements,
+                                     const dfloat * restrict R,
+                                     const dfloat * restrict qCoarse,
+                                     dfloat * restrict qFine){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_qCoarse[p_NblockV][p_NpCoarse];
     shared dfloat s_R[p_NpCoarse][p_NpFine];
 
     for(int es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
-        int t = n + es*p_NpFine;
+        dlong t = n + es*p_NpFine;
 
         if(t<p_NpCoarse*p_NblockV)
           if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
@@ -45,7 +45,7 @@ kernel void ellipticPreconProlongate(const int Nelements,
 
     for(int es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
-        int e = eo + es;
+        const dlong e = eo + es;
         if(e<Nelements){
           dfloat tmp = 0.;
           //dfloat tmp = qFine[e*p_NpFine+n];

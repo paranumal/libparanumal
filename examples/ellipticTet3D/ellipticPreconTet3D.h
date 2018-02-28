@@ -12,6 +12,7 @@ typedef struct {
   long long int preconBytes;
 
   ogs_t *ogs;
+  ogs_t *FEMogs;
 
   dfloat *zP;
   occa::memory o_zP;
@@ -50,6 +51,15 @@ typedef struct {
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
 
+  occa::memory o_rFEM;
+  occa::memory o_zFEM;
+  occa::memory o_GrFEM;
+  occa::memory o_GzFEM;
+
+  occa::kernel SEMFEMInterpKernel;
+  occa::kernel SEMFEMAnterpKernel;
+
+
   ogs_t *ogsP, *ogsDg;
 
   occa::memory o_diagA;
@@ -83,6 +93,10 @@ typedef struct {
   //dummy almond level to store the OAS smoothing op
   agmgLevel *OASLevel;
   void **OASsmoothArgs;
+
+  //SEMFEM variables
+  mesh3D *femMesh;
+
 
 } precon_t;
 

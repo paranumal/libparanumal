@@ -152,6 +152,8 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
   kernelInfo.addDefine("p_NpFine", mesh->Np);
   kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
 
+  kernelInfo.addDefine("p_NpFEM", mesh->NpFEM);
+
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
@@ -395,6 +397,16 @@ solver_t *ellipticSolveSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*B
       solver->precon->exactBlockJacobiSolverKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
                    "ellipticExactBlockJacobiSolver3D",
+                   kernelInfo);
+
+      solver->precon->SEMFEMInterpKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+                   "ellipticSEMFEMInterp",
+                   kernelInfo);
+
+      solver->precon->SEMFEMAnterpKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+                   "ellipticSEMFEMAnterp",
                    kernelInfo);
     }
     MPI_Barrier(MPI_COMM_WORLD);

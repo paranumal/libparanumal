@@ -269,7 +269,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
-  long long int nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
+  dlong nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
   int *AsendCounts  = (int*) calloc(size, sizeof(int));
@@ -278,7 +278,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   //Build unassembed non-zeros
-  long long int cnt =0;
+  dlong cnt =0;
+  #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int n=0;n<femMesh->Np;n++) {
       dlong idn = localIds[e*femMesh->Np + n];
@@ -302,12 +303,15 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          // pack non-zero
-          sendNonZeros[cnt].val = val;
-          sendNonZeros[cnt].row = pmesh->globalIds[idn];
-          sendNonZeros[cnt].col = pmesh->globalIds[idm];
-          sendNonZeros[cnt].ownerRank = pmesh->globalOwners[idn];
-          cnt++;
+          #pragma omp critical
+          {
+            // pack non-zero
+            sendNonZeros[cnt].val = val;
+            sendNonZeros[cnt].row = pmesh->globalIds[idn];
+            sendNonZeros[cnt].col = pmesh->globalIds[idm];
+            sendNonZeros[cnt].ownerRank = pmesh->globalOwners[idn];
+            cnt++;
+          }
         }
       }
     }
@@ -330,7 +334,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Type_commit (&MPI_NONZERO_T);
 
   // count how many non-zeros to send to each process
-  for(long long int n=0;n<cnt;++n)
+  for(dlong n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
@@ -340,7 +344,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  long long int nnz = 0;
+  dlong nnz = 0;
   for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
@@ -359,7 +363,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
   // compress duplicates
   cnt = 0;
-  for(long long int n=1;n<nnz;++n){
+  for(dlong n=1;n<nnz;++n){
     if(A[n].row == A[cnt].row && A[n].col == A[cnt].col){
       A[cnt].val += A[n].val;
     } else{
@@ -367,7 +371,8 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
       A[cnt] = A[n];
     }
   }
-  nnz = cnt+1;
+  if (nnz) cnt++;
+  nnz = cnt;
 
   if(rank==0) printf("done.\n");
 
@@ -378,7 +383,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
   dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-  for (long long int n=0;n<nnz;n++) {
+  for (dlong n=0;n<nnz;n++) {
     Rows[n] = A[n].row;
     Cols[n] = A[n].col;
     Vals[n] = A[n].val;
