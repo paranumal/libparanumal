@@ -516,7 +516,7 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
         dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f, Lnydq4 = 0.f, Lnydq5 = 0.f, Lnydq6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_Nfaces)
+        occaUnroll(p_NfacesNfp)
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           Lnxdq1 += L*s_nxdq1[es][m];
@@ -724,7 +724,7 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
         dfloat rhsqy1 = 0.f, rhsqy2 = 0.f, rhsqy3 = 0.f, rhsqy4 = 0.f, rhsqy5 = 0.f, rhsqy6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_Nfaces)
+        occaUnroll(p_NfacesNfp)
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           rhsqx1 += L*s_nxdq1[es][m];
@@ -1041,7 +1041,7 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
         dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f, Lnydq4 = 0.f, Lnydq5 = 0.f, Lnydq6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_Nfaces)
+        occaUnroll(p_NfacesNfp)
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           Lnxdq1 += L*s_nxdq1[es][m];
