@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 1
+#if 0
 #define datafloat double
 #define datafloatString "double"
 #else
@@ -27,7 +27,7 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 
 int main(int argc, char **argv){
 
-  int NKernels = 7;
+  int NKernels = 8;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;

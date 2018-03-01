@@ -68,7 +68,7 @@ void ellipticPartialAxTet3D_Ref0(int Nelements,
 }
 
 // Ref0+const
-void ellipticPartialAxTet3D_Ref4(const int Nelements,
+void ellipticPartialAxTet3D_Ref1(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -137,8 +137,8 @@ void ellipticPartialAxTet3D_Ref4(const int Nelements,
     }
   }
 }
-//Ref 5 = Ref4 + main loop unrolled
-void ellipticPartialAxTet3D_Ref5(const int Nelements,
+//Ref2 = Ref1 + main loop unrolled
+void ellipticPartialAxTet3D_Ref2(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -208,8 +208,8 @@ void ellipticPartialAxTet3D_Ref5(const int Nelements,
     }
   }
 }
-//Ref6 = Ref5 read q once
-void ellipticPartialAxTet3D_Ref6(const int Nelements,
+//Ref3 = Ref2 read q once
+void ellipticPartialAxTet3D_Ref3(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -283,9 +283,9 @@ void ellipticPartialAxTet3D_Ref6(const int Nelements,
 }
 
 
-//Ref1 = Ref6 + q in shared
-
-void ellipticPartialAxTet3D_Ref1(const int Nelements,
+//Ref4 = Ref3 + q in shared
+// (former Ref 1)
+void ellipticPartialAxTet3D_Ref4(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -367,8 +367,8 @@ void ellipticPartialAxTet3D_Ref1(const int Nelements,
 }
 
 
-//Ref7 = Ref1+ geofactors in shared
-void ellipticPartialAxTet3D_Ref7(const int Nelements,
+//Ref5 = Ref4+ geofactors in shared
+void ellipticPartialAxTet3D_Ref5(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -455,8 +455,107 @@ void ellipticPartialAxTet3D_Ref7(const int Nelements,
     }
   }
 }
-//Ref 7: read q once
 
+//Ref 6: Ref5 + less memory
+// assumes SrsT actually contains SrsT + SsrT
+//            SrtT actually contains SrtT + StrT
+//            SstT actually contains SstT + StsT
+
+
+
+void ellipticPartialAxTet3D_Ref6(const int Nelements,
+    const int   * restrict elementList,
+    const datafloat * restrict ggeo,
+    const datafloat * restrict SrrT,
+    const datafloat * restrict SrsT,
+    const datafloat * restrict SrtT,
+    const datafloat * restrict SsrT,
+    const datafloat * restrict SssT,
+    const datafloat * restrict SstT,
+    const datafloat * restrict StrT,
+    const datafloat * restrict StsT,
+    const datafloat * restrict SttT,
+    const datafloat * restrict MM,
+    const datafloat lambda,
+    const datafloat  * restrict q,
+    datafloat  * restrict Aq){
+
+  for(int e=0;e<Nelements;e++;outer0){
+
+    shared datafloat s_q[p_Np];
+    shared datafloat s_ggeo[p_Nggeo];
+    const int element = elementList[e];
+
+    for(int n=0;n<p_Np;++n;inner0){
+      //prefetch q
+      const int id = n + element*p_Np;
+      s_q[n] = q[id];
+      int m=n;
+      while(m<p_Nggeo){
+        //              s_ggeo[et][m] = element[et]*p_Nggeo+m;
+        s_ggeo[m] = ggeo[element*p_Nggeo+m];  
+        m += p_Np;
+      }
+
+    }
+
+    barrier(localMemFence);
+    //loop 1
+    for(int n=0;n<p_Np;++n;inner0){
+      const int element = elementList[e];
+      const datafloat Grr = s_ggeo[p_G00ID];
+      const datafloat Grs = s_ggeo[p_G01ID];
+      const datafloat Grt = s_ggeo[p_G02ID];
+      const datafloat Gss = s_ggeo[p_G11ID];
+      const datafloat Gst = s_ggeo[p_G12ID];
+      const datafloat Gtt = s_ggeo[p_G22ID];
+      const datafloat J   = s_ggeo[p_GWJID];
+          
+
+      datafloat qrr = 0.;
+      datafloat qrs = 0.;
+      datafloat qrt = 0.;
+      datafloat qsr = 0.;
+      datafloat qss = 0.;
+      datafloat qst = 0.;
+      datafloat qtr = 0.;
+      datafloat qts = 0.;
+      datafloat qtt = 0.;
+      datafloat qM = 0.;
+
+      occaUnroll(p_Np)
+        for (int k=0;k<p_Np;k++) {
+          const datafloat qk = s_q[k];
+
+          
+qrr += SrrT[n+k*p_Np]*qk;  
+              qrs += SrsT[n+k*p_Np]*qk; // assume (Srs stores Srs+Ssr)
+              qrt += SrtT[n+k*p_Np]*qk; // assume (Srt stores Srt+Str)
+              qss += SssT[n+k*p_Np]*qk;
+              qst += SstT[n+k*p_Np]*qk; // assume (Sst stores Sst+Sts)
+              qtt += SttT[n+k*p_Np]*qk;
+              qM  += MM[n+k*p_Np] *qk;
+
+
+
+ }
+
+
+      const int id = n + element*p_Np;
+
+     
+  Aq[id] = 
+              Grr*qrr+
+              Grs*qrs+
+              Grt*qrt+
+              Gss*qss+
+              Gst*qst+
+              Gtt*qtt+ 
+              +J*lambda*qM;   
+
+ }
+  }
+}
 // optimizations:
 //
 // 1. multiple outputs per thread 
@@ -466,7 +565,7 @@ void ellipticPartialAxTet3D_Ref7(const int Nelements,
 //            SrtT actually contains SrtT + StrT
 //            SstT actually contains SstT + StsT
 
-kernel void ellipticPartialAxTet3D_Ref2(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref7(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -587,7 +686,7 @@ kernel void ellipticPartialAxTet3D_Ref2(const int Nelements,
 }
 
 
-kernel void ellipticPartialAxTet3D_Ref3(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref8(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
