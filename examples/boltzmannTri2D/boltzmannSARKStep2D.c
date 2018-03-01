@@ -6,8 +6,8 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
 
 
 
-  const iint shift_base = 0; 
-       mesh->shiftIndex = 0;
+  const iint shift_base      = 0; 
+  mesh->shiftIndex = 0;
 
  
   for(iint s=0; s<3; ++s){
@@ -42,21 +42,26 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     }
 
 
+    occaTimerTic(mesh->device, "VolumeKernel");
 
-    if (mesh->nonPmlNelements)
-    mesh->volumeKernel(mesh->nonPmlNelements,
-                      mesh->o_nonPmlElementIds,
-                      ramp, 
-                      drampdt,
-                      mesh->Nrhs,
-                      mesh->shiftIndex,
-                      mesh->o_vgeo,
-                      mesh->o_DrT,
-                      mesh->o_DsT,
-                      mesh->o_q,
-                      mesh->o_rhsq);
+    if (mesh->nonPmlNelements){
+      occaTimerTic(mesh->device,"NonPmlVolumeKernel"); 
+      mesh->volumeKernel(mesh->nonPmlNelements,
+                        mesh->o_nonPmlElementIds,
+                        ramp, 
+                        drampdt,
+                        mesh->Nrhs,
+                        mesh->shiftIndex,
+                        mesh->o_vgeo,
+                        mesh->o_DrT,
+                        mesh->o_DsT,
+                        mesh->o_q,
+                        mesh->o_rhsq);
+      occaTimerToc(mesh->device,"NonPmlVolumeKernel"); 
+  }
 
-  if (mesh->pmlNelements)
+  if (mesh->pmlNelements){
+    occaTimerTic(mesh->device,"PmlVolumeKernel"); 
     mesh->pmlVolumeKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
@@ -75,11 +80,18 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_rhsq,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
+    occaTimerToc(mesh->device,"PmlVolumeKernel"); 
+  }
+
+  occaTimerToc(mesh->device, "VolumeKernel");    
 
 
-  if(strstr(options, "CUBATURE")){ 
 
-    if (mesh->nonPmlNelements)
+  if(strstr(options, "CUBATURE")){
+    occaTimerTic(mesh->device, "RelaxationKernel");
+          
+    if (mesh->nonPmlNelements){
+      occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
       mesh->relaxationKernel(mesh->nonPmlNelements,
                             mesh->o_nonPmlElementIds,
                             mesh->Nrhs,
@@ -87,9 +99,12 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                             mesh->o_cubInterpT,
                             mesh->o_cubProjectT,
                             mesh->o_q,
-                            mesh->o_rhsq);  
+                            mesh->o_rhsq);
+      occaTimerToc(mesh->device, "NonPmlRelaxationKernel");
+      } 
 
-    if (mesh->pmlNelements) 
+    if (mesh->pmlNelements){
+      occaTimerTic(mesh->device, "PmlRelaxationKernel"); 
       mesh->pmlRelaxationKernel(mesh->pmlNelements,
                                 mesh->o_pmlElementIds,
                                 mesh->o_pmlIds,
@@ -105,16 +120,11 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                                 mesh->o_rhsq,
                                 mesh->o_pmlrhsqx,
                                 mesh->o_pmlrhsqy);
-      // mesh->pmlRelaxationKernel(mesh->pmlNelements,
-      //                           mesh->o_pmlElementIds,
-      //                           mesh->o_pmlIds,
-      //                           mesh->Nrhs,
-      //                           mesh->shiftIndex,
-      //                           mesh->o_cubInterpT,
-      //                           mesh->o_cubProjectT,
-      //                           mesh->o_q,
-      //                           mesh->o_rhsq);
-  }
+      occaTimerToc(mesh->device, "PmlRelaxationKernel");
+    }
+
+    occaTimerToc(mesh->device, "RelaxationKernel");
+    }
 
 
 
@@ -146,8 +156,12 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
     #endif
   }
 
+  
 
-  if (mesh->nonPmlNelements)
+
+  occaTimerTic(mesh->device,"SurfaceKernel");  
+  if (mesh->nonPmlNelements){
+    occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
     mesh->surfaceKernel(mesh->nonPmlNelements,
                         mesh->o_nonPmlElementIds,
                         t,
@@ -163,8 +177,12 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                         mesh->o_y,
                         mesh->o_q,
                         mesh->o_rhsq);
+    occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
 
-  if (mesh->pmlNelements)
+  }
+
+  if (mesh->pmlNelements){
+    occaTimerTic(mesh->device,"PmlSurfaceKernel");
     mesh->pmlSurfaceKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
@@ -183,16 +201,21 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_rhsq,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
+    occaTimerToc(mesh->device,"PmlSurfaceKernel");
 
+  }
+
+  occaTimerToc(mesh->device,"SurfaceKernel");
 
 
     //rotate index
     mesh->shiftIndex = (mesh->shiftIndex+1)%3;
 
-
+  occaTimerTic(mesh->device,"UpdateKernel");
  if(s<2){ 
       // Stage update
-      if (mesh->pmlNelements)
+      if (mesh->pmlNelements){
+        occaTimerTic(mesh->device,"PmlUpdateKernel");
         mesh->pmlUpdateStageKernel(mesh->pmlNelements,
                   mesh->o_pmlElementIds,
                   mesh->o_pmlIds,
@@ -213,8 +236,11 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                   mesh->o_pmlqx,
                   mesh->o_pmlqy,
                   mesh->o_q);
+        occaTimerToc(mesh->device,"PmlUpdateKernel");
+      }
         
-      if(mesh->nonPmlNelements)
+      if(mesh->nonPmlNelements){
+        occaTimerTic(mesh->device,"NonPmlUpdateKernel");
         mesh->updateStageKernel(mesh->nonPmlNelements,
                   mesh->o_nonPmlElementIds,
                   mesh->dt,
@@ -227,11 +253,15 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                   mesh->o_rhsq,
                   mesh->o_qS,
                   mesh->o_q);
+        occaTimerToc(mesh->device,"NonPmlUpdateKernel");
+      }
+
     }
 
     else{
      // Final update s==2
-     if (mesh->pmlNelements)
+     if (mesh->pmlNelements){
+      occaTimerTic(mesh->device,"PmlUpdateKernel");
         mesh->pmlUpdateKernel(mesh->pmlNelements,
                   mesh->o_pmlElementIds,
                   mesh->o_pmlIds,
@@ -254,8 +284,11 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                   mesh->o_pmlqx,
                   mesh->o_pmlqy,
                   mesh->o_q);
+      occaTimerToc(mesh->device,"PmlUpdateKernel");
+      }
         
-      if(mesh->nonPmlNelements)
+      if(mesh->nonPmlNelements){
+        occaTimerTic(mesh->device,"NonPmlUpdateKernel");
         mesh->updateKernel(mesh->nonPmlNelements,
                   mesh->o_nonPmlElementIds,
                   mesh->dt,
@@ -270,9 +303,11 @@ void boltzmannSARKStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                   mesh->o_rhsq,
                   mesh->o_qS,
                   mesh->o_q);
+        occaTimerToc(mesh->device,"NonPmlUpdateKernel");
+      }
     }
 
-
+  occaTimerToc(mesh->device,"UpdateKernel");
         
   }   
 }

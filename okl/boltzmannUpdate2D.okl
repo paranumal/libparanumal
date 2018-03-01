@@ -499,6 +499,7 @@ kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
             const dfloat ake, 
             const dfloat * restrict q,
             const dfloat * restrict qZ,
+            const dfloat * restrict rhsq,
                   dfloat * restrict qY){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
@@ -509,7 +510,7 @@ kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
       
       occaUnroll(p_Nfields)
       for(iint fld=0; fld<p_Nfields; ++fld){
-        qY[id +fld] = q[id+fld] + dt*( ake*qY[id +fld] + aki*qZ[id +fld]);
+        qY[id +fld] = q[id+fld] + dt*( ake*rhsq[id +fld] + aki*qZ[id +fld]);
       }
     }
   }
@@ -528,7 +529,10 @@ kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint pmlNelements,
             const dfloat * restrict q,
             const dfloat  * restrict pmlqx,
             const dfloat  * restrict pmlqy,
-                  dfloat  * restrict qZ,
+            const dfloat  * restrict qZ,      
+            const dfloat  * restrict rhsq,
+            const dfloat  * restrict rhsqx,
+            const dfloat  * restrict rhsqy,
                   dfloat  * restrict qY,  
                   dfloat  * restrict pmlYx,
                   dfloat  * restrict pmlYy){
@@ -545,11 +549,9 @@ kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint pmlNelements,
       
       occaUnroll(p_Nfields)
       for(iint fld=0; fld<p_Nfields; ++fld){
-
-        pmlYx[pid+fld] = pmlqx[pid+fld] + c_ex*dt*pmlYx[pid+fld];
-        pmlYy[pid+fld] = pmlqy[pid+fld] + c_ex*dt*pmlYy[pid+fld];
-
-        qY[id+fld]   = q[id+fld] + dt*(c_ex*qY[id+fld] + c_im*qZ[id+fld]);
+        pmlYx[pid+fld] = pmlqx[pid+fld] + c_ex*dt*rhsqx[pid+fld]; // fully explicit
+        pmlYy[pid+fld] = pmlqy[pid+fld] + c_ex*dt*rhsqy[pid+fld]; // fully explicit
+        qY[id+fld]     = q[id+fld]      + dt*(c_ex*rhsq[id+fld] + c_im*qZ[id+fld]); // imlicit-explicit
       }
     }
   }
@@ -564,9 +566,7 @@ kernel void boltzmannLSIMEXImplicitUpdate2D(const iint Nelements,
             const dfloat dt, 
             const dfloat akk,
             const dfloat * restrict qZ,
-            const dfloat * restrict qY,
-                  dfloat * restrict q,
-                  dfloat * restrict qS){
+                  dfloat * restrict qY){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
@@ -576,10 +576,7 @@ kernel void boltzmannLSIMEXImplicitUpdate2D(const iint Nelements,
       
       occaUnroll(p_Nfields)
       for(iint fld=0; fld<p_Nfields; ++fld){
-       // Save q 
-       qS[id+fld] = q[id + fld];   
-       // Update q   
-       q[id + fld] = qY[id+fld] + akk*dt*qZ[id+fld];
+       qY[id + fld] += akk*dt*qZ[id+fld];
       }
     }
   }
@@ -594,8 +591,8 @@ kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
             const dfloat dt, 
             const dfloat akk,
             const dfloat * restrict qZ,
-            const dfloat * restrict qY,
-            const dfloat * restrict qS,
+                  dfloat * restrict qY,
+            const dfloat * restrict rhsq,
                   dfloat * restrict q){
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
@@ -605,7 +602,7 @@ kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
       const iint id = p_Nfields*(n + e*p_Np);
       occaUnroll(p_Nfields)
        for(iint fld=0; fld<p_Nfields; ++fld){
-        q[id +fld] = qS[id+fld]+ akk*dt*(qY[id+fld] + qZ[id+fld]);
+        q[id  +fld] += akk*dt*(rhsq[id+fld] + qZ[id+fld]);
        }
     }
   }
@@ -620,16 +617,8 @@ kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const iint pmlNelements,
             const dfloat dt, 
             const dfloat ramp,
             const dfloat akk,
-            const dfloat  * restrict qY,
-            const dfloat  * restrict qYx,
-            const dfloat  * restrict qYy,
             const dfloat  * restrict qZ,
-                  dfloat  * restrict pmlqx,
-                  dfloat  * restrict pmlqy,
-                  dfloat  * restrict qSx,
-                  dfloat  * restrict qSy,   
-                  dfloat  * restrict qS,
-                  dfloat  * restrict q ){
+                  dfloat  * restrict qY){
  for(iint es=0;es<pmlNelements;++es;outer0){
   exclusive iint e;
     for(iint n=0; n < p_Np; ++n; inner0){
@@ -642,20 +631,7 @@ kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const iint pmlNelements,
       
       occaUnroll(p_Nfields)
       for(iint fld=0; fld<p_Nfields; ++fld){
-        // Save qx, qy
-        qSx[pid+fld] = pmlqx[pid+fld];
-        qSy[pid+fld] = pmlqy[pid+fld];
-        
-        // ipdate field
-        pmlqx[pid+fld] = qYx[pid+fld];
-        pmlqy[pid+fld] = qYy[pid+fld];
-     
-        // Save q 
-        qS[id+fld] = q[id + fld];   
-        // Update q   
-        q[id + fld] = qY[id+fld] + akk*dt*qZ[id+fld];
-
-
+        qY[id + fld] +=  akk*dt*qZ[id+fld];
       }
     }
   }
@@ -675,9 +651,9 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
             const dfloat  * restrict qY,
             const dfloat  * restrict qYx,
             const dfloat  * restrict qYy,
-            const dfloat  * restrict qS,
-            const dfloat  * restrict qSx,
-            const dfloat  * restrict qSy,    
+            const dfloat  * restrict rhsq,
+            const dfloat  * restrict rhsqx,
+            const dfloat  * restrict rhsqy,    
                   dfloat  * restrict pmlqx,
                   dfloat  * restrict pmlqy,
                   dfloat  * restrict q ){
@@ -693,10 +669,11 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
       
       occaUnroll(p_Nfields)
       for(iint fld=0; fld<p_Nfields; ++fld){
-        pmlqx[pid+fld] = qSx[pid+fld] + akk*dt*qYx[pid+fld];
-        pmlqy[pid+fld] = qSy[pid+fld] + akk*dt*qYy[pid+fld];
-        //
-        q[id +fld] = qS[id+fld]+ akk*dt*(qY[id+fld] + qZ[id+fld]);
+        
+        //update qx
+        pmlqx[pid+fld] +=  akk*dt*rhsqx[pid+fld];
+        pmlqy[pid+fld] +=  akk*dt*rhsqy[pid+fld];
+        q[id  +fld]    +=  akk*dt*(rhsq[id+fld] + qZ[id+fld]);
       }
     }
   }

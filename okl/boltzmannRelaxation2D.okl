@@ -100,7 +100,7 @@ kernel void boltzmannRelaxationCub2D(const iint Nelements,
                   N5 += Pnc*s_cubN5[es][i];
                   N6 += Pnc*s_cubN6[es][i];
                 }
-                
+
               // Update  
               rhsq[rhsId + 3] = N4;
               rhsq[rhsId + 4] = N5;
@@ -203,7 +203,7 @@ kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
             // Prefetch sigma
             const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp+n];
             const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp+n];
-
+            // M-PML sigma midification
             const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
             

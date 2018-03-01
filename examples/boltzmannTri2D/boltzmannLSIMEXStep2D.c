@@ -33,6 +33,9 @@ for(iint k=0;k<mesh->Nimex;++k){
                                   mesh->o_pmlqx,
                                   mesh->o_pmlqy,
                                   mesh->o_qZ,
+                                  mesh->o_rhsq,
+                                  mesh->o_pmlrhsqx,
+                                  mesh->o_pmlrhsqy,
                                   mesh->o_qY,
                                   mesh->o_qYx,
                                   mesh->o_qYy);
@@ -47,6 +50,7 @@ for(iint k=0;k<mesh->Nimex;++k){
                               mesh->LSIMEX_ABe[k],
                               mesh->o_q,
                               mesh->o_qZ,
+                              mesh->o_rhsq,
                               mesh->o_qY);
     occaTimerToc(mesh->device,"NONPMLResidualUpdateKernel");
   }
@@ -57,15 +61,24 @@ for(iint k=0;k<mesh->Nimex;++k){
 
   occaTimerTic(mesh->device,"PMLImplicit");
   // Compute Implicit Part of Boltzmann, node based no communication
+  // Solves imlicit part and adds sigma volume terms also.
   if(mesh->pmlNelements){
     occaTimerTic(mesh->device,"PMLImplicitSolve");
     mesh->pmlImplicitSolveKernel(mesh->pmlNelements,
                                 mesh->o_pmlElementIds,
+                                mesh->o_pmlIds,
                                 mesh->dt,
                                 mesh->LSIMEX_Ad[k],
                                 mesh->o_cubInterpT,
                                 mesh->o_cubProjectT,
+                                mesh->o_pmlSigmaX,
+                                mesh->o_pmlSigmaY,
                                 mesh->o_qY,
+                                mesh->o_qYx,
+                                mesh->o_qYy,
+                                mesh->o_rhsq,
+                                mesh->o_pmlrhsqx,
+                                mesh->o_pmlrhsqy,
                                 mesh->o_qZ); 
     occaTimerToc(mesh->device,"PMLImplicitSolve");
 
@@ -78,23 +91,14 @@ for(iint k=0;k<mesh->Nimex;++k){
                                   mesh->dt,
                                   ramp,
                                   mesh->LSIMEX_Ad[k],
-                                  mesh->o_qY,
-                                  mesh->o_qYx,
-                                  mesh->o_qYy,
                                   mesh->o_qZ,
-                                  mesh->o_pmlqx,
-                                  mesh->o_pmlqy,
-                                  mesh->o_qSx,
-                                  mesh->o_qSy,
-                                  mesh->o_qS,
-                                  mesh->o_q);
+                                  mesh->o_qY);
     occaTimerToc(mesh->device,"PMLImplicitUpdate");
   }
 
   occaTimerToc(mesh->device,"PMLImplicit");
 
- //      // compute volume contribution to DG boltzmann RHS
-      
+   // compute volume contribution to DG boltzmann RHS   
   occaTimerTic(mesh->device,"NONPMLImplicit");
   if(mesh->nonPmlNelements){
     occaTimerTic(mesh->device,"NONPMLImplicitSolve");
@@ -116,9 +120,7 @@ for(iint k=0;k<mesh->Nimex;++k){
                               mesh->dt,
                               mesh->LSIMEX_Ad[k],
                               mesh->o_qZ,
-                              mesh->o_qY,
-                              mesh->o_q,
-                              mesh->o_qS);	
+                              mesh->o_qY);	
     occaTimerToc(mesh->device,"NONPMLImplicitUpdate");
   }
 
@@ -135,7 +137,7 @@ for(iint k=0;k<mesh->Nimex;++k){
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
-                            mesh->o_q,
+                            mesh->o_qY,
                             mesh->o_haloBuffer);
 
     // copy extracted halo to HOST
@@ -165,12 +167,12 @@ for(iint k=0;k<mesh->Nimex;++k){
                           mesh->o_pmlSigmaY,
                           mesh->o_DrT,
                           mesh->o_DsT,
-                          mesh->o_q,
-                          mesh->o_pmlqx,
-                          mesh->o_pmlqy,
                           mesh->o_qY,
                           mesh->o_qYx,
-                          mesh->o_qYy);
+                          mesh->o_qYy,
+                          mesh->o_rhsq,
+                          mesh->o_pmlrhsqx,
+                          mesh->o_pmlrhsqy);
     occaTimerToc(mesh->device,"PMLVolumeKernel");	
 
   }
@@ -188,8 +190,8 @@ for(iint k=0;k<mesh->Nimex;++k){
                          mesh->o_vgeo,
                          mesh->o_DrT,
                          mesh->o_DsT,
-                         mesh->o_q,
-                         mesh->o_qY);
+                         mesh->o_qY,
+                         mesh->o_rhsq);
       occaTimerToc(mesh->device,"NONPMLVolumeKernel");
 	}
     
@@ -217,7 +219,7 @@ for(iint k=0;k<mesh->Nimex;++k){
 
     // copy halo data to DEVICE
     size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    mesh->o_q.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    mesh->o_qY.asyncCopyFrom(recvBuffer, haloBytes, offset);
     mesh->device.finish();        
 
     #if ASYNC 
@@ -247,10 +249,10 @@ for(iint k=0;k<mesh->Nimex;++k){
                             mesh->o_EToB,
                             mesh->o_x,
                             mesh->o_y,
-                            mesh->o_q,
                             mesh->o_qY,
-                            mesh->o_qYx,
-                            mesh->o_qYy);
+                            mesh->o_rhsq,
+                            mesh->o_pmlrhsqx,
+                            mesh->o_pmlrhsqy);
 
     occaTimerToc(mesh->device,"PMLSurfaceKernel"); 	
   }
@@ -271,8 +273,8 @@ for(iint k=0;k<mesh->Nimex;++k){
                         mesh->o_EToB,
                         mesh->o_x,
                         mesh->o_y,
-                        mesh->o_q,
-                        mesh->o_qY);
+                        mesh->o_qY,
+                        mesh->o_rhsq);
     occaTimerToc(mesh->device,"NONPMLSurfaceKernel"); 
   }
 
@@ -296,9 +298,9 @@ for(iint k=0;k<mesh->Nimex;++k){
                           mesh->o_qY,
                           mesh->o_qYx,
                           mesh->o_qYy,
-                          mesh->o_qS,
-                          mesh->o_qSx,
-                          mesh->o_qSy,
+                          mesh->o_rhsq,
+                          mesh->o_pmlrhsqx,
+                          mesh->o_pmlrhsqy,
                           mesh->o_pmlqx,
                           mesh->o_pmlqy,
                           mesh->o_q);
@@ -314,7 +316,7 @@ for(iint k=0;k<mesh->Nimex;++k){
                       mesh->LSIMEX_B[k],
                       mesh->o_qZ,
                       mesh->o_qY,
-                      mesh->o_qS,
+                      mesh->o_rhsq,
                       mesh->o_q);
 
     occaTimerToc(mesh->device,"NONPMLUpdateKernel");  

@@ -44,7 +44,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 0.2; // Was 200  
+    mesh->finalTime = 0.1; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -653,9 +653,11 @@ else if(strstr(options, "LSIMEX")){
   
     mesh->o_qZ =    
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-    // 
-    mesh->o_qS =
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
+    printf("IMEX setup assumes rhsq and o_rhsq are set on meshOccaSetup function! \n"); 
+    // // 
+    // mesh->o_qS =
+    //   mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 }   
 
 
@@ -1006,7 +1008,7 @@ else if(strstr(options, "LSIMEX")){
           printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
       mesh->pmlImplicitSolveKernel = 
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-             "boltzmannLSIMEXImplicitSolveCub2D",
+             "boltzmannLSIMEXPmlImplicitSolveCub2D",
              kernelInfo); 
     }
     else if(strstr(options, "COLLOCATION")){ 
@@ -1035,7 +1037,7 @@ else if(strstr(options, "LSIMEX")){
     printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
     mesh->pmlVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-        "boltzmannPmlVolumeCub2D",
+        "boltzmannIMEXPmlVolumeCub2D",
         kernelInfo);
        
    printf("Compiling surface kernel\n");
