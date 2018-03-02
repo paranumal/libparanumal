@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../../.."' -O3
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../../.."' -O3 -g
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -O3
@@ -31,10 +31,9 @@ LIBS	=  $(links)
 
 # list of objects to be compiled
 OBJS    = \
-main.o
-parse_vtu.o
-compute_l2.o
-print_vtu.o
+main.o \
+parse_vtu.o \
+send_vtu.o
 
 afterparser:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o afterparser $(OBJS) $(paths) $(LIBS) 

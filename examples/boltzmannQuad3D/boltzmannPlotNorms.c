@@ -10,8 +10,6 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  iint plotnp = (mesh->Np + mesh->Nq)/2;
   
   FILE *fp;
   char fileName[BUFSIZ];
@@ -24,8 +22,8 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
-	  mesh->Nelements*2*plotnp,
-	  mesh->Nelements*2);
+	  mesh->Nelements*mesh->Np,
+	  mesh->Nelements);
 
   
   // write out nodes
@@ -34,23 +32,12 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   
   // compute plot node coordinates on the fly
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=0;j<mesh->Nq-i;++j){
-	dfloat plotxn = mesh->x[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotyn = mesh->y[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotzn = mesh->z[j+i*mesh->Nq+e*mesh->Np];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
-      }
-    }
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=mesh->Nq-i-1;j<mesh->Nq;++j){
-	dfloat plotxn = mesh->x[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotyn = mesh->y[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotzn = mesh->z[j+i*mesh->Nq+e*mesh->Np];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
-      }
+    for(iint n=0;n<mesh->Np;++n){
+      dfloat plotxn = mesh->x[n+e*mesh->Np];
+      dfloat plotyn = mesh->y[n+e*mesh->Np];
+      dfloat plotzn = mesh->z[n+e*mesh->Np];
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
     }
   }
   fprintf(fp, "        </DataArray>\n");
@@ -60,7 +47,7 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"mrab_levels\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np+mesh->Nq;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat plotpn = mesh->MRABlevel[e];
       //      plotpn = plotpn*mesh->rho; // Get Pressure
       fprintf(fp, "       ");
@@ -69,77 +56,54 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   }
 
   fprintf(fp, "       </DataArray>\n");
-  
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_value\" Format=\"ascii\">\n");
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=0; j<mesh->Nq-i;++j){
-	dfloat plotpn = q[j+i*mesh->Nq+1*mesh->Np+e*mesh->Np*mesh->Nfields];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotpn);
-      }
-    }
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=mesh->Nq-i-1; j<mesh->Nq;++j){
-	dfloat plotpn = q[j+i*mesh->Nq+1*mesh->Np+e*mesh->Np*mesh->Nfields];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotpn);
-      }
-    }
-  }
-  fprintf(fp, "       </DataArray>\n");
 
+  for (int i = 0; i < 10; ++i) {
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_%d\" Format=\"ascii\">\n",i+1);
+    for(iint e=0;e<mesh->Nelements;++e){
+      for(iint n=0;n<mesh->Np;++n){
+	dfloat plotpn = q[n+i*mesh->Np+e*mesh->Np*mesh->Nfields];
+	fprintf(fp, "       ");
+	fprintf(fp, "%g\n", plotpn);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+  }
+  
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint i=0;i<mesh->Nq;++i) {
-      for(iint j=0;j<mesh->Nq-i;++j) {
-	int id = j+i*mesh->Nq + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
-        dfloat plotpn = mesh->q[id];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotpn);
-      }
-    }
-    for(iint i=0;i<mesh->Nq;++i) {
-      for(iint j=mesh->Nq-i-1;j<mesh->Nq;++j) {
-	int id = j+i*mesh->Nq + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
-        dfloat plotpn = mesh->q[id];
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotpn);
-      }
+    for(iint n=0;n<mesh->Np;++n) {
+      int id = n + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
+      dfloat plotpn = mesh->q[id];
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
     }
   }
   fprintf(fp, "       </DataArray>\n");
 
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"jacobian\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n) {
+      int id = mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n;
+      dfloat plotpn = mesh->vgeo[id];
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=0;j<mesh->Nq-i;++j){
-	int uid = j+i*mesh->Nq + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = j+i*mesh->Nq + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = j+i*mesh->Nq + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
-	
-	dfloat plotun = mesh->q[uid];
-	dfloat plotvn = mesh->q[vid];
-	dfloat plotwn = mesh->q[vid];
-	
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
-      }
-    }
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=mesh->Nq-i-1;j<mesh->Nq;++j){
-	int uid = j+i*mesh->Nq + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = j+i*mesh->Nq + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = j+i*mesh->Nq + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
-	
-	dfloat plotun = mesh->q[uid];
-	dfloat plotvn = mesh->q[vid];
-	dfloat plotwn = mesh->q[vid];
-	
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
-      }
+    for(iint n=0;n<mesh->Np;++n){
+      int uid = n + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
+      int vid = n + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
+      int wid = n + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
+      
+      dfloat plotun = mesh->q[uid];
+      dfloat plotvn = mesh->q[vid];
+      dfloat plotwn = mesh->q[vid];
+      
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
     }
   }
   fprintf(fp, "       </DataArray>\n");
@@ -205,52 +169,26 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
       }
     }
           
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=0;j<mesh->Nq-i;++j){
-	int uid = j+i*mesh->Nq + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = j+i*mesh->Nq + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = j+i*mesh->Nq + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
+    for(iint n=0;n<mesh->Np;++n){
+	int uid = n + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
+	int vid = n + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
+	int wid = n + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
 	
-	dfloat plotvort1n = vort[j+i*mesh->Nq+0*mesh->Np];
-	dfloat plotvort2n = vort[j+i*mesh->Nq+1*mesh->Np];
-	dfloat plotvort3n = vort[j+i*mesh->Nq+2*mesh->Np];
+	dfloat plotvort1n = vort[n+0*mesh->Np];
+	dfloat plotvort2n = vort[n+1*mesh->Np];
+	dfloat plotvort3n = vort[n+2*mesh->Np];
 
 	fprintf(fp, "       ");
 	fprintf(fp, "%g %g %g\n", plotvort1n, plotvort2n, plotvort3n);
 
-	dfloat plotxn = mesh->x[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotyn = mesh->y[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotzn = mesh->z[j+i*mesh->Nq+e*mesh->Np];
+	dfloat plotxn = mesh->x[n+e*mesh->Np];
+	dfloat plotyn = mesh->y[n+e*mesh->Np];
+	dfloat plotzn = mesh->z[n+e*mesh->Np];
 	
-	plotVortRadial[j+i*mesh->Nq + mesh->plotNp*e] =
+	plotVortRadial[n + mesh->plotNp*e] =
 	  plotxn*plotvort1n + 
 	  plotyn*plotvort2n + 
 	  plotzn*plotvort3n;
-      }
-    }
-
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=mesh->Nq-i-1;j<mesh->Nq;++j){
-	int uid = j+i*mesh->Nq + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = j+i*mesh->Nq + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = j+i*mesh->Nq + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
-	
-	dfloat plotvort1n = vort[j+i*mesh->Nq+0*mesh->Np];
-	dfloat plotvort2n = vort[j+i*mesh->Nq+1*mesh->Np];
-	dfloat plotvort3n = vort[j+i*mesh->Nq+2*mesh->Np];
-
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotvort1n, plotvort2n, plotvort3n);
-
-	dfloat plotxn = mesh->x[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotyn = mesh->y[j+i*mesh->Nq+e*mesh->Np];
-	dfloat plotzn = mesh->z[j+i*mesh->Nq+e*mesh->Np];
-	
-	plotVortRadial[j+i*mesh->Nq + mesh->plotNp*e] =
-	  plotxn*plotvort1n + 
-	  plotyn*plotvort2n + 
-	  plotzn*plotvort3n;
-      }
     }
   }
   fprintf(fp, "       </DataArray>\n");
@@ -260,18 +198,9 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   for(iint e=0;e<mesh->Nelements;++e){
 
     // compute vorticity
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=0;j<mesh->Nq-i;++j){
+    for(iint n=0;n<mesh->Np;++n){
 	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotVortRadial[j+i*mesh->Nq+e*mesh->plotNp]);
-      }
-    }
-
-    for(iint i=0;i<mesh->Nq;++i){
-      for(iint j=mesh->Nq-i-1;j<mesh->Nq;++j){
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotVortRadial[j+i*mesh->Nq+e*mesh->plotNp]);
-      }
+	fprintf(fp, "%g\n", plotVortRadial[n+e*mesh->plotNp]);
     }
   }
 
@@ -286,24 +215,23 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   
   for(iint e=0;e<mesh->Nelements;++e){
     fprintf(fp, "       ");
-    fprintf(fp, "%d %d %d \n", 2*e*(mesh->Np + mesh->Nq)/2 + 0,2*e*(mesh->Np + mesh->Nq)/2 + mesh->Nq - 1,(2*e+1)*(mesh->Np+mesh->Nq)/2-1);
-    fprintf(fp, "%d %d %d \n", (2*e+1)*(mesh->Np + mesh->Nq)/2 + 0,(2*e+2)*(mesh->Np + mesh->Nq)/2 - mesh->Nq,(2*e+2)*(mesh->Np+mesh->Nq)/2-1);
+    fprintf(fp, "%d %d %d %d\n", e*mesh->Np + 0,e*mesh->Np + mesh->Nq - 1,(e+1)*mesh->Np-1,(e+1)*mesh->Np - mesh->Nq);
   }
   
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   iint cnt = 0;
-  for(iint e=0;e<2*mesh->Nelements;++e){
-      cnt += 3;
+  for(iint e=0;e<mesh->Nelements;++e){
+      cnt += 4;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
   }
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<2*mesh->Nelements;++e){
-      fprintf(fp, "5\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+      fprintf(fp, "9\n");
   }
 
   
