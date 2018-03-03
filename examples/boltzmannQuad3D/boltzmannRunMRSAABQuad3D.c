@@ -24,7 +24,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-  mesh->filterKernelq0H(mesh->Nelements,
+  /*mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -43,7 +43,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_y,
 			mesh->o_z,
 			mesh->o_qFilter,
-			mesh->o_q);
+			mesh->o_q);*/
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
      for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -137,7 +137,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
-            for (iint l = 0; l < lev; l++) {
+      /*for (iint l = 0; l < lev; l++) {
 	
        	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
 	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
@@ -177,7 +177,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    l,
 			    mesh->o_qFilter,
 			    mesh->o_rhsq);	
-			    }
+			    }*/
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -243,7 +243,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       fflush(stdout);
       // copy data back to host
       mesh->o_q.copyTo(mesh->q);
-      boltzmannPlotNorms(mesh,"norms",tstep,mesh->q);
 
       // check for nans
       for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
@@ -253,11 +252,13 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
 
+      boltzmannPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
+
       // output field files
       iint fld = 0;
       char fname[BUFSIZ];
 
-      boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
+      //boltzmannPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
     }        
     occa::printTimer();
   }

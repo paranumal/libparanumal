@@ -75,7 +75,7 @@ void parse_vtu(char *filename,data *parsed) {
 
   for(int i = 0; i < parsed->points; i++) {
     fgets(buf,BUFSIZ,fp);
-    sscanf(buf,"%lf",parsed->density+i);
+    sscanf(buf,"%lf",parsed->jacobian+i);
   }
 
   while(!strstr(buf,"Velocity")) fgets(buf,BUFSIZ,fp);

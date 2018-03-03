@@ -33,7 +33,8 @@ LIBS	=  $(links)
 OBJS    = \
 main.o \
 parse_vtu.o \
-send_vtu.o
+send_vtu.o \
+compute_l2.o
 
 afterparser:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o afterparser $(OBJS) $(paths) $(LIBS) 
