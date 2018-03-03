@@ -28,10 +28,16 @@ typedef struct {
   dfloat *jacobian;
   dfloat *rad_vort;
   iint *connectivity; //too lazy to generate this myself...
+  
+  //error terms.  Should make a new struct when there are more
+  dfloat *mismatch;
+  dfloat *difference;
 } data;
 
 void parse_vtu(char *filename, data *parsed);
 
 void send_vtu(char *filename, data *parsed);
+
+dfloat compute_l2(data *ref, data *test);
 
 #endif
