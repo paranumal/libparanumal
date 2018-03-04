@@ -24,7 +24,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-        mesh->filterKernelq0H(mesh->Nelements,
+  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -186,7 +186,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				       mesh->MRABshiftIndex[l],
 				       mesh->Nrhs,
 				       mesh->o_q,
-				       mesh->o_rhsq);
+				       mesh->o_qCorr);
 	}
       }
       
@@ -212,6 +212,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_rhsq,
 			     mesh->o_vmapM,
 			     mesh->o_fQM,
+			     mesh->o_qCorr,
 			     mesh->o_q);
 
 	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
@@ -240,6 +241,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_rhsq,
 				  mesh->o_vmapM,
 				  mesh->o_fQM,
+				  mesh->o_qCorr,
 				  mesh->o_q);
       	}
       }

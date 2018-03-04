@@ -104,6 +104,7 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
 					const dfloat * restrict rhsq,
 					const iint   * restrict vmapM,
 					dfloat * restrict fQM,
+					dfloat * restrict qCorr,
 					dfloat * restrict q){
 
   // Low storage Runge Kutta time step update
@@ -128,7 +129,7 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
 	  if(fld<4)
 	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
 	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*rhsq[rhsId1+fld*p_Np] + saab2*rhsq[rhsId2+fld*p_Np] + saab3*rhsq[rhsId3+fld*p_Np];
+	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
 	}
       }
     }
@@ -175,6 +176,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
 					     const dfloat * restrict rhsq,
 					     const iint   * restrict vmapM,
 					     dfloat * restrict fQM,
+					     dfloat * restrict qCorr,
 					     dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
@@ -199,7 +201,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
 	  if(fld<4)
 	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
 	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*rhsq[rhsId1+fld*p_Np] + saab2*rhsq[rhsId2+fld*p_Np] + saab3*rhsq[rhsId3+fld*p_Np];
+	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
 	}
       }
     }
