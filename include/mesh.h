@@ -446,6 +446,7 @@ typedef struct {
   occa::memory o_projectL2; // local weights for projection.
 
   occa::kernel volumeKernel;
+  occa::kernel volumeCorrectionKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
   occa::kernel filterKernelH;

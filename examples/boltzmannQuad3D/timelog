@@ -1,0 +1,88 @@
+r: 00 [ 0000] (Nmessages=0, Ncomms=0)
+got message: % number of nodes
+
+got message: % node coordinates
+
+got Dr message: % r collocation differentation matrix
+
+got Ds message: % s collocation differentation matrix
+
+got faceNodes message: % faceNodes
+
+got LIFT message: % LIFT matrix
+
+got D message: % D (1D) matrix
+
+got gllz message: % r (1D) gll nodes
+
+got gllw message: % w (1D) gll node weights
+
+got message: % number of plot nodes
+
+got message: % plot node coordinates
+
+got plotInterp: % plot node interpolation matrix
+
+got plotTri message: % number of plot elements
+
+got plotEToV message: % triangulation of plot nodes
+
+got dual message: % dual projection matrix
+
+-0.0271225 0.0817437 -0.175171 0.389295 0.314507 0.327614 0.0635454 0.0238715 0.0627296 -0.077858 -0.016861 0.0290023 0.00888401 -0.00623963 0.00205994 
+-0.00394495 0.0116823 -0.019301 -0.0105936 0.0578335 0.0460257 0.87654 0.0722346 -0.0736703 0.0458758 0.0105095 -0.00970293 -0.00603534 0.0037992 -0.00125285 
+0.00214815 -0.00650005 0.0114102 0.00205551 -0.0198865 -0.0337982 0.0718604 0.945421 0.0718604 -0.0337982 -0.0198865 0.00205551 0.0114102 -0.00650005 0.00214815 
+-0.00125285 0.0037992 -0.00603534 -0.00970293 0.0105095 0.0458758 -0.0736703 0.0722346 0.87654 0.0460257 0.0578335 -0.0105936 -0.019301 0.0116823 -0.00394495 
+0.00205994 -0.00623963 0.00888401 0.0290023 -0.016861 -0.077858 0.0627296 0.0238715 0.0635454 0.327614 0.314507 0.389295 -0.175171 0.0817437 -0.0271225 
+gatherChange=36864
+gatherChange=0
+----------- MRAB Setup ------------------------------
+dtmin = 3.92837e-05, dtmax = 9.56647e-05
+| Rank | Level | Nelements | Level/Level Boundary Elements | 
+------------------------------------------------------------
+|  0,    0,      5088,        0     
+|  0,    1,      1056,        264     
+------------------------------------------------------------
+cfl = 0.2 0.2
+dt = 3.92837e-05
+max wave speed = 5.19615
+global h in [0.0255155,0.0625]
+dt = 3.92837e-05
+adding p_cubNp
+start
+end
+Found cached binary of [cfd4bfa98cd8d7dd/parsedSource.occa] in [862dc6168a8bf172/binary]
+Found cached binary of [cfd4bfa98cd8d7dd/parsedSource.occa] in [684daf48aacbd3b8/binary]
+Found cached binary of [c6d24f1a183bb7a4/parsedSource.occa] in [e22fe8e2d97dc712/binary]
+Found cached binary of [c6d24f1a183bb7a4/parsedSource.occa] in [99646394ff18efd8/binary]
+starting surface
+Found cached binary of [ceb95196d89a6d08/parsedSource.occa] in [154c0509fe8d82e7/binary]
+Found cached binary of [ceb95196d89a6d08/parsedSource.occa] in [2c43a7af4e49b025/binary]
+ending surface
+Compiling [boltzmannMRSAABTraceUpdateQuad3D]
+g++ -x c++ -fPIC -shared  /home/stimmel/._occa/kernels/2c4ba8c7ce72f211/source.occa -o /home/stimmel/._occa/kernels/2c4ba8c7ce72f211/binary -I/home/stimmel/occa//include -L/home/stimmel/occa//lib -locca
+
+Compiling [boltzmannMRSAABTraceUpdateQuad3D0]
+nvcc -o /home/stimmel/._occa/kernels/6b9794d9666a0a43/binary -ptx -I. -I/home/stimmel/occa/include   --ftz=true --prec-div=false --prec-sqrt=false --use_fast_math --fmad=true -arch=sm_61  -x cu /home/stimmel/._occa/kernels/6b9794d9666a0a43/source.occa
+Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [2c4ba8c7ce72f211/binary]
+Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [6b9794d9666a0a43/binary]
+Found cached binary of [615ddb14ed9d480c/parsedSource.occa] in [219f822fbaed64fd/binary]
+Found cached binary of [615ddb14ed9d480c/parsedSource.occa] in [5f9a1081857284ff/binary]
+Found cached binary of [22f02abc68d21cd0/parsedSource.occa] in [e2834f22e783fc78/binary]
+Found cached binary of [22f02abc68d21cd0/parsedSource.occa] in [305333543fc5ef32/binary]
+Found cached binary of [ad64efe25cc97c46/parsedSource.occa] in [d03222c41bfc0858/binary]
+Found cached binary of [ad64efe25cc97c46/parsedSource.occa] in [8cbdeb622864a712/binary]
+Found cached binary of [22f02abc68d21cd0/parsedSource.occa] in [e2834f22e783fc78/binary]
+Found cached binary of [22f02abc68d21cd0/parsedSource.occa] in [305333543fc5ef32/binary]
+Found cached binary of [ad64efe25cc97c46/parsedSource.occa] in [d03222c41bfc0858/binary]
+Found cached binary of [ad64efe25cc97c46/parsedSource.occa] in [8cbdeb622864a712/binary]
+tstep = 499, t = 0.0392837
+FILE = norms_0000_0000.vtu
+tstep = 999, t = 0.0785675
+FILE = norms_0000_0001.vtu
+tstep = 1499, t = 0.117851
+FILE = norms_0000_0002.vtu
+tstep = 1999, t = 0.157135
+FILE = norms_0000_0003.vtu
+tstep = 2499, t = 0.196419
+found nan
