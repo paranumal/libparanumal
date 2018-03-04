@@ -16,7 +16,12 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   
   mesh->errorStep = 10000; 
 
-  dfloat RE[4];  RE[0] = 20;  RE[1] = 50; RE[2] = 200; RE[3] = 500; // Remove for tests!!!!!
+  dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
+                 RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
+
+  dfloat MA[7];  MA[0] = 0.05;  MA[1] = 0.075; MA[2] = 0.1; MA[3] = 0.125;
+                 MA[4] = 0.15;  MA[5] = 0.175; MA[6] = 0.2;
+   // Remove for tests!!!!!
 
   // Initialize
   dfloat Ma      = 0.f,   Re      = 0.f;
@@ -27,8 +32,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.05;    // Set Mach number
-    mesh->Re = 1000; //RE[mesh->Ntscale]; // Set Reynolds number was 100
+    mesh->Ma = 0.1; //MA[mesh->Ntscale]; // Set Mach number
+    mesh->Re = RE[mesh->Ntscale]; 
     //
     Uref = 1.0;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
@@ -44,7 +49,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 0.1; // Was 200  
+    mesh->finalTime = 0.01; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -91,7 +96,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl          = 0.300; 
+  dfloat cfl = 0.25; 
+  if(strstr(options,"LSERK") || strstr(options,"SARK") || strstr(options,"LSIMEX") )
+    cfl          = 0.75; 
+
+
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/mesh->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 

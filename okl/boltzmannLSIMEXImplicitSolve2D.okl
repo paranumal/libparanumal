@@ -281,16 +281,12 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     shared dfloat s_cubN4[p_NblockCub][p_cubNp];
     shared dfloat s_cubN5[p_NblockCub][p_cubNp];
     shared dfloat s_cubN6[p_NblockCub][p_cubNp];
-    // sub-group of p_Np cubature node interpolants of N4,N5,N6
+
     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
 
     exclusive iint   e, pmlId;  
-    //
-    // exclusive dfloat N4c, N5c, N6c;
-    // exclusive dfloat qim4 =0.f, qim5 = 0.f, qim6=0.f ;  
-    // exclusive dfloat qex4 =0.f, qex5 = 0.f, qex6=0.f ; 
-
+  
     for(iint es=0;es<p_NblockCub;++es;inner1){
       for(iint n=0;n<p_maxCubNodes;++n;inner0){      
         iint et = eo+es; // element in block

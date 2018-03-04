@@ -87,9 +87,10 @@ int main(int argc, char **argv){
 
     SCALE[0] = 1; SCALE[1] = 2;  SCALE[2] = 10;   SCALE[3] = 20;   
     
-    for(iint i=0; i<1;i++){
+    for(iint i=0; i<9;i++){
 
-      mesh->Ntscale=SCALE[i];
+      //mesh->Ntscale=SCALE[i];
+      mesh->Ntscale=i;
 
       printf("Setup Boltzmann Solver: \n");
       boltzmannSetup2D(mesh,options); 

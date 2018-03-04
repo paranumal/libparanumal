@@ -1,12 +1,26 @@
 cd ../examples/boltzmannTri2D;
 make -j; 
 
-rm *.dat; rm *.vtu; 
-mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W1.msh  3  MRSAAB
-mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W2.msh  3  MRSAAB
-mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W3.msh  3  MRSAAB
+rm *.vtu; 
 
+#
+#for N in `seq 1 6 `;do
+#./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh $N LSERK
+#./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh $N MRAB
+#./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh $N MRSAAB
+#./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh $N LSIMEX
+#./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh $N SARK
+#done;
 
+./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh 3 LSERK
+./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh 3 MRAB
+./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh 3 MRSAAB
+
+#mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W1.msh  3  MRSAAB
+#mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W2.msh  3  MRSAAB
+#mpiexec.openmpi -n 2  ./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W3.msh  3  MRSAAB
+#
+#
 # Test Pml Width
 #./boltzmannMain2D ../../meshes/boltzmannVortex2D_w0.msh 3 LSERK;
 #./boltzmannMain2D ../../meshes/boltzmannVortex2D_w1.msh 3 LSERK;
