@@ -51,19 +51,16 @@ dt = 3.92837e-05
 adding p_cubNp
 start
 end
-Found cached binary of [cfd4bfa98cd8d7dd/parsedSource.occa] in [862dc6168a8bf172/binary]
-Found cached binary of [cfd4bfa98cd8d7dd/parsedSource.occa] in [684daf48aacbd3b8/binary]
+Found cached binary of [91f94c8924cb6a59/parsedSource.occa] in [d304a0081cd965fa/binary]
+Found cached binary of [91f94c8924cb6a59/parsedSource.occa] in [3af53786cfb64940/binary]
 Found cached binary of [c6d24f1a183bb7a4/parsedSource.occa] in [e22fe8e2d97dc712/binary]
 Found cached binary of [c6d24f1a183bb7a4/parsedSource.occa] in [99646394ff18efd8/binary]
 starting surface
 Found cached binary of [ceb95196d89a6d08/parsedSource.occa] in [154c0509fe8d82e7/binary]
 Found cached binary of [ceb95196d89a6d08/parsedSource.occa] in [2c43a7af4e49b025/binary]
 ending surface
-Compiling [boltzmannMRSAABTraceUpdateQuad3D]
-g++ -x c++ -fPIC -shared  /home/stimmel/._occa/kernels/2c4ba8c7ce72f211/source.occa -o /home/stimmel/._occa/kernels/2c4ba8c7ce72f211/binary -I/home/stimmel/occa//include -L/home/stimmel/occa//lib -locca
-
-Compiling [boltzmannMRSAABTraceUpdateQuad3D0]
-nvcc -o /home/stimmel/._occa/kernels/6b9794d9666a0a43/binary -ptx -I. -I/home/stimmel/occa/include   --ftz=true --prec-div=false --prec-sqrt=false --use_fast_math --fmad=true -arch=sm_61  -x cu /home/stimmel/._occa/kernels/6b9794d9666a0a43/source.occa
+Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [2c4ba8c7ce72f211/binary]
+Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [6b9794d9666a0a43/binary]
 Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [2c4ba8c7ce72f211/binary]
 Found cached binary of [ba85673ea168a0b0/parsedSource.occa] in [6b9794d9666a0a43/binary]
 Found cached binary of [615ddb14ed9d480c/parsedSource.occa] in [219f822fbaed64fd/binary]
@@ -85,4 +82,9 @@ FILE = norms_0000_0002.vtu
 tstep = 1999, t = 0.157135
 FILE = norms_0000_0003.vtu
 tstep = 2499, t = 0.196419
-found nan
+FILE = norms_0000_0004.vtu
+tstep = 2999, t = 0.235702
+FILE = norms_0000_0005.vtu
+tstep = 3499, t = 0.274986
+FILE = norms_0000_0006.vtu
+tstep = 3999, t = 0.31427

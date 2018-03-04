@@ -101,17 +101,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
 
-      /*for (iint l=0;l<lev;l++) {
-	if (mesh->MRABNelements[l]) {
-	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
-				       mesh->o_MRABelementIds[l],
-				       mesh->MRABshiftIndex[l],
-				       mesh->Nrhs,
-				       mesh->o_q,
-				       mesh->o_rhsq);
-	}
-	}*/
-
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);
@@ -190,6 +179,17 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_qFilter,
 			    mesh->o_rhsq);	
 			    }
+
+      for (iint l=0;l<lev;l++) {
+	if (mesh->MRABNelements[l]) {
+	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
+				       mesh->o_MRABelementIds[l],
+				       mesh->MRABshiftIndex[l],
+				       mesh->Nrhs,
+				       mesh->o_q,
+				       mesh->o_rhsq);
+	}
+      }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
