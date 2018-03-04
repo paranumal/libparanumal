@@ -15,16 +15,16 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   
   /*for (int e = 0; e < mesh->Nelements; ++e) {
     for (int f = 0; f < mesh->Nfaces; ++f) {
-      printf("%d ",mesh->EToF[e*mesh->Nfaces + f]);
+    printf("%d ",mesh->EToF[e*mesh->Nfaces + f]);
     }
     printf("\n");
-  }*/
+    }*/
   
   //kernel arguments
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-  /*mesh->filterKernelq0H(mesh->Nelements,
+  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -43,10 +43,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			mesh->o_y,
 			mesh->o_z,
 			mesh->o_qFilter,
-			mesh->o_q);*/
+			mesh->o_q);
   
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
-     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+    for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
        
       iint mrab_order = 0; 
       
@@ -137,7 +137,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
-      /*for (iint l = 0; l < lev; l++) {
+      for (iint l = 0; l < lev; l++) {
 	
        	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
 	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
@@ -177,7 +177,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    l,
 			    mesh->o_qFilter,
 			    mesh->o_rhsq);	
-			    }*/
+			    }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -206,7 +206,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
 	}
-	}
+      }
       
       occa::toc("updateKernel");
       
@@ -232,10 +232,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_q);
       	}
       }
-     }
+    }
 
-     // estimate maximum error
-     if((tstep%mesh->errorStep)==0){
+    // estimate maximum error
+    if(((tstep+1)%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	

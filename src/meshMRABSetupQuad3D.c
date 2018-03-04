@@ -31,9 +31,10 @@ void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   //number of levels
   mesh->MRABNlevels = mymin(floor(log2(dtGmax/dtGmin))+1,maxLevels);
 
-  //shift dtGmin so that we have an integer number of steps
-  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
-  dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
+  //ST: disabled for testing
+  //shift dtGmin so that we have an integer number of steps 
+  /*mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
+    dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);*/
 
   mesh->dt = dtGmin; 
 
