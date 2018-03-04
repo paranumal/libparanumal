@@ -8,51 +8,34 @@ kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared iint e;
     for(iint es=0;es<p_NblockV;++es;inner2){
       for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){    
+	for(iint i=0;i<p_Nq;++i;inner0){
 	  
-	  const iint eT = eo+es; // element in block
-	  if(eT<Nelements){
-	    e = elementIds[eT];
-	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
-	    for(int fld=0;fld<p_Nfields;++fld){
-	      s_q[fld][es][j][i] = q[base+fld*p_Np];
-	    }
-	  }
-	}
-      }
-    }
-    
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-    
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){    
 	  iint eT = eo+es; // element in block
-
+	  
 	  const iint n=j*p_Nq+i;
-
+	  
 	  if(eT<Nelements){
-	    const dfloat q1  = s_q[0][es][j][i];
-	    const dfloat q2  = s_q[1][es][j][i];
-	    const dfloat q3  = s_q[2][es][j][i];
-	    const dfloat q4  = s_q[3][es][j][i];
-	    const dfloat q5  = s_q[4][es][j][i];
-	    const dfloat q6  = s_q[5][es][j][i];
-	    const dfloat q7  = s_q[6][es][j][i];
-	    const dfloat q8  = s_q[7][es][j][i];
-	    const dfloat q9  = s_q[8][es][j][i];
-	    const dfloat q10 = s_q[9][es][j][i];
+	    const iint e = elementIds[eo+es];
+	    
+	    iint base = i + j*p_Nq + p_Nfields*p_Np*e;
+	    
+	    const dfloat q1  = q[base+0*p_Np];
+	    const dfloat q2  = q[base+1*p_Np];
+	    const dfloat q3  = q[base+2*p_Np];
+	    const dfloat q4  = q[base+3*p_Np];
+	    const dfloat q5  = q[base+4*p_Np];
+	    const dfloat q6  = q[base+5*p_Np];
+	    const dfloat q7  = q[base+6*p_Np];
+	    const dfloat q8  = q[base+7*p_Np];
+	    const dfloat q9  = q[base+8*p_Np];
+	    const dfloat q10 = q[base+9*p_Np];
 	    
 	    const dfloat sw = 0;
 	    const dfloat invq1 = 1.f/q1;
 
-	    const iint base = e*p_Np*p_Nfields*nrhs+shift*p_Np*p_Nfields+n;
+	    base = e*p_Np*p_Nfields*nrhs+shift*p_Np*p_Nfields+n;
 
 	    rhsq[base+4*p_Np] -= p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
 	    rhsq[base+5*p_Np] -= p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
@@ -60,12 +43,9 @@ kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
 	    rhsq[base+7*p_Np] -= p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
 	    rhsq[base+8*p_Np] -= p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
 	    rhsq[base+9*p_Np] -= p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
-
 	  }
 	}
       }
     }
   }
 }
-
-
