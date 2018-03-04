@@ -24,7 +24,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-  mesh->filterKernelq0H(mesh->Nelements,
+    mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -101,6 +101,17 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
 
+      /*for (iint l=0;l<lev;l++) {
+	if (mesh->MRABNelements[l]) {
+	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
+				       mesh->o_MRABelementIds[l],
+				       mesh->MRABshiftIndex[l],
+				       mesh->Nrhs,
+				       mesh->o_q,
+				       mesh->o_rhsq);
+	}
+	}*/
+
       if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);
@@ -114,6 +125,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       
       occa::tic("surfaceKernel");
 
+      
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 
