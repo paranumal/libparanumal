@@ -146,6 +146,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	    for (iint fld=0; fld<p_Nfields;++fld) {
 	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
 	    }
+
 	}
 	else{
 	  
