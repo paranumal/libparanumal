@@ -37,12 +37,12 @@ kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
 
 	    base = e*p_Np*p_Nfields*nrhs+shift*p_Np*p_Nfields+n;
 
-	    rhsq[base+4*p_Np] -= p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
-	    rhsq[base+5*p_Np] -= p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
-	    rhsq[base+6*p_Np] -= p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
-	    rhsq[base+7*p_Np] -= p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
-	    rhsq[base+8*p_Np] -= p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
-	    rhsq[base+9*p_Np] -= p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+	    rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+	    rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+	    rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+	    rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+	    rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+	    rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
 	  }
 	}
       }

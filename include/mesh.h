@@ -411,7 +411,7 @@ typedef struct {
   occa::memory o_MRABlevels;
   occa::memory o_lev_updates;
   occa::memory o_shift;
-
+  occa::memory o_qCorr;
 
   iint * lev_updates;
 

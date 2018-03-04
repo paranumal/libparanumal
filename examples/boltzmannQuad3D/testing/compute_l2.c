@@ -14,9 +14,9 @@ dfloat compute_l2(data *ref, data *test) {
     }
     mismatch += pw_mismatch;
     test->mismatch[p] = pw_mismatch;
-    test->difference[3*p] = test->vel_x[p] - ref->vel_x[p];
-    test->difference[3*p+1] = test->vel_y[p] - ref->vel_y[p];
-    test->difference[3*p+2] = test->vel_z[p] - ref->vel_z[p];
+    test->difference[3*p] = (test->vel_x[p] - ref->vel_x[p])/ref->vel_x[p];
+    test->difference[3*p+1] = (test->vel_y[p] - ref->vel_y[p])/ref->vel_y[p];
+    test->difference[3*p+2] = (test->vel_z[p] - ref->vel_z[p])/ref->vel_z[p];
   }
   return sqrt(mismatch);
 }

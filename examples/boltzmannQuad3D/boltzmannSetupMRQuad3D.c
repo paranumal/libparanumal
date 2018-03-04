@@ -297,7 +297,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
   dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = cfl_small;
+  dfloat cfl_large = 2*cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -391,6 +391,9 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   
   //initialization isn't strictly necessary here.
   mesh->o_qFilter =
+    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+
+  mesh->o_qCorr =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
   
   mesh->o_sgeo =

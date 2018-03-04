@@ -62,7 +62,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eL];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
+		  const iint rhsNum = (shift[lev] + li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
@@ -89,7 +89,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		for (iint li=0; li<nrhs; ++li) {
 		  const iint lev = lev_numbers[eR];
 		  
-		  const iint rhsNum = (nrhs + shift[lev] - li) % nrhs;
+		  const iint rhsNum = (shift[lev] + li) % nrhs;
 		  
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
