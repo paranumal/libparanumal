@@ -144,8 +144,8 @@ using Lookup=std::map<std::pair<Index, Index>, Index>;
 
 inline v3 split(v3 lhs, v3 rhs)
 {
-  //return normalize(lhs+rhs);
-  return (lhs+rhs)/2;
+  return normalize(lhs+rhs);
+  //return (lhs+rhs)/2;
 }
 
 inline ColorPosition split(ColorPosition lhs, ColorPosition rhs)
@@ -249,7 +249,7 @@ void make_icosphere(int subdivisions, VertexList &vertices, std::vector<bool> &m
 int main(int argc, char **argv){
 
   bool trim_edge = false; //set to true to remove cube edge entirely
-  bool mark_edge = true; //adds a tag to mark cube face matching each element face
+  bool mark_edge = false; //adds a tag to mark cube face matching each element face
 
   int Nref = (argc==2) ? atoi(argv[1]): 0;
   

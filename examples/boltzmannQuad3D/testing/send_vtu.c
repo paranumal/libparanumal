@@ -25,10 +25,10 @@ void send_vtu(char *filename, data *content) {
 
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"difference\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"difference\" Format=\"ascii\">\n");
     for(iint n=0;n<content->points;++n){
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", content->difference[3*n],content->difference[3*n+1],content->difference[3*n+2]);
+      fprintf(fp, "%g\n", content->difference[n]);
     }
     fprintf(fp, "       </DataArray>\n");
 
