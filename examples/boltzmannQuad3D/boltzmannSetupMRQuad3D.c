@@ -297,7 +297,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
   dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = 2*cfl_small;
+  dfloat cfl_large = 4*cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   

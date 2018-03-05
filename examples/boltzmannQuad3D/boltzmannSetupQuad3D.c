@@ -178,7 +178,7 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
     }
   }
 
-  dfloat cfl = 2; // depends on the stability region size (was .4)
+  dfloat cfl = 0.2; // depends on the stability region size (was .4)
 
   // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
