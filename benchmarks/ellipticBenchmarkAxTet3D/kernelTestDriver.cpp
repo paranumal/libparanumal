@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 1
+#if 0
 #define datafloat double
 #define datafloatString "double"
 #else
@@ -288,16 +288,18 @@ double timeData[15];
       sprintf(buf, "ellipticPartialAxTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
     }
+int elementOffset = 0;
     occa::initTimer(device);
 
     // queue Ax kernels
     for (int i =kMin;i<=kMax; i++){
       datafloat lambda = 1.;
       occa::streamTag startTag = device.tagStream();
-
+if (i<9){
       // launch kernel
       for(it=0;it<Niter;++it){
-        Tet3Dkernel[i-1](E, o_elementList,
+        Tet3Dkernel[i-1](E,
+ o_elementList,
             o_ggeo,
             o_SrrT,
             o_SrsT,
@@ -313,17 +315,41 @@ double timeData[15];
             o_q,       
             o_Aq);
       }
+}
+else{
+      for(it=0;it<Niter;++it){
+        Tet3Dkernel[i-1](E,
+ elementOffset,
+            o_ggeo,
+            o_SrrT,
+            o_SrsT,
+            o_SrtT,
+            o_SsrT,
+            o_SssT,
+            o_SstT,
+            o_StrT,
+            o_StsT,
+            o_SttT,
+            o_MM,
+            lambda,
+            o_q,       
+            o_Aq);
+      }
+
+
+}
+
       //adjust GFLOPS for Ref2 and Ref3
-      if (i>5){
+      occa::streamTag stopTag = device.tagStream();
+      double elapsed = device.timeBetween(startTag, stopTag);
+     if (i>5){
         // old: gflops = p_Np*20*(1+p_Np)
         gflops = p_Np*(p_Np*14 +14);
 gflops *=Niter;      
 
 
-}
-      occa::streamTag stopTag = device.tagStream();
-      double elapsed = device.timeBetween(startTag, stopTag);
-      printf("\n\nKERNEL %d  ================================================== \n\n", i);
+} 
+     printf("\n\nKERNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
 timeData[i] = elapsed/Niter;
       printf("number of flops = %f time = %f \n", gflops, elapsed);
