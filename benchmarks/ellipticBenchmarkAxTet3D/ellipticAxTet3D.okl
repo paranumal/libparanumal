@@ -510,7 +510,7 @@ void ellipticPartialAxTet3D_Ref6(const int Nelements,
       const datafloat Gst = s_ggeo[p_G12ID];
       const datafloat Gtt = s_ggeo[p_G22ID];
       const datafloat J   = s_ggeo[p_GWJID];
-          
+
 
       datafloat qrr = 0.;
       datafloat qrs = 0.;
@@ -527,33 +527,33 @@ void ellipticPartialAxTet3D_Ref6(const int Nelements,
         for (int k=0;k<p_Np;k++) {
           const datafloat qk = s_q[k];
 
-          
-qrr += SrrT[n+k*p_Np]*qk;  
-              qrs += SrsT[n+k*p_Np]*qk; // assume (Srs stores Srs+Ssr)
-              qrt += SrtT[n+k*p_Np]*qk; // assume (Srt stores Srt+Str)
-              qss += SssT[n+k*p_Np]*qk;
-              qst += SstT[n+k*p_Np]*qk; // assume (Sst stores Sst+Sts)
-              qtt += SttT[n+k*p_Np]*qk;
-              qM  += MM[n+k*p_Np] *qk;
+
+          qrr += SrrT[n+k*p_Np]*qk;  
+          qrs += SrsT[n+k*p_Np]*qk; // assume (Srs stores Srs+Ssr)
+          qrt += SrtT[n+k*p_Np]*qk; // assume (Srt stores Srt+Str)
+          qss += SssT[n+k*p_Np]*qk;
+          qst += SstT[n+k*p_Np]*qk; // assume (Sst stores Sst+Sts)
+          qtt += SttT[n+k*p_Np]*qk;
+          qM  += MM[n+k*p_Np] *qk;
 
 
 
- }
+        }
 
 
       const int id = n + element*p_Np;
 
-     
-  Aq[id] = 
-              Grr*qrr+
-              Grs*qrs+
-              Grt*qrt+
-              Gss*qss+
-              Gst*qst+
-              Gtt*qtt+ 
-              +J*lambda*qM;   
 
- }
+      Aq[id] = 
+        Grr*qrr+
+        Grs*qrs+
+        Grt*qrt+
+        Gss*qss+
+        Gst*qst+
+        Gtt*qtt+ 
+        +J*lambda*qM;   
+
+    }
   }
 }
 // optimizations:
