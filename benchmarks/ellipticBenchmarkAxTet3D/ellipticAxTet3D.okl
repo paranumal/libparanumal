@@ -685,7 +685,6 @@ kernel void ellipticPartialAxTet3D_Ref7(const int Nelements,
   }
 }
 
-
 kernel void ellipticPartialAxTet3D_Ref8(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
@@ -813,3 +812,263 @@ kernel void ellipticPartialAxTet3D_Ref8(const int Nelements,
     }
   }
 }
+//geofactors in shared but loaded more efficiently
+
+#define elementOffset 0
+
+kernel void ellipticPartialAxTet3D_Ref9(const int Nelements,
+    const int   * restrict elementList,
+    const datafloat * restrict ggeo,
+    const datafloat * restrict SrrT,
+    const datafloat * restrict SrsT,
+    const datafloat * restrict SrtT,
+    const datafloat * restrict SsrT,
+    const datafloat * restrict SssT,
+    const datafloat * restrict SstT,
+    const datafloat * restrict StrT,
+    const datafloat * restrict StsT,
+    const datafloat * restrict SttT,
+    const datafloat * restrict MM,
+    const datafloat lambda,
+    const datafloat  * restrict q,
+    datafloat  * restrict Aq){
+
+  // number of outputs per thread 
+  // important to tune this at low order
+  //#define p_Ne 2
+
+  // p_Ne nodes per thread
+  // p_Nb elements worth of threads per block
+
+  for(int eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
+
+    shared datafloat s_q[p_Ne][p_Nb][p_Np];
+   shared datafloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
+    //exclusive int element[p_Ne];
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+const int ebase = eo + b + p_Nb*et;
+const int e = elementOffset + ebase; 
+
+            if(ebase<Nelements){
+      //        element[et] = elementList[e];
+
+              int id = n + e*p_Np;
+              s_q[et][b][n] = q[id];
+
+int m = n + b*p_Nb;
+id = eo*p_Nggeo + m;
+while(m<p_Nggeo*p_Ne*p_Nb && id<Nelements*p_Nggeo){
+    s_ggeo[0][0][m] = ggeo[id];
+    id += p_Np*p_Nb;
+    m += p_Np*p_Nb;
+}
+            }
+          }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        datafloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne], qM[p_Ne];
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+            qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
+            qss[et] = 0;    qst[et] = 0;
+            qtt[et] = 0;
+            qM[et] = 0;
+          }
+
+        // overall this does p_Ne*14 flops for  (7+p_Ne)*|datafloat| L1+shared accesse
+        // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
+        occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+
+            const datafloat Srr_nk = SrrT[n+k*p_Np];
+            const datafloat Srs_nk = SrsT[n+k*p_Np];
+            const datafloat Srt_nk = SrtT[n+k*p_Np];
+            const datafloat Sss_nk = SssT[n+k*p_Np];
+            const datafloat Sst_nk = SstT[n+k*p_Np];
+            const datafloat Stt_nk = SttT[n+k*p_Np];
+            const datafloat   MM_nk =    MM[n+k*p_Np];
+
+            occaUnroll(p_Ne)
+              for(int et=0;et<p_Ne;++et){
+
+                const datafloat qk = s_q[et][b][k];
+                qrr[et] += Srr_nk*qk;  
+                qrs[et] += Srs_nk*qk; // assume (Srs stores Srs+Ssr)
+                qrt[et] += Srt_nk*qk; // assume (Srt stores Srt+Str)
+                qss[et] += Sss_nk*qk;
+                qst[et] += Sst_nk*qk; // assume (Sst stores Sst+Sts)
+                qtt[et] += Stt_nk*qk;
+                qM[et]  += MM_nk*qk;
+              }
+          }
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+const int ebase = eo + b + p_Nb*et;
+const int e = elementOffset + ebase;
+            if(ebase<Nelements){
+  const datafloat Grr = s_ggeo[et][b][p_G00ID];
+              const datafloat Grs = s_ggeo[et][b][p_G01ID];
+              const datafloat Grt = s_ggeo[et][b][p_G02ID];
+              const datafloat Gss = s_ggeo[et][b][p_G11ID];
+              const datafloat Gst = s_ggeo[et][b][p_G12ID];
+              const datafloat Gtt = s_ggeo[et][b][p_G22ID];
+              const datafloat J   = s_ggeo[et][b][p_GWJID];
+
+              const int id = n + e*p_Np;
+
+
+              Aq[id] = 
+                Grr*qrr[et]+
+                Grs*qrs[et]+
+                Grt*qrt[et]+
+                Gss*qss[et]+
+                Gst*qst[et]+
+                Gtt*qtt[et]+ 
+                +J*lambda*qM[et];
+            }
+          }
+      }
+    }
+  }
+}
+// geofactors in REGISTERS + elementOffset instead of element list
+
+
+
+kernel void ellipticPartialAxTet3D_Ref10(const int Nelements,
+    const int   * restrict elementList,
+    const datafloat * restrict ggeo,
+    const datafloat * restrict SrrT,
+    const datafloat * restrict SrsT,
+    const datafloat * restrict SrtT,
+    const datafloat * restrict SsrT,
+    const datafloat * restrict SssT,
+    const datafloat * restrict SstT,
+    const datafloat * restrict StrT,
+    const datafloat * restrict StsT,
+    const datafloat * restrict SttT,
+    const datafloat * restrict MM,
+    const datafloat lambda,
+    const datafloat  * restrict q,
+    datafloat  * restrict Aq){
+
+  // number of outputs per thread 
+  // important to tune this at low order
+  //#define p_Ne 2
+
+  // p_Ne nodes per thread
+  // p_Nb elements worth of threads per block
+
+  for(int eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
+
+    shared datafloat s_q[p_Ne][p_Nb][p_Np];
+
+    //exclusive int element[p_Ne];
+
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+const int ebase = eo + b + p_Nb*et;            
+const int e = elementOffset + ebase;
+
+            if(ebase<Nelements){
+      //        element[et] = elementList[e];
+
+              const int id = n + e*p_Np;
+              s_q[et][b][n] = q[id];
+
+            }
+          }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+
+        datafloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne], qM[p_Ne];
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+            qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
+            qss[et] = 0;    qst[et] = 0;
+            qtt[et] = 0;
+            qM[et] = 0;
+          }
+
+        // overall this does p_Ne*14 flops for  (7+p_Ne)*|datafloat| L1+shared accesse
+        // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
+        occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+
+            const datafloat Srr_nk = SrrT[n+k*p_Np];
+            const datafloat Srs_nk = SrsT[n+k*p_Np];
+            const datafloat Srt_nk = SrtT[n+k*p_Np];
+            const datafloat Sss_nk = SssT[n+k*p_Np];
+            const datafloat Sst_nk = SstT[n+k*p_Np];
+            const datafloat Stt_nk = SttT[n+k*p_Np];
+            const datafloat   MM_nk =    MM[n+k*p_Np];
+
+            occaUnroll(p_Ne)
+              for(int et=0;et<p_Ne;++et){
+
+                const datafloat qk = s_q[et][b][k];
+                qrr[et] += Srr_nk*qk;  
+                qrs[et] += Srs_nk*qk; // assume (Srs stores Srs+Ssr)
+                qrt[et] += Srt_nk*qk; // assume (Srt stores Srt+Str)
+                qss[et] += Sss_nk*qk;
+                qst[et] += Sst_nk*qk; // assume (Sst stores Sst+Sts)
+                qtt[et] += Stt_nk*qk;
+                qM[et]  += MM_nk*qk;
+              }
+          }
+
+        occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+	    const int ebase = eo + b + p_Nb*et;
+            const int e = elementOffset + ebase;
+            if(ebase<Nelements){
+
+
+ int gid = e*p_Nggeo;
+
+      datafloat Grr = ggeo[gid + p_G00ID];
+      datafloat Grs = ggeo[gid + p_G01ID];
+      datafloat Grt = ggeo[gid + p_G02ID];
+      datafloat Gss = ggeo[gid + p_G11ID];
+      datafloat Gst = ggeo[gid + p_G12ID];
+      datafloat Gtt = ggeo[gid + p_G22ID];
+      datafloat J   = ggeo[gid + p_GWJID];
+
+              const int id = n + e*p_Np;
+
+              Aq[id] = 
+                Grr*qrr[et]+
+                Grs*qrs[et]+
+                Grt*qrt[et]+
+                Gss*qss[et]+
+                Gst*qst[et]+
+                Gtt*qtt[et]+ 
+                +J*lambda*qM[et];
+            }
+          }
+      }
+    }
+  }
+}
+
