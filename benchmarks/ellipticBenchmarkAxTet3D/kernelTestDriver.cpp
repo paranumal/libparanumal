@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 0
+#if 1
 #define datafloat double
 #define datafloatString "double"
 #else
@@ -27,7 +27,7 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 
 int main(int argc, char **argv){
 
-  int NKernels = 8;
+  int NKernels = 9;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -35,6 +35,9 @@ int main(int argc, char **argv){
   int option = (argc>=4) ? atoi(argv[3]):1;  
   int p_Ne = (argc>=5) ? atoi(argv[4]):1;
   int p_Nb = (argc>=6) ? atoi(argv[5]):1;
+
+ int kMin = (argc>=7) ? atoi(argv[6]):0;
+ int kMax = (argc>=8) ? atoi(argv[7]):8;
 
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
@@ -50,6 +53,7 @@ printf("Polynomial degree  : %d\n", p_N);
 printf("Nodes per element  : %d\n", p_Np);
 printf("Elements per block : %d\n", p_Ne);
 printf("Outputs per thread : %d\n", p_Nb);
+printf("Running kernels    : %d to %d \n", kMin, kMax);
 printf("==============================================================\n");
 printf("==============================================================\n");
 printf("==============================================================\n");
@@ -74,10 +78,11 @@ printf("\n\n");
   gflops *= Niter;
 
   // build some dummy storage & parameters
-  double results3D[10];
-  double roofline[10];
+  double results3D[15];
+  double roofline[15];
+double timeData[15];
   occa::device device;
-  occa::kernel Tet3Dkernel[8];
+  occa::kernel Tet3Dkernel[15];
   occa::kernel correctRes;
   occa::kernelInfo kernelInfo;
 
@@ -138,7 +143,7 @@ printf("\n\n");
     kernelInfo.addDefine("p_JWID", 10);
 
     char buf[200];
-    for (int i =0; i<NKernels+1; i++){
+    for (int i =kMin; i<kMax+1; i++){
       printf("compiling kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxIpdgTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxIpdgTet3D.okl", buf, kernelInfo);
@@ -187,7 +192,7 @@ printf("\n\n");
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =0;i<=NKernels; i++){
+    for (int i =kMin;i<=kMax; i++){
       datafloat lambda = 1.;
       datafloat tau  = 0.5;    
       occa::streamTag startTag = device.tagStream();
@@ -278,7 +283,7 @@ printf("\n\n");
     }
     o_elementList = device.malloc(E*sizeof(int), elementList);
     char buf[200];
-    for (int i =0; i<NKernels+1; i++){
+    for (int i =kMin; i<kMax+1; i++){
       printf("compiling 3D kernel %d ...\n", i);
       sprintf(buf, "ellipticPartialAxTet3D_Ref%d", i); 
       Tet3Dkernel[i-1] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
@@ -286,7 +291,7 @@ printf("\n\n");
     occa::initTimer(device);
 
     // queue Ax kernels
-    for (int i =0;i<=NKernels; i++){
+    for (int i =kMin;i<=kMax; i++){
       datafloat lambda = 1.;
       occa::streamTag startTag = device.tagStream();
 
@@ -320,6 +325,7 @@ gflops *=Niter;
       double elapsed = device.timeBetween(startTag, stopTag);
       printf("\n\nKERNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
+timeData[i] = elapsed/Niter;
       printf("number of flops = %f time = %f \n", gflops, elapsed);
       results3D[i] =E*gflops/(elapsed*1000*1000*1000); 
 //elapsed/Niter;
@@ -351,13 +357,13 @@ gflops *=Niter;
 
 
   //printf("\n\nBWfromCopy%d = [", E);
-  for (int k=0; k<=NKernels; k++){
+  for (int k=kMin; k<=kMax; k++){
     printf("==== this is kernel %d \n", k);
     int p_Nq = k+1;
     int p_gjNq = k+2;
     int Niter = 10;
     double gflops;
-    int Nbytes;
+    long long int Nbytes;
     if (option == 0){
       gflops =
         p_Np*24+p_Np*p_Np*8+p_NfacesNfp*37 + p_Np*p_NfacesNfp * 8;
@@ -416,7 +422,7 @@ Nbytes /= 2;
   //printf("];\n\n");
 
   printf("\n\nROOFLINE = [");
-  for (int k=0; k<=NKernels; k++){
+  for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", roofline[k]);
   }
@@ -425,12 +431,29 @@ Nbytes /= 2;
 
 
 printf("\n\nResults(:,%d)  = [", p_N);
-  for (int k=0; k<=NKernels; k++){
+  for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", results3D[k]);
   }
 
   printf("];\n\n");
+
+printf("\n\ntimeData(:, %d) = [",p_N);
+  for (int k=kMin; k<=kMax; k++){
+
+    printf(" %16.17f ", timeData[k]);
+  }
+
+  printf("];\n\n");
+
+printf("\n\ngigaNodes(:, %d) = [",p_N);
+  for (int k=kMin; k<=kMax; k++){
+
+    printf(" %16.17f ", (p_Np*E/10e9)/timeData[k]);
+  }
+
+  printf("];\n\n");
+
 
   exit(0);
   return 0;
