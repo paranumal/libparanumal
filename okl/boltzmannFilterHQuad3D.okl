@@ -59,7 +59,11 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	    //should be == 0, but then I can't test in serial mode
 	    if(mark_edge < 1) {
 
-	      if (1) {//(lev_updates[lev_numbers[eL]] != lev_updates[l]) {
+	      const dfloat stepC = lev_updates[l];
+	      const dfloat stepL = lev_updates[lev_numbers[eL]];
+	      const dfloat stepR = lev_updates[lev_numbers[eR]];
+	      
+	      if (stepL != stepC) {
 		dfloat q_sum = 0;
 		
 		for (iint li=0; li<nrhs; ++li) {
@@ -69,8 +73,6 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  
 		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 		  
-		  const dfloat stepC = lev_updates[l];
-		  const dfloat stepL = lev_updates[lev_numbers[eL]];
 		  const dfloat sizeL = 1<<lev_numbers[eL];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
@@ -84,9 +86,10 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		s_q[fld][0][j][i] = q_sum;
 	      }
 	      else {
-		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+		const iint shiftL = shift[lev_numbers[eL]];
+		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
-	      if (1) {//(lev_updates[lev_numbers[eR]] != lev_updates[l]) {
+	      if (stepR != stepC) {
 		dfloat q_sum = 0;
 		
 		for (iint li=0; li<nrhs; ++li) {
@@ -96,8 +99,6 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  
 		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
 
-		  const dfloat stepC = lev_updates[l];
-		  const dfloat stepR = lev_updates[lev_numbers[eR]];
 		  const dfloat sizeR = 1 << lev_numbers[eR];
 		  
 		  for (iint lj = 0; lj < nrhs; ++lj) {
@@ -110,7 +111,8 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		s_q[fld][2][j][i] = q_sum;
 	      }
 	      else {
-		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+		const iint shiftR = shift[lev_numbers[eR]];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
 	    }
 	  }

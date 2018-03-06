@@ -24,7 +24,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-   mesh->filterKernelq0H(mesh->Nelements,
+  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -137,11 +137,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
+      mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
+      mesh->o_lev_updates.copyFrom(mesh->lev_updates);
+
       for (iint l = 0; l < lev; l++) {
-	
-       	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
-	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
-	
+		
       	mesh->filterKernelH(mesh->MRABNelements[l],
 			    mesh->o_MRABelementIds[l],
 			    mesh->Nrhs,
