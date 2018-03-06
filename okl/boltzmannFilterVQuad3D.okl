@@ -56,7 +56,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	   
 	    //edge of an mrab level, but not the edge of a face
 	    if(mark_edge < 1) {
-	      if (lev_updates[lev_numbers[eL]] != lev_updates[l]) {
+	      if (1) {//(lev_updates[lev_numbers[eL]] != lev_updates[l]) {
 		dfloat q_sum = 0;
 		
 		for (iint li=0; li<nrhs; ++li) {
@@ -83,7 +83,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
 	      
-	      if (lev_updates[lev_numbers[eR]] != lev_updates[l]) {
+	      if (1) {//(lev_updates[lev_numbers[eR]] != lev_updates[l]) {
 		dfloat q_sum = 0;
 		
 		for (iint li=0; li<nrhs; ++li) {
