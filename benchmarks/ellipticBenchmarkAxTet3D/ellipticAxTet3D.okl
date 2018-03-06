@@ -843,29 +843,29 @@ kernel void ellipticPartialAxTet3D_Ref9(const int Nelements,
   for(int eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
 
     shared datafloat s_q[p_Ne][p_Nb][p_Np];
-   shared datafloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
+    shared datafloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
     //exclusive int element[p_Ne];
     for(int b=0;b<p_Nb;++b;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_Ne)
           for(int et=0;et<p_Ne;++et){
-const int ebase = eo + b + p_Nb*et;
-const int e = elementOffset + ebase; 
+            const int ebase = eo + b + p_Nb*et;
+            const int e = elementOffset + ebase; 
 
             if(ebase<Nelements){
-      //        element[et] = elementList[e];
+              //        element[et] = elementList[e];
 
               int id = n + e*p_Np;
               s_q[et][b][n] = q[id];
 
-int m = n + b*p_Nb;
-id = eo*p_Nggeo + m;
-while(m<p_Nggeo*p_Ne*p_Nb && id<Nelements*p_Nggeo){
-    s_ggeo[0][0][m] = ggeo[id];
-    id += p_Np*p_Nb;
-    m += p_Np*p_Nb;
-}
+              int m = n + b*p_Nb;
+              id = eo*p_Nggeo + m;
+              while(m<p_Nggeo*p_Ne*p_Nb && id<Nelements*p_Nggeo){
+                s_ggeo[0][0][m] = ggeo[id];
+                id += p_Np*p_Nb;
+                m += p_Np*p_Nb;
+              }
             }
           }
       }
@@ -915,10 +915,10 @@ while(m<p_Nggeo*p_Ne*p_Nb && id<Nelements*p_Nggeo){
 
         occaUnroll(p_Ne)
           for(int et=0;et<p_Ne;++et){
-const int ebase = eo + b + p_Nb*et;
-const int e = elementOffset + ebase;
+            const int ebase = eo + b + p_Nb*et;
+            const int e = elementOffset + ebase;
             if(ebase<Nelements){
-  const datafloat Grr = s_ggeo[et][b][p_G00ID];
+              const datafloat Grr = s_ggeo[et][b][p_G00ID];
               const datafloat Grs = s_ggeo[et][b][p_G01ID];
               const datafloat Grt = s_ggeo[et][b][p_G02ID];
               const datafloat Gss = s_ggeo[et][b][p_G11ID];
@@ -982,11 +982,11 @@ kernel void ellipticPartialAxTet3D_Ref10(const int Nelements,
 
         occaUnroll(p_Ne)
           for(int et=0;et<p_Ne;++et){
-const int ebase = eo + b + p_Nb*et;            
-const int e = elementOffset + ebase;
+            const int ebase = eo + b + p_Nb*et;            
+            const int e = elementOffset + ebase;
 
             if(ebase<Nelements){
-      //        element[et] = elementList[e];
+              //        element[et] = elementList[e];
 
               const int id = n + e*p_Np;
               s_q[et][b][n] = q[id];
@@ -1040,20 +1040,20 @@ const int e = elementOffset + ebase;
 
         occaUnroll(p_Ne)
           for(int et=0;et<p_Ne;++et){
-	    const int ebase = eo + b + p_Nb*et;
+            const int ebase = eo + b + p_Nb*et;
             const int e = elementOffset + ebase;
             if(ebase<Nelements){
 
 
- int gid = e*p_Nggeo;
+              int gid = e*p_Nggeo;
 
-      datafloat Grr = ggeo[gid + p_G00ID];
-      datafloat Grs = ggeo[gid + p_G01ID];
-      datafloat Grt = ggeo[gid + p_G02ID];
-      datafloat Gss = ggeo[gid + p_G11ID];
-      datafloat Gst = ggeo[gid + p_G12ID];
-      datafloat Gtt = ggeo[gid + p_G22ID];
-      datafloat J   = ggeo[gid + p_GWJID];
+              datafloat Grr = ggeo[gid + p_G00ID];
+              datafloat Grs = ggeo[gid + p_G01ID];
+              datafloat Grt = ggeo[gid + p_G02ID];
+              datafloat Gss = ggeo[gid + p_G11ID];
+              datafloat Gst = ggeo[gid + p_G12ID];
+              datafloat Gtt = ggeo[gid + p_G22ID];
+              datafloat J   = ggeo[gid + p_GWJID];
 
               const int id = n + e*p_Np;
 
