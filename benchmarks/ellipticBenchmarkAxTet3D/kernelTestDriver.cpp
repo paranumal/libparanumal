@@ -36,8 +36,8 @@ int main(int argc, char **argv){
   int p_Ne = (argc>=5) ? atoi(argv[4]):1;
   int p_Nb = (argc>=6) ? atoi(argv[5]):1;
 
- int kMin = (argc>=7) ? atoi(argv[6]):0;
- int kMax = (argc>=8) ? atoi(argv[7]):8;
+  int kMin = (argc>=7) ? atoi(argv[6]):0;
+  int kMax = (argc>=8) ? atoi(argv[7]):8;
 
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
@@ -45,19 +45,19 @@ int main(int argc, char **argv){
   int p_Nfaces = 4;
   int p_NfacesNfp = p_Nfaces*p_Nfp;
 
-printf("==============================================================\n");
-printf("===================== BASIC INFO =============================\n");
-printf("==============================================================\n");
-printf("Number of elements : %d\n", E);
-printf("Polynomial degree  : %d\n", p_N);
-printf("Nodes per element  : %d\n", p_Np);
-printf("Elements per block : %d\n", p_Ne);
-printf("Outputs per thread : %d\n", p_Nb);
-printf("Running kernels    : %d to %d \n", kMin, kMax);
-printf("==============================================================\n");
-printf("==============================================================\n");
-printf("==============================================================\n");
-printf("\n\n");
+  printf("==============================================================\n");
+  printf("===================== BASIC INFO =============================\n");
+  printf("==============================================================\n");
+  printf("Number of elements : %d\n", E);
+  printf("Polynomial degree  : %d\n", p_N);
+  printf("Nodes per element  : %d\n", p_Np);
+  printf("Elements per block : %d\n", p_Ne);
+  printf("Outputs per thread : %d\n", p_Nb);
+  printf("Running kernels    : %d to %d \n", kMin, kMax);
+  printf("==============================================================\n");
+  printf("==============================================================\n");
+  printf("==============================================================\n");
+  printf("\n\n");
   int BSIZE  = p_Np;
 
 
@@ -80,7 +80,7 @@ printf("\n\n");
   // build some dummy storage & parameters
   double results3D[15];
   double roofline[15];
-double timeData[15];
+  double timeData[15];
   occa::device device;
   occa::kernel Tet3Dkernel[15];
   occa::kernel correctRes;
@@ -317,18 +317,18 @@ double timeData[15];
       if (i>5){
         // old: gflops = p_Np*20*(1+p_Np)
         gflops = p_Np*(p_Np*14 +14);
-gflops *=Niter;      
+        gflops *=Niter;      
 
 
-}
+      }
       occa::streamTag stopTag = device.tagStream();
       double elapsed = device.timeBetween(startTag, stopTag);
       printf("\n\nKERNEL %d  ================================================== \n\n", i);
       printf("OCCA elapsed time = %g\n", elapsed);
-timeData[i] = elapsed/Niter;
+      timeData[i] = elapsed/Niter;
       printf("number of flops = %f time = %f \n", gflops, elapsed);
       results3D[i] =E*gflops/(elapsed*1000*1000*1000); 
-//elapsed/Niter;
+      //elapsed/Niter;
       //
       printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i], E*gflops/(elapsed*1000*1000*1000));
       printf("GFL %17.17f \n",E*gflops/(elapsed*1000*1000*1000) );      
@@ -378,13 +378,13 @@ timeData[i] = elapsed/Niter;
 
     }
     else {
-if (k<=5)
-      Nbytes = 10*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
+      if (k<=5)
+        Nbytes = 10*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
       else {
-Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
-}
+        Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
+      }
 
-Nbytes /= 2;
+      Nbytes /= 2;
       gflops = p_Np*20*(1+p_Np); 
       if (k>5){
         // old: gflops = p_Np*20*(1+p_Np)
@@ -430,7 +430,7 @@ Nbytes /= 2;
   printf("]\n\n");
 
 
-printf("\n\nResults(:,%d)  = [", p_N);
+  printf("\n\nResults(:,%d)  = [", p_N);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", results3D[k]);
@@ -438,7 +438,7 @@ printf("\n\nResults(:,%d)  = [", p_N);
 
   printf("];\n\n");
 
-printf("\n\ntimeData(:, %d) = [",p_N);
+  printf("\n\ntimeData(:, %d) = [",p_N);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", timeData[k]);
@@ -446,7 +446,7 @@ printf("\n\ntimeData(:, %d) = [",p_N);
 
   printf("];\n\n");
 
-printf("\n\ngigaNodes(:, %d) = [",p_N);
+  printf("\n\ngigaNodes(:, %d) = [",p_N);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", (p_Np*E/10e9)/timeData[k]);
