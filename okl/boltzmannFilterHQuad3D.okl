@@ -13,6 +13,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 				   const iint * restrict lev_updates,
 				   const iint * restrict lev_numbers,
 				   const iint l,
+				   const iint order,
 				   const dfloat * restrict qIn,
 				   dfloat * restrict Fq) {
   
@@ -63,10 +64,10 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	      const dfloat stepL = lev_updates[lev_numbers[eL]];
 	      const dfloat stepR = lev_updates[lev_numbers[eR]];
 	      
-	      if (stepL != stepC) {
+	      if (stepL != stepC && order != 1) {
 		dfloat q_sum = 0;
 		
-		for (iint li=0; li<nrhs; ++li) {
+		for (iint li=0; li<order; ++li) {
 		  const iint lev = lev_numbers[eL];
 		  
 		  const iint rhsNum = (shift[lev] + li) % nrhs;
@@ -75,7 +76,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  
 		  const dfloat sizeL = 1<<lev_numbers[eL];
 		  
-		  for (iint lj = 0; lj < nrhs; ++lj) {
+		  for (iint lj = 0; lj < order; ++lj) {
 		    //for simplicity, scale x so current time is 1, and last interpolation point is 0
 		    if (lj != li) {
 		      q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
@@ -89,7 +90,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		const iint shiftL = shift[lev_numbers[eL]];
 		 s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
-	      if (stepR != stepC) {
+	      if (stepR != stepC && order != 1) {
 		dfloat q_sum = 0;
 		
 		for (iint li=0; li<nrhs; ++li) {
