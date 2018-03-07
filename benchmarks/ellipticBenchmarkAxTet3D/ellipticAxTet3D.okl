@@ -814,10 +814,10 @@ kernel void ellipticPartialAxTet3D_Ref8(const int Nelements,
 }
 //geofactors in shared but loaded more efficiently
 
-#define elementOffset 0
+//#define elementOffset 0
 
 kernel void ellipticPartialAxTet3D_Ref9(const int Nelements,
-    const int   * restrict elementList,
+    const int elementOffset,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
     const datafloat * restrict SrsT,
@@ -948,7 +948,7 @@ kernel void ellipticPartialAxTet3D_Ref9(const int Nelements,
 
 
 kernel void ellipticPartialAxTet3D_Ref10(const int Nelements,
-    const int   * restrict elementList,
+    const int elementOffset,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
     const datafloat * restrict SrsT,
