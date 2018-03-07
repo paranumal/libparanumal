@@ -18,9 +18,9 @@
 
 
 
-#ifndef p_N
-#define p_N 2
-#endif
+//#ifndef p_N
+//#define p_N 2
+//#endif
  
 
 // scraped from recent 
@@ -53,10 +53,10 @@ void generateRandArray(int sz, dfloat * a){
 __global__ void geofactorsKernel(const int Nelements, 
     const dfloat * __restrict__ ggeo,
     const dfloat * __restrict__ q,
-const dfloat lambda,
+    const dfloat lambda,
     dfloat * __restrict__ Aq  ){
 
-int p_Np = blockDim.x;
+  int p_Np = blockDim.x;
   const int e  = blockIdx.x; 
   const int t  = threadIdx.x;
   const int id = t + e*p_Np;
@@ -70,7 +70,37 @@ int p_Np = blockDim.x;
   const dfloat Gtt = ggeo[gid + p_G22ID];
   const dfloat J   = ggeo[gid + p_GWJID];
 
- 
+  Aq[id] = 
+    Grr*q[e*7*p_Np + 0*7 + t]+
+    Grs*q[e*7*p_Np + 1*7 + t]+
+    Grt*q[e*7*p_Np + 2*7 + t]+
+    Gss*q[e*7*p_Np + 3*7 + t]+
+    Gst*q[e*7*p_Np + 4*7 + t]+
+    Gtt*q[e*7*p_Np + 5*7 + t]+ 
+    +J*lambda*q[e*7*p_Np + 6*7 + t];
+}
+
+//coalested reads
+__global__ void geofactorsKernelv1(const int Nelements, 
+    const dfloat * __restrict__ ggeo,
+    const dfloat * __restrict__ q,
+    const dfloat lambda,
+    dfloat * __restrict__ Aq  ){
+
+  int p_Np = blockDim.x;
+  const int e  = blockIdx.x; 
+  const int t  = threadIdx.x;
+  int id = t + e*p_Np;
+
+while (id<Nelements){
+  //const int gid = e*p_Nggeo;
+  const dfloat Grr = ggeo[e + Nelements*p_G00ID];
+  const dfloat Grs = ggeo[e + Nelements*p_G01ID];
+  const dfloat Grt = ggeo[e + Nelements*p_G02ID];
+  const dfloat Gss = ggeo[e + Nelements*p_G11ID];
+  const dfloat Gst = ggeo[e + Nelements*p_G12ID];
+  const dfloat Gtt = ggeo[e + Nelements*p_G22ID];
+  const dfloat J   = ggeo[e + Nelements*p_GWJID];
 
   Aq[id] = 
     Grr*q[e*7*p_Np + 0*7 + t]+
@@ -80,11 +110,11 @@ int p_Np = blockDim.x;
     Gst*q[e*7*p_Np + 4*7 + t]+
     Gtt*q[e*7*p_Np + 5*7 + t]+ 
     +J*lambda*q[e*7*p_Np + 6*7 + t];
+id += blockDim.x * gridDim.x;
+if (e == 0){printf("id = %d \n", id);
 
-
-}
-
-
+}// while
+}//if
 
 void gpuFillRand(int N, dfloat **h_v, dfloat **c_v){
 
@@ -126,7 +156,7 @@ int main(int argc, char **argv){
 
 
   int E = (argc>=2) ? atoi(argv[1]):512;
-  //int p_N = (argc>=3) ? atoi(argv[2]):5;
+  int p_N = (argc>=3) ? atoi(argv[2]):5;
   //int option = (argc>=4) ? atoi(argv[3]):1;  
   //int p_Ne = (argc>=5) ? atoi(argv[4]):1;
   //int p_Nb = (argc>=6) ? atoi(argv[5]):1;
@@ -141,7 +171,7 @@ printf("E= %d p_N = %d p_Np = %d \n", E, p_N, p_Np);
 
   // number of geometric factors
   
-  int Niter = 10, it;
+  int Niter = 1, it;
 
   unsigned long long int  gflopsOLD = p_Np*20*(1+p_Np);
 
@@ -194,8 +224,9 @@ generateRandArray( p_Np* p_Np, SssT);
 //printf("SttT \n");
   generateRandArray( p_Np* p_Np, SttT); 
 //printf("MM \n");
+
   generateRandArray( p_Np* p_Np, MM); 
-printf("check 2, allocateD \n");
+//printf("check 2, allocateD \n");
   //allocate q
   gpuFillRand( p_Np*E,   &h_q,    &d_q); 
 
@@ -211,13 +242,13 @@ printf("check 3, allocateD some more \n");
 
   //2) put Dcombined together
   h_Dcombined = (dfloat*) calloc( p_Np* p_Np*7, sizeof(dfloat)); 
-//printf("check 4, Dcombined allocateD \n");
+printf("check 4, Dcombined allocateD \n");
   for (int n=0; n< p_Np; ++n){
 
     for (int k=0; k<7; ++k){
 
       if (k ==0){
-//printf("check 4.1, copying the contents of SrrT \n");
+printf("check 4.1, copying the contents of SrrT \n");
         //copy k*p_Np entries from SrrT
         for (int m=0; m< p_Np; ++m){
 
@@ -271,7 +302,7 @@ printf("check 3, allocateD some more \n");
 
     }
   }
-//printf("check 5, Dcombined ready\n");
+printf("check 5, Dcombined ready\n");
 
   //copy Dcombined to device
   cudaMalloc(&d_Dcombined,  p_Np* p_Np*7*sizeof(dfloat)); 
@@ -300,6 +331,15 @@ printf("check 3, allocateD some more \n");
      k
      number of columns of matrix op(A) and number of rows of op(B);k must be at least zero.
    */
+int Nblocks = E;
+int Nthreads = BSIZE;
+if (Nblocks>65535 )
+{
+Nblocks = 65535;
+}
+    dim3 G(Nblocks,1,1);
+    dim3 B(BSIZE,1,1);
+dfloat lambda = 1.0;
   cudaEventRecord(start);
 
 
@@ -309,21 +349,21 @@ printf("check 3, allocateD some more \n");
     gpuBlasGemm(handle, d_Dcombined, d_q, d_Dq, 7* p_Np, E,  p_Np);
     //geo-factors
 
-    dim3 G(E,1,1);
-    dim3 B(BSIZE,1,1);
-dfloat lambda = 1.0;
-    geofactorsKernel<<< G, B >>> (E, d_ggeo, d_Dq,lambda, d_Aq);
+
+
+printf("done! %d \n", it);
+    geofactorsKernelv1<<< G, B >>> (E, d_ggeo, d_Dq,lambda, d_Aq);
 }
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
 
-  float elapsedCublas;
+  float  elapsedCublas;
 
   cudaEventElapsedTime(&elapsedCublas, start, stop);
   elapsedCublas /= (1000.*Niter);
 printf("TIME %17.16f flops = %llu  GFLOPS: %17.17f \n",elapsedCublas,gflops, 
-(((dfloat)gflops*(dfloat)E)/elapsedCublas)/1000000000.0);
+(((dfloat)gflops*(dfloat)E/10e8)/elapsedCublas));
 
 cudaMemcpy(h_Aq, d_Aq, E*p_Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
 
