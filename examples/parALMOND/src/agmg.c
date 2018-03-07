@@ -205,6 +205,9 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     dfloat rho1, alpha1, norm_rkp1;
     dfloat norm_rktilde_pLocal, norm_rktilde_pGlobal;
 
+    // kcycleCombinedOp1(parAlmond,N,aDotbc,a,b,c,w,bool) 
+    //    returns aDotbc[0] = a.b, aDotbc[1] = a.c, aDotbc[2] = b.b
+    //       or aDotbc[0] = w.a.b, aDotbc[1] = w.a.c, aDotbc[2] = w.b.b
     if(parAlmond->ktype == PCG)
       kcycleCombinedOp1(parAlmond, mCoarse, rhoLocal,
                         levels[k+1]->o_ckp1,
@@ -249,6 +252,9 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
       dfloat gamma, beta, alpha2;
 
+      // kcycleCombinedOp2(parAlmond,N,aDotbc,a,b,c,d,w,bool) 
+      //   returns aDotbcd[0] = a.b, aDotbcd[1] = a.c, aDotbcd[2] = a.d,
+      //      or aDotbcd[0] = w.a.b, aDotbcd[1] = w.a.c, aDotbcd[2] = w.a.d,
       if(parAlmond->ktype == PCG)
         kcycleCombinedOp2(parAlmond,mCoarse,rhoLocal,
                           levels[k+1]->o_x,
