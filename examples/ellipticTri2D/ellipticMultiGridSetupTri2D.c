@@ -12,19 +12,39 @@ void AxTri2D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 void coarsenTri2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
+  char *options    = (char *) args[1];
+  solver_t *Fsolver = (solver_t *) args[2];
+
   mesh_t *mesh = solver->mesh;
+  mesh_t *Fmesh = Fsolver->mesh;
   precon_t *precon = solver->precon;
   occa::memory o_R = solver->o_R;
 
+  if (strstr(options,"CONTINUOUS"))
+    Fsolver->dotMultiplyKernel(Fmesh->Nelements*Fmesh->Np, Fmesh->ogs->o_invDegree, o_x, o_x);
+
   precon->coarsenKernel(mesh->Nelements, o_R, o_x, o_Rx);
+
+  if (strstr(options,"CONTINUOUS")) {
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Rx, o_Rx);
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Rx);
+  }
 }
 
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   solver_t *solver = (solver_t *) args[0];
+  char *options    = (char *) args[1];
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
   occa::memory o_R = solver->o_R;
+
+  // if (strstr(options,"CONTINUOUS")) {
+  //   if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_x);
+  //   ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_x, dfloatString, "add");  
+  //   solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_x, o_x);
+  // }
 
   precon->prolongateKernel(mesh->Nelements, o_R, o_x, o_Px);
 }
@@ -298,7 +318,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
   hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
   dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-  for (long long int i=0;i<nnzCoarseA;i++) {
+  for (dlong i=0;i<nnzCoarseA;i++) {
     Rows[i] = coarseA[i].row;
     Cols[i] = coarseA[i].col;
     Vals[i] = coarseA[i].val;
@@ -323,8 +343,8 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     
     coarseLevel->Srhs = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
     coarseLevel->Sx   = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
-    coarseLevel->o_Srhs = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
-    coarseLevel->o_Sx   = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
+    coarseLevel->o_Srhs = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),coarseLevel->Srhs);
+    coarseLevel->o_Sx   = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat),coarseLevel->Sx);
 
     coarseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
     coarseLevel->gatherArgs[0] = (void *) solverL;
@@ -344,10 +364,13 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     int Nc = levelDegree[n];  
 
     solver_t *solverL = solversN[Nc];
+    solver_t *solverF = solversN[Nf];
     buildCoarsenerTri2D(solverL, meshLevels, Nf, Nc, options);
     
-    levels[n]->coarsenArgs = (void **) calloc(1,sizeof(void*));
+    levels[n]->coarsenArgs = (void **) calloc(3,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
+    levels[n]->coarsenArgs[1] = (void *) options;
+    levels[n]->coarsenArgs[2] = (void *) solverF;
 
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
     
@@ -371,44 +394,43 @@ void buildCoarsenerTri2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, 
   //initialize P as identity (which it is for SPARSE)
   for (int i=0;i<NpCoarse;i++) P[i*NpCoarse+i] = 1.0;
 
-  if (strstr(options,"IPDG")) {
-    for (int n=Nc;n<Nf;n++) {
 
-      int Npp1 = meshLevels[n+1]->Np;
-      int Np   = meshLevels[n  ]->Np;
+  for (int n=Nc;n<Nf;n++) {
 
-      //copy P
-      for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
+    int Npp1 = meshLevels[n+1]->Np;
+    int Np   = meshLevels[n  ]->Np;
 
-      //Multiply by the raise op
-      for (int i=0;i<Npp1;i++) {
-        for (int j=0;j<NpCoarse;j++) {
-          P[i*NpCoarse + j] = 0.;
-          for (int k=0;k<Np;k++) {
-            P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
+    //copy P
+    for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
+
+    //Multiply by the raise op
+    for (int i=0;i<Npp1;i++) {
+      for (int j=0;j<NpCoarse;j++) {
+        P[i*NpCoarse + j] = 0.;
+        for (int k=0;k<Np;k++) {
+          P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
+        }
+      }
+    }
+  }
+
+  if (strstr(options,"BERN")) {
+    dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+    for (int j=0;j<NpFine;j++) {
+      for (int i=0;i<NpCoarse;i++) {
+        for (int k=0;k<NpCoarse;k++) {
+          for (int l=0;l<NpFine;l++) {
+            BBP[i+j*NpCoarse] += meshLevels[Nf]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
           }
         }
       }
     }
-
-    if (strstr(options,"BERN")) {
-      dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-      for (int j=0;j<NpFine;j++) {
-        for (int i=0;i<NpCoarse;i++) {
-          for (int k=0;k<NpCoarse;k++) {
-            for (int l=0;l<NpFine;l++) {
-              BBP[i+j*NpCoarse] += meshLevels[Nf]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
-            }
-          }
-        }
+    for (int j=0;j<NpFine;j++) {
+      for (int i=0;i<NpCoarse;i++) {
+        P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
       }
-      for (int j=0;j<NpFine;j++) {
-        for (int i=0;i<NpCoarse;i++) {
-          P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
-        }
-      }
-      free(BBP);
     }
+    free(BBP);
   }
 
   //the coarsen matrix is P^T

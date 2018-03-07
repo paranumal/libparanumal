@@ -74,7 +74,7 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 
 void parAlmondAgmgSetup(parAlmond_t *parAlmond,
                          hlong* globalRowStarts,       //global partition
-                         dlong nnz,           //--
+                         dlong nnz,                    //--
                          hlong* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
                          hlong* Aj,                    //--
                          dfloat* Avals,                //--
