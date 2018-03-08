@@ -1,6 +1,5 @@
 kernel void boltzmannFilterVQuad3D(const iint Nelements,
 				   const iint * restrict elementIds,
-				   const iint nrhs,
 				   const iint * restrict shift,
 				   const dfloat alpha,
 				   const dfloat * restrict F,
@@ -12,7 +11,6 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 				   const iint * restrict lev_updates,
 				   const iint * restrict lev_numbers,
 				   const iint l,
-				   const iint order,
 				   const dfloat * restrict qIn,
 				   dfloat * restrict Fq) {
   
@@ -35,46 +33,35 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	eC = elementIds[eo];
 	const iint eL = EToE[eC*p_Nfaces+0];
 	const iint eR = EToE[eC*p_Nfaces+2];
-
-	//unordered, used only for bounds checking
-	const iint eU = EToE[eC*p_Nfaces+1];
-	const iint eD = EToE[eC*p_Nfaces+3];
+	const iint eD = EToE[eC*p_Nfaces+1];
+	const iint eU = EToE[eC*p_Nfaces+3];
 
 	const iint faceC = cubeFaceNumber[eC];
-	const iint faceL = cubeFaceNumber[eL];
-	const iint faceR = cubeFaceNumber[eR];
-	const iint faceU = cubeFaceNumber[eU];
-	const iint faceD = cubeFaceNumber[eD];
 
-	mark_edge  = (faceC - faceL)*(faceC - faceL);
-	mark_edge += (faceC - faceR)*(faceC - faceR);
-	mark_edge += (faceC - faceU)*(faceC - faceU);
-	mark_edge += (faceC - faceD)*(faceC - faceD);
+	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) \
+	         && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	   
-	    //edge of an mrab level, but not the edge of a face
-	    if(mark_edge < 1) {
+	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    if(mark_edge) {
 
+	      const iint levL = lev_numbers[eL];
+	      const iint levR = lev_numbers[eR];
 	      const dfloat stepC = lev_updates[l];
-	      const dfloat stepL = lev_updates[lev_numbers[eL]];
-	      const dfloat stepR = lev_updates[lev_numbers[eR]];
+	      const dfloat stepL = lev_updates[levL];
+	      const dfloat stepR = lev_updates[levR];
+	      const iint shiftL = shift[levL];
+	      const iint shiftR = shift[levR];
+	      const dfloat sizeL = 1 << levL;
+	      const dfloat sizeR = 1 << levR;
 
-	      if (stepL != stepC && order != 1) {
-		dfloat q_sum = 0;
-		
-		for (iint li=0; li<order; ++li) {
-		  const iint lev = lev_numbers[eL];
-		  
-		  const iint rhsNum = (shift[lev] + li) % nrhs;
-		  
-		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
-
-		  const dfloat sizeL = 1 << lev_numbers[eL];
-		  
-		  for (iint lj = 0; lj < order; ++lj) {
+	      if (stepL != stepC) {
+		dfloat q_sum = 0;		
+		for (iint li=0; li<p_nrhs; ++li) {		  
+		  const iint rhsNum = (shiftL + li) % p_nrhs;
+		  dfloat q_prod = qIn[eL*p_Np*p_Nfields*p_nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
+		  for (iint lj = 0; lj < p_nrhs; ++lj) {
 		    if (lj != li) {
 		      q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
 		    }
@@ -84,23 +71,14 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		s_q[fld][0][j][i] = q_sum;
 	      }
 	      else {
-		const iint shiftL = shift[lev_numbers[eL]];
-		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*nrhs + shiftL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*p_nrhs + shiftL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
-	      
-	      if (stepR != stepC && order != 1) {
-		dfloat q_sum = 0;
-		
-		for (iint li=0; li<order; ++li) {
-		  const iint lev = lev_numbers[eR];
-		  
-		  const iint rhsNum = (shift[lev] + li) % nrhs;
-		  
-		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
-
-		  const dfloat sizeR = 1<<lev_numbers[eR];
-		  
-		  for (iint lj = 0; lj < order; ++lj) {
+	      if (stepR != stepC) {
+		dfloat q_sum = 0;	
+		for (iint li=0; li<p_nrhs; ++li) {
+		  const iint rhsNum = (shiftR + li) % p_nrhs;
+		  dfloat q_prod = qIn[eR*p_Np*p_Nfields*p_nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];		  
+		  for (iint lj = 0; lj < p_nrhs; ++lj) {
 		    if (lj != li) {
 		      q_prod *= (stepC - stepR + lj*sizeR)/(lj*sizeR - li*sizeR);
 		    }
@@ -110,8 +88,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		s_q[fld][2][j][i] = q_sum;
 	      }
 	      else {
-		const iint shiftR = shift[lev_numbers[eR]];
-		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*nrhs + shiftR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*p_nrhs + shiftR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      }
 	    }
 	  }
@@ -123,7 +100,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(mark_edge < 1){
+	if(mark_edge){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;
@@ -171,7 +148,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    Fq[eC*p_Nfields*p_Np*nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
+	    Fq[eC*p_Nfields*p_Np*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
 	  }
       }
     }
@@ -203,30 +180,20 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	
 	const iint eL = EToE[eo*p_Nfaces+0];
 	const iint eR = EToE[eo*p_Nfaces+2];
-
-	//unordered, used only for bounds checking
-	const iint eU = EToE[eo*p_Nfaces+1];
-	const iint eD = EToE[eo*p_Nfaces+3];
+	const iint eD = EToE[eo*p_Nfaces+1];
+	const iint eU = EToE[eo*p_Nfaces+3];
 
 	const iint faceC = cubeFaceNumber[eo];
-	const iint faceL = cubeFaceNumber[eL];
-	const iint faceR = cubeFaceNumber[eR];
-	const iint faceU = cubeFaceNumber[eU];
-	const iint faceD = cubeFaceNumber[eD];
 
-	mark_edge  = (faceC - faceL)*(faceC - faceL);
-	mark_edge += (faceC - faceR)*(faceC - faceR);
-	mark_edge += (faceC - faceU)*(faceC - faceU);
-	mark_edge += (faceC - faceD)*(faceC - faceD);
-	
+	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) \
+	         && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	   
-	    //edge of an mrab level, but not the edge of a face
-	    if(mark_edge < 1) {
-		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    if(mark_edge) {
+	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    }
 	  }
       }
@@ -237,7 +204,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
-	if(mark_edge < 1){
+	if(mark_edge){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;

@@ -2,7 +2,6 @@
 kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
 					      const iint   * restrict elementIds,
 					      const iint shift,
-					      const iint nrhs,
 					      const dfloat * restrict q,
 					      dfloat * restrict rhsq){
   
@@ -35,7 +34,7 @@ kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
 	    const dfloat sw = 0;
 	    const dfloat invq1 = 1.f/q1;
 
-	    base = e*p_Np*p_Nfields*nrhs+shift*p_Np*p_Nfields+n;
+	    base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
 
 	    rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
 	    rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);

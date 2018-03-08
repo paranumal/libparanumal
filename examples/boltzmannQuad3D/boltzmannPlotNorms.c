@@ -100,7 +100,7 @@ void boltzmannPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
       
       dfloat plotun = mesh->q[uid];
       dfloat plotvn = mesh->q[vid];
-      dfloat plotwn = mesh->q[vid];
+      dfloat plotwn = mesh->q[wid];
       
       fprintf(fp, "       ");
       fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);

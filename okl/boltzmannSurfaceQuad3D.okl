@@ -126,7 +126,6 @@ kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 // pointwise SEM-DG lift
 kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 				     const iint * restrict elementIds,
-				     const iint nrhs,
 				     const iint shift,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
@@ -203,7 +202,7 @@ kernel void boltzmannSurfaceMRQuad3D(const iint Nelements,
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
 	    //account for new layout of rhsq
-	    const iint vidNew = eM*nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + vM;
+	    const iint vidNew = eM*p_nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + vM;
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
