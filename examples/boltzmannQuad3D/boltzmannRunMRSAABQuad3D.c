@@ -24,7 +24,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   //filter the initial state
-  mesh->filterKernelq0H(mesh->Nelements,
+    mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -48,33 +48,23 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
        
-      iint mrab_order = 0;
-      iint filter_order = 0;
+      iint mrab_order = 0; 
       
-      if(tstep==0 || tstep==mesh->Nrhs)
+      if(tstep==0)
 	mrab_order = 0; // first order
-      else if(tstep==1 || tstep==mesh->Nrhs+1)
+      else if(tstep==1)
 	mrab_order = 1; // second order
       else
 	mrab_order = 2; // third order 
 
-      if (tstep < mesh->Nrhs) filter_order = -1;
-      else if (tstep < 2*mesh->Nrhs)
-	filter_order = (tstep-mesh->Nrhs)*pow(2,mesh->MRABNlevels-1) + Ntick;
-      else
-	filter_order = mesh->Nrhs*pow(2,mesh->MRABNlevels-1) + Ntick;
-      
       //synthesize actual stage time
       iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
 
       iint lev;
-      if (tstep < mesh->Nrhs) lev = mesh->MRABNlevels;
-      else {
-	for (lev=0;lev<mesh->MRABNlevels;lev++)
-	  if (Ntick % (1<<lev) != 0) break;
-      }
+      for (lev=0;lev<mesh->MRABNlevels;lev++)
+	if (Ntick % (1<<lev) != 0) break;
 
-      /*      if(mesh->totalHaloPairs>0){
+      if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
 	iint Nentries = mesh->Np*mesh->Nfields;
 	
@@ -92,7 +82,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->Np*mesh->Nfields*sizeof(dfloat),
 			      sendBuffer,
 			      recvBuffer);
-			      }*/
+			      }
       
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
@@ -111,7 +101,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
 
-      /*      if(mesh->totalHaloPairs>0){
+      if(mesh->totalHaloPairs>0){
 	// wait for halo data to arrive
 	meshHaloExchangeFinish(mesh);
 	
@@ -120,7 +110,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
 	}
     
-	mesh->device.finish();*/
+	mesh->device.finish();
       
       occa::tic("surfaceKernel");
       
@@ -166,7 +156,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_lev_updates,
 			    mesh->o_MRABlevels,
 			    l,
-			    filter_order,
+			    mrab_order,
 			    mesh->o_rhsq,
 			    mesh->o_qFilter);
       }
@@ -186,7 +176,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_lev_updates,
 			    mesh->o_MRABlevels,
 			    l,
-			    filter_order,
+			    mrab_order,
 			    mesh->o_qFilter,
 			    mesh->o_rhsq);	
 			    }
@@ -201,16 +191,12 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				       mesh->o_qCorr);
 	}
       }
-
-      if (tstep < mesh->Nrhs) lev = mesh->MRABNlevels;
-      else {
-	for (lev=0;lev<mesh->MRABNlevels;lev++)
-	  if ((Ntick+1) % (1<<lev) != 0) break;
-      }
-
+      
+      for (lev=0;lev<mesh->MRABNlevels;lev++)
+        if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
+      
       for (iint l = 0; l < lev; l++) {
-	  iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs;
-	  if (tstep >= mesh->Nrhs) id += l*mesh->Nrhs;
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
 
 	occa::tic("updateKernel");
 	
@@ -264,7 +250,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
     }
 
     // estimate maximum error
-    if(((tstep+1)%mesh->errorStep)==0 || tstep==mesh->NtimeSteps-1){
+    if(((tstep+1)%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
