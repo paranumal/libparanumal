@@ -8,7 +8,7 @@ int main() {
   char *ref_string = (char *) calloc(300,sizeof(char));
   char *out_string = (char *) calloc(300,sizeof(char));
   
-  for(int i = 0; i < 1; ++i) {
+  for(int i = 0; i < 18; ++i) {
     
     sprintf(test_string,"/scratch/stimmel/short_filter/norms_0000_%04d.vtu",i);
     sprintf(ref_string,"/scratch/stimmel/short_mrab/norms_0000_%04d.vtu",(i+1) - 1);

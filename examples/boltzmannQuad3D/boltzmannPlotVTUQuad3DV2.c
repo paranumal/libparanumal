@@ -82,7 +82,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 		
         dfloat um = mesh->q[uid];
         dfloat vm = mesh->q[vid];
-	dfloat wm = mesh->q[wid];
+	dfloat wm = mesh->q[vid];
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
