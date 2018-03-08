@@ -383,6 +383,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   // quad stuff
 
   kernelInfo.addDefine("p_Nq", mesh->Nq);
+  kernelInfo.addDefine("p_nrhs",mesh->Nrhs);
 
   mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
   mesh->o_vgeo =

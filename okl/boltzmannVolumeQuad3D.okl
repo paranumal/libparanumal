@@ -186,7 +186,6 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 				    const iint   * restrict elementIds,
 				    const iint shift,
-				    const iint nrhs,
 				    const dfloat * restrict vgeo,
 				    const dfloat * restrict D,
 				    const dfloat * restrict x,
@@ -343,7 +342,7 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    rhsq3 -= yij*xdotrhsq;
 	    rhsq4 -= zij*xdotrhsq;
 
-	    const iint base = e*p_Np*p_Nfields*nrhs+shift*p_Np*p_Nfields+n;
+	    const iint base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
 	    
 	    rhsq[base+0*p_Np] = rhsq1;
 	    rhsq[base+1*p_Np] = rhsq2;
