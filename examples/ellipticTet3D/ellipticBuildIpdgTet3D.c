@@ -50,13 +50,6 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
 
-  dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-
-  dfloat *qmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *qmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *ndotgradqmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-  dfloat *ndotgradqmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
-
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
   for (int f=0;f<mesh->Nfaces;f++) {
@@ -101,7 +94,17 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
 
   // loop over all elements
-  #pragma omp parallel for
+  #pragma omp parallel
+{
+
+  dfloat *BM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+
+  dfloat *qmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
+  dfloat *qmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
+  dfloat *ndotgradqmM = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
+  dfloat *ndotgradqmP = (dfloat *) calloc(mesh->Nfp,sizeof(dfloat));
+
+  #pragma omp for
   for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     dlong gbase = eM*mesh->Nggeo;
@@ -260,6 +263,10 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
     }
   }
   
+  free(BM);
+  free(qmM); free(qmP);
+  free(ndotgradqmM); free(ndotgradqmP);
+}
   qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
   // free up unused storage
   //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
@@ -269,9 +276,6 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   
   free(globalIds);
 
-  free(BM);  free(MS);
+  free(MS);
   free(DrTMS); free(DsTMS); free(DtTMS);
-
-  free(qmM); free(qmP);
-  free(ndotgradqmM); free(ndotgradqmP);
 }

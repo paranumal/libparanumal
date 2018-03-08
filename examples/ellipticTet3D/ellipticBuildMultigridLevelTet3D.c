@@ -77,32 +77,61 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   }
 
   //build element stiffness matrices
-  if (mesh->Nverts==4) {
-    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
-        for (int k=0;k<mesh->Np;k++) {
-          for (int l=0;l<mesh->Np;l++) {
-            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-            mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-          }
+  mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {
+      for (int k=0;k<mesh->Np;k++) {
+        for (int l=0;l<mesh->Np;l++) {
+          mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+          mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+          mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+          mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
         }
       }
+    }
+  }
+  dfloat *SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  dfloat *SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+  for (int n=0;n<mesh->Np;n++) {
+    for (int m=0;m<mesh->Np;m++) {
+      #if 0
+      SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+      SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+      SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
+      SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+      SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np];
+      StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
+      StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
+      SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+      #else
+      SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+      SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
+      SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
+      SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
+      SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+      #endif
     }
   }
 
@@ -135,6 +164,16 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int Nc, int Nf,
   mesh->o_MM =
     mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
       mesh->MM);
+
+  mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
+  mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
+  mesh->o_SrtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrtT);
+  mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
+  mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+  mesh->o_SstT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SstT);
+  mesh->o_StrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StrT);
+  mesh->o_StsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StsT);
+  mesh->o_SttT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SttT);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),

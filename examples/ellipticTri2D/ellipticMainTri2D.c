@@ -45,10 +45,10 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=LOCALPATCH,EXACT");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=SEMFEM");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=LOCALPATCH");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=SEMFEM");
+    //strdup("solver=PCG,VERBOSE method=IPDG basis=NODAL preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be KCYCLE, or VCYCLE
@@ -70,7 +70,7 @@ int main(int argc, char **argv){
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
-  dfloat lambda = 10000;
+  dfloat lambda = 0;
 
   if (strstr(options,"SPARSE")&&(lambda!=0)) { //sanity check
     printf("SPARSE not currently supported for screened Poisson\n");

@@ -85,25 +85,31 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
 
   dfloat *diagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
-  //temp patch storage
-  dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-
   if(rank==0) printf("Building diagonal...");fflush(stdout);
 
   // loop over all elements
-  for(dlong eM=0;eM<mesh->Nelements;++eM){
-    //build the patch A matrix for this element
-    if (strstr(options,"IPDG")) {
-      BuildLocalIpdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
-    } else if (strstr(options,"BRDG")) {
-      BuildLocalBRdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
-    } else if (strstr(options,"CONTINUOUS")) {
-      BuildLocalContinuousPatchAx(solver, mesh, lambda, eM, Srr, Srs, Sss, MM, patchA);
-    }
+  #pragma omp parallel
+  {
+    //temp patch storage
+    dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
-    for(int n=0;n<mesh->Np;++n) {
-      diagA[eM*mesh->Np + n] = patchA[n*mesh->Np+n]; //store the diagonal entry
+    #pragma omp for 
+    for(dlong eM=0;eM<mesh->Nelements;++eM){
+      //build the patch A matrix for this element
+      if (strstr(options,"IPDG")) {
+        BuildLocalIpdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
+      } else if (strstr(options,"BRDG")) {
+        BuildLocalBRdgPatchAx(solver, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
+      } else if (strstr(options,"CONTINUOUS")) {
+        BuildLocalContinuousPatchAx(solver, mesh, lambda, eM, Srr, Srs, Sss, MM, patchA);
+      }
+
+      for(int n=0;n<mesh->Np;++n) {
+        diagA[eM*mesh->Np + n] = patchA[n*mesh->Np+n]; //store the diagonal entry
+      }
     }
+    
+    free(patchA);
   }
 
   if (strstr(options,"CONTINUOUS")) 
@@ -124,6 +130,5 @@ void ellipticBuildJacobiTri2D(solver_t* solver, mesh2D* mesh, int basisNp, dfloa
   }
 
   free(diagA);
-  free(patchA);
   free(MS);
 }

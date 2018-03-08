@@ -51,7 +51,7 @@ void ellipticPreconditioner2D(solver_t *solver,
       ogs_t *ogs = solver->mesh->ogs;
 
       solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_r, solver->o_rtmp);
-    
+
       //pre-mask
       //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
 

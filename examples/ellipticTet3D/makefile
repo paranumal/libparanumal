@@ -56,10 +56,10 @@ ellipticParallelGatherScatterTet3D.o \
 ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTet3D.o \
 ellipticBuildContinuousTet3D.o \
-ellipticBuildFullPatchesIpdgTet3D.o \
-ellipticBuildFacePatchesIpdgTet3D.o \
-ellipticBuildJacobiIpdgTet3D.o \
-ellipticBuildLocalPatchIpdgTet3D.o \
+ellipticBuildFullPatchesTet3D.o \
+ellipticBuildFacePatchesTet3D.o \
+ellipticBuildJacobiTet3D.o \
+ellipticBuildLocalPatchTet3D.o \
 ellipticBuildMultigridLevelTet3D.o \
 ellipticMultiGridSetupTet3D.o \
 ellipticSEMFEMSetupTet3D.o\
