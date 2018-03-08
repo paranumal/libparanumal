@@ -12,11 +12,24 @@ void AxTet3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 void coarsenTet3D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
+  char *options    = (char *) args[1];
+  solver_t *Fsolver = (solver_t *) args[2];
+
   mesh_t *mesh = solver->mesh;
+  mesh_t *Fmesh = Fsolver->mesh;
   precon_t *precon = solver->precon;
   occa::memory o_R = solver->o_R;
 
+  if (strstr(options,"CONTINUOUS"))
+    Fsolver->dotMultiplyKernel(Fmesh->Nelements*Fmesh->Np, Fmesh->ogs->o_invDegree, o_x, o_x);
+
   precon->coarsenKernel(mesh->Nelements, o_R, o_x, o_Rx);
+
+  if (strstr(options,"CONTINUOUS")) {
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Rx, o_Rx);
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Rx);
+  }
 }
 
 void prolongateTet3D(void **args, occa::memory &o_x, occa::memory &o_Px) {
@@ -327,10 +340,13 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
     int Nc = levelDegree[n];  
 
     solver_t *solverL = solversN[Nc];
+    solver_t *solverF = solversN[Nf];
     buildCoarsenerTet3D(solverL, meshLevels, Nf, Nc, options);
     
-    levels[n]->coarsenArgs = (void **) calloc(1,sizeof(void*));
+    levels[n]->coarsenArgs = (void **) calloc(3,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
+    levels[n]->coarsenArgs[1] = (void *) options;
+    levels[n]->coarsenArgs[2] = (void *) solverF;
 
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
     
@@ -353,22 +369,20 @@ void buildCoarsenerTet3D(solver_t* solver, mesh3D **meshLevels, int Nf, int Nc, 
   //initialize P as identity
   for (int i=0;i<NpCoarse;i++) P[i*NpCoarse+i] = 1.0;
 
-  if (strstr(options,"IPDG")) {
-    for (int n=Nc;n<Nf;n++) {
+  for (int n=Nc;n<Nf;n++) {
 
-      int Npp1 = meshLevels[n+1]->Np;
-      int Np   = meshLevels[n  ]->Np;
+    int Npp1 = meshLevels[n+1]->Np;
+    int Np   = meshLevels[n  ]->Np;
 
-      //copy P
-      for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
+    //copy P
+    for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
 
-      //Multiply by the raise op
-      for (int i=0;i<Npp1;i++) {
-        for (int j=0;j<NpCoarse;j++) {
-          P[i*NpCoarse + j] = 0.;
-          for (int k=0;k<Np;k++) {
-            P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
-          }
+    //Multiply by the raise op
+    for (int i=0;i<Npp1;i++) {
+      for (int j=0;j<NpCoarse;j++) {
+        P[i*NpCoarse + j] = 0.;
+        for (int k=0;k<Np;k++) {
+          P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
         }
       }
     }

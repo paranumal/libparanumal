@@ -271,7 +271,7 @@ void ellipticSetupSmootherFullPatch(solver_t *solver, precon_t *precon, agmgLeve
   int NpP = mesh->Np*(mesh->Nfaces+1);
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFullPatchesIpdgTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFullPatchesTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -331,7 +331,7 @@ void ellipticSetupSmootherFacePatch(solver_t *solver, precon_t *precon, agmgLeve
   mesh_t *mesh = solver->mesh;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildFacePatchesIpdgTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildFacePatchesTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   int NpP = 2*mesh->Np;
@@ -403,7 +403,7 @@ void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLev
   int NpP = mesh->Np;
 
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildLocalPatchesIpdgTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
+  ellipticBuildLocalPatchesTet3D(solver, mesh, mesh->Np, NULL, tau, lambda, BCType, rateTolerance,
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
@@ -451,7 +451,7 @@ void ellipticSetupSmootherDampedJacobi(solver_t *solver, precon_t *precon, agmgL
   dfloat *invDiagA;
   mesh_t *mesh = solver->mesh;
 
-  ellipticBuildJacobiIpdgTet3D(solver, mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+  ellipticBuildJacobiTet3D(solver, mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 

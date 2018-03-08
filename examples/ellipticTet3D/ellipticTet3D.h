@@ -140,22 +140,22 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
             const char *options);
 void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
 
-void ellipticBuildJacobiIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+void ellipticBuildJacobiTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
                                    int *BCType, dfloat **invDiagA,
                                    const char *options);
 
-void ellipticBuildLocalPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+void ellipticBuildLocalPatchesTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
                                    dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFacePatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+void ellipticBuildFacePatchesTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
                                    dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);
 
-void ellipticBuildFullPatchesIpdgTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
+void ellipticBuildFullPatchesTet3D(solver_t *solver, mesh3D *mesh, int basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
                                    dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options);

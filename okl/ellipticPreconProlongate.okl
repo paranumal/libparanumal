@@ -15,8 +15,50 @@ kernel void ellipticPreconProlongate_v0(const dlong Nelements,
   }
 }
 
-
 kernel void ellipticPreconProlongate(const dlong Nelements,
+                                     const dfloat * restrict R,
+                                     const dfloat * restrict qCoarse,
+                                     dfloat * restrict qFine){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+    shared dfloat s_qCoarse[p_NblockV][p_NpCoarse];
+
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_NpFine;++n;inner0){
+        dlong t = n + es*p_NpFine;
+
+        if(t<p_NpCoarse*p_NblockV)
+          if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
+            s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_NpFine;++n;inner0){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0.;
+          //dfloat tmp = qFine[e*p_NpFine+n];
+
+          occaUnroll(p_NpCoarse)
+            for(int i=0;i<p_NpCoarse;++i){
+              tmp += R[i*p_NpFine + n]*s_qCoarse[es][i];
+            }
+
+          qFine[e*p_NpFine+n] = tmp;
+        }
+      }
+    }
+  }
+}
+
+
+//storing R in shared is too much for 3D
+#if 0
+kernel void ellipticPreconProlongate_v1(const dlong Nelements,
                                      const dfloat * restrict R,
                                      const dfloat * restrict qCoarse,
                                      dfloat * restrict qFine){
@@ -61,7 +103,7 @@ kernel void ellipticPreconProlongate(const dlong Nelements,
     }
   }
 }
-
+#endif
 
 #if 0
 kernel void ellipticPreconProlongateQuad2D(const int Nelements,

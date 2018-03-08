@@ -157,7 +157,7 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
 // number of outputs per thread 
 // important to tune this at low order
 #define p_Ne 4
-#define p_Nb 4
+#define p_Nb 2
 kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   const dlong   * restrict elementList,
                                   const dfloat * restrict ggeo,
