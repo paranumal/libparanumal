@@ -339,7 +339,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   //dt = mymin(dt, cfl/mesh->tauInv);
 
-  mesh->finalTime = 10;
+  mesh->finalTime = 0.00002;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
