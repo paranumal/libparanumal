@@ -535,6 +535,11 @@ solver_t *ellipticSolveSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *
 				       "ellipticBlockJacobiPreconTri2D",
 				       kernelInfo);
 
+  solver->precon->partialblockJacobiKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
+               "ellipticPartialBlockJacobiPreconTri2D",
+               kernelInfo);
+
   solver->precon->approxPatchSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticApproxPatchSolver2D",

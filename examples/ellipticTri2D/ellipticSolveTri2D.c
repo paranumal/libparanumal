@@ -11,7 +11,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *gradSendBuffer = solver->gradSendBuffer;
   dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
-  dfloat alpha = 0., alphaG =0.;
+  dfloat alpha = 0., alphaG = 0.;
   dlong Nblock = solver->Nblock;
   dfloat *tmp = solver->tmp;
   occa::memory &o_tmp = solver->o_tmp;
