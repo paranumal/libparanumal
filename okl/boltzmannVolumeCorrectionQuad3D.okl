@@ -1,4 +1,65 @@
 
+kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
+					    const iint saved,
+					    const iint shift,
+					    const dfloat * restrict q,
+					    dfloat * restrict rhsq,
+					    dfloat * restrict prerhsq){
+  
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+    
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){    
+	for(iint i=0;i<p_Nq;++i;inner0){
+	  
+	  const iint e = eo+es; // element in block
+	  
+	  const iint n=j*p_Nq+i;
+	  
+	  if(e<Nelements){
+	    iint base = n + p_Nfields*p_Np*e;
+	    
+	    const dfloat q1  = q[base+0*p_Np];
+	    const dfloat q2  = q[base+1*p_Np];
+	    const dfloat q3  = q[base+2*p_Np];
+	    const dfloat q4  = q[base+3*p_Np];
+	    const dfloat q5  = q[base+4*p_Np];
+	    const dfloat q6  = q[base+5*p_Np];
+	    const dfloat q7  = q[base+6*p_Np];
+	    const dfloat q8  = q[base+7*p_Np];
+	    const dfloat q9  = q[base+8*p_Np];
+	    const dfloat q10 = q[base+9*p_Np];
+	    
+	    const dfloat sw = 0;
+	    const dfloat invq1 = 1.f/q1;
+
+	    base = e*p_Np*p_Nfields+n;
+
+	    prerhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+	    prerhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+	    prerhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+	    prerhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+	    prerhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+	    prerhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+
+	    if (saved) {
+	      base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
+	      
+	      rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+	      rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+	      rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+	      rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+	      rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+	      rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+
 kernel void boltzmannVolumeCorrectionSAQuad3D(const iint Nelements,
 					      const iint   * restrict elementIds,
 					      const iint shift,

@@ -308,7 +308,8 @@ typedef struct {
   iint *cubeFaceNumber;   //ST: Mesh boundary logic for cubed sphere
   dfloat *dualProjMatrix; //    Fixed matrix applies the dual mapping 
   iint *cubeDistance;     //    distance between element and edge of cube face
-  dfloat *localdt;        //    temp variable for testing
+  dfloat *localdt;        
+  iint *shift_init;       //    shift data for lserk
   
   // occa stuff
   occa::device device;
@@ -412,6 +413,8 @@ typedef struct {
   occa::memory o_lev_updates;
   occa::memory o_shift;
   occa::memory o_qCorr;
+  occa::memory o_qlserk;
+  occa::memory o_qPreCorr;
 
   iint * lev_updates;
 
@@ -449,6 +452,10 @@ typedef struct {
   occa::kernel volumeCorrectionKernel;
   occa::kernel surfaceKernel;
   occa::kernel updateKernel;
+  occa::kernel volumePreKernel;
+  occa::kernel surfacePreKernel;
+  occa::kernel volumeCorrPreKernel;
+  occa::kernel updatePreKernel;
   occa::kernel filterKernelH;
   occa::kernel filterKernelV;
   occa::kernel filterKernelq0H;

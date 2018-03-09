@@ -49,8 +49,8 @@ typedef struct {
 solver_t *boltzmannSetupQuad3D(mesh_t *mesh);
 solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh);
 
-void boltzmannRunQuad3D(solver_t *solver);
 void boltzmannRunMRSAABQuad3D(solver_t *solver);
+void boltzmannRunLSERKQuad3D(solver_t *solver);
 
 void boltzmannPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
 void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, iint tstep);

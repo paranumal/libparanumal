@@ -38,8 +38,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eC];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) \
-	         && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -185,8 +184,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) \
-	         && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
