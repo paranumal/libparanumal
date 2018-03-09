@@ -52,112 +52,42 @@ void rk_coeffs(mesh_t *mesh) {
     dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
     dfloat h  = mesh->dt * pow(2,l); 
     //
-    for (iint order=0; order<3; ++order){
-      // computation of coefficients based on magnitude
-      const iint id = order*Nlevels*3 + l*3;
-      if(order==0){
-
-	double complex a1 = 0. + 0.* I; 
-	double complex b1 = 0. + 0.* I; 
-	      
-	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
-	  a1 +=  h*(cexp(lr) - 1.)/lr;
-	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
-	}
-	// Full dt coeeficients
-	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	mesh->MRSAAB_A[id + 1] = 0.f;
-	mesh->MRSAAB_A[id + 2] = 0.f;
-	// Half coefficients
-	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	mesh->MRSAAB_B[id + 1] = 0.f;
-	mesh->MRSAAB_B[id + 2] = 0.f;
-	      
-	// MRAB coefficients
-	mesh->MRAB_A[id + 0]   =  h ;
-	mesh->MRAB_A[id + 1]   =  0.f ;
-	mesh->MRAB_A[id + 2]   =  0.f ;
-	      
-	mesh->MRAB_B[id+0]     =  h/2. ;
-	mesh->MRAB_B[id+1]     =  0.f ;
-	mesh->MRAB_B[id+2]     =  0.f ;
-      }
-	    
-      else if(order==1){
-	      
-	double complex a1 = 0. + 0.* I; 
-	double complex b1 = 0. + 0.* I; 
-	double complex a2 = 0. + 0.* I; 
-	double complex b2 = 0. + 0.* I; 
-	      
-	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
-	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
-	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
-	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
-	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
-	}
-	// Full dt coeeficients
-	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
-	mesh->MRSAAB_A[id + 2] = 0.f;
-	// Half coefficients
-	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
-	mesh->MRSAAB_B[id + 2] = 0.f;
-	      
-	      
-	// MRAB coefficients
-	mesh->MRAB_A[id + 0]   =  3.*h/2. ;
-	mesh->MRAB_A[id + 1]   = -1.*h/2. ;
-	mesh->MRAB_A[id + 2]   =  0.f ;
-	      
-	mesh->MRAB_B[id + 0]   =  5.*h/8. ;
-	mesh->MRAB_B[id + 1]   = -1.*h/8. ;
-	mesh->MRAB_B[id + 2]   =   0.f ;
-      }
-	    
-      else{
-	double complex a1 = 0. + 0.* I; 
-	double complex b1 = 0. + 0.* I; 
-	double complex a2 = 0. + 0.* I; 
-	double complex b2 = 0. + 0.* I; 
-	double complex a3 = 0. + 0.* I; 
-	double complex b3 = 0. + 0.* I; 
-
-	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
-	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
-	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
-	}
-
-	      
-	// Full dt coeeficients
-	mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
-	mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
-	mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
-	// Half coefficients
-	mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
-	mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
-	mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
-	      
-	// MRAB coefficients
-	mesh->MRAB_A[id+0]   =  23.*h/12. ;
-	mesh->MRAB_A[id+1]   = -16.*h/12. ;
-	mesh->MRAB_A[id+2]   =  5. *h/12. ;
-	      
-	mesh->MRAB_B[id+0]   =  17.*h/24. ;
-	mesh->MRAB_B[id+1]   = - 7.*h/24. ;
-	mesh->MRAB_B[id+2]   =   2.*h/24. ;
-	      
-	      
-      }	    
+    const iint id = l*3;
+    double complex a1 = 0. + 0.* I; 
+    double complex b1 = 0. + 0.* I; 
+    double complex a2 = 0. + 0.* I; 
+    double complex b2 = 0. + 0.* I; 
+    double complex a3 = 0. + 0.* I; 
+    double complex b3 = 0. + 0.* I; 
+    
+    for(iint i = 0; i<Nr; ++i ){
+      double complex lr = alpha  + R[i];
+      a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
+      a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
+      a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
+      b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
+      b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
+      b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
     }
+
+    
+    // Full dt coeeficients
+    mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+    mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+    mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+    // Half coefficients
+    mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+    mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+    mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+    
+    // MRAB coefficients
+    mesh->MRAB_A[id+0]   =  23.*h/12. ;
+    mesh->MRAB_A[id+1]   = -16.*h/12. ;
+    mesh->MRAB_A[id+2]   =  5. *h/12. ;
+    
+    mesh->MRAB_B[id+0]   =  17.*h/24. ;
+    mesh->MRAB_B[id+1]   = - 7.*h/24. ;
+    mesh->MRAB_B[id+2]   =   2.*h/24. ;	    
 
     // Exponential part
     mesh->MRSAAB_C[l]    = exp(alpha);
@@ -184,6 +114,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				sizeof(dfloat));
 
   mesh->MRABshiftIndex = (iint*) calloc(mesh->MRABNlevels,sizeof(iint));
+  mesh->shift_init = (iint*) calloc(mesh->MRABNlevels,sizeof(iint));
 
   // set temperature, gas constant, wave speeds
   mesh->RT = 9.;
@@ -396,6 +327,12 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 
   mesh->o_qCorr =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+
+    mesh->o_qPreCorr =
+    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+
+  mesh->o_qlserk =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
   
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
@@ -404,7 +341,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat));
+  mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQM);
   mesh->o_lev_updates = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->lev_updates);
   mesh->o_shift = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->MRABshiftIndex);
   
@@ -468,18 +405,28 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				       "boltzmannVolumeSAQuad3D",
 				       kernelInfo);
 
+  mesh->volumePreKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
+				       "boltzmannVolumeQuad3D",
+				       kernelInfo);
   mesh->volumeCorrectionKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
 				       "boltzmannVolumeCorrectionSAQuad3D",
 				       kernelInfo);
-
-  printf("starting surface\n");
+  mesh->volumeCorrPreKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
+				       "boltzmannVolumeCorrectionQuad3D",
+				       kernelInfo);
   mesh->surfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceQuad3D.okl",
 				       "boltzmannSurfaceMRQuad3D",
 				       kernelInfo);
-  printf("ending surface\n");
 
+  mesh->surfacePreKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurfaceQuad3D.okl",
+				       "boltzmannSurfaceQuad3D",
+				       kernelInfo);
+  
   mesh->traceUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannMRSAABTraceUpdateQuad3D",
@@ -490,29 +437,30 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
 				       "boltzmannMRSAABUpdateQuad3D",
 				       kernelInfo);
 
+  mesh->updatePreKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannLSERKUpdateQuad3D",
+				       kernelInfo);
+  
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-    mesh->filterKernelH =
+  mesh->filterKernelH =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHQuad3D",
 				       kernelInfo);
-
   mesh->filterKernelV =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVQuad3D",
 				       kernelInfo);
-
   mesh->filterKernelq0H =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHq0Quad3D",
 				       kernelInfo);
-
   mesh->filterKernelq0V =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVq0Quad3D",
 				       kernelInfo);
-  
   return solver;
 }

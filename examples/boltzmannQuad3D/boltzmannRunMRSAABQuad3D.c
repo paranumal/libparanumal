@@ -22,41 +22,10 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   
   //kernel arguments
   dfloat alpha = 1./mesh->N;
-
-  //filter the initial state
-  mesh->filterKernelq0H(mesh->Nelements,
-			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_q,
-			mesh->o_qFilter);
-  mesh->filterKernelq0V(mesh->Nelements,
-			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_qFilter,
-			mesh->o_q);
   
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-       
-      iint mrab_order = 0; 
       
-      if(tstep==0)
-	mrab_order = 0; // first order
-      else if(tstep==1)
-	mrab_order = 1; // second order
-      else
-	mrab_order = 2; // third order 
-
       //synthesize actual stage time
       iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
 
@@ -189,7 +158,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
       
       for (iint l = 0; l < lev; l++) {
-	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
+	const iint id = l*mesh->Nrhs;
 
 	occa::tic("updateKernel");
 	
@@ -219,7 +188,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       
       if (lev<mesh->MRABNlevels) {
 	
-	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + lev*mesh->Nrhs;
+	const iint id = lev*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  //trace update using same kernel

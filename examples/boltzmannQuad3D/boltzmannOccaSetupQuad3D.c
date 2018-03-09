@@ -23,7 +23,6 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
-  //nrhs here is added for mr.  Should just be harmless memory bloat otherwise.
   mesh->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
   mesh->o_resq =

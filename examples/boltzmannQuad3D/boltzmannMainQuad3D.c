@@ -22,6 +22,7 @@ int main(int argc, char **argv){
   solver_t *solver = boltzmannSetupMRQuad3D(mesh);
 
   // time step Boltzmann equations
+  boltzmannRunLSERKQuad3D(solver);
   boltzmannRunMRSAABQuad3D(solver);
 
   // close down MPI
