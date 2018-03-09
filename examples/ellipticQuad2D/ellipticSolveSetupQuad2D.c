@@ -135,6 +135,8 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*
   //sizes for the coarsen and prolongation kernels. degree N to degree 1
   kernelInfo.addDefine("p_NpFine", mesh->Np);
   kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
+  kernelInfo.addDefine("p_NqFine", mesh->N+1);
+  kernelInfo.addDefine("p_NqCoarse", 2);
 
   kernelInfo.addDefine("p_NpFEM", mesh->Np);
 
@@ -153,7 +155,7 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockP = 256/(5*mesh->Np); // get close to 256 threads
+  int NblockP = mymax(256/(5*mesh->Np),1); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -377,16 +379,6 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*
   solver->precon->exactBlockJacobiSolverKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
                "ellipticExactBlockJacobiSolver2D",
-               kernelInfo);
-
-  solver->precon->SEMFEMInterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
-               "ellipticSEMFEMInterp",
-               kernelInfo);
-
-  solver->precon->SEMFEMAnterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
-               "ellipticSEMFEMAnterp",
                kernelInfo);
 
   long long int pre = mesh->device.memoryAllocated();

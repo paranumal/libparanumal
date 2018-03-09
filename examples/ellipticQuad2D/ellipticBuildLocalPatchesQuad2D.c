@@ -257,47 +257,51 @@ void BuildLocalContinuousPatchAx(solver_t* solver, dfloat lambda,
 
   for (int ny=0;ny<mesh->Nq;ny++) {
     for (int nx=0;nx<mesh->Nq;nx++) {
-      if (solver->mapB[nx+ny*mesh->Nq+eM*mesh->Np]!=1) continue; //skip masked nodes
-      for (int my=0;my<mesh->Nq;my++) {
-        for (int mx=0;mx<mesh->Nq;mx++) {
-          if (solver->mapB[mx+my*mesh->Nq+eM*mesh->Np]!=1) continue; //skip masked nodes
-          
-          int id;
-          int iid = (nx+ny*mesh->Nq)*mesh->Np + mx+my*mesh->Nq;
-          A[iid] = 0;
+      if (solver->mapB[nx+ny*mesh->Nq+eM*mesh->Np]!=1) {
+        for (int my=0;my<mesh->Nq;my++) {
+          for (int mx=0;mx<mesh->Nq;mx++) {
+            if (solver->mapB[mx+my*mesh->Nq+eM*mesh->Np]==1) continue;
+            
+            int id;
+            int iid = (nx+ny*mesh->Nq)*mesh->Np + mx+my*mesh->Nq;
+            A[iid] = 0;
 
-          if (ny==my) {
-            for (int k=0;k<mesh->Nq;k++) {
-              id = k+ny*mesh->Nq;
-              dfloat Grr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
+            if (ny==my) {
+              for (int k=0;k<mesh->Nq;k++) {
+                id = k+ny*mesh->Nq;
+                dfloat Grr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
 
-              A[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
+                A[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
+              }
             }
-          }
 
-          id = mx+ny*mesh->Nq;
-          dfloat Grs = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-          A[iid] += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
+            id = mx+ny*mesh->Nq;
+            dfloat Grs = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+            A[iid] += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
 
-          id = nx+my*mesh->Nq;
-          dfloat Gsr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
-          A[iid] += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
+            id = nx+my*mesh->Nq;
+            dfloat Gsr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+            A[iid] += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
 
-          if (nx==mx) {
-            for (int k=0;k<mesh->Nq;k++) {
-              id = nx+k*mesh->Nq;
-              dfloat Gss = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
+            if (nx==mx) {
+              for (int k=0;k<mesh->Nq;k++) {
+                id = nx+k*mesh->Nq;
+                dfloat Gss = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
 
-              A[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
+                A[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
+              }
             }
-          }
 
-          if ((nx==mx)&&(ny==my)) {
-            id = nx + ny*mesh->Nq;
-            dfloat JW = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
-            A[iid] += JW*lambda;
+            if ((nx==mx)&&(ny==my)) {
+              id = nx + ny*mesh->Nq;
+              dfloat JW = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
+              A[iid] += JW*lambda;
+            }
           }
         }
+      } else {
+        int iid = (nx+ny*mesh->Nq)*mesh->Np + nx+ny*mesh->Nq;
+        A[iid] = 1; //just put a 1 so A is invertable
       }
     }
   }
