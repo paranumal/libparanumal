@@ -142,8 +142,8 @@ void ellipticPreconditioner2D(solver_t *solver,
     occaTimerTic(mesh->device,"dotDivideKernel");
     solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");
-  }
-  else{ // turn off preconditioner
+  
+  } else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
 }

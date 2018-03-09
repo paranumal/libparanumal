@@ -29,9 +29,9 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=FULLPATCH,EXACT");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=NONE");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
   // can add GATHER to build a gsop
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
-    strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
+    strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
     //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
 
   //this is strictly for testing, to do repeated runs. Will be removed later
@@ -55,7 +55,7 @@ int main(int argc, char **argv){
   precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 1;
+  dfloat lambda = 0;
 
   // set up
   occa::kernelInfo kernelInfo;
@@ -78,20 +78,20 @@ int main(int argc, char **argv){
   int BCType[3] = {0,1,2};
 
   dfloat tau = (mesh->N+1)*(mesh->N+1);
-  solver_t *solver = ellipticSolveSetupQuad2D(mesh, tau, lambda, BCType, kernelInfo, options);
+  solver_t *solver = ellipticSolveSetupQuad2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
-  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
 
-      int ggid = e*mesh->Np*mesh->Nggeo + n;
+      dlong ggid = e*mesh->Np*mesh->Nggeo + n;
       dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
 
-      int   id = e*mesh->Np+n;
+      dlong  id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
 
@@ -117,28 +117,73 @@ int main(int argc, char **argv){
                            mesh->o_y,
                            mesh->o_vgeo,
                            mesh->o_sgeo,
-                           mesh->o_EToB,
+                           solver->o_EToB,
                            mesh->o_D,
                            o_r);
   }
 
-  ellipticSolveQuad2D(solver, lambda, o_r, o_x, options);
+  if (strstr(options,"CONTINUOUS")) {
+
+    solver->rhsBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCQuad2D.okl",
+          "ellipticRhsBCQuad2D",
+          kernelInfo);
+
+    solver->addBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAddBCQuad2D.okl",
+          "ellipticAddBCQuad2D",
+          kernelInfo);
+
+    dfloat zero = 0.f;
+    solver->rhsBCKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        mesh->o_sgeo,
+                        mesh->o_D,
+                        mesh->o_vmapM,
+                        lambda,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        solver->o_mapB,
+                        o_r);
+  }
+
+  // gather-scatter rhs
+  if(strstr(options, "CONTINUOUS")) {
+    ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_r, dfloatString, "add");
+    //mask
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
+  }
+
+
+  // convergence tolerance
+  dfloat tol = 1e-8;
+  ellipticSolveQuad2D(solver, lambda, tol, o_r, o_x, options);
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       solver->o_mapB,
+                       o_x);
+  }
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
   dfloat maxError = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      int   id = e*mesh->Np+n;
+      dlong  id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 
@@ -147,7 +192,9 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU2D(mesh, "foo.vtu", 0);
+  char filename[BUFSIZ];
+  sprintf(filename, "foo_%d.vtu", rank);
+  meshPlotVTU2D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

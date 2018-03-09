@@ -7,10 +7,10 @@ void meshPhysicalNodesQuad2D(mesh2D *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -30,16 +30,16 @@ void meshPhysicalNodesQuad2D(mesh2D *mesh){
 
       /* physical coordinate of interpolation node */
       mesh->x[cnt] = 
-	+0.25*(1-rn)*(1-sn)*xe1
-	+0.25*(1+rn)*(1-sn)*xe2
-	+0.25*(1+rn)*(1+sn)*xe3
-	+0.25*(1-rn)*(1+sn)*xe4;
+        +0.25*(1-rn)*(1-sn)*xe1
+        +0.25*(1+rn)*(1-sn)*xe2
+        +0.25*(1+rn)*(1+sn)*xe3
+        +0.25*(1-rn)*(1+sn)*xe4;
 
       mesh->y[cnt] = 
-	+0.25*(1-rn)*(1-sn)*ye1
-	+0.25*(1+rn)*(1-sn)*ye2
-	+0.25*(1+rn)*(1+sn)*ye3
-	+0.25*(1-rn)*(1+sn)*ye4;
+        +0.25*(1-rn)*(1-sn)*ye1
+        +0.25*(1+rn)*(1-sn)*ye2
+        +0.25*(1+rn)*(1+sn)*ye3
+        +0.25*(1-rn)*(1+sn)*ye4;
 
       ++cnt;
     }

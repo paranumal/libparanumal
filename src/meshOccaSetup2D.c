@@ -66,7 +66,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   }
 
   // =============== BB operators [added by JC] ===============
-
   // deriv operators: transpose from row major to column major
   int *D1ids = (int*) calloc(mesh->Np*3,sizeof(int));
   int *D2ids = (int*) calloc(mesh->Np*3,sizeof(int));
@@ -80,48 +79,50 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   int *ELids = (int*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(int));
   dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
 
-  if(mesh->max_EL_nnz){
+  if (mesh->Nverts==3) {
+    if(mesh->max_EL_nnz){
 
-    for (int i = 0; i < mesh->Np; ++i){
-      for (int j = 0; j < 3; ++j){
-        D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
-        D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
-        D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];      
-        Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];    
-      }
-    }
-
-    for (int i = 0; i < mesh->cubNp; ++i){
-      for (int j = 0; j < mesh->Np; ++j){
-        VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
-        PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
-      }
-    }
-
-
-    for (int i = 0; i < mesh->Nfp; ++i){
-      for (int j = 0; j < 3; ++j){
-        L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
-      }
-    }
-
-    for (int i = 0; i < mesh->Np; ++i){
-      for (int j = 0; j < mesh->max_EL_nnz; ++j){
-        ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
-        ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz]; // ???
-      }
-    }
-  }
-
-  //BB mass matrix
-  mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n = 0; n < mesh->Np; ++n){
-    for (int m = 0; m < mesh->Np; ++m){
       for (int i = 0; i < mesh->Np; ++i){
-        for (int j = 0; j < mesh->Np; ++j){
-          mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
+        for (int j = 0; j < 3; ++j){
+          D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
+          D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
+          D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];      
+          Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];    
         }
-      } 
+      }
+
+      for (int i = 0; i < mesh->cubNp; ++i){
+        for (int j = 0; j < mesh->Np; ++j){
+          VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
+          PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
+        }
+      }
+
+
+      for (int i = 0; i < mesh->Nfp; ++i){
+        for (int j = 0; j < 3; ++j){
+          L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
+        }
+      }
+
+      for (int i = 0; i < mesh->Np; ++i){
+        for (int j = 0; j < mesh->max_EL_nnz; ++j){
+          ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
+          ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz]; // ???
+        }
+      }
+    }
+
+    //BB mass matrix
+    mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n = 0; n < mesh->Np; ++n){
+      for (int m = 0; m < mesh->Np; ++m){
+        for (int i = 0; i < mesh->Np; ++i){
+          for (int j = 0; j < mesh->Np; ++j){
+            mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
+          }
+        } 
+      }
     }
   }
 
@@ -348,7 +349,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   // =============== Bernstein-Bezier allocations [added by JC] ============
 #if 1
-  if(mesh->max_EL_nnz){
+  if(mesh->Nverts==3) {
     mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
     mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
     mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D3ids);

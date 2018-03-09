@@ -1,7 +1,7 @@
 typedef struct{
 
-  int row;
-  int col;
+  hlong row;
+  hlong col;
   int ownerRank;
   dfloat val;
 
@@ -11,8 +11,15 @@ typedef struct {
 
   long long int preconBytes;
 
+  ogs_t *ogs;
+  ogs_t *FEMogs;
+
   dfloat *zP;
   occa::memory o_zP;
+
+  occa::memory o_Gr;
+  occa::memory o_Gz;
+  occa::memory o_Sr;
 
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
@@ -20,6 +27,7 @@ typedef struct {
   occa::memory o_oasForward;
   occa::memory o_oasBack;
   occa::memory o_oasDiagInvOp;
+  occa::memory o_invDegreeP;
 
   occa::memory o_oasForwardDg;
   occa::memory o_oasBackDg;
@@ -44,8 +52,15 @@ typedef struct {
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
 
+  occa::memory o_rFEM;
+  occa::memory o_zFEM;
+  occa::memory o_GrFEM;
+  occa::memory o_GzFEM;
+
+  occa::kernel SEMFEMInterpKernel;
+  occa::kernel SEMFEMAnterpKernel;
+
   ogs_t *ogsP, *ogsDg;
-  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invDiagA;
@@ -63,8 +78,8 @@ typedef struct {
   occa::memory o_coarseInvDegree;
 
   int coarseNp;
-  int coarseTotal;
-  int *coarseOffsets;
+  hlong coarseTotal;
+  hlong *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -73,10 +88,14 @@ typedef struct {
   // block Jacobi precon
   occa::memory o_invMM;
   occa::kernel blockJacobiKernel;
+  occa::kernel partialblockJacobiKernel;
 
   //dummy almond level to store the OAS smoothing op
   agmgLevel *OASLevel;
   void **OASsmoothArgs;
+
+  //SEMFEM variables
+  mesh2D *femMesh;
 
 } precon_t;
 
@@ -91,47 +110,12 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
-
-void ellipticBuildContinuousQuad2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
-                              hgs_t **hgs, int *globalStarts, const char* options);
-
-void ellipticBuildPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   int *BCType, nonZero_t **A, int *nnzA,
-                                   hgs_t **hgs, int *globalStarts,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA, dfloat **localA,
-                                   const char *options);
-
-void ellipticCoarsePreconditionerSetupQuad2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   int *BCType, dfloat **V1, nonZero_t **A, int *nnzA,
-                                   hgs_t **hgs, int *globalStarts, const char *options);
-
-void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   int *BCType, dfloat **invDiagA,
-                                   const char *options);
-
-void ellipticBuildFullPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
-void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npataches, int **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
-
 //Multigrid function callbacks
 void AxQuad2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenQuad2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateQuad2D(void **args, occa::memory &o_x, occa::memory &o_Px);
+void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
 void smoothQuad2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 void smoothChebyshevQuad2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 
