@@ -239,6 +239,75 @@ int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, dfloat tol,
 
   mesh_t *mesh = solver->mesh;
 
+/*
+  dfloat *t = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  dfloat *Pt = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  occa::memory o_t = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  occa::memory o_Pt = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  
+  char fname[BUFSIZ];
+  sprintf(fname, "Precon.m");
+  FILE *fp = fopen(fname, "w");
+
+  fprintf(fp, "P = [");
+  agmgLevel **levels = solver->precon->parAlmond->levels;
+  for (int n=0;n<mesh->Np*mesh->Nelements;n++) {
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) t[m] =0;
+    o_Pt.copyFrom(t);
+
+    t[n] = 1;
+    o_t.copyFrom(t);
+    
+    //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_t);
+    //ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_t, dfloatString, "add");
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_t, o_t);
+
+    o_t.copyTo(t);
+    dfloat max = 0;
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) max = mymax(max,t[m]);
+
+    //if (max>1E-5) ellipticPreconditioner2D(solver, lambda, o_t, o_Pt, options);
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, false);
+    ellipticOperator2D(solver, lambda, o_t, o_Pt, options);
+
+
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, levels[0]->o_x, true);
+
+    // res = rhs - A*x
+    //levels[0]->device_Ax(levels[0]->AxArgs,levels[0]->o_x,levels[0]->o_res);
+    //dfloat one = 1.0, none = -1.0;
+    //solver->scaledAddKernel(mesh->Np*mesh->Nelements, one, o_t, none, levels[0]->o_res);
+
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, levels[0]->o_res, levels[0]->o_res);
+    //levels[1]->device_coarsen(levels[1]->coarsenArgs, levels[0]->o_res, levels[1]->o_rhs);
+    //levels[0]->device_gather (levels[0]->gatherArgs,  o_t, levels[0]->o_rhs);
+    //levels[1]->device_smooth(levels[1]->smoothArgs, levels[1]->o_rhs, levels[1]->o_x, true);
+    //levels[1]->o_x.copyFrom(levels[1]->o_rhs);
+    //levels[0]->device_scatter(levels[0]->scatterArgs,  levels[0]->o_rhs, o_Pt);
+    //levels[1]->device_prolongate(levels[1]->prolongateArgs, levels[1]->o_x, o_Pt);
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Pt, o_Pt);
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, false);
+
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Pt, o_Pt);
+    //ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_Pt, dfloatString, "add");
+    //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Pt);
+
+    //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Pt);
+    //o_Pt.copyFrom(o_t);
+
+    o_Pt.copyTo(Pt);
+
+    printf("diagA[%d] = %f\n", n, Pt[n]);
+
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) 
+      fprintf(fp, "%.10e,", Pt[m]);
+
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "];\n");
+  fclose(fp);
+*/
+
   int Niter = 0;
   int maxIter = 5000; 
 

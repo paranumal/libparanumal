@@ -112,7 +112,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     int degree = mesh->N;
     int dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    while (dofs>4) {
       numLevels++;
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
@@ -124,7 +124,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     levelDegree[0] = degree;
     dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    while (dofs>4) {
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
@@ -372,41 +372,41 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
 //TODO this needs attention for quads
 void buildCoarsenerQuad2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options) {
 
-  int NpFine   = meshLevels[Nf]->Np;
-  int NpCoarse = meshLevels[Nc]->Np;
-  dfloat *P    = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-  dfloat *Ptmp = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+  int NqFine   = Nf+1;
+  int NqCoarse = Nc+1;
+  dfloat *P    = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+  dfloat *Ptmp = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
 
   //initialize P as identity
-  for (int i=0;i<NpCoarse;i++) P[i*NpCoarse+i] = 1.0;
+  for (int i=0;i<NqCoarse;i++) P[i*NqCoarse+i] = 1.0;
 
   for (int n=Nc;n<Nf;n++) {
 
-    int Npp1 = meshLevels[n+1]->Np;
-    int Np   = meshLevels[n]->Np;
+    int Nqp1 = n+2;
+    int Nq   = n+1;
 
     //copy P
-    for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
+    for (int i=0;i<Nq*NqCoarse;i++) Ptmp[i] = P[i];
 
     //Multiply by the raise op
-    for (int i=0;i<Npp1;i++) {
-      for (int j=0;j<NpCoarse;j++) {
-        P[i*NpCoarse + j] = 0.;
-        for (int k=0;k<Np;k++) {
-          P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
+    for (int i=0;i<Nqp1;i++) {
+      for (int j=0;j<NqCoarse;j++) {
+        P[i*NqCoarse + j] = 0.;
+        for (int k=0;k<Nq;k++) {
+          P[i*NqCoarse + j] += meshLevels[n]->interpRaise[i*Nq+k]*Ptmp[k*NqCoarse + j];
         }
       }
     }
   }
 
   //the coarsen matrix is P^T
-  solver->R = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-  for (int i=0;i<NpCoarse;i++) {
-    for (int j=0;j<NpFine;j++) {
-      solver->R[i*NpFine+j] = P[j*NpCoarse+i];
+  solver->R = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+  for (int i=0;i<NqCoarse;i++) {
+    for (int j=0;j<NqFine;j++) {
+      solver->R[i*NqFine+j] = P[j*NqCoarse+i];
     }
   }
-  solver->o_R = solver->mesh->device.malloc(NpFine*NpCoarse*sizeof(dfloat), solver->R);
+  solver->o_R = solver->mesh->device.malloc(NqFine*NqCoarse*sizeof(dfloat), solver->R);
 
   free(P); free(Ptmp);
 }

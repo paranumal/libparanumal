@@ -84,4 +84,5 @@ void ellipticBuildJacobiQuad2D(solver_t* solver, dfloat tau, dfloat lambda,
   if(rank==0) printf("done.\n");
 
   free(B); free(Br); free(Bs);
+  free(diagA);
 }

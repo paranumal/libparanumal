@@ -20,6 +20,9 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesQuad2D(mesh);
 
+  // compute geometric factors
+  meshGeometricFactorsQuad2D(mesh);
+
   // create halo extension for x,y arrays
   dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
   dlong localNodes     = mesh->Nelements*mesh->Np;
@@ -34,6 +37,9 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
+
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsQuad2D(mesh);
 
   // global nodes
   meshParallelConnectNodes(mesh);
@@ -67,6 +73,27 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
+
+
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    dlong Nlocal = mesh->Np*mesh->Nelements;
+    dlong Nhalo = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
+
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
+
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + Nlocal*mesh->Nvgeo);
+
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    free(vgeoSendBuffer);
+  }
 
 
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
@@ -155,7 +182,8 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   kernelInfo.addDefine("p_blockSize", blockSize);
 
   // add custom defines
-  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
+  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
 
@@ -174,7 +202,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockP = 512/(5*mesh->Np); // get close to 256 threads
+  int NblockP = mymax(256/(5*mesh->Np),1); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -194,7 +222,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxQuad2D.okl",
-               "ellipticAxQuad2D",
+               "ellipticAxQuad2D_e0",
                kernelInfo);
 
   solver->partialAxKernel =
@@ -233,11 +261,6 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictQuad2D.okl",
                "ellipticFooQuad2D",
-               kernelInfo);
-
-  solver->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconQuad2D.okl",
-               "ellipticBlockJacobiPreconQuad2D",
                kernelInfo);
 
   solver->precon->approxPatchSolverKernel =
@@ -282,17 +305,21 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   int NpFine   = (Nf+1)*(Nf+1);
   int NpCoarse = (Nc+1)*(Nc+1);
+  int NqFine   = (Nf+1)*(Nf+1);
+  int NqCoarse = (Nc+1)*(Nc+1);
   kernelInfo.addDefine("p_NpFine", NpFine);
   kernelInfo.addDefine("p_NpCoarse", NpCoarse);
-
+  kernelInfo.addDefine("p_NqFine", Nf+1);
+  kernelInfo.addDefine("p_NqCoarse", Nc+1);
+  
   solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsenQuad2D.okl",
+               "ellipticPreconCoarsenQuad2D",
                kernelInfo);
 
   solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongateQuad2D.okl",
+               "ellipticPreconProlongateQuad2D",
                kernelInfo);
 
   //on host gather-scatter

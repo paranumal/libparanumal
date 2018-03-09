@@ -1,82 +1,70 @@
-kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
-					const dfloat * restrict invDegree,
-					const dfloat * restrict V1,
-					const dfloat * restrict qN,
-					dfloat * restrict q1){
-
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Nverts;++n;inner0){
-      dfloat tmp = 0;
-      for(int i=0;i<p_Np;++i){
-	tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
-      }
-      q1[e*p_Nverts+n] = tmp; // *invDegree[e*p_Nverts+n];
-    }
-  }
-}
-
-#if 0
-kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
-					const dfloat * restrict R,
-					const dfloat * restrict qN,
-					dfloat * restrict q1){
+kernel void ellipticPreconCoarsenQuad2D(const dlong Nelements,
+                                        const dfloat * restrict R,
+                                        const dfloat * restrict qf,
+                                              dfloat * restrict qc){
   
   
-  for(int e=0;e<Nelements;++e;outer0){
-    shared dfloat s_qNN[p_Nq][p_Nq];
-    shared dfloat s_q1N[p_Nq1][p_Nq];
-    shared dfloat s_q11[p_Nq1][p_Nq1];
+  for(dlong e=0;e<Nelements;++e;outer0){
+    shared dfloat s_qff[p_NqFine][p_NqFine];
+    shared dfloat s_qcf[p_NqCoarse][p_NqFine];
+    shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
+
+    shared dfloat s_R[p_NqCoarse][p_NqFine];
 
     // prefetch to shared
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-	s_qNN[j][i] = qN[i+j*p_Nq+e*p_Nq*p_Nq];
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        const dlong id = i+j*p_NqFine+e*p_NpFine;
+        s_qff[j][i] = qf[id];
+
+        if (j<p_NqCoarse)
+          s_R[j][i] = R[j*p_NqFine + i];
       }
     }
 
     barrier(localMemFence);
 
     // coarsen in j index
-    
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-	if(j<2){
-	  dfloat res = 0;
-	  for(int m=0;m<p_Nq;++m)
-	    res += R[j*p_Nq + m]*s_qN[m][i];
-	  s_q1N[j][i] = res;
-	}
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        if(j<p_NqCoarse){
+          dfloat res = 0;
+          occaUnroll(p_NqFine)
+            for(int m=0;m<p_NqFine;++m) {
+              res += s_R[j][m]*s_qff[m][i];
+            }
+          s_qcf[j][i] = res;
+        }
       }
     }
 
     barrier(localMemFence);
 
     // coarsen in i index
-    
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-	if(j<2 && i<2){
-	  dfloat rtmp = 0;
-	  for(int m=0;m<p_Nq;++m)
-	    rtmp += R[i*p_Nq + m]*s_qN[j][m];
-	  s_q11[j][i] = rtmp;
-	}
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        if(j<p_NqCoarse && i<p_NqCoarse){
+          dfloat rtmp = 0;
+          occaUnroll(p_NqFine)
+            for(int m=0;m<p_NqFine;++m) {
+              rtmp += s_R[i][m]*s_qcf[j][m];
+            }
+          s_qcc[j][i] = rtmp;
+        }
       }
     }
 
     barrier(localMemFence);
 
     // collect writes
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-	const int id = i + j*p_Nq;
-	if(id<p_Nq1*p_Nq1){
-	  q1[id + p_Nq1*p_Nq1*e] = s_q11[0][id];
-	}
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        const int id = i + j*p_NqFine;
+        if(id<p_NpCoarse){
+          qc[id + p_NpCoarse*e] = s_qcc[0][id];
+        }
       }
     }
-    
   }
 }
-#endif
