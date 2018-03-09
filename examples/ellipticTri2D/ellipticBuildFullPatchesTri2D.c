@@ -204,7 +204,7 @@ void ellipticBuildFullPatchesTri2D(solver_t *solver, mesh2D* mesh, int basisNp, 
     //copy inverse into patchesInvA
     for(int n=0;n<patchNp;++n){
       for(int m=0;m<patchNp;++m){
-        int id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
+        dlong id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
         (*patchesInvA)[id] = patchA[n*patchNp+m];
       }
     }

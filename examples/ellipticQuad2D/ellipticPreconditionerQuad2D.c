@@ -1,12 +1,5 @@
 #include "ellipticQuad2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-void ellipticParallelGatherScatterQuad2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-
-
 void ellipticPreconditioner2D(solver_t *solver,
             dfloat lambda,
             occa::memory &o_r,
@@ -15,10 +8,6 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  ogs_t    *ogs = solver->ogs; // C0 Gather ScatterTri info
-
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
 
   if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
 
@@ -50,15 +39,30 @@ void ellipticPreconditioner2D(solver_t *solver,
 
     occaTimerToc(mesh->device,"coarseGrid");
 
+  } else if (strstr(options, "SEMFEM")) {
+
+    o_z.copyFrom(o_r);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+    precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
+    meshParallelGather(mesh, precon->FEMogs, precon->o_rFEM, precon->o_GrFEM);
+    occaTimerTic(mesh->device,"parALMOND");
+    parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
+    occaTimerToc(mesh->device,"parALMOND");
+    meshParallelScatter(mesh, precon->FEMogs, precon->o_GzFEM, precon->o_zFEM);
+    precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
+    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
+
+    ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_z, dfloatString, "add");
+
   } else if(strstr(options, "JACOBI")){
 
-    int Ntotal = mesh->Np*mesh->Nelements;
+    dlong Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
     solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");
-  }
-  else{ // turn off preconditioner
-    o_z.copyFrom(o_r);
+  
+  }  else{ // turn off preconditioner
+    o_z.copyFrom(o_r); 
   }
 }
