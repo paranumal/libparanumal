@@ -47,6 +47,7 @@ int main(int argc, char **argv){
   int p_Nfaces = 4;
   int p_NfacesNfp = p_Nfaces*p_Nfp;
   int p_Nq = p_N+1;
+  int p_Nggeo = 7;
   
   printf("==============================================================\n");
   printf("===================== BASIC INFO =============================\n");
@@ -64,7 +65,7 @@ int main(int argc, char **argv){
   int BSIZE  = p_Np;
 
   // number of geometric factors
-  int Nvgeo =  7;
+  int Nvgeo =  p_Nggeo;
   int Niter = 10, it;
   double gflops;
   
@@ -99,11 +100,9 @@ int main(int argc, char **argv){
   kernelInfo.addDefine("p_Nfaces", p_Nfaces);
   kernelInfo.addDefine("p_NfacesNfp", p_Nfaces*p_Nfp);
   kernelInfo.addDefine("BSIZE", (int)BSIZE);
-  kernelInfo.addDefine("p_Nvgeo", 11);
-  kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("p_Nggeo", p_Nggeo);
   kernelInfo.addDefine("p_Ne", p_Ne);
   kernelInfo.addDefine("p_Nb", p_Nb);
-
 
   dlong elementOffset = 0;
   dfloat    *ggeo, *DT,   *q, *Aq;
@@ -119,35 +118,35 @@ int main(int argc, char **argv){
   kernelInfo.addDefine("p_G22ID", 5);
   kernelInfo.addDefine("p_GWJID", 6);
 
-  randCalloc(device, E*7, &ggeo, o_ggeo);
+  randCalloc(device, E*p_Nggeo*BSIZE*BSIZE, &ggeo, o_ggeo);
   randCalloc(device, BSIZE*BSIZE, &DT, o_DT);
   randCalloc(device, BSIZE*E, &q, o_q);
   randCalloc(device, BSIZE*E, &Aq, o_Aq);
 
   char buf[200];
-  for (int i =kMin; i<kMax+1; i++){
-    printf("compiling 3D kernel %d ...\n", i);
-    sprintf(buf, "ellipticPartialAxQuad2D_Ref%d", i); 
-    ellipticAxKernel[i-1] = device.buildKernelFromSource("ellipticAxQuad2D.okl", buf, kernelInfo);
+  for (int k =kMin; k<kMax+1; k++){
+    printf("compiling Quad2D kernel %d ...\n", k);
+    sprintf(buf, "ellipticPartialAxQuad2D_Ref%d", k); 
+    ellipticAxKernel[k] = device.buildKernelFromSource("ellipticAxQuad2D.okl", buf, kernelInfo);
   }
-
+  
   occa::initTimer(device);
 
   // queue Ax kernels
-  for (int i =kMin;i<=kMax; i++){
+  for (int k =kMin;k<=kMax; k++){
     dfloat lambda = 1.;
     occa::streamTag startTag = device.tagStream();
 
     for(it=0;it<Niter;++it){
-      ellipticAxKernel[i-1](E,
-			    elementOffset,
-			    o_ggeo,
-			    o_DT,
-			    lambda,
-			    o_q,       
-			    o_Aq);
+      ellipticAxKernel[k](E,
+			  elementOffset,
+			  o_ggeo,
+			  o_DT,
+			  lambda,
+			  o_q,       
+			  o_Aq);
     }
-
+    
     //adjust GFLOPS for Ref2 and Ref3
     occa::streamTag stopTag = device.tagStream();
     double elapsed = device.timeBetween(startTag, stopTag);
@@ -155,14 +154,14 @@ int main(int argc, char **argv){
     gflops = p_Np*(4*p_Nq + 8 + 4*p_Nq); // FIX LATER
     gflops *=Niter;      
 
-    printf("\n\nKERNEL %d  ================================================== \n\n", i);
+    printf("\n\nKERNEL %d  ================================================== \n\n", k);
     printf("OCCA elapsed time = %g\n", elapsed);
-    timeData[i] = elapsed/Niter;
+    timeData[k] = elapsed/Niter;
     printf("number of flops = %f time = %f \n", gflops, elapsed);
-    results[i] =E*gflops/(elapsed*1000*1000*1000); 
+    results[k] =E*gflops/(elapsed*1000*1000*1000); 
     //elapsed/Niter;
     //
-    printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results[i], E*gflops/(elapsed*1000*1000*1000));
+    printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results[k], E*gflops/(elapsed*1000*1000*1000));
     printf("GFL %17.17f \n",E*gflops/(elapsed*1000*1000*1000) );      
     // compute l2 of data
     o_Aq.copyTo(Aq);
@@ -192,18 +191,11 @@ int main(int argc, char **argv){
     double gflops;
     long long int Nbytes;
 
-    if (k<=5)
-      Nbytes = 10*p_Np*p_Np*sizeof(dfloat) + E*7*sizeof(dfloat)+E*sizeof(int)+E*p_Np*2*sizeof(dfloat);
-    else {
-      Nbytes =  7*p_Np*p_Np*sizeof(dfloat) + E*7*sizeof(dfloat)+E*sizeof(int)+E*p_Np*2*sizeof(dfloat);
-    }
+    Nbytes = p_Nq*p_Nq*sizeof(dfloat) + E*p_Np*p_Nggeo*sizeof(dfloat)+E*sizeof(int)+E*p_Np*2*sizeof(dfloat);
+
     
     Nbytes /= 2;
-    gflops = p_Np*20*(1+p_Np); 
-    if (k>5){
-      // old: gflops = p_Np*20*(1+p_Np)
-      gflops = p_Np*(p_Np*14 +14);
-    }    
+    gflops = p_Np*(4*p_Nq + 8 + 4*p_Nq); // FIX LATER
 
     occa::memory o_foo = device.malloc(Nbytes);
     occa::memory o_bah = device.malloc(Nbytes);
