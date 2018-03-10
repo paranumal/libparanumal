@@ -10,7 +10,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   // dfloat xsigma  = Sigma[mesh->Ntscale]; dfloat  ysigma  = Sigma[mesh->Ntscale];
 
 
-  dfloat xsigma    = 20., ysigma  = 20.;
+  dfloat xsigma    = 50., ysigma  = 50.;
   
   dfloat xsmin    = -2.0, xsmax = 2.0; // map x to this range to control erf profile 
   dfloat ysmin    = -2.0, ysmax = 2.0; // map y to this range to control erf profile 

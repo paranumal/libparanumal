@@ -31,7 +31,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   iint lev;
   for (lev=0;lev<mesh->MRABNlevels;lev++)
     if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
-
+  
   if(mesh->totalHaloPairs>0){
     // extract halo on DEVICE
     #if ASYNC 
@@ -57,6 +57,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   occaTimerTic(mesh->device, "VolumeKernel");  
 
   for (iint l=0;l<lev;l++) {
+
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device, "NonPmlVolumeKernel"); 
       mesh->volumeKernel(mesh->MRABNelements[l],
@@ -224,7 +225,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   for (lev=0;lev<mesh->MRABNlevels;lev++)
     if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
 
-
+      // printf(" UPDATE:\n  Ntick :%d  lev: %d", Ntick, lev);
 
   for (iint l=0; l<lev; l++) {
 
@@ -281,8 +282,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   }
 
 
-  if (lev<mesh->MRABNlevels) {
-    
+  if (lev<mesh->MRABNlevels) {    
     // const iint id = mrab_order*mesh->MRABNlevels*3 + (lev-1)*3; // !!!!!
     const iint id = mrab_order*mesh->MRABNlevels*3 + (lev)*3;
     occaTimerTic(mesh->device,"TraceUpdateKernel");

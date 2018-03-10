@@ -119,7 +119,7 @@ occaTimerTic(mesh->device,"BOLTZMANN");
 tic_tot = MPI_Wtime();
  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
       
-
+   // for(iint tstep=0;tstep<1;++tstep){
       tic_out = MPI_Wtime();
 
       if(strstr(options, "REPORT")){
