@@ -1,0 +1,95 @@
+r: 00 [ 0000] (Nmessages=0, Ncomms=0)
+got message: % number of nodes
+
+got message: % node coordinates
+
+got Dr message: % r collocation differentation matrix
+
+got Ds message: % s collocation differentation matrix
+
+got faceNodes message: % faceNodes
+
+got LIFT message: % LIFT matrix
+
+got D message: % D (1D) matrix
+
+got gllz message: % r (1D) gll nodes
+
+got gllw message: % w (1D) gll node weights
+
+got message: % number of plot nodes
+
+got message: % plot node coordinates
+
+got plotInterp: % plot node interpolation matrix
+
+got plotTri message: % number of plot elements
+
+got plotEToV message: % triangulation of plot nodes
+
+got dual message: % dual projection matrix
+
+0.000995002 -0.00254718 0.00368681 -0.00505672 0.00722819 -0.0121312 0.0278956 -0.0806313 0.155759 0.306076 0.0531911 0.0661425 0.326532 0.358401 -0.345319 0.227879 -0.141178 0.0750225 -0.00617083 -0.0654087 0.0679994 -0.0105059 0.00341082 0.00946228 -0.028888 0.00813804 0.00138387 -0.00251596 0.0019909 -0.00145853 0.00106471 -0.000733172 0.00028587 
+0.00430765 -0.0110527 0.0160817 -0.0221952 0.0313776 -0.0469198 0.0713997 -0.082452 -0.051887 0.342999 0.0525242 0.0498329 0.435923 0.234487 -0.006178 -0.0357953 0.0275612 -0.0104544 -0.0125128 0.0378526 -0.0347989 0.0069491 -0.00141162 -0.00431699 0.0119512 -0.00317328 -0.000721401 0.00113556 -0.000886274 0.000647543 -0.00047242 0.000325263 -0.000126818 
+-0.00108439 0.00278111 -0.00404402 0.00558891 -0.00801472 0.0128528 -0.0246048 0.0520261 -0.0748532 -0.0397591 0.0176053 0.0307754 0.155378 0.798851 0.114153 -0.0587425 0.0368175 -0.0323008 0.0392367 -0.0507384 0.0402235 -0.0103938 0.00112565 0.00423735 -0.00952168 0.00214528 0.000869634 -0.00109237 0.000830235 -0.000603399 0.000439705 -0.000302645 0.000117991 
+-0.000494347 0.00126767 -0.00184065 0.00252396 -0.0034789 0.00467013 -0.00432773 -0.00657048 0.0405562 -0.0292879 -0.00765516 -0.0163286 -0.0318546 0.1037 0.917561 0.0515821 -0.0356875 0.0320963 -0.0381507 0.0471696 -0.0346539 0.00853086 -0.00105574 -0.00526274 0.00891649 -0.00139062 -0.00129103 0.00132653 -0.000978381 0.00070669 -0.000514277 0.000353845 -0.000137941 
+0.000477108 -0.00122385 0.00177902 -0.00244799 0.00341839 -0.00484663 0.00598522 -0.00143363 -0.0192659 0.022169 0.00276555 0.00404022 0.0184363 -0.0612313 0.052169 0.964929 0.0267353 -0.027119 0.0353207 -0.0439798 0.0281187 -0.00564752 0.00113024 0.00767623 -0.00948613 0.000502385 0.00212564 -0.0018904 0.00135814 -0.000975587 0.000709118 -0.000487757 0.000190131 
+-0.000297644 0.000763575 -0.00111024 0.00152841 -0.00213514 0.00302321 -0.00369632 0.000732737 0.0119089 -0.0127119 -0.00147448 0.00209525 -0.0224993 0.0468742 -0.0386455 0.027441 0.976406 0.027441 -0.0386455 0.0468742 -0.0224993 0.00209525 -0.00147448 -0.0127119 0.0119089 0.000732737 -0.00369632 0.00302321 -0.00213514 0.00152841 -0.00111024 0.000763575 -0.000297644 
+0.000190131 -0.000487757 0.000709118 -0.000975587 0.00135814 -0.0018904 0.00212564 0.000502385 -0.00948613 0.00767623 0.00113024 -0.00564752 0.0281187 -0.0439798 0.0353207 -0.027119 0.0267353 0.964929 0.052169 -0.0612313 0.0184363 0.00404022 0.00276555 0.022169 -0.0192659 -0.00143363 0.00598522 -0.00484663 0.00341839 -0.00244799 0.00177902 -0.00122385 0.000477108 
+-0.000137941 0.000353845 -0.000514277 0.00070669 -0.000978381 0.00132653 -0.00129103 -0.00139062 0.00891649 -0.00526274 -0.00105574 0.00853086 -0.0346539 0.0471696 -0.0381507 0.0320963 -0.0356875 0.0515821 0.917561 0.1037 -0.0318546 -0.0163286 -0.00765516 -0.0292879 0.0405562 -0.00657048 -0.00432773 0.00467013 -0.0034789 0.00252396 -0.00184065 0.00126767 -0.000494347 
+0.000117991 -0.000302645 0.000439705 -0.000603399 0.000830235 -0.00109237 0.000869634 0.00214528 -0.00952168 0.00423735 0.00112565 -0.0103938 0.0402235 -0.0507384 0.0392367 -0.0323008 0.0368175 -0.0587425 0.114153 0.798851 0.155378 0.0307754 0.0176053 -0.0397591 -0.0748532 0.0520261 -0.0246048 0.0128528 -0.00801472 0.00558891 -0.00404402 0.00278111 -0.00108439 
+-0.000126818 0.000325263 -0.00047242 0.000647543 -0.000886274 0.00113556 -0.000721401 -0.00317328 0.0119512 -0.00431699 -0.00141162 0.0069491 -0.0347989 0.0378526 -0.0125128 -0.0104544 0.0275612 -0.0357953 -0.006178 0.234487 0.435923 0.0498329 0.0525242 0.342999 -0.051887 -0.082452 0.0713997 -0.0469198 0.0313776 -0.0221952 0.0160817 -0.0110527 0.00430765 
+0.00028587 -0.000733172 0.00106471 -0.00145853 0.0019909 -0.00251596 0.00138387 0.00813804 -0.028888 0.00946228 0.00341082 -0.0105059 0.0679994 -0.0654087 -0.00617083 0.0750225 -0.141178 0.227879 -0.345319 0.358401 0.326532 0.0661425 0.0531911 0.306076 0.155759 -0.0806313 0.0278956 -0.0121312 0.00722819 -0.00505672 0.00368681 -0.00254718 0.000995002 
+gatherChange=110592
+gatherChange=0
+----------- MRAB Setup ------------------------------
+dtmin = 8.11647e-06, dtmax = 1.97654e-05
+| Rank | Level | Nelements | Level/Level Boundary Elements | 
+------------------------------------------------------------
+|  0,    0,      5088,        0     
+|  0,    1,      1056,        264     
+------------------------------------------------------------
+cfl = 0.2 0.2
+dt = 8.11647e-06
+max wave speed = 5.19615
+global h in [0.0255155,0.0625]
+dt = 8.11647e-06
+adding p_cubNp
+start
+end
+Found cached binary of [cf17f24320671911/parsedSource.occa] in [34925b18f6d8b340/binary]
+Found cached binary of [cf17f24320671911/parsedSource.occa] in [34b2c75ae392bffd/binary]
+Found cached binary of [cf17f24320671911/parsedSource.occa] in [34925b18f6d8b340/binary]
+Found cached binary of [cf17f24320671911/parsedSource.occa] in [34b2c75ae392bffd/binary]
+Found cached binary of [21fdce215d9cebf7/parsedSource.occa] in [26a250021ffa187c/binary]
+Found cached binary of [21fdce215d9cebf7/parsedSource.occa] in [2cdda8df64bda35b/binary]
+Found cached binary of [21fdce215d9cebf7/parsedSource.occa] in [26a250021ffa187c/binary]
+Found cached binary of [21fdce215d9cebf7/parsedSource.occa] in [2cdda8df64bda35b/binary]
+Found cached binary of [1990cf50cf76dbd4/parsedSource.occa] in [4fd7c48f24abc50d/binary]
+Found cached binary of [1990cf50cf76dbd4/parsedSource.occa] in [a986a31c5e4993ce/binary]
+Found cached binary of [1990cf50cf76dbd4/parsedSource.occa] in [4fd7c48f24abc50d/binary]
+Found cached binary of [1990cf50cf76dbd4/parsedSource.occa] in [a986a31c5e4993ce/binary]
+Compiling [boltzmannMRSAABTraceUpdateQuad3D]
+g++ -x c++ -fPIC -shared  /home/stimmel/._occa/kernels/85c837b7edabd925/source.occa -o /home/stimmel/._occa/kernels/85c837b7edabd925/binary -I/home/stimmel/occa//include -L/home/stimmel/occa//lib -locca
+
+Compiling [boltzmannMRSAABTraceUpdateQuad3D0]
+nvcc -o /home/stimmel/._occa/kernels/e5121c247e6214b6/binary -ptx -I. -I/home/stimmel/occa/include   --ftz=true --prec-div=false --prec-sqrt=false --use_fast_math --fmad=true -g -arch=sm_61  -x cu /home/stimmel/._occa/kernels/e5121c247e6214b6/source.occa
+Found cached binary of [2580635dbf8e8451/parsedSource.occa] in [85c837b7edabd925/binary]
+Found cached binary of [2580635dbf8e8451/parsedSource.occa] in [e5121c247e6214b6/binary]
+Found cached binary of [2580635dbf8e8451/parsedSource.occa] in [85c837b7edabd925/binary]
+Found cached binary of [2580635dbf8e8451/parsedSource.occa] in [e5121c247e6214b6/binary]
+Found cached binary of [7082eb69133816de/parsedSource.occa] in [219f822fbaed64fd/binary]
+Found cached binary of [7082eb69133816de/parsedSource.occa] in [e86acb3c5d2d495e/binary]
+Found cached binary of [cbbef44a26031656/parsedSource.occa] in [2fc7298eaa8cb0fa/binary]
+Found cached binary of [cbbef44a26031656/parsedSource.occa] in [4f3bd0f37528d47d/binary]
+Found cached binary of [d54abf65f2805cd1/parsedSource.occa] in [e25bece63a16af26/binary]
+Found cached binary of [d54abf65f2805cd1/parsedSource.occa] in [eb6528aba1f710a9/binary]
+Found cached binary of [cbbef44a26031656/parsedSource.occa] in [2fc7298eaa8cb0fa/binary]
+Found cached binary of [cbbef44a26031656/parsedSource.occa] in [4f3bd0f37528d47d/binary]
+Found cached binary of [d54abf65f2805cd1/parsedSource.occa] in [e25bece63a16af26/binary]
+Found cached binary of [d54abf65f2805cd1/parsedSource.occa] in [eb6528aba1f710a9/binary]
+Error
+    File    : /home/stimmel/occa//src/CUDA.cpp
+    Line    : 496
+    Error   : CUDA Error [ 1 ]: CUDA_ERROR_INVALID_VALUE
+    Message : Launching Kernel
