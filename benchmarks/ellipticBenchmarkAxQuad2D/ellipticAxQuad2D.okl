@@ -1,0 +1,87 @@
+
+// hex kernel for screened coulomb potential mat-vec
+#define squareThreads                           \
+  for(int j=0; j<p_Nq; ++j; inner1)		\
+    for(int i=0; i<p_Nq; ++i; inner0)
+
+
+// square thread version
+kernel void ellipticPartialAxQuad2D_Ref0(const dlong Nelements,
+					 const dlong elementOffset,
+					 const dfloat * restrict ggeo,
+					 const dfloat * restrict D,
+					 const dfloat   lambda,
+					 const dfloat * restrict q,
+					 dfloat * restrict Aq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_q[p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+    shared dfloat s_qr[p_Nq][p_Nq];
+    shared dfloat s_qs[p_Nq][p_Nq];
+    
+    exclusive dlong element;
+    exclusive dfloat r_Aq;
+    
+    // prefetch q(:,:,:,e) to shared
+    squareThreads{
+
+      element = e+elementOffset;
+      
+      const dlong base = i + j*p_Nq + element*p_Np; 
+      
+      s_q[j][i] = q[base];
+    
+      // fetch D to shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+      
+    barrier(localMemFence);
+
+    squareThreads{
+      
+      const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
+      
+      // assumes w*J built into G entries
+      const dfloat r_GwJ = ggeo[base+p_GWJID*p_Np];
+      
+      const dfloat r_G00 = ggeo[base+p_G00ID*p_Np];
+      const dfloat r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      const dfloat r_G11 = ggeo[base+p_G11ID*p_Np];
+      
+      dfloat qr = 0.f, qs = 0.f;
+      
+      occaUnroll(p_Nq)
+	for(int n=0; n<p_Nq; ++n){
+	  qr += s_D[i][n]*s_q[j][n];
+	  qs += s_D[j][n]*s_q[n][i];
+	}
+      
+      r_Aq = r_GwJ*lambda*s_q[j][i];
+      
+      s_qr[j][i] = r_G00*qr + r_G01*qs;
+      s_qs[j][i] = r_G01*qr + r_G11*qs;
+    }
+
+    barrier(localMemFence);
+
+    squareThreads{
+      dfloat tmpr = 0.f, tmps = 0.f;
+
+      occaUnroll(p_Nq)
+        for(int n=0;n<p_Nq;++n) {
+          tmpr += s_D[n][i]*s_qr[j][n];
+	  tmps += s_D[n][j]*s_qs[n][i];
+        }
+      
+      r_Aq += tmpr;
+      r_Aq += tmps;
+      
+      const dlong base = element*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
+    }
+  }
+}
+
