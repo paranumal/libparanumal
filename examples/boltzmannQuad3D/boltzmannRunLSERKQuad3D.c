@@ -13,6 +13,29 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
     
   //kernel arguments
   dfloat alpha = 1./mesh->N;
+  
+  mesh->filterKernelq0H(mesh->Nelements,
+			alpha,
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_q,
+			mesh->o_qFilter);
+  
+  mesh->filterKernelq0V(mesh->Nelements,
+			alpha,
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_qFilter,
+			mesh->o_q);
+  
   for(iint tstep=0;tstep<mesh->Nrhs;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       for (iint rk = 0; rk < mesh->Nrk; ++rk) {
@@ -98,7 +121,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_qlserk);
 
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
-	  iint saved = (l < lev)&&(rk == mesh->Nrk - 1);
+	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->volumeCorrPreKernel(mesh->Nelements,
 				    saved,
 				    mesh->MRABshiftIndex[l],
@@ -107,8 +130,10 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				    mesh->o_qPreCorr);
 	}
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
-	  iint saved = (l < lev)&&(rk == mesh->Nrk-1);
-	
+	  for (lev=0;lev<mesh->MRABNlevels;lev++)
+	    if (Ntick % (1<<lev) !=0) break; //find the max lev to add to rhsq
+	  iint saved = (l < lev)&&(rk == 0);
+	  
 	  if (mesh->MRABNelements[l]) {
 	    mesh->updatePreKernel(mesh->MRABNelements[l],
 				  mesh->o_MRABelementIds[l],
@@ -117,9 +142,11 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				  mesh->rka[rk],
 				  mesh->rkb[rk],
 				  mesh->MRABshiftIndex[l],
+				  mesh->o_vmapM,
 				  mesh->o_qlserk,
 				  mesh->o_rhsq,
-				  mesh->o_qCorr,
+				  mesh->o_qPreCorr,
+				  mesh->o_fQM,
 				  mesh->o_resq,
 				  mesh->o_q);
 	  
@@ -131,6 +158,8 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
       }
       
     }
+    mesh->o_q.copyTo(mesh->q);
+    boltzmannPlotNorms(mesh,"start",tstep,mesh->q);
   }
   
   free(recvBuffer);

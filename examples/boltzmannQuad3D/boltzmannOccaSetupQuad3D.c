@@ -151,6 +151,7 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo.addCompilerFlag("-g");
   }
   
   kernelInfo.addDefine("p_RXID", RXID);

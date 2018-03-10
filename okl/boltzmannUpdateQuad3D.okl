@@ -5,18 +5,23 @@ kernel void boltzmannLSERKUpdateQuad3D(const iint Nelements,
 				       const dfloat rka,
 				       const dfloat rkb,
 				       const iint shift,
+				       const iint * restrict vmapM,
 				       const dfloat * restrict rhsq,
 				       dfloat * restrict qpop,
 				       const dfloat * restrict qCorr,
+				       dfloat * restrict fQM,
 				       dfloat * restrict resq,
 				       dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
 
+    shared iint e;
+    shared dfloat s_q[p_Np][p_Nfields];
+    
     for(iint n=0;n<p_Np;++n;inner0){
 
-      const iint e = elementIDs[es];
+      e = elementIDs[es];
       
       for(iint fld=0; fld<p_Nfields; ++fld){
 
@@ -31,10 +36,26 @@ kernel void boltzmannLSERKUpdateQuad3D(const iint Nelements,
 
 	resq[id] = r_resq;
 
-	q[id] = r_q;
+	s_q[n][fld] = r_q;
 	if(saved) {
 	  const iint id2 = e*p_Np*p_Nfields*p_nrhs + shift*p_Np*p_Nfields + fld*p_Np + n;
 	  qpop[id2] = r_rhsq;
+	}
+      }
+    }
+    barrier(localMemFence);
+    for(iint n=0;n<p_Np;++n;inner0) {
+      for (iint fld = 0; fld < p_Nfields; ++fld) {
+	q[e*p_Np*p_Nfields + fld*p_Np + n] = s_q[n][fld];
+      }
+      if(n<p_Nfaces*p_Nfp){
+	
+	const iint iid  = e*p_Nfp*p_Nfaces + n;
+	const iint qidM = vmapM[iid] - e*p_Np;
+	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
+	
+	for (iint fld = 0; fld < p_Nfields; ++fld){
+	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM][fld];
 	}
       }
     }
