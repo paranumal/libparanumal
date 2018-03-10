@@ -292,4 +292,17 @@ writeFloatMatrix(fid, IP1, '1D degree raise matrix');
 writeFloatMatrix(fid, IM1, '1D degree lower matrix');
 
 
+%%SEMFEM data
+%manually build quad grid for FEM problem
+FEMEToV = zeros(N*N,4);
+cnt =1;
+for j=0:N-1
+  for i=0:N-1
+    FEMEToV(cnt,:) = [i+(j)*(N+1), i+1+(j)*(N+1), i+1+(j+1)*(N+1), i+(j+1)*(N+1)];
+    cnt = cnt+1;
+  end
+end
+
+writeIntMatrix(fid, FEMEToV, 'SEMFEM reference mesh');
+
 fclose(fid);

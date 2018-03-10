@@ -9,7 +9,7 @@ void ellipticPreconditioner2D(solver_t *solver,
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
 
-  if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
+  if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")||strstr(options, "SEMFEM")) {
 
     occaTimerTic(mesh->device,"parALMOND");
     parAlmondPrecon(precon->parAlmond, o_z, o_r);
@@ -38,21 +38,6 @@ void ellipticPreconditioner2D(solver_t *solver,
     occaTimerToc(mesh->device,"prolongateKernel");
 
     occaTimerToc(mesh->device,"coarseGrid");
-
-  } else if (strstr(options, "SEMFEM")) {
-
-    o_z.copyFrom(o_r);
-    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
-    precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
-    meshParallelGather(mesh, precon->FEMogs, precon->o_rFEM, precon->o_GrFEM);
-    occaTimerTic(mesh->device,"parALMOND");
-    parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
-    occaTimerToc(mesh->device,"parALMOND");
-    meshParallelScatter(mesh, precon->FEMogs, precon->o_GzFEM, precon->o_zFEM);
-    precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
-    solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, solver->o_invDegree, o_z, o_z);
-
-    ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_z, dfloatString, "add");
 
   } else if(strstr(options, "JACOBI")){
 

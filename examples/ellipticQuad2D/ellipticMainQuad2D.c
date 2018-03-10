@@ -28,8 +28,8 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=OAS smoother=FULLPATCH");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=NONE");
     //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=JACOBI");
@@ -41,7 +41,7 @@ int main(int argc, char **argv){
   // partition can be STRONGNODES, DISTRIBUTED, SATURATE
   char *parAlmondOptions =
     strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
-    //strdup("solver=EXACT,VERBOSE smoother=DAMPEDJACOBI partition=STRONGNODES");
+    //strdup("solver=EXACT,KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
   //this is strictly for testing, to do repeated runs. Will be removed later
   if (argc==6) {

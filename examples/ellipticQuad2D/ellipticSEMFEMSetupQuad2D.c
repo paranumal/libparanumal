@@ -22,8 +22,6 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
 
   memcpy(femMesh,mesh,sizeof(mesh2D));
 
-  //mesh->NelFEM = 2*mesh->N*mesh->N;
-
   //now build the full degree 1 fem mesh
   int femN = 1; //degree of fem approximation
 
@@ -42,24 +40,29 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
       dlong id1 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+0];
       dlong id2 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+1];
       dlong id3 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+2];
+      dlong id4 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+3];
 
-      /* read vertex triplet for triangle */
-      dlong femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
+      /* read vertex quadruplet for quad */
+      dlong femId = e*mesh->NelFEM*mesh->Nverts + n*mesh->Nverts;
       femMesh->EToV[femId+0] = mesh->globalIds[id1];
       femMesh->EToV[femId+1] = mesh->globalIds[id2];
       femMesh->EToV[femId+2] = mesh->globalIds[id3];
+      femMesh->EToV[femId+3] = mesh->globalIds[id4];
 
       femMesh->EX[femId+0] = mesh->x[id1];
       femMesh->EX[femId+1] = mesh->x[id2];
       femMesh->EX[femId+2] = mesh->x[id3];
+      femMesh->EX[femId+3] = mesh->x[id4];
 
       femMesh->EY[femId+0] = mesh->y[id1];
       femMesh->EY[femId+1] = mesh->y[id2];
       femMesh->EY[femId+2] = mesh->y[id3];
+      femMesh->EY[femId+3] = mesh->y[id4];
 
       localIds[femId+0] = id1;
       localIds[femId+1] = id2;
-      localIds[femId+2] = id3;
+      localIds[femId+2] = id4;  //need to swap this as the Np nodes are ordered [0,1,4,3] in a degree 1 element
+      localIds[femId+3] = id3;
     }
   }
 
@@ -85,7 +88,7 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   meshSurfaceGeometricFactorsQuad2D(femMesh);
 
   // global nodes
-  //meshParallelConnectNodes(femMesh);
+  meshParallelConnectNodes(femMesh);
 
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
@@ -110,24 +113,6 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   precon->FEMogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
                                         mesh->gatherLocalIds,  gatherMaskedBaseIds, 
                                         mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
-
-  //build stiffness matrices
-  femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-  femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-  femMesh->Ssr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-  femMesh->Sss = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-  for (int n=0;n<femMesh->Np;n++) {
-    for (int m=0;m<femMesh->Np;m++) {
-      for (int k=0;k<femMesh->Np;k++) {
-        for (int l=0;l<femMesh->Np;l++) {
-          femMesh->Srr[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-          femMesh->Srs[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-          femMesh->Ssr[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-          femMesh->Sss[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-        }
-      }
-    }
-  }
 
   printf("Building full SEMFEM matrix..."); fflush(stdout);
 
@@ -292,27 +277,24 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
                      solver->allNeumannPenalty);
   free(A); free(Rows); free(Cols); free(Vals);
 
-  //tell parAlmond not to gather this level (its done manually)
+  //tell parAlmond to gather this level
   agmgLevel *baseLevel = precon->parAlmond->levels[0];
-  baseLevel->gatherLevel = false;
+
+  baseLevel->gatherLevel = true;
+  baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+  baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+
   baseLevel->weightedInnerProds = false;
 
-  // build interp and anterp
-  dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh->NpFEM*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->NpFEM;++n){
-    for(int m=0;m<mesh->Np;++m){
-      SEMFEMAnterp[n+m*mesh->NpFEM] = mesh->SEMFEMInterp[n*mesh->Np+m];
-    }
-  }
+  baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
+  baseLevel->gatherArgs[0] = (void *) solver;
+  baseLevel->gatherArgs[1] = (void *) precon->FEMogs;  //use the gs made from the partial gathered femgrid 
+  baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+  baseLevel->gatherArgs[3] = (void *) options;
+  baseLevel->scatterArgs = baseLevel->gatherArgs;
 
-  mesh->o_SEMFEMInterp = mesh->device.malloc(mesh->NpFEM*mesh->Np*sizeof(dfloat),mesh->SEMFEMInterp);
-  mesh->o_SEMFEMAnterp = mesh->device.malloc(mesh->NpFEM*mesh->Np*sizeof(dfloat),SEMFEMAnterp);
-
-  free(SEMFEMAnterp);
-
-  precon->o_rFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
-  precon->o_zFEM = mesh->device.malloc(mesh->Nelements*mesh->NpFEM*sizeof(dfloat));
-
-  precon->o_GrFEM = mesh->device.malloc(precon->FEMogs->Ngather*sizeof(dfloat));
-  precon->o_GzFEM = mesh->device.malloc(precon->FEMogs->Ngather*sizeof(dfloat));
+  baseLevel->device_gather  = ellipticGather;
+  baseLevel->device_scatter = ellipticScatter;  
 }

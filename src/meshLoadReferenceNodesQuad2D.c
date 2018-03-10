@@ -74,6 +74,9 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   readDfloatArray(fp, "IPDG overlapping patch backward matrix", &(mesh->oasBackDg), &Nrows, &Ncols);   
   mesh->NpP = Nrows; //overlapping patch size
 
+  readIntArray   (fp, "SEMFEM reference mesh", &(mesh->FEMEToV), &Nrows, &Ncols);
+  mesh->NelFEM = Nrows;
+
   fclose(fp);
 
   // find node indices of vertex nodes
