@@ -317,3 +317,7 @@ Cubature Surface Lift Matrix
 1D degree lower matrix
 1 2
 0.500000000000000 0.500000000000000 
+******************************************
+SEMFEM reference mesh
+1 4
+0 1 3 2 
