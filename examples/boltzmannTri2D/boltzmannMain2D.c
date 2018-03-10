@@ -22,7 +22,7 @@ int main(int argc, char **argv){
   // pmlprofile  = CONSTANT, QUADRATIC
   
   char options[BUFSIZ];
-  strcpy(options,"out = REPORT +VTU+ PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
+  strcpy(options,"out = REPORT+PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
   
     int N, time_disc;
     char meshfile[BUFSIZ]; 
@@ -87,7 +87,7 @@ int main(int argc, char **argv){
 
     SCALE[0] = 1; SCALE[1] = 2;  SCALE[2] = 10;   SCALE[3] = 20;   
     
-    for(iint i=0; i<9;i++){
+    for(iint i=0; i<1;i++){
 
       //mesh->Ntscale=SCALE[i];
       mesh->Ntscale=i;

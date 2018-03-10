@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 10000; 
+  mesh->errorStep = 1; 
 
   dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
                  RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
@@ -32,8 +32,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.1; //MA[mesh->Ntscale]; // Set Mach number
-    mesh->Re = RE[mesh->Ntscale]; 
+    mesh->Ma = 0.2; //MA[mesh->Ntscale]; // Set Mach number
+    mesh->Re = 150.; //RE[mesh->Ntscale]; 
     //
     Uref = 1.0;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
@@ -49,7 +49,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 0.01; // Was 200  
+    mesh->finalTime = 300.; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -96,7 +96,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl = 0.25; 
+  dfloat cfl = 0.2; 
   if(strstr(options,"LSERK") || strstr(options,"SARK") || strstr(options,"LSIMEX") )
     cfl          = 0.75; 
 
@@ -705,7 +705,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f); // 0.05
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
 
 
 
