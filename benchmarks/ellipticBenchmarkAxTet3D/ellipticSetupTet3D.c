@@ -170,10 +170,13 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
 
   solver->o_localGatherElementList =
     mesh->device.malloc(localCount*sizeof(int), localGatherElementList);
+
+#if 0
   mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   for (int n=0;n<mesh->Np*mesh->Np;n++)
     mesh->invSparseV[n] = mesh->sparseV[n];
-
+#endif
+  
   // load sparse data
   void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N);
   loadElementStiffnessMatricesTet3D(mesh, " ", mesh->N);

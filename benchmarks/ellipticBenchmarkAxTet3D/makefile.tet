@@ -87,10 +87,10 @@ COBJS = \
 ../../src/xxtCoarseSolve.o
 
 
-ellipticBenchmarkTet3D:$(AOBJS) $(LOBJS) ellipticBenchmarkTet3D.o gslibInterface
+ellipticBenchmarkTet3D:$(AOBJS) $(LOBJS) ellipticBenchmarkTet3D.o gslibInterface loadElementStiffnessMatricesTet3D.o
 	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../benchmarks/ellipticBenchmarkAxTet3D
 	cd ../../examples/parALMOND; make -j lib; cd ../../benchmarks/ellipticBenchmarkAxTet3D
-	$(LD)  $(LDFLAGS)  -o ellipticBenchmarkTet3D ellipticBenchmarkTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+	$(LD)  $(LDFLAGS)  -o ellipticBenchmarkTet3D ellipticBenchmarkTet3D.o loadElementStiffnessMatricesTet3D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 gslibInterface:
 	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../benchmarks/ellipticBenchmarkAxTet3D

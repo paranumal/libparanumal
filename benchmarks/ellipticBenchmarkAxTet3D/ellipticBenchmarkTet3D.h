@@ -1,5 +1,5 @@
-#ifndef ELLIPTICTRI3D_H
-#define ELLIPTICTRI3D_H 1
+#ifndef ELLIPTICTET3D_H
+#define ELLIPTICTET3D_H 1
 
 #include <math.h>
 #include <stdlib.h>
@@ -90,10 +90,10 @@ typedef struct {
 
 }solver_t;
 
-solver_t *ellipticSetupTri3D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, int Nblocks, int Nnodes);
+solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, int Nblocks, int Nnodes);
 
 void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes);
 
-void loadElementStiffnessMatricesTri3D(mesh_t *mesh, const char *options, int N);
+void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N);
 
 #endif
