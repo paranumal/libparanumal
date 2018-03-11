@@ -7,7 +7,7 @@ typedef struct {
 void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N){
 
   char fname[BUFSIZ];
-  sprintf(fname, "sparseTet3DN%02d.dat", N);
+  sprintf(fname, "sparseMatrices/sparseTet3DN%02d.dat", N);
   FILE *fp = fopen(fname, "r");
 
   char buf[BUFSIZ];
@@ -27,9 +27,9 @@ void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N)
   printf("maxNnzPerRow = %d, paddedNnzPerRow = %d\n", mesh->maxNnzPerRow, paddedRowSize);
 
   fgets(buf, BUFSIZ, fp); 
-  int *Ind = (int*) calloc(paddedRowSize*mesh->Np, sizeof(int));                     
+  mesh->Ind = (int*) calloc(paddedRowSize*mesh->Np, sizeof(int));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->Np;++n){ 
-    fscanf(fp, "%d ", Ind+n);                                             
+    fscanf(fp, "%d ", mesh->Ind+n);                                             
   }   
   mesh->Srr =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   mesh->Srs =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
@@ -86,14 +86,19 @@ void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N)
   for (int m=0;m<paddedRowSize;m+=4) {  
     for (int n=0;n<mesh->Np;n++) {
       char4 ind;
-      ind.x = Ind[n + 0*mesh->Np + m*mesh->Np];
-      ind.y = Ind[n + 1*mesh->Np + m*mesh->Np];
-      ind.z = Ind[n + 2*mesh->Np + m*mesh->Np];
-      ind.w = Ind[n + 3*mesh->Np + m*mesh->Np];
+      ind.x = mesh->Ind[n + 0*mesh->Np + m*mesh->Np];
+      ind.y = mesh->Ind[n + 1*mesh->Np + m*mesh->Np];
+      ind.z = mesh->Ind[n + 2*mesh->Np + m*mesh->Np];
+      ind.w = mesh->Ind[n + 3*mesh->Np + m*mesh->Np];
       
       IndTchar[n + mesh->Np*(m/4)] = ind;
     }
   }
+
+  int nnz = 0;
+  for(int n=0;n<paddedRowSize*mesh->Np;++n)
+    nnz += (mesh->Ind[n]!=0);
+  printf("NNZ = %d\n", nnz);
   
   mesh->maxNnzPerRow = paddedRowSize;
   mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Srr);
