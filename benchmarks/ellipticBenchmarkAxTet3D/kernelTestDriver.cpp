@@ -342,7 +342,8 @@ else{
       //adjust GFLOPS for Ref2 and Ref3
       occa::streamTag stopTag = device.tagStream();
       double elapsed = device.timeBetween(startTag, stopTag);
-     if (i>5){
+
+ if (i>5){
         // old: gflops = p_Np*20*(1+p_Np)
         gflops = p_Np*(p_Np*14 +14);
 gflops *=Niter;      
@@ -353,6 +354,8 @@ gflops *=Niter;
       printf("OCCA elapsed time = %g\n", elapsed);
 timeData[i] = elapsed/Niter;
       printf("number of flops = %f time = %f \n", gflops, elapsed);
+printf("DOFS %lu  %17.17f \n",p_Np*E,  elapsed);    
+
       results3D[i] =E*gflops/(elapsed*1000*1000*1000); 
 //elapsed/Niter;
       //
