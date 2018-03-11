@@ -1,4 +1,4 @@
-#include "ellipticBenchmarkTri2D.h"
+#include "ellipticBenchmarkTet3D.h"
 
 int main(int argc, char **argv){
 
@@ -76,13 +76,13 @@ int main(int argc, char **argv){
   occa::kernelInfo kernelInfo;
 
   //add user defined boundary data
-  char *boundaryHeaderFileName = strdup("homogeneous2D.h"); // default
+  char *boundaryHeaderFileName = strdup("homogeneous3D.h"); // default
   kernelInfo.addInclude(boundaryHeaderFileName);
 
-  solver_t *solver = ellipticSetupTri3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, Nblocks, Nnodes);
+  solver_t *solver = ellipticSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, Nblocks, Nnodes);
   solver->lambda = lambda;
 
-  ellipticRunBenchmark2D(solver,options,kernelInfo,kernelFileName,Nblocks,Nnodes);
+  ellipticRunBenchmark3D(solver,options,kernelInfo,kernelFileName,Nblocks,Nnodes);
 
   // close down MPI
   MPI_Finalize();
