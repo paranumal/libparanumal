@@ -4,22 +4,18 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *B, dfloat *Br, dfloat *Bs, int eM, dfloat *A);
+void BuildLocalIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A);
 
+//returns the C0FEM patch A matrix for element eM
+void BuildLocalContinuousPatchAx(solver_t* solver, dfloat lambda,
+                                  dlong eM, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *A);
 
-void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+void ellipticBuildLocalPatchesQuad2D(solver_t *solver, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
-  if(!basis) { // default to degree N Lagrange basis
-    basisNp = mesh->Np;
-    basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
-    for(int n=0;n<basisNp;++n){
-      basis[n+n*basisNp] = 1;
-    }
-  }
+  mesh2D *mesh = solver->mesh;
 
   // build some monolithic basis arrays
   dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -51,14 +47,14 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->Nelements, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
 
   //temp patch storage
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *invRefAA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   (*Npatches) = 1;
-  int refPatches = 0;
+  dlong refPatches = 0;
 
 
   //build a mini mesh struct for the reference patch
@@ -79,7 +75,7 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
   refMesh->EX[2] = V3x;  refMesh->EY[2] = V3y;
   refMesh->EX[3] = V4x;  refMesh->EY[3] = V4y;
 
-  refMesh->EToV = (int*) calloc(mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(mesh->Nverts, sizeof(hlong));
 
   refMesh->EToV[0] = 0;
   refMesh->EToV[1] = 1;
@@ -98,19 +94,19 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
 
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  BuildLocalPatchAx(refMesh, basis, tau, lambda, BCType, B,Br,Bs, 0, refPatchInvA);
+  BuildLocalIpdgPatchAx(refMesh, tau, lambda, BCType, B,Br,Bs, 0, refPatchInvA);
   matrixInverse(mesh->Np, refPatchInvA);
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
-    BuildLocalPatchAx(mesh, basis, tau, lambda, BCType, B,Br,Bs, eM, patchA);
+    BuildLocalIpdgPatchAx(mesh, tau, lambda, BCType, B,Br,Bs, eM, patchA);
 
-    int eP0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eM*mesh->Nfaces+2];
-    int eP3 = mesh->EToE[eM*mesh->Nfaces+3];
+    dlong eP0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eP3 = mesh->EToE[eM*mesh->Nfaces+3];
 
     int fP0 = mesh->EToF[eM*mesh->Nfaces+0];
     int fP1 = mesh->EToF[eM*mesh->Nfaces+1];
@@ -150,7 +146,7 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
     //copy inverse into patchesInvA
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Np;++m){
-        int id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
+        dlong id = ((*Npatches)-1)*mesh->Np*mesh->Np + n*mesh->Np + m;
         (*patchesInvA)[id] = patchA[n*mesh->Np+m];
       }
     }
@@ -158,8 +154,8 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(refMesh);
   free(patchA); free(invRefAA);
@@ -168,8 +164,8 @@ void ellipticBuildLocalPatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basi
 
 
 //returns the patch A matrix for element eM
-void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *B, dfloat *Br, dfloat *Bs, int eM, dfloat *A) {
+void BuildLocalIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A) {
 
   /* start with stiffness matrix  */
   for(int n=0;n<mesh->Np;++n){
@@ -178,7 +174,7 @@ void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, i
 
       // (grad phi_n, grad phi_m)_{D^e}
       for(int i=0;i<mesh->Np;++i){
-        int base = eM*mesh->Np*mesh->Nvgeo + i;
+        dlong base = eM*mesh->Np*mesh->Nvgeo + i;
         dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
         dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
         dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
@@ -201,14 +197,14 @@ void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, i
           int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
           // grab vol geofacs at surface nodes
-          int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+          dlong baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
           dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
           dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
           dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
           dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
 
           // grab surface geometric factors
-          int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+          dlong base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
           dfloat nx = mesh->sgeo[base+NXID];
           dfloat ny = mesh->sgeo[base+NYID];
           dfloat wsJ = mesh->sgeo[base+WSJID];
@@ -250,6 +246,75 @@ void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, i
           A[n*mesh->Np+m] += +0.5*(1+bcD)*(1-bcN)*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
         }
       }
+    }
+  }
+}
+
+void BuildLocalContinuousPatchAx(solver_t* solver, dfloat lambda,
+                                  dlong eM, dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A) {
+
+  mesh2D *mesh = solver->mesh;
+
+  for (int ny=0;ny<mesh->Nq;ny++) {
+    for (int nx=0;nx<mesh->Nq;nx++) {
+      if (solver->mapB[nx+ny*mesh->Nq+eM*mesh->Np]!=1) {
+        for (int my=0;my<mesh->Nq;my++) {
+          for (int mx=0;mx<mesh->Nq;mx++) {
+            if (solver->mapB[mx+my*mesh->Nq+eM*mesh->Np]==1) continue;
+            
+            int id;
+            int iid = (nx+ny*mesh->Nq)*mesh->Np + mx+my*mesh->Nq;
+            A[iid] = 0;
+
+            if (ny==my) {
+              for (int k=0;k<mesh->Nq;k++) {
+                id = k+ny*mesh->Nq;
+                dfloat Grr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
+
+                A[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[mx+k*mesh->Nq];
+              }
+            }
+
+            id = mx+ny*mesh->Nq;
+            dfloat Grs = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+            A[iid] += Grs*mesh->D[nx+mx*mesh->Nq]*mesh->D[my+ny*mesh->Nq];
+
+            id = nx+my*mesh->Nq;
+            dfloat Gsr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+            A[iid] += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
+
+            if (nx==mx) {
+              for (int k=0;k<mesh->Nq;k++) {
+                id = nx+k*mesh->Nq;
+                dfloat Gss = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
+
+                A[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
+              }
+            }
+
+            if ((nx==mx)&&(ny==my)) {
+              id = nx + ny*mesh->Nq;
+              dfloat JW = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
+              A[iid] += JW*lambda;
+            }
+          }
+        }
+      } else {
+        int iid = (nx+ny*mesh->Nq)*mesh->Np + nx+ny*mesh->Nq;
+        A[iid] = 1; //just put a 1 so A is invertable
+      }
+    }
+  }
+
+  //add the rank boost for the allNeumann Poisson problem
+  if (solver->allNeumann) {
+    for(int n=0;n<mesh->Np;++n){
+      if (solver->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
+        for(int m=0;m<mesh->Np;++m){
+          if (solver->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
+          A[n*mesh->Np+m] += solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
+        }
+      } 
     }
   }
 }

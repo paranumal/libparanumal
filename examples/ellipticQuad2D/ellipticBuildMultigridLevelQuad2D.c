@@ -1,7 +1,9 @@
 #include "ellipticQuad2D.h"
 
+void matrixInverse(int N, dfloat *A);
+
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegree, int n, const char *options){
+solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf, int *BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
@@ -12,27 +14,45 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
 
   solver->mesh = mesh;
 
-  int N = levelDegree[n];
-  int NFine = levelDegree[n-1];
-  int NpFine = (NFine+1)*(NFine+1);
-  int NpCoarse = (N+1)*(N+1);
-
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesQuad2D(mesh, N);
+  meshLoadReferenceNodesQuad2D(mesh, Nc);
 
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesQuad2D(mesh);
 
+  // compute geometric factors
+  meshGeometricFactorsQuad2D(mesh);
+
+  // create halo extension for x,y arrays
+  dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  dlong localNodes     = mesh->Nelements*mesh->Np;
+  // temporary send buffer
+  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+
+  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
+  mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
+  // compute surface geofacs
+  meshSurfaceGeometricFactorsQuad2D(mesh);
+
   // global nodes
-  //meshParallelConnectNodes(mesh); //not needed for Ipdg, but possibly re-enable later
+  meshParallelConnectNodes(mesh);
 
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
+  free(sendBuffer);
 
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+
+  solver->Nblock = Nblock;
 
   mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
   
@@ -53,6 +73,34 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
+
+
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs){
+    dlong Nlocal = mesh->Np*mesh->Nelements;
+    dlong Nhalo = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
+
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
+
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + Nlocal*mesh->Nvgeo);
+
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    free(vgeoSendBuffer);
+  }
+
+
+  //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   // info for kernel construction
   occa::kernelInfo kernelInfo;
@@ -93,10 +141,10 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   }
 
   if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+    kernelInfo.addDefine("dlong","int");
   }
   if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -124,13 +172,6 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   kernelInfo.addDefine("p_JWID", JWID);
 
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
-
-  solver->Nblock = Nblock;
-
   //add standard boundary functions
   char *boundaryHeaderFileName;
   boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticQuad2D/ellipticBoundary2D.h");
@@ -141,20 +182,27 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   kernelInfo.addDefine("p_blockSize", blockSize);
 
   // add custom defines
-  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
+  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
   int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
   kernelInfo.addDefine("p_Nmax", Nmax);
 
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_maxNodes", maxNodes);
+
   int NblockV = 256/mesh->Np; // get close to 256 threads
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 512/(5*mesh->Np); // get close to 256 threads
+  int one = 1; //set to one for now. TODO: try optimizing over these
+  kernelInfo.addDefine("p_NnodesV", one);
+
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo.addDefine("p_NblockS", NblockS);
+
+  int NblockP = mymax(256/(5*mesh->Np),1); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -174,7 +222,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
 
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxQuad2D.okl",
-               "ellipticAxQuad2D",
+               "ellipticAxQuad2D_e0",
                kernelInfo);
 
   solver->partialAxKernel =
@@ -213,21 +261,6 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
   solver->precon->restrictKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictQuad2D.okl",
                "ellipticFooQuad2D",
-               kernelInfo);
-
-  solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
-               kernelInfo);
-
-  solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
-               kernelInfo);
-
-  solver->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconQuad2D.okl",
-               "ellipticBlockJacobiPreconQuad2D",
                kernelInfo);
 
   solver->precon->approxPatchSolverKernel =
@@ -270,7 +303,66 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegr
                "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
 
-  free(DrT); free(DsT); free(LIFTT);
+  int NpFine   = (Nf+1)*(Nf+1);
+  int NpCoarse = (Nc+1)*(Nc+1);
+  int NqFine   = (Nf+1)*(Nf+1);
+  int NqCoarse = (Nc+1)*(Nc+1);
+  kernelInfo.addDefine("p_NpFine", NpFine);
+  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+  kernelInfo.addDefine("p_NqFine", Nf+1);
+  kernelInfo.addDefine("p_NqCoarse", Nc+1);
+  
+  solver->precon->coarsenKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsenQuad2D.okl",
+               "ellipticPreconCoarsenQuad2D",
+               kernelInfo);
+
+  solver->precon->prolongateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongateQuad2D.okl",
+               "ellipticPreconProlongateQuad2D",
+               kernelInfo);
+
+  //on host gather-scatter
+  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
+
+  // set up separate gather scatter infrastructure for halo and non halo nodes
+  ellipticParallelGatherScatterSetup(solver,options);
+
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  solver->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) solver->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          solver->mapB[fid+e*mesh->Np] = mymin(BCFlag,solver->mapB[fid+e*mesh->Np]);
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(mesh->hostGsh, solver->mapB, "int", "min"); 
+
+  //use the bc flags to find masked ids
+  solver->Nmasked = 0;
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (solver->mapB[n] == 1E9) {
+      solver->mapB[n] = 0.;
+    } else if (solver->mapB[n] == 1) { //Dirichlet boundary
+      solver->Nmasked++;
+    }
+  }
+  solver->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), solver->mapB);
+  
+  solver->maskIds = (dlong *) calloc(solver->Nmasked, sizeof(dlong));
+  solver->Nmasked =0; //reset
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (solver->mapB[n] == 1) solver->maskIds[solver->Nmasked++] = n;
+  }
+  if (solver->Nmasked) solver->o_maskIds = mesh->device.malloc(solver->Nmasked*sizeof(dlong), solver->maskIds);
 
   return solver;
 }

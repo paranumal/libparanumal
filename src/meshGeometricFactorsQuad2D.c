@@ -14,10 +14,10 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
   mesh->Nggeo = 4;
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat *xe = mesh->EX + id;
     dfloat *ye = mesh->EY + id;
