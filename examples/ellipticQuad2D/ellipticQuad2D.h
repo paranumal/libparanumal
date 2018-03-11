@@ -1,3 +1,6 @@
+#ifndef ELLIPTICQUAD2D_H
+#define ELLIPTICQUAD2D_H 1
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,10 +35,30 @@ typedef struct {
 
   dfloat tau;
 
+  int *BCType;
+
+  bool allNeumann;
+  dfloat allNeumannPenalty;
+  dfloat allNeumannScale;
+
   // HOST shadow copies
   dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
+  dfloat *invDegree;
+
+  dfloat *Ry, *R; //multigrid restriction matrix
+
+  int *EToB;
+
+  //C0-FEM mask data
+  int *mapB;      // boundary flag of face nodes
+  dlong Nmasked;
+  dlong *maskIds;
+
+  occa::memory o_maskIds;
+  occa::memory o_mapB;
 
   dfloat *sendBuffer, *recvBuffer;
+  dfloat *gradSendBuffer, *gradRecvBuffer;
 
   occa::stream defaultStream;
   occa::stream dataStream;
@@ -51,18 +74,21 @@ typedef struct {
   occa::memory o_rtmp;
   occa::memory o_invDegree;
   occa::memory o_EToB;
+  occa::memory o_R;
+  occa::memory o_Ry;
 
   // list of elements that are needed for global gather-scatter
-  int NglobalGatherElements;
+  dlong NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  int NlocalGatherElements;
+  dlong NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel rhsBCKernel;
+  occa::kernel addBCKernel;
   occa::kernel innerProductKernel;
   occa::kernel weightedInnerProduct1Kernel;
   occa::kernel weightedInnerProduct2Kernel;
@@ -81,8 +107,7 @@ typedef struct {
 
 void ellipticSetupQuad2D(mesh2D *mesh, occa::kernelInfo &kernelInfo);
 
-void ellipticParallelGatherScatterQuad2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gsv,
-          const char *type, const char *op);
+void ellipticParallelGatherScatterQuad2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
 
 void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 
@@ -90,37 +115,72 @@ void diagnostic(int N, occa::memory &o_x, const char *message);
 
 void ellipticPreconditioner2D(solver_t *solver, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
 
-int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const char *options);
+int ellipticSolveQuad2D(solver_t *solver, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
 
 solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
 
-solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int* levelDegrees, int n, const char *options);
+solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf, int *BCType, const char *options);
 
-void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+void ellipticStartHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
-void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
+void ellipticInterimHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
 
-void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, dfloat *recvBuffer);
+void ellipticEndHaloExchange2D(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
-void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-          int Nlocal,     // number of local nodes
-          int Nbytes,     // number of bytes per node
-          int *gatherLocalIds,  // local index of nodes
-          int *gatherBaseIds,   // global index of their base nodes
-          int *gatherHaloFlags,
-          ogs_t **halo,
-          ogs_t **nonHalo);   // 1 for halo node, 0 for not
+void ellipticParallelGatherScatterSetup(solver_t *solver,const char *options);
+
+//Linear solvers
+int pcg      (solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+
+void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+dfloat ellipticWeightedInnerProduct(solver_t *solver,
+            occa::memory &o_w,
+            occa::memory &o_a,
+            occa::memory &o_b,
+            const char *options);
+void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
+
+
+void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              dlong *nnzA, hlong *globalStarts, const char *options);
+
+void ellipticBuildContinuousQuad2D(solver_t *solver, dfloat lambda, nonZero_t **A, dlong *nnz,
+                              ogs_t **ogs, hlong *globalStarts, const char* options);
+
+void ellipticBuildJacobiQuad2D(solver_t *solver, dfloat tau, dfloat lambda,
+                                   int *BCType, dfloat **invDiagA,
+                                   const char *options);
+
+void ellipticBuildFullPatchesQuad2D(solver_t *solver, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildFacePatchesQuad2D(solver_t *solver, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
+
+void ellipticBuildLocalPatchesQuad2D(solver_t *solver, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
+                                   const char *options);
 
 //smoother setups
-void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
-void ellipticSetupSmootherDampedJacobiIpdg    (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
-void ellipticSetupSmootherFullPatchIpdg (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
-void ellipticSetupSmootherFacePatchIpdg (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
-void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherOverlappingPatch(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, const char *options);
+void ellipticSetupSmootherDampedJacobi    (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
+void ellipticSetupSmootherFullPatch (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherFacePatch (solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmootherLocalPatch(solver_t *solver, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
 
 
 void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
 void ellipticSetupSmootherQuad2D(solver_t *solver, precon_t *precon,
                                 dfloat tau, dfloat lambda, int* BCType,
                                 const char *options);
-dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level);
+
+void matrixInverse(int N, dfloat *A);
+dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level, const char* options);
+
+void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
+                              dfloat tau, dfloat lambda, int *BCType,
+                              const char *options, const char *parAlmondOptions);
+
+#endif

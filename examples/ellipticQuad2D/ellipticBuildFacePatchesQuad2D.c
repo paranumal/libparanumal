@@ -4,7 +4,7 @@ typedef struct {
 
   int face;
   int signature[4];
-  int id;
+  dlong id;
 
 } refPatch_t;
 
@@ -13,29 +13,22 @@ void matrixInverse(int N, dfloat *A);
 
 dfloat matrixConditionNumber(int N, dfloat *A);
 
-void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int face, dfloat *A);
+void BuildFaceIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat *Bs, dlong face, dfloat *A);
 
-void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int face, int *signature, dfloat *A);
+void BuildReferenceFacePatch(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat *Bs, int face, int *signature, dfloat *A);
 
-int getFacePatchIndex(refPatch_t *referencePatchList, int numRefPatches, int face, int *signature);
-
-
+dlong getFacePatchIndex(refPatch_t *referencePatchList, int numRefPatches, int face, int *signature);
 
 
-void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   int *Npatches, int **patchesIndex, dfloat **patchesInvA,
+
+
+void ellipticBuildFacePatchesQuad2D(solver_t *solver, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
                                    const char *options){
 
-  if(!basis) { // default to degree N Lagrange basis
-    basisNp = mesh->Np;
-    basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
-    for(int n=0;n<basisNp;++n){
-      basis[n+n*basisNp] = 1;
-    }
-  }
+  mesh2D *mesh = solver->mesh;
 
   // build some monolithic basis arrays
   dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -78,27 +71,27 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
 
   //build a list of all face pairs
   mesh->NfacePairs=0;
-  for (int eM=0; eM<mesh->Nelements;eM++) {
+  for (dlong eM=0; eM<mesh->Nelements;eM++) {
     for (int f=0;f<mesh->Nfaces;f++) {
-      int eP = mesh->EToE[eM*mesh->Nfaces+f];
+      dlong eP = mesh->EToE[eM*mesh->Nfaces+f];
 
       if (eM<eP) mesh->NfacePairs++;
     }
   }
 
-  mesh->EToFPairs = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces,sizeof(int));
-  mesh->FPairsToE = (int *) calloc(2*mesh->NfacePairs,sizeof(int));
+  mesh->EToFPairs = (dlong *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces,sizeof(dlong));
+  mesh->FPairsToE = (dlong *) calloc(2*mesh->NfacePairs,sizeof(dlong));
   mesh->FPairsToF = (int *) calloc(2*mesh->NfacePairs,sizeof(int));
 
   //fill with -1
-  for (int n=0;n<(mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces;n++) {
+  for (dlong n=0;n<(mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfaces;n++) {
     mesh->EToFPairs[n] = -1;
   }
 
-  int cnt=0;
-  for (int eM=0; eM<mesh->Nelements;eM++) {
+  dlong cnt=0;
+  for (dlong eM=0; eM<mesh->Nelements;eM++) {
     for (int fM=0;fM<mesh->Nfaces;fM++) {
-      int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      dlong eP = mesh->EToE[eM*mesh->Nfaces+fM];
 
       if (eM<eP) {
         mesh->FPairsToE[2*cnt+0] = eM;
@@ -119,12 +112,12 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
 
 
   (*Npatches) = 0;
-  int numRefPatches=0;
-  int refPatches = 0;
+  dlong numRefPatches=0;
+  dlong refPatches = 0;
 
   //patch inverse storage
   *patchesInvA = (dfloat*) calloc((*Npatches)*patchNp*patchNp, sizeof(dfloat));
-  *patchesIndex = (int*) calloc(mesh->NfacePairs, sizeof(int));
+  *patchesIndex = (dlong*) calloc(mesh->NfacePairs, sizeof(dlong));
 
   refPatch_t *referencePatchList = (refPatch_t *) calloc(numRefPatches,sizeof(refPatch_t));
 
@@ -135,32 +128,32 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
   dfloat *refPatchInvA;
 
   // loop over all face pairs
-  for(int face=0;face<mesh->NfacePairs;++face){
+  for(dlong face=0;face<mesh->NfacePairs;++face){
 
     //build the patch A matrix for this element
-    BuildFacePatchAx(mesh, basis, tau, lambda, BCType, B, Br, Bs, face, patchA);
+    BuildFaceIpdgPatchAx(mesh, tau, lambda, BCType, B, Br, Bs, face, patchA);
 
-    int eM = mesh->FPairsToE[2*face+0];
-    int eP = mesh->FPairsToE[2*face+1];
+    dlong eM = mesh->FPairsToE[2*face+0];
+    dlong eP = mesh->FPairsToE[2*face+1];
     int fM = mesh->FPairsToF[2*face+0];
     int fP = mesh->FPairsToF[2*face+1];
 
-    int eM0 = mesh->EToE[eM*mesh->Nfaces+0];
-    int eM1 = mesh->EToE[eM*mesh->Nfaces+1];
-    int eM2 = mesh->EToE[eM*mesh->Nfaces+2];
-    int eM3 = mesh->EToE[eM*mesh->Nfaces+3];
+    dlong eM0 = mesh->EToE[eM*mesh->Nfaces+0];
+    dlong eM1 = mesh->EToE[eM*mesh->Nfaces+1];
+    dlong eM2 = mesh->EToE[eM*mesh->Nfaces+2];
+    dlong eM3 = mesh->EToE[eM*mesh->Nfaces+3];
 
-    int eP0 = mesh->EToE[eP*mesh->Nfaces+0];
-    int eP1 = mesh->EToE[eP*mesh->Nfaces+1];
-    int eP2 = mesh->EToE[eP*mesh->Nfaces+2];
-    int eP3 = mesh->EToE[eP*mesh->Nfaces+3];
+    dlong eP0 = mesh->EToE[eP*mesh->Nfaces+0];
+    dlong eP1 = mesh->EToE[eP*mesh->Nfaces+1];
+    dlong eP2 = mesh->EToE[eP*mesh->Nfaces+2];
+    dlong eP3 = mesh->EToE[eP*mesh->Nfaces+3];
 
     if(eM0>=0 && eM1>=0 && eM2>=0 && eM3>=0 &&
        eP0>=0 && eP1>=0 && eP2>=0 && eP3>=0){ //check if this is an interiour patch
       
       //get the vertices
-      int *vM = mesh->EToV + eM*mesh->Nverts;
-      int *vP = mesh->EToV + eP*mesh->Nverts;
+      hlong *vM = mesh->EToV + eM*mesh->Nverts;
+      hlong *vP = mesh->EToV + eP*mesh->Nverts;
 
       // intialize signature to -1
       int signature[4];
@@ -172,7 +165,7 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
         }
       }
 
-      int index = getFacePatchIndex(referencePatchList,numRefPatches,fM,signature);
+      dlong index = getFacePatchIndex(referencePatchList,numRefPatches,fM,signature);
       if (index<0) {      
         //build the reference patch for this signature
         ++(*Npatches);
@@ -189,7 +182,7 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
 
         // printf("Building reference patch for the face %d, with signature [%d,%d,%d,%d] \n", fM, signature[0], signature[1], signature[2],signature[3]);
 
-        BuildReferenceFacePatch(mesh, basis, tau, lambda, BCType, B, Br, Bs, fM, signature, refPatchInvA); 
+        BuildReferenceFacePatch(mesh, tau, lambda, BCType, B, Br, Bs, fM, signature, refPatchInvA); 
         matrixInverse(patchNp, refPatchInvA);        
         index = (*Npatches)-1;
       }
@@ -209,7 +202,7 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
       dfloat cond = matrixConditionNumber(patchNp,invRefAA);
       dfloat rate = (sqrt(cond)-1.)/(sqrt(cond)+1.);
 
-      printf("Face pair %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
+      //printf("Face pair %d's conditioned patch reports cond = %g and rate = %g \n", eM, cond, rate);
 
       //if the convergence rate is good, use the reference patch, and skip adding this patch
       if (rate < rateTolerance) {
@@ -227,7 +220,7 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
     //copy inverse into patchesInvA
     for(int n=0;n<patchNp;++n){
       for(int m=0;m<patchNp;++m){
-        int id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
+        dlong id = ((*Npatches)-1)*patchNp*patchNp + n*patchNp + m;
         (*patchesInvA)[id] = patchA[n*patchNp+m];
       }
     }
@@ -235,16 +228,16 @@ void ellipticBuildFacePatchesIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis
     (*patchesIndex)[face] = (*Npatches)-1;
   }
 
-  printf("saving %d full patches\n",*Npatches);
-  printf("using %d reference patches\n", refPatches);
+  printf("saving "dlongFormat" full patches\n",*Npatches);
+  printf("using "dlongFormat" reference patches\n", refPatches);
 
   free(patchA); free(invRefAA);
   free(B); free(Br); free(Bs);
 }
 
 
-void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *MS, int face, dfloat *A) {
+void BuildFaceIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat *Bs, dlong face, dfloat *A) {
 
   int NpatchElements = 2;
   int patchNp = NpatchElements*mesh->Np;
@@ -256,7 +249,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
   //start with diagonals
   for(int N=0;N<NpatchElements;++N){
     //element number
-    int e = mesh->FPairsToE[2*face+N];
+    dlong e = mesh->FPairsToE[2*face+N];
 
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Np;++m){
@@ -265,7 +258,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
 
         // (grad phi_n, grad phi_m)_{D^e}
         for(int i=0;i<mesh->Np;++i){
-          int base = e*mesh->Np*mesh->Nvgeo + i;
+          dlong base = e*mesh->Np*mesh->Nvgeo + i;
           dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
           dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
           dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
@@ -289,14 +282,14 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
             int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
             // grab vol geofacs at surface nodes
-            int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+            dlong baseM = e*mesh->Np*mesh->Nvgeo + vidM;
             dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
             dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
             dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
             dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
 
             // grab surface geometric factors
-            int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+            dlong base = mesh->Nsgeo*(e*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
             dfloat nx = mesh->sgeo[base+NXID];
             dfloat ny = mesh->sgeo[base+NYID];
             dfloat wsJ = mesh->sgeo[base+WSJID];
@@ -317,7 +310,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
             dfloat lmM = B[idmM];
             
             dfloat penalty = tau*hinv;     
-            int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+            int bc = mesh->EToB[fM+mesh->Nfaces*e]; //raw boundary flag
 
             int bcD = 0, bcN =0;
             int bcType = 0;
@@ -343,8 +336,8 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
   }
 
   //now the off-diagonal
-  int eM = mesh->FPairsToE[2*face+0];
-  int eP = mesh->FPairsToE[2*face+1];
+  dlong eM = mesh->FPairsToE[2*face+0];
+  dlong eP = mesh->FPairsToE[2*face+1];
   int fM = mesh->FPairsToF[2*face+0];
 
   // accumulate flux terms for positive traces
@@ -357,23 +350,23 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
         int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
         // grab vol geofacs at surface nodes
-        int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+        dlong baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
         dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
         dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
         dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
         dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
 
         // double check vol geometric factors are in halo storage of vgeo
-        int idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-        int vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-        int baseP   = eP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
+        dlong idM   = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+        int vidP    = (int) (mesh->vmapP[idM]%mesh->Np); // only use this to identify location of positive trace vgeo
+        dlong baseP = eP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
         dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
         dfloat drdyP = mesh->vgeo[baseP+mesh->Np*RYID];
         dfloat dsdxP = mesh->vgeo[baseP+mesh->Np*SXID];
         dfloat dsdyP = mesh->vgeo[baseP+mesh->Np*SYID];
         
         // grab surface geometric factors
-        int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+        dlong base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
         dfloat nx = mesh->sgeo[base+NXID];
         dfloat ny = mesh->sgeo[base+NYID];
         dfloat wsJ = mesh->sgeo[base+WSJID];
@@ -413,7 +406,7 @@ void BuildFacePatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, in
   }
 }
 
-void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
+void BuildReferenceFacePatch(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
                         dfloat *B, dfloat *Br, dfloat *Bs, int face, int *signature, dfloat *A) {
   //build a mini mesh struct for the reference patch
   mesh2D *refMesh = (mesh2D*) calloc(1,sizeof(mesh2D));
@@ -424,7 +417,7 @@ void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lam
   dfloat VX[12] = {-1, 1, 1,-1,-1, 1, 3, 3, 1,-1,-3,-3};
   dfloat VY[12] = {-1,-1, 1, 1,-3,-3,-1, 1, 3, 3, 1,-1};
 
-  int EToV[5*4] = {0,1,2,3,
+  hlong EToV[5*4] = {0,1,2,3,
                     1,0,4,5,
                     2,1,6,7,
                     3,2,8,9,
@@ -436,20 +429,20 @@ void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lam
   refMesh->EX = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
   refMesh->EY = (dfloat *) calloc(mesh->Nverts*NpatchElements,sizeof(dfloat));
 
-  refMesh->EToV = (int*) calloc(NpatchElements*mesh->Nverts, sizeof(int));
+  refMesh->EToV = (hlong*) calloc(NpatchElements*mesh->Nverts, sizeof(hlong));
 
   for(int n=0;n<mesh->Nverts;++n){
-    int v = EToV[n];
+    hlong v = EToV[n];
     refMesh->EX[n] = VX[v];
     refMesh->EY[n] = VY[v];
     refMesh->EToV[n] = v;
   } 
 
-  cnt[4] = {0,0,0,0};
+  int cnt[4] = {0,0,0,0};
   for (int n=0;n<mesh->Nverts;n++) {
     if (signature[n]==-1) {
       //fill the missing vertex based on the face number
-      int v = EToV[(face+1)*mesh->Nverts+mesh->Nverts-2+cnt[face]];  
+      hlong v = EToV[(face+1)*mesh->Nverts+mesh->Nverts-2 + cnt[face]];  
       refMesh->EX[mesh->Nverts+n] = VX[v];
       refMesh->EY[mesh->Nverts+n] = VY[v];
       refMesh->EToV[mesh->Nverts+n] = mesh->Nverts+cnt[face]; //extra verts      
@@ -468,8 +461,8 @@ void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lam
   //build a list of all face pairs
   refMesh->NfacePairs=1;
 
-  refMesh->EToFPairs = (int *) calloc(2*mesh->Nfaces,sizeof(int));
-  refMesh->FPairsToE = (int *) calloc(2,sizeof(int));
+  refMesh->EToFPairs = (dlong *) calloc(2*mesh->Nfaces,sizeof(dlong));
+  refMesh->FPairsToE = (dlong *) calloc(2,sizeof(dlong));
   refMesh->FPairsToF = (int *)  calloc(2,sizeof(int));
 
   //fill with -1
@@ -490,7 +483,7 @@ void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lam
   meshSurfaceGeometricFactorsQuad2D(refMesh);
 
   //build this reference patch
-  BuildFacePatchAx(refMesh, basis, tau, lambda, BCType, B, Br, Bs, 0, A);
+  BuildFaceIpdgPatchAx(refMesh, tau, lambda, BCType, B, Br, Bs, 0, A);
 
   free(refMesh->EX);
   free(refMesh->EY);
@@ -499,10 +492,10 @@ void BuildReferenceFacePatch(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lam
   free(refMesh);
 }
 
-int getFacePatchIndex(refPatch_t *referencePatchList, int numRefPatches, int face, int *signature) {
+dlong getFacePatchIndex(refPatch_t *referencePatchList, dlong numRefPatches, int face, int *signature) {
 
-  int index = -1;
-  for (int n=0;n<numRefPatches;n++) {
+  dlong index = -1;
+  for (dlong n=0;n<numRefPatches;n++) {
     if (referencePatchList[n].face == face) {
       if ((referencePatchList[n].signature[0] == signature[0]) &&
           (referencePatchList[n].signature[1] == signature[1]) && 

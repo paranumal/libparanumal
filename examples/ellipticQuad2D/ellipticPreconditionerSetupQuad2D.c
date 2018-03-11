@@ -11,25 +11,23 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    int nnz;
+    dlong nnz;
     nonZero_t *A;
-    hgs_t *hgs;
-
-    int Nnum = mesh->Np*mesh->Nelements;
-    int *globalStarts = (int*) calloc(size+1, sizeof(int));
+    
+    hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgQuad2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
     } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousQuad2D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
+      ellipticBuildContinuousQuad2D(solver,lambda,&A,&nnz,&(precon->ogs),globalStarts, options);
     }
     
 
-    int *Rows = (int *) calloc(nnz, sizeof(int));
-    int *Cols = (int *) calloc(nnz, sizeof(int));
+    hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
+    hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    for (int n=0;n<nnz;n++) {
+    for (dlong n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
@@ -42,9 +40,31 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
                        Rows,
                        Cols,
                        Vals,
-                       hgs);
-
+                       solver->allNeumann,
+                       solver->allNeumannPenalty);
     free(A); free(Rows); free(Cols); free(Vals);
+
+    if (strstr(options,"CONTINUOUS")) {//tell parAlmond to gather this level
+      agmgLevel *baseLevel = precon->parAlmond->levels[0];
+
+      baseLevel->gatherLevel = true;
+      baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+      baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+
+      baseLevel->weightedInnerProds = false;
+
+      baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
+      baseLevel->gatherArgs[0] = (void *) solver;
+      baseLevel->gatherArgs[1] = (void *) precon->ogs;
+      baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+      baseLevel->gatherArgs[3] = (void *) options;
+      baseLevel->scatterArgs = baseLevel->gatherArgs;
+
+      baseLevel->device_gather  = ellipticGather;
+      baseLevel->device_scatter = ellipticScatter;        
+    }
 
     if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
       agmgLevel **levels = precon->parAlmond->levels;
@@ -71,7 +91,7 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
       // extra storage for smoothing op
       levels[0]->o_smootherResidual = mesh->device.malloc(levels[0]->Ncols*sizeof(dfloat),levels[0]->x);
 
-            dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
+      dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
       if(strstr(options, "EXACT")){
         rateTolerance = 0.0;
       } else {
@@ -80,15 +100,15 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
 
       //set up the fine problem smoothing
       if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherOverlappingPatch(solver, precon, levels[0], tau, lambda, BCType, options);
       } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFullPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherFacePatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
+        ellipticSetupSmootherLocalPatch(solver, precon, levels[0], tau, lambda, BCType, rateTolerance, options);
       } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solver, precon, levels[0], tau, lambda, BCType, options);
+        ellipticSetupSmootherDampedJacobi(solver, precon, levels[0], tau, lambda, BCType, options);
       }
     }
 
@@ -128,20 +148,22 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
 
     //set up the fine problem smoothing
     if(strstr(options, "OVERLAPPINGPATCH")){
-      ellipticSetupSmootherOverlappingPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      ellipticSetupSmootherOverlappingPatch(solver, precon, OASLevel, tau, lambda, BCType, options);
     } else if(strstr(options, "FULLPATCH")){
-      ellipticSetupSmootherFullPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherFullPatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else if(strstr(options, "FACEPATCH")){
-      ellipticSetupSmootherFacePatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherFacePatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else if(strstr(options, "LOCALPATCH")){
-      ellipticSetupSmootherLocalPatchIpdg(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
+      ellipticSetupSmootherLocalPatch(solver, precon, OASLevel, tau, lambda, BCType, rateTolerance, options);
     } else { //default to damped jacobi
-      ellipticSetupSmootherDampedJacobiIpdg(solver, precon, OASLevel, tau, lambda, BCType, options);
+      ellipticSetupSmootherDampedJacobi(solver, precon, OASLevel, tau, lambda, BCType, options);
     }
 
 
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
+    //TODO need to fix this to use the normal builder for OAS to work again
+    /*
     nonZero_t *coarseA;
     int nnzCoarseA;
     hgs_t *coarsehgs;
@@ -182,17 +204,23 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
     precon->r1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     precon->z1 = (dfloat*) malloc(Nnum*sizeof(dfloat));
     occaTimerToc(mesh->device,"CoarsePreconditionerSetup");
-
+    */
   } else if(strstr(options, "MULTIGRID")){
 
     ellipticMultiGridSetupQuad2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
+
+  } else if(strstr(options, "SEMFEM")) {
+
+    ellipticSEMFEMSetupQuad2D(solver,precon,tau,lambda,BCType,options,parAlmondOptions);
 
   } else if(strstr(options,"JACOBI")) {
 
     dfloat *invDiagA;
 
-    ellipticBuildJacobiIpdgQuad2D(mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
+    ellipticBuildJacobiQuad2D(solver,tau, lambda, BCType, &invDiagA,options);
 
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+
+    free(invDiagA);    
   }
 }

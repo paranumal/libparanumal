@@ -515,11 +515,8 @@ void ellipticPartialAxTet3D_Ref6(const int Nelements,
       datafloat qrr = 0.;
       datafloat qrs = 0.;
       datafloat qrt = 0.;
-      datafloat qsr = 0.;
       datafloat qss = 0.;
       datafloat qst = 0.;
-      datafloat qtr = 0.;
-      datafloat qts = 0.;
       datafloat qtt = 0.;
       datafloat qM = 0.;
 
