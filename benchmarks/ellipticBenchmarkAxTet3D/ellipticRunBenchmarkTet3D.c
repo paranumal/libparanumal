@@ -11,7 +11,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 2;
+  NKernels = 3;
   sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 
   //  kernelInfo.addCompilerFlag("-G");
@@ -60,9 +60,11 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
     mesh->device.finish();
 
     occa::streamTag start[Ntrials], end[Ntrials];
-    for(int it=0;it<Ntrials;++it){
-      start[it] = mesh->device.tagStream();
+    start[0] = mesh->device.tagStream();
+    for(int it=0;it<Ntrials+1;++it){
 
+      if(it==1) // tag after warm up
+	start[0] = mesh->device.tagStream();
 #if 1
       // tet sparse kernel
       testKernel(mesh->Nelements, 
@@ -96,14 +98,12 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 		 solver->o_grad);
 #endif
 
-      end[it] = mesh->device.tagStream();
     }
+    end[0] = mesh->device.tagStream();
+	  
     mesh->device.finish();
-    for(int it=0;it<Ntrials;++it){
-      timeAx = mesh->device.timeBetween(start[it],end[it]);
-      kernelElapsed +=timeAx;    
-    }
-    mesh->device.finish();
+    kernelElapsed = mesh->device.timeBetween(start[0],end[0]);
+
     kernelElapsed = kernelElapsed/(dfloat)Ntrials;
 
     //start
@@ -137,8 +137,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
 
       // 6 flops per non-zero plus chain rule
-      double flops = (double)(nnzs*12 + mesh->Np*11);
-      double eqflops = mesh->Np*mesh->Np*12 + mesh->Np*11;
+      double flops = (double)(nnzs*14 + mesh->Np*13);
+      double eqflops = mesh->Np*mesh->Np*14 + mesh->Np*13;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
       printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f kernelElapsed %16.16f\n",mesh->Nelements, (int) flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
@@ -153,7 +153,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("ROOFLINE %16.17g \n", roofline);
       printf("GFLOPS %16.17f (%16.17f) \n", kernelGFLOPS, kernelEquivGFLOPS);
       printf("time per kernel %f \n",kernelElapsed);
-      printf("PARAMETERS %d %d %16.17f \n ", Nblocks, Nnodes, kernelGFLOPS );
+      printf("PARAMETERS %d %d %d %d %16.17f %16.17f \n ", mesh->N, i, Nblocks, Nnodes, kernelGFLOPS, kernelEquivGFLOPS );
 
     }
   }
