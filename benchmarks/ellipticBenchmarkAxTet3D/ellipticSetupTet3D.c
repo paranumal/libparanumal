@@ -174,86 +174,11 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   for (int n=0;n<mesh->Np*mesh->Np;n++)
     mesh->invSparseV[n] = mesh->sparseV[n];
 
-  // TW: what is all this ? ----------------------------------------------------------------------------->
-  //very simple, just look through the indices; there will be three nnz groups in worst case
-  char *rowData = (char*) calloc(8*mesh->Np, sizeof(char));
-  for (int i=0; i<mesh->Np; ++i){
-    rowData[8*i] = (char)mesh->sparseStackedNZ[0*mesh->Np+i];    
-    int nogroups = 1; 
-    int j=0;   
-    while (nogroups != 4){
-      if (j<mesh->SparseNnzPerRow-1){      
-        //printf("comparing %d and %d \n", mesh->sparseStackedNZ[j*mesh->Np+i], mesh->sparseStackedNZ[(j+1)*mesh->Np+i]);        
-        if (mesh->sparseStackedNZ[j*mesh->Np+i]+1 == mesh->sparseStackedNZ[(j+1)*mesh->Np+i]){
-          j++;
-        } 
-        else{
-          if (mesh->sparseStackedNZ[(j+1)*mesh->Np+i] == 0){
-            rowData[8*i + 2*(nogroups-1)+1] =  (char) mesh->sparseStackedNZ[j*mesh->Np+i];
-            nogroups = 4;
-          }
-          else{
-            //printf("ending %d starting at %d \n " , mesh->sparseStackedNZ[j*mesh->Np+i], mesh->sparseStackedNZ[(j+1)*mesh->Np+i]);
-            rowData[8*i + 2*(nogroups-1)+1] = (char) mesh->sparseStackedNZ[j*mesh->Np+i];
-            rowData[8*i+ 2*(nogroups-1)+2] = (char) mesh->sparseStackedNZ[(j+1)*mesh->Np+i];
-            nogroups = nogroups+1;
-            j++;
-          }
-        }
-      }//if smaller then row lenght
-      else{
-        rowData[8*i +  nogroups] = (char) mesh->sparseStackedNZ[j*mesh->Np+i];
-        nogroups = 4;
-      }
-    }
+  // load sparse data
+  void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N);
+  loadElementStiffnessMatricesTet3D(mesh, " ", mesh->N);
 
-
-    printf("THIS IS ROW %d GROUP DATA\n", i);
-    for (int j=0; j<8; j++){
-      printf(" %d ", (int) rowData[8*i+j]);
-
-    }
-    if (rowData[8*i+2] == rowData[8*i+3]){
-      rowData[8*i+2] = (char)1;
-    }
-    if (rowData[8*i+4] == rowData[8*i+5]){
-      rowData[8*i+4] = (char)1;
-    }   
-
-    printf("\n");
-  }
-
-  //transpose
-  char *rowDataTransposed = (char*) calloc(8*mesh->Np, sizeof(char));
-  for (int i=0; i<mesh->Np; ++i){
-    for (int j=0; j<4; j++){
-      rowDataTransposed[4*i+j] = (char) rowData[8*i+j];    
-    }
-    for (int j=0; j<4; j++){
-      rowDataTransposed[mesh->Np*4 + 4*i+j] = (char) rowData[8*i+j+4];
-    }
-  }
-  for (int j=0; j<8*mesh->Np; ++j){
-    if ((j)%4 == 0){
-      printf(" || ");
-    }    
-    if ((j)%(4*mesh->Np) == 0){
-      printf("\n\n");
-    }
-    printf(" %d ",  (int)rowDataTransposed[j]  );
-  }
-  // TW: <---------------------------------------------------------------------what is all this ? 
-  printf("\n MAX IS %d \n", mesh->Np*8);
-  mesh->o_rowData = mesh->device.malloc(mesh->Np*8*sizeof(char), rowDataTransposed);
-
-  mesh->o_Srr = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
-  mesh->o_Srs = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
-  mesh->o_Srt = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrtT);
-  mesh->o_Sss = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);  
-  mesh->o_Sst = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSstT);  
-  mesh->o_Stt = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSttT);  
-
-  kernelInfo.addDefine("p_SparseNnzPerRow", mesh->SparseNnzPerRow);
+  kernelInfo.addDefine("p_maxNnzPerRow", mesh->maxNnzPerRow);
 
 
   return solver;

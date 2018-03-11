@@ -2,7 +2,7 @@
 
 void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes){
 
-  mesh2D *mesh = solver->mesh;
+  mesh3D *mesh = solver->mesh;
 
   int Ntrials = 10;
 
@@ -12,7 +12,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   char kernelName[BUFSIZ];
 
   NKernels = 4;
-  sprintf(kernelName, "ellipticAxNEWTri2D");
+  sprintf(kernelName, "ellipticAxNEWTri3D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
@@ -81,13 +81,13 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       testKernel(mesh->Nelements, 
 		 solver->o_localGatherElementList,
 		 mesh->o_ggeo, 
-		 mesh->o_sparseStackedNZ, 
-		 mesh->o_sparseSrrT, 
-		 mesh->o_sparseSrsT, 
-		 mesh->o_sparseSrtT, 
-		 mesh->o_sparseSssT,		 
-		 mesh->o_sparseSstT,		 
-		 mesh->o_sparseSttT,		 
+		 mesh->o_IndTchar,
+		 mesh->o_SrrT, 
+		 mesh->o_SrsT, 
+		 mesh->o_SrtT, 
+		 mesh->o_SssT,		 
+		 mesh->o_SstT,		 
+		 mesh->o_SttT,		 
 		 mesh->o_MM, 
 		 lambda,
 		 solver->o_p,
