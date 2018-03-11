@@ -9,8 +9,8 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(argc<4){
-    printf("usage 1: ./ellipticBenchmarkTri2D kernel.okl ../../meshes/cavityH005.msh N\n");
-    printf("usage 2: ./ellipticBenchmarkTri2D kernel.okl ../../meshes/cavityH005.msh N Nblocks Nnodes\n");
+    printf("usage 1: ./ellipticBenchmarkTet3D kernel.okl ../../meshes/cavityTetH0125.msh N\n");
+    printf("usage 2: ./ellipticBenchmarkTet3D kernel.okl ../../meshes/cavityTetH0125.msh N Nblocks Nnodes\n");
     exit(-1);
   }
 
