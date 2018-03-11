@@ -4,7 +4,7 @@ kernel void ellipticAxSparseTet3D_v0(const int Nelements,
 				     const char4  * restrict IndT,
 				     const dfloat * restrict Srr,
 				     const dfloat * restrict Srs,
-				     const dfloat * restrict Srs,
+				     const dfloat * restrict Srt,
 				     const dfloat * restrict Sss,
 				     const dfloat * restrict Sst,
 				     const dfloat * restrict Stt,
@@ -55,8 +55,8 @@ kernel void ellipticAxSparseTet3D_v0(const int Nelements,
 	    r_qss[et] = 0; r_qst[et] = 0; r_qtt[et] = 0;
 	  }
 
-	occaUnroll(p_SparseNnzPerRow/4)
-	  for (int k=0;k<p_SparseNnzPerRow/4;k++) {
+	occaUnroll(p_maxNnzPerRow/4)
+	  for (int k=0;k<p_maxNnzPerRow/4;k++) {
 	    const char4 Indn = IndT[n + p_Np*k]; 
 	    const char *pt_Indn = (char*) &Indn;
 
@@ -129,7 +129,7 @@ kernel void ellipticPartialAxSparseTet3D_v0(const int Nelements,
 					    const char4  * restrict IndT,
 					    const dfloat * restrict Srr,
 					    const dfloat * restrict Srs,
-					    const dfloat * restrict Srs,
+					    const dfloat * restrict Srt,
 					    const dfloat * restrict Sss,
 					    const dfloat * restrict Sst,
 					    const dfloat * restrict Stt,
@@ -191,8 +191,8 @@ kernel void ellipticPartialAxSparseTet3D_v0(const int Nelements,
 	    r_qss[et] = 0; r_qst[et] = 0; r_qtt[et] = 0;
 	  }
 
-	occaUnroll(p_SparseNnzPerRow)
-	  for (int k=0;k<p_SparseNnzPerRow;k++) {
+	occaUnroll(p_maxNnzPerRow)
+	  for (int k=0;k<p_maxNnzPerRow;k++) {
 	    const char4 Indn = IndT[n + p_Np*k]; 
 	    const char *pt_Indn = (char*) &Indn;
 
@@ -270,17 +270,20 @@ kernel void ellipticPartialAxSparseTet3D_v0(const int Nelements,
 
 
 
-kernel void ellipticPartialAxTri2D_v1(const int Nelements,
-				      const int   * restrict elementList,
-				      const dfloat * restrict ggeo,
-				      const char4  * restrict IndT,
-				      const dfloat * restrict Srr,
-				      const dfloat * restrict Srs,
-				      const dfloat * restrict Sss,
-				      const dfloat * restrict MM,
-				      const dfloat lambda,
-				      const dfloat * restrict q,
-				      dfloat * restrict Aq){
+kernel void ellipticPartialAxSparseTet3D_v1(const int Nelements,
+					    const int   * restrict elementList,
+					    const dfloat * restrict ggeo,
+					    const char4  * restrict IndT,
+					    const dfloat * restrict Srr,
+					    const dfloat * restrict Srs,
+					    const dfloat * restrict Srt,
+					    const dfloat * restrict Sss,
+					    const dfloat * restrict Sst,
+					    const dfloat * restrict Stt,
+					    const dfloat * restrict MM,
+					    const dfloat lambda,
+					    const dfloat * restrict q,
+					    dfloat * restrict Aq){
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
@@ -334,8 +337,8 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
 	  }
 
 
-	occaUnroll(p_SparseNnzPerRow/4)
-	  for (int k=0;k<( ((int)p_SparseNnzPerRow/4));k++) {
+	occaUnroll(p_maxNnzPerRow/4)
+	  for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
 	    const char4 Indn = IndT[n + p_Np*k]; 
 	    const char *pt_Indn = (char*) &Indn;
 

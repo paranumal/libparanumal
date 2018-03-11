@@ -11,25 +11,13 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 4;
-  sprintf(kernelName, "ellipticAxNEWTri3D");
+  NKernels = 2;
+  sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
   printf("test 0 \n");
-
-  /*int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
-    printf("test 1 \n");
-    mesh->o_India.copyTo(test);
-    printf("test 2\n");
-
-    printf("test 1 \n");
-    printf("\n");
-    for (int nn=0; nn<mesh->Np+1; ++nn){
-    printf(" %d ",  test[nn]);
-    }
-    */
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
@@ -53,8 +41,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   printf("copied \n");
 
 
-
-  for(int i=1; i<NKernels; i++) {
+  for(int i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
@@ -141,21 +128,12 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("Ntrials = %d global copy el %f local copy el %f size(dfloat) %d \n",Ntrials, globalCopyElapsed, copyElapsed, sizeof(dfloat));
 
       // count actual number of non-zeros
-#if 1
+
       int nnzs = 0;
-      printf("sparse nnz per row: %d \n", mesh->SparseNnzPerRow);
-      for(int n=0;n<mesh->Np*mesh->SparseNnzPerRow;++n){
-        //        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
-        //      nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
-        //    nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
-        //printf("%16.16f %16.16f %16.16f \n", mesh->sparseSrrT[n],  mesh->sparseSrsT[n],  mesh->sparseSssT[n]);
-        nnzs += (mesh->sparseStackedNZ[n]>0); 
-      }
-      //nnzs*=3;
-#else
-      nnzs = test[mesh->Np]-1;
-#endif
-      printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
+      for(int n=0;n<mesh->maxNnzPerRow*mesh->Np;++n)
+	nnzs += (mesh->Ind[n]!=0);
+      
+      printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->maxNnzPerRow, mesh->maxNnzPerRow);
 
 
       // 6 flops per non-zero plus chain rule
