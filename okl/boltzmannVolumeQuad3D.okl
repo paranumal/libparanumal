@@ -9,7 +9,7 @@
 #define TYID 7
 #define TZID 8
 
-kernel void boltzmannVolumeQuad3D(const iint Nelements,
+kernel void boltzmannVolumeQuad3D(const int Nelements,
 				  const dfloat * restrict vgeo,
 				  const dfloat * restrict D,
 				  const dfloat * restrict x,
@@ -17,41 +17,41 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 				  const dfloat * restrict z,
 				  const dfloat * restrict q,
 				  dfloat * restrict rhsq){
-  
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-    
+
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
     shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
-    
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){    
-	  
-	  iint e = eo+es; // element in block
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+
+	  int e = eo+es; // element in block
 	  if(e<Nelements){
 	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      s_q[fld][es][j][i] = q[base+fld*p_Np];
 	    }
 	  }
-	  
+
 	  if(es==0)
 	    s_D[j][i] = D[j*p_Nq+i];
 	}
       }
     }
-    
+
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){    
-	  iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  int e = eo+es; // element in block
 
 	  if(e<Nelements){
 
-	    const iint n=j*p_Nq+i;
+	    const int n=j*p_Nq+i;
 
 	    // prefetch geometric factors (constant on triangle)
 	    const int gbase = e*p_Np*p_Nvgeo + n;
@@ -64,7 +64,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
 	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
 	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
-	    
+
 	    // compute 'r' and 's' derivatives of (q_m) at node n
 	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
 
@@ -73,23 +73,23 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 		dqdr[fld] = 0;
 		dqds[fld] = 0;
 	      }
-	    
+
 	    occaUnroll(p_Nq)
-	      for(iint m=0;m<p_Nq;++m){
+	      for(int m=0;m<p_Nq;++m){
 		const dfloat Dim = s_D[i][m]; // could L1
 		const dfloat Djm = s_D[j][m];
-		
+
 		// differentiate q components with respect to 'r'
 		occaUnroll(p_Nfields)
-		  for(int fld=0;fld<p_Nfields;++fld) 
+		  for(int fld=0;fld<p_Nfields;++fld)
 		    dqdr[fld] += Dim*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
-		
+
 		// differentiate q components with respect to 's'
 		occaUnroll(p_Nfields)
 		  for(int fld=0;fld<p_Nfields;++fld)
 		    dqds[fld] += Djm*s_q[fld][es][m][i];
 	      }
-	    
+
 	    const dfloat q1  = s_q[0][es][j][i];
 	    const dfloat q2  = s_q[1][es][j][i];
 	    const dfloat q3  = s_q[2][es][j][i];
@@ -100,41 +100,41 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    const dfloat q8  = s_q[7][es][j][i];
 	    const dfloat q9  = s_q[8][es][j][i];
 	    const dfloat q10 = s_q[9][es][j][i];
-	    
+
 	    const dfloat invq1 = 1.f/q1;
-	    
+
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
-					     		     
+
 	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
 	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
 	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;
-					     	            
+
 	    const dfloat dq3dx = drdx*dqdr[2] + dsdx*dqds[2] + dtdx*q3;
 	    const dfloat dq3dy = drdy*dqdr[2] + dsdy*dqds[2] + dtdy*q3;
 	    const dfloat dq3dz = drdz*dqdr[2] + dsdz*dqds[2] + dtdz*q3;
-					     	            
+
 	    const dfloat dq4dx = drdx*dqdr[3] + dsdx*dqds[3] + dtdx*q4;
 	    const dfloat dq4dy = drdy*dqdr[3] + dsdy*dqds[3] + dtdy*q4;
 	    const dfloat dq4dz = drdz*dqdr[3] + dsdz*dqds[3] + dtdz*q4;
-					     	            
+
 	    const dfloat dq5dx = drdx*dqdr[4] + dsdx*dqds[4] + dtdx*q5;
 	    const dfloat dq6dy = drdy*dqdr[5] + dsdy*dqds[5] + dtdy*q6;
 	    const dfloat dq7dz = drdz*dqdr[6] + dsdz*dqds[6] + dtdz*q7;
-					     	            
+
 	    const dfloat dq8dx = drdx*dqdr[7] + dsdx*dqds[7] + dtdx*q8;
 	    const dfloat dq8dy = drdy*dqdr[7] + dsdy*dqds[7] + dtdy*q8;
-					     	            
+
 	    const dfloat dq9dx = drdx*dqdr[8] + dsdx*dqds[8] + dtdx*q9;
 	    const dfloat dq9dz = drdz*dqdr[8] + dsdz*dqds[8] + dtdz*q9;
 
 	    const dfloat dq10dy = drdy*dqdr[9] + dsdy*dqds[9] + dtdy*q10;
 	    const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9] + dtdz*q10;
 
-	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);	
-	    	  
-	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);	
+	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);
+
+	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);
 	    dfloat rhsq3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy + dq8dx + dq10dz);
 	    dfloat rhsq4 = -p_sqrtRT*(dq1dz + p_sqrt2*dq7dz + dq9dx + dq10dy);
 
@@ -159,12 +159,12 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
 	    // remove radial component of momentum change
 	    const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
 
-	    rhsq2 -= xij*xdotrhsq; 
+	    rhsq2 -= xij*xdotrhsq;
 	    rhsq3 -= yij*xdotrhsq;
 	    rhsq4 -= zij*xdotrhsq;
 
-	    const iint base = e*p_Np*p_Nfields+n;
-	    
+	    const int base = e*p_Np*p_Nfields+n;
+
 	    rhsq[base+0*p_Np] = rhsq1;
 	    rhsq[base+1*p_Np] = rhsq2;
 	    rhsq[base+2*p_Np] = rhsq3;
@@ -183,6 +183,7 @@ kernel void boltzmannVolumeQuad3D(const iint Nelements,
   }
 }
 
+
 kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 				    const iint   * restrict elementIds,
 				    const iint shift,
@@ -193,16 +194,16 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 				    const dfloat * restrict z,
 				    const dfloat * restrict q,
 				    dfloat * restrict rhsq){
-  
+
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-    
+
     shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
     exclusive iint e;
     for(iint es=0;es<p_NblockV;++es;inner2){
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
-	  
+
 	  const iint eT = eo+es; // element in block
 	  if(eT<Nelements){
 	    e = elementIds[eT];
@@ -211,16 +212,16 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	      s_q[fld][es][j][i] = q[base+fld*p_Np];
 	    }
 	  }
-	  
+
 	  if(es==0)
 	    s_D[j][i] = D[j*p_Nq+i];
 	}
       }
     }
-    
+
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    
+
     for(iint es=0;es<p_NblockV;++es;inner2){
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){    
@@ -241,7 +242,7 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
 	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
 	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
-	    
+
 	    // compute 'r' and 's' derivatives of (q_m) at node n
 	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
 
@@ -250,23 +251,23 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 		dqdr[fld] = 0;
 		dqds[fld] = 0;
 	      }
-	    
+
 	    occaUnroll(p_Nq)
 	      for(iint m=0;m<p_Nq;++m){
 		const dfloat Dim = s_D[i][m]; // could L1
 		const dfloat Djm = s_D[j][m];
-		
+
 		// differentiate q components with respect to 'r'
 		occaUnroll(p_Nfields)
 		  for(int fld=0;fld<p_Nfields;++fld) 
 		    dqdr[fld] += Dim*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
-		
+
 		// differentiate q components with respect to 's'
 		occaUnroll(p_Nfields)
 		  for(int fld=0;fld<p_Nfields;++fld)
 		    dqds[fld] += Djm*s_q[fld][es][m][i];
 	      }
-	    
+
 	    const dfloat q1  = s_q[0][es][j][i];
 	    const dfloat q2  = s_q[1][es][j][i];
 	    const dfloat q3  = s_q[2][es][j][i];
@@ -277,32 +278,32 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    const dfloat q8  = s_q[7][es][j][i];
 	    const dfloat q9  = s_q[8][es][j][i];
 	    const dfloat q10 = s_q[9][es][j][i];
-	    
+
 	    const dfloat invq1 = 1.f/q1;
-	    
+
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
-					     		     
+
 	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
 	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
 	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;
-					     	            
+
 	    const dfloat dq3dx = drdx*dqdr[2] + dsdx*dqds[2] + dtdx*q3;
 	    const dfloat dq3dy = drdy*dqdr[2] + dsdy*dqds[2] + dtdy*q3;
 	    const dfloat dq3dz = drdz*dqdr[2] + dsdz*dqds[2] + dtdz*q3;
-					     	            
+
 	    const dfloat dq4dx = drdx*dqdr[3] + dsdx*dqds[3] + dtdx*q4;
 	    const dfloat dq4dy = drdy*dqdr[3] + dsdy*dqds[3] + dtdy*q4;
 	    const dfloat dq4dz = drdz*dqdr[3] + dsdz*dqds[3] + dtdz*q4;
-					     	            
+
 	    const dfloat dq5dx = drdx*dqdr[4] + dsdx*dqds[4] + dtdx*q5;
 	    const dfloat dq6dy = drdy*dqdr[5] + dsdy*dqds[5] + dtdy*q6;
 	    const dfloat dq7dz = drdz*dqdr[6] + dsdz*dqds[6] + dtdz*q7;
-					     	            
+
 	    const dfloat dq8dx = drdx*dqdr[7] + dsdx*dqds[7] + dtdx*q8;
 	    const dfloat dq8dy = drdy*dqdr[7] + dsdy*dqds[7] + dtdy*q8;
-					     	            
+
 	    const dfloat dq9dx = drdx*dqdr[8] + dsdx*dqds[8] + dtdx*q9;
 	    const dfloat dq9dz = drdz*dqdr[8] + dsdz*dqds[8] + dtdz*q9;
 
@@ -310,7 +311,7 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9] + dtdz*q10;
 
 	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);	
-	    	  
+
 	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);	
 	    dfloat rhsq3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy + dq8dx + dq10dz);
 	    dfloat rhsq4 = -p_sqrtRT*(dq1dz + p_sqrt2*dq7dz + dq9dx + dq10dy);
@@ -343,7 +344,7 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    rhsq4 -= zij*xdotrhsq;
 
 	    const iint base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
-	    
+
 	    rhsq[base+0*p_Np] = rhsq1;
 	    rhsq[base+1*p_Np] = rhsq2;
 	    rhsq[base+2*p_Np] = rhsq3;
