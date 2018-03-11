@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 0
+#if 1
 #define datafloat double
 #define datafloatString "double"
 #else
@@ -446,7 +446,7 @@ int main(int argc, char **argv){
 
   //printf("];\n\n");
 
-  printf("\n\nROOFLINE = [");
+  printf("\n\nROOFLINE(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", roofline[k]);
@@ -471,7 +471,7 @@ int main(int argc, char **argv){
 
   printf("];\n\n");
 
-  printf("\n\ngigaNodes(:, %d) = [",p_N);
+  printf("\n\n giganodes(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", (p_Np*E/1.e9)/timeData[k]);
